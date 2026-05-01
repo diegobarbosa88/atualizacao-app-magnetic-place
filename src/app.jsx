@@ -2106,7 +2106,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                 c.adminEntry || c.adminExit || c.adminBreakStart || c.adminBreakEnd || c.editedEntry || c.editedExit
               )
             );
-            const isEditing = true; // DEBUG: Always show correction button
+            const isEditing = !!editingDrafts[notif.id];
 
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
@@ -2297,6 +2297,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                         });
                                       }
                                     }
+
+                                    // Garantir que a lista fica sempre ordenada cronologicamente
+                                    daysToRender = [...daysToRender].sort((a, b) => {
+                                      const dateA = a.date || a.dateLabel || '';
+                                      const dateB = b.date || b.dateLabel || '';
+                                      return dateA.localeCompare(dateB);
+                                    });
 
                                     return daysToRender.map((change, cIdx) => {
                                       const isDayChanged = (change.adminEntry && change.adminEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
@@ -2549,7 +2556,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           >
                             <Send size={16} /> Corrigir e Enviar
                           </button>
-                          <button onClick={() => setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; })} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
+                          <button onClick={() => { 
+                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                              setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
                         </>
                       ) : (
                         <>
