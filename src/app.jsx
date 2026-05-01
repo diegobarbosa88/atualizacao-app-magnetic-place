@@ -1744,20 +1744,26 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const editedShift = shiftMatch[2].trim();
             const originalShift = shiftMatch[1].trim();
             const [e, x] = editedShift.includes('-') ? editedShift.split('-') : ['--:--', '--:--'];
+            const [origEntry, origExit] = originalShift.includes('-') ? originalShift.split('-') : ['--:--', '--:--'];
 
             const originalBreak = breakMatch ? breakMatch[1].trim() : '--:--';
             const editedBreak = breakMatch ? breakMatch[2].trim() : '--:--';
             const [bs, be] = (editedBreak.includes('-') && editedBreak !== '--:--') ? editedBreak.split('-') : ['--:--', '--:--'];
+            const [obs, obsEnd] = originalBreak.includes('-') ? originalBreak.split('-') : ['--:--', '--:--'];
 
             changes.push({
               dateLabel,
               date: dateLabel,
               originalShift: originalShift,
+              entry: origEntry === 'undefined' ? '--:--' : origEntry,
+              exit: origExit === 'undefined' ? '--:--' : origExit,
               editedEntry: e,
               editedExit: x,
               originalBreak: originalBreak,
               editedBreakStart: bs === 'undefined' ? '--:--' : bs,
               editedBreakEnd: be === 'undefined' ? '--:--' : be,
+              breakStart: obs === 'undefined' ? '--:--' : obs,
+              breakEnd: obsEnd === 'undefined' ? '--:--' : obsEnd,
               originalHours: hourMatch ? parseFloat(hourMatch[1].replace('h', '')) : 0,
               editedHours: hourMatch ? parseFloat(hourMatch[2].replace('h', '')) : 0
             });
@@ -2234,17 +2240,17 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       <div className="space-y-1">
                                         <label className="text-[8px] font-black text-indigo-400 uppercase ml-1">Ajuste Turno</label>
                                         <div className="flex items-center gap-2">
-                                          <input type="time" value={change.adminEntry || change.editedEntry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.editedEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                           <span className="text-indigo-300 font-bold">➔</span>
-                                          <input type="time" value={change.adminExit || change.editedExit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.editedExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                         </div>
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-[8px] font-black text-indigo-400 uppercase ml-1">Ajuste Pausa</label>
                                         <div className="flex items-center gap-2">
-                                          <input type="time" value={change.adminBreakStart || change.editedBreakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.adminBreakStart || change.editedBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                           <span className="text-indigo-300 font-bold">➔</span>
-                                          <input type="time" value={change.adminBreakEnd || change.editedBreakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                         </div>
                                       </div>
                                     </div>
@@ -2353,10 +2359,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 days.forEach(c => {
                                   c.adminEntry = c.editedEntry || c.newEntry || '';
                                   c.adminExit = c.editedExit || c.newExit || '';
-                                  c.adminBreakStart = c.editedBreakStart || c.newBreakStart || '--:--';
-                                  c.adminBreakEnd = c.editedBreakEnd || c.newBreakEnd || '--:--';
+                                  c.adminBreakStart = c.editedBreakStart || c.newBreakStart || c.breakStart || c.originalBreakStart || '';
+                                  c.adminBreakEnd = c.editedBreakEnd || c.newBreakEnd || c.breakEnd || c.originalBreakEnd || '';
                                   if (c.adminEntry && c.adminExit) {
-                                    c.adminHours = calculateDuration(c.adminEntry, c.adminExit, c.adminBreakStart === '--:--' ? null : c.adminBreakStart, c.adminBreakEnd === '--:--' ? null : c.adminBreakEnd);
+                                    c.adminHours = calculateDuration(c.adminEntry, c.adminExit, (!c.adminBreakStart || c.adminBreakStart === '--:--') ? null : c.adminBreakStart, (!c.adminBreakEnd || c.adminBreakEnd === '--:--') ? null : c.adminBreakEnd);
                                   }
                                 });
                                 w.editedTotalHours = calculateMonthTotal(w);
