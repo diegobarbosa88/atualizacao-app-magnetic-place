@@ -1759,7 +1759,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const editedShift = shiftMatch[2].trim();
             const originalShift = shiftMatch[1].trim();
             const [e, x] = editedShift.includes('-') ? editedShift.split('-') : ['--:--', '--:--'];
-            const [origEntry, origExit] = originalShift.includes('-') ? originalShift.split('-') : ['--:--', '--:--'];
+            const [origEntry, origExit] = (originalShift && originalShift !== '--' && originalShift.includes('-') && originalShift !== '--:--') ? originalShift.split('-') : ['--:--', '--:--'];
 
             const originalBreak = breakMatch ? breakMatch[1].trim() : '--:--';
             const editedBreak = breakMatch ? breakMatch[2].trim() : '--:--';
@@ -1968,7 +1968,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
           );
 
           const logId = oldLog ? oldLog.id : "log_" + Date.now() + Math.random().toString(36).substr(2, 9);
-          
+
           const updateData = {
             id: logId,
             date: oldLog ? oldLog.date : dateStr,
@@ -1991,7 +1991,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
           const oldExit = oldLog ? (oldLog.endTime || '--:--') : '--:--';
           const oldBStart = oldLog ? (oldLog.breakStart || '--:--') : '--:--';
           const oldBEnd = oldLog ? (oldLog.breakEnd || '--:--') : '--:--';
-          const oldDur = oldLog ? (oldLog.hours || 0) : 0;
+          const oldDur = oldLog ? (oldLog.hours || '--:--') : '--:--';
 
           totalWorkerHoursOrig += oldDur;
           totalWorkerHoursNew += dur;
@@ -2569,10 +2569,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           >
                             <Send size={16} /> Corrigir e Enviar
                           </button>
-                          <button onClick={() => { 
-                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                              setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                            }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
+                          <button onClick={() => {
+                            setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                          }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
                         </>
                       ) : (
                         <>
@@ -2590,7 +2590,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     const exit = change.adminExit || change.editedExit || change.exit || '--:--';
                                     const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
                                     const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
-                                    
+
                                     if ((entry && entry !== '--:--' && exit && exit !== '--:--') || oldLog) {
                                       const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
                                       if (oldLog) {
@@ -4517,7 +4517,7 @@ function WorkerDashboard(props) {
     };
 
     checkPending(new Date()); // Mês atual
-    
+
     const prevM = new Date();
     prevM.setMonth(prevM.getMonth() - 1);
     checkPending(prevM); // Mês anterior
@@ -4617,50 +4617,50 @@ function WorkerDashboard(props) {
       </nav>
       <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8">
         {/* Notificações de Fim de Mês - PRIORIDADE MÁXIMA */}
-          {pendingApprovals.map((pending, idx) => {
-            const isViewingThisMonth = pending.monthStr === currentMonthStr;
-            
-            return (
-              <div key={`pending-${pending.monthStr}`} className="mb-8 animate-in slide-in-from-top-4 duration-700">
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-1 shadow-2xl ring-4 ring-indigo-500/20">
-                  <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-5">
-                        <div className="bg-indigo-100 p-4 rounded-2xl text-indigo-600 shadow-inner animate-pulse">
-                          <Clock size={32} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">
-                            Validar Horas de {pending.date.toLocaleDateString('pt-PT', { month: 'long' })}
-                          </h3>
-                          <p className="text-sm font-bold text-slate-500 mt-1">
-                            {isViewingThisMonth 
-                              ? "O mês terminou. Verifica os teus registos e submete para aprovação."
-                              : "Ainda tens horas de um mês anterior por validar. Por favor, revê e submete."}
-                          </p>
-                        </div>
+        {pendingApprovals.map((pending, idx) => {
+          const isViewingThisMonth = pending.monthStr === currentMonthStr;
+
+          return (
+            <div key={`pending-${pending.monthStr}`} className="mb-8 animate-in slide-in-from-top-4 duration-700">
+              <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-1 shadow-2xl ring-4 ring-indigo-500/20">
+                <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-5">
+                      <div className="bg-indigo-100 p-4 rounded-2xl text-indigo-600 shadow-inner animate-pulse">
+                        <Clock size={32} />
                       </div>
-                      {isViewingThisMonth ? (
-                        <button
-                          onClick={() => handleApproveMonth(currentUser.id)}
-                          className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 flex items-center justify-center gap-3"
-                        >
-                          <CheckCircle size={18} /> Confirmar e Enviar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
-                          className="w-full md:w-auto px-10 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
-                        >
-                          <Clock size={18} /> Rever e Validar
-                        </button>
-                      )}
+                      <div>
+                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">
+                          Validar Horas de {pending.date.toLocaleDateString('pt-PT', { month: 'long' })}
+                        </h3>
+                        <p className="text-sm font-bold text-slate-500 mt-1">
+                          {isViewingThisMonth
+                            ? "O mês terminou. Verifica os teus registos e submete para aprovação."
+                            : "Ainda tens horas de um mês anterior por validar. Por favor, revê e submete."}
+                        </p>
+                      </div>
                     </div>
+                    {isViewingThisMonth ? (
+                      <button
+                        onClick={() => handleApproveMonth(currentUser.id)}
+                        className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 flex items-center justify-center gap-3"
+                      >
+                        <CheckCircle size={18} /> Confirmar e Enviar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
+                        className="w-full md:w-auto px-10 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
+                      >
+                        <Clock size={18} /> Rever e Validar
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
 
         {/* Notificação de Assinaturas Pendentes */}
         {(documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id).length > 0 && (

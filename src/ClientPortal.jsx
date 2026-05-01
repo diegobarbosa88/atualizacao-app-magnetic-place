@@ -1003,9 +1003,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
        });
 
 relevantDays.forEach(d => {
-            const originalEntry = d.entry === '--:--' ? '' : d.entry;
-            const originalExit = d.exit === '--:--' ? '' : d.exit;
-            const originalShift = (!originalEntry || !originalExit) ? '--:--' : `${originalEntry}-${originalExit}`;
+            const originalEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
+            const originalExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
+            const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
             const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
             const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
             const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
