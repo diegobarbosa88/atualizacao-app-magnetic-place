@@ -2172,38 +2172,32 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                               <div className="space-y-3">
                                 {days.map((change, cIdx) => (
-                                <div key={cIdx} className="bg-amber-50/30 p-4 rounded-3xl border border-amber-100 shadow-sm">
+                                <div key={cIdx} className="bg-amber-50/30 p-4 rounded-xl border border-amber-100 shadow-sm">
                                   <div className="flex flex-col md:flex-row items-center gap-4">
                                     <div className="md:w-32">
-                                      <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{change.date || change.dateLabel}</span>
+                                      <span className="font-bold text-[10px] text-slate-600 uppercase tracking-wider">{change.date || change.dateLabel}</span>
                                     </div>
 
-                                    <div className="flex-1 bg-white border border-amber-100 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
-                                      <div className="flex flex-col sm:flex-row items-center gap-6">
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Turno:</span>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-slate-300 line-through text-[10px]">{change.originalShift || (change.entry + '-' + change.exit)}</span>
-                                            <span className="text-slate-300">→</span>
-                                            <span className="text-amber-600 font-black text-xs">{change.editedEntry}-{change.editedExit}</span>
-                                          </div>
+                                    <div className="flex-1 bg-white/50 border border-amber-200 px-4 py-2 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+                                      <div className="flex flex-col sm:flex-row items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-slate-400">Turno:</span>
+                                          <span className="text-slate-400 line-through decoration-rose-400">{change.originalShift || (change.entry + '-' + change.exit)}</span>
+                                          <span className="text-slate-300">→</span>
+                                          <span className="text-amber-600 font-black">{change.editedEntry}-{change.editedExit}</span>
                                         </div>
                                         
-                                        <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
+                                        <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
 
-                                        <div className="flex items-center gap-3">
-                                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa:</span>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-slate-300 line-through text-[10px]">{change.originalBreak || '--:-- - --:--'}</span>
-                                            <span className="text-slate-300">→</span>
-                                            <span className="text-amber-600 font-black text-xs">{change.editedBreakStart || '--:--'} - {change.editedBreakEnd || '--:--'}</span>
-                                          </div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-bold text-slate-400">Pausa:</span>
+                                          <span className="text-slate-400 line-through decoration-rose-400">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
+                                          <span className="text-slate-300">→</span>
+                                          <span className="text-amber-600 font-black">{change.editedBreakStart || '--:--'} - {change.editedBreakEnd || '--:--'}</span>
                                         </div>
                                       </div>
 
-                                      <div className="bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200">
-                                        <span className="text-amber-700 font-black text-xs">{(change.editedHours || change.newHours || 0)}h</span>
-                                      </div>
+                                      <span className="sm:ml-2 px-2 py-1 rounded-md font-black bg-amber-100 text-amber-700">{(change.editedHours || change.newHours || 0)}h</span>
                                     </div>
                                   </div>
 
