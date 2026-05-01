@@ -4660,7 +4660,27 @@ function WorkerDashboard(props) {
                 </div>
               </div>
             );
-          })};
+          })}
+
+        {/* Notificação de Assinaturas Pendentes */}
+        {(documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id).length > 0 && (
+          <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
+            <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-1 shadow-lg">
+              <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-center gap-5">
+                    <div className="bg-amber-100 p-4 rounded-2xl text-amber-600 shadow-inner">
+                      <AlertCircle size={32} />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Assinaturas Pendentes</h3>
+                      <p className="text-sm font-bold text-slate-500 mt-1">Tens documentos importantes que requerem a tua validação e assinatura digital.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById('secao-documentos');
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }}
                     className="w-full md:w-auto px-10 py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
                   >
