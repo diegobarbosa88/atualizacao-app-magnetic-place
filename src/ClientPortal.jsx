@@ -1002,11 +1002,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
           return d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
        });
 
-       relevantDays.forEach(d => {
-           const originalShift = `${d.entry}-${d.exit}`;
-           const editedShift = `${d.editedEntry}-${d.editedExit}`;
-           const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
-           const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
+relevantDays.forEach(d => {
+            const originalEntry = d.entry === '--:--' ? '' : d.entry;
+            const originalExit = d.exit === '--:--' ? '' : d.exit;
+            const originalShift = (!originalEntry || !originalExit) ? '--:--' : `${originalEntry}-${originalExit}`;
+            const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
+            const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
+            const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
            
            correcoesTexto += `   • ${d.rawDate || d.date}:\n`;
            correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
