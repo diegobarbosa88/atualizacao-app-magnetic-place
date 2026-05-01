@@ -998,12 +998,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const changedWorkers = isQuickMessage ? draftData.filter(w => w.dailyRecords.some(d => {
           return d.editedEntry && d.editedExit && d.editedHours > 0;
         })) : draftData.filter(w => w.dailyRecords.some(d => {
+        const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
         const originalEntry = d.entry === '--:--' ? '' : d.entry;
         const originalExit = d.exit === '--:--' ? '' : d.exit;
-        const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
         const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
         const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
-        return hasOriginal ? hasChange : wasEdited;
+        return isNewDay ? wasEdited : hasChange;
     }));
     
     const diffTotal = (draftTotal - originalTotal).toFixed(2);
@@ -1025,33 +1025,34 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
        correcoesTexto += `   Alterações:\n`;
        
 const relevantDays = isQuickMessage ? w.dailyRecords.filter(d => {
-            const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
-            return hasOriginal ? d.hours > 0 : (d.editedEntry && d.editedExit && d.editedHours > 0);
+            const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
+            return isNewDay ? (d.editedEntry && d.editedExit && d.editedHours > 0) : d.hours > 0;
         }) : w.dailyRecords.filter(d => {
+           const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
            const originalEntry = d.entry === '--:--' ? '' : d.entry;
            const originalExit = d.exit === '--:--' ? '' : d.exit;
-           const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
            const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
            const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
-           return hasOriginal ? hasChange : wasEdited;
+           return isNewDay ? wasEdited : hasChange;
         });
 
 relevantDays.forEach(d => {
-            const originalEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
-            const originalExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
-const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
-            const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
-            const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
-            const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
-            
-            correcoesTexto += `   • ${d.rawDate || d.date}:\n`;
-            correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
-            if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
-              correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;
-            }
-            const origH = d.isNew ? 0 : d.hours;
-            correcoesTexto += `     - Horas: ${origH}h ➔ ${d.editedHours}h\n`;
-       });
+             const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
+             const originalEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
+             const originalExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
+             const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
+             const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
+             const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
+             const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
+
+             correcoesTexto += `   • ${d.rawDate || d.date}:\n`;
+             correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
+             if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
+               correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;
+             }
+             const origH = isNewDay ? 0 : d.hours;
+             correcoesTexto += `     - Horas: ${origH}h ➔ ${d.editedHours}h\n`;
+        });
        correcoesTexto += `\n`;
     });
 
@@ -1162,14 +1163,14 @@ const originalShift = (!originalEntry || !originalExit || originalEntry === '--'
               const correcoesTexto = generateCorrectionMessage(false);
               const changedWorkers = draftData.map(w => {
                 const modifiedDays = w.dailyRecords.filter(d => {
+                  const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
                   const originalEntry = d.entry === '--:--' ? '' : d.entry;
                   const originalExit = d.exit === '--:--' ? '' : d.exit;
                   const originalBStart = d.breakStart || '';
                   const originalBEnd = d.breakEnd || '';
-                  const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
                   const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
                   const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== originalBStart || d.editedBreakEnd !== originalBEnd;
-                  return hasOriginal ? hasChange : wasEdited;
+                  return isNewDay ? wasEdited : hasChange;
                 });
                 return { ...w, dailyRecords: modifiedDays };
               }).filter(w => w.dailyRecords.length > 0);
