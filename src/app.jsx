@@ -67,7 +67,7 @@ const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
 const sendNotificationEmail = async (clientEmail, clientName, notifTitle, notifMessage, clientId = null, month = null) => {
   try {
     const monthStr = month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
-    const clientParam = clientId ? `&client=${clientId}&month=${monthStr}` : '';
+    const clientParam = clientId ? `&client=${String(clientId)}&month=${monthStr}` : '';
     const templateParams = {
       to_email: clientEmail || 'contato@cliente.pt',
       to_name: clientName,
@@ -2097,7 +2097,18 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
         <div className="space-y-4">
           {correctionNotifications.map(notif => {
             const targetClientId = notif.target_client_id || (clients.find(c => c.name.toLowerCase() === notif.message.toLowerCase().split('\n')[0]?.replace('⚠️ PEDIDO DE CORREÇÃO: ', '').replace('💬 MENSAGEM DE DIVERGÊNCIA: ', ''))?.id);
-            const rawTargetMonth = (notif.message.match(/📅 Período: (.+)/)?.[1] || '').includes('2024') ? (notif.message.match(/📅 Período: (.+)/)?.[1] || '').match(/\d{4}-\d{2}/)?.[0] : null;
+            const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
+            const periodLabel = periodMatch ? periodMatch[1].trim() : '';
+            const rawTargetMonth = periodLabel.match(/\d{4}-\d{2}/)?.[0] || (periodLabel ? (() => {
+              const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+              const lowerLabel = periodLabel.toLowerCase();
+              const monthIdx = months.findIndex(m => lowerLabel.includes(m));
+              const yearMatch = periodLabel.match(/\d{4}/);
+              if (monthIdx >= 0 && yearMatch) {
+                return `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
+              }
+              return null;
+            })() : null);
             const details = parseCorrectionDetails(notif.message, targetClientId, rawTargetMonth);
             let currentData;
             if (editingDrafts[notif.id]) {
@@ -2587,16 +2598,21 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               const targetClient = clients.find(c => String(c.id) === String(notif.target_client_id));
                               if (targetClient?.email) {
                                 await sendNotificationEmail(targetClient.email, targetClient.name, newNotif.title, newNotif.message, notif.target_client_id, currentData.monthLabel);
-                              }
+                                }
 
-                              await handleDelete('app_notifications', notif.id);
-                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                              alert("Correções aplicadas e cliente notificado!");
-                            }}
-                            className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
-                          >
-                            <Send size={16} /> Corrigir e Enviar
-                          </button>
+                                await handleDelete('app_notifications', notif.id);
+                                setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+
+                                if (notif.payload?.correcao_id) {
+                                  await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
+                                }
+
+                                alert("Correções aplicadas e cliente notificado!");
+                              }}
+                              className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
+                            >
+                              <Send size={16} /> Corrigir e Enviar
+                            </button>
                           <button onClick={() => {
                             setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                             setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
@@ -2650,7 +2666,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
                                     message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`
                                   };
-                                  await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, fbNotif.message, notif.target_client_id, currentData.monthLabel || details.monthLabel);
+                                  await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, fbNotif.message, notif.target_client_id, rawTargetMonth || currentData.monthLabel || details.monthLabel);
                                 }
 
                                 await handleDelete('app_notifications', notif.id);
@@ -2661,13 +2677,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               <CheckCircle size={16} /> Aceitar e Aplicar
                             </button>
                           ) : (
-<button onClick={() => {
+<button onClick={async () => {
                               if (!window.confirm("Marcar este reporte como resolvido e notificar o cliente?")) return;
                               const feedbackNotifId = "fb_" + Date.now();
                               const fbNotifData = {
                                 id: feedbackNotifId,
-                                title: `Reporte de Divergência Resolvido: ${details.monthLabel || ''}`,
-                                message: `O seu reporte de divergência referente ao período de ${details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
+                                title: `Reporte de Divergência Resolvido: ${details.monthLabel || notif.payload?.month || ''}`,
+                                message: `O seu reporte de divergência referente ao período de ${details.monthLabel || notif.payload?.month || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
                                 type: 'success',
                                 target_type: 'client',
                                 target_client_id: String(notif.target_client_id),
@@ -2675,13 +2691,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 is_active: true,
                                 payload: { type: 'correcoes_aplicadas' }
                               };
-                              saveToDb('app_notifications', feedbackNotifId, fbNotifData).then(async () => {
-                                const targetClient3 = clients.find(c => String(c.id) === String(notif.target_client_id));
-                                if (targetClient3?.email) {
-                                  await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, fbNotifData.message, notif.target_client_id, details.monthLabel);
-                                }
-                              });
-                              handleDelete('app_notifications', notif.id);
+                              await saveToDb('app_notifications', feedbackNotifId, fbNotifData);
+                              const targetClient3 = clients.find(c => String(c.id) === String(notif.target_client_id));
+                              if (targetClient3?.email) {
+                                await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, fbNotifData.message, notif.target_client_id, rawTargetMonth || notif.payload?.month || details.monthLabel);
+                              }
+                              await handleDelete('app_notifications', notif.id);
+                              if (notif.payload?.correcao_id) {
+                                await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
+                              }
                               alert("Reporte marcado como resolvido.");
                             }} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
                               <CheckCircle size={16} /> Marcar como Resolvido
@@ -3170,6 +3188,15 @@ function AdminDashboard(props) {
   const daysInMonthList = useMemo(() => Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }, (_, i) => toISODateLocal(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1))), [currentMonth]);
   const currentMonthStr = toISODateLocal(currentMonth).substring(0, 7);
   const portalMonthStr = toISODateLocal(portalMonth).substring(0, 7);
+
+  const allClientsValidated = useMemo(() => {
+    if (clients.length === 0) return false;
+    return clients.every(c => {
+      const approval = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr);
+      const hasEmail = c.status_email === `enviado_${portalMonthStr}`;
+      return approval || hasEmail;
+    });
+  }, [clients, clientApprovals, portalMonthStr]);
 
   const [viewedCorrections, setViewedCorrections] = useState(() => {
     const saved = localStorage.getItem('magnetic_viewed_corrections');
@@ -3777,11 +3804,14 @@ function AdminDashboard(props) {
                     <div className="h-1 w-1 bg-slate-300 rounded-full"></div>
                     <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100">
                       <button onClick={() => setPortalMonth(new Date(portalMonth.setMonth(portalMonth.getMonth() - 1)))} className="p-1 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"><ChevronLeft size={14} /></button>
-                      <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest min-w-[100px] text-center">
+                      <span className={`text-[10px] font-black uppercase tracking-widest min-w-[100px] text-center ${allClientsValidated ? 'text-emerald-700' : 'text-indigo-700'}`}>
                         {portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
                       </span>
                       <button onClick={() => setPortalMonth(new Date(portalMonth.setMonth(portalMonth.getMonth() + 1)))} className="p-1 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"><ChevronRight size={14} /></button>
                     </div>
+                    {allClientsValidated && (
+                      <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">✓ Validado</span>
+                    )}
                   </div>
                 </div>
 
@@ -3831,7 +3861,7 @@ function AdminDashboard(props) {
                           const totalHoras = logs.filter(l => l.clientId === c.id && l.date?.substring(0, 7) === portalMonthStr).reduce((acc, l) => acc + l.hours, 0);
                           const approval = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr);
                           const sentEmails = c.sent_emails || {};
-                          const status = approval ? 'validado' : (sentEmails[portalMonthStr] ? 'enviado' : 'pendente');
+                          const status = approval ? 'validado' : (c.status_email === `enviado_${portalMonthStr}` ? 'enviado' : 'pendente');
                           return { ...c, totalHoras, status };
                         }).sort((a, b) => {
                           let res = 0;
@@ -3845,7 +3875,7 @@ function AdminDashboard(props) {
                         })).map(c => {
                           const status = c.status;
                           const monthStr = portalMonthStr;
-                          const linkUnico = c.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${c.id}&month=${monthStr}`;
+                          const linkUnico = c.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${String(c.id)}&month=${monthStr}`;
 
                           return (
                             <tr key={c.id} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-all even:bg-slate-50/50 last:border-b-0 group">
@@ -5153,6 +5183,7 @@ function App(props) {
   const [personalSchedules, setPersonalSchedules] = useState([]);
   const [logs, setLogs] = useState([]);
   const [expenses, setExpenses] = useState([]);
+  const [correcoesCorrections, setCorrecoesCorrections] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [clientApprovals, setClientApprovals] = useState([]);
@@ -5241,6 +5272,7 @@ function App(props) {
         // Fetch tabela documents (nome em inglês)
         fetchTable('documents', setDocuments),
         fetchTable('app_notifications', setAppNotifications),
+        fetchTable('correcoes', setCorrecoesCorrections),
       ]);
     };
     fetchData();
@@ -5256,6 +5288,17 @@ function App(props) {
         if (payload.eventType === 'INSERT') setAppNotifications(prev => [payload.new, ...prev]);
         else if (payload.eventType === 'UPDATE') setAppNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
         else if (payload.eventType === 'DELETE') setAppNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+      })
+      .subscribe();
+
+    // Correções
+    const channelCorrecoes = supabase
+      .channel('realtime-correcoes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'correcoes' }, (payload) => {
+        console.log('Realtime correcao received:', payload.eventType, payload.new);
+        if (payload.eventType === 'INSERT') setCorrecoesCorrections(prev => [payload.new, ...prev]);
+        else if (payload.eventType === 'UPDATE') setCorrecoesCorrections(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
+        else if (payload.eventType === 'DELETE') setCorrecoesCorrections(prev => prev.filter(c => c.id !== payload.old.id));
       })
       .subscribe();
 
@@ -5314,6 +5357,10 @@ function App(props) {
       console.log('saveToDb app_notifications: id=', id, 'data=', data);
       setAppNotifications(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [data, ...prev]);
     }
+    if (colName === 'correcoes') {
+      console.log('saveToDb correcoes: id=', id, 'data=', data);
+      setCorrecoesCorrections(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [data, ...prev]);
+    }
 
     if (colName === 'documents' || colName === 'documentos') {
       setDocuments(prev => {
@@ -5359,6 +5406,34 @@ function App(props) {
         if (nis) {
           payload.nis = nis;
         }
+      } else if (colName === 'clients') {
+        // Filtrar apenas campos que existem na tabela clients
+        const { name, morada, nif, email, valorHora, status_email, link_gerado, status, totalHoras, ...rest } = data;
+        payload = {
+          id: id,
+          name,
+          morada,
+          nif,
+          email,
+          valorHora,
+          status_email,
+          link_gerado,
+          ...rest
+        };
+      } else if (colName === 'correcoes') {
+        // Filtrar apenas campos que existem na tabela correcoes
+        const { title, message, status: correcaoStatus, client_id, month, payload: correcaoPayload, created_at, ...rest } = data;
+        payload = {
+          id: id,
+          title,
+          message,
+          status: correcaoStatus || 'pending',
+          client_id,
+          month,
+          payload: correcaoPayload || {},
+          created_at: created_at || new Date().toISOString(),
+          ...rest
+        };
       }
 
       console.log('DEBUG: Enviando para Supabase table:', tableName, 'payload:', payload);
@@ -5366,6 +5441,8 @@ function App(props) {
       if (error) {
         console.error(`Erro ao gravar em ${tableName}:`, error);
         console.error('Detalhes do erro:', error.message, error.details, error.hint);
+      } else {
+        console.log('Gravado com sucesso em', tableName);
       }
     }
   };
@@ -5381,6 +5458,7 @@ function App(props) {
     if (colName === 'approvals') setApprovals(prev => prev.filter(x => x.id !== id));
     if (colName === 'client_approvals') setClientApprovals(prev => prev.filter(x => x.id !== id));
     if (colName === 'app_notifications') setAppNotifications(prev => prev.filter(x => x.id !== id));
+    if (colName === 'correcoes') setCorrecoesCorrections(prev => prev.filter(x => x.id !== id));
     if (colName === 'documentos' || colName === 'documents') {
       const doc = documents.find(x => x.id === id);
       setDocuments(prev => prev.filter(x => x.id !== id));
@@ -5479,18 +5557,8 @@ function App(props) {
   }, [appNotifications, currentUser, dismissedNotifs]);
 
   const correctionNotifications = useMemo(() => {
-    return (appNotifications || []).filter(n =>
-      n.is_active &&
-      n.title &&
-      (
-        n.title.includes('Pedido de Correção') ||
-        n.title.includes('Contra-proposta Aceite') ||
-        n.title.includes('Divergência Reportada') ||
-        n.title.includes('Contra-proposta')
-      ) &&
-      n.target_type === 'admin'
-    );
-  }, [appNotifications]);
+    return correcoesCorrections.filter(c => c.status === 'pending');
+  }, [correcoesCorrections]);
 
   const handleDismissNotif = async (id) => {
     setDismissedNotifs(prev => {
@@ -5587,7 +5655,7 @@ function App(props) {
     setIsSendingEmail(true);
 
     const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
-    const modalLinkUnico = clienteSelecionado.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${clienteSelecionado.id}&month=${monthStr}`;
+    const modalLinkUnico = clienteSelecionado.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
 
     // Configurações da sua conta EmailJS
@@ -5614,9 +5682,7 @@ function App(props) {
         EMAILJS_PUBLIC_KEY
       );
 
-      const sentEmails = clienteSelecionado.sent_emails || {};
-      sentEmails[monthStr] = new Date().toISOString().split('T')[0];
-      const updatedClient = { ...clienteSelecionado, status_email: 'enviado', sent_emails: sentEmails };
+      const updatedClient = { ...clienteSelecionado, status_email: `enviado_${monthStr}` };
       saveToDb('clients', updatedClient.id, updatedClient);
       setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
 
@@ -5666,6 +5732,26 @@ function App(props) {
     const dateToSave = isMain ? formData.date : inlineDate;
     const wId = (currentUser.role === 'admin' ? auditWorkerId : currentUser.id);
     const logId = formData.id || `l${Date.now()}`;
+
+    const toMins = (t) => { if (!t || t === '--:--') return 0; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m); };
+    const newStart = toMins(formData.startTime);
+    const newEnd = toMins(formData.endTime);
+
+    const existingLogs = logs.filter(l =>
+      String(l.workerId) === String(wId) &&
+      l.date === dateToSave &&
+      String(l.clientId) === String(formData.clientId) &&
+      l.id !== logId
+    );
+
+    for (const log of existingLogs) {
+      const existingStart = toMins(log.startTime);
+      const existingEnd = toMins(log.endTime);
+      if (newStart < existingEnd && newEnd > existingStart) {
+        alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia. Não é permitido sobrepor horários.`);
+        return;
+      }
+    }
 
     saveToDb('logs', logId, { ...formData, date: dateToSave, hours, workerId: wId, id: logId });
 

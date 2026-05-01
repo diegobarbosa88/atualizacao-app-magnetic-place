@@ -804,7 +804,27 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                       created_at: new Date().toISOString()
                   };
                   console.log("Enviando notificação para admin:", newNotif);
-                  await saveToDb('app_notifications', notifId, newNotif);
+                  const correcaoId = "correcao_" + Date.now();
+                  const correcaoRecord = {
+                    id: correcaoId,
+                    title: `Divergência Reportada: ${clientData.name}`,
+                    message: correcoesTexto,
+                    status: 'pending',
+                    client_id: initialClientId,
+                    month: initialMonth,
+                    payload: { changes: fullMonthSnapshot, isFullMonth: true },
+                    created_at: new Date().toISOString()
+                  };
+                  await saveToDb('correcoes', correcaoId, correcaoRecord);
+
+                  // Include correcao_id in notification payload so admin can update status
+                  const newNotifWithCorrecaoId = {
+                      ...newNotif,
+                      payload: { ...newNotif.payload, correcao_id: correcaoId }
+                  };
+                  console.log("Enviando notificação para admin:", newNotifWithCorrecaoId);
+                  await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
+
                   console.log("Notificação guardada com sucesso");
                   goToView('sucesso_reporte');
                 }}
@@ -1156,7 +1176,25 @@ relevantDays.forEach(d => {
                   is_active: true,
                   created_at: new Date().toISOString()
               };
-              await saveToDb('app_notifications', notifId, newNotif);
+              const correcaoId = "correcao_" + Date.now();
+              const correcaoRecord = {
+                id: correcaoId,
+                title: `Pedido de Correção: ${clientData.name}`,
+                message: correcoesTexto,
+                status: 'pending',
+                client_id: initialClientId,
+                month: initialMonth,
+                payload: { changes: changedWorkers, isOnlyModified: true },
+                created_at: new Date().toISOString()
+              };
+              await saveToDb('correcoes', correcaoId, correcaoRecord);
+
+              const newNotifWithCorrecaoId = {
+                  ...newNotif,
+                  payload: { ...newNotif.payload, correcao_id: correcaoId }
+              };
+              await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
+
               goToView('sucesso_reporte');
           }} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-xl shadow-indigo-600/30 active:scale-95">Confirmar e Enviar</button>
         </div>
