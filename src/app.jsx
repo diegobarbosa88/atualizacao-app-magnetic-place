@@ -4497,6 +4497,34 @@ function WorkerDashboard(props) {
   lastBizDay.setHours(0, 0, 0, 0);
   const isEndOfMonth = todayDate.getTime() >= lastBizDay.getTime();
 
+  const pendingApprovals = useMemo(() => {
+    const pending = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const checkPending = (d) => {
+      const mStr = toISODateLocal(d).substring(0, 7);
+      const lBiz = getLastBusinessDayOfMonth(d);
+      lBiz.setHours(0, 0, 0, 0);
+      if (today.getTime() >= lBiz.getTime()) {
+        const isApproved = approvals.some(a => a.workerId === currentUser.id && a.month === mStr);
+        // Só pedir aprovação se tiver registos ou se for o mês atual?
+        // Vamos pedir sempre se passou o dia útil.
+        if (!isApproved) {
+          pending.push({ date: d, monthStr: mStr });
+        }
+      }
+    };
+
+    checkPending(new Date()); // Mês atual
+    
+    const prevM = new Date();
+    prevM.setMonth(prevM.getMonth() - 1);
+    checkPending(prevM); // Mês anterior
+
+    return pending;
+  }, [approvals, currentUser.id]);
+
   const handleOpenInlineForm = (ds) => {
     if (!expandedDays.includes(ds)) setExpandedDays(prev => [...prev, ds]);
     setInlineEditingDate(ds);
@@ -4588,89 +4616,51 @@ function WorkerDashboard(props) {
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8">
-        {/* Notificação de Fim de Mês - PRIORIDADE MÁXIMA */}
-        {!myApproval && isEndOfMonth && (
-          <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
-            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-1 shadow-2xl ring-4 ring-indigo-500/20">
-              <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-5">
-                    <div className="bg-indigo-100 p-4 rounded-2xl text-indigo-600 shadow-inner animate-pulse">
-                      <Clock size={32} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Validar Horas do Mês</h3>
-                      <p className="text-sm font-bold text-slate-500 mt-1">O mês está a terminar. Verifica os teus registos e submete para aprovação.</p>
+        {/* Notificações de Fim de Mês - PRIORIDADE MÁXIMA */}
+          {pendingApprovals.map((pending, idx) => {
+            const isViewingThisMonth = pending.monthStr === currentMonthStr;
+            
+            return (
+              <div key={`pending-${pending.monthStr}`} className="mb-8 animate-in slide-in-from-top-4 duration-700">
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-1 shadow-2xl ring-4 ring-indigo-500/20">
+                  <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                      <div className="flex items-center gap-5">
+                        <div className="bg-indigo-100 p-4 rounded-2xl text-indigo-600 shadow-inner animate-pulse">
+                          <Clock size={32} />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">
+                            Validar Horas de {pending.date.toLocaleDateString('pt-PT', { month: 'long' })}
+                          </h3>
+                          <p className="text-sm font-bold text-slate-500 mt-1">
+                            {isViewingThisMonth 
+                              ? "O mês terminou. Verifica os teus registos e submete para aprovação."
+                              : "Ainda tens horas de um mês anterior por validar. Por favor, revê e submete."}
+                          </p>
+                        </div>
+                      </div>
+                      {isViewingThisMonth ? (
+                        <button
+                          onClick={() => handleApproveMonth(currentUser.id)}
+                          className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 flex items-center justify-center gap-3"
+                        >
+                          <CheckCircle size={18} /> Confirmar e Enviar
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
+                          className="w-full md:w-auto px-10 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
+                        >
+                          <Clock size={18} /> Rever e Validar
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleApproveMonth(currentUser.id)}
-                    className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 flex items-center justify-center gap-3"
-                  >
-                    <CheckCircle size={18} /> Confirmar e Enviar
-                  </button>
                 </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Banner de Notificações Ativas */}
-        {myNotifications.map(notif => (
-          <div key={notif.id} className="mb-4 animate-in slide-in-from-top-4 duration-700">
-            <div className={`rounded-[2rem] p-1 shadow-lg ${notif.type === 'urgent' ? 'bg-gradient-to-br from-rose-500 to-red-600' :
-              notif.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
-                notif.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
-                  'bg-gradient-to-br from-indigo-500 to-violet-600'
-              }`}>
-              <div className="bg-white/95 backdrop-blur-sm rounded-[1.9rem] p-4 sm:p-6">
-                <div className="flex items-center gap-4">
-                  <div className={`p-3 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' :
-                    notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
-                      notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
-                        'bg-indigo-50 text-indigo-600'
-                    }`}>
-                    {notif.type === 'urgent' ? <AlertCircle size={24} /> : <Megaphone size={24} />}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter truncate">{notif.title}</h3>
-                    <p className="text-xs font-bold text-slate-500 mt-0.5 leading-relaxed">
-                      {notif.title.includes('Pedido de Correção') ? notif.message.split('\n')[0] + '...' : notif.message}
-                    </p>
-                  </div>
-                  {notif.is_dismissible && (
-                    <button
-                      onClick={() => handleDismissNotif(notif.id)}
-                      className="p-2 text-slate-300 hover:text-slate-600 transition-all"
-                    >
-                      <X size={20} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {/* Destaque de Documentos Pendentes */}
-        {(documents || []).some(d => d.workerId === currentUser?.id && d.status === 'Pendente') && (
-          <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
-            <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-1 shadow-lg">
-              <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-5">
-                    <div className="bg-amber-100 p-4 rounded-2xl text-amber-600 shadow-inner">
-                      <AlertCircle size={32} />
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Assinaturas Pendentes</h3>
-                      <p className="text-sm font-bold text-slate-500 mt-1">Tens documentos importantes que requerem a tua validação e assinatura digital.</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const el = document.getElementById('secao-documentos');
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            );
+          })};
                     }}
                     className="w-full md:w-auto px-10 py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
                   >
