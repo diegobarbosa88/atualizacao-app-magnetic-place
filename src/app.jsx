@@ -2267,31 +2267,71 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
                                     {isDayChanged ? (
                                       <>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-slate-400 font-bold">Turno:</span>
-                                          <span className="text-slate-400 line-through decoration-rose-400">{change.entry} - {change.exit}</span>
-                                          <span className="text-slate-300">→</span>
-                                          <span className="text-amber-600 font-black">{displayEntry} - {displayExit}</span>
-                                        </div>
-                                        <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-slate-400 font-bold">Pausa:</span>
-                                          <span className="text-slate-400 line-through decoration-rose-400">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
-                                          <span className="text-slate-300">→</span>
-                                          <span className="text-amber-600 font-black">{displayBreakStart} - {displayBreakEnd}</span>
-                                        </div>
+                                        {isDayEditing ? (
+                                          <>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Turno:</span>
+                                              <input type="time" value={change.adminEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                              <span className="text-indigo-400">-</span>
+                                              <input type="time" value={change.adminExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            </div>
+                                            <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Pausa:</span>
+                                              <input type="time" value={change.adminBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                              <span className="text-indigo-400">-</span>
+                                              <input type="time" value={change.adminBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Turno:</span>
+                                              <span className="text-slate-400 line-through decoration-rose-400">{change.entry} - {change.exit}</span>
+                                              <span className="text-slate-300">→</span>
+                                              <span className="text-amber-600 font-black">{displayEntry} - {displayExit}</span>
+                                            </div>
+                                            <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Pausa:</span>
+                                              <span className="text-slate-400 line-through decoration-rose-400">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
+                                              <span className="text-slate-300">→</span>
+                                              <span className="text-amber-600 font-black">{displayBreakStart} - {displayBreakEnd}</span>
+                                            </div>
+                                          </>
+                                        )}
                                       </>
                                     ) : (
                                       <>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-slate-400 font-bold">Turno:</span>
-                                          <span className="text-slate-600 font-black">{change.entry} - {change.exit}</span>
-                                        </div>
-                                        <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
-                                        <div className="flex items-center gap-2">
-                                          <span className="text-slate-400 font-bold">Pausa:</span>
-                                          <span className="text-slate-600 font-black">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
-                                        </div>
+                                        {isDayEditing ? (
+                                          <>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Turno:</span>
+                                              <input type="time" value={change.adminEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                              <span className="text-indigo-400">-</span>
+                                              <input type="time" value={change.adminExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            </div>
+                                            <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Pausa:</span>
+                                              <input type="time" value={change.adminBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                              <span className="text-indigo-400">-</span>
+                                              <input type="time" value={change.adminBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            </div>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Turno:</span>
+                                              <span className="text-slate-600 font-black">{change.entry} - {change.exit}</span>
+                                            </div>
+                                            <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
+                                            <div className="flex items-center gap-2">
+                                              <span className="text-slate-400 font-bold">Pausa:</span>
+                                              <span className="text-slate-600 font-black">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
+                                            </div>
+                                          </>
+                                        )}
                                       </>
                                     )}
                                     {(() => {
@@ -2315,27 +2355,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                         }
                                       })()}
                                   </div>
-                                  
-                                  {isDayEditing && (
-                                    <div className="mt-4 pt-4 border-t border-indigo-50 grid grid-cols-2 gap-4 bg-indigo-50/30 p-4 rounded-2xl">
-                                      <div className="space-y-1">
-                                        <label className="text-[8px] font-black text-indigo-400 uppercase ml-1">Ajuste Turno</label>
-                                        <div className="flex items-center gap-2">
-                                          <input type="time" value={change.adminEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                          <span className="text-indigo-300 font-bold">➔</span>
-                                          <input type="time" value={change.adminExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                        </div>
-                                      </div>
-                                      <div className="space-y-1">
-                                        <label className="text-[8px] font-black text-indigo-400 uppercase ml-1">Ajuste Pausa</label>
-                                        <div className="flex items-center gap-2">
-                                          <input type="time" value={change.adminBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                          <span className="text-indigo-300 font-bold">➔</span>
-                                          <input type="time" value={change.adminBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
                                 </div>
                                 );
                                 })}
