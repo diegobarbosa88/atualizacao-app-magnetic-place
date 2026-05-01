@@ -1671,10 +1671,23 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 };
 
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser }) => {
-  const [editingDrafts, setEditingDrafts] = useState({});
-  const [activeWorkerInNotif, setActiveWorkerInNotif] = useState({});
-  const [activeEditingDay, setActiveEditingDay] = useState({});
-  const [expandedCorrecaoDias, setExpandedCorrecaoDias] = useState({});
+  const [editingDrafts, setEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [activeWorkerInNotif, setActiveWorkerInNotif] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_correcoes_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [activeEditingDay, setActiveEditingDay] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_correcoes_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [expandedCorrecaoDias, setExpandedCorrecaoDias] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_correcoes_expanded'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_drafts', JSON.stringify(editingDrafts)); }, [editingDrafts]);
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_worker', JSON.stringify(activeWorkerInNotif)); }, [activeWorkerInNotif]);
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(activeEditingDay)); }, [activeEditingDay]);
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
   const correctionNotifications = (appNotifications || []).filter(n =>
     n.is_active &&
     n.title &&
