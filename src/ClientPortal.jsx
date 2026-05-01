@@ -1389,6 +1389,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                           <>
                             <button 
                               onClick={() => {
+                                handleDismissNotif(notif.id);
                                 goToView('inicio');
                                 const scrollToSignature = () => {
                                   const el = document.getElementById('signature-canvas-area');
