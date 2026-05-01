@@ -1673,6 +1673,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser }) => {
   const [editingDrafts, setEditingDrafts] = useState({});
   const [activeWorkerInNotif, setActiveWorkerInNotif] = useState({});
+  const [activeEditingDay, setActiveEditingDay] = useState({});
   const correctionNotifications = (appNotifications || []).filter(n =>
     n.is_active &&
     n.title &&
@@ -2057,10 +2058,47 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
       ) : (
         <div className="space-y-4">
           {correctionNotifications.map(notif => {
-            const targetClientId = notif.target_client_id || (clients.find(c => c.name.toLowerCase() === notif.message.toLowerCase().split('\n')[0]?.replace('⚠️ PEDIDO DE CORREÇÃO: ', ''))?.id);
+            const targetClientId = notif.target_client_id || (clients.find(c => c.name.toLowerCase() === notif.message.toLowerCase().split('\n')[0]?.replace('⚠️ PEDIDO DE CORREÇÃO: ', '').replace('💬 MENSAGEM DE DIVERGÊNCIA: ', ''))?.id);
             const rawTargetMonth = (notif.message.match(/📅 Período: (.+)/)?.[1] || '').includes('2024') ? (notif.message.match(/📅 Período: (.+)/)?.[1] || '').match(/\d{4}-\d{2}/)?.[0] : null;
             const details = parseCorrectionDetails(notif.message, targetClientId, rawTargetMonth);
-            const currentData = editingDrafts[notif.id] || (notif.payload?.changes ? { workers: notif.payload.changes, clientName: details.clientName, monthLabel: details.monthLabel } : details);
+            let currentData;
+            if (editingDrafts[notif.id]) {
+              currentData = editingDrafts[notif.id];
+            } else if (details.workers && details.workers.length > 0) {
+              currentData = details;
+            } else if (notif.payload?.changes && Array.isArray(notif.payload.changes)) {
+              currentData = { 
+                workers: notif.payload.changes.map(w => ({ 
+                  ...w, 
+                  dailyRecords: (w.dailyRecords || w.changes || []).map(d => ({
+                    ...d,
+                    originalShift: d.entry && d.exit ? `${d.entry}-${d.exit}` : '--:--',
+                    entry: d.entry || '--:--',
+                    exit: d.exit || '--:--',
+                    breakStart: d.breakStart || '--:--',
+                    breakEnd: d.breakEnd || '--:--',
+                    originalBreak: (d.breakStart || d.breakEnd) ? `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}` : '--:--',
+                    editedEntry: d.editedEntry || d.entry || '--:--',
+                    editedExit: d.editedExit || d.exit || '--:--',
+                    editedBreakStart: d.editedBreakStart || d.breakStart || '',
+                    editedBreakEnd: d.editedBreakEnd || d.breakEnd || '',
+                    originalHours: d.originalHours || d.hours || 0,
+                    editedHours: d.editedHours || d.hours || 0,
+                    adminEntry: '',
+                    adminExit: '',
+                    adminBreakStart: '',
+                    adminBreakEnd: '',
+                    adminHours: null
+                  })),
+                  totalHours: w.totalHours || 0, 
+                  editedTotalHours: w.editedTotalHours || w.totalHours || 0 
+                })), 
+                clientName: details.clientName, 
+                monthLabel: details.monthLabel 
+              };
+            } else {
+              currentData = details;
+            }
             const isEditing = !!editingDrafts[notif.id];
 
             const calculateMonthTotal = (worker) => {
@@ -2079,8 +2117,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const handleUpdateDraft = (workerName, date, field, value) => {
               setEditingDrafts(prev => {
                 const currentDraft = prev[notif.id] || (() => {
-                  const draft = JSON.parse(JSON.stringify(details));
-                  draft.workers.forEach(w => { w.editedTotalHours = calculateMonthTotal(w); });
+                  const draft = JSON.parse(JSON.stringify(currentData));
+                  draft.workers.forEach(w => { 
+                    w.editedTotalHours = calculateMonthTotal(w); 
+                  });
                   return draft;
                 })();
                 const worker = currentDraft.workers.find(w => w.name === workerName);
@@ -2089,11 +2129,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   if (change) {
                     change[field] = value;
                     if (field.startsWith('admin')) {
-                      const entry = change.adminEntry;
-                      const exit = change.adminExit;
-                      const bStart = change.adminBreakStart || '--:--';
-                      const bEnd = change.adminBreakEnd || '--:--';
-                      change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                      const entry = change.adminEntry || change.editedEntry || change.entry || '';
+                      const exit = change.adminExit || change.editedExit || change.exit || '';
+                      const bStart = change.adminBreakStart || change.breakStart || '--:--';
+                      const bEnd = change.adminBreakEnd || change.breakEnd || '--:--';
+                      if (entry && exit) {
+                        change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                      }
                     }
                     worker.editedTotalHours = calculateMonthTotal(worker);
                   }
@@ -2191,72 +2233,106 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               </div>
 
                               <div className="space-y-3">
-                                {days.map((change, cIdx) => (
-                                <div key={cIdx} className="bg-amber-50/30 p-4 rounded-xl border border-amber-100 shadow-sm">
-                                  <div className="flex flex-col md:flex-row items-center gap-4">
-                                    <div className="md:w-32">
-                                      <span className="font-bold text-[10px] text-slate-600 uppercase tracking-wider">{change.date || change.dateLabel}</span>
-                                    </div>
-
-                                    <div className="flex-1 bg-white/50 border border-amber-200 px-4 py-2 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-                                      <div className="flex flex-col sm:flex-row items-center gap-3">
+                                {days.map((change, cIdx) => {
+                                  const isDayChanged = (change.adminEntry && change.adminEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
+                                                       (change.adminExit && change.adminExit !== (change.exit === '--:--' ? '' : change.exit)) ||
+                                                       (change.adminBreakStart && change.adminBreakStart !== (change.breakStart || '')) ||
+                                                       (change.adminBreakEnd && change.adminBreakEnd !== (change.breakEnd || '')) ||
+                                                       (change.editedEntry && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
+                                                       (change.editedExit && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
+                                  const displayEntry = change.adminEntry || change.editedEntry || change.entry || '--:--';
+                                  const displayExit = change.adminExit || change.editedExit || change.exit || '--:--';
+                                  const displayBreakStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
+                                  const displayBreakEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+                                  const displayHours = (change.adminHours !== null && change.adminHours !== undefined && change.adminHours > 0) 
+                          ? change.adminHours 
+                          : (change.editedHours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd) || 0);
+                                  
+                                  const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
+                                  const toggleDayEdit = () => {
+                                    setActiveEditingDay(prev => ({
+                                      ...prev,
+                                      [notif.id]: isDayEditing ? null : (change.date || change.dateLabel)
+                                    }));
+                                  };
+                                  
+                                  return (
+                                <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayChanged ? 'bg-amber-50 border border-amber-100' : 'bg-slate-50 border border-transparent'} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
+                                  <div className="flex items-center gap-3">
+                                    <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
+                                      <Edit2 size={14} />
+                                    </button>
+                                    <span className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">{change.date || change.dateLabel}</span>
+                                  </div>
+                                  <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
+                                    {isDayChanged ? (
+                                      <>
                                         <div className="flex items-center gap-2">
-                                          <span className="font-bold text-slate-400">Turno:</span>
-                                          <span className="text-slate-400 line-through decoration-rose-400">{change.originalShift || (change.entry + '-' + change.exit)}</span>
+                                          <span className="text-slate-400 font-bold">Turno:</span>
+                                          <span className="text-slate-400 line-through decoration-rose-400">{change.entry} - {change.exit}</span>
                                           <span className="text-slate-300">→</span>
-                                          <span className="text-amber-600 font-black">{change.editedEntry}-{change.editedExit}</span>
+                                          <span className="text-amber-600 font-black">{displayEntry} - {displayExit}</span>
                                         </div>
-                                        
                                         <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-
                                         <div className="flex items-center gap-2">
-                                          <span className="font-bold text-slate-400">Pausa:</span>
+                                          <span className="text-slate-400 font-bold">Pausa:</span>
                                           <span className="text-slate-400 line-through decoration-rose-400">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
                                           <span className="text-slate-300">→</span>
-                                          <span className="text-amber-600 font-black">{change.editedBreakStart || '--:--'} - {change.editedBreakEnd || '--:--'}</span>
+                                          <span className="text-amber-600 font-black">{displayBreakStart} - {displayBreakEnd}</span>
                                         </div>
-                                      </div>
-
-                                      {(() => {
-                                        const originalDayHours = change.originalHours || parseFloat(change.hours) || 0;
-                                        const editedDayHours = change.editedHours || change.newHours || 0;
-                                        const dayDiff = (editedDayHours - originalDayHours).toFixed(2);
+                                      </>
+                                    ) : (
+                                      <>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-slate-400 font-bold">Turno:</span>
+                                          <span className="text-slate-600 font-black">{change.entry} - {change.exit}</span>
+                                        </div>
+                                        <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-slate-400 font-bold">Pausa:</span>
+                                          <span className="text-slate-600 font-black">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {(() => {
+                                        const originalDayHours = parseFloat(change.hours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd));
+                                        const dayDiff = (displayHours - originalDayHours).toFixed(2);
                                         const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
                                         const dayDiffSign = dayDiff >= 0 ? '+' : '';
                                         return (
                                           <div className="flex items-center gap-1">
                                             <span className="text-xs text-slate-400 line-through">{originalDayHours}h</span>
                                             <span className="text-slate-300">→</span>
-                                            <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black text-xs">{editedDayHours}h</span>
-                                            <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>
+                                            <span className={`px-2 py-1 rounded-md font-black text-xs ${isDayChanged ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'}`}>{displayHours}h</span>
+                                            {isDayChanged && <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>}
                                           </div>
                                         );
                                       })()}
-                                    </div>
                                   </div>
-
-                                  {isEditing && (
+                                  
+                                  {isDayEditing && (
                                     <div className="mt-4 pt-4 border-t border-indigo-50 grid grid-cols-2 gap-4 bg-indigo-50/30 p-4 rounded-2xl">
                                       <div className="space-y-1">
                                         <label className="text-[8px] font-black text-indigo-400 uppercase ml-1">Ajuste Turno</label>
                                         <div className="flex items-center gap-2">
-                                          <input type="time" value={change.editedEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.adminEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                           <span className="text-indigo-300 font-bold">➔</span>
-                                          <input type="time" value={change.editedExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.adminExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                         </div>
                                       </div>
                                       <div className="space-y-1">
                                         <label className="text-[8px] font-black text-indigo-400 uppercase ml-1">Ajuste Pausa</label>
                                         <div className="flex items-center gap-2">
-                                          <input type="time" value={change.adminBreakStart || change.editedBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.adminBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                           <span className="text-indigo-300 font-bold">➔</span>
-                                          <input type="time" value={change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                          <input type="time" value={change.adminBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="flex-1 bg-white border border-indigo-100 rounded-xl p-2 text-xs font-black text-indigo-700 shadow-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
                                         </div>
                                       </div>
                                     </div>
                                   )}
                                 </div>
-                              ))}
+                                );
+                                })}
                               </div>
                             </div>
                           );
@@ -2348,31 +2424,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           >
                             <CheckCircle size={16} /> {details.workers.length > 0 ? 'Aceitar e Aplicar' : 'Marcar como Resolvido'}
                           </button>
-                          {details.workers.length === 0 && (
+{details.workers.length === 0 && (
                              <button onClick={() => handleDelete('app_notifications', notif.id)} className="px-6 py-3 bg-white text-slate-400 border border-slate-200 rounded-xl font-black text-xs uppercase hover:text-rose-500 transition-all shadow-sm">Arquivar</button>
-                          )}
-                          <button
-                            onClick={() => {
-                              const draft = JSON.parse(JSON.stringify(details));
-                              draft.workers.forEach(w => {
-                                const days = w.dailyRecords || w.changes || [];
-                                days.forEach(c => {
-                                  c.adminEntry = c.editedEntry || c.newEntry || '';
-                                  c.adminExit = c.editedExit || c.newExit || '';
-                                  c.adminBreakStart = c.editedBreakStart || c.newBreakStart || c.breakStart || c.originalBreakStart || '';
-                                  c.adminBreakEnd = c.editedBreakEnd || c.newBreakEnd || c.breakEnd || c.originalBreakEnd || '';
-                                  if (c.adminEntry && c.adminExit) {
-                                    c.adminHours = calculateDuration(c.adminEntry, c.adminExit, (!c.adminBreakStart || c.adminBreakStart === '--:--') ? null : c.adminBreakStart, (!c.adminBreakEnd || c.adminBreakEnd === '--:--') ? null : c.adminBreakEnd);
-                                  }
-                                });
-                                w.editedTotalHours = calculateMonthTotal(w);
-                              });
-                              setEditingDrafts(prev => ({ ...prev, [notif.id]: draft }));
-                            }}
-                            className="px-6 py-3 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase hover:bg-rose-100 transition-all flex items-center gap-2 border border-rose-100"
-                          >
-                            <Edit2 size={16} /> Contestar
-                          </button>
+                           )}
                           <button onClick={() => handleDelete('app_notifications', notif.id)} className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-all">Ignorar</button>
                         </>
                       )}
