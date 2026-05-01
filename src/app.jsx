@@ -2099,7 +2099,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             } else {
               currentData = details;
             }
-            const isEditing = !!editingDrafts[notif.id];
+            const hasWorkerChanges = currentData.workers && currentData.workers.some(w => 
+              (w.dailyRecords || w.changes || []).some(c => 
+                c.adminEntry || c.adminExit || c.adminBreakStart || c.adminBreakEnd || c.editedEntry || c.editedExit
+              )
+            );
+            const isEditing = true; // DEBUG: Always show correction button
 
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
@@ -2378,59 +2383,161 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         <>
                           <button
                             onClick={async () => {
-                              const reason = prompt("Motivo da Contra-proposta:");
-                              if (!reason) return;
-                              let clientMsg = `⚠️ CONTRA-PROPOSTA DO ADMINISTRADOR\n`;
-                              clientMsg += `👤 Cliente: ${currentData.clientName}\n📅 Período: ${currentData.monthLabel}\n💬 Motivo: ${reason}\n\n`;
-                              currentData.workers.forEach(w => {
-                                clientMsg += `👤 ${w.name}: ${w.totalHours}h ➔ ${w.editedTotalHours}h\n`;
+                              console.log("Iniciando correção para cliente:", notif.target_client_id);
+                              console.log("Workers:", currentData.workers?.length);
+                              
+                              // Primeiro salva as correções no banco de dados
+                              const targetClientId = notif.target_client_id;
+                              console.log("=== DEBUG CORREÇÃO ===");
+                              console.log("target_client_id:", targetClientId, "type:", typeof targetClientId);
+                              console.log("logs totais:", logs.length);
+                              console.log("currentData.workers:", (currentData.workers || []).length);
+                              
+                              if (!targetClientId) {
+                                alert("ERRO: target_client_id não encontrado na notificação!");
+                                return;
+                              }
+                              
+                              let savedCount = 0;
+                              for (const worker of (currentData.workers || [])) {
+                                console.log("Processando worker:", worker.name, "id:", worker.id);
+                                const workerLogs = logs.filter(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(targetClientId));
+                                console.log("  Logs deste worker neste cliente:", workerLogs.length);
+                                
+                                for (const change of (worker.dailyRecords || worker.changes || [])) {
+                                  const dateStr = change.date || change.rawDate;
+                                  if (!dateStr) continue;
+                                  
+                                  const workerIdStr = String(worker.id);
+                                  const clientIdStr = String(targetClientId);
+                                  
+                                  const oldLog = logs.find(l => String(l.workerId) === workerIdStr && String(l.clientId) === clientIdStr && l.date === dateStr);
+                                  
+                                  const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
+                                  const exit = change.adminExit || change.editedExit || change.exit || '--:--';
+                                  const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
+                                  const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+                                  const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                                  
+                                  const logData = {
+                                    startTime: entry,
+                                    endTime: exit,
+                                    breakStart: bStart === '--:--' ? null : bStart,
+                                    breakEnd: bEnd === '--:--' ? null : bEnd,
+                                    hours: dur
+                                  };
+                                  
+                                  if (oldLog) {
+                                    console.log("  Atualizando log existente:", oldLog.id, "date:", dateStr);
+                                    await saveToDb('logs', oldLog.id, { ...oldLog, ...logData });
+                                    savedCount++;
+                                  } else {
+                                    const nid = "log_" + Date.now() + Math.random();
+                                    console.log("  Criando novo log:", dateStr, "worker:", workerIdStr, "client:", clientIdStr);
+                                    await saveToDb('logs', nid, { 
+                                      id: nid, 
+                                      date: dateStr, 
+                                      workerId: workerIdStr, 
+                                      clientId: clientIdStr, 
+                                      ...logData, 
+                                      created_at: new Date().toISOString() 
+                                    });
+                                    savedCount++;
+                                  }
+                                }
+                              }
+                              console.log("Total processado:", savedCount);
+                              
+                              // Envia notificação para o cliente
+                              const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                              const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                              
+                              let clientMsg = `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                              clientMsg += `👤 Cliente: ${currentData.clientName}\n📅 Período: ${currentData.monthLabel}\n`;
+                              clientMsg += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
+                              clientMsg += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h\n\n`;
+                              (currentData.workers || []).forEach(w => {
+                                const orig = parseFloat(w.totalHours) || 0;
+                                const edit = parseFloat(w.editedTotalHours) || orig;
+                                const diff = (edit - orig).toFixed(2);
+                                const diffSign = diff >= 0 ? '+' : '';
+                                clientMsg += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${diffSign}${diff}h)\n`;
                               });
                               const notifId = "cntr_" + Date.now();
-                              await saveToDb('app_notifications', notifId, {
-                                id: notifId, title: `Contra-proposta: ${currentData.monthLabel || ''}`, message: clientMsg,
-                                type: 'warning', target_type: 'client', target_client_id: String(notif.target_client_id),
-                                created_at: new Date().toISOString(), is_active: true,
-                                payload: { type: 'counter_proposal', reason, month: currentData.monthLabel, changes: currentData.workers }
-                              });
+                              const newNotif = {
+                                id: notifId, 
+                                title: `Correção: ${currentData.monthLabel || ''}`, 
+                                message: clientMsg,
+                                type: 'warning', 
+                                target_type: 'client', 
+                                target_client_id: String(notif.target_client_id),
+                                created_at: new Date().toISOString(), 
+                                is_active: true,
+                                payload: { type: 'correcao_admin', month: currentData.monthLabel, totalOriginal, totalCorrigido, changes: currentData.workers }
+                              };
+                              console.log("Criando notificação para cliente:", newNotif);
+                              await saveToDb('app_notifications', notifId, newNotif);
+                              
                               await handleDelete('app_notifications', notif.id);
                               setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                              alert("Contra-proposta enviada!");
+                              alert("Correções aplicadas e cliente notificado!");
                             }}
-                            className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers.length === 0 ? 'hidden' : ''}`}
+                            className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
                           >
-                            <Send size={16} /> Enviar Contra-proposta
+                            <Send size={16} /> Corrigir e Enviar
                           </button>
                           <button onClick={() => setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; })} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
                         </>
                       ) : (
                         <>
-                          <button
-                            onClick={async () => {
-                              if (!window.confirm(details.workers.length > 0 ? "Aprovar todas as alterações?" : "Marcar este reporte como resolvido e notificar o cliente?")) return;
+                          {(currentData.workers && currentData.workers.length > 0) ? (
+                            <button
+                              onClick={async () => {
+                              if (!window.confirm("Aprovar todas as alterações?")) return;
                               
-                              if (details.workers.length > 0) {
-                                for (const worker of details.workers) {
-                                  for (const change of (worker.dailyRecords || worker.changes || [])) {
-                                    const dateStr = change.date || change.rawDate;
-                                    const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
-                                    const entry = change.editedEntry || change.newEntry;
-                                    const exit = change.editedExit || change.newExit;
-                                    const bStart = change.editedBreakStart || change.newBreakStart || '--:--';
-                                    const bEnd = change.editedBreakEnd || change.newBreakEnd || '--:--';
-                                    const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
-                                    if (oldLog) {
-                                      await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
-                                    } else {
-                                      const nid = "log_" + Date.now() + Math.random();
-                                      await saveToDb('logs', nid, { id: nid, date: dateStr, workerId: String(worker.id), clientId: String(notif.target_client_id), startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur, created_at: new Date().toISOString() });
-                                    }
+                              for (const worker of currentData.workers) {
+                                for (const change of (worker.dailyRecords || worker.changes || [])) {
+                                  const dateStr = change.date || change.rawDate;
+                                  const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
+                                  const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
+                                  const exit = change.adminExit || change.editedExit || change.exit || '--:--';
+                                  const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
+                                  const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+                                  const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                                  if (oldLog) {
+                                    await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
+                                  } else {
+                                    const nid = "log_" + Date.now() + Math.random();
+                                    await saveToDb('logs', nid, { id: nid, date: dateStr, workerId: String(worker.id), clientId: String(notif.target_client_id), startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur, created_at: new Date().toISOString() });
                                   }
                                 }
                               }
 
-                              // Notificar o cliente que as correções foram aceites e pedir validação
                               const feedbackNotifId = "fb_" + Date.now();
                               await saveToDb('app_notifications', feedbackNotifId, {
+                                id: feedbackNotifId,
+                                title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
+                                message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
+                                type: 'success',
+                                target_type: 'client',
+                                target_client_id: String(notif.target_client_id),
+                                created_at: new Date().toISOString(),
+                                is_active: true,
+                                payload: { type: 'correcoes_aplicadas' }
+                              });
+
+                              await handleDelete('app_notifications', notif.id);
+                              alert("Correções aplicadas e cliente notificado!");
+                            }}
+                            className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+                          >
+                            <CheckCircle size={16} /> Aceitar e Aplicar
+                          </button>
+                          ) : (
+                            <button onClick={() => {
+                              if (!window.confirm("Marcar este reporte como resolvido e notificar o cliente?")) return;
+                              const feedbackNotifId = "fb_" + Date.now();
+                              saveToDb('app_notifications', feedbackNotifId, {
                                 id: feedbackNotifId,
                                 title: `Reporte de Divergência Resolvido: ${details.monthLabel || ''}`,
                                 message: `O seu reporte de divergência referente ao período de ${details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
@@ -2441,17 +2548,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 is_active: true,
                                 payload: { type: 'correcoes_aplicadas' }
                               });
-
-                              await handleDelete('app_notifications', notif.id);
-                              alert(details.workers.length > 0 ? "Correções aplicadas e cliente notificado!" : "Reporte marcado como resolvido.");
-                            }}
-                            className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
-                          >
-                            <CheckCircle size={16} /> {details.workers.length > 0 ? 'Aceitar e Aplicar' : 'Marcar como Resolvido'}
-                          </button>
-{details.workers.length === 0 && (
-                             <button onClick={() => handleDelete('app_notifications', notif.id)} className="px-6 py-3 bg-white text-slate-400 border border-slate-200 rounded-xl font-black text-xs uppercase hover:text-rose-500 transition-all shadow-sm">Arquivar</button>
-                           )}
+                              handleDelete('app_notifications', notif.id);
+                              alert("Reporte marcado como resolvido.");
+                            }} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
+                              <CheckCircle size={16} /> Marcar como Resolvido
+                            </button>
+                          )}
                           <button onClick={() => handleDelete('app_notifications', notif.id)} className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-all">Ignorar</button>
                         </>
                       )}
