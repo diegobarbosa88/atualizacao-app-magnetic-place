@@ -2133,6 +2133,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           const selectedWorkerId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
                           const isSelected = selectedWorkerId === worker.id;
                           const workerChanged = (worker.editedTotalHours || worker.suggestedTotal || 0) !== (worker.totalHours || worker.originalTotal || 0);
+                          const originalTotal = worker.totalHours || worker.originalTotal || 0;
+                          const suggestedTotal = worker.editedTotalHours || worker.suggestedTotal || 0;
+                          const diff = (suggestedTotal - originalTotal).toFixed(2);
+                          const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                          const diffSign = diff >= 0 ? '+' : '';
                           return (
                             <button
                               key={idx}
@@ -2143,7 +2148,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[8px] ${workerChanged ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                                   {workerChanged ? '!' : '✓'}
                                 </span>
-                                <span className="text-[9px] font-black text-slate-400 uppercase">{(worker.editedTotalHours || worker.suggestedTotal || 0)}h</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[9px] font-black text-slate-400 uppercase">{suggestedTotal}h</span>
+                                  <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>
+                                </div>
                               </div>
                               <h4 className="font-black text-slate-800 text-xs leading-tight">{worker.name}</h4>
                             </button>
@@ -2159,14 +2167,20 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           if (!worker) return null;
                           const days = worker.dailyRecords || worker.changes || [];
                           const totalSugerido = worker.editedTotalHours || worker.totalHours || 0;
+                          const originalTotal = worker.totalHours || worker.originalTotal || 0;
+                          const diff = (totalSugerido - originalTotal).toFixed(2);
+                          const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                          const diffSign = diff >= 0 ? '+' : '';
 
                           return (
                             <div className="animate-fade-in space-y-4">
-                              <div className="bg-white p-6 rounded-3xl border border-slate-200 flex justify-between items-center shadow-sm">
-                                <h3 className="text-lg font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
-                                <div className="flex items-center gap-3">
-                                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Sugerido:</span>
-                                  <span className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-2xl font-black text-lg">{totalSugerido}H</span>
+                              <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                                <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
+                                  <span className="text-slate-300">→</span>
+                                  <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-sm">{totalSugerido}h</span>
+                                  <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>
                                 </div>
                               </div>
 
@@ -2197,7 +2211,21 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                         </div>
                                       </div>
 
-                                      <span className="sm:ml-2 px-2 py-1 rounded-md font-black bg-amber-100 text-amber-700">{(change.editedHours || change.newHours || 0)}h</span>
+                                      {(() => {
+                                        const originalDayHours = change.originalHours || parseFloat(change.hours) || 0;
+                                        const editedDayHours = change.editedHours || change.newHours || 0;
+                                        const dayDiff = (editedDayHours - originalDayHours).toFixed(2);
+                                        const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                                        const dayDiffSign = dayDiff >= 0 ? '+' : '';
+                                        return (
+                                          <div className="flex items-center gap-1">
+                                            <span className="text-xs text-slate-400 line-through">{originalDayHours}h</span>
+                                            <span className="text-slate-300">→</span>
+                                            <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black text-xs">{editedDayHours}h</span>
+                                            <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>
+                                          </div>
+                                        );
+                                      })()}
                                     </div>
                                   </div>
 
