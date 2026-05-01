@@ -2119,26 +2119,30 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               currentData = {
                 workers: notif.payload.changes.map(w => ({
                   ...w,
-                  dailyRecords: (w.dailyRecords || w.changes || []).map(d => ({
-                    ...d,
-                    originalShift: d.entry && d.exit ? `${d.entry}-${d.exit}` : '--:--',
-                    entry: d.entry || '--:--',
-                    exit: d.exit || '--:--',
-                    breakStart: d.breakStart || '--:--',
-                    breakEnd: d.breakEnd || '--:--',
-                    originalBreak: (d.breakStart || d.breakEnd) ? `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}` : '--:--',
-                    editedEntry: d.editedEntry || d.entry || '--:--',
-                    editedExit: d.editedExit || d.exit || '--:--',
-                    editedBreakStart: d.editedBreakStart || d.breakStart || '',
-                    editedBreakEnd: d.editedBreakEnd || d.breakEnd || '',
-                    originalHours: d.originalHours || d.hours || 0,
-                    editedHours: d.editedHours || d.hours || 0,
-                    adminEntry: '',
-                    adminExit: '',
-                    adminBreakStart: '',
-                    adminBreakEnd: '',
-                    adminHours: null
-                  })),
+                  dailyRecords: (w.dailyRecords || w.changes || []).map(d => {
+                    const isNewDay = d.isNew || (!d.entry || d.entry === '--:--') && (!d.originalHours || d.originalHours === 0);
+                    return {
+                      ...d,
+                      originalShift: d.entry && d.exit ? `${d.entry}-${d.exit}` : '--:--',
+                      entry: d.entry || '--:--',
+                      exit: d.exit || '--:--',
+                      breakStart: d.breakStart || '--:--',
+                      breakEnd: d.breakEnd || '--:--',
+                      originalBreak: (d.breakStart || d.breakEnd) ? `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}` : '--:--',
+                      editedEntry: d.editedEntry || d.entry || (isNewDay ? '' : '--:--'),
+                      editedExit: d.editedExit || d.exit || (isNewDay ? '' : '--:--'),
+                      editedBreakStart: d.editedBreakStart || d.breakStart || '',
+                      editedBreakEnd: d.editedBreakEnd || d.breakEnd || '',
+                      originalHours: d.originalHours || d.hours || 0,
+                      editedHours: d.editedHours || d.hours || 0,
+                      adminEntry: '',
+                      adminExit: '',
+                      adminBreakStart: '',
+                      adminBreakEnd: '',
+                      adminHours: null,
+                      isNew: isNewDay
+                    };
+                  }),
                   totalHours: w.totalHours || 0,
                   editedTotalHours: w.editedTotalHours || w.totalHours || 0
                 })),

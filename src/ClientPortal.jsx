@@ -995,10 +995,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
   };
 
   const generateCorrectionMessage = (isQuickMessage = false) => {
-    const changedWorkers = isQuickMessage ? draftData.filter(w => w.dailyRecords.some(d => d.hours > 0)) : draftData.filter(w => w.dailyRecords.some(d => {
+    const changedWorkers = isQuickMessage ? draftData.filter(w => w.dailyRecords.some(d => {
+          return d.editedEntry && d.editedExit && d.editedHours > 0;
+        })) : draftData.filter(w => w.dailyRecords.some(d => {
         const originalEntry = d.entry === '--:--' ? '' : d.entry;
         const originalExit = d.exit === '--:--' ? '' : d.exit;
-        return d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
+        const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
+        const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
+        const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
+        return hasOriginal ? hasChange : wasEdited;
     }));
     
     const diffTotal = (draftTotal - originalTotal).toFixed(2);
@@ -1019,26 +1024,33 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
        correcoesTexto += `   Total: ${w.totalHours}h ➔ ${w.editedTotalHours}h (${wDiff > 0 ? '+' : ''}${wDiff}h)\n`;
        correcoesTexto += `   Alterações:\n`;
        
-       const relevantDays = isQuickMessage ? w.dailyRecords.filter(d => d.hours > 0) : w.dailyRecords.filter(d => {
-          const originalEntry = d.entry === '--:--' ? '' : d.entry;
-          const originalExit = d.exit === '--:--' ? '' : d.exit;
-          return d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
-       });
+const relevantDays = isQuickMessage ? w.dailyRecords.filter(d => {
+            const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
+            return hasOriginal ? d.hours > 0 : (d.editedEntry && d.editedExit && d.editedHours > 0);
+        }) : w.dailyRecords.filter(d => {
+           const originalEntry = d.entry === '--:--' ? '' : d.entry;
+           const originalExit = d.exit === '--:--' ? '' : d.exit;
+           const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
+           const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
+           const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
+           return hasOriginal ? hasChange : wasEdited;
+        });
 
 relevantDays.forEach(d => {
             const originalEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
             const originalExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
-            const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
+const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
             const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
             const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
             const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
-           
-           correcoesTexto += `   • ${d.rawDate || d.date}:\n`;
-           correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
-           if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
-             correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;
-           }
-           correcoesTexto += `     - Horas: ${d.hours}h ➔ ${d.editedHours}h\n`;
+            
+            correcoesTexto += `   • ${d.rawDate || d.date}:\n`;
+            correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
+            if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
+              correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;
+            }
+            const origH = d.isNew ? 0 : d.hours;
+            correcoesTexto += `     - Horas: ${origH}h ➔ ${d.editedHours}h\n`;
        });
        correcoesTexto += `\n`;
     });
@@ -1154,10 +1166,10 @@ relevantDays.forEach(d => {
                   const originalExit = d.exit === '--:--' ? '' : d.exit;
                   const originalBStart = d.breakStart || '';
                   const originalBEnd = d.breakEnd || '';
-                  return d.editedEntry !== originalEntry ||
-                         d.editedExit !== originalExit ||
-                         d.editedBreakStart !== originalBStart ||
-                         d.editedBreakEnd !== originalBEnd;
+                  const hasOriginal = (d.entry && d.entry !== '--:--') || (d.exit && d.exit !== '--:--') || d.breakStart || d.breakEnd;
+                  const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
+                  const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== originalBStart || d.editedBreakEnd !== originalBEnd;
+                  return hasOriginal ? hasChange : wasEdited;
                 });
                 return { ...w, dailyRecords: modifiedDays };
               }).filter(w => w.dailyRecords.length > 0);
