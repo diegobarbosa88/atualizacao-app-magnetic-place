@@ -601,7 +601,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
       </section>
 
       {currentView === 'inicio' && !printingWorker && (
-      <section className="approval-section bg-white rounded-[3rem] shadow-xl border border-slate-100 p-8 md:p-12 animate-in slide-in-from-bottom-8 duration-500">
+      <section id="validar-horarios-section" className="approval-section bg-white rounded-[3rem] shadow-xl border border-slate-100 p-8 md:p-12 animate-in slide-in-from-bottom-8 duration-500">
         {isApproved ? (
           <div className="text-center py-6">
             <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-emerald-100 shadow-lg shadow-emerald-200/50">
@@ -1390,12 +1390,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <button 
                               onClick={() => {
                                 goToView('inicio');
-                                setTimeout(() => {
-                                  const signatureSection = document.querySelector('.approval-section');
-                                  if (signatureSection) {
-                                    signatureSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                const scrollToApproval = () => {
+                                  const el = document.getElementById('validar-horarios-section');
+                                  if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  } else {
+                                    setTimeout(scrollToApproval, 150);
                                   }
-                                }, 100);
+                                };
+                                setTimeout(scrollToApproval, 150);
                               }}
                               className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
                             >
