@@ -783,9 +783,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             <div className="flex flex-col gap-4">
               <button 
-                onClick={() => {
+                onClick={async () => {
                   if (!reportJustification.trim()) { alert("Por favor, descreva o problema."); return; }
-                  
+
                   const notifId = "notif_" + Date.now();
                   const correcoesTexto = generateCorrectionMessage(true);
                   // Envia TODOS os trabalhadores e TODOS os dias do mês no payload para que o admin possa editar qualquer dia
@@ -803,7 +803,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                       is_active: true, 
                       created_at: new Date().toISOString()
                   };
-                  saveToDb('app_notifications', notifId, newNotif).then(() => { goToView('sucesso_reporte'); });
+                  console.log("Enviando notificação para admin:", newNotif);
+                  await saveToDb('app_notifications', notifId, newNotif);
+                  console.log("Notificação guardada com sucesso");
+                  goToView('sucesso_reporte');
                 }}
                 className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
               >
@@ -1123,18 +1126,17 @@ relevantDays.forEach(d => {
 
         <div className="flex justify-end gap-4">
           <button onClick={() => goToView('editar_relatorio')} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-800 rounded-xl transition-all shadow-sm">Voltar</button>
-          <button onClick={() => {
+          <button onClick={async () => {
               const correcoesTexto = generateCorrectionMessage(false);
-              // Filtra para enviar APENAS os dias que foram modificados pelo cliente
               const changedWorkers = draftData.map(w => {
                 const modifiedDays = w.dailyRecords.filter(d => {
                   const originalEntry = d.entry === '--:--' ? '' : d.entry;
                   const originalExit = d.exit === '--:--' ? '' : d.exit;
                   const originalBStart = d.breakStart || '';
                   const originalBEnd = d.breakEnd || '';
-                  return d.editedEntry !== originalEntry || 
-                         d.editedExit !== originalExit || 
-                         d.editedBreakStart !== originalBStart || 
+                  return d.editedEntry !== originalEntry ||
+                         d.editedExit !== originalExit ||
+                         d.editedBreakStart !== originalBStart ||
                          d.editedBreakEnd !== originalBEnd;
                 });
                 return { ...w, dailyRecords: modifiedDays };
@@ -1142,19 +1144,20 @@ relevantDays.forEach(d => {
 
               const notifId = "notif_" + Date.now();
               const newNotif = {
-                  id: notifId, 
-                  title: `Pedido de Correção: ${clientData.name}`, 
+                  id: notifId,
+                  title: `Pedido de Correção: ${clientData.name}`,
                   message: correcoesTexto,
-                  type: 'warning', 
-                  target_type: 'admin', 
+                  type: 'warning',
+                  target_type: 'admin',
                   target_client_id: initialClientId,
                   target_worker_ids: [],
                   payload: { changes: changedWorkers, isOnlyModified: true },
-                  is_dismissible: true, 
-                  is_active: true, 
+                  is_dismissible: true,
+                  is_active: true,
                   created_at: new Date().toISOString()
               };
-              saveToDb('app_notifications', notifId, newNotif).then(() => { goToView('sucesso_reporte'); });
+              await saveToDb('app_notifications', notifId, newNotif);
+              goToView('sucesso_reporte');
           }} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-all shadow-xl shadow-indigo-600/30 active:scale-95">Confirmar e Enviar</button>
         </div>
       </div>

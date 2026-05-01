@@ -60,6 +60,29 @@ const formatHours = (h) => {
   return `${hours}h${minutes === 0 ? '00' : minutes.toString().padStart(2, '0')}`;
 };
 
+const EMAILJS_SERVICE_ID = "service_xvt0vm8";
+const EMAILJS_TEMPLATE_ID_NOTIF = "template_xmexrgp";
+const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
+
+const sendNotificationEmail = async (clientEmail, clientName, notifTitle, notifMessage, clientId = null, month = null) => {
+  try {
+    const monthStr = month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const clientParam = clientId ? `&client=${clientId}&month=${monthStr}` : '';
+    const templateParams = {
+      to_email: clientEmail || 'contato@cliente.pt',
+      to_name: clientName,
+      notification_title: notifTitle,
+      notification_message: notifMessage,
+      link_unico: `${window.location.origin}${window.location.pathname}?view=client_portal${clientParam}`
+    };
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, templateParams, EMAILJS_PUBLIC_KEY);
+    return true;
+  } catch (error) {
+    console.error('Falha no envio de e-mail de notificação:', error);
+    return false;
+  }
+};
+
 const formatDocDate = (dateStr, showTime = false) => {
   if (!dateStr) return '--/--/----';
   // Se for apenas data (YYYY-MM-DD), evita o shift de timezone convertendo manualmente
@@ -2561,6 +2584,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               console.log("Criando notificação para cliente:", newNotif);
                               await saveToDb('app_notifications', notifId, newNotif);
 
+                              const targetClient = clients.find(c => String(c.id) === String(notif.target_client_id));
+                              if (targetClient?.email) {
+                                await sendNotificationEmail(targetClient.email, targetClient.name, newNotif.title, newNotif.message, notif.target_client_id, currentData.monthLabel);
+                              }
+
                               await handleDelete('app_notifications', notif.id);
                               setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                               alert("Correções aplicadas e cliente notificado!");
@@ -2616,6 +2644,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   payload: { type: 'correcoes_aplicadas' }
                                 });
 
+                                const targetClient2 = clients.find(c => String(c.id) === String(notif.target_client_id));
+                                if (targetClient2?.email) {
+                                  const fbNotif = {
+                                    title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
+                                    message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`
+                                  };
+                                  await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, fbNotif.message, notif.target_client_id, currentData.monthLabel || details.monthLabel);
+                                }
+
                                 await handleDelete('app_notifications', notif.id);
                                 alert("Correções aplicadas e cliente notificado!");
                               }}
@@ -2624,10 +2661,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               <CheckCircle size={16} /> Aceitar e Aplicar
                             </button>
                           ) : (
-                            <button onClick={() => {
+<button onClick={() => {
                               if (!window.confirm("Marcar este reporte como resolvido e notificar o cliente?")) return;
                               const feedbackNotifId = "fb_" + Date.now();
-                              saveToDb('app_notifications', feedbackNotifId, {
+                              const fbNotifData = {
                                 id: feedbackNotifId,
                                 title: `Reporte de Divergência Resolvido: ${details.monthLabel || ''}`,
                                 message: `O seu reporte de divergência referente ao período de ${details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
@@ -2637,10 +2674,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 created_at: new Date().toISOString(),
                                 is_active: true,
                                 payload: { type: 'correcoes_aplicadas' }
+                              };
+                              saveToDb('app_notifications', feedbackNotifId, fbNotifData).then(async () => {
+                                const targetClient3 = clients.find(c => String(c.id) === String(notif.target_client_id));
+                                if (targetClient3?.email) {
+                                  await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, fbNotifData.message, notif.target_client_id, details.monthLabel);
+                                }
                               });
                               handleDelete('app_notifications', notif.id);
                               alert("Reporte marcado como resolvido.");
-                            }} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200">
+                            }} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
                               <CheckCircle size={16} /> Marcar como Resolvido
                             </button>
                           )}
@@ -3787,7 +3830,8 @@ function AdminDashboard(props) {
                         {([...clients].map(c => {
                           const totalHoras = logs.filter(l => l.clientId === c.id && l.date?.substring(0, 7) === portalMonthStr).reduce((acc, l) => acc + l.hours, 0);
                           const approval = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr);
-                          const status = approval ? 'validado' : (c.status_email === 'enviado' && portalMonthStr === currentMonthStr ? 'enviado' : 'pendente');
+                          const sentEmails = c.sent_emails || {};
+                          const status = approval ? 'validado' : (sentEmails[portalMonthStr] ? 'enviado' : 'pendente');
                           return { ...c, totalHoras, status };
                         }).sort((a, b) => {
                           let res = 0;
@@ -5208,6 +5252,7 @@ function App(props) {
     const channelNotif = supabase
       .channel('realtime-notifications')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_notifications' }, (payload) => {
+        console.log('Realtime notification received:', payload.eventType, payload.new);
         if (payload.eventType === 'INSERT') setAppNotifications(prev => [payload.new, ...prev]);
         else if (payload.eventType === 'UPDATE') setAppNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
         else if (payload.eventType === 'DELETE') setAppNotifications(prev => prev.filter(n => n.id !== payload.old.id));
@@ -5265,7 +5310,10 @@ function App(props) {
     }
     if (colName === 'approvals') setApprovals(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
     if (colName === 'client_approvals') setClientApprovals(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
-    if (colName === 'app_notifications') setAppNotifications(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [data, ...prev]);
+    if (colName === 'app_notifications') {
+      console.log('saveToDb app_notifications: id=', id, 'data=', data);
+      setAppNotifications(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [data, ...prev]);
+    }
 
     if (colName === 'documents' || colName === 'documentos') {
       setDocuments(prev => {
@@ -5538,9 +5586,9 @@ function App(props) {
     if (!clienteSelecionado) return;
     setIsSendingEmail(true);
 
-    const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
+    const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
     const modalLinkUnico = clienteSelecionado.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${clienteSelecionado.id}&month=${monthStr}`;
-    const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id).reduce((acc, l) => acc + l.hours, 0));
+    const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
 
     // Configurações da sua conta EmailJS
     const EMAILJS_SERVICE_ID = "service_xvt0vm8"; // Substitua pelo seu Service ID
@@ -5553,7 +5601,7 @@ function App(props) {
       const templateParams = {
         to_email: clienteSelecionado.email || 'contato@cliente.pt',
         to_name: clienteSelecionado.name,
-        mes_referencia: currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }),
+        mes_referencia: portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }),
         total_horas: totalHoras,
         link_unico: modalLinkUnico
       };
@@ -5566,7 +5614,9 @@ function App(props) {
         EMAILJS_PUBLIC_KEY
       );
 
-      const updatedClient = { ...clienteSelecionado, status_email: 'enviado' };
+      const sentEmails = clienteSelecionado.sent_emails || {};
+      sentEmails[monthStr] = new Date().toISOString().split('T')[0];
+      const updatedClient = { ...clienteSelecionado, status_email: 'enviado', sent_emails: sentEmails };
       saveToDb('clients', updatedClient.id, updatedClient);
       setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
 
