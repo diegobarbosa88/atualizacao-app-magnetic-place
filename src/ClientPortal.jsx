@@ -641,7 +641,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Assine abaixo para validar e aprovar o relatório de {originalTotal} horas.</p>
             </div>
             
-            <div className="relative w-full max-w-2xl mx-auto bg-slate-50 border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden mb-6 shadow-inner">
+            <div id="signature-canvas-area" className="relative w-full max-w-2xl mx-auto bg-slate-50 border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden mb-6 shadow-inner">
               <canvas ref={canvasRef} className="w-full cursor-crosshair touch-none" style={{ touchAction: 'none' }} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
               {!hasSignature && <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">Assine Aqui</div>}
             </div>
@@ -1385,20 +1385,22 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         )}
                       </div>
                       <div className="flex items-center gap-4">
-                        {notif.payload?.type === 'correcoes_aplicadas' ? (
+                        {notif.payload?.type === 'correcoes_aplicadas' || notif.payload?.type === 'correcao_admin' ? (
                           <>
                             <button 
                               onClick={() => {
                                 goToView('inicio');
-                                const scrollToApproval = () => {
-                                  const el = document.getElementById('validar-horarios-section');
+                                const scrollToSignature = () => {
+                                  const el = document.getElementById('signature-canvas-area');
                                   if (el) {
                                     el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    const canvas = document.querySelector('canvas');
+                                    if (canvas) canvas.focus();
                                   } else {
-                                    setTimeout(scrollToApproval, 150);
+                                    setTimeout(scrollToSignature, 150);
                                   }
                                 };
-                                setTimeout(scrollToApproval, 150);
+                                setTimeout(scrollToSignature, 150);
                               }}
                               className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
                             >
