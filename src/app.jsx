@@ -2620,16 +2620,20 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                 for (const worker of currentData.workers) {
                                   for (const change of (worker.dailyRecords || worker.changes || [])) {
-                                    const dateStr = change.date || change.rawDate || change.dateLabel;
+                                    const rawDate = change.rawDate || change.date;
+                                    const dateStr = rawDate && rawDate.includes('-') ? rawDate : change.dateLabel;
                                     if (!dateStr) continue;
                                     const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
                                     const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
                                     const exit = change.adminExit || change.editedExit || change.exit || '--:--';
                                     const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
                                     const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+                                    const isNewDay = change.isNew || (!change.originalHours || change.originalHours === 0);
+                                    const hasValidTimes = entry && entry !== '--:--' && exit && exit !== '--:--';
+                                    const shouldSave = hasValidTimes || oldLog || isNewDay;
 
-                                    if ((entry && entry !== '--:--' && exit && exit !== '--:--') || oldLog) {
-                                      const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                                    if (shouldSave) {
+                                      const dur = hasValidTimes ? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd) : 0;
                                       if (oldLog) {
                                         await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
                                       } else {
@@ -5702,8 +5706,8 @@ function App(props) {
       return;
     }
     const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
-    const monthLabel = (rejeitarNotif.message.match(/📅 Período: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
-    const rawTargetMonth = monthLabel || rejeitarNotif.payload?.month || '';
+    const rawTargetMonth = rejeitarNotif.payload?.month || '';
+    const monthLabel = (rejeitarNotif.message.match(/📅 Período: (.+)\n/)?.[1] || rawTargetMonth || '').trim();
     const rejectNotifId = "reject_" + Date.now();
     const fbNotifData = {
       id: rejectNotifId,
@@ -5721,7 +5725,10 @@ function App(props) {
       await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth);
     }
     if (rejeitarNotif.payload?.correcao_id) {
-      await saveToDb('correcoes', rejeitarNotif.payload.correcao_id, { status: 'rejected' });
+      const existingCorrecao = correcoesCorrections.find(c => c.id === rejeitarNotif.payload.correcao_id);
+      if (existingCorrecao) {
+        await saveToDb('correcoes', rejeitarNotif.payload.correcao_id, { ...existingCorrecao, status: 'rejected' });
+      }
     }
     await handleDelete('app_notifications', rejeitarNotif.id);
     setModalRejeitarAberto(false);

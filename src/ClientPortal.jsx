@@ -798,7 +798,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                       target_type: 'admin', 
                       target_client_id: initialClientId,
                       target_worker_ids: [],
-                      payload: { changes: fullMonthSnapshot, isFullMonth: true }, 
+                      payload: { changes: fullMonthSnapshot, isFullMonth: true, month: initialMonth }, 
                       is_dismissible: true, 
                       is_active: true, 
                       created_at: new Date().toISOString()
@@ -1184,7 +1184,7 @@ relevantDays.forEach(d => {
                   target_type: 'admin',
                   target_client_id: initialClientId,
                   target_worker_ids: [],
-                  payload: { changes: changedWorkers, isOnlyModified: true },
+                  payload: { changes: changedWorkers, isOnlyModified: true, month: initialMonth },
                   is_dismissible: true,
                   is_active: true,
                   created_at: new Date().toISOString()
