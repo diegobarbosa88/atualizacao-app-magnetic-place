@@ -115,6 +115,8 @@ const isSameMonth = (dateStr, targetDate) => {
   return y === targetDate.getFullYear() && (m - 1) === targetDate.getMonth();
 };
 
+const toTimeInputValue = (val) => val === '--:--' ? '' : (val || '');
+
 // Mesma lógica do ClientPortal para calcular horas
 const calculateDuration = (entry, exit, breakStart, breakEnd) => {
   if (!entry || !exit || entry === '--:--' || exit === '--:--') return 0;
@@ -2383,17 +2385,21 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={change.adminEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminEntry || change.entry)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminExit || change.exit)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={change.adminBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminBreakStart || change.breakStart)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminBreakEnd || change.breakEnd)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
+                                                      <Trash2 size={16} />
+                                                    </button>
                                                   </>
                                                 ) : (
                                                   <>
@@ -2419,17 +2425,21 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={change.adminEntry || change.entry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminEntry || change.entry)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminExit || change.exit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminExit || change.exit)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={change.adminBreakStart || change.breakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminBreakStart || change.breakStart)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminBreakEnd || change.breakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={toTimeInputValue(change.adminBreakEnd || change.breakEnd)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
+                                                      <Trash2 size={16} />
+                                                    </button>
                                                   </>
                                                 ) : (
                                                   <>
@@ -2624,6 +2634,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     const dateStr = rawDate && rawDate.includes('-') ? rawDate : change.dateLabel;
                                     if (!dateStr) continue;
                                     const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
+
                                     const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
                                     const exit = change.adminExit || change.editedExit || change.exit || '--:--';
                                     const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
@@ -4504,8 +4515,8 @@ function WorkerDashboard(props) {
 
   const todayStr = toISODateLocal(new Date());
   const monthLogs = logs.filter(l => l.workerId === currentUser.id && isSameMonth(l.date, currentMonth));
-  const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + b.hours, 0);
-  const totalMonthHours = monthLogs.reduce((acc, curr) => acc + curr.hours, 0);
+  const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + calculateDuration(b.startTime, b.endTime, b.breakStart, b.breakEnd), 0);
+  const totalMonthHours = monthLogs.reduce((acc, curr) => acc + calculateDuration(curr.startTime, curr.endTime, curr.breakStart, curr.breakEnd), 0);
 
   const activeWorkerSchedule = schedules.find(s => s.id === currentUser.defaultScheduleId) || personalSchedules.find(p => p.id === currentUser.defaultScheduleId);
   const expectedHours = activeWorkerSchedule ? calculateExpectedMonthlyHours(activeWorkerSchedule, currentMonth) : 0;
@@ -4867,7 +4878,7 @@ function WorkerDashboard(props) {
           <div className="divide-y divide-slate-100">
             {daysList.map(ds => {
               const dayLogs = monthLogs.filter(l => l.date === ds);
-              const dayTotalTotal = dayLogs.reduce((acc, l) => acc + l.hours, 0);
+              const dayTotalTotal = dayLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
               const isCurrentInline = inlineEditingDate === ds;
               const isExpanded = expandedDays.includes(ds);
               const dObj = new Date(ds);
@@ -4937,7 +4948,7 @@ function WorkerDashboard(props) {
                                   )}
                                 </div>
                                 <div className="flex flex-row items-center justify-between sm:justify-end gap-4 sm:border-l sm:pl-4 border-slate-100 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
-                                  <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(log.hours)}</span>
+                                  <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd))}</span>
                                   {!myApproval && (
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
                                   )}

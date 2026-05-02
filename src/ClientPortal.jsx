@@ -226,7 +226,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
   const originalWorkersData = useMemo(() => {
     if (!initialClientId || !initialMonth) return [];
-    const clientLogs = logs.filter(l => l.clientId === initialClientId && l.date && l.date.substring(0, 7) === initialMonth);
+    const clientLogs = logs.filter(l => String(l.clientId) === String(initialClientId) && l.date && l.date.substring(0, 7) === initialMonth);
     const workerIds = [...new Set(clientLogs.map(l => l.workerId))];
     
     return workerIds.map(wId => {
@@ -234,8 +234,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
       const wLogs = clientLogs.filter(l => l.workerId === wId).sort((a,b) => a.date.localeCompare(b.date));
       let total = 0;
       const dailyRecords = wLogs.map(log => {
-        let h = log.hours;
-        if (h === undefined || h === null) h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+        const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
         const dayObj = new Date(log.date);
         const dayStr = `${String(dayObj.getDate()).padStart(2, '0')}/${String(dayObj.getMonth()+1).padStart(2,'0')} (${dayObj.toLocaleDateString('pt-PT', { weekday: 'short' }).substring(0,3)})`;
         total += h;
