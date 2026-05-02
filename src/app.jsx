@@ -12,7 +12,7 @@ import {
   Hash, Euro, BarChart3, ArrowUpRight, ArrowDownRight,
   Wallet, Receipt, Tag, Layers, Repeat, Trophy, History,
   TrendingDown, Building2, ExternalLink, Lock, Stethoscope, UserCheck, Eye,
-  Sparkles, Loader2, BrainCircuit, Magnet, Timer, Coffee, ListChecks, Star, Printer, CheckCircle, Unlock, List, Palette, Settings, Upload, User, Bell, Megaphone, Info, Link, AlertTriangle, Mail, Send, RotateCcw, Copy
+  Sparkles, Loader2, BrainCircuit, Magnet, Timer, Coffee, ListChecks, Star, Printer, CheckCircle, Unlock, List, Palette, Settings, Upload, User, Bell, Megaphone, Info, Link, AlertTriangle, Mail, Send, RotateCcw, Copy, XCircle
 } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 
@@ -1693,7 +1693,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
   );
 };
 
-const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser }) => {
+const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif }) => {
   const [editingDrafts, setEditingDrafts] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
@@ -2113,9 +2113,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             let currentData;
             if (editingDrafts[notif.id]) {
               currentData = editingDrafts[notif.id];
-            } else if (details.workers && details.workers.length > 0) {
-              currentData = details;
-            } else if (notif.payload?.changes && Array.isArray(notif.payload.changes)) {
+            } else if (notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
+              const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
+              const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
               currentData = {
                 workers: notif.payload.changes.map(w => ({
                   ...w,
@@ -2123,12 +2123,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                     const isNewDay = d.isNew || (!d.entry || d.entry === '--:--') && (!d.originalHours || d.originalHours === 0);
                     return {
                       ...d,
-                      originalShift: d.entry && d.exit ? `${d.entry}-${d.exit}` : '--:--',
+                      originalShift: d.entry && d.exit ? d.entry + '-' + d.exit : '--:--',
                       entry: d.entry || '--:--',
                       exit: d.exit || '--:--',
                       breakStart: d.breakStart || '--:--',
                       breakEnd: d.breakEnd || '--:--',
-                      originalBreak: (d.breakStart || d.breakEnd) ? `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}` : '--:--',
+                      originalBreak: (d.breakStart || d.breakEnd) ? (d.breakStart || '--:--') + '-' + (d.breakEnd || '--:--') : '--:--',
                       editedEntry: d.editedEntry || d.entry || (isNewDay ? '' : '--:--'),
                       editedExit: d.editedExit || d.exit || (isNewDay ? '' : '--:--'),
                       editedBreakStart: d.editedBreakStart || d.breakStart || '',
@@ -2146,10 +2146,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   totalHours: w.totalHours || 0,
                   editedTotalHours: w.editedTotalHours || w.totalHours || 0
                 })),
-                clientName: details.clientName,
-                monthLabel: details.monthLabel
+                clientName: clientNameMatch ? clientNameMatch[1].trim() : '',
+                monthLabel: periodMatch ? periodMatch[1].trim() : ''
               };
-            } else {
+            } else if (details.workers && details.workers.length > 0) {
               currentData = details;
             }
             const hasWorkerChanges = currentData.workers && currentData.workers.some(w =>
@@ -2309,18 +2309,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                 <div className="space-y-3">
 
-                                  {days && days.length > 0 && (
-                                    <button
-                                      onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
-                                      className="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs uppercase transition-all mb-4"
-                                    >
-                                      {expandedCorrecaoDias[notif.id] ? (
-                                        <>Recolher Dias <ChevronUp size={16} /></>
-                                      ) : (
-                                        <>Ver Todos os Dias do Mês <ChevronDown size={16} /></>
-                                      )}
-                                    </button>
-                                  )}
+                                  
                                   {(() => {
                                     let daysToRender = days;
 
@@ -2709,7 +2698,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               <CheckCircle size={16} /> Marcar como Resolvido
                             </button>
                           )}
-                          <button onClick={() => handleDelete('app_notifications', notif.id)} className="px-6 py-3 bg-slate-100 text-slate-500 rounded-xl font-black text-xs uppercase hover:bg-slate-200 transition-all">Ignorar</button>
+                          <button onClick={() => { setRejeitarNotif(notif); setRejeitarMotivo(''); setModalRejeitarAberto(true); }} className="px-6 py-3 bg-rose-100 text-rose-600 rounded-xl font-black text-xs uppercase hover:bg-rose-200 transition-all"><X size={16} /> Rejeitar</button>
                         </>
                       )}
                     </div>
@@ -3167,7 +3156,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
 };
 
 function AdminDashboard(props) {
-  const { onLogout, onLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, setClients, clientForm, setClientForm, workers, setWorkers, workerForm, setWorkerForm, schedules, setSchedules, scheduleForm, setScheduleForm, expenses, setExpenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth } = props;
+  const { onLogout, onLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, setClients, clientForm, setClientForm, workers, setWorkers, workerForm, setWorkerForm, schedules, setSchedules, scheduleForm, setScheduleForm, expenses, setExpenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif } = props;
 
   const notificacoesDeCorrecao = correctionNotifications;
 
@@ -4026,7 +4015,7 @@ function AdminDashboard(props) {
 
               {portalSubTab === 'correcoes' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <CorrecoesAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} clients={clients} logs={logs} setSchedules={setSchedules} />
+                  <CorrecoesAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} clients={clients} logs={logs} setSchedules={setSchedules} setModalRejeitarAberto={setModalRejeitarAberto} setRejeitarMotivo={setRejeitarMotivo} setRejeitarNotif={setRejeitarNotif} />
                 </div>
               )}
 
@@ -5201,6 +5190,9 @@ function App(props) {
   const [toastMessage, setToastMessage] = useState(null);
   const [portalSubTab, setPortalSubTab] = useState('envios'); // 'envios' | 'colaboradores' | 'correcoes' | 'links'
   const [portalMonth, setPortalMonth] = useState(new Date());
+  const [modalRejeitarAberto, setModalRejeitarAberto] = useState(false);
+  const [rejeitarMotivo, setRejeitarMotivo] = useState('');
+  const [rejeitarNotif, setRejeitarNotif] = useState(null);
 
   // Injetar o script do Supabase dinamicamente para evitar erros de build
   useEffect(() => {
@@ -5703,6 +5695,42 @@ function App(props) {
     }
   };
 
+  const handleConfirmarRejeicao = async () => {
+    if (!rejeitarNotif) return;
+    if (rejeitarMotivo.trim().length < 10) {
+      alert('Por favor, insira um motivo com pelo menos 10 caracteres.');
+      return;
+    }
+    const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
+    const monthLabel = (rejeitarNotif.message.match(/📅 Período: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
+    const rawTargetMonth = monthLabel || rejeitarNotif.payload?.month || '';
+    const rejectNotifId = "reject_" + Date.now();
+    const fbNotifData = {
+      id: rejectNotifId,
+      title: `Reporte de Divergência Rejeitado: ${monthLabel || rawTargetMonth || ''}`,
+      message: `O seu reporte de divergência referente ao período de ${monthLabel || rawTargetMonth || ''} foi rejeitado pelo administrador.\n\nMotivo: ${rejeitarMotivo.trim()}\n\nPor favor, aceda ao portal para rever e submeter um novo reporte caso necessário.`,
+      type: 'error',
+      target_type: 'client',
+      target_client_id: String(rejeitarNotif.target_client_id),
+      created_at: new Date().toISOString(),
+      is_active: true,
+      payload: { type: 'correcao_rejeitada', motivo: rejeitarMotivo.trim() }
+    };
+    await saveToDb('app_notifications', rejectNotifId, fbNotifData);
+    if (targetClient?.email) {
+      await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth);
+    }
+    if (rejeitarNotif.payload?.correcao_id) {
+      await saveToDb('correcoes', rejeitarNotif.payload.correcao_id, { status: 'rejected' });
+    }
+    await handleDelete('app_notifications', rejeitarNotif.id);
+    setModalRejeitarAberto(false);
+    setRejeitarMotivo('');
+    setRejeitarNotif(null);
+    setToastMessage('Correção rejeitada e cliente notificado!');
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
   const handleSaveExpense = () => {
     if (!expenseForm.name || !expenseForm.amount) return;
     const eId = expenseForm.id || `e${Date.now()}`;
@@ -5816,7 +5844,7 @@ function App(props) {
       {view === 'login' && <LoginView workers={workers} onLogin={handleLogin} systemSettings={systemSettings} setSystemSettings={setSystemSettings} />}
       {view === 'admin' && (
         <AdminDashboard
-          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, clientForm, setClientForm, workers, workerForm, setWorkerForm, schedules, scheduleForm, setScheduleForm, expenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth }}
+          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, clientForm, setClientForm, workers, workerForm, setWorkerForm, schedules, scheduleForm, setScheduleForm, expenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif }}
         />
       )}
       {view === 'worker' && (
@@ -5941,6 +5969,86 @@ function App(props) {
                   ) : (
                     <><Send size={16} /> Confirmar e Disparar</>
                   )}
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Modal de Rejeição de Correção */}
+      {modalRejeitarAberto && rejeitarNotif && (() => {
+        const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
+        const monthLabel = (rejeitarNotif.message.match(/📅 Período: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
+        return (
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+            <div className="bg-white rounded-[2rem] shadow-2xl border border-rose-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300">
+              <div className="flex justify-between items-center p-6 border-b border-rose-100">
+                <h3 className="font-black text-xl text-rose-600 flex items-center gap-3">
+                  <XCircle size={24} />
+                  Rejeitar Correção
+                </h3>
+                <button onClick={() => setModalRejeitarAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="p-6 bg-slate-50 space-y-4">
+                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex gap-2 text-sm">
+                    <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Para:</span>
+                    <span className="font-bold text-rose-700">{targetClient?.name || 'Cliente'}</span>
+                  </div>
+                  <div className="flex gap-2 text-sm">
+                    <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">E-mail:</span>
+                    <span className="font-medium text-slate-700">{targetClient?.email || 'Não definido'}</span>
+                  </div>
+                  <div className="flex gap-2 text-sm">
+                    <span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Período:</span>
+                    <span className="font-medium text-slate-700">{monthLabel || rejeitarNotif.payload?.month || ''}</span>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Motivo da Rejeição *</label>
+                  <textarea
+                    value={rejeitarMotivo}
+                    onChange={e => setRejeitarMotivo(e.target.value)}
+                    placeholder="Descreva o motivo pelo qual esta correção está a ser rejeitada..."
+                    rows={4}
+                    className="w-full border border-slate-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 resize-none"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-2 text-right">{rejeitarMotivo.length} caracteres (mínimo 10)</p>
+                </div>
+
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
+                  <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest mb-2">Pré-visualização do E-mail</p>
+                  <div className="bg-white rounded-lg p-4 text-sm space-y-2">
+                    <p className="font-bold text-slate-800">Assunto: Reporte de Divergência Rejeitado: {monthLabel || ''}</p>
+                    <p className="text-slate-600 text-xs leading-relaxed">
+                      {rejeitarMotivo.trim().length >= 10 ? (
+                        <>O seu reporte de divergência referente ao período de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br/><br/><strong>Motivo:</strong> {rejeitarMotivo.trim()}</>
+                      ) : (
+                        <span className="text-amber-500">Aguarde... Insira o motivo da rejeição.</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-white">
+                <button
+                  onClick={() => setModalRejeitarAberto(false)}
+                  className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmarRejeicao}
+                  disabled={rejeitarMotivo.trim().length < 10}
+                  className="px-6 py-3 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <XCircle size={16} /> Confirmar Rejeição
                 </button>
               </div>
             </div>
