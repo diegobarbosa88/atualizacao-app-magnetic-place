@@ -64,9 +64,22 @@ const EMAILJS_SERVICE_ID = "service_xvt0vm8";
 const EMAILJS_TEMPLATE_ID_NOTIF = "template_xmexrgp";
 const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
 
+const monthToYYYYMM = (monthStr) => {
+  if (!monthStr) return null;
+  if (monthStr.match(/^\d{4}-\d{2}$/)) return monthStr;
+  const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+  const lower = monthStr.toLowerCase();
+  const monthIdx = months.findIndex(m => lower.includes(m));
+  const yearMatch = monthStr.match(/\d{4}/);
+  if (monthIdx >= 0 && yearMatch) {
+    return `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
+  }
+  return monthStr;
+};
+
 const sendNotificationEmail = async (clientEmail, clientName, notifTitle, notifMessage, clientId = null, month = null) => {
   try {
-    const monthStr = month || `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const monthStr = month ? monthToYYYYMM(month) : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const clientParam = clientId ? `&client=${String(clientId)}&month=${monthStr}` : '';
     const templateParams = {
       to_email: clientEmail || 'contato@cliente.pt',
@@ -2102,7 +2115,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
             const periodLabel = periodMatch ? periodMatch[1].trim() : '';
             const rawTargetMonth = periodLabel.match(/\d{4}-\d{2}/)?.[0] || (periodLabel ? (() => {
-              const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+              const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
               const lowerLabel = periodLabel.toLowerCase();
               const monthIdx = months.findIndex(m => lowerLabel.includes(m));
               const yearMatch = periodLabel.match(/\d{4}/);
@@ -2337,7 +2350,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                 <div className="space-y-3">
 
-                                  
+
                                   {(() => {
                                     let daysToRender = days;
 
@@ -2563,6 +2576,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   const exit = change.adminExit || change.editedExit || change.exit || '--:--';
                                   const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
                                   const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+
+                                  const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+
+                                  if (isAdminCleared) {
+                                    if (oldLog) {
+                                      await handleDelete('logs', oldLog.id);
+                                    }
+                                    continue;
+                                  }
+
                                   const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
 
                                   const logData = {
@@ -2627,21 +2650,21 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               const targetClient = clients.find(c => String(c.id) === String(notif.target_client_id));
                               if (targetClient?.email) {
                                 await sendNotificationEmail(targetClient.email, targetClient.name, newNotif.title, newNotif.message, notif.target_client_id, currentData.monthLabel);
-                                }
+                              }
 
-                                await handleDelete('app_notifications', notif.id);
-                                setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                              await handleDelete('app_notifications', notif.id);
+                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
 
-                                if (notif.payload?.correcao_id) {
-                                  await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
-                                }
+                              if (notif.payload?.correcao_id) {
+                                await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
+                              }
 
-                                alert("Correções aplicadas e cliente notificado!");
-                              }}
-                              className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
-                            >
-                              <Send size={16} /> Corrigir e Enviar
-                            </button>
+                              alert("Correções aplicadas e cliente notificado!");
+                            }}
+                            className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
+                          >
+                            <Send size={16} /> Corrigir e Enviar
+                          </button>
                           <button onClick={() => {
                             setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                             setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
@@ -2665,6 +2688,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     const exit = change.adminExit || change.editedExit || change.exit || '--:--';
                                     const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
                                     const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+
+                                    const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+
+                                    if (isAdminCleared) {
+                                      if (oldLog) {
+                                        await handleDelete('logs', oldLog.id);
+                                      }
+                                      continue;
+                                    }
+
                                     const isNewDay = change.isNew || (!change.originalHours || change.originalHours === 0);
                                     const hasValidTimes = entry && entry !== '--:--' && exit && exit !== '--:--';
                                     const shouldSave = hasValidTimes || oldLog || isNewDay;
@@ -2711,7 +2744,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               <CheckCircle size={16} /> Aceitar e Aplicar
                             </button>
                           ) : (
-<button onClick={async () => {
+                            <button onClick={async () => {
                               if (!window.confirm("Marcar este reporte como resolvido e notificar o cliente?")) return;
                               const feedbackNotifId = "fb_" + Date.now();
                               const fbNotifData = {
@@ -5746,7 +5779,7 @@ function App(props) {
     let rawTargetMonth = rejeitarNotif.payload?.month || '';
     // Convert "abril de 2026" format to "2026-04" for URL parameter
     if (rawTargetMonth && !rawTargetMonth.match(/^\d{4}-\d{2}$/)) {
-      const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+      const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
       const lowerMonth = rawTargetMonth.toLowerCase();
       const monthIdx = months.findIndex(m => lowerMonth.includes(m));
       const yearMatch = rawTargetMonth.match(/\d{4}/);
@@ -5819,7 +5852,7 @@ function App(props) {
     const wId = (currentUser.role === 'admin' ? auditWorkerId : currentUser.id);
     const logId = formData.id || `l${Date.now()}`;
 
-    const toMins = (t) => { if (!t || t === '--:--') return 0; const [h,m]=t.split(':'); return parseInt(h)*60+parseInt(m); };
+    const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m); };
     const newStart = toMins(formData.startTime);
     const newEnd = toMins(formData.endTime);
 
@@ -6081,7 +6114,7 @@ function App(props) {
                     <p className="font-bold text-slate-800">Assunto: Reporte de Divergência Rejeitado: {monthLabel || ''}</p>
                     <p className="text-slate-600 text-xs leading-relaxed">
                       {rejeitarMotivo.trim().length >= 10 ? (
-                        <>O seu reporte de divergência referente ao período de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br/><br/><strong>Motivo:</strong> {rejeitarMotivo.trim()}</>
+                        <>O seu reporte de divergência referente ao período de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br /><br /><strong>Motivo:</strong> {rejeitarMotivo.trim()}</>
                       ) : (
                         <span className="text-amber-500">Aguarde... Insira o motivo da rejeição.</span>
                       )}
