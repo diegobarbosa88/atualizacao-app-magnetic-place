@@ -2164,12 +2164,35 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
               const originalTotal = worker.totalHours || worker.originalTotal || 0;
-              const originalOfModified = days.reduce((acc, c) => acc + (parseFloat(c.originalHours) || parseFloat(c.hours) || 0), 0);
+              // Always calculate original hours from startTime/endTime to handle night shifts correctly
+              const originalOfModified = days.reduce((acc, c) => {
+                const entry = c.entry || c.startTime || '--:--';
+                const exit = c.exit || c.endTime || '--:--';
+                const bStart = c.breakStart || '--:--';
+                const bEnd = c.breakEnd || '--:--';
+                const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                return acc + h;
+              }, 0);
               const finalOfModified = days.reduce((acc, c) => {
-                if ('adminHours' in c) return acc + (parseFloat(c.adminHours) || 0);
-                if (c.editedHours !== undefined) return acc + parseFloat(c.editedHours);
-                if (c.newHours !== undefined) return acc + parseFloat(c.newHours);
-                return acc + (parseFloat(c.originalHours) || parseFloat(c.hours) || 0);
+                // Use adminHours if explicitly set (even if 0)
+                if (c.adminHours !== undefined && c.adminHours !== null) {
+                  return acc + c.adminHours;
+                }
+                // Use editedHours if set
+                if (c.editedHours !== undefined && c.editedHours !== null) {
+                  return acc + parseFloat(c.editedHours);
+                }
+                // Use newHours if set
+                if (c.newHours !== undefined && c.newHours !== null) {
+                  return acc + parseFloat(c.newHours);
+                }
+                // Fallback: calculate from entry/exit
+                const entry = c.adminEntry || c.editedEntry || c.entry || '--:--';
+                const exit = c.adminExit || c.editedExit || c.exit || '--:--';
+                const bStart = c.adminBreakStart || c.editedBreakStart || c.breakStart || '--:--';
+                const bEnd = c.adminBreakEnd || c.editedBreakEnd || c.breakEnd || '--:--';
+                const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                return acc + h;
               }, 0);
               return parseFloat((originalTotal - originalOfModified + finalOfModified).toFixed(2));
             };
@@ -2204,15 +2227,18 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                   if (change) {
                     change.isPlaceholder = false; // no longer a placeholder
+                    // Auto-convert empty to --:-- for time fields
+                    if (field !== 'adminHours' && field !== 'toDelete' && field !== 'isPlaceholder' && field !== 'isNew' && field !== 'originalHours' && field !== 'editedHours' && field !== 'newHours' && !value) {
+                      value = '--:--';
+                    }
                     change[field] = value;
                     if (field.startsWith('admin')) {
                       const entry = change.adminEntry || change.editedEntry || change.entry || '';
                       const exit = change.adminExit || change.editedExit || change.exit || '';
                       const bStart = change.adminBreakStart || change.breakStart || '--:--';
                       const bEnd = change.adminBreakEnd || change.breakEnd || '--:--';
-                      if (entry && exit) {
-                        change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
-                      }
+                      // Always set adminHours even if entry/exit is empty (calculateDuration returns 0 for empty)
+                      change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
                     }
                     worker.editedTotalHours = calculateMonthTotal(worker);
                   }
@@ -2358,7 +2384,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       const displayExit = change.adminExit || change.editedExit || change.exit || '--:--';
                                       const displayBreakStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
                                       const displayBreakEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
-                                      const displayHours = (change.adminHours !== null && change.adminHours !== undefined && change.adminHours > 0)
+                                      const displayHours = (change.adminHours !== null && change.adminHours !== undefined)
                                         ? change.adminHours
                                         : (change.editedHours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd) || 0);
 
@@ -2385,16 +2411,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminEntry || change.entry)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminExit || change.exit)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminBreakStart || change.breakStart)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminBreakEnd || change.breakEnd)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2425,16 +2451,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminEntry || change.entry)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminExit || change.exit)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminBreakStart || change.breakStart)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={toTimeInputValue(change.adminBreakEnd || change.breakEnd)} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -5608,7 +5634,7 @@ function App(props) {
 
   useEffect(() => {
     if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
-      const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção'));
+      const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
       if (toDismiss.length > 0) {
         console.log('Auto-descartando notificações de correção pois a sub-aba correcoes está ativa');
         toDismiss.forEach(n => handleDismissNotif(n.id));
@@ -5621,8 +5647,8 @@ function App(props) {
     // 1. Descarta imediatamente para sumir visualmente
     handleDismissNotif(notif.id);
 
-    // 2. Navega se for um pedido de correção
-    if (notif.title?.includes('Pedido de Correção') && currentUser.role === 'admin') {
+    // 2. Navega se for um pedido de correção ou mensagem rápida
+    if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
       setActiveTab('portal_validacao');
       setPortalSubTab('correcoes');
       setView('admin');
@@ -5717,7 +5743,17 @@ function App(props) {
       return;
     }
     const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
-    const rawTargetMonth = rejeitarNotif.payload?.month || '';
+    let rawTargetMonth = rejeitarNotif.payload?.month || '';
+    // Convert "abril de 2026" format to "2026-04" for URL parameter
+    if (rawTargetMonth && !rawTargetMonth.match(/^\d{4}-\d{2}$/)) {
+      const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+      const lowerMonth = rawTargetMonth.toLowerCase();
+      const monthIdx = months.findIndex(m => lowerMonth.includes(m));
+      const yearMatch = rawTargetMonth.match(/\d{4}/);
+      if (monthIdx >= 0 && yearMatch) {
+        rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
+      }
+    }
     const monthLabel = (rejeitarNotif.message.match(/📅 Período: (.+)\n/)?.[1] || rawTargetMonth || '').trim();
     const rejectNotifId = "reject_" + Date.now();
     const fbNotifData = {
