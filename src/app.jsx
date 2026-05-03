@@ -2144,8 +2144,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                       breakStart: d.breakStart || '--:--',
                       breakEnd: d.breakEnd || '--:--',
                       originalBreak: (d.breakStart || d.breakEnd) ? (d.breakStart || '--:--') + '-' + (d.breakEnd || '--:--') : '--:--',
-                      editedEntry: d.editedEntry || d.entry || (isNewDay ? '' : '--:--'),
-                      editedExit: d.editedExit || d.exit || (isNewDay ? '' : '--:--'),
+                      editedEntry: d.editedEntry || d.entry || '--:--',
+                      editedExit: d.editedExit || d.exit || '--:--',
                       editedBreakStart: d.editedBreakStart || d.breakStart || '',
                       editedBreakEnd: d.editedBreakEnd || d.breakEnd || '',
                       originalHours: d.originalHours || d.hours || 0,
@@ -2401,6 +2401,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                         (change.adminBreakEnd && change.adminBreakEnd !== (change.breakEnd || '')) ||
                                         (change.editedEntry && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
                                         (change.editedExit && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
+                                      const isDayCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) &&
+                                        (change.entry && change.entry !== '--:--') &&
+                                        (change.editedEntry === '--:--' || change.editedExit === '--:--');
                                       const displayEntry = change.adminEntry || change.editedEntry || change.entry || '--:--';
                                       const displayExit = change.adminExit || change.editedExit || change.exit || '--:--';
                                       const displayBreakStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
@@ -2418,15 +2421,32 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       };
 
                                       return (
-                                        <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayChanged ? 'bg-amber-50 border border-amber-100' : (change.isPlaceholder && !isDayEditing && !change.adminEntry ? 'bg-slate-50/50 border-dashed border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
+                                        <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged ? 'bg-amber-50 border border-amber-100' : (change.isPlaceholder && !isDayEditing && !change.adminEntry ? 'bg-slate-50/50 border-dashed border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
                                           <div className="flex items-center gap-3">
                                             <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
                                               <Edit2 size={14} />
                                             </button>
                                             <span className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">{change.date || change.dateLabel}</span>
+                                            {isDayCleared && <span className="text-[8px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded uppercase">Apagado</span>}
                                           </div>
-                                          <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
-                                            {isDayChanged ? (
+                                          <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayCleared ? 'bg-white border border-rose-200' : isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
+                                            {isDayCleared ? (
+                                              <>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-slate-400 font-bold">Turno:</span>
+                                                  <span className="text-slate-400 line-through decoration-rose-400 text-xs">{change.entry} - {change.exit}</span>
+                                                  <span className="text-slate-300 text-xs">→</span>
+                                                  <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
+                                                </div>
+                                                <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-slate-400 font-bold">Pausa:</span>
+                                                  <span className="text-slate-400 line-through decoration-rose-400 text-xs">{(change.breakStart || '--:--')} - {(change.breakEnd || '--:--')}</span>
+                                                  <span className="text-slate-300 text-xs">→</span>
+                                                  <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
+                                                </div>
+                                              </>
+                                            ) : isDayChanged ? (
                                               <>
                                                 {isDayEditing ? (
                                                   <>
@@ -2508,7 +2528,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                               const dayDiff = (displayHours - originalDayHours).toFixed(2);
                                               const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
                                               const dayDiffSign = dayDiff >= 0 ? '+' : '';
-                                              if (isDayChanged) {
+                                              if (isDayCleared) {
+                                                return (
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-xs text-slate-400 line-through">{originalDayHours.toFixed(2)}h</span>
+                                                    <span className="text-slate-300">→</span>
+                                                    <span className="bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black text-xs">0.00h</span>
+                                                    <span className="text-rose-400 font-black text-[9px]">-{originalDayHours.toFixed(2)}h</span>
+                                                  </div>
+                                                );
+                                              } else if (isDayChanged) {
                                                 return (
                                                   <div className="flex items-center gap-1">
                                                     <span className="text-xs text-slate-400 line-through">{originalDayHours}h</span>
@@ -2586,15 +2615,18 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
 
                                   const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+                                  const isClientCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) && (change.entry && change.entry !== '--:--') && (change.editedEntry === '--:--' || change.editedExit === '--:--');
 
-                                  if (isAdminCleared) {
+                                  // Se admin apagou OU cliente apagou (e tinha registro original), deletar o log
+                                  if (isAdminCleared || isClientCleared) {
                                     if (oldLog) {
                                       await handleDelete('logs', oldLog.id);
                                     }
                                     continue;
                                   }
 
-                                  const dur = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                                  // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
+                                  const dur = change.adminHours ?? change.editedHours ?? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
 
                                   const logData = {
                                     startTime: entry,
@@ -2700,8 +2732,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
 
                                     const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+                                    const isClientCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) && (change.entry && change.entry !== '--:--') && (change.editedEntry === '--:--' || change.editedExit === '--:--');
 
-                                    if (isAdminCleared) {
+                                    // Se admin apagou OU cliente apagou (e tinha registro original), deletar o log
+                                    if (isAdminCleared || isClientCleared) {
                                       if (oldLog) {
                                         await handleDelete('logs', oldLog.id);
                                       }
@@ -2713,7 +2747,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     const shouldSave = hasValidTimes || oldLog || isNewDay;
 
                                     if (shouldSave) {
-                                      const dur = hasValidTimes ? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd) : 0;
+                                      // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
+                                      const dur = change.adminHours ?? change.editedHours ?? (hasValidTimes ? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd) : 0);
                                       if (oldLog) {
                                         await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
                                       } else {
