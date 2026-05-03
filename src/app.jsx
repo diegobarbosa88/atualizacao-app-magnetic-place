@@ -2012,8 +2012,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             date: oldLog ? oldLog.date : dateStr,
             workerId: String(targetWorkerIdStr),
             clientId: String(clientIdStr),
-            startTime: entry,
-            endTime: exit,
+            startTime: entry === '--:--' ? null : entry,
+            endTime: exit === '--:--' ? null : exit,
             breakStart: bStart === '--:--' ? null : bStart,
             breakEnd: bEnd === '--:--' ? null : bEnd,
             hours: dur
@@ -2629,8 +2629,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   const dur = change.adminHours ?? change.editedHours ?? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
 
                                   const logData = {
-                                    startTime: entry,
-                                    endTime: exit,
+                                    startTime: entry === '--:--' ? null : entry,
+                                    endTime: exit === '--:--' ? null : exit,
                                     breakStart: bStart === '--:--' ? null : bStart,
                                     breakEnd: bEnd === '--:--' ? null : bEnd,
                                     hours: dur
@@ -2750,10 +2750,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
                                       const dur = change.adminHours ?? change.editedHours ?? (hasValidTimes ? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd) : 0);
                                       if (oldLog) {
-                                        await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
+                                        await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry === '--:--' ? null : entry, endTime: exit === '--:--' ? null : exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
                                       } else {
                                         const nid = "log_" + Date.now() + Math.random().toString(36).substr(2, 9);
-                                        await saveToDb('logs', nid, { id: nid, date: dateStr, workerId: String(worker.id), clientId: String(notif.target_client_id), startTime: entry, endTime: exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur, created_at: new Date().toISOString() });
+                                        await saveToDb('logs', nid, { id: nid, date: dateStr, workerId: String(worker.id), clientId: String(notif.target_client_id), startTime: entry === '--:--' ? null : entry, endTime: exit === '--:--' ? null : exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur, created_at: new Date().toISOString() });
                                       }
                                     }
                                   }

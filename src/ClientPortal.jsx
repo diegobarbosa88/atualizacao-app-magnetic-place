@@ -146,8 +146,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     if (originalLog) {
                         const updatedLog = {
                             ...originalLog,
-                            startTime: d.adminEntry || d.editedEntry || d.newEntry,
-                            endTime: d.adminExit || d.editedExit || d.newExit,
+                            startTime: (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry),
+                            endTime: (d.adminExit || d.editedExit || d.newExit) === '--:--' ? null : (d.adminExit || d.editedExit || d.newExit),
                             breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart,
                             breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd,
                             hours: d.adminHours || d.editedHours || d.newHours
@@ -165,8 +165,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             date: targetDate,
                             workerId: targetWorkerId,
                             clientId: targetClientId,
-                            startTime: d.adminEntry || d.editedEntry || d.newEntry,
-                            endTime: d.adminExit || d.editedExit || d.newExit,
+                            startTime: (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry),
+                            endTime: (d.adminExit || d.editedExit || d.newExit) === '--:--' ? null : (d.adminExit || d.editedExit || d.newExit),
                             breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart,
                             breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd,
                             hours: d.adminHours || d.editedHours || d.newHours,
