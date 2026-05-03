@@ -2389,6 +2389,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                           };
                                         });
                                       }
+                                    } else {
+                                      // Modo Expandir: mostrar apenas dias com registo (entry não é --:--)
+                                      daysToRender = days.filter(day =>
+                                        day.entry && day.entry !== '--:--'
+                                      );
                                     }
 
                                     // Garantir que a lista fica sempre ordenada cronologicamente
@@ -2528,10 +2533,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                               </>
                                             )}
                                             {(() => {
-                                              const originalDayHours = parseFloat(change.hours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd));
+                                              const originalDayHours = (change.hours !== undefined && change.hours !== null && change.hours !== '')
+                                                ? parseFloat(change.hours)
+                                                : calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd);
                                               const dayDiff = (displayHours - originalDayHours).toFixed(2);
                                               const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
                                               const dayDiffSign = dayDiff >= 0 ? '+' : '';
+                                              const hoursDisplay = (val) => val > 0 ? `${val}h` : '--h';
                                               if (isDayCleared) {
                                                 return (
                                                   <div className="flex items-center gap-1">
@@ -2544,15 +2552,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                               } else if (isDayChanged) {
                                                 return (
                                                   <div className="flex items-center gap-1">
-                                                    <span className="text-xs text-slate-400 line-through">{originalDayHours}h</span>
+                                                    <span className="text-xs text-slate-400 line-through">{hoursDisplay(originalDayHours)}</span>
                                                     <span className="text-slate-300">→</span>
-                                                    <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black text-xs">{displayHours}h</span>
+                                                    <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black text-xs">{hoursDisplay(displayHours)}</span>
                                                     <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>
                                                   </div>
                                                 );
                                               } else {
                                                 return (
-                                                  <span className="sm:ml-2 px-2 py-1 rounded-md font-black bg-slate-100 text-slate-600">{displayHours}h</span>
+                                                  <span className="sm:ml-2 px-2 py-1 rounded-md font-black bg-slate-100 text-slate-600">{hoursDisplay(displayHours)}</span>
                                                 );
                                               }
                                             })()}
