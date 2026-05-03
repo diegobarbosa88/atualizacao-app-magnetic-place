@@ -993,16 +993,19 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                   }
 
                   return dayLogs.map((log, lIdx) => {
-                    weekPerformed += log.hours;
+                    const isClearedDay = log.startTime == null && log.endTime == null;
+                    if (!isClearedDay) {
+                      weekPerformed += log.hours;
+                    }
                     return (
                       <tr key={`${log.id}-${lIdx}`} className="page-break-inside-avoid">
                         {visibleColumns.day && <td className="text-center font-bold text-slate-700 py-0 col-day">{lIdx === 0 ? `${dayNum} ${dayName}` : ''}</td>}
-                        {visibleColumns.start && <td className="text-center font-mono col-time">{log.startTime}</td>}
+                        {visibleColumns.start && <td className="text-center font-mono col-time">{log.startTime ?? ''}</td>}
                         {visibleColumns.breakStart && <td className="text-center font-mono text-slate-400 col-time">{log.breakStart || ''}</td>}
                         {visibleColumns.breakEnd && <td className="text-center font-mono text-slate-400 col-time">{log.breakEnd || ''}</td>}
-                        {visibleColumns.end && <td className="text-center font-mono col-time">{log.endTime}</td>}
-                        {visibleColumns.total && <td className="text-center font-bold text-slate-700 col-time">{formatHours(log.hours)}</td>}
-                        {visibleColumns.project && <td className="text-center font-medium text-slate-700 uppercase whitespace-nowrap col-project" style={{ fontSize: '8px' }}>{unit.client?.name || ''}</td>}
+                        {visibleColumns.end && <td className="text-center font-mono col-time">{log.endTime ?? ''}</td>}
+                        {visibleColumns.total && <td className="text-center font-bold text-slate-700 col-time">{isClearedDay ? '' : formatHours(log.hours)}</td>}
+                        {visibleColumns.project && <td className="text-center font-medium text-slate-700 uppercase whitespace-nowrap col-project" style={{ fontSize: '8px' }}>{isClearedDay ? '' : (unit.client?.name || '')}</td>}
                         {visibleColumns.comment && <td className="text-center text-slate-500 italic col-comment" style={{ fontSize: '8px' }}>{log.description || ''}</td>}
                       </tr>
                     );
