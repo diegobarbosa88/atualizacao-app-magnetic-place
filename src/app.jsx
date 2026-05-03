@@ -2130,23 +2130,27 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             })() : null);
             const details = parseCorrectionDetails(notif.message, targetClientId, rawTargetMonth);
             let currentData;
-            if (editingDrafts[notif.id]) {
-              const hasAdminEdits = editingDrafts[notif.id].workers?.some(w =>
-                (w.dailyRecords || w.changes || []).some(d =>
-                  d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
-                )
-              );
-              if (hasAdminEdits) {
-                currentData = editingDrafts[notif.id];
-              } else {
+
+            // Check if there are any admin edits in the draft
+            const hasAdminEdits = editingDrafts[notif.id]?.workers?.some(w =>
+              (w.dailyRecords || w.changes || []).some(d =>
+                d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
+              )
+            );
+
+            // If there are admin edits, use the draft. Otherwise use fresh payload.
+            if (hasAdminEdits && editingDrafts[notif.id]) {
+              currentData = editingDrafts[notif.id];
+            } else {
+              // Clear any existing draft and use fresh payload
+              if (editingDrafts[notif.id]) {
                 setEditingDrafts(prev => {
                   const n = { ...prev };
                   delete n[notif.id];
                   return n;
                 });
               }
-            }
-            if (!currentData && notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
+              if (notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
               const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
               const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
               currentData = {
