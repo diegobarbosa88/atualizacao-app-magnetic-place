@@ -2139,7 +2139,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               if (hasAdminEdits) {
                 currentData = editingDrafts[notif.id];
               } else {
-                editingDrafts[notif.id] = null;
+                setEditingDrafts(prev => {
+                  const n = { ...prev };
+                  delete n[notif.id];
+                  return n;
+                });
               }
             }
             if (!currentData && notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
