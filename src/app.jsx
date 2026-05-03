@@ -2423,6 +2423,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       const isPrecisionReport = notif.payload?.reportType === 'precision';
 
                                       // For precision reports, always show only corrected days (no need to expand)
+                                      // If reportType is not set, default to precision if there are edited fields
+                                      const isPrecisionReport = notif.payload?.reportType === 'precision' ||
+                                        (notif.payload?.reportType === undefined && (change.editedEntry || change.editedExit || change.editedBreakStart || change.editedBreakEnd));
                                       if (isPrecisionReport && !shouldShowCorrection) return null;
 
                                       const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
