@@ -2148,12 +2148,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                       breakStart: d.breakStart || '--:--',
                       breakEnd: d.breakEnd || '--:--',
                       originalBreak: (d.breakStart || d.breakEnd) ? (d.breakStart || '--:--') + '-' + (d.breakEnd || '--:--') : '--:--',
-                      editedEntry: d.editedEntry || d.entry || '--:--',
-                      editedExit: d.editedExit || d.exit || '--:--',
-                      editedBreakStart: d.editedBreakStart || d.breakStart || '',
-                      editedBreakEnd: d.editedBreakEnd || d.breakEnd || '',
+                      editedEntry: d.editedEntry !== undefined ? d.editedEntry : '--:--',
+                      editedExit: d.editedExit !== undefined ? d.editedExit : '--:--',
+                      editedBreakStart: d.editedBreakStart !== undefined ? d.editedBreakStart : '',
+                      editedBreakEnd: d.editedBreakEnd !== undefined ? d.editedBreakEnd : '',
                       originalHours: d.originalHours || d.hours || 0,
-                      editedHours: d.editedHours || d.hours || 0,
+                      editedHours: d.editedHours !== undefined ? d.editedHours : 0,
                       adminEntry: '',
                       adminExit: '',
                       adminBreakStart: '',
@@ -2385,6 +2385,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                             breakStart: '--:--',
                                             breakEnd: '--:--',
                                             hours: 0,
+                                            editedEntry: '--:--',
+                                            editedExit: '--:--',
+                                            editedBreakStart: '--:--',
+                                            editedBreakEnd: '--:--',
+                                            editedHours: 0,
+                                            isNew: true,
                                             isPlaceholder: true
                                           };
                                         });
@@ -2406,8 +2412,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                         (change.adminExit && change.adminExit !== (change.exit === '--:--' ? '' : change.exit)) ||
                                         (change.adminBreakStart && change.adminBreakStart !== (change.breakStart || '')) ||
                                         (change.adminBreakEnd && change.adminBreakEnd !== (change.breakEnd || '')) ||
-                                        (change.editedEntry && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
-                                        (change.editedExit && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
+                                        (change.editedEntry !== undefined && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
+                                        (change.editedExit !== undefined && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
                                       const isDayCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) &&
                                         (change.entry && change.entry !== '--:--') &&
                                         (change.editedEntry === '--:--' || change.editedExit === '--:--');
