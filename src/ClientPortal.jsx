@@ -798,7 +798,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         target_type: 'admin',
                                         target_client_id: initialClientId,
                                         target_worker_ids: [],
-                                        payload: { changes: fullMonthSnapshot, isFullMonth: true, month: initialMonth },
+                                        payload: { changes: fullMonthSnapshot, isFullMonth: true, month: initialMonth, reportType: 'quick' },
                                         is_dismissible: true,
                                         is_active: true,
                                         created_at: new Date().toISOString()
@@ -812,7 +812,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         status: 'pending',
                                         client_id: initialClientId,
                                         month: initialMonth,
-                                        payload: { changes: fullMonthSnapshot, isFullMonth: true },
+                                        payload: { changes: fullMonthSnapshot, isFullMonth: true, reportType: 'quick' },
                                         created_at: new Date().toISOString()
                                     };
                                     await saveToDb('correcoes', correcaoId, correcaoRecord);
@@ -1263,7 +1263,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             target_type: 'admin',
                             target_client_id: initialClientId,
                             target_worker_ids: [],
-                            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth },
+                            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
                             is_dismissible: true,
                             is_active: true,
                             created_at: new Date().toISOString()
