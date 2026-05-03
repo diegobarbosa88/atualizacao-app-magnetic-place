@@ -2687,9 +2687,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                 for (const worker of currentData.workers) {
                                   for (const change of (worker.dailyRecords || worker.changes || [])) {
-                                    const rawDate = change.rawDate || change.date;
-                                    const dateStr = rawDate && rawDate.includes('-') ? rawDate : change.dateLabel;
-                                    if (!dateStr) continue;
+                                    const dateStr = change.date || change.rawDate;
+                                    if (!dateStr || !dateStr.includes('-')) continue;
                                     const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
 
                                     const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
