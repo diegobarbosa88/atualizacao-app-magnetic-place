@@ -938,7 +938,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         const dayDiff = (displayHours - originalDayHours).toFixed(2);
                                         const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
                                         const dayDiffSign = dayDiff >= 0 ? '+' : '';
-                                        const shouldShow = isDayChanged || isDayCleared || (day.isNew && (day.editedEntry || day.editedExit));
+                                        const shouldShow = day.isVisible || isDayChanged || isDayCleared;
 
                                         if (!shouldShow) return null;
 

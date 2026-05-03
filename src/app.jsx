@@ -2130,20 +2130,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             })() : null);
             const details = parseCorrectionDetails(notif.message, targetClientId, rawTargetMonth);
             let currentData;
-
-            // Check if there are any admin edits in the draft
-            const hasAdminEdits = editingDrafts[notif.id]?.workers?.some(w =>
-              (w.dailyRecords || w.changes || []).some(d =>
-                d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
-              )
-            );
-
-            // If there are admin edits, use the draft. Otherwise use fresh payload.
-            if (hasAdminEdits && editingDrafts[notif.id]) {
-              currentData = editingDrafts[notif.id];
-            } else {
-              // Clear any existing draft and use fresh payload
-              if (editingDrafts[notif.id]) {
+            if (editingDrafts[notif.id]) {
+              const hasAdminEdits = editingDrafts[notif.id].workers?.some(w =>
+                (w.dailyRecords || w.changes || []).some(d =>
+                  d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
+                )
+              );
+              if (hasAdminEdits) {
+                currentData = editingDrafts[notif.id];
+              } else {
                 setEditingDrafts(prev => {
                   const n = { ...prev };
                   delete n[notif.id];
@@ -2166,457 +2161,584 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               currentData = details;
             }
             const hasWorkerChanges = currentData.workers && currentData.workers.some(w =>
-                (w.dailyRecords || w.changes || []).some(c =>
-                  c.adminEntry || c.adminExit || c.adminBreakStart || c.adminBreakEnd || c.editedEntry || c.editedExit
-                )
-              );
-              const isEditing = !!editingDrafts[notif.id];
+              (w.dailyRecords || w.changes || []).some(c =>
+                c.adminEntry || c.adminExit || c.adminBreakStart || c.adminBreakEnd || c.editedEntry || c.editedExit
+              )
+            );
+            const isEditing = !!editingDrafts[notif.id];
 
-              const calculateMonthTotal = (worker) => {
-                const days = worker.dailyRecords || worker.changes || [];
-                const originalTotal = worker.totalHours || worker.originalTotal || 0;
-                // Always calculate original hours from startTime/endTime to handle night shifts correctly
-                const originalOfModified = days.reduce((acc, c) => {
-                  const entry = c.entry || c.startTime || '--:--';
-                  const exit = c.exit || c.endTime || '--:--';
-                  const bStart = c.breakStart || '--:--';
-                  const bEnd = c.breakEnd || '--:--';
-                  const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
-                  return acc + h;
-                }, 0);
-                const finalOfModified = days.reduce((acc, c) => {
-                  // Use adminHours if explicitly set (even if 0)
-                  if (c.adminHours !== undefined && c.adminHours !== null) {
-                    return acc + c.adminHours;
-                  }
-                  // Use editedHours if set
-                  if (c.editedHours !== undefined && c.editedHours !== null) {
-                    return acc + parseFloat(c.editedHours);
-                  }
-                  // Use newHours if set
-                  if (c.newHours !== undefined && c.newHours !== null) {
-                    return acc + parseFloat(c.newHours);
-                  }
-                  // Fallback: calculate from entry/exit
-                  const entry = c.adminEntry || c.editedEntry || c.entry || '--:--';
-                  const exit = c.adminExit || c.editedExit || c.exit || '--:--';
-                  const bStart = c.adminBreakStart || c.editedBreakStart || c.breakStart || '--:--';
-                  const bEnd = c.adminBreakEnd || c.editedBreakEnd || c.breakEnd || '--:--';
-                  const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
-                  return acc + h;
-                }, 0);
-                return parseFloat((originalTotal - originalOfModified + finalOfModified).toFixed(2));
-              };
+            const calculateMonthTotal = (worker) => {
+              const days = worker.dailyRecords || worker.changes || [];
+              const originalTotal = worker.totalHours || worker.originalTotal || 0;
+              // Always calculate original hours from startTime/endTime to handle night shifts correctly
+              const originalOfModified = days.reduce((acc, c) => {
+                const entry = c.entry || c.startTime || '--:--';
+                const exit = c.exit || c.endTime || '--:--';
+                const bStart = c.breakStart || '--:--';
+                const bEnd = c.breakEnd || '--:--';
+                const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                return acc + h;
+              }, 0);
+              const finalOfModified = days.reduce((acc, c) => {
+                // Use adminHours if explicitly set (even if 0)
+                if (c.adminHours !== undefined && c.adminHours !== null) {
+                  return acc + c.adminHours;
+                }
+                // Use editedHours if set
+                if (c.editedHours !== undefined && c.editedHours !== null) {
+                  return acc + parseFloat(c.editedHours);
+                }
+                // Use newHours if set
+                if (c.newHours !== undefined && c.newHours !== null) {
+                  return acc + parseFloat(c.newHours);
+                }
+                // Fallback: calculate from entry/exit
+                const entry = c.adminEntry || c.editedEntry || c.entry || '--:--';
+                const exit = c.adminExit || c.editedExit || c.exit || '--:--';
+                const bStart = c.adminBreakStart || c.editedBreakStart || c.breakStart || '--:--';
+                const bEnd = c.adminBreakEnd || c.editedBreakEnd || c.breakEnd || '--:--';
+                const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                return acc + h;
+              }, 0);
+              return parseFloat((originalTotal - originalOfModified + finalOfModified).toFixed(2));
+            };
 
-              const handleUpdateDraft = (workerName, date, field, value) => {
-                setEditingDrafts(prev => {
-                  const currentDraft = prev[notif.id] || (() => {
-                    const draft = JSON.parse(JSON.stringify(currentData));
-                    draft.workers.forEach(w => {
-                      w.editedTotalHours = calculateMonthTotal(w);
-                    });
-                    return draft;
-                  })();
-                  const worker = currentDraft.workers.find(w => w.name === workerName);
-                  if (worker) {
-                    let change = (worker.dailyRecords || worker.changes).find(c => (c.date || c.dateLabel) === date);
-                    if (!change) {
-                      change = {
-                        date: date,
-                        entry: '--:--',
-                        exit: '--:--',
-                        breakStart: '--:--',
-                        breakEnd: '--:--',
-                        hours: 0,
-                      };
-                      if (worker.dailyRecords) {
-                        worker.dailyRecords.push(change);
-                      } else if (worker.changes) {
-                        worker.changes.push(change);
-                      }
-                    }
-
-                    if (change) {
-                      change.isPlaceholder = false; // no longer a placeholder
-                      // Auto-convert empty to --:-- for time fields
-                      if (field !== 'adminHours' && field !== 'toDelete' && field !== 'isPlaceholder' && field !== 'isNew' && field !== 'originalHours' && field !== 'editedHours' && field !== 'newHours' && !value) {
-                        value = '--:--';
-                      }
-                      change[field] = value;
-                      if (field.startsWith('admin')) {
-                        const entry = change.adminEntry || change.editedEntry || change.entry || '';
-                        const exit = change.adminExit || change.editedExit || change.exit || '';
-                        const bStart = change.adminBreakStart || change.breakStart || '--:--';
-                        const bEnd = change.adminBreakEnd || change.breakEnd || '--:--';
-                        // Always set adminHours even if entry/exit is empty (calculateDuration returns 0 for empty)
-                        change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
-                      }
-                      worker.editedTotalHours = calculateMonthTotal(worker);
+            const handleUpdateDraft = (workerName, date, field, value) => {
+              setEditingDrafts(prev => {
+                const currentDraft = prev[notif.id] || (() => {
+                  const draft = JSON.parse(JSON.stringify(currentData));
+                  draft.workers.forEach(w => {
+                    w.editedTotalHours = calculateMonthTotal(w);
+                  });
+                  return draft;
+                })();
+                const worker = currentDraft.workers.find(w => w.name === workerName);
+                if (worker) {
+                  let change = (worker.dailyRecords || worker.changes).find(c => (c.date || c.dateLabel) === date);
+                  if (!change) {
+                    change = {
+                      date: date,
+                      entry: '--:--',
+                      exit: '--:--',
+                      breakStart: '--:--',
+                      breakEnd: '--:--',
+                      hours: 0,
+                    };
+                    if (worker.dailyRecords) {
+                      worker.dailyRecords.push(change);
+                    } else if (worker.changes) {
+                      worker.changes.push(change);
                     }
                   }
-                  return { ...prev, [notif.id]: currentDraft };
-                });
-              };
 
-              const isAcceptance = notif.title.includes('Contra-proposta Aceite');
+                  if (change) {
+                    change.isPlaceholder = false; // no longer a placeholder
+                    // Auto-convert empty to --:-- for time fields
+                    if (field !== 'adminHours' && field !== 'toDelete' && field !== 'isPlaceholder' && field !== 'isNew' && field !== 'originalHours' && field !== 'editedHours' && field !== 'newHours' && !value) {
+                      value = '--:--';
+                    }
+                    change[field] = value;
+                    if (field.startsWith('admin')) {
+                      const entry = change.adminEntry || change.editedEntry || change.entry || '';
+                      const exit = change.adminExit || change.editedExit || change.exit || '';
+                      const bStart = change.adminBreakStart || change.breakStart || '--:--';
+                      const bEnd = change.adminBreakEnd || change.breakEnd || '--:--';
+                      // Always set adminHours even if entry/exit is empty (calculateDuration returns 0 for empty)
+                      change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                    }
+                    worker.editedTotalHours = calculateMonthTotal(worker);
+                  }
+                }
+                return { ...prev, [notif.id]: currentDraft };
+              });
+            };
 
-              return (
-                <div key={notif.id} className={`rounded-[1.5rem] p-6 border ${isAcceptance ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-amber-50 border-amber-200'}`}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl ${isAcceptance ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
-                        {isAcceptance ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
-                      </div>
-                      <div>
-                        <h4 className={`font-black uppercase tracking-tight ${isAcceptance ? 'text-emerald-800' : 'text-slate-800'}`}>{notif.title}</h4>
-                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{new Date(notif.created_at).toLocaleDateString('pt-PT')}</p>
-                      </div>
+            const isAcceptance = notif.title.includes('Contra-proposta Aceite');
+
+            return (
+              <div key={notif.id} className={`rounded-[1.5rem] p-6 border ${isAcceptance ? 'bg-emerald-50 border-emerald-200 shadow-sm' : 'bg-amber-50 border-amber-200'}`}>
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-xl ${isAcceptance ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`}>
+                      {isAcceptance ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                    </div>
+                    <div>
+                      <h4 className={`font-black uppercase tracking-tight ${isAcceptance ? 'text-emerald-800' : 'text-slate-800'}`}>{notif.title}</h4>
+                      <p className="text-[10px] text-slate-500 font-medium mt-0.5">{new Date(notif.created_at).toLocaleDateString('pt-PT')}</p>
                     </div>
                   </div>
+                </div>
 
-                  {isAcceptance ? (
-                    <div className="space-y-4">
-                      <div className="bg-white/60 p-4 rounded-2xl border border-emerald-100 italic text-sm text-emerald-900">{notif.message}</div>
-                      <button onClick={() => handleDelete('app_notifications', notif.id)} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95">Arquivar e Remover da Lista</button>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {currentData.workers.length === 0 && (
-                        <div className="bg-white/60 p-6 rounded-2xl border border-amber-200 text-sm text-amber-900 whitespace-pre-wrap font-medium">
-                          {notif.message}
-                        </div>
-                      )}
+                {isAcceptance ? (
+                  <div className="space-y-4">
+                    <div className="bg-white/60 p-4 rounded-2xl border border-emerald-100 italic text-sm text-emerald-900">{notif.message}</div>
+                    <button onClick={() => handleDelete('app_notifications', notif.id)} className="bg-emerald-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95">Arquivar e Remover da Lista</button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {currentData.workers.length === 0 && (
+                      <div className="bg-white/60 p-6 rounded-2xl border border-amber-200 text-sm text-amber-900 whitespace-pre-wrap font-medium">
+                        {notif.message}
+                      </div>
+                    )}
 
-                      {currentData.workers.length > 0 && (
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                          {/* Lista de Colaboradores (Esquerda) */}
-                          <div className="lg:col-span-1 space-y-3">
-                            {currentData.workers.map((worker, idx) => {
-                              const selectedWorkerId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
-                              const isSelected = selectedWorkerId === worker.id;
-                              const workerChanged = (worker.editedTotalHours || worker.suggestedTotal || 0) !== (worker.totalHours || worker.originalTotal || 0);
-                              const originalTotal = worker.totalHours || worker.originalTotal || 0;
-                              const suggestedTotal = worker.editedTotalHours || worker.suggestedTotal || 0;
-                              const diff = (suggestedTotal - originalTotal).toFixed(2);
-                              const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
-                              const diffSign = diff >= 0 ? '+' : '';
-                              return (
-                                <button
-                                  key={idx}
-                                  onClick={() => setActiveWorkerInNotif(prev => ({ ...prev, [notif.id]: worker.id }))}
-                                  className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex flex-col gap-1 ${isSelected ? 'border-indigo-600 bg-white shadow-lg' : 'border-slate-100 bg-slate-50/50 hover:border-slate-300'}`}
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[8px] ${workerChanged ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                      {workerChanged ? '!' : '✓'}
-                                    </span>
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[9px] font-black text-slate-400 uppercase">{suggestedTotal}h</span>
-                                      <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>
-                                    </div>
-                                  </div>
-                                  <h4 className="font-black text-slate-800 text-xs leading-tight">{worker.name}</h4>
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          {/* Detalhes do Colaborador Selecionado (Direita) */}
-                          <div className="lg:col-span-2 space-y-3">
-                            {(() => {
-                              const selectedId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
-                              const worker = currentData.workers.find(w => w.id === selectedId);
-                              if (!worker) return null;
-                              const days = worker.dailyRecords || worker.changes || [];
-                              const totalSugerido = worker.editedTotalHours || worker.totalHours || 0;
-                              const originalTotal = worker.totalHours || worker.originalTotal || 0;
-                              const diff = (totalSugerido - originalTotal).toFixed(2);
-                              const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
-                              const diffSign = diff >= 0 ? '+' : '';
-
-                              return (
-                                <div className="animate-fade-in space-y-4">
-                                  <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
-                                    <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
-                                    <div className="flex items-center gap-2">
-                                      <button
-                                        onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
-                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                                        title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
-                                      >
-                                        {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
-                                      </button>
-                                      <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
-                                      <span className="text-slate-300">→</span>
-                                      <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-sm">{totalSugerido}h</span>
-                                      <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-3">
-
-
-                                    {(() => {
-                                      let daysToRender = days;
-
-                                      if (expandedCorrecaoDias[notif.id] && days.length > 0) {
-                                        const sampleDate = days.find(r => r.date || r.dateLabel)?.date || days.find(r => r.date || r.dateLabel)?.dateLabel;
-                                        if (sampleDate) {
-                                          const [y, m] = sampleDate.split('-').map(Number);
-                                          const daysInMonth = new Date(y, m, 0).getDate();
-                                          const recordsMap = {};
-                                          days.forEach(r => { if (r.date || r.dateLabel) recordsMap[r.date || r.dateLabel] = r; });
-
-                                          daysToRender = Array.from({ length: daysInMonth }, (_, i) => {
-                                            const dayStr = String(i + 1).padStart(2, '0');
-                                            const monthStr = String(m).padStart(2, '0');
-                                            const dateStr = `${y}-${monthStr}-${dayStr}`;
-                                            return recordsMap[dateStr] || {
-                                              date: dateStr,
-                                              entry: '--:--',
-                                              exit: '--:--',
-                                              breakStart: '--:--',
-                                              breakEnd: '--:--',
-                                              hours: 0,
-                                              editedEntry: '--:--',
-                                              editedExit: '--:--',
-                                              editedBreakStart: '--:--',
-                                              editedBreakEnd: '--:--',
-                                              editedHours: 0,
-                                              isNew: true,
-                                              isPlaceholder: true
-                                            };
-                                          });
-                                        }
-                                      } else {
-                                        // Modo Expandir: não filtra, apenas usa array original
-                                        daysToRender = days;
-                                      }
-
-                                      // Garantir que a lista fica sempre ordenada cronologicamente
-                                      daysToRender = [...daysToRender].sort((a, b) => {
-                                        const dateA = a.date || a.dateLabel || '';
-                                        const dateB = b.date || b.dateLabel || '';
-                                        return dateA.localeCompare(dateB);
-                                      });
-
-                                      return daysToRender.map((change, cIdx) => {
-                                        const isDayChanged = (change.adminEntry && change.adminEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
-                                          (change.adminExit && change.adminExit !== (change.exit === '--:--' ? '' : change.exit)) ||
-                                          (change.adminBreakStart && change.adminBreakStart !== (change.breakStart || '')) ||
-                                          (change.adminBreakEnd && change.adminBreakEnd !== (change.breakEnd || '')) ||
-                                          (change.editedEntry !== undefined && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
-                                          (change.editedExit !== undefined && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
-                                        const isDayCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) &&
-                                          (change.entry && change.entry !== '--:--') &&
-                                          (change.editedEntry === '--:--' || change.editedExit === '--:--');
-                                        const displayEntry = change.adminEntry || change.editedEntry || change.entry || '--:--';
-                                        const displayExit = change.adminExit || change.editedExit || change.exit || '--:--';
-                                        const displayBreakStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
-                                        const displayBreakEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
-                                        const displayHours = (change.adminHours !== null && change.adminHours !== undefined)
-                                          ? change.adminHours
-                                          : (change.editedHours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd) || 0);
-
-                                        const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
-                                        const toggleDayEdit = () => {
-                                          setActiveEditingDay(prev => ({
-                                            ...prev,
-                                            [notif.id]: isDayEditing ? null : (change.date || change.dateLabel)
-                                          }));
-                                        };
-
-                                        return (
-                                          <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged && !change.isNew ? 'bg-amber-50 border border-amber-100' : (!change.entry || change.entry === '--:--' || change.isNew ? 'bg-slate-50/50 border border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
-                                            <div className="flex items-center gap-3">
-                                              <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
-                                                <Edit2 size={14} />
-                                              </button>
-                                              <span className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">{change.date || change.dateLabel}</span>
-                                              {isDayCleared && <span className="text-[8px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded uppercase">Apagado</span>}
-                                            </div>
-                                            <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayCleared ? 'bg-white border border-rose-200' : isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
-                                              {isDayCleared ? (
-                                                <>
-                                                  <div className="flex items-center gap-2">
-                                                    <span className="text-slate-400 font-bold">Turno:</span>
-                                                    <span className="text-slate-400 line-through decoration-rose-400 text-xs">{change.entry} - {change.exit}</span>
-                                                    <span className="text-slate-300 text-xs">→</span>
-                                                    <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
-                                                  </div>
-                                                  <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                  <div className="flex items-center gap-2">
-                                                    <span className="text-slate-400 font-bold">Pausa:</span>
-                                                    <span className="text-slate-400 line-through decoration-rose-400 text-xs">{(change.breakStart || '--:--')} - {(change.breakEnd || '--:--')}</span>
-                                                    <span className="text-slate-300 text-xs">→</span>
-                                                    <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
-                                                  </div>
-                                                </>
-                                              ) : isDayChanged ? (
-                                                <>
-                                                  {isDayEditing ? (
-                                                    <>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Turno:</span>
-                                                        <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                        <span className="text-indigo-400">-</span>
-                                                        <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                      </div>
-                                                      <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Pausa:</span>
-                                                        <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                        <span className="text-indigo-400">-</span>
-                                                        <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                      </div>
-                                                      <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                      <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
-                                                        <Trash2 size={16} />
-                                                      </button>
-                                                    </>
-                                                  ) : (
-                                                    <>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Turno:</span>
-                                                        <span className="text-slate-400 line-through decoration-rose-400">{change.entry} - {change.exit}</span>
-                                                        <span className="text-slate-300">→</span>
-                                                        <span className="text-amber-600 font-black">{displayEntry} - {displayExit}</span>
-                                                      </div>
-                                                      <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Pausa:</span>
-                                                        <span className="text-slate-400 line-through decoration-rose-400">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
-                                                        <span className="text-slate-300">→</span>
-                                                        <span className="text-amber-600 font-black">{displayBreakStart} - {displayBreakEnd}</span>
-                                                      </div>
-                                                    </>
-                                                  )}
-                                                </>
-                                              ) : (
-                                                <>
-                                                  {isDayEditing ? (
-                                                    <>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Turno:</span>
-                                                        <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                        <span className="text-indigo-400">-</span>
-                                                        <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                      </div>
-                                                      <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Pausa:</span>
-                                                        <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                        <span className="text-indigo-400">-</span>
-                                                        <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                      </div>
-                                                      <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                      <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
-                                                        <Trash2 size={16} />
-                                                      </button>
-                                                    </>
-                                                  ) : (
-                                                    <>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Turno:</span>
-                                                        <span className="text-slate-600 font-black">{change.entry} - {change.exit}</span>
-                                                      </div>
-                                                      <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
-                                                      <div className="flex items-center gap-2">
-                                                        <span className="text-slate-400 font-bold">Pausa:</span>
-                                                        <span className="text-slate-600 font-black">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
-                                                      </div>
-                                                    </>
-                                                  )}
-                                                </>
-                                              )}
-                                              {(() => {
-                                                const originalDayHours = (change.hours !== undefined && change.hours !== null && change.hours !== '')
-                                                  ? parseFloat(change.hours)
-                                                  : calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd);
-                                                const dayDiff = (displayHours - originalDayHours).toFixed(2);
-                                                const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
-                                                const dayDiffSign = dayDiff >= 0 ? '+' : '';
-                                                const hoursDisplay = (val) => val > 0 ? `${val}h` : '--h';
-                                                if (isDayCleared) {
-                                                  return (
-                                                    <div className="flex items-center gap-1">
-                                                      <span className="text-xs text-slate-400 line-through">{originalDayHours.toFixed(2)}h</span>
-                                                      <span className="text-slate-300">→</span>
-                                                      <span className="bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black text-xs">0.00h</span>
-                                                      <span className="text-rose-400 font-black text-[9px]">-{originalDayHours.toFixed(2)}h</span>
-                                                    </div>
-                                                  );
-                                                } else if (isDayChanged) {
-                                                  return (
-                                                    <div className="flex items-center gap-1">
-                                                      <span className="text-xs text-slate-400 line-through">{hoursDisplay(originalDayHours)}</span>
-                                                      <span className="text-slate-300">→</span>
-                                                      <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black text-xs">{hoursDisplay(displayHours)}</span>
-                                                      <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>
-                                                    </div>
-                                                  );
-                                                } else {
-                                                  return (
-                                                    <span className="sm:ml-2 px-2 py-1 rounded-md font-black bg-slate-100 text-slate-600">{hoursDisplay(displayHours)}</span>
-                                                  );
-                                                }
-                                              })()}
-
-
-                                            </div>
-                                          </div>
-                                        );
-                                      });
-                                    })()}
+                    {currentData.workers.length > 0 && (
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Lista de Colaboradores (Esquerda) */}
+                        <div className="lg:col-span-1 space-y-3">
+                          {currentData.workers.map((worker, idx) => {
+                            const selectedWorkerId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
+                            const isSelected = selectedWorkerId === worker.id;
+                            const workerChanged = (worker.editedTotalHours || worker.suggestedTotal || 0) !== (worker.totalHours || worker.originalTotal || 0);
+                            const originalTotal = worker.totalHours || worker.originalTotal || 0;
+                            const suggestedTotal = worker.editedTotalHours || worker.suggestedTotal || 0;
+                            const diff = (suggestedTotal - originalTotal).toFixed(2);
+                            const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                            const diffSign = diff >= 0 ? '+' : '';
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => setActiveWorkerInNotif(prev => ({ ...prev, [notif.id]: worker.id }))}
+                                className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex flex-col gap-1 ${isSelected ? 'border-indigo-600 bg-white shadow-lg' : 'border-slate-100 bg-slate-50/50 hover:border-slate-300'}`}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-[8px] ${workerChanged ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                    {workerChanged ? '!' : '✓'}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[9px] font-black text-slate-400 uppercase">{suggestedTotal}h</span>
+                                    <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>
                                   </div>
                                 </div>
-                              );
-                            })()}
-                          </div>
+                                <h4 className="font-black text-slate-800 text-xs leading-tight">{worker.name}</h4>
+                              </button>
+                            );
+                          })}
                         </div>
-                      )}
 
-                      {details.justification && (
-                        <div className="bg-white rounded-xl p-4 border border-slate-100">
-                          <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Justificação do Cliente</p>
-                          <p className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded">"{details.justification}"</p>
+                        {/* Detalhes do Colaborador Selecionado (Direita) */}
+                        <div className="lg:col-span-2 space-y-3">
+                          {(() => {
+                            const selectedId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
+                            const worker = currentData.workers.find(w => w.id === selectedId);
+                            if (!worker) return null;
+                            const days = worker.dailyRecords || worker.changes || [];
+                            const totalSugerido = worker.editedTotalHours || worker.totalHours || 0;
+                            const originalTotal = worker.totalHours || worker.originalTotal || 0;
+                            const diff = (totalSugerido - originalTotal).toFixed(2);
+                            const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                            const diffSign = diff >= 0 ? '+' : '';
+
+                            return (
+                              <div className="animate-fade-in space-y-4">
+                                <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
+                                  <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                      title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
+                                    >
+                                      {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
+                                    </button>
+                                    <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
+                                    <span className="text-slate-300">→</span>
+                                    <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-sm">{totalSugerido}h</span>
+                                    <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-3">
+
+
+                                  {(() => {
+                                    let daysToRender = days;
+
+                                    if (expandedCorrecaoDias[notif.id] && days.length > 0) {
+                                      const sampleDate = days.find(r => r.date || r.dateLabel)?.date || days.find(r => r.date || r.dateLabel)?.dateLabel;
+                                      if (sampleDate) {
+                                        const [y, m] = sampleDate.split('-').map(Number);
+                                        const daysInMonth = new Date(y, m, 0).getDate();
+                                        const recordsMap = {};
+                                        days.forEach(r => { if (r.date || r.dateLabel) recordsMap[r.date || r.dateLabel] = r; });
+
+                                        daysToRender = Array.from({ length: daysInMonth }, (_, i) => {
+                                          const dayStr = String(i + 1).padStart(2, '0');
+                                          const monthStr = String(m).padStart(2, '0');
+                                          const dateStr = `${y}-${monthStr}-${dayStr}`;
+                                          return recordsMap[dateStr] || {
+                                            date: dateStr,
+                                            entry: '--:--',
+                                            exit: '--:--',
+                                            breakStart: '--:--',
+                                            breakEnd: '--:--',
+                                            hours: 0,
+                                            editedEntry: '--:--',
+                                            editedExit: '--:--',
+                                            editedBreakStart: '--:--',
+                                            editedBreakEnd: '--:--',
+                                            editedHours: 0,
+                                            isNew: true,
+                                            isPlaceholder: true
+                                          };
+                                        });
+                                      }
+                                    } else {
+                                      // Modo Expandir: não filtra, apenas usa array original
+                                      daysToRender = days;
+                                    }
+
+                                    // Garantir que a lista fica sempre ordenada cronologicamente
+                                    daysToRender = [...daysToRender].sort((a, b) => {
+                                      const dateA = a.date || a.dateLabel || '';
+                                      const dateB = b.date || b.dateLabel || '';
+                                      return dateA.localeCompare(dateB);
+                                    });
+
+                                    return daysToRender.map((change, cIdx) => {
+                                      const isDayChanged = (change.adminEntry && change.adminEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
+                                        (change.adminExit && change.adminExit !== (change.exit === '--:--' ? '' : change.exit)) ||
+                                        (change.adminBreakStart && change.adminBreakStart !== (change.breakStart || '')) ||
+                                        (change.adminBreakEnd && change.adminBreakEnd !== (change.breakEnd || '')) ||
+                                        (change.editedEntry !== undefined && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
+                                        (change.editedExit !== undefined && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
+                                      const isDayCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) &&
+                                        (change.entry && change.entry !== '--:--') &&
+                                        (change.editedEntry === '--:--' || change.editedExit === '--:--');
+                                      const displayEntry = change.adminEntry || change.editedEntry || change.entry || '--:--';
+                                      const displayExit = change.adminExit || change.editedExit || change.exit || '--:--';
+                                      const displayBreakStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
+                                      const displayBreakEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+                                      const displayHours = (change.adminHours !== null && change.adminHours !== undefined)
+                                        ? change.adminHours
+                                        : (change.editedHours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd) || 0);
+
+                                      // Filter: only show days that client corrected (edited, cleared, or added)
+                                      const isClientEditedDay = (change.editedEntry !== undefined && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
+                                        (change.editedExit !== undefined && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
+                                      const isClientClearedDay = isDayCleared;
+                                      const isClientAddedDay = change.isNew && (change.editedEntry || change.editedExit);
+                                      const shouldShowCorrection = isClientEditedDay || isClientClearedDay || isClientAddedDay;
+
+                                      // In expanded mode, only show correction days
+                                      if (expandedCorrecaoDias[notif.id] && !shouldShowCorrection) return null;
+
+                                      const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
+                                      const toggleDayEdit = () => {
+                                        setActiveEditingDay(prev => ({
+                                          ...prev,
+                                          [notif.id]: isDayEditing ? null : (change.date || change.dateLabel)
+                                        }));
+                                      };
+
+                                      return (
+                                        <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged && !change.isNew ? 'bg-amber-50 border border-amber-100' : (!change.entry || change.entry === '--:--' || change.isNew ? 'bg-slate-50/50 border border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
+                                          <div className="flex items-center gap-3">
+                                            <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
+                                              <Edit2 size={14} />
+                                            </button>
+                                            <span className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">{change.date || change.dateLabel}</span>
+                                            {isDayCleared && <span className="text-[8px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded uppercase">Apagado</span>}
+                                          </div>
+                                          <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayCleared ? 'bg-white border border-rose-200' : isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
+                                            {isDayCleared ? (
+                                              <>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-slate-400 font-bold">Turno:</span>
+                                                  <span className="text-slate-400 line-through decoration-rose-400 text-xs">{change.entry} - {change.exit}</span>
+                                                  <span className="text-slate-300 text-xs">→</span>
+                                                  <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
+                                                </div>
+                                                <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                <div className="flex items-center gap-2">
+                                                  <span className="text-slate-400 font-bold">Pausa:</span>
+                                                  <span className="text-slate-400 line-through decoration-rose-400 text-xs">{(change.breakStart || '--:--')} - {(change.breakEnd || '--:--')}</span>
+                                                  <span className="text-slate-300 text-xs">→</span>
+                                                  <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
+                                                </div>
+                                              </>
+                                            ) : isDayChanged ? (
+                                              <>
+                                                {isDayEditing ? (
+                                                  <>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Turno:</span>
+                                                      <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <span className="text-indigo-400">-</span>
+                                                      <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                    </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Pausa:</span>
+                                                      <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <span className="text-indigo-400">-</span>
+                                                      <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                    </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
+                                                      <Trash2 size={16} />
+                                                    </button>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Turno:</span>
+                                                      <span className="text-slate-400 line-through decoration-rose-400">{change.entry} - {change.exit}</span>
+                                                      <span className="text-slate-300">→</span>
+                                                      <span className="text-amber-600 font-black">{displayEntry} - {displayExit}</span>
+                                                    </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Pausa:</span>
+                                                      <span className="text-slate-400 line-through decoration-rose-400">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
+                                                      <span className="text-slate-300">→</span>
+                                                      <span className="text-amber-600 font-black">{displayBreakStart} - {displayBreakEnd}</span>
+                                                    </div>
+                                                  </>
+                                                )}
+                                              </>
+                                            ) : (
+                                              <>
+                                                {isDayEditing ? (
+                                                  <>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Turno:</span>
+                                                      <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <span className="text-indigo-400">-</span>
+                                                      <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                    </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Pausa:</span>
+                                                      <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <span className="text-indigo-400">-</span>
+                                                      <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                    </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
+                                                    <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
+                                                      <Trash2 size={16} />
+                                                    </button>
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Turno:</span>
+                                                      <span className="text-slate-600 font-black">{change.entry} - {change.exit}</span>
+                                                    </div>
+                                                    <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
+                                                    <div className="flex items-center gap-2">
+                                                      <span className="text-slate-400 font-bold">Pausa:</span>
+                                                      <span className="text-slate-600 font-black">{change.breakStart || '--:--'} - {change.breakEnd || '--:--'}</span>
+                                                    </div>
+                                                  </>
+                                                )}
+                                              </>
+                                            )}
+                                            {(() => {
+                                              const originalDayHours = (change.hours !== undefined && change.hours !== null && change.hours !== '')
+                                                ? parseFloat(change.hours)
+                                                : calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd);
+                                              const dayDiff = (displayHours - originalDayHours).toFixed(2);
+                                              const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
+                                              const dayDiffSign = dayDiff >= 0 ? '+' : '';
+                                              const hoursDisplay = (val) => val > 0 ? `${val}h` : '--h';
+                                              if (isDayCleared) {
+                                                return (
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-xs text-slate-400 line-through">{originalDayHours.toFixed(2)}h</span>
+                                                    <span className="text-slate-300">→</span>
+                                                    <span className="bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black text-xs">0.00h</span>
+                                                    <span className="text-rose-400 font-black text-[9px]">-{originalDayHours.toFixed(2)}h</span>
+                                                  </div>
+                                                );
+                                              } else if (isDayChanged) {
+                                                return (
+                                                  <div className="flex items-center gap-1">
+                                                    <span className="text-xs text-slate-400 line-through">{hoursDisplay(originalDayHours)}</span>
+                                                    <span className="text-slate-300">→</span>
+                                                    <span className="bg-amber-100 text-amber-700 px-2 py-1 rounded-md font-black text-xs">{hoursDisplay(displayHours)}</span>
+                                                    <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>
+                                                  </div>
+                                                );
+                                              } else {
+                                                return (
+                                                  <span className="sm:ml-2 px-2 py-1 rounded-md font-black bg-slate-100 text-slate-600">{hoursDisplay(displayHours)}</span>
+                                                );
+                                              }
+                                            })()}
+
+
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
-                      )}
+                      </div>
+                    )}
 
-                      <div className="flex gap-3">
-                        {isEditing ? (
-                          <>
+                    {details.justification && (
+                      <div className="bg-white rounded-xl p-4 border border-slate-100">
+                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Justificação do Cliente</p>
+                        <p className="text-xs text-slate-600 italic bg-slate-50 p-2 rounded">"{details.justification}"</p>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={async () => {
+                              console.log("Iniciando correção para cliente:", notif.target_client_id);
+                              console.log("Workers:", currentData.workers?.length);
+
+                              // Primeiro salva as correções no banco de dados
+                              const targetClientId = notif.target_client_id;
+                              console.log("=== DEBUG CORREÇÃO ===");
+                              console.log("target_client_id:", targetClientId, "type:", typeof targetClientId);
+                              console.log("logs totais:", logs.length);
+                              console.log("currentData.workers:", (currentData.workers || []).length);
+
+                              if (!targetClientId) {
+                                alert("ERRO: target_client_id não encontrado na notificação!");
+                                return;
+                              }
+
+                              let savedCount = 0;
+                              for (const worker of (currentData.workers || [])) {
+                                console.log("Processando worker:", worker.name, "id:", worker.id);
+                                const workerLogs = logs.filter(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(targetClientId));
+                                console.log("  Logs deste worker neste cliente:", workerLogs.length);
+
+                                for (const change of (worker.dailyRecords || worker.changes || [])) {
+                                  const dateStr = change.date || change.rawDate;
+                                  if (!dateStr) continue;
+
+                                  const workerIdStr = String(worker.id);
+                                  const clientIdStr = String(targetClientId);
+
+                                  const oldLog = logs.find(l => String(l.workerId) === workerIdStr && String(l.clientId) === clientIdStr && l.date === dateStr);
+
+                                  const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
+                                  const exit = change.adminExit || change.editedExit || change.exit || '--:--';
+                                  const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
+                                  const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+
+                                  const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+                                  const isClientCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) && (change.entry && change.entry !== '--:--') && (change.editedEntry === '--:--' || change.editedExit === '--:--');
+
+                                  // Se admin apagou OU cliente apagou (e tinha registro original), deletar o log
+                                  if (isAdminCleared || isClientCleared) {
+                                    if (oldLog) {
+                                      await handleDelete('logs', oldLog.id);
+                                    }
+                                    continue;
+                                  }
+
+                                  // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
+                                  const dur = change.adminHours ?? change.editedHours ?? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+
+                                  const logData = {
+                                    startTime: entry === '--:--' ? null : entry,
+                                    endTime: exit === '--:--' ? null : exit,
+                                    breakStart: bStart === '--:--' ? null : bStart,
+                                    breakEnd: bEnd === '--:--' ? null : bEnd,
+                                    hours: dur
+                                  };
+
+                                  if (oldLog) {
+                                    console.log("  Atualizando log existente:", oldLog.id, "date:", dateStr);
+                                    await saveToDb('logs', oldLog.id, { ...oldLog, ...logData });
+                                    savedCount++;
+                                  } else {
+                                    const nid = "log_" + Date.now() + Math.random();
+                                    console.log("  Criando novo log:", dateStr, "worker:", workerIdStr, "client:", clientIdStr);
+                                    await saveToDb('logs', nid, {
+                                      id: nid,
+                                      date: dateStr,
+                                      workerId: workerIdStr,
+                                      clientId: clientIdStr,
+                                      ...logData,
+                                      created_at: new Date().toISOString()
+                                    });
+                                    savedCount++;
+                                  }
+                                }
+                              }
+                              console.log("Total processado:", savedCount);
+
+                              // Envia notificação para o cliente
+                              const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                              const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+
+                              let clientMsg = `Olá ${currentData.clientName},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel}\n\n`;
+                              clientMsg += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                              clientMsg += `👤 Cliente: ${currentData.clientName}\n📅 Período: ${currentData.monthLabel}\n`;
+                              const diffTotal = (totalCorrigido - totalOriginal).toFixed(2);
+                              const diffSignTotal = diffTotal >= 0 ? '+' : '';
+                              clientMsg += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
+                              clientMsg += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotal}${diffTotal}h)\n\n`;
+                              (currentData.workers || []).forEach(w => {
+                                const orig = parseFloat(w.totalHours) || 0;
+                                const edit = parseFloat(w.editedTotalHours) || orig;
+                                const diff = (edit - orig).toFixed(2);
+                                const diffSign = diff >= 0 ? '+' : '';
+                                clientMsg += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${diffSign}${diff}h)\n`;
+                              });
+                              const notifId = "cntr_" + Date.now();
+                              const newNotif = {
+                                id: notifId,
+                                title: `Correção: ${currentData.monthLabel || ''}`,
+                                message: clientMsg,
+                                type: 'warning',
+                                target_type: 'client',
+                                target_client_id: String(notif.target_client_id),
+                                created_at: new Date().toISOString(),
+                                is_active: true,
+                                payload: { type: 'correcao_admin', month: currentData.monthLabel, totalOriginal, totalCorrigido, changes: currentData.workers }
+                              };
+                              console.log("Criando notificação para cliente:", newNotif);
+                              await saveToDb('app_notifications', notifId, newNotif);
+
+                              const targetClient = clients.find(c => String(c.id) === String(notif.target_client_id));
+                              if (targetClient?.email) {
+                                await sendNotificationEmail(targetClient.email, targetClient.name, newNotif.title, newNotif.message, notif.target_client_id, currentData.monthLabel);
+                              }
+
+                              await handleDelete('app_notifications', notif.id);
+                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+
+                              if (notif.payload?.correcao_id) {
+                                await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
+                              }
+
+                              alert("Correções aplicadas e cliente notificado!");
+                            }}
+                            className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
+                          >
+                            <Send size={16} /> Corrigir e Enviar
+                          </button>
+                          <button onClick={() => {
+                            setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                          }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
+                        </>
+                      ) : (
+                        <>
+                          {(currentData.workers && currentData.workers.length > 0) ? (
                             <button
                               onClick={async () => {
-                                console.log("Iniciando correção para cliente:", notif.target_client_id);
-                                console.log("Workers:", currentData.workers?.length);
+                                if (!window.confirm("Aprovar todas as alterações?")) return;
 
-                                // Primeiro salva as correções no banco de dados
-                                const targetClientId = notif.target_client_id;
-                                console.log("=== DEBUG CORREÇÃO ===");
-                                console.log("target_client_id:", targetClientId, "type:", typeof targetClientId);
-                                console.log("logs totais:", logs.length);
-                                console.log("currentData.workers:", (currentData.workers || []).length);
-
-                                if (!targetClientId) {
-                                  alert("ERRO: target_client_id não encontrado na notificação!");
-                                  return;
-                                }
-
-                                let savedCount = 0;
-                                for (const worker of (currentData.workers || [])) {
-                                  console.log("Processando worker:", worker.name, "id:", worker.id);
-                                  const workerLogs = logs.filter(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(targetClientId));
-                                  console.log("  Logs deste worker neste cliente:", workerLogs.length);
-
+                                for (const worker of currentData.workers) {
                                   for (const change of (worker.dailyRecords || worker.changes || [])) {
                                     const dateStr = change.date || change.rawDate;
-                                    if (!dateStr) continue;
-
-                                    const workerIdStr = String(worker.id);
-                                    const clientIdStr = String(targetClientId);
-
-                                    const oldLog = logs.find(l => String(l.workerId) === workerIdStr && String(l.clientId) === clientIdStr && l.date === dateStr);
+                                    if (!dateStr || !dateStr.includes('-')) continue;
+                                    const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
 
                                     const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
                                     const exit = change.adminExit || change.editedExit || change.exit || '--:--';
@@ -2634,247 +2756,129 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       continue;
                                     }
 
-                                    // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
-                                    const dur = change.adminHours ?? change.editedHours ?? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
+                                    const isNewDay = change.isNew || (!change.originalHours || change.originalHours === 0);
+                                    const hasValidTimes = entry && entry !== '--:--' && exit && exit !== '--:--';
+                                    const shouldSave = hasValidTimes || oldLog || isNewDay;
 
-                                    const logData = {
-                                      startTime: entry === '--:--' ? null : entry,
-                                      endTime: exit === '--:--' ? null : exit,
-                                      breakStart: bStart === '--:--' ? null : bStart,
-                                      breakEnd: bEnd === '--:--' ? null : bEnd,
-                                      hours: dur
-                                    };
-
-                                    if (oldLog) {
-                                      console.log("  Atualizando log existente:", oldLog.id, "date:", dateStr);
-                                      await saveToDb('logs', oldLog.id, { ...oldLog, ...logData });
-                                      savedCount++;
-                                    } else {
-                                      const nid = "log_" + Date.now() + Math.random();
-                                      console.log("  Criando novo log:", dateStr, "worker:", workerIdStr, "client:", clientIdStr);
-                                      await saveToDb('logs', nid, {
-                                        id: nid,
-                                        date: dateStr,
-                                        workerId: workerIdStr,
-                                        clientId: clientIdStr,
-                                        ...logData,
-                                        created_at: new Date().toISOString()
-                                      });
-                                      savedCount++;
-                                    }
-                                  }
-                                }
-                                console.log("Total processado:", savedCount);
-
-                                // Envia notificação para o cliente
-                                const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
-                                const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
-
-                                let clientMsg = `Olá ${currentData.clientName},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel}\n\n`;
-                                clientMsg += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
-                                clientMsg += `👤 Cliente: ${currentData.clientName}\n📅 Período: ${currentData.monthLabel}\n`;
-                                const diffTotal = (totalCorrigido - totalOriginal).toFixed(2);
-                                const diffSignTotal = diffTotal >= 0 ? '+' : '';
-                                clientMsg += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
-                                clientMsg += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotal}${diffTotal}h)\n\n`;
-                                (currentData.workers || []).forEach(w => {
-                                  const orig = parseFloat(w.totalHours) || 0;
-                                  const edit = parseFloat(w.editedTotalHours) || orig;
-                                  const diff = (edit - orig).toFixed(2);
-                                  const diffSign = diff >= 0 ? '+' : '';
-                                  clientMsg += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${diffSign}${diff}h)\n`;
-                                });
-                                const notifId = "cntr_" + Date.now();
-                                const newNotif = {
-                                  id: notifId,
-                                  title: `Correção: ${currentData.monthLabel || ''}`,
-                                  message: clientMsg,
-                                  type: 'warning',
-                                  target_type: 'client',
-                                  target_client_id: String(notif.target_client_id),
-                                  created_at: new Date().toISOString(),
-                                  is_active: true,
-                                  payload: { type: 'correcao_admin', month: currentData.monthLabel, totalOriginal, totalCorrigido, changes: currentData.workers }
-                                };
-                                console.log("Criando notificação para cliente:", newNotif);
-                                await saveToDb('app_notifications', notifId, newNotif);
-
-                                const targetClient = clients.find(c => String(c.id) === String(notif.target_client_id));
-                                if (targetClient?.email) {
-                                  await sendNotificationEmail(targetClient.email, targetClient.name, newNotif.title, newNotif.message, notif.target_client_id, currentData.monthLabel);
-                                }
-
-                                await handleDelete('app_notifications', notif.id);
-                                setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-
-                                if (notif.payload?.correcao_id) {
-                                  await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
-                                }
-
-                                alert("Correções aplicadas e cliente notificado!");
-                              }}
-                              className={`flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-200 ${currentData.workers?.length === 0 ? 'hidden' : ''}`}
-                            >
-                              <Send size={16} /> Corrigir e Enviar
-                            </button>
-                            <button onClick={() => {
-                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                              setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                            }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
-                          </>
-                        ) : (
-                          <>
-                            {(currentData.workers && currentData.workers.length > 0) ? (
-                              <button
-                                onClick={async () => {
-                                  if (!window.confirm("Aprovar todas as alterações?")) return;
-
-                                  for (const worker of currentData.workers) {
-                                    for (const change of (worker.dailyRecords || worker.changes || [])) {
-                                      const dateStr = change.date || change.rawDate;
-                                      if (!dateStr || !dateStr.includes('-')) continue;
-                                      const oldLog = logs.find(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(notif.target_client_id) && l.date === dateStr);
-
-                                      const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
-                                      const exit = change.adminExit || change.editedExit || change.exit || '--:--';
-                                      const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
-                                      const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
-
-                                      const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
-                                      const isClientCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) && (change.entry && change.entry !== '--:--') && (change.editedEntry === '--:--' || change.editedExit === '--:--');
-
-                                      // Se admin apagou OU cliente apagou (e tinha registro original), deletar o log
-                                      if (isAdminCleared || isClientCleared) {
-                                        if (oldLog) {
-                                          await handleDelete('logs', oldLog.id);
-                                        }
-                                        continue;
-                                      }
-
-                                      const isNewDay = change.isNew || (!change.originalHours || change.originalHours === 0);
-                                      const hasValidTimes = entry && entry !== '--:--' && exit && exit !== '--:--';
-                                      const shouldSave = hasValidTimes || oldLog || isNewDay;
-
-                                      if (shouldSave) {
-                                        // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
-                                        const dur = change.adminHours ?? change.editedHours ?? (hasValidTimes ? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd) : 0);
-                                        if (oldLog) {
-                                          await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry === '--:--' ? null : entry, endTime: exit === '--:--' ? null : exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
-                                        } else {
-                                          const nid = "log_" + Date.now() + Math.random().toString(36).substr(2, 9);
-                                          await saveToDb('logs', nid, { id: nid, date: dateStr, workerId: String(worker.id), clientId: String(notif.target_client_id), startTime: entry === '--:--' ? null : entry, endTime: exit === '--:--' ? null : exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur, created_at: new Date().toISOString() });
-                                        }
+                                    if (shouldSave) {
+                                      // Usar editedHours se existir (do cliente), senão adminHours, senão calcular
+                                      const dur = change.adminHours ?? change.editedHours ?? (hasValidTimes ? calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd) : 0);
+                                      if (oldLog) {
+                                        await saveToDb('logs', oldLog.id, { ...oldLog, startTime: entry === '--:--' ? null : entry, endTime: exit === '--:--' ? null : exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur });
+                                      } else {
+                                        const nid = "log_" + Date.now() + Math.random().toString(36).substr(2, 9);
+                                        await saveToDb('logs', nid, { id: nid, date: dateStr, workerId: String(worker.id), clientId: String(notif.target_client_id), startTime: entry === '--:--' ? null : entry, endTime: exit === '--:--' ? null : exit, breakStart: bStart === '--:--' ? null : bStart, breakEnd: bEnd === '--:--' ? null : bEnd, hours: dur, created_at: new Date().toISOString() });
                                       }
                                     }
                                   }
+                                }
 
-                                  const feedbackNotifId = "fb_" + Date.now();
-                                  await saveToDb('app_notifications', feedbackNotifId, {
-                                    id: feedbackNotifId,
-                                    title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
-                                    message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
-                                    type: 'success',
-                                    target_type: 'client',
-                                    target_client_id: String(notif.target_client_id),
-                                    created_at: new Date().toISOString(),
-                                    is_active: true,
-                                    payload: { type: 'correcoes_aplicadas' }
-                                  });
-
-                                  const targetClient2 = clients.find(c => String(c.id) === String(notif.target_client_id));
-                                  if (targetClient2?.email) {
-                                    const fbNotif = {
-                                      title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
-                                      message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`
-                                    };
-                                    const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
-                                    const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
-                                    const diffTotalAcc = (totalCorrigido - totalOriginal).toFixed(2);
-                                    const diffSignTotalAcc = diffTotalAcc >= 0 ? '+' : '';
-                                    let clientMsgAcc = `Olá ${targetClient2.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel || details.monthLabel || ''}\n\n`;
-                                    clientMsgAcc += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
-                                    clientMsgAcc += `👤 Cliente: ${targetClient2.name}\n📅 Período: ${currentData.monthLabel || details.monthLabel || ''}\n`;
-                                    clientMsgAcc += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
-                                    clientMsgAcc += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotalAcc}${diffTotalAcc}h)\n\n`;
-                                    (currentData.workers || []).forEach(w => {
-                                      const orig = parseFloat(w.totalHours) || 0;
-                                      const edit = parseFloat(w.editedTotalHours) || orig;
-                                      const diff = (edit - orig).toFixed(2);
-                                      const dS = diff >= 0 ? '+' : '';
-                                      clientMsgAcc += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${dS}${diff}h)\n`;
-                                    });
-                                    await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, clientMsgAcc, notif.target_client_id, rawTargetMonth || currentData.monthLabel || details.monthLabel);
-                                  }
-
-                                  await handleDelete('app_notifications', notif.id);
-                                  alert("Correções aplicadas e cliente notificado!");
-                                }}
-                                className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
-                              >
-                                <CheckCircle size={16} /> Aceitar e Aplicar
-                              </button>
-                            ) : (
-                              <button onClick={async () => {
-                                if (!window.confirm("Marcar este reporte como resolvido e notificar o cliente?")) return;
                                 const feedbackNotifId = "fb_" + Date.now();
-                                const fbNotifData = {
+                                await saveToDb('app_notifications', feedbackNotifId, {
                                   id: feedbackNotifId,
-                                  title: `Reporte de Divergência Resolvido: ${details.monthLabel || notif.payload?.month || ''}`,
-                                  message: `O seu reporte de divergência referente ao período de ${details.monthLabel || notif.payload?.month || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
+                                  title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
+                                  message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
                                   type: 'success',
                                   target_type: 'client',
                                   target_client_id: String(notif.target_client_id),
                                   created_at: new Date().toISOString(),
                                   is_active: true,
                                   payload: { type: 'correcoes_aplicadas' }
-                                };
-                                await saveToDb('app_notifications', feedbackNotifId, fbNotifData);
-                                const targetClient3 = clients.find(c => String(c.id) === String(notif.target_client_id));
-                                if (targetClient3?.email) {
-                                  const rawTargetMonth3 = (notif.payload?.month || details.monthLabel || '').match(/\d{4}-\d{2}/)?.[0] || '';
-                                  const clientMsgRes = details.workers
-                                    ? (() => {
-                                      const tOrig = (details.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
-                                      const tCorr = (details.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
-                                      const dT = (tCorr - tOrig).toFixed(2);
-                                      const dTS = dT >= 0 ? '+' : '';
-                                      let m = `Olá ${targetClient3.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${details.monthLabel || notif.payload?.month || ''}\n\n`;
-                                      m += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
-                                      m += `👤 Cliente: ${targetClient3.name}\n📅 Período: ${details.monthLabel || notif.payload?.month || ''}\n`;
-                                      m += `💰 Total Original: ${tOrig.toFixed(2)}h\n`;
-                                      m += `✅ Total Corrigido: ${tCorr.toFixed(2)}h (${dTS}${dT}h)\n\n`;
-                                      (details.workers || []).forEach(w => {
-                                        const orig = parseFloat(w.totalHours) || 0;
-                                        const edit = parseFloat(w.editedTotalHours) || orig;
-                                        const diff = (edit - orig).toFixed(2);
-                                        const dS = diff >= 0 ? '+' : '';
-                                        m += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${dS}${diff}h)\n`;
-                                      });
-                                      return m;
-                                    })()
-                                    : `Olá ${targetClient3.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${details.monthLabel || notif.payload?.month || ''}\n\n`;
-                                  await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, clientMsgRes, notif.target_client_id, rawTargetMonth3 || notif.payload?.month || details.monthLabel);
+                                });
+
+                                const targetClient2 = clients.find(c => String(c.id) === String(notif.target_client_id));
+                                if (targetClient2?.email) {
+                                  const fbNotif = {
+                                    title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
+                                    message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`
+                                  };
+                                  const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                                  const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                                  const diffTotalAcc = (totalCorrigido - totalOriginal).toFixed(2);
+                                  const diffSignTotalAcc = diffTotalAcc >= 0 ? '+' : '';
+                                  let clientMsgAcc = `Olá ${targetClient2.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel || details.monthLabel || ''}\n\n`;
+                                  clientMsgAcc += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                                  clientMsgAcc += `👤 Cliente: ${targetClient2.name}\n📅 Período: ${currentData.monthLabel || details.monthLabel || ''}\n`;
+                                  clientMsgAcc += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
+                                  clientMsgAcc += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotalAcc}${diffTotalAcc}h)\n\n`;
+                                  (currentData.workers || []).forEach(w => {
+                                    const orig = parseFloat(w.totalHours) || 0;
+                                    const edit = parseFloat(w.editedTotalHours) || orig;
+                                    const diff = (edit - orig).toFixed(2);
+                                    const dS = diff >= 0 ? '+' : '';
+                                    clientMsgAcc += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${dS}${diff}h)\n`;
+                                  });
+                                  await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, clientMsgAcc, notif.target_client_id, rawTargetMonth || currentData.monthLabel || details.monthLabel);
                                 }
+
                                 await handleDelete('app_notifications', notif.id);
-                                if (notif.payload?.correcao_id) {
-                                  await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
-                                }
-                                alert("Reporte marcado como resolvido.");
-                              }} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
-                                <CheckCircle size={16} /> Marcar como Resolvido
-                              </button>
-                            )}
-                            <button onClick={() => { setRejeitarNotif(notif); setRejeitarMotivo(''); setModalRejeitarAberto(true); }} className="px-6 py-3 bg-rose-100 text-rose-600 rounded-xl font-black text-xs uppercase hover:bg-rose-200 transition-all"><X size={16} /> Rejeitar</button>
-                          </>
-                        )}
-                      </div>
+                                alert("Correções aplicadas e cliente notificado!");
+                              }}
+                              className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-200"
+                            >
+                              <CheckCircle size={16} /> Aceitar e Aplicar
+                            </button>
+                          ) : (
+                            <button onClick={async () => {
+                              if (!window.confirm("Marcar este reporte como resolvido e notificar o cliente?")) return;
+                              const feedbackNotifId = "fb_" + Date.now();
+                              const fbNotifData = {
+                                id: feedbackNotifId,
+                                title: `Reporte de Divergência Resolvido: ${details.monthLabel || notif.payload?.month || ''}`,
+                                message: `O seu reporte de divergência referente ao período de ${details.monthLabel || notif.payload?.month || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`,
+                                type: 'success',
+                                target_type: 'client',
+                                target_client_id: String(notif.target_client_id),
+                                created_at: new Date().toISOString(),
+                                is_active: true,
+                                payload: { type: 'correcoes_aplicadas' }
+                              };
+                              await saveToDb('app_notifications', feedbackNotifId, fbNotifData);
+                              const targetClient3 = clients.find(c => String(c.id) === String(notif.target_client_id));
+                              if (targetClient3?.email) {
+                                const rawTargetMonth3 = (notif.payload?.month || details.monthLabel || '').match(/\d{4}-\d{2}/)?.[0] || '';
+                                const clientMsgRes = details.workers
+                                  ? (() => {
+                                    const tOrig = (details.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                                    const tCorr = (details.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                                    const dT = (tCorr - tOrig).toFixed(2);
+                                    const dTS = dT >= 0 ? '+' : '';
+                                    let m = `Olá ${targetClient3.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${details.monthLabel || notif.payload?.month || ''}\n\n`;
+                                    m += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                                    m += `👤 Cliente: ${targetClient3.name}\n📅 Período: ${details.monthLabel || notif.payload?.month || ''}\n`;
+                                    m += `💰 Total Original: ${tOrig.toFixed(2)}h\n`;
+                                    m += `✅ Total Corrigido: ${tCorr.toFixed(2)}h (${dTS}${dT}h)\n\n`;
+                                    (details.workers || []).forEach(w => {
+                                      const orig = parseFloat(w.totalHours) || 0;
+                                      const edit = parseFloat(w.editedTotalHours) || orig;
+                                      const diff = (edit - orig).toFixed(2);
+                                      const dS = diff >= 0 ? '+' : '';
+                                      m += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${dS}${diff}h)\n`;
+                                    });
+                                    return m;
+                                  })()
+                                  : `Olá ${targetClient3.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${details.monthLabel || notif.payload?.month || ''}\n\n`;
+                                await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, clientMsgRes, notif.target_client_id, rawTargetMonth3 || notif.payload?.month || details.monthLabel);
+                              }
+                              await handleDelete('app_notifications', notif.id);
+                              if (notif.payload?.correcao_id) {
+                                await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
+                              }
+                              alert("Reporte marcado como resolvido.");
+                            }} className="flex-1 bg-emerald-600 text-white py-3 rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200">
+                              <CheckCircle size={16} /> Marcar como Resolvido
+                            </button>
+                          )}
+                          <button onClick={() => { setRejeitarNotif(notif); setRejeitarMotivo(''); setModalRejeitarAberto(true); }} className="px-6 py-3 bg-rose-100 text-rose-600 rounded-xl font-black text-xs uppercase hover:bg-rose-200 transition-all"><X size={16} /> Rejeitar</button>
+                        </>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            }
-          }
-</div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );
