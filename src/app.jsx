@@ -445,7 +445,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
           client,
           worker: workers.find(w => w.id === workerId),
           logs: specificLogs,
-          totalHours: specificLogs.reduce((acc, l) => acc + l.hours, 0),
+          totalHours: specificLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
           id: workerId
         }];
       }
@@ -4111,7 +4111,7 @@ function AdminDashboard(props) {
                       </thead>
                       <tbody>
                         {([...workers].map(w => {
-                          const totalHours = logs.filter(l => l.workerId === w.id && l.date?.substring(0, 7) === portalMonthStr).reduce((acc, l) => acc + l.hours, 0);
+                          const totalHours = logs.filter(l => l.workerId === w.id && l.date?.substring(0, 7) === portalMonthStr).reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
                           const approval = approvals.find(a => a.workerId === w.id && a.month === portalMonthStr);
                           return { ...w, totalHours, isApproved: !!approval, approval };
                         }).sort((a, b) => {
