@@ -2146,33 +2146,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
               const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
               currentData = {
-                workers: notif.payload.changes.map(w => ({
-                  ...w,
-                  dailyRecords: (w.dailyRecords || w.changes || []).map(d => {
-                    const isNewDay = d.isNew || (!d.entry || d.entry === '--:--') && (!d.originalHours || d.originalHours === 0);
-                    return {
-                      ...d,
-                      originalShift: d.entry && d.exit ? d.entry + '-' + d.exit : '--:--',
-                      entry: d.entry || '--:--',
-                      exit: d.exit || '--:--',
-                      breakStart: d.breakStart || '--:--',
-                      breakEnd: d.breakEnd || '--:--',
-                      originalBreak: (d.breakStart || d.breakEnd) ? (d.breakStart || '--:--') + '-' + (d.breakEnd || '--:--') : '--:--',
-                      editedEntry: d.editedEntry !== undefined ? d.editedEntry : '--:--',
-                      editedExit: d.editedExit !== undefined ? d.editedExit : '--:--',
-                      editedBreakStart: d.editedBreakStart !== undefined ? d.editedBreakStart : '',
-                      editedBreakEnd: d.editedBreakEnd !== undefined ? d.editedBreakEnd : '',
-                      originalHours: d.originalHours || d.hours || 0,
-                      editedHours: d.editedHours !== undefined ? d.editedHours : 0,
-                      adminEntry: '',
-                      adminExit: '',
-                      adminBreakStart: '',
-                      adminBreakEnd: '',
-                      adminHours: null,
-                      isNew: isNewDay
-                    };
-                  })
-                })),
+                workers: notif.payload.changes,
                 clientName: clientNameMatch ? clientNameMatch[1].trim() : '',
                 monthLabel: periodMatch ? periodMatch[1].trim() : ''
               };
