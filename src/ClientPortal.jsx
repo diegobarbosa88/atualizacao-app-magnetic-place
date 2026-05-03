@@ -1155,19 +1155,10 @@ relevantDays.forEach(d => {
           <button onClick={() => goToView('editar_relatorio')} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-800 rounded-xl transition-all shadow-sm">Voltar</button>
           <button onClick={async () => {
               const correcoesTexto = generateCorrectionMessage(false);
-              const changedWorkers = draftData.map(w => {
-                const modifiedDays = w.dailyRecords.filter(d => {
-                  const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-                  const originalEntry = d.entry === '--:--' ? '' : d.entry;
-                  const originalExit = d.exit === '--:--' ? '' : d.exit;
-                  const originalBStart = d.breakStart || '';
-                  const originalBEnd = d.breakEnd || '';
-                  const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
-                  const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== originalBStart || d.editedBreakEnd !== originalBEnd;
-                  return isNewDay ? wasEdited : hasChange;
-                });
-                return { ...w, dailyRecords: modifiedDays };
-              }).filter(w => w.dailyRecords.length > 0);
+              const changedWorkers = draftData.map(w => ({
+                ...w,
+                dailyRecords: w.dailyRecords.map(d => ({ ...d, date: d.rawDate || d.date }))
+              }));
 
               const notifId = "notif_" + Date.now();
               const newNotif = {
@@ -1178,10 +1169,21 @@ relevantDays.forEach(d => {
                   target_type: 'admin',
                   target_client_id: initialClientId,
                   target_worker_ids: [],
-                  payload: { changes: changedWorkers, isOnlyModified: true, month: initialMonth },
+                  payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth },
                   is_dismissible: true,
                   is_active: true,
                   created_at: new Date().toISOString()
+              };
+              const correcaoId = "correcao_" + Date.now();
+              const correcaoRecord = {
+                id: correcaoId,
+                title: `Pedido de Correção: ${clientData.name}`,
+                message: correcoesTexto,
+                status: 'pending',
+                client_id: initialClientId,
+                month: initialMonth,
+                payload: { changes: changedWorkers, isFullMonth: true },
+                created_at: new Date().toISOString()
               };
               const correcaoId = "correcao_" + Date.now();
               const correcaoRecord = {
