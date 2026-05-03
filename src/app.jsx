@@ -2428,7 +2428,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       };
 
                                       return (
-                                        <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged ? 'bg-amber-50 border border-amber-100' : (!change.entry || change.entry === '--:--' ? 'bg-slate-50/50 border border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
+                                        <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged && !change.isNew ? 'bg-amber-50 border border-amber-100' : (!change.entry || change.entry === '--:--' || change.isNew ? 'bg-slate-50/50 border border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
                                           <div className="flex items-center gap-3">
                                             <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
                                               <Edit2 size={14} />
