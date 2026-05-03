@@ -419,7 +419,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
           client: uClient,
           worker: uWorker,
           logs: unitLogs,
-          totalHours: unitLogs.reduce((acc, l) => acc + l.hours, 0),
+          totalHours: unitLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
           id: pair
         };
       }).filter(Boolean);
@@ -433,7 +433,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
           client,
           worker: workers.find(w => w.id === wId),
           logs: unitLogs,
-          totalHours: unitLogs.reduce((acc, l) => acc + l.hours, 0),
+          totalHours: unitLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
           id: wId
         };
       });
@@ -459,7 +459,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
           client: clients.find(c => c.id === cId),
           worker: workers.find(w => w.id === workerId),
           logs: unitLogs,
-          totalHours: unitLogs.reduce((acc, l) => acc + l.hours, 0),
+          totalHours: unitLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
           id: cId
         };
       });
@@ -994,8 +994,9 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
 
                   return dayLogs.map((log, lIdx) => {
                     const isClearedDay = log.startTime == null && log.endTime == null;
+                    const logHours = isClearedDay ? 0 : calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
                     if (!isClearedDay) {
-                      weekPerformed += log.hours;
+                      weekPerformed += logHours;
                     }
                     return (
                       <tr key={`${log.id}-${lIdx}`} className="page-break-inside-avoid">
@@ -1004,7 +1005,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                         {visibleColumns.breakStart && <td className="text-center font-mono text-slate-400 col-time">{log.breakStart || ''}</td>}
                         {visibleColumns.breakEnd && <td className="text-center font-mono text-slate-400 col-time">{log.breakEnd || ''}</td>}
                         {visibleColumns.end && <td className="text-center font-mono col-time">{log.endTime ?? ''}</td>}
-                        {visibleColumns.total && <td className="text-center font-bold text-slate-700 col-time">{isClearedDay ? '' : formatHours(log.hours)}</td>}
+                        {visibleColumns.total && <td className="text-center font-bold text-slate-700 col-time">{isClearedDay ? '' : formatHours(logHours)}</td>}
                         {visibleColumns.project && <td className="text-center font-medium text-slate-700 uppercase whitespace-nowrap col-project" style={{ fontSize: '8px' }}>{isClearedDay ? '' : (unit.client?.name || '')}</td>}
                         {visibleColumns.comment && <td className="text-center text-slate-500 italic col-comment" style={{ fontSize: '8px' }}>{log.description || ''}</td>}
                       </tr>
