@@ -2629,10 +2629,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
                               const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
 
-                              let clientMsg = `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                              let clientMsg = `Olá ${currentData.clientName},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel}\n\n`;
+                              clientMsg += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
                               clientMsg += `👤 Cliente: ${currentData.clientName}\n📅 Período: ${currentData.monthLabel}\n`;
+                              const diffTotal = (totalCorrigido - totalOriginal).toFixed(2);
+                              const diffSignTotal = diffTotal >= 0 ? '+' : '';
                               clientMsg += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
-                              clientMsg += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h\n\n`;
+                              clientMsg += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotal}${diffTotal}h)\n\n`;
                               (currentData.workers || []).forEach(w => {
                                 const orig = parseFloat(w.totalHours) || 0;
                                 const edit = parseFloat(w.editedTotalHours) || orig;
@@ -2740,7 +2743,23 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
                                     message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`
                                   };
-                                  await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, fbNotif.message, notif.target_client_id, rawTargetMonth || currentData.monthLabel || details.monthLabel);
+                                  const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                                  const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                                  const diffTotalAcc = (totalCorrigido - totalOriginal).toFixed(2);
+                                  const diffSignTotalAcc = diffTotalAcc >= 0 ? '+' : '';
+                                  let clientMsgAcc = `Olá ${targetClient2.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel || details.monthLabel || ''}\n\n`;
+                                  clientMsgAcc += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                                  clientMsgAcc += `👤 Cliente: ${targetClient2.name}\n📅 Período: ${currentData.monthLabel || details.monthLabel || ''}\n`;
+                                  clientMsgAcc += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
+                                  clientMsgAcc += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotalAcc}${diffTotalAcc}h)\n\n`;
+                                  (currentData.workers || []).forEach(w => {
+                                    const orig = parseFloat(w.totalHours) || 0;
+                                    const edit = parseFloat(w.editedTotalHours) || orig;
+                                    const diff = (edit - orig).toFixed(2);
+                                    const dS = diff >= 0 ? '+' : '';
+                                    clientMsgAcc += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${dS}${diff}h)\n`;
+                                  });
+                                  await sendNotificationEmail(targetClient2.email, targetClient2.name, fbNotif.title, clientMsgAcc, notif.target_client_id, rawTargetMonth || currentData.monthLabel || details.monthLabel);
                                 }
 
                                 await handleDelete('app_notifications', notif.id);
@@ -2768,7 +2787,29 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               await saveToDb('app_notifications', feedbackNotifId, fbNotifData);
                               const targetClient3 = clients.find(c => String(c.id) === String(notif.target_client_id));
                               if (targetClient3?.email) {
-                                await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, fbNotifData.message, notif.target_client_id, rawTargetMonth || notif.payload?.month || details.monthLabel);
+                                const rawTargetMonth3 = (notif.payload?.month || details.monthLabel || '').match(/\d{4}-\d{2}/)?.[0] || '';
+                                const clientMsgRes = details.workers
+                                  ? (() => {
+                                      const tOrig = (details.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                                      const tCorr = (details.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                                      const dT = (tCorr - tOrig).toFixed(2);
+                                      const dTS = dT >= 0 ? '+' : '';
+                                      let m = `Olá ${targetClient3.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${details.monthLabel || notif.payload?.month || ''}\n\n`;
+                                      m += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
+                                      m += `👤 Cliente: ${targetClient3.name}\n📅 Período: ${details.monthLabel || notif.payload?.month || ''}\n`;
+                                      m += `💰 Total Original: ${tOrig.toFixed(2)}h\n`;
+                                      m += `✅ Total Corrigido: ${tCorr.toFixed(2)}h (${dTS}${dT}h)\n\n`;
+                                      (details.workers || []).forEach(w => {
+                                        const orig = parseFloat(w.totalHours) || 0;
+                                        const edit = parseFloat(w.editedTotalHours) || orig;
+                                        const diff = (edit - orig).toFixed(2);
+                                        const dS = diff >= 0 ? '+' : '';
+                                        m += `👤 ${w.name}: ${orig.toFixed(2)}h ➔ ${edit.toFixed(2)}h (${dS}${diff}h)\n`;
+                                      });
+                                      return m;
+                                    })()
+                                  : `Olá ${targetClient3.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${details.monthLabel || notif.payload?.month || ''}\n\n`;
+                                await sendNotificationEmail(targetClient3.email, targetClient3.name, fbNotifData.title, clientMsgRes, notif.target_client_id, rawTargetMonth3 || notif.payload?.month || details.monthLabel);
                               }
                               await handleDelete('app_notifications', notif.id);
                               if (notif.payload?.correcao_id) {
@@ -5807,6 +5848,16 @@ function App(props) {
       is_active: true,
       payload: { type: 'correcao_rejeitada', motivo: rejeitarMotivo.trim() }
     };
+    const monthFromMsg = rejeitarNotif.message.match(/📅 Período: (.+)\n/)?.[1] || '';
+    if (!rawTargetMonth && monthFromMsg) {
+      const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      const lowerMonth = monthFromMsg.toLowerCase();
+      const monthIdx = months.findIndex(m => lowerMonth.includes(m));
+      const yearMatch = monthFromMsg.match(/\d{4}/);
+      if (monthIdx >= 0 && yearMatch) {
+        rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
+      }
+    }
     await saveToDb('app_notifications', rejectNotifId, fbNotifData);
     if (targetClient?.email) {
       await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth);
