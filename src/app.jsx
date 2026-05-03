@@ -2422,8 +2422,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                       const isPrecisionReport = notif.payload?.reportType === 'precision';
 
-                                      // In expanded mode, only show correction days for precision reports
-                                      if (expandedCorrecaoDias[notif.id] && isPrecisionReport && !shouldShowCorrection) return null;
+                                      // For precision reports, always show only corrected days (no need to expand)
+                                      if (isPrecisionReport && !shouldShowCorrection) return null;
 
                                       const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
                                       const toggleDayEdit = () => {
