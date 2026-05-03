@@ -2420,8 +2420,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       const isClientAddedDay = change.isNew && (change.editedEntry || change.editedExit);
                                       const shouldShowCorrection = isClientEditedDay || isClientClearedDay || isClientAddedDay;
 
-                                      const isPrecisionReport = notif.payload?.reportType === 'precision';
-
                                       // For precision reports, always show only corrected days (no need to expand)
                                       // If reportType is not set, default to precision if there are edited fields
                                       const isPrecisionReport = notif.payload?.reportType === 'precision' ||
