@@ -2150,7 +2150,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   return n;
                 });
               }
-              if (notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
+if (notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
                 const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
                 const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
                 currentData = {
@@ -2158,9 +2158,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   clientName: clientNameMatch ? clientNameMatch[1].trim() : '',
                   monthLabel: periodMatch ? periodMatch[1].trim() : ''
                 };
-if (!expandedCorrecaoDias[notif.id]) {
+                if (!expandedCorrecaoDias[notif.id]) {
                   setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: true }));
-                } else if (details.workers && details.workers.length > 0) {
+                }
+              } else if (details.workers && details.workers.length > 0) {
                 currentData = details;
               }
               const hasWorkerChanges = currentData.workers && currentData.workers.some(w =>
