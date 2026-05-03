@@ -1185,17 +1185,6 @@ relevantDays.forEach(d => {
                 payload: { changes: changedWorkers, isFullMonth: true },
                 created_at: new Date().toISOString()
               };
-              const correcaoId = "correcao_" + Date.now();
-              const correcaoRecord = {
-                id: correcaoId,
-                title: `Pedido de Correção: ${clientData.name}`,
-                message: correcoesTexto,
-                status: 'pending',
-                client_id: initialClientId,
-                month: initialMonth,
-                payload: { changes: changedWorkers, isOnlyModified: true },
-                created_at: new Date().toISOString()
-              };
               await saveToDb('correcoes', correcaoId, correcaoRecord);
 
               const newNotifWithCorrecaoId = {
