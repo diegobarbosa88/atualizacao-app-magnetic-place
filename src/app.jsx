@@ -2131,8 +2131,18 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const details = parseCorrectionDetails(notif.message, targetClientId, rawTargetMonth);
             let currentData;
             if (editingDrafts[notif.id]) {
-              currentData = editingDrafts[notif.id];
-            } else if (notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
+              const hasAdminEdits = editingDrafts[notif.id].workers?.some(w =>
+                (w.dailyRecords || w.changes || []).some(d =>
+                  d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
+                )
+              );
+              if (hasAdminEdits) {
+                currentData = editingDrafts[notif.id];
+              } else {
+                editingDrafts[notif.id] = null;
+              }
+            }
+            if (!currentData && notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
               const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
               const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
               currentData = {
