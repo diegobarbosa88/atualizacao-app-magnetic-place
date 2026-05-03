@@ -994,9 +994,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
   };
 
   const generateCorrectionMessage = (isQuickMessage = false) => {
-    const changedWorkers = isQuickMessage ? draftData.filter(w => w.dailyRecords.some(d => {
-          return d.editedEntry && d.editedExit && d.editedHours > 0;
-        })) : draftData.filter(w => w.dailyRecords.some(d => {
+    const changedWorkers = isQuickMessage ? draftData : draftData.filter(w => w.dailyRecords.some(d => {
         const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
         const originalEntry = d.entry === '--:--' ? '' : d.entry;
         const originalExit = d.exit === '--:--' ? '' : d.exit;
@@ -1023,10 +1021,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
        correcoesTexto += `   Total: ${w.totalHours}h ➔ ${w.editedTotalHours}h (${wDiff > 0 ? '+' : ''}${wDiff}h)\n`;
        correcoesTexto += `   Alterações:\n`;
        
-const relevantDays = isQuickMessage ? w.dailyRecords.filter(d => {
-            const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-            return isNewDay ? (d.editedEntry && d.editedExit && d.editedHours > 0) : d.hours > 0;
-        }) : w.dailyRecords.filter(d => {
+const relevantDays = isQuickMessage ? w.dailyRecords : w.dailyRecords.filter(d => {
            const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
            const originalEntry = d.entry === '--:--' ? '' : d.entry;
            const originalExit = d.exit === '--:--' ? '' : d.exit;

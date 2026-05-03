@@ -2157,13 +2157,14 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                       adminHours: null,
                       isNew: isNewDay
                     };
-                  }),
-                  totalHours: w.totalHours || 0,
-                  editedTotalHours: w.editedTotalHours || w.totalHours || 0
+                  })
                 })),
                 clientName: clientNameMatch ? clientNameMatch[1].trim() : '',
                 monthLabel: periodMatch ? periodMatch[1].trim() : ''
               };
+              if (!expandedCorrecaoDias[notif.id]) {
+                setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: true }));
+              }
             } else if (details.workers && details.workers.length > 0) {
               currentData = details;
             }
@@ -2341,6 +2342,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
                                   <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
                                   <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                      title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
+                                    >
+                                      {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
+                                    </button>
                                     <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
                                     <span className="text-slate-300">→</span>
                                     <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-sm">{totalSugerido}h</span>
