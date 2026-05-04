@@ -64,6 +64,46 @@ const EMAILJS_SERVICE_ID = "service_xvt0vm8";
 const EMAILJS_TEMPLATE_ID_NOTIF = "template_xmexrgp";
 const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
 
+const emailTranslations = {
+  es: {
+    // Títulos
+    'Pedido de Correção': 'Solicitud de Corrección',
+    'Divergência Reportada': 'Divergencia Reportada',
+    'Correção Aceite': 'Corrección Aceptada',
+    'Correção Rejeitada': 'Corrección Rechazada',
+    'Mensagem de Divergência': 'Mensaje de Divergencia',
+    // Partes da mensagem
+    'PEDIDO DE CORREÇÃO': 'SOLICITUD DE CORRECCIÓN',
+    'MENSAGEM DE DIVERGÊNCIA': 'MENSAJE DE DIVERGENCIA',
+    'RESUMO GERAL': 'RESUMEN GENERAL',
+    'Total Original:': 'Total Original:',
+    'Novo Total Sugerido:': 'Nuevo Total Sugerido:',
+    'Diferença:': 'Diferencia:',
+    'DETALHES POR COLABORADOR': 'DETALLES POR COLABORADOR',
+    'Total:': 'Total:',
+    'Alterações:': 'Cambios:',
+    'Turno:': 'Turno:',
+    'Pausa:': 'Pausa:',
+    'Horas:': 'Horas:',
+    'JUSTIFICAÇÃO:': 'JUSTIFICACIÓN:',
+    'justificação:': 'justificación:',
+    'Correção aceite pelo admin!': '¡Corrección aceptada por el admin!',
+    'Correção rejeitada. Motivo:': 'Corrección rechazada. Motivo:',
+  }
+};
+
+const translateEmailContent = (text, lang = 'es') => {
+  if (!text || !emailTranslations[lang]) return text;
+  let translated = text;
+  const replacements = emailTranslations[lang];
+  // Sort by length descending to avoid partial replacements
+  const keys = Object.keys(replacements).sort((a, b) => b.length - a.length);
+  keys.forEach(key => {
+    translated = translated.split(key).join(replacements[key]);
+  });
+  return translated;
+};
+
 const monthToYYYYMM = (monthStr) => {
   if (!monthStr) return null;
   if (monthStr.match(/^\d{4}-\d{2}$/)) return monthStr;
@@ -81,11 +121,13 @@ const sendNotificationEmail = async (clientEmail, clientName, notifTitle, notifM
   try {
     const monthStr = month ? monthToYYYYMM(month) : `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
     const clientParam = clientId ? `&client=${String(clientId)}&month=${monthStr}` : '';
+    const translatedTitle = translateEmailContent(notifTitle, 'es');
+    const translatedMessage = translateEmailContent(notifMessage, 'es');
     const templateParams = {
       to_email: clientEmail || 'contato@cliente.pt',
       to_name: clientName,
-      notification_title: notifTitle,
-      notification_message: notifMessage,
+      notification_title: translatedTitle,
+      notification_message: translatedMessage,
       link_unico: `${window.location.origin}${window.location.pathname}?view=client_portal${clientParam}`
     };
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, templateParams, EMAILJS_PUBLIC_KEY);
@@ -5954,7 +5996,7 @@ function App(props) {
       const templateParams = {
         to_email: clienteSelecionado.email || 'contato@cliente.pt',
         to_name: clienteSelecionado.name,
-        mes_referencia: portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }),
+        mes_referencia: portalMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
         total_horas: totalHoras,
         link_unico: modalLinkUnico
       };
