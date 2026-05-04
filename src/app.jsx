@@ -63,6 +63,7 @@ const formatHours = (h) => {
 const EMAILJS_SERVICE_ID = "service_xvt0vm8";
 const EMAILJS_TEMPLATE_ID_NOTIF = "template_xmexrgp";
 const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
+const CLIENT_PORTAL_URL = import.meta.env.VITE_CLIENT_PORTAL_URL || 'http://localhost:5173';
 
 const emailTranslations = {
   es: {
@@ -128,7 +129,7 @@ const sendNotificationEmail = async (clientEmail, clientName, notifTitle, notifM
       to_name: clientName,
       notification_title: translatedTitle,
       notification_message: translatedMessage,
-      link_unico: `${window.location.origin}${window.location.pathname}?view=client_portal${clientParam}`
+      link_unico: `${CLIENT_PORTAL_URL}/?view=client_portal${clientParam}`
     };
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, templateParams, EMAILJS_PUBLIC_KEY);
     return true;
@@ -5992,7 +5993,7 @@ function App(props) {
     setIsSendingEmail(true);
 
     const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
-    const modalLinkUnico = clienteSelecionado.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
+    const modalLinkUnico = clienteSelecionado.link_gerado || `${CLIENT_PORTAL_URL}/?view=client_portal&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
 
     // Configurações da sua conta EmailJS
