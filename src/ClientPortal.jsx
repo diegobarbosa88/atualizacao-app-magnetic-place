@@ -922,12 +922,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     {draftData.find(w => w.id === editingWorkerId)?.dailyRecords.map(day => {
                                         const origEntry = day.entry === '--:--' ? '' : day.entry;
                                         const origExit = day.exit === '--:--' ? '' : day.exit;
-                                        const isDayChanged = day.editedEntry !== origEntry ||
-                                            day.editedExit !== origExit ||
-                                            day.editedBreakStart !== (day.breakStart || '') ||
-                                            day.editedBreakEnd !== (day.breakEnd || '');
-                                        const isDayCleared = (day.entry && day.entry !== '--:--' && (!day.editedEntry || day.editedEntry === '--:--' || !day.editedExit || day.editedExit === '--:--')) ||
-                                            (day.exit && day.exit !== '--:--' && (!day.editedEntry || day.editedEntry === '--:--' || !day.editedExit || day.editedExit === '--:--'));
+                                        const isEmptyValue = (val) => val === '' || val === null || val === undefined;
+                                        const isDayChanged = !isEmptyValue(day.editedEntry) && !isEmptyValue(day.editedExit) &&
+                                            (day.editedEntry !== origEntry || day.editedExit !== origExit ||
+                                             day.editedBreakStart !== (day.breakStart || '') ||
+                                             day.editedBreakEnd !== (day.breakEnd || ''));
+                                        const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
+                                        const isDayCleared = (day.entry && day.entry !== '--:--' && (!day.editedEntry || isClearedPattern(day.editedEntry) || isEmptyValue(day.editedEntry) || !day.editedExit || isClearedPattern(day.editedExit) || isEmptyValue(day.editedExit))) ||
+                                            (day.exit && day.exit !== '--:--' && (!day.editedEntry || isClearedPattern(day.editedEntry) || isEmptyValue(day.editedEntry) || !day.editedExit || isClearedPattern(day.editedExit) || isEmptyValue(day.editedExit)));
                                         const isDayEditing = editingDayId === day.date;
                                         const displayEntry = day.editedEntry || day.entry || '--:--';
                                         const displayExit = day.editedExit || day.exit || '--:--';
@@ -1276,7 +1278,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             status: 'pending',
                             client_id: initialClientId,
                             month: initialMonth,
-                            payload: { changes: changedWorkers, isFullMonth: true },
+                            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
                             created_at: new Date().toISOString()
                         };
                         await saveToDb('correcoes', correcaoId, correcaoRecord);

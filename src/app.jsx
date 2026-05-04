@@ -1712,7 +1712,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
   );
 };
 
-const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif }) => {
+const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif, correcoesCorrections }) => {
   const [editingDrafts, setEditingDrafts] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
@@ -1730,6 +1730,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
   useEffect(() => { localStorage.setItem('magnetic_correcoes_worker', JSON.stringify(activeWorkerInNotif)); }, [activeWorkerInNotif]);
   useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(activeEditingDay)); }, [activeEditingDay]);
   useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
+
   const correctionNotifications = (appNotifications || []).filter(n =>
     n.is_active &&
     n.title &&
@@ -1741,6 +1742,25 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
     ) &&
     n.target_type === 'admin'
   );
+
+  // Inicializar expandedCorrecaoDias para Precision reports (não expandir automaticamente)
+  useEffect(() => {
+    if (!correctionNotifications || correctionNotifications.length === 0) return;
+    const needsUpdate = correctionNotifications.some(n =>
+      expandedCorrecaoDias[n.id] === undefined
+    );
+    if (needsUpdate) {
+      setExpandedCorrecaoDias(prev => {
+        const next = { ...prev };
+        correctionNotifications.forEach(n => {
+          if (next[n.id] === undefined) {
+            next[n.id] = n.payload?.reportType !== 'precision';
+          }
+        });
+        return next;
+      });
+    }
+  }, [correctionNotifications]);
 
   if (!appNotifications) {
     return <div className="p-8 text-center">Carregando...</div>;
@@ -1769,6 +1789,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
     }
 
     const isNewFormat = message.includes('👥 DETALHES POR COLABORADOR');
+    const isQuickReportMessage = message.includes('💬 MENSAGEM DE DIVERGÊNCIA');
 
     if (isNewFormat) {
       const workerParts = message.split('👤 ');
@@ -1800,7 +1821,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
           if (shiftMatch) {
             const editedShift = shiftMatch[2].trim();
             const originalShift = shiftMatch[1].trim();
-            const [e, x] = editedShift.includes('-') ? editedShift.split('-') : ['--:--', '--:--'];
+            const isClearedShift = (editedShift === '--:--' || editedShift === '--:' ||
+              (editedShift.startsWith('--:') && editedShift.includes('-----')));
+            const [e, x] = isClearedShift
+              ? ['--:--', '--:--']
+              : editedShift.includes('-') ? editedShift.split('-') : ['--:--', '--:--'];
             const [origEntry, origExit] = (originalShift && originalShift !== '--' && originalShift.includes('-') && originalShift !== '--:--') ? originalShift.split('-') : ['--:--', '--:--'];
 
             const originalBreak = breakMatch ? breakMatch[1].trim() : '--:--';
@@ -1808,7 +1833,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const [bs, be] = (editedBreak.includes('-') && editedBreak !== '--:--') ? editedBreak.split('-') : ['--:--', '--:--'];
             const [obs, obsEnd] = originalBreak.includes('-') ? originalBreak.split('-') : ['--:--', '--:--'];
 
-            changes.push({
+            const dayRecord = {
               dateLabel,
               date: dateLabel,
               originalShift: originalShift,
@@ -1823,7 +1848,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               breakEnd: obsEnd === 'undefined' ? '--:--' : obsEnd,
               originalHours: hourMatch ? parseFloat(hourMatch[1].replace('h', '')) : 0,
               editedHours: hourMatch ? parseFloat(hourMatch[2].replace('h', '')) : 0
-            });
+            };
+
+            changes.push(dayRecord);
           }
         });
 
@@ -2130,7 +2157,41 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             })() : null);
             const details = parseCorrectionDetails(notif.message, targetClientId, rawTargetMonth);
             let currentData;
-            if (editingDrafts[notif.id]) {
+
+            // 1. DETETAR TIPO DE REPORT PRIMEIRO (antes de processar dados)
+            const isPrecisionReport = notif.payload?.reportType === 'precision';
+            const isQuickReport = notif.payload?.reportType === 'quick';
+
+            // 2. TENTAR OBTER DADOS DA TABELA CORRECOES USANDO correcao_id
+            let workersData = null;
+            let dataSource = null;
+
+            if (notif.payload?.correcao_id && correcoesCorrections) {
+              const correcaoFromTable = correcoesCorrections.find(c => c.id === notif.payload.correcao_id);
+              if (correcaoFromTable?.payload?.changes) {
+                workersData = correcaoFromTable.payload.changes;
+                dataSource = 'correcoesTable';
+              }
+            }
+
+            // 3. Se não encontrou na tabela correcoes, tentar usar payload.changes direto
+            if (!workersData && notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
+              workersData = notif.payload.changes;
+              dataSource = 'notificationPayload';
+            }
+
+            // 4. Se tem workersData, usar
+            if (workersData) {
+              const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
+              const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
+              currentData = {
+                workers: workersData,
+                clientName: clientNameMatch ? clientNameMatch[1].trim() : '',
+                monthLabel: periodMatch ? periodMatch[1].trim() : ''
+              };
+            }
+            // 5. SÓ usar draft se não tem payload E tem edições reais do admin
+            else if (editingDrafts[notif.id]) {
               const hasAdminEdits = editingDrafts[notif.id].workers?.some(w =>
                 (w.dailyRecords || w.changes || []).some(d =>
                   d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
@@ -2138,34 +2199,61 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               );
               if (hasAdminEdits) {
                 currentData = editingDrafts[notif.id];
-              } else {
-                setEditingDrafts(prev => {
-                  const n = { ...prev };
-                  delete n[notif.id];
-                  return n;
-                });
               }
             }
-            if (!currentData && notif.payload?.changes && Array.isArray(notif.payload.changes) && notif.payload.changes.length > 0) {
-              const clientNameMatch = notif.message.match(/(?:⚠️ PEDIDO DE CORREÇÃO|💬 MENSAGEM DE DIVERGÊNCIA): (.+)\n/);
-              const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
-              currentData = {
-                workers: notif.payload.changes,
-                clientName: clientNameMatch ? clientNameMatch[1].trim() : '',
-                monthLabel: periodMatch ? periodMatch[1].trim() : ''
-              };
-              if (!expandedCorrecaoDias[notif.id]) {
-                setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: true }));
-              }
-            } else if (details.workers && details.workers.length > 0) {
+            // 3. Fallback: usar parseCorrectionDetails
+            else if (details.workers && details.workers.length > 0) {
               currentData = details;
             }
-            const hasWorkerChanges = currentData.workers && currentData.workers.some(w =>
+
+            // Função para verificar se um dia foi editado pelo cliente
+            const isEditedDay = (day) => {
+              const isEmptyValue = (val) => val === '' || val === null || val === undefined;
+              // Para quick reports, dias sem horas originais não são "cleared"
+              const hadOriginalHours = (day.originalHours > 0) || (day.hours > 0);
+
+              // Dia foi editado com novo valor (editedEntry diferente do original E não vazio)
+              const wasEditedToNew = !isEmptyValue(day.editedEntry) && (day.editedEntry !== '--:' && day.editedEntry !== '--:--' && day.editedEntry !== day.entry) ||
+                                    !isEmptyValue(day.editedExit) && (day.editedExit !== '--:' && day.editedExit !== '--:--' && day.editedExit !== day.exit) ||
+                                    !isEmptyValue(day.editedBreakStart) && (day.editedBreakStart !== '--:' && day.editedBreakStart !== '--:--') ||
+                                    !isEmptyValue(day.editedBreakEnd) && (day.editedBreakEnd !== '--:' && day.editedBreakEnd !== '--:--');
+
+              // Dia foi apagado (original tinha horário, edited está vazio)
+              // Só considera "cleared" se tinha horas originais E valores são diferentes do original
+              const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
+              const isSameAsOriginal = (day.editedEntry === day.entry || isEmptyValue(day.editedEntry)) &&
+                                       (day.editedExit === day.exit || isEmptyValue(day.editedExit));
+              const wasCleared = hadOriginalHours && !isSameAsOriginal &&
+                                 ((day.entry && day.entry !== '--:') || (day.exit && day.exit !== '--:')) &&
+                                 (isClearedPattern(day.editedEntry) || isClearedPattern(day.editedExit) ||
+                                  isEmptyValue(day.editedEntry) || isEmptyValue(day.editedExit));
+
+              return wasEditedToNew || wasCleared;
+            };
+
+            // Filtrar workers e dias se houver edits do cliente (independentemente do reportType)
+            const hasClientEdits = currentData.workers && currentData.workers.some(w =>
+              (w.dailyRecords || []).some(d => isEditedDay(d))
+            );
+
+            // Se há edits do cliente, filtrar para mostrar apenas workers com edits e apenas os dias editados
+            let displayWorkers = currentData.workers;
+            if (hasClientEdits && currentData.workers) {
+              displayWorkers = currentData.workers
+                .map(w => ({
+                  ...w,
+                  dailyRecords: (w.dailyRecords || []).filter(d => isEditedDay(d))
+                }))
+                .filter(w => w.dailyRecords && w.dailyRecords.length > 0);
+            }
+
+            const hasWorkerChanges = displayWorkers && displayWorkers.some(w =>
               (w.dailyRecords || w.changes || []).some(c =>
                 c.adminEntry || c.adminExit || c.adminBreakStart || c.adminBreakEnd || c.editedEntry || c.editedExit
               )
             );
-            const isEditing = !!editingDrafts[notif.id];
+            // Se há edits do cliente, admin não pode editar - só pode aceitar/rejeitar
+            const isEditing = !hasClientEdits && !!editingDrafts[notif.id];
 
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
@@ -2264,6 +2352,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                     </div>
                     <div>
                       <h4 className={`font-black uppercase tracking-tight ${isAcceptance ? 'text-emerald-800' : 'text-slate-800'}`}>{notif.title}</h4>
+                      {isPrecisionReport && (
+                        <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-600 text-[8px] font-black rounded uppercase">Precisão</span>
+                      )}
+                      {isQuickReport && (
+                        <span className="ml-2 px-2 py-0.5 bg-amber-100 text-amber-600 text-[8px] font-black rounded uppercase">Rápido</span>
+                      )}
                       <p className="text-[10px] text-slate-500 font-medium mt-0.5">{new Date(notif.created_at).toLocaleDateString('pt-PT')}</p>
                     </div>
                   </div>
@@ -2276,18 +2370,18 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {currentData.workers.length === 0 && (
+                    {displayWorkers.length === 0 && (
                       <div className="bg-white/60 p-6 rounded-2xl border border-amber-200 text-sm text-amber-900 whitespace-pre-wrap font-medium">
                         {notif.message}
                       </div>
                     )}
 
-                    {currentData.workers.length > 0 && (
+                    {displayWorkers.length > 0 && (
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Lista de Colaboradores (Esquerda) */}
                         <div className="lg:col-span-1 space-y-3">
-                          {currentData.workers.map((worker, idx) => {
-                            const selectedWorkerId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
+                          {displayWorkers.map((worker, idx) => {
+                            const selectedWorkerId = activeWorkerInNotif[notif.id] || displayWorkers[0]?.id;
                             const isSelected = selectedWorkerId === worker.id;
                             const workerChanged = (worker.editedTotalHours || worker.suggestedTotal || 0) !== (worker.totalHours || worker.originalTotal || 0);
                             const originalTotal = worker.totalHours || worker.originalTotal || 0;
@@ -2319,8 +2413,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         {/* Detalhes do Colaborador Selecionado (Direita) */}
                         <div className="lg:col-span-2 space-y-3">
                           {(() => {
-                            const selectedId = activeWorkerInNotif[notif.id] || currentData.workers[0]?.id;
-                            const worker = currentData.workers.find(w => w.id === selectedId);
+                            const selectedId = activeWorkerInNotif[notif.id] || displayWorkers[0]?.id;
+                            const worker = displayWorkers.find(w => w.id === selectedId);
                             if (!worker) return null;
                             const days = worker.dailyRecords || worker.changes || [];
                             const totalSugerido = worker.editedTotalHours || worker.totalHours || 0;
@@ -2334,13 +2428,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
                                   <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
                                   <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
-                                      className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                                      title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
-                                    >
-                                      {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
-                                    </button>
+                                    {!hasClientEdits && (
+                                      <button
+                                        onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                        title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
+                                      >
+                                        {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
+                                      </button>
+                                    )}
                                     <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
                                     <span className="text-slate-300">→</span>
                                     <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-sm">{totalSugerido}h</span>
@@ -2354,7 +2450,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   {(() => {
                                     let daysToRender = days;
 
-                                    if (expandedCorrecaoDias[notif.id] && days.length > 0) {
+                                    // Se há edits do cliente, nunca expandir - mostrar apenas os dias editados
+                                    // Se não há edits E expanded=true, expandir para todos os dias do mês
+                                    if (!hasClientEdits && expandedCorrecaoDias[notif.id] && days.length > 0) {
                                       const sampleDate = days.find(r => r.date || r.dateLabel)?.date || days.find(r => r.date || r.dateLabel)?.dateLabel;
                                       if (sampleDate) {
                                         const [y, m] = sampleDate.split('-').map(Number);
@@ -2396,15 +2494,30 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     });
 
                                     return daysToRender.map((change, cIdx) => {
-                                      const isDayChanged = (change.adminEntry && change.adminEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
-                                        (change.adminExit && change.adminExit !== (change.exit === '--:--' ? '' : change.exit)) ||
-                                        (change.adminBreakStart && change.adminBreakStart !== (change.breakStart || '')) ||
-                                        (change.adminBreakEnd && change.adminBreakEnd !== (change.breakEnd || '')) ||
-                                        (change.editedEntry !== undefined && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
-                                        (change.editedExit !== undefined && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
-                                      const isDayCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) &&
-                                        (change.entry && change.entry !== '--:--') &&
-                                        (change.editedEntry === '--:--' || change.editedExit === '--:--');
+                                      // Verificar se o dia foi editado pelo cliente (não apagado)
+                                      const isEmptyValue = (val) => val === '' || val === null || val === undefined;
+                                      const isClientEditedDay = !isEmptyValue(change.editedEntry) && !isEmptyValue(change.editedExit) &&
+                                                                (change.editedEntry !== '--:' && change.editedEntry !== '--:--' && change.editedEntry !== change.entry) ||
+                                                                !isEmptyValue(change.editedExit) && (change.editedExit !== '--:' && change.editedExit !== '--:--' && change.editedExit !== change.exit) ||
+                                                                !isEmptyValue(change.editedBreakStart) && (change.editedBreakStart !== '--:' && change.editedBreakStart !== '--:--') ||
+                                                                !isEmptyValue(change.editedBreakEnd) && (change.editedBreakEnd !== '--:' && change.editedBreakEnd !== '--:--');
+
+                                      // Verificar se o dia foi apagado pelo cliente
+                                      const hadOriginalHours = (change.originalHours > 0) || (change.hours > 0);
+                                      const wasOriginalEntry = change.entry && change.entry !== '--:';
+                                      const wasOriginalExit = change.exit && change.exit !== '--:';
+                                      const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
+                                      const isSameAsOriginal = (change.editedEntry === change.entry || isEmptyValue(change.editedEntry)) &&
+                                                               (change.editedExit === change.exit || isEmptyValue(change.editedExit));
+                                      const isClientClearedDay = hadOriginalHours && !isSameAsOriginal && (wasOriginalEntry || wasOriginalExit) &&
+                                                               (isClearedPattern(change.editedEntry) || isClearedPattern(change.editedExit) ||
+                                                                isEmptyValue(change.editedEntry) || isEmptyValue(change.editedExit));
+
+                                      const shouldShowCorrection = isClientEditedDay || isClientClearedDay;
+
+                                      // Se há edits do cliente, não mostrar dias sem edits
+                                      if (hasClientEdits && !shouldShowCorrection) return null;
+
                                       const displayEntry = change.adminEntry || change.editedEntry || change.entry || '--:--';
                                       const displayExit = change.adminExit || change.editedExit || change.exit || '--:--';
                                       const displayBreakStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
@@ -2413,18 +2526,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                         ? change.adminHours
                                         : (change.editedHours || calculateDuration(change.entry, change.exit, change.breakStart === '--:--' ? null : change.breakStart, change.breakEnd === '--:--' ? null : change.breakEnd) || 0);
 
-                                      // Filter: only show days that client corrected (edited, cleared, or added)
-                                      const isClientEditedDay = (change.editedEntry !== undefined && change.editedEntry !== (change.entry === '--:--' ? '' : change.entry)) ||
-                                        (change.editedExit !== undefined && change.editedExit !== (change.exit === '--:--' ? '' : change.exit));
-                                      const isClientClearedDay = isDayCleared;
-                                      const isClientAddedDay = change.isNew && (change.editedEntry || change.editedExit);
-                                      const shouldShowCorrection = isClientEditedDay || isClientClearedDay || isClientAddedDay;
-
-                                      // For precision reports, always show only corrected days (no need to expand)
-                                      // If reportType is not set, default to precision if there are edited fields
-                                      const isPrecisionReport = notif.payload?.reportType === 'precision' ||
-                                        (notif.payload?.reportType === undefined && (change.editedEntry || change.editedExit || change.editedBreakStart || change.editedBreakEnd));
-                                      if (isPrecisionReport && !shouldShowCorrection) return null;
+                                      const isDayChanged = change.adminEntry || change.adminExit || change.adminBreakStart || change.adminBreakEnd || isClientEditedDay;
+                                      const isDayCleared = isClientClearedDay;
 
                                       const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
                                       const toggleDayEdit = () => {
@@ -2437,9 +2540,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       return (
                                         <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged && !change.isNew ? 'bg-amber-50 border border-amber-100' : (!change.entry || change.entry === '--:--' || change.isNew ? 'bg-slate-50/50 border border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
                                           <div className="flex items-center gap-3">
-                                            <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
-                                              <Edit2 size={14} />
-                                            </button>
+                                            {!hasClientEdits && (
+                                              <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
+                                                <Edit2 size={14} />
+                                              </button>
+                                            )}
                                             <span className="font-bold text-slate-600 text-[10px] uppercase tracking-wider">{change.date || change.dateLabel}</span>
                                             {isDayCleared && <span className="text-[8px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded uppercase">Apagado</span>}
                                           </div>
@@ -2466,16 +2571,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminEntry || change.entry === '--:--' ? '' : change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminExit || change.exit === '--:--' ? '' : change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakStart || change.breakStart === '--:--' ? '' : change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakEnd || change.breakEnd === '--:--' ? '' : change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2506,16 +2611,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="text" value={change.adminEntry || change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminEntry || change.entry === '--:--' ? '' : change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="text" value={change.adminExit || change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminExit || change.exit === '--:--' ? '' : change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="text" value={change.adminBreakStart || change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakStart || change.breakStart === '--:--' ? '' : change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="text" value={change.adminBreakEnd || change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} placeholder="--:--" className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakEnd || change.breakEnd === '--:--' ? '' : change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2597,14 +2702,14 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           <button
                             onClick={async () => {
                               console.log("Iniciando correção para cliente:", notif.target_client_id);
-                              console.log("Workers:", currentData.workers?.length);
+                              console.log("Workers:", displayWorkers?.length);
 
                               // Primeiro salva as correções no banco de dados
                               const targetClientId = notif.target_client_id;
                               console.log("=== DEBUG CORREÇÃO ===");
                               console.log("target_client_id:", targetClientId, "type:", typeof targetClientId);
                               console.log("logs totais:", logs.length);
-                              console.log("currentData.workers:", (currentData.workers || []).length);
+                              console.log("displayWorkers:", (displayWorkers || []).length);
 
                               if (!targetClientId) {
                                 alert("ERRO: target_client_id não encontrado na notificação!");
@@ -2612,7 +2717,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               }
 
                               let savedCount = 0;
-                              for (const worker of (currentData.workers || [])) {
+                              for (const worker of (displayWorkers || [])) {
                                 console.log("Processando worker:", worker.name, "id:", worker.id);
                                 const workerLogs = logs.filter(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(targetClientId));
                                 console.log("  Logs deste worker neste cliente:", workerLogs.length);
@@ -2626,12 +2731,22 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                   const oldLog = logs.find(l => String(l.workerId) === workerIdStr && String(l.clientId) === clientIdStr && l.date === dateStr);
 
-                                  const entry = change.adminEntry || change.editedEntry || change.entry || '--:--';
-                                  const exit = change.adminExit || change.editedExit || change.exit || '--:--';
-                                  const bStart = change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--';
-                                  const bEnd = change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--';
+                                      // Se há edits do cliente, usar apenas editedEntry/editedExit
+                                      // Se não há edits do cliente, usar hierarquia normal (admin > cliente > original)
+                                      const entry = hasClientEdits
+                                        ? (change.editedEntry || change.entry || '--:--')
+                                        : (change.adminEntry || change.editedEntry || change.entry || '--:--');
+                                      const exit = hasClientEdits
+                                        ? (change.editedExit || change.exit || '--:--')
+                                        : (change.adminExit || change.editedExit || change.exit || '--:--');
+                                      const bStart = hasClientEdits
+                                        ? (change.editedBreakStart || change.breakStart || '--:--')
+                                        : (change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--');
+                                      const bEnd = hasClientEdits
+                                        ? (change.editedBreakEnd || change.breakEnd || '--:--')
+                                        : (change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--');
 
-                                  const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+                                      const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
                                   const isClientCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) && (change.entry && change.entry !== '--:--') && (change.editedEntry === '--:--' || change.editedExit === '--:--');
 
                                   // Se admin apagou OU cliente apagou (e tinha registro original), deletar o log
@@ -2675,8 +2790,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               console.log("Total processado:", savedCount);
 
                               // Envia notificação para o cliente
-                              const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
-                              const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                              const totalOriginal = (displayWorkers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                              const totalCorrigido = (displayWorkers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
 
                               let clientMsg = `Olá ${currentData.clientName},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel}\n\n`;
                               clientMsg += `⚠️ CORREÇÃO DO ADMINISTRADOR\n`;
@@ -2685,7 +2800,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               const diffSignTotal = diffTotal >= 0 ? '+' : '';
                               clientMsg += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
                               clientMsg += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotal}${diffTotal}h)\n\n`;
-                              (currentData.workers || []).forEach(w => {
+                              (displayWorkers || []).forEach(w => {
                                 const orig = parseFloat(w.totalHours) || 0;
                                 const edit = parseFloat(w.editedTotalHours) || orig;
                                 const diff = (edit - orig).toFixed(2);
@@ -2702,7 +2817,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 target_client_id: String(notif.target_client_id),
                                 created_at: new Date().toISOString(),
                                 is_active: true,
-                                payload: { type: 'correcao_admin', month: currentData.monthLabel, totalOriginal, totalCorrigido, changes: currentData.workers }
+                                payload: { type: 'correcao_admin', month: currentData.monthLabel, totalOriginal, totalCorrigido, changes: displayWorkers }
                               };
                               console.log("Criando notificação para cliente:", newNotif);
                               await saveToDb('app_notifications', notifId, newNotif);
@@ -2732,12 +2847,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         </>
                       ) : (
                         <>
-                          {(currentData.workers && currentData.workers.length > 0) ? (
+                          {(displayWorkers && displayWorkers.length > 0) ? (
                             <button
                               onClick={async () => {
                                 if (!window.confirm("Aprovar todas as alterações?")) return;
 
-                                for (const worker of currentData.workers) {
+                                for (const worker of displayWorkers) {
                                   for (const change of (worker.dailyRecords || worker.changes || [])) {
                                     const dateStr = change.date || change.rawDate;
                                     if (!dateStr || !dateStr.includes('-')) continue;
@@ -2795,8 +2910,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     title: `Reporte de Divergência Resolvido: ${currentData.monthLabel || details.monthLabel || ''}`,
                                     message: `O seu reporte de divergência referente ao período de ${currentData.monthLabel || details.monthLabel || ''} foi analisado e resolvido pelo administrador. Por favor, aceda ao portal para realizar a validação final das horas.`
                                   };
-                                  const totalOriginal = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
-                                  const totalCorrigido = (currentData.workers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
+                                  const totalOriginal = (displayWorkers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
+                                  const totalCorrigido = (displayWorkers || []).reduce((acc, w) => acc + (parseFloat(w.editedTotalHours) || parseFloat(w.totalHours) || 0), 0);
                                   const diffTotalAcc = (totalCorrigido - totalOriginal).toFixed(2);
                                   const diffSignTotalAcc = diffTotalAcc >= 0 ? '+' : '';
                                   let clientMsgAcc = `Olá ${targetClient2.name},\nRecebeu uma nova atualização no seu portal de cliente.\nNotificação\nCorreção: ${currentData.monthLabel || details.monthLabel || ''}\n\n`;
@@ -2804,7 +2919,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   clientMsgAcc += `👤 Cliente: ${targetClient2.name}\n📅 Período: ${currentData.monthLabel || details.monthLabel || ''}\n`;
                                   clientMsgAcc += `💰 Total Original: ${totalOriginal.toFixed(2)}h\n`;
                                   clientMsgAcc += `✅ Total Corrigido: ${totalCorrigido.toFixed(2)}h (${diffSignTotalAcc}${diffTotalAcc}h)\n\n`;
-                                  (currentData.workers || []).forEach(w => {
+                                  (displayWorkers || []).forEach(w => {
                                     const orig = parseFloat(w.totalHours) || 0;
                                     const edit = parseFloat(w.editedTotalHours) || orig;
                                     const diff = (edit - orig).toFixed(2);
@@ -3330,7 +3445,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
 };
 
 function AdminDashboard(props) {
-  const { onLogout, onLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, setClients, clientForm, setClientForm, workers, setWorkers, workerForm, setWorkerForm, schedules, setSchedules, scheduleForm, setScheduleForm, expenses, setExpenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif } = props;
+  const { onLogout, onLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, setClients, clientForm, setClientForm, workers, setWorkers, workerForm, setWorkerForm, schedules, setSchedules, scheduleForm, setScheduleForm, expenses, setExpenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, correcoesCorrections, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif } = props;
 
   const notificacoesDeCorrecao = correctionNotifications;
 
@@ -4189,7 +4304,7 @@ function AdminDashboard(props) {
 
               {portalSubTab === 'correcoes' && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <CorrecoesAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} clients={clients} logs={logs} setSchedules={setSchedules} setModalRejeitarAberto={setModalRejeitarAberto} setRejeitarMotivo={setRejeitarMotivo} setRejeitarNotif={setRejeitarNotif} />
+                  <CorrecoesAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} clients={clients} logs={logs} setSchedules={setSchedules} correcoesCorrections={correcoesCorrections} setModalRejeitarAberto={setModalRejeitarAberto} setRejeitarMotivo={setRejeitarMotivo} setRejeitarNotif={setRejeitarNotif} />
                 </div>
               )}
 
@@ -4730,7 +4845,7 @@ function WorkerDashboard(props) {
         }
       }
     });
-  }, [myNotifications.length, currentUser?.id]);
+  }, [currentUser?.id]);
 
   const todayDate = new Date();
   todayDate.setHours(0, 0, 0, 0);
@@ -5763,7 +5878,7 @@ function App(props) {
         }
       }
     });
-  }, [myNotifications.length, currentUser?.id]);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
@@ -6041,7 +6156,7 @@ function App(props) {
       {view === 'login' && <LoginView workers={workers} onLogin={handleLogin} systemSettings={systemSettings} setSystemSettings={setSystemSettings} />}
       {view === 'admin' && (
         <AdminDashboard
-          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, clientForm, setClientForm, workers, workerForm, setWorkerForm, schedules, scheduleForm, setScheduleForm, expenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif }}
+          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, adminStats, currentMonth, setCurrentMonth, activeTab, setActiveTab, clients, clientForm, setClientForm, workers, workerForm, setWorkerForm, schedules, scheduleForm, setScheduleForm, expenses, expenseForm, setExpenseForm, auditWorkerId, setAuditWorkerId, setShowFinReport, logs, handleSaveWorker, handleSaveClient, handleSaveSchedule, handleSaveExpense, handleSaveEntry, printingReport, setPrintingReport, handleDelete, approvals, clientApprovals, systemSettings, setSystemSettings, documents, setDocuments, saveToDb, appNotifications, correctionNotifications, correcoesCorrections, setClienteSelecionado, setModalEmailAberto, setToastMessage, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif }}
         />
       )}
       {view === 'worker' && (
