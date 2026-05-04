@@ -5488,6 +5488,16 @@ function App(props) {
   });
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // Corrigir problema de URL params perdidos no deploy Vercel
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam = params.get('view');
+    const clientParam = params.get('client');
+    if (viewParam === 'client_portal' && clientParam) {
+      setView('client_portal');
+    }
+  }, []);
+
   const [activeTab, setActiveTab] = useState(() => {
     const saved = localStorage.getItem('magnetic_admin_tab');
     const validTabs = ['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'expenses', 'reports', 'documentos', 'notificacoes', 'correcoes', 'settings'];
