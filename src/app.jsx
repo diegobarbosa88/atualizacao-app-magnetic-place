@@ -1774,7 +1774,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
   useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(activeEditingDay)); }, [activeEditingDay]);
   useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
 
-  const correctionNotifications = (appNotifications || []).filter(n =>
+  const baseFilter = n =>
     n.is_active &&
     n.title &&
     (
@@ -1783,8 +1783,52 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
       n.title.includes('Divergência Reportada') ||
       n.title.includes('Contra-proposta')
     ) &&
-    n.target_type === 'admin'
-  );
+    n.target_type === 'admin';
+
+  const quickNotifications = (appNotifications || []).filter(n => baseFilter(n) && n.payload?.reportType === 'quick');
+  const precisionNotifications = (appNotifications || []).filter(n => baseFilter(n) && n.payload?.reportType === 'precision');
+  const legacyNotifications = (appNotifications || []).filter(n => baseFilter(n) && !n.payload?.reportType);
+
+  // For backward compatibility, also keep the unified filter
+  const correctionNotifications = [...quickNotifications, ...precisionNotifications, ...legacyNotifications];
+
+  // D-01: Type-specific state for editing
+  const [quickEditingDrafts, setQuickEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_quick_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [quickActiveWorker, setQuickActiveWorker] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_quick_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [quickActiveDay, setQuickActiveDay] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_quick_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  const [precisionEditingDrafts, setPrecisionEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [precisionActiveWorker, setPrecisionActiveWorker] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [precisionActiveDay, setPrecisionActiveDay] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [precisionExpandedDias, setPrecisionExpandedDias] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_expanded'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  const [legacyEditingDrafts, setLegacyEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_legacy_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  // localStorage persistence for type-specific state
+  useEffect(() => { localStorage.setItem('magnetic_quick_drafts', JSON.stringify(quickEditingDrafts)); }, [quickEditingDrafts]);
+  useEffect(() => { localStorage.setItem('magnetic_quick_worker', JSON.stringify(quickActiveWorker)); }, [quickActiveWorker]);
+  useEffect(() => { localStorage.setItem('magnetic_quick_day', JSON.stringify(quickActiveDay)); }, [quickActiveDay]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_drafts', JSON.stringify(precisionEditingDrafts)); }, [precisionEditingDrafts]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_worker', JSON.stringify(precisionActiveWorker)); }, [precisionActiveWorker]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_day', JSON.stringify(precisionActiveDay)); }, [precisionActiveDay]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_expanded', JSON.stringify(precisionExpandedDias)); }, [precisionExpandedDias]);
+  useEffect(() => { localStorage.setItem('magnetic_legacy_drafts', JSON.stringify(legacyEditingDrafts)); }, [legacyEditingDrafts]);
 
   // Inicializar expandedCorrecaoDias para Precision reports (não expandir automaticamente)
   useEffect(() => {
