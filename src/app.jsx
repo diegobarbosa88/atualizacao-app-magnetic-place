@@ -2313,6 +2313,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             };
 
             const handleUpdateDraft = (workerName, date, field, value) => {
+              const isTimeField = field.endsWith('Entry') || field.endsWith('Exit') || field.endsWith('BreakStart') || field.endsWith('BreakEnd');
+              if (isTimeField && value && value.length < 5 && !value.includes('--')) {
+                return;
+              }
               setEditingDrafts(prev => {
                 const currentDraft = prev[notif.id] ? JSON.parse(JSON.stringify(prev[notif.id])) : (() => {
                   const draft = JSON.parse(JSON.stringify(currentData));
@@ -2603,16 +2607,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={change.adminEntry && change.adminEntry !== '--:--' ? change.adminEntry : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminEntry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminExit && change.adminExit !== '--:--' ? change.adminExit : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminExit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={change.adminBreakStart && change.adminBreakStart !== '--:--' ? change.adminBreakStart : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminBreakEnd && change.adminBreakEnd !== '--:--' ? change.adminBreakEnd : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2643,16 +2647,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={change.adminEntry && change.adminEntry !== '--:--' ? change.adminEntry : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminEntry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminExit && change.adminExit !== '--:--' ? change.adminExit : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminExit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={change.adminBreakStart && change.adminBreakStart !== '--:--' ? change.adminBreakStart : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminBreakEnd && change.adminBreakEnd !== '--:--' ? change.adminBreakEnd : ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2872,7 +2876,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 clientMsg += `💬 Motivo: ${reason}\n\n`;
                                 clientMsg += `📊 RESUMO DAS ALTERAÇÕES PROPOSTAS:\n`;
                                 clientMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
-                                
+
                                 currentData.workers.forEach(w => {
                                   clientMsg += `\n👤 TRABALHADOR: ${w.name}\n`;
                                   const originalTotal = w.totalHours || w.originalTotal || 0;
@@ -2891,12 +2895,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 const normalizedClientName = (currentData.clientName || "").trim().toLowerCase();
                                 const clientObj = clients.find(c => (c.name || "").trim().toLowerCase() === normalizedClientName);
                                 const targetClientId = clientObj?.id;
-                                
+
                                 if (!targetClientId) {
                                   alert("Erro: Não foi possível identificar o cliente.");
                                   return;
                                 }
-                                
+
                                 await saveToDb('app_notifications', `cntr_${notif.id}_${Date.now()}`, {
                                   title: `Contra-proposta: ${currentData.monthLabel}`,
                                   message: clientMsg,
