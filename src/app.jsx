@@ -2267,8 +2267,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             </>
           )}
 
-          {/* Main rendering with type separation */}
-          {correctionNotifications.filter(n => !n.payload?.reportType).map(notif => {
+          {/* All notifications - unified rendering */}
+          {correctionNotifications.map(notif => {
             const targetClientId = notif.target_client_id || (clients.find(c => c.name.toLowerCase() === notif.message.toLowerCase().split('\n')[0]?.replace('⚠️ PEDIDO DE CORREÇÃO: ', '').replace('💬 MENSAGEM DE DIVERGÊNCIA: ', ''))?.id);
             const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
             const periodLabel = periodMatch ? periodMatch[1].trim() : '';
