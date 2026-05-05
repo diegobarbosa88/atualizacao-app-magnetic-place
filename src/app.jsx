@@ -1756,23 +1756,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 };
 
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif, correcoesCorrections }) => {
-  const [typeDrafts, setTypeDrafts] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
-  });
-  const [typeActiveWorker, setTypeActiveWorker] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
-  });
-  const [typeActiveDay, setTypeActiveDay] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
-  });
-  const [expandedCorrecaoDias, setExpandedCorrecaoDias] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_expanded'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
-  });
-
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_drafts', JSON.stringify(typeDrafts)); }, [typeDrafts]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_worker', JSON.stringify(typeActiveWorker)); }, [typeActiveWorker]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(typeActiveDay)); }, [typeActiveDay]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
 
   const baseFilter = n =>
     n.is_active &&
@@ -1830,18 +1813,18 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
   useEffect(() => { localStorage.setItem('magnetic_precision_expanded', JSON.stringify(precisionExpandedDias)); }, [precisionExpandedDias]);
   useEffect(() => { localStorage.setItem('magnetic_legacy_drafts', JSON.stringify(legacyEditingDrafts)); }, [legacyEditingDrafts]);
 
-  // Inicializar expandedCorrecaoDias para Precision reports (não expandir automaticamente)
+  // Inicializar precisionExpandedDias for Precision reports (não expandir automaticamente)
   useEffect(() => {
-    if (!correctionNotifications || correctionNotifications.length === 0) return;
-    const needsUpdate = correctionNotifications.some(n =>
-      expandedCorrecaoDias[n.id] === undefined
+    if (!precisionNotifications || precisionNotifications.length === 0) return;
+    const needsUpdate = precisionNotifications.some(n =>
+      precisionExpandedDias[n.id] === undefined
     );
     if (needsUpdate) {
-      setExpandedCorrecaoDias(prev => {
+      setPrecisionExpandedDias(prev => {
         const next = { ...prev };
-        correctionNotifications.forEach(n => {
+        precisionNotifications.forEach(n => {
           if (next[n.id] === undefined) {
-            next[n.id] = n.payload?.reportType !== 'precision';
+            next[n.id] = false;
           }
         });
         return next;
@@ -2228,45 +2211,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Quick Reports */}
-          {quickNotifications.length > 0 && (
-            <>
-              <h4 className="font-black text-sm text-amber-600 uppercase tracking-wide mb-2">⚡ Rápido ({quickNotifications.length})</h4>
-              {quickNotifications.map(notif => (
-                <div key={notif.id} className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
-                  <p className="text-xs text-amber-700 font-medium">{notif.title}</p>
-                  <p className="text-[10px] text-amber-500">A aguardar análise do admin</p>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Precision Reports */}
-          {precisionNotifications.length > 0 && (
-            <>
-              <h4 className="font-black text-sm text-indigo-600 uppercase tracking-wide mb-2">🎯 Precisão ({precisionNotifications.length})</h4>
-              {precisionNotifications.map(notif => (
-                <div key={notif.id} className="mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
-                  <p className="text-xs text-indigo-700 font-medium">{notif.title}</p>
-                  <p className="text-[10px] text-indigo-500">A aguardar análise do admin</p>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Legacy Notifications */}
-          {legacyNotifications.length > 0 && (
-            <>
-              <h4 className="font-black text-sm text-slate-600 uppercase tracking-wide mb-2">📋 Outros ({legacyNotifications.length})</h4>
-              {legacyNotifications.map(notif => (
-                <div key={notif.id} className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <p className="text-xs text-slate-700 font-medium">{notif.title}</p>
-                  <p className="text-[10px] text-slate-500">A aguardar análise do admin</p>
-                </div>
-              ))}
-            </>
-          )}
-
           {/* All notifications - unified rendering */}
           {correctionNotifications.map(notif => {
             const targetClientId = notif.target_client_id || (clients.find(c => c.name.toLowerCase() === notif.message.toLowerCase().split('\n')[0]?.replace('⚠️ PEDIDO DE CORREÇÃO: ', '').replace('💬 MENSAGEM DE DIVERGÊNCIA: ', ''))?.id);
