@@ -2228,8 +2228,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               currentData = details;
             }
 
-            // Função para verificar se um dia foi editado pelo cliente
+            // Função para verificar se um dia foi editado pelo cliente (SÓ para quick reports)
             const isEditedDay = (day) => {
+              if (!isQuickReport) return false; // Precision reports não usam esta lógica
               const isEmptyValue = (val) => val === '' || val === null || val === undefined;
               // Para quick reports, dias novos (isNew) sem horas originais podem ser adicionados
               const isNewDayAdded = day.isNew && day.editedEntry && day.editedEntry !== '--:--' && day.editedEntry !== '';
@@ -2254,14 +2255,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               return isNewDayAdded || wasEditedToNew || wasCleared;
             };
 
-            // Filtrar workers e dias se houver edits do cliente (independentemente do reportType)
-            const hasClientEdits = currentData.workers && currentData.workers.some(w =>
+            // Para quick reports: Filtrar workers e dias se houver edits do cliente
+            // Para precision: Não filtrar, mostrar todos os dias
+            const hasClientEdits = isQuickReport && currentData.workers && currentData.workers.some(w =>
               (w.dailyRecords || []).some(d => isEditedDay(d))
             );
 
-            // Se há edits do cliente, filtrar para mostrar apenas workers com edits e apenas os dias editados
+            // Precision reports: admin pode editar qualquer dia sem filtragem
             let displayWorkers = currentData.workers;
-            if (hasClientEdits && currentData.workers) {
+            if (isQuickReport && hasClientEdits && currentData.workers) {
               displayWorkers = currentData.workers
                 .map(w => ({
                   ...w,
