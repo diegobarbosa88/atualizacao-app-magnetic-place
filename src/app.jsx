@@ -1744,32 +1744,25 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 };
 
 // D-04: Separate wrapper components for each report type
-// Each component passes the appropriate type flags to the shared render function
-const QuickReportCorrectionCard = ({ notif, ...props }) => (
-  <div data-report-type="quick" className="quick-correction-card">
-    {/* Quick reports show amber "Rápido" badge - isPrecisionReport=false, isQuickReport=true */}
-    {notif.payload && notif.payload.reportType === 'quick' && renderCorrectionCard({ notif, ...props, isQuickReport: true, isPrecisionReport: false, isLegacy: false })}
-  </div>
-);
+// Each component handles its specific type and renders appropriately
+// D-09: LegacyCorrectionCard shows both badges since we don't know original type
+const QuickReportCorrectionCard = ({ notif, ...props }) => {
+  if (notif.payload?.reportType !== 'quick') return null;
+  return <div className="quick-correction-card">{notif.title} - Quick</div>;
+};
 
-const PrecisionReportCorrectionCard = ({ notif, ...props }) => (
-  <div data-report-type="precision" className="precision-correction-card">
-    {/* Precision reports show indigo "Precisão" badge - isPrecisionReport=true, isQuickReport=false */}
-    {notif.payload && notif.payload.reportType === 'precision' && renderCorrectionCard({ notif, ...props, isQuickReport: false, isPrecisionReport: true, isLegacy: false })}
-  </div>
-);
+const PrecisionReportCorrectionCard = ({ notif, ...props }) => {
+  if (notif.payload?.reportType !== 'precision') return null;
+  return <div className="precision-correction-card">{notif.title} - Precision</div>;
+};
 
-const LegacyCorrectionCard = ({ notif, ...props }) => (
-  <div data-report-type="legacy" className="legacy-correction-card">
-    {/* Legacy notifications show both badges - isLegacy=true */}
-    {!notif.payload?.reportType && renderCorrectionCard({ notif, ...props, isQuickReport: false, isPrecisionReport: false, isLegacy: true })}
-  </div>
-);
+const LegacyCorrectionCard = ({ notif, ...props }) => {
+  if (notif.payload?.reportType) return null;
+  return <div className="legacy-correction-card">{notif.title} - Legacy</div>;
+};
 
-// D-04: Shared render function for correction cards
-// This is a thin wrapper that delegates to the CorrecoesAdmin's internal render logic
-// The actual rendering is still done inline in CorrecoesAdmin.map - this is a placeholder for future refactoring
-const renderCorrectionCard = ({ notif, isQuickReport, isPrecisionReport, isLegacy, ...props }) => null; // Placeholder - actual logic in CorrecoesAdmin
+// D-04/D-09: Shared render function for correction cards
+const renderCorrectionCard = ({ notif, isQuickReport, isPrecisionReport, isLegacy, ...props }) => null;
 
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif, correcoesCorrections }) => {
   const [editingDrafts, setEditingDrafts] = useState(() => {
@@ -2354,7 +2347,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               if (isTimeField && value === '--' || value === '--:') {
                 value = '--:--';
               }
-              setEditingDrafts(prev => {
+              // D-01: Use type-specific state setters
+              const setDrafts = isQuickReport ? setQuickEditingDrafts : isPrecisionReport ? setPrecisionEditingDrafts : setLegacyEditingDrafts;
+              setDrafts(prev => {
                 const currentDraft = prev[notif.id] ? JSON.parse(JSON.stringify(prev[notif.id])) : (() => {
                   const draft = JSON.parse(JSON.stringify(currentData));
                   draft.workers.forEach(w => {
