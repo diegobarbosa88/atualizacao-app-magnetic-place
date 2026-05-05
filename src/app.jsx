@@ -2275,8 +2275,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                 c.adminEntry || c.adminExit || c.adminBreakStart || c.adminBreakEnd || c.editedEntry || c.editedExit
               )
             );
-            // Se há edits do cliente, admin não pode editar - só pode aceitar/rejeitar
-            const isEditing = !hasClientEdits && !!editingDrafts[notif.id];
+            // Admin pode sempre editar, idependente de edits do cliente
+            const isEditing = !!editingDrafts[notif.id];
 
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
@@ -2314,8 +2314,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
             const handleUpdateDraft = (workerName, date, field, value) => {
               const isTimeField = field.endsWith('Entry') || field.endsWith('Exit') || field.endsWith('BreakStart') || field.endsWith('BreakEnd');
-              if (isTimeField && value && value.length < 5 && !value.includes('--')) {
+              if (isTimeField && value && value.length < 5 && !value.includes('--') && !value.includes(':')) {
                 return;
+              }
+              if (isTimeField && value === '--' || value === '--:') {
+                value = '--:--';
               }
               setEditingDrafts(prev => {
                 const currentDraft = prev[notif.id] ? JSON.parse(JSON.stringify(prev[notif.id])) : (() => {
@@ -2402,7 +2405,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                     {displayWorkers?.length > 0 && (
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-1 space-y-3">
-                          {!hasClientEdits && !isEditing && (
+                          {!isEditing && (
                             <button
                               onClick={() => {
                                 setEditingDrafts(prev => ({ ...prev, [notif.id]: JSON.parse(JSON.stringify(currentData)) }));
@@ -2576,7 +2579,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       return (
                                         <div key={cIdx} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged && !change.isNew ? 'bg-amber-50 border border-amber-100' : (!change.entry || change.entry === '--:--' || change.isNew ? 'bg-slate-50/50 border border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
                                           <div className="flex items-center gap-3">
-                                            {!hasClientEdits && (
+                                            {isEditing && (
                                               <button onClick={toggleDayEdit} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
                                                 <Edit2 size={14} />
                                               </button>
