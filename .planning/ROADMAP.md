@@ -13,8 +13,8 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Move all hardcoded API keys to environment variables
-- [ ] 01-02-PLAN.md — Fix error handling (try/catch/finally, NaN guards, dependency arrays)
+- [x] 01-01-PLAN.md — Move all hardcoded API keys to environment variables
+- [x] 01-02-PLAN.md — Fix error handling (try/catch/finally, NaN guards, dependency arrays)
 
 **Success Criteria:**
 1. Todas as API keys movidas para .env e referenciadas via import.meta.env
@@ -36,6 +36,12 @@ Plans:
 
 **Requirements:** NOTF-01, NOTF-02
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Client push notifications when report is generated
+- [ ] 02-02-PLAN.md — Admin notification badge counter and instant divergence alerts
+
 **Success Criteria:**
 1. Clientes recebem notificação quando novo relatório está disponível
 2. Admin recebe notificação instantânea de reportes de divergência
@@ -50,6 +56,12 @@ Plans:
 **Goal:** Permitir ao admin visualizar histórico de reportes e filtrar por múltiplos critérios.
 
 **Requirements:** PORTAL-01, PORTAL-02
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Admin history view with client/status/date filters
+- [ ] 03-02-PLAN.md — Text search capability for report history
 
 **Success Criteria:**
 1. Página de histórico com lista de todos os reportes
@@ -80,7 +92,7 @@ Plans:
 
 | Phase | Name | Status |
 |-------|------|--------|
-| 1 | Correções de Segurança e Error Handling | Pending |
+| 1 | Correções de Segurança e Error Handling | Complete |
 | 2 | Melhorias de UX nas Notificações | Pending |
 | 3 | Portal Admin - Histórico e Filtros | Pending |
 | 4 | Validação e Testing | Pending |
