@@ -1756,22 +1756,22 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 };
 
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif, correcoesCorrections }) => {
-  const [editingDrafts, setEditingDrafts] = useState(() => {
+  const [typeDrafts, setTypeDrafts] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
-  const [activeWorkerInNotif, setActiveWorkerInNotif] = useState(() => {
+  const [typeActiveWorker, setTypeActiveWorker] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
-  const [activeEditingDay, setActiveEditingDay] = useState(() => {
+  const [typeActiveDay, setTypeActiveDay] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
   const [expandedCorrecaoDias, setExpandedCorrecaoDias] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_expanded'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
 
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_drafts', JSON.stringify(editingDrafts)); }, [editingDrafts]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_worker', JSON.stringify(activeWorkerInNotif)); }, [activeWorkerInNotif]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(activeEditingDay)); }, [activeEditingDay]);
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_drafts', JSON.stringify(typeDrafts)); }, [typeDrafts]);
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_worker', JSON.stringify(typeActiveWorker)); }, [typeActiveWorker]);
+  useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(typeActiveDay)); }, [typeActiveDay]);
   useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
 
   const baseFilter = n =>
@@ -2289,6 +2289,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const isPrecisionReport = notif.payload?.reportType === 'precision';
             const isQuickReport = notif.payload?.reportType === 'quick';
 
+            // Select correct state based on type - D-01 architecture
+            const typeDrafts = isQuickReport ? quickEditingDrafts : isPrecisionReport ? precisionEditingDrafts : legacyEditingDrafts;
+            const setTypeDrafts = isQuickReport ? setQuickEditingDrafts : isPrecisionReport ? setPrecisionEditingDrafts : setLegacyEditingDrafts;
+            const typeActiveWorker = isQuickReport ? quickActiveWorker : isPrecisionReport ? precisionActiveWorker : {};
+            const setTypeActiveWorker = isQuickReport ? setQuickActiveWorker : isPrecisionReport ? setPrecisionActiveWorker : null;
+            const typeActiveDay = isQuickReport ? quickActiveDay : isPrecisionReport ? precisionActiveDay : {};
+            const setTypeActiveDay = isQuickReport ? setQuickActiveDay : isPrecisionReport ? setPrecisionActiveDay : null;
+            const typeExpandedDias = isPrecisionReport ? precisionExpandedDias : {};
+            const setTypeExpandedDias = isPrecisionReport ? setPrecisionExpandedDias : null;
+
             // 2. TENTAR OBTER DADOS DA TABELA CORRECOES USANDO correcao_id
             let workersData = null;
             let dataSource = null;
@@ -2318,14 +2328,14 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               };
             }
             // 5. SÓ usar draft se não tem payload E tem edições reais do admin
-            else if (editingDrafts[notif.id]) {
-              const hasAdminEdits = editingDrafts[notif.id].workers?.some(w =>
+            else if (typeDrafts[notif.id]) {
+              const hasAdminEdits = typeDrafts[notif.id].workers?.some(w =>
                 (w.dailyRecords || w.changes || []).some(d =>
                   d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
                 )
               );
               if (hasAdminEdits) {
-                currentData = editingDrafts[notif.id];
+                currentData = typeDrafts[notif.id];
               }
             }
             // 3. Fallback: usar parseCorrectionDetails
@@ -2380,7 +2390,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               )
             );
             // Se há edits do cliente, admin não pode editar - só pode aceitar/rejeitar
-            const isEditing = !hasClientEdits && !!editingDrafts[notif.id];
+            const isEditing = !hasClientEdits && !!typeDrafts[notif.id];
 
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
@@ -2419,7 +2429,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             };
 
             const handleUpdateDraft = (workerName, date, field, value) => {
-              setEditingDrafts(prev => {
+              setTypeDrafts(prev => {
                 const currentDraft = prev[notif.id] ? JSON.parse(JSON.stringify(prev[notif.id])) : (() => {
                   const draft = JSON.parse(JSON.stringify(currentData));
                   draft.workers.forEach(w => {
@@ -2506,7 +2516,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         {/* Lista de Colaboradores (Esquerda) */}
                         <div className="lg:col-span-1 space-y-3">
                           {displayWorkers.map((worker, idx) => {
-                            const selectedWorkerId = activeWorkerInNotif[notif.id] || displayWorkers[0]?.id;
+                            const selectedWorkerId = typeActiveWorker[notif.id] || displayWorkers[0]?.id;
                             const isSelected = selectedWorkerId === worker.id;
                             const workerChanged = (worker.editedTotalHours || worker.suggestedTotal || 0) !== (worker.totalHours || worker.originalTotal || 0);
                             const originalTotal = worker.totalHours || worker.originalTotal || 0;
@@ -2517,7 +2527,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                             return (
                               <button
                                 key={idx}
-                                onClick={() => setActiveWorkerInNotif(prev => ({ ...prev, [notif.id]: worker.id }))}
+                                onClick={() => setTypeActiveWorker(prev => ({ ...prev, [notif.id]: worker.id }))}
                                 className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex flex-col gap-1 ${isSelected ? 'border-indigo-600 bg-white shadow-lg' : 'border-slate-100 bg-slate-50/50 hover:border-slate-300'}`}
                               >
                                 <div className="flex justify-between items-center">
@@ -2538,7 +2548,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         {/* Detalhes do Colaborador Selecionado (Direita) */}
                         <div className="lg:col-span-2 space-y-3">
                           {(() => {
-                            const selectedId = activeWorkerInNotif[notif.id] || displayWorkers[0]?.id;
+                            const selectedId = typeActiveWorker[notif.id] || displayWorkers[0]?.id;
                             const worker = displayWorkers.find(w => w.id === selectedId);
                             if (!worker) return null;
                             const days = worker.dailyRecords || worker.changes || [];
@@ -2553,13 +2563,13 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center shadow-sm">
                                   <h3 className="text-base font-black text-slate-800 uppercase tracking-tighter">{worker.name}</h3>
                                   <div className="flex items-center gap-2">
-                                    {!hasClientEdits && (
+                                    {!hasClientEdits && isPrecisionReport && (
                                       <button
-                                        onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
-                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                                        title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
+                                        onClick={() => setTypeExpandedDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${typeExpandedDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                        title={typeExpandedDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
                                       >
-                                        {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
+                                        {typeExpandedDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
                                       </button>
                                     )}
                                     <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
@@ -2577,7 +2587,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                     // Se há edits do cliente, nunca expandir - mostrar apenas os dias editados
                                     // Se não há edits E expanded=true, expandir para todos os dias do mês
-                                    if (!hasClientEdits && expandedCorrecaoDias[notif.id] && days.length > 0) {
+                                    if (!hasClientEdits && isPrecisionReport && typeExpandedDias[notif.id] && days.length > 0) {
                                       const sampleDate = days.find(r => r.date || r.dateLabel)?.date || days.find(r => r.date || r.dateLabel)?.dateLabel;
                                       if (sampleDate) {
                                         const [y, m] = sampleDate.split('-').map(Number);
@@ -2654,9 +2664,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       const isDayChanged = change.adminEntry || change.adminExit || change.adminBreakStart || change.adminBreakEnd || isClientEditedDay;
                                       const isDayCleared = isClientClearedDay;
 
-                                      const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
+                                      const isDayEditing = typeActiveDay[notif.id] === (change.date || change.dateLabel);
                                       const toggleDayEdit = () => {
-                                        setActiveEditingDay(prev => ({
+                                        setTypeActiveDay(prev => ({
                                           ...prev,
                                           [notif.id]: isDayEditing ? null : (change.date || change.dateLabel)
                                         }));
@@ -2953,7 +2963,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               }
 
                               await handleDelete('app_notifications', notif.id);
-                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                              setTypeDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
 
                               if (notif.payload?.correcao_id) {
                                 await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
@@ -2966,8 +2976,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                             <Send size={16} /> Corrigir e Enviar
                           </button>
                           <button onClick={() => {
-                            setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                            setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            setTypeDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            setTypeActiveDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                           }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
                         </>
                       ) : (
