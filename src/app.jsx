@@ -2622,9 +2622,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       const isDayChanged = change.adminEntry || change.adminExit || change.adminBreakStart || change.adminBreakEnd || isClientEditedDay;
                                       const isDayCleared = isClientClearedDay;
 
-                                      const isDayEditing = activeEditingDay[notif.id] === (change.date || change.dateLabel);
+                                      const activeDay = isQuickReport ? quickActiveDay : isPrecisionReport ? precisionActiveDay : {};
+                                      const setActiveDay = isQuickReport ? setQuickActiveDay : isPrecisionReport ? setPrecisionActiveDay : null;
+                                      const isDayEditing = activeDay[notif.id] === (change.date || change.dateLabel);
                                       const toggleDayEdit = () => {
-                                        setActiveEditingDay(prev => ({
+                                        if (setActiveDay) setActiveDay(prev => ({
                                           ...prev,
                                           [notif.id]: isDayEditing ? null : (change.date || change.dateLabel)
                                         }));
