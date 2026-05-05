@@ -94,13 +94,14 @@ Plans:
 
 **Requirements:** REPORT-01, REPORT-02, REPORT-03, REPORT-04
 
-**Success Criteria:**
-1. Fluxo "Mensagem Rápida" funciona completamente
-2. Fluxo "Ajuste de Precisão" funciona completamente
-3. Admin recebe notificações em tempo real
-4. Admin pode editar/apagar/adicionar registos
-5. Cliente recebe feedback das ações do admin
-6. Sistema de contra-proposta funciona
+**Plans:** 5 plans
+
+Plans:
+- [x] 05-01-PLAN.md — (completed) Fix contra-proposta button
+- [x] 05-02-PLAN.md — (completed) Fix client name resolution for counter-proposal
+- [x] 05-03-PLAN.md — (planned) Architecture for state separation
+- [ ] 05-04-PLAN.md — Separate Quick/Precision/Legacy correction card components
+- [ ] 05-05-PLAN.md — Implement separate state per report type
 
 **UI hint:** yes
 
