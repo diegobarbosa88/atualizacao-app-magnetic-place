@@ -17,10 +17,11 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 | Phase | Status | Plans | Summaries |
 |-------|--------|-------|-----------|
-| 1 | In Progress (Wave 1 done) | 2 | 2 |
+| 1 | Completed | 2 | 2 |
 | 2 | Pending | 0 | 0 |
 | 3 | Pending | 0 | 0 |
 | 4 | Pending | 0 | 0 |
+| 5 | In Progress | 5 | 2 |
 
 ## Decisions
 
