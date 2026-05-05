@@ -2228,7 +2228,47 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
         </div>
       ) : (
         <div className="space-y-4">
-          {correctionNotifications.map(notif => {
+          {/* Quick Reports */}
+          {quickNotifications.length > 0 && (
+            <>
+              <h4 className="font-black text-sm text-amber-600 uppercase tracking-wide mb-2">⚡ Rápido ({quickNotifications.length})</h4>
+              {quickNotifications.map(notif => (
+                <div key={notif.id} className="mb-4 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <p className="text-xs text-amber-700 font-medium">{notif.title}</p>
+                  <p className="text-[10px] text-amber-500">A aguardar análise do admin</p>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Precision Reports */}
+          {precisionNotifications.length > 0 && (
+            <>
+              <h4 className="font-black text-sm text-indigo-600 uppercase tracking-wide mb-2">🎯 Precisão ({precisionNotifications.length})</h4>
+              {precisionNotifications.map(notif => (
+                <div key={notif.id} className="mb-4 p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                  <p className="text-xs text-indigo-700 font-medium">{notif.title}</p>
+                  <p className="text-[10px] text-indigo-500">A aguardar análise do admin</p>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Legacy Notifications */}
+          {legacyNotifications.length > 0 && (
+            <>
+              <h4 className="font-black text-sm text-slate-600 uppercase tracking-wide mb-2">📋 Outros ({legacyNotifications.length})</h4>
+              {legacyNotifications.map(notif => (
+                <div key={notif.id} className="mb-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                  <p className="text-xs text-slate-700 font-medium">{notif.title}</p>
+                  <p className="text-[10px] text-slate-500">A aguardar análise do admin</p>
+                </div>
+              ))}
+            </>
+          )}
+
+          {/* Main rendering with type separation */}
+          {correctionNotifications.filter(n => !n.payload?.reportType).map(notif => {
             const targetClientId = notif.target_client_id || (clients.find(c => c.name.toLowerCase() === notif.message.toLowerCase().split('\n')[0]?.replace('⚠️ PEDIDO DE CORREÇÃO: ', '').replace('💬 MENSAGEM DE DIVERGÊNCIA: ', ''))?.id);
             const periodMatch = notif.message.match(/📅 Período: (.+)\n/);
             const periodLabel = periodMatch ? periodMatch[1].trim() : '';
