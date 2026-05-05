@@ -88,6 +88,24 @@ Plans:
 
 ---
 
+## Phase 5: Correção do Sistema de Reports
+
+**Goal:** Analisar e corrigir todos os bugs no sistema de troca de reports entre cliente e admin.
+
+**Requirements:** REPORT-01, REPORT-02, REPORT-03, REPORT-04
+
+**Success Criteria:**
+1. Fluxo "Mensagem Rápida" funciona completamente
+2. Fluxo "Ajuste de Precisão" funciona completamente
+3. Admin recebe notificações em tempo real
+4. Admin pode editar/apagar/adicionar registos
+5. Cliente recebe feedback das ações do admin
+6. Sistema de contra-proposta funciona
+
+**UI hint:** yes
+
+---
+
 ## Milestone v1.0
 
 | Phase | Name | Status |
@@ -96,5 +114,6 @@ Plans:
 | 2 | Melhorias de UX nas Notificações | Pending |
 | 3 | Portal Admin - Histórico e Filtros | Pending |
 | 4 | Validação e Testing | Pending |
+| 5 | Correção do Sistema de Reports | Pending |
 
 *Created: 2026-05-05*

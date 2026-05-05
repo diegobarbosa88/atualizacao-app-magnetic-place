@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Download, ChevronDown, Printer, Loader2, Bell, X, AlertCircle, Info, Megaphone, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -60,6 +60,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     // Subscription em tempo real para logs
     useEffect(() => {
         if (!supabase) return;
+        if (!initialClientId || typeof initialClientId !== 'string') {
+            console.warn('Invalid clientId, skipping subscription');
+            return;
+        }
 
         const channel = supabase
             .channel('client-portal-logs')
@@ -69,8 +73,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 table: 'logs',
                 filter: `clientId=eq.${initialClientId}`
             }, (payload) => {
-                console.log('Mudança em tempo real nos logs do cliente:', payload);
-
                 if (payload.eventType === 'UPDATE') {
                     setLogs(prev => prev.map(log =>
                         log.id === payload.new.id ? { ...log, ...payload.new } : log
@@ -101,14 +103,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     });
 
     const myNotifications = useMemo(() => {
-        console.log("Notificações Totais:", appNotifications);
-        console.log("ID do Cliente no Portal:", initialClientId);
-
         if (!appNotifications || !initialClientId) return [];
 
         const filtered = appNotifications.filter(n => {
             const matchTarget = n.target_type === 'client';
-            // Compara IDs convertendo ambos para string para evitar erro de tipo (123 vs "123")
             const matchClientId = String(n.target_client_id) === String(initialClientId);
             const isActive = n.is_active === true;
             const notDismissed = !dismissedNotifs.includes(n.id);
@@ -116,7 +114,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             return matchTarget && matchClientId && isActive && notDismissed;
         });
 
-        console.log("Notificações Filtradas para este Cliente:", filtered);
         return filtered;
     }, [appNotifications, initialClientId, dismissedNotifs]);
 
@@ -669,8 +666,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         client_ua: navigator.userAgent || 'N/D'
                                     };
 
-                                    console.log("Saving approval to DB:", id, approvalData);
-
                                     saveToDb('client_approvals', id, approvalData)
                                         .then(() => {
                                             const notifId = "notif_" + Date.now();
@@ -803,7 +798,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         is_active: true,
                                         created_at: new Date().toISOString()
                                     };
-                                    console.log("Enviando notificação para admin:", newNotif);
                                     const correcaoId = "correcao_" + Date.now();
                                     const correcaoRecord = {
                                         id: correcaoId,
@@ -822,10 +816,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         ...newNotif,
                                         payload: { ...newNotif.payload, correcao_id: correcaoId }
                                     };
-                                    console.log("Enviando notificação para admin:", newNotifWithCorrecaoId);
                                     await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
 
-                                    console.log("Notificação guardada com sucesso");
                                     goToView('sucesso_reporte');
                                 }}
                                 className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
@@ -1135,7 +1127,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
                 const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
 
-                correcoesTexto += `   • ${d.rawDate || d.date}:\n`;
+                const displayDate = d.rawDate && d.rawDate.includes('/') ? d.date : (d.rawDate || d.date);
+                correcoesTexto += `   • ${displayDate}:\n`;
                 correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
                 if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
                     correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;

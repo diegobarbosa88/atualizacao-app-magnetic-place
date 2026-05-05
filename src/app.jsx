@@ -2,7 +2,6 @@
 import SignatureCanvas from 'react-signature-canvas';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import './App.css';
-import './App.css';
 import {
   Users, Briefcase, Clock, FileText, Plus, Trash2, Download,
   ChevronRight, LogOut, UserCircle, AlertCircle, Edit2, Save,
@@ -19,9 +18,8 @@ import emailjs from '@emailjs/browser';
 import ClientPortal from './ClientPortal.jsx';
 
 // --- CONFIGURAÇÃO DO SUPABASE ---
-// Cole aqui os dados do seu projeto Supabase (MANTENHA AS ASPAS SIMPLES)
-const supabaseUrl = 'https://ccvxnrnlbipsojbbrzaw.supabase.co';
-const supabaseKey = 'sb_publishable_Ze9r5vColmrZGfhxMwDURg_i4EHktEJ';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
 let supabase = null;
 
@@ -30,16 +28,22 @@ let apiKey = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 async function callGemini(prompt, systemInstruction = "") {
   if (!apiKey) return "A IA precisa de uma chave API configurada no código.";
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent`;
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     systemInstruction: { parts: [{ text: systemInstruction }] }
   };
   try {
-    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(payload) });
     if (response.ok) {
       const data = await response.json();
       return data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro na resposta.";
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      console.error('Gemini API error:', response.status, errorData);
+      if (response.status === 401) return "Chave API inválida.";
+      if (response.status === 429) return "Limite de uso atingido. Tente novamente em alguns minutos.";
+      return `Erro da IA (${response.status}).`;
     }
   } catch (error) { console.error(error); }
   return "Ocorreu um erro ao contactar a IA.";
@@ -60,9 +64,10 @@ const formatHours = (h) => {
   return `${hours}h${minutes === 0 ? '00' : minutes.toString().padStart(2, '0')}`;
 };
 
-const EMAILJS_SERVICE_ID = "service_xvt0vm8";
-const EMAILJS_TEMPLATE_ID_NOTIF = "template_xmexrgp";
-const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID || "";
+const EMAILJS_TEMPLATE_ID_NOTIF = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_NOTIF || "";
+const EMAILJS_TEMPLATE_ID_PORTAL = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_PORTAL || "";
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY || "";
 const CLIENT_PORTAL_URL = import.meta.env.VITE_CLIENT_PORTAL_URL || 'http://localhost:5173';
 
 const emailTranslations = {
@@ -261,9 +266,14 @@ const EntryForm = ({ data, clients, assignedClients, onChange, onSave, onCancel,
   const handleAiPolish = async () => {
     if (!data.description) return;
     setIsImproving(true);
-    const res = await callGemini(`Melhore esta descrição de tarefa para um relatório de horas profissional. Responda APENAS com a descrição polida. Sem conselhos e sem frases introdutórias (ex: não comece com "A descrição melhorada seria..." ou "às vezes isso acontece..."). Texto original: "${data.description}"`, "Você é um redator profissional muito rigoroso.");
-    onChange({ ...data, description: res.trim() });
-    setIsImproving(false);
+    try {
+      const res = await callGemini(`Melhore esta descrição de tarefa para um relatório de horas profissional. Responda APENAS com a descrição polida. Sem conselhos e sem frases introdutórias (ex: não comece com "A descrição melhorada seria..." ou "às vezes isso acontece..."). Texto original: "${data.description}"`, "Você é um redator profissional muito rigoroso.");
+      if (res) onChange({ ...data, description: res.trim() });
+    } catch (error) {
+      console.error('AI polish failed:', error);
+    } finally {
+      setIsImproving(false);
+    }
   };
 
   return (
@@ -1189,17 +1199,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     }
   }, [showSigner]);
 
-  console.log('WorkerDocuments - currentUser:', currentUser?.id);
-  console.log('WorkerDocuments - documents count:', documents?.length);
-  console.log('WorkerDocuments - first doc:', documents?.[0]);
-
   const docs = documents?.filter(d => d.workerId === currentUser?.id) || [];
-  console.log('WorkerDocuments - filtered docs:', docs.length);
 
   const pendentes = docs.filter(d => d.status === 'Pendente');
   const historico = docs.filter(d => d.status === 'Assinado');
-  console.log('Pendentes:', pendentes.length);
-  console.log('Historico:', historico.length);
 
   const handleSign = async () => {
     if (!sigCanvas.current || sigCanvas.current.isEmpty()) return alert('Assinatura obrigatória.');
@@ -1207,7 +1210,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
     try {
       const sigDataUrl = sigCanvas.current.toDataURL('image/png');
-      console.log('Assinatura gerada:', sigDataUrl.substring(0, 50));
 
       // Upload assinatura
       const sigBlob = await fetch(sigDataUrl).then(r => r.blob());
@@ -1220,7 +1222,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
       const { data: sigUrlData } = supabase.storage.from('documentos').getPublicUrl(sigPath);
       const assinaturaUrl = sigUrlData.publicUrl;
-      console.log('Assinatura URL:', assinaturaUrl);
 
       // IP do utilizador
       const ipResponse = await fetch('https://api.ipify.org?format=json');
@@ -1230,10 +1231,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       const workerName = currentUser?.name || 'Desconhecido';
 
       // Processar PDF com PDF.co
-      console.log('A processar PDF com PDF.co...');
-
       const pdfCoUrl = 'https://api.pdf.co/v1/pdf/edit/add';
-      const pdfCoKey = 'diegobarbosa@magneticplace.pt_QTV2lppvP8euGSGmWWAEU9iZTpb81mZIQqOJM1r9zsVW4weRfuolLhkdzXFTpNFU';
+      const pdfCoKey = import.meta.env.VITE_PDFCO_API_KEY || '';
 
       // Primeira chamada - adicionar texto
       const textResponse = await fetch(pdfCoUrl, {
@@ -1256,8 +1255,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       });
 
       const textResult = await textResponse.json();
-      console.log('Texto adicionado:', textResult);
-
       if (textResult.error) {
         throw new Error(textResult.error);
       }
@@ -1284,17 +1281,14 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       });
 
       const imgResult = await imgResponse.json();
-      console.log('Imagem adicionada:', imgResult);
 
       if (imgResult.error) {
         throw new Error(imgResult.error);
       }
 
       const pdfCoTempUrl = imgResult.url;
-      console.log('PDF temporário PDF.co:', pdfCoTempUrl);
 
       // Fazer download do PDF temporário e fazer upload para Supabase Storage (permanent)
-      console.log('A tentar descarregar PDF assinado do PDF.co:', pdfCoTempUrl);
 
       const pdfBlob = await fetch(pdfCoTempUrl).then(async r => {
         if (!r.ok) throw new Error('Erro ao baixar PDF temporário do PDF.co');
@@ -1302,7 +1296,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       });
 
       const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
-      console.log('A carregar PDF para Supabase Path:', pdfPath);
 
       const { data: pdfUpload, error: pdfError } = await supabase.storage
         .from('documentos')
@@ -1318,12 +1311,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
       const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pdfPath);
       const pdfAssinadoUrl = pdfUrlData.publicUrl;
-      console.log('PDF Permanente gerado com sucesso:', pdfAssinadoUrl);
 
       // Guardar
-      console.log('A guardar documento com ID:', selectedDoc.id);
-
-      // Criar objeto limpo sem a propriedade 'file'
       const docData = {
         id: selectedDoc.id,
         workerId: selectedDoc.workerId,
@@ -1340,7 +1329,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
       await saveToDb('documentos', selectedDoc.id, docData);
 
-      console.log('Documento guardado com sucesso');
       alert('Documento assinado com sucesso! O PDF será atualizado em breve.');
       setShowSigner(false);
       setSelectedDoc(null);
@@ -1476,7 +1464,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
     if (!selWorker || !selFile) return alert('Selecione tudo.');
     setUploading(true);
 
-    const clientSupabase = supabase || (window.supabase ? window.supabase.createClient('https://ccvxnrnlbipsojbbrzaw.supabase.co', 'sb_publishable_Ze9r5vColmrZGfhxMwDURg_i4EHktEJ') : null);
+    const clientSupabase = supabase || (window.supabase ? window.supabase.createClient(import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co', import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder-key') : null);
     if (!clientSupabase) {
       setUploading(false);
       return alert('A conexão com a base de dados falhou. Por favor, atualize a página (F5) e tente novamente.');
@@ -2018,9 +2006,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
     clientMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
     for (const worker of details.workers) {
-      console.log('DEBUG: Worker details:', { id: worker.id, name: worker.name });
       const targetWorkerId = worker.id || workers.find(w => w.name.toLowerCase() === worker.name.toLowerCase())?.id;
-      console.log('DEBUG: Target worker ID:', targetWorkerId);
       if (!targetWorkerId) continue;
 
       const workerDailyRecords = worker.dailyRecords || worker.changes || [];
@@ -2036,11 +2022,14 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
       for (const change of workerDailyRecords) {
         // Tentar obter a data no formato correto (YYYY-MM-DD)
         let dateStr = change.date;
-        if (!dateStr && change.dateLabel) {
-          const dateMatch = change.dateLabel.match(/(\d{2})\/(\d{2})/);
+        // Se date contém apenas label formatada (DD/MM), usar rawDate ou extrair do date
+        if (!dateStr || !dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const dateMatch = (change.date || change.rawDate || '').match(/(\d{2})\/(\d{2})/);
           if (dateMatch) {
             const year = details.year || new Date().getFullYear();
             dateStr = `${year}-${dateMatch[2]}-${dateMatch[1]}`;
+          } else if (change.rawDate && change.rawDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            dateStr = change.rawDate;
           }
         }
 
@@ -2050,20 +2039,12 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
         const targetWorkerIdStr = String(targetWorkerId);
         const clientIdStr = String(client.id);
 
-        console.log('DEBUG: Buscando log - workerId:', targetWorkerIdStr, 'clientId:', clientIdStr, 'date:', dateStr);
-
         // Encontrar o log correspondente - verificação mais flexível
         const oldLog = logs.find(l =>
           String(l.workerId) === targetWorkerIdStr &&
           String(l.clientId) === clientIdStr &&
           l.date === dateStr
         );
-
-        if (!oldLog) {
-          // Tentar encontrar por data apenas para debug
-          const logsByDate = logs.filter(l => l.date === dateStr);
-          console.log('DEBUG: Logs com mesma data:', logsByDate.map(l => ({ id: l.id, workerId: l.workerId, clientId: l.clientId })));
-        }
 
         const entry = change.adminEntry || change.editedEntry || change.newEntry;
         const exit = change.adminExit || change.editedExit || change.newExit;
@@ -2092,8 +2073,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             breakEnd: bEnd === '--:--' ? null : bEnd,
             hours: dur
           };
-
-          console.log('DEBUG: updateData formatado:', updateData);
 
           await saveToDb('logs', logId, updateData);
           appliedCount++;
@@ -2252,26 +2231,27 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             // Função para verificar se um dia foi editado pelo cliente
             const isEditedDay = (day) => {
               const isEmptyValue = (val) => val === '' || val === null || val === undefined;
-              // Para quick reports, dias sem horas originais não são "cleared"
+              // Para quick reports, dias novos (isNew) sem horas originais podem ser adicionados
+              const isNewDayAdded = day.isNew && day.editedEntry && day.editedEntry !== '--:--' && day.editedEntry !== '';
               const hadOriginalHours = (day.originalHours > 0) || (day.hours > 0);
 
               // Dia foi editado com novo valor (editedEntry diferente do original E não vazio)
               const wasEditedToNew = !isEmptyValue(day.editedEntry) && (day.editedEntry !== '--:' && day.editedEntry !== '--:--' && day.editedEntry !== day.entry) ||
-                                    !isEmptyValue(day.editedExit) && (day.editedExit !== '--:' && day.editedExit !== '--:--' && day.editedExit !== day.exit) ||
-                                    !isEmptyValue(day.editedBreakStart) && (day.editedBreakStart !== '--:' && day.editedBreakStart !== '--:--') ||
-                                    !isEmptyValue(day.editedBreakEnd) && (day.editedBreakEnd !== '--:' && day.editedBreakEnd !== '--:--');
+                !isEmptyValue(day.editedExit) && (day.editedExit !== '--:' && day.editedExit !== '--:--' && day.editedExit !== day.exit) ||
+                !isEmptyValue(day.editedBreakStart) && (day.editedBreakStart !== '--:' && day.editedBreakStart !== '--:--') ||
+                !isEmptyValue(day.editedBreakEnd) && (day.editedBreakEnd !== '--:' && day.editedBreakEnd !== '--:--');
 
               // Dia foi apagado (original tinha horário, edited está vazio)
               // Só considera "cleared" se tinha horas originais E valores são diferentes do original
               const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
               const isSameAsOriginal = (day.editedEntry === day.entry || isEmptyValue(day.editedEntry)) &&
-                                       (day.editedExit === day.exit || isEmptyValue(day.editedExit));
+                (day.editedExit === day.exit || isEmptyValue(day.editedExit));
               const wasCleared = hadOriginalHours && !isSameAsOriginal &&
-                                 ((day.entry && day.entry !== '--:') || (day.exit && day.exit !== '--:')) &&
-                                 (isClearedPattern(day.editedEntry) || isClearedPattern(day.editedExit) ||
-                                  isEmptyValue(day.editedEntry) || isEmptyValue(day.editedExit));
+                ((day.entry && day.entry !== '--:') || (day.exit && day.exit !== '--:')) &&
+                (isClearedPattern(day.editedEntry) || isClearedPattern(day.editedExit) ||
+                  isEmptyValue(day.editedEntry) || isEmptyValue(day.editedExit));
 
-              return wasEditedToNew || wasCleared;
+              return isNewDayAdded || wasEditedToNew || wasCleared;
             };
 
             // Filtrar workers e dias se houver edits do cliente (independentemente do reportType)
@@ -2301,8 +2281,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
               const originalTotal = worker.totalHours || worker.originalTotal || 0;
-              // Always calculate original hours from startTime/endTime to handle night shifts correctly
               const originalOfModified = days.reduce((acc, c) => {
+                const isNewDay = c.isNew || (!c.entry || c.entry === '--:--');
                 const entry = c.entry || c.startTime || '--:--';
                 const exit = c.exit || c.endTime || '--:--';
                 const bStart = c.breakStart || '--:--';
@@ -2311,21 +2291,19 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                 return acc + h;
               }, 0);
               const finalOfModified = days.reduce((acc, c) => {
-                // Use adminHours if explicitly set (even if 0)
                 if (c.adminHours !== undefined && c.adminHours !== null) {
                   return acc + c.adminHours;
                 }
-                // Use editedHours if set
                 if (c.editedHours !== undefined && c.editedHours !== null) {
                   return acc + parseFloat(c.editedHours);
                 }
-                // Use newHours if set
                 if (c.newHours !== undefined && c.newHours !== null) {
                   return acc + parseFloat(c.newHours);
                 }
-                // Fallback: calculate from entry/exit
-                const entry = c.adminEntry || c.editedEntry || c.entry || '--:--';
-                const exit = c.adminExit || c.editedExit || c.exit || '--:--';
+                // For new days added by client, use editedEntry/Exit
+                const isNewDay = c.isNew || (!c.entry || c.entry === '--:--');
+                const entry = c.adminEntry || (isNewDay ? c.editedEntry : null) || c.editedEntry || c.entry || '--:--';
+                const exit = c.adminExit || (isNewDay ? c.editedExit : null) || c.editedExit || c.exit || '--:--';
                 const bStart = c.adminBreakStart || c.editedBreakStart || c.breakStart || '--:--';
                 const bEnd = c.adminBreakEnd || c.editedBreakEnd || c.breakEnd || '--:--';
                 const h = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
@@ -2336,7 +2314,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
             const handleUpdateDraft = (workerName, date, field, value) => {
               setEditingDrafts(prev => {
-                const currentDraft = prev[notif.id] || (() => {
+                const currentDraft = prev[notif.id] ? JSON.parse(JSON.stringify(prev[notif.id])) : (() => {
                   const draft = JSON.parse(JSON.stringify(currentData));
                   draft.workers.forEach(w => {
                     w.editedTotalHours = calculateMonthTotal(w);
@@ -2363,8 +2341,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   }
 
                   if (change) {
-                    change.isPlaceholder = false; // no longer a placeholder
-                    // Auto-convert empty to --:-- for time fields
+                    change.isPlaceholder = false;
                     if (field !== 'adminHours' && field !== 'toDelete' && field !== 'isPlaceholder' && field !== 'isNew' && field !== 'originalHours' && field !== 'editedHours' && field !== 'newHours' && !value) {
                       value = '--:--';
                     }
@@ -2374,7 +2351,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                       const exit = change.adminExit || change.editedExit || change.exit || '';
                       const bStart = change.adminBreakStart || change.breakStart || '--:--';
                       const bEnd = change.adminBreakEnd || change.breakEnd || '--:--';
-                      // Always set adminHours even if entry/exit is empty (calculateDuration returns 0 for empty)
                       change.adminHours = calculateDuration(entry, exit, bStart === '--:--' ? null : bStart, bEnd === '--:--' ? null : bEnd);
                     }
                     worker.editedTotalHours = calculateMonthTotal(worker);
@@ -2413,14 +2389,27 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {displayWorkers.length === 0 && (
+                    {displayWorkers?.length === 0 && (
                       <div className="bg-white/60 p-6 rounded-2xl border border-amber-200 text-sm text-amber-900 whitespace-pre-wrap font-medium">
                         {notif.message}
                       </div>
                     )}
 
-                    {displayWorkers.length > 0 && (
+                    {displayWorkers?.length > 0 && (
                       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="lg:col-span-1 space-y-3">
+                          {!hasClientEdits && !isEditing && (
+                            <button
+                              onClick={() => {
+                                setEditingDrafts(prev => ({ ...prev, [notif.id]: JSON.parse(JSON.stringify(currentData)) }));
+                                setActiveEditingDay(prev => ({ ...prev, [notif.id]: displayWorkers[0]?.dailyRecords?.[0]?.date || displayWorkers[0]?.dailyRecords?.[0]?.dateLabel || null }));
+                              }}
+                              className="w-full p-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                            >
+                              <Edit2 size={14} className="inline mr-2" /> Iniciar Edição
+                            </button>
+                          )}
+                        </div>
                         {/* Lista de Colaboradores (Esquerda) */}
                         <div className="lg:col-span-1 space-y-3">
                           {displayWorkers.map((worker, idx) => {
@@ -2540,10 +2529,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       // Verificar se o dia foi editado pelo cliente (não apagado)
                                       const isEmptyValue = (val) => val === '' || val === null || val === undefined;
                                       const isClientEditedDay = !isEmptyValue(change.editedEntry) && !isEmptyValue(change.editedExit) &&
-                                                                (change.editedEntry !== '--:' && change.editedEntry !== '--:--' && change.editedEntry !== change.entry) ||
-                                                                !isEmptyValue(change.editedExit) && (change.editedExit !== '--:' && change.editedExit !== '--:--' && change.editedExit !== change.exit) ||
-                                                                !isEmptyValue(change.editedBreakStart) && (change.editedBreakStart !== '--:' && change.editedBreakStart !== '--:--') ||
-                                                                !isEmptyValue(change.editedBreakEnd) && (change.editedBreakEnd !== '--:' && change.editedBreakEnd !== '--:--');
+                                        (change.editedEntry !== '--:' && change.editedEntry !== '--:--' && change.editedEntry !== change.entry) ||
+                                        !isEmptyValue(change.editedExit) && (change.editedExit !== '--:' && change.editedExit !== '--:--' && change.editedExit !== change.exit) ||
+                                        !isEmptyValue(change.editedBreakStart) && (change.editedBreakStart !== '--:' && change.editedBreakStart !== '--:--') ||
+                                        !isEmptyValue(change.editedBreakEnd) && (change.editedBreakEnd !== '--:' && change.editedBreakEnd !== '--:--');
 
                                       // Verificar se o dia foi apagado pelo cliente
                                       const hadOriginalHours = (change.originalHours > 0) || (change.hours > 0);
@@ -2551,10 +2540,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       const wasOriginalExit = change.exit && change.exit !== '--:';
                                       const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
                                       const isSameAsOriginal = (change.editedEntry === change.entry || isEmptyValue(change.editedEntry)) &&
-                                                               (change.editedExit === change.exit || isEmptyValue(change.editedExit));
+                                        (change.editedExit === change.exit || isEmptyValue(change.editedExit));
                                       const isClientClearedDay = hadOriginalHours && !isSameAsOriginal && (wasOriginalEntry || wasOriginalExit) &&
-                                                               (isClearedPattern(change.editedEntry) || isClearedPattern(change.editedExit) ||
-                                                                isEmptyValue(change.editedEntry) || isEmptyValue(change.editedExit));
+                                        (isClearedPattern(change.editedEntry) || isClearedPattern(change.editedExit) ||
+                                          isEmptyValue(change.editedEntry) || isEmptyValue(change.editedExit));
 
                                       const shouldShowCorrection = isClientEditedDay || isClientClearedDay;
 
@@ -2614,16 +2603,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={change.adminEntry || change.entry === '--:--' ? '' : change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminEntry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminExit || change.exit === '--:--' ? '' : change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminExit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={change.adminBreakStart || change.breakStart === '--:--' ? '' : change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminBreakEnd || change.breakEnd === '--:--' ? '' : change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2654,16 +2643,16 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                                   <>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Turno:</span>
-                                                      <input type="time" value={change.adminEntry || change.entry === '--:--' ? '' : change.entry} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminEntry || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminEntry', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminExit || change.exit === '--:--' ? '' : change.exit} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminExit || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminExit', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <div className="flex items-center gap-2">
                                                       <span className="text-slate-400 font-bold">Pausa:</span>
-                                                      <input type="time" value={change.adminBreakStart || change.breakStart === '--:--' ? '' : change.breakStart} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakStart || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakStart', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                       <span className="text-indigo-400">-</span>
-                                                      <input type="time" value={change.adminBreakEnd || change.breakEnd === '--:--' ? '' : change.breakEnd} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                                      <input type="time" value={change.adminBreakEnd || ''} onChange={e => handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', e.target.value)} className="w-24 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
                                                     </div>
                                                     <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
                                                     <button onClick={() => { handleUpdateDraft(worker.name, change.date, 'adminEntry', ''); handleUpdateDraft(worker.name, change.date, 'adminExit', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakStart', ''); handleUpdateDraft(worker.name, change.date, 'adminBreakEnd', ''); handleUpdateDraft(worker.name, change.date, 'adminHours', 0); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
@@ -2744,26 +2733,15 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         <>
                           <button
                             onClick={async () => {
-                              console.log("Iniciando correção para cliente:", notif.target_client_id);
-                              console.log("Workers:", displayWorkers?.length);
-
-                              // Primeiro salva as correções no banco de dados
                               const targetClientId = notif.target_client_id;
-                              console.log("=== DEBUG CORREÇÃO ===");
-                              console.log("target_client_id:", targetClientId, "type:", typeof targetClientId);
-                              console.log("logs totais:", logs.length);
-                              console.log("displayWorkers:", (displayWorkers || []).length);
 
                               if (!targetClientId) {
                                 alert("ERRO: target_client_id não encontrado na notificação!");
                                 return;
                               }
 
-                              let savedCount = 0;
                               for (const worker of (displayWorkers || [])) {
-                                console.log("Processando worker:", worker.name, "id:", worker.id);
-                                const workerLogs = logs.filter(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(targetClientId));
-                                console.log("  Logs deste worker neste cliente:", workerLogs.length);
+                                logs.filter(l => String(l.workerId) === String(worker.id) && String(l.clientId) === String(targetClientId));
 
                                 for (const change of (worker.dailyRecords || worker.changes || [])) {
                                   const dateStr = change.date || change.rawDate;
@@ -2774,22 +2752,22 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                   const oldLog = logs.find(l => String(l.workerId) === workerIdStr && String(l.clientId) === clientIdStr && l.date === dateStr);
 
-                                      // Se há edits do cliente, usar apenas editedEntry/editedExit
-                                      // Se não há edits do cliente, usar hierarquia normal (admin > cliente > original)
-                                      const entry = hasClientEdits
-                                        ? (change.editedEntry || change.entry || '--:--')
-                                        : (change.adminEntry || change.editedEntry || change.entry || '--:--');
-                                      const exit = hasClientEdits
-                                        ? (change.editedExit || change.exit || '--:--')
-                                        : (change.adminExit || change.editedExit || change.exit || '--:--');
-                                      const bStart = hasClientEdits
-                                        ? (change.editedBreakStart || change.breakStart || '--:--')
-                                        : (change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--');
-                                      const bEnd = hasClientEdits
-                                        ? (change.editedBreakEnd || change.breakEnd || '--:--')
-                                        : (change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--');
+                                  // Se há edits do cliente, usar apenas editedEntry/editedExit
+                                  // Se não há edits do cliente, usar hierarquia normal (admin > cliente > original)
+                                  const entry = hasClientEdits
+                                    ? (change.editedEntry || change.entry || '--:--')
+                                    : (change.adminEntry || change.editedEntry || change.entry || '--:--');
+                                  const exit = hasClientEdits
+                                    ? (change.editedExit || change.exit || '--:--')
+                                    : (change.adminExit || change.editedExit || change.exit || '--:--');
+                                  const bStart = hasClientEdits
+                                    ? (change.editedBreakStart || change.breakStart || '--:--')
+                                    : (change.adminBreakStart || change.editedBreakStart || change.breakStart || '--:--');
+                                  const bEnd = hasClientEdits
+                                    ? (change.editedBreakEnd || change.breakEnd || '--:--')
+                                    : (change.adminBreakEnd || change.editedBreakEnd || change.breakEnd || '--:--');
 
-                                      const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
+                                  const isAdminCleared = change.adminEntry === '--:--' || change.adminExit === '--:--';
                                   const isClientCleared = ((change.originalHours && change.originalHours > 0) || (change.hours && change.hours > 0)) && (change.entry && change.entry !== '--:--') && (change.editedEntry === '--:--' || change.editedExit === '--:--');
 
                                   // Se admin apagou OU cliente apagou (e tinha registro original), deletar o log
@@ -2812,12 +2790,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   };
 
                                   if (oldLog) {
-                                    console.log("  Atualizando log existente:", oldLog.id, "date:", dateStr);
                                     await saveToDb('logs', oldLog.id, { ...oldLog, ...logData });
-                                    savedCount++;
                                   } else {
                                     const nid = "log_" + Date.now() + Math.random();
-                                    console.log("  Criando novo log:", dateStr, "worker:", workerIdStr, "client:", clientIdStr);
                                     await saveToDb('logs', nid, {
                                       id: nid,
                                       date: dateStr,
@@ -2826,11 +2801,9 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                       ...logData,
                                       created_at: new Date().toISOString()
                                     });
-                                    savedCount++;
                                   }
                                 }
                               }
-                              console.log("Total processado:", savedCount);
 
                               // Envia notificação para o cliente
                               const totalOriginal = (displayWorkers || []).reduce((acc, w) => acc + (parseFloat(w.totalHours) || 0), 0);
@@ -2862,7 +2835,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                 is_active: true,
                                 payload: { type: 'correcao_admin', month: currentData.monthLabel, totalOriginal, totalCorrigido, changes: displayWorkers }
                               };
-                              console.log("Criando notificação para cliente:", newNotif);
                               await saveToDb('app_notifications', notifId, newNotif);
 
                               const targetClient = clients.find(c => String(c.id) === String(notif.target_client_id));
@@ -2887,6 +2859,74 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                             setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                             setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                           }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
+                          {isEditing && (
+                            <button
+                              onClick={async () => {
+                                const reason = prompt("Motivo da Contra-proposta / Contestação:");
+                                if (!reason) return;
+
+                                let clientMsg = `⚠️ CONTRA-PROPOSTA DO ADMINISTRADOR\n`;
+                                clientMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                                clientMsg += `👤 Cliente: ${currentData.clientName}\n`;
+                                clientMsg += `📅 Período: ${currentData.monthLabel}\n`;
+                                clientMsg += `💬 Motivo: ${reason}\n\n`;
+                                clientMsg += `📊 RESUMO DAS ALTERAÇÕES PROPOSTAS:\n`;
+                                clientMsg += `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                                
+                                currentData.workers.forEach(w => {
+                                  clientMsg += `\n👤 TRABALHADOR: ${w.name}\n`;
+                                  const originalTotal = w.totalHours || w.originalTotal || 0;
+                                  const days = w.dailyRecords || w.changes || [];
+                                  const originalOfModified = days.reduce((acc, c) => acc + (parseFloat(c.originalHours) || parseFloat(c.hours) || 0), 0);
+                                  const editedOfModified = days.reduce((acc, c) => {
+                                    if (c.editedHours !== undefined) return acc + parseFloat(c.editedHours);
+                                    if (c.newHours !== undefined) return acc + parseFloat(c.newHours);
+                                    return acc + (parseFloat(c.originalHours) || parseFloat(c.hours) || 0);
+                                  }, 0);
+                                  const suggestedTotal = parseFloat((originalTotal - originalOfModified + editedOfModified).toFixed(2));
+                                  const adminTotal = w.editedTotalHours || 0;
+                                  clientMsg += `   📊 Total do Período: ${originalTotal}h ➔ ${suggestedTotal}h ➔ ${adminTotal}h\n`;
+                                });
+
+                                const normalizedClientName = (currentData.clientName || "").trim().toLowerCase();
+                                const clientObj = clients.find(c => (c.name || "").trim().toLowerCase() === normalizedClientName);
+                                const targetClientId = clientObj?.id;
+                                
+                                if (!targetClientId) {
+                                  alert("Erro: Não foi possível identificar o cliente.");
+                                  return;
+                                }
+                                
+                                await saveToDb('app_notifications', `cntr_${notif.id}_${Date.now()}`, {
+                                  title: `Contra-proposta: ${currentData.monthLabel}`,
+                                  message: clientMsg,
+                                  type: 'warning',
+                                  target_type: 'client',
+                                  target_client_id: String(targetClientId),
+                                  created_at: new Date().toISOString(),
+                                  is_active: true,
+                                  payload: {
+                                    type: 'counter_proposal',
+                                    reason: reason,
+                                    changes: currentData.workers
+                                  }
+                                });
+
+                                await saveToDb('app_notifications', notif.id, {
+                                  ...notif,
+                                  status: 'contestada',
+                                  admin_response: reason,
+                                  is_active: false
+                                });
+
+                                setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                                alert("Contra-proposta enviada ao cliente!");
+                              }}
+                              className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-emerald-200"
+                            >
+                              <Sparkles size={16} /> Enviar Contra-proposta
+                            </button>
+                          )}
                         </>
                       ) : (
                         <>
@@ -3507,6 +3547,10 @@ function AdminDashboard(props) {
   const [portalWorkersSort, setPortalWorkersSort] = useState({ key: 'name', direction: 'asc' });
   const [valSortConfig, setValSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [expensesSort, setExpensesSort] = useState({ key: 'date', direction: 'desc' });
+  const [portalHistoryClient, setPortalHistoryClient] = useState('');
+  const [portalHistoryStatus, setPortalHistoryStatus] = useState('');
+  const [portalHistoryMonth, setPortalHistoryMonth] = useState('');
+  const [portalSearchText, setPortalSearchText] = useState('');
 
   const auditedWorker = workers.find(w => w.id === auditWorkerId);
   const auditedMonthLogs = logs.filter(l => l.workerId === auditWorkerId && isSameMonth(l.date, currentMonth));
@@ -3639,7 +3683,9 @@ function AdminDashboard(props) {
                 <button key={t} onClick={() => { setActiveTab(t); setIsAddingInTab(false); setAuditWorkerId(null); }} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && unviewedCorrectionsCount > 0 ? 'animate-pulse' : ''}`}>
                   {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
                     <span className="flex items-center gap-1">Portal Validação {unviewedCorrectionsCount > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unviewedCorrectionsCount}</span>}</span>
-                  ) : t === 'schedules' ? 'Horários' : t === 'expenses' ? 'Despesas' : t === 'reports' ? 'Relatórios' : t === 'documentos' ? 'Documentos' : t === 'notificacoes' ? 'Notificações' : <Settings size={14} />}
+                  ) : t === 'schedules' ? 'Horários' : t === 'expenses' ? 'Despesas' : t === 'reports' ? 'Relatórios' : t === 'documentos' ? 'Documentos' : t === 'notificacoes' ? (
+                    <span className="flex items-center gap-1">Notificações {(appNotifications?.filter(n => n.is_active && n.target_type === 'admin')?.length || 0) > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{appNotifications?.filter(n => n.is_active && n.target_type === 'admin')?.length || 0}</span>}</span>
+                  ) : <Settings size={14} />}
                 </button>
               ))}
             </div>
@@ -4165,8 +4211,73 @@ function AdminDashboard(props) {
                   >
                     Links
                   </button>
+                  <button
+                    onClick={() => setPortalSubTab('historico')}
+                    className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${portalSubTab === 'historico' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  >
+                    Histórico
+                  </button>
                 </div>
               </div>
+
+              {/* Filtros de Histórico */}
+              {portalSubTab === 'historico' && (
+                <div className="mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                  <div className="flex flex-wrap gap-3 items-end">
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Pesquisar</label>
+                      <input
+                        type="text"
+                        placeholder="Pesquisar por cliente..."
+                        value={portalSearchText}
+                        onChange={(e) => setPortalSearchText(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+                      />
+                    </div>
+                    <div className="min-w-[150px]">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Cliente</label>
+                      <select
+                        value={portalHistoryClient}
+                        onChange={(e) => setPortalHistoryClient(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+                      >
+                        <option value="">Todos os clientes</option>
+                        {clients?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="min-w-[150px]">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Estado</label>
+                      <select
+                        value={portalHistoryStatus}
+                        onChange={(e) => setPortalHistoryStatus(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+                      >
+                        <option value="">Todos</option>
+                        <option value="pending">Pendente</option>
+                        <option value="enviado">Enviado</option>
+                        <option value="validado">Validado</option>
+                      </select>
+                    </div>
+                    <div className="min-w-[150px]">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase mb-1 block">Mês</label>
+                      <input
+                        type="month"
+                        value={portalHistoryMonth}
+                        onChange={(e) => setPortalHistoryMonth(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white"
+                      />
+                    </div>
+                    {(portalSearchText || portalHistoryClient || portalHistoryStatus || portalHistoryMonth) && (
+                      <button
+                        onClick={() => { setPortalSearchText(''); setPortalHistoryClient(''); setPortalHistoryStatus(''); setPortalHistoryMonth(''); }}
+                        className="px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-100"
+                      >
+                        Limpar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {portalSubTab === 'envios' && (
                 <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -4381,6 +4492,128 @@ function AdminDashboard(props) {
                   ) : (
                     <p className="text-slate-400">A carregar...</p>
                   )}
+                </div>
+              )}
+
+              {portalSubTab === 'historico' && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="admin-table">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-100">
+                            <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">CLIENTE</th>
+                            <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">MÊS</th>
+                            <th className="text-center text-xs font-bold text-slate-400 uppercase tracking-wider">HORAS</th>
+                            <th className="text-center text-xs font-bold text-slate-400 uppercase tracking-wider">ESTADO</th>
+                            <th className="text-right text-xs font-bold text-slate-400 uppercase tracking-wider">AÇÃO</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const allMonths = [];
+                            const now = new Date();
+                            for (let i = 0; i < 12; i++) {
+                              const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                              const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                              allMonths.push(monthStr);
+                            }
+
+                            const historyRows = [];
+                            clients.forEach(c => {
+                              allMonths.forEach(monthStr => {
+                                const totalHoras = logs.filter(l => l.clientId === c.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0);
+                                if (totalHoras === 0) return;
+                                const approval = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === monthStr);
+                                const emailSent = c.status_email === `enviado_${monthStr}`;
+                                const status = approval ? 'validado' : (emailSent ? 'enviado' : 'pendente');
+                                historyRows.push({ client: c, monthStr, totalHoras, status, approval, emailSent });
+                              });
+                            });
+
+                            let filtered = historyRows;
+
+                            if (portalSearchText) {
+                              const search = portalSearchText.toLowerCase();
+                              filtered = filtered.filter(r => r.client.name.toLowerCase().includes(search));
+                            }
+                            if (portalHistoryClient) {
+                              filtered = filtered.filter(r => r.client.id === portalHistoryClient);
+                            }
+                            if (portalHistoryStatus) {
+                              filtered = filtered.filter(r => r.status === portalHistoryStatus);
+                            }
+                            if (portalHistoryMonth) {
+                              filtered = filtered.filter(r => r.monthStr === portalHistoryMonth);
+                            }
+
+                            filtered.sort((a, b) => b.monthStr.localeCompare(a.monthStr) || a.client.name.localeCompare(b.client.name));
+
+                            if (filtered.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={5} className="text-center py-12 text-slate-400">
+                                    Nenhum registo encontrado
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return filtered.map((row, idx) => {
+                              const monthDate = new Date(row.monthStr + '-01');
+                              const monthLabel = monthDate.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+                              return (
+                                <tr key={`${row.client.id}-${row.monthStr}`} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-all">
+                                  <td className="relative">
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <p className="font-black text-slate-800 text-sm">{row.client.name}</p>
+                                    <p className="text-xs text-slate-400">{row.client.email || 'Não definido'}</p>
+                                  </td>
+                                  <td><span className="font-medium text-slate-600 text-sm capitalize">{monthLabel}</span></td>
+                                  <td className="text-center"><span className="font-bold text-slate-600">{formatHours(row.totalHoras)}h</span></td>
+                                  <td className="text-center">
+                                    {row.status === 'validado' ? (
+                                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 border border-emerald-200 bg-white px-3 py-1.5 rounded-full">
+                                        <CheckCircle size={14} /> Validado
+                                      </span>
+                                    ) : row.status === 'enviado' ? (
+                                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 border border-blue-200 bg-white px-3 py-1.5 rounded-full">
+                                        <Mail size={14} /> Enviado
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 border border-slate-200 bg-white px-3 py-1.5 rounded-full">
+                                        Pendente
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="text-right">
+                                    <div className="flex justify-end gap-2">
+                                      {row.status === 'validado' && (
+                                        <button
+                                          onClick={() => setPrintingReport({ client: row.client, logs, workers, clients, month: row.monthStr, clientApprovals })}
+                                          className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                          title="Baixar Relatório"
+                                        >
+                                          <Download size={16} />
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => { setClienteSelecionado(row.client); setPortalMonth(new Date(row.monthStr + '-01')); setPortalSubTab('envios'); }}
+                                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                        title="Ver detalhes"
+                                      >
+                                        <Eye size={16} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -5538,6 +5771,10 @@ function App(props) {
 
   // Injetar o script do Supabase dinamicamente para evitar erros de build
   useEffect(() => {
+    if (!supabaseUrl || !supabaseKey) {
+      console.warn('Supabase credentials not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+      return;
+    }
     if (supabase) {
       setIsDbReady(true);
       return;
@@ -5568,9 +5805,7 @@ function App(props) {
     if (!isDbReady || !supabase) return;
     const fetchData = async () => {
       const fetchTable = async (table, setter) => {
-        // Envia o nome da tabela sempre em minúsculas para o Supabase
         const tableName = table.toLowerCase();
-        console.log('A carregar tabela:', tableName);
         const { data, error } = await supabase.from(tableName).select('*');
         if (error) console.error('Erro fetchTable:', error);
         if (!error && data) {
@@ -5582,11 +5817,8 @@ function App(props) {
             }));
             setter(mapped);
           } else {
-            console.log('Dados recebidos para', table, ':', data?.length);
             setter(data);
           }
-        } else {
-          console.log('Erro ou sem dados para', table, ':', error);
         }
       };
 
@@ -5615,14 +5847,11 @@ function App(props) {
     };
     fetchData();
 
-    // 1.5 REAL-TIME SUBSCRIPTIONS PARA DADOS CRÍTICOS
-    console.log('Iniciando subscrições real-time...');
-
+    // REAL-TIME SUBSCRIPTIONS PARA DADOS CRÍTICOS
     // Notificações
     const channelNotif = supabase
       .channel('realtime-notifications')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_notifications' }, (payload) => {
-        console.log('Realtime notification received:', payload.eventType, payload.new);
         if (payload.eventType === 'INSERT') setAppNotifications(prev => [payload.new, ...prev]);
         else if (payload.eventType === 'UPDATE') setAppNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
         else if (payload.eventType === 'DELETE') setAppNotifications(prev => prev.filter(n => n.id !== payload.old.id));
@@ -5633,7 +5862,6 @@ function App(props) {
     const channelCorrecoes = supabase
       .channel('realtime-correcoes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'correcoes' }, (payload) => {
-        console.log('Realtime correcao received:', payload.eventType, payload.new);
         if (payload.eventType === 'INSERT') setCorrecoesCorrections(prev => [payload.new, ...prev]);
         else if (payload.eventType === 'UPDATE') setCorrecoesCorrections(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
         else if (payload.eventType === 'DELETE') setCorrecoesCorrections(prev => prev.filter(c => c.id !== payload.old.id));
@@ -5644,7 +5872,6 @@ function App(props) {
     const channelApprovals = supabase
       .channel('realtime-client-approvals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_approvals' }, (payload) => {
-        console.log('Mudança real-time em client_approvals:', payload);
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           setClientApprovals(prev => {
             const exists = prev.some(x => x.id === payload.new.id);
@@ -5686,17 +5913,14 @@ function App(props) {
     if (colName === 'schedules') setSchedules(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
     if (colName === 'personalSchedules' || colName === 'personalschedules') setPersonalSchedules(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
     if (colName === 'logs' || colName === 'worker_logs') {
-      console.log('DEBUG saveToDb: Atualizando log', id, 'com dados:', data);
       setLogs(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
     }
     if (colName === 'approvals') setApprovals(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
     if (colName === 'client_approvals') setClientApprovals(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [...prev, data]);
     if (colName === 'app_notifications') {
-      console.log('saveToDb app_notifications: id=', id, 'data=', data);
       setAppNotifications(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [data, ...prev]);
     }
     if (colName === 'correcoes') {
-      console.log('saveToDb correcoes: id=', id, 'data=', data);
       setCorrecoesCorrections(prev => prev.some(x => x.id === id) ? prev.map(x => x.id === id ? { ...x, ...data } : x) : [data, ...prev]);
     }
 
@@ -5774,13 +5998,10 @@ function App(props) {
         };
       }
 
-      console.log('DEBUG: Enviando para Supabase table:', tableName, 'payload:', payload);
       const { error } = await supabase.from(tableName).upsert(payload, { onConflict: 'id' });
       if (error) {
         console.error(`Erro ao gravar em ${tableName}:`, error);
         console.error('Detalhes do erro:', error.message, error.details, error.hint);
-      } else {
-        console.log('Gravado com sucesso em', tableName);
       }
     }
   };
@@ -5937,18 +6158,14 @@ function App(props) {
     if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
       const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
       if (toDismiss.length > 0) {
-        console.log('Auto-descartando notificações de correção pois a sub-aba correcoes está ativa');
         toDismiss.forEach(n => handleDismissNotif(n.id));
       }
     }
   }, [activeTab, portalSubTab, myNotifications, currentUser?.role]);
 
   const handleBannerClick = (notif) => {
-    console.log('Banner clicado:', notif.title);
-    // 1. Descarta imediatamente para sumir visualmente
     handleDismissNotif(notif.id);
 
-    // 2. Navega se for um pedido de correção ou mensagem rápida
     if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
       setActiveTab('portal_validacao');
       setPortalSubTab('correcoes');
@@ -5997,9 +6214,7 @@ function App(props) {
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
 
     // Configurações da sua conta EmailJS
-    const EMAILJS_SERVICE_ID = "service_xvt0vm8"; // Substitua pelo seu Service ID
-    const EMAILJS_TEMPLATE_ID = "template_o5csfq8"; // Substitua pelo seu Template ID
-    const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9"; // Substitua pela sua Public Key
+    const EMAILJS_TEMPLATE_ID = EMAILJS_TEMPLATE_ID_PORTAL;
 
     // O sistema agora avança diretamente para o envio via EmailJS
     try {
@@ -6023,6 +6238,15 @@ function App(props) {
       const updatedClient = { ...clienteSelecionado, status_email: `enviado_${monthStr}` };
       saveToDb('clients', updatedClient.id, updatedClient);
       setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
+
+      await sendNotificationEmail(
+        clienteSelecionado.email,
+        clienteSelecionado.name,
+        'Novo Relatório Disponível',
+        `O seu relatório de horas do mês ${portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} está disponível para validação.`,
+        clienteSelecionado.id,
+        monthStr
+      );
 
       setToastMessage('E-mail enviado com sucesso!');
       setTimeout(() => setToastMessage(null), 4000);
@@ -6435,4 +6659,4 @@ function App(props) {
   );
 }
 
-export default App;
+export default App; 

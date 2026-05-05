@@ -1,0 +1,1 @@
+const fs = require('fs'); const filePath = 'c:/Users/diego/app Magnetic/src/App.jsx'; const content = fs.readFileSync(filePath, 'utf8'); const lines = content.split(/\r?\n/); lines[1864] = " const id = \\ppr__\\;\; fs.writeFileSync(filePath, lines.join('\\n')); console.log('Fixed line 1865.');
