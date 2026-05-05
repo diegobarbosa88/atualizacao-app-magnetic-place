@@ -2521,10 +2521,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                     {!hasClientEdits && (
                                       <button
                                         onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
-                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${expandedCorrecaoDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                                        title={expandedCorrecaoDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
+                                        className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${precisionExpandedDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                        title={precisionExpandedDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
                                       >
-                                        {expandedCorrecaoDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
+                                        {precisionExpandedDias[notif.id] ? '▼ Todos' : '▶ Expandir'}
                                       </button>
                                     )}
                                     <span className="text-sm text-slate-400 line-through">{originalTotal}h</span>
@@ -2542,7 +2542,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
                                     // Se há edits do cliente, nunca expandir - mostrar apenas os dias editados
                                     // Se não há edits E expanded=true, expandir para todos os dias do mês
-                                    if (!hasClientEdits && expandedCorrecaoDias[notif.id] && days.length > 0) {
+                                    if (!hasClientEdits && precisionExpandedDias[notif.id] && days.length > 0) {
                                       const sampleDate = days.find(r => r.date || r.dateLabel)?.date || days.find(r => r.date || r.dateLabel)?.dateLabel;
                                       if (sampleDate) {
                                         const [y, m] = sampleDate.split('-').map(Number);
