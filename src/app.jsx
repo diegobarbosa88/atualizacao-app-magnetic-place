@@ -2314,9 +2314,6 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
 
             const handleUpdateDraft = (workerName, date, field, value) => {
               const isTimeField = field.endsWith('Entry') || field.endsWith('Exit') || field.endsWith('BreakStart') || field.endsWith('BreakEnd');
-              if (isTimeField && value && value.length < 5 && !value.includes('--') && !value.includes(':')) {
-                return;
-              }
               if (isTimeField && value === '--' || value === '--:') {
                 value = '--:--';
               }
