@@ -1743,6 +1743,34 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
   );
 };
 
+// D-04: Separate wrapper components for each report type
+// Each component passes the appropriate type flags to the shared render function
+const QuickReportCorrectionCard = ({ notif, ...props }) => (
+  <div data-report-type="quick" className="quick-correction-card">
+    {/* Quick reports show amber "Rápido" badge - isPrecisionReport=false, isQuickReport=true */}
+    {notif.payload && notif.payload.reportType === 'quick' && renderCorrectionCard({ notif, ...props, isQuickReport: true, isPrecisionReport: false, isLegacy: false })}
+  </div>
+);
+
+const PrecisionReportCorrectionCard = ({ notif, ...props }) => (
+  <div data-report-type="precision" className="precision-correction-card">
+    {/* Precision reports show indigo "Precisão" badge - isPrecisionReport=true, isQuickReport=false */}
+    {notif.payload && notif.payload.reportType === 'precision' && renderCorrectionCard({ notif, ...props, isQuickReport: false, isPrecisionReport: true, isLegacy: false })}
+  </div>
+);
+
+const LegacyCorrectionCard = ({ notif, ...props }) => (
+  <div data-report-type="legacy" className="legacy-correction-card">
+    {/* Legacy notifications show both badges - isLegacy=true */}
+    {!notif.payload?.reportType && renderCorrectionCard({ notif, ...props, isQuickReport: false, isPrecisionReport: false, isLegacy: true })}
+  </div>
+);
+
+// D-04: Shared render function for correction cards
+// This is a thin wrapper that delegates to the CorrecoesAdmin's internal render logic
+// The actual rendering is still done inline in CorrecoesAdmin.map - this is a placeholder for future refactoring
+const renderCorrectionCard = ({ notif, isQuickReport, isPrecisionReport, isLegacy, ...props }) => null; // Placeholder - actual logic in CorrecoesAdmin
+
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif, correcoesCorrections }) => {
   const [editingDrafts, setEditingDrafts] = useState(() => {
     try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
@@ -2217,14 +2245,17 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               };
             }
             // 5. SÓ usar draft se não tem payload E tem edições reais do admin
-            else if (editingDrafts[notif.id]) {
-              const hasAdminEdits = editingDrafts[notif.id].workers?.some(w =>
+            else if ((isQuickReport && quickEditingDrafts[notif.id]) ||
+                     (isPrecisionReport && precisionEditingDrafts[notif.id]) ||
+                     (!isQuickReport && !isPrecisionReport && legacyEditingDrafts[notif.id])) {
+              const draft = isQuickReport ? quickEditingDrafts[notif.id] : (isPrecisionReport ? precisionEditingDrafts[notif.id] : legacyEditingDrafts[notif.id]);
+              const hasAdminEdits = draft.workers?.some(w =>
                 (w.dailyRecords || w.changes || []).some(d =>
                   d.adminEntry || d.adminExit || d.adminBreakStart || d.adminBreakEnd
                 )
               );
               if (hasAdminEdits) {
-                currentData = editingDrafts[notif.id];
+                currentData = draft;
               }
             }
             // 3. Fallback: usar parseCorrectionDetails
@@ -2282,7 +2313,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
               )
             );
             // Admin pode sempre editar, idependente de edits do cliente
-            const isEditing = !!editingDrafts[notif.id];
+            const isEditing = !!(isQuickReport ? quickEditingDrafts[notif.id] : isPrecisionReport ? precisionEditingDrafts[notif.id] : legacyEditingDrafts[notif.id]);
 
             const calculateMonthTotal = (worker) => {
               const days = worker.dailyRecords || worker.changes || [];
