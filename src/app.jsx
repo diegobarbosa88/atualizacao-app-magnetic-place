@@ -2471,18 +2471,20 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         {/* Lista de Colaboradores (Esquerda) */}
                         <div className="lg:col-span-1 space-y-3">
                           {displayWorkers.map((worker, idx) => {
-                            const selectedWorkerId = activeWorkerInNotif[notif.id] || displayWorkers[0]?.id;
+                            const activeWorker = isQuickReport ? quickActiveWorker : isPrecisionReport ? precisionActiveWorker : {};
+                            const setActiveWorker = isQuickReport ? setQuickActiveWorker : isPrecisionReport ? setPrecisionActiveWorker : null;
+                            const selectedWorkerId = activeWorker[notif.id] || displayWorkers[0]?.id;
                             const isSelected = selectedWorkerId === worker.id;
                             const workerChanged = (worker.editedTotalHours || worker.suggestedTotal || 0) !== (worker.totalHours || worker.originalTotal || 0);
                             const originalTotal = worker.totalHours || worker.originalTotal || 0;
-                            const suggestedTotal = worker.editedTotalHours || worker.suggestedTotal || 0;
+                            const suggestedTotal = worker.editedTotalHours || worker.totalHours || 0;
                             const diff = (suggestedTotal - originalTotal).toFixed(2);
                             const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
                             const diffSign = diff >= 0 ? '+' : '';
                             return (
                               <button
                                 key={idx}
-                                onClick={() => setActiveWorkerInNotif(prev => ({ ...prev, [notif.id]: worker.id }))}
+                                onClick={() => setActiveWorker && setActiveWorker(prev => ({ ...prev, [notif.id]: worker.id }))}
                                 className={`w-full p-4 rounded-2xl border-2 text-left transition-all flex flex-col gap-1 ${isSelected ? 'border-indigo-600 bg-white shadow-lg' : 'border-slate-100 bg-slate-50/50 hover:border-slate-300'}`}
                               >
                                 <div className="flex justify-between items-center">
@@ -2503,7 +2505,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                         {/* Detalhes do Colaborador Selecionado (Direita) */}
                         <div className="lg:col-span-2 space-y-3">
                           {(() => {
-                            const selectedId = activeWorkerInNotif[notif.id] || displayWorkers[0]?.id;
+                            const activeWorker = isQuickReport ? quickActiveWorker : isPrecisionReport ? precisionActiveWorker : {};
+                            const selectedId = activeWorker[notif.id] || displayWorkers[0]?.id;
                             const worker = displayWorkers.find(w => w.id === selectedId);
                             if (!worker) return null;
                             const days = worker.dailyRecords || worker.changes || [];
@@ -2520,7 +2523,7 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   <div className="flex items-center gap-2">
                                     {!hasClientEdits && (
                                       <button
-                                        onClick={() => setExpandedCorrecaoDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                        onClick={() => isPrecisionReport && setPrecisionExpandedDias(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
                                         className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all ${precisionExpandedDias[notif.id] ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
                                         title={precisionExpandedDias[notif.id] ? 'Ocultar dias sem registo' : 'Mostrar todos os dias do mês'}
                                       >
