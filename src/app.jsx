@@ -1762,7 +1762,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
   useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(activeEditingDay)); }, [activeEditingDay]);
   useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
 
-  const correctionNotifications = (appNotifications || []).filter(n =>
+  // D-06: Independent notification filters per type
+  const baseFilter = n =>
     n.is_active &&
     n.title &&
     (
@@ -1771,8 +1772,11 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
       n.title.includes('Divergência Reportada') ||
       n.title.includes('Contra-proposta')
     ) &&
-    n.target_type === 'admin'
-  );
+    n.target_type === 'admin';
+  const quickNotifications = (appNotifications || []).filter(n => baseFilter(n) && n.payload?.reportType === 'quick');
+  const precisionNotifications = (appNotifications || []).filter(n => baseFilter(n) && n.payload?.reportType === 'precision');
+  const legacyNotifications = (appNotifications || []).filter(n => baseFilter(n) && !n.payload?.reportType);
+  const correctionNotifications = [...quickNotifications, ...precisionNotifications, ...legacyNotifications];
 
   // Inicializar expandedCorrecaoDias para Precision reports (não expandir automaticamente)
   useEffect(() => {
