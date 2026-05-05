@@ -99,9 +99,10 @@ Plans:
 Plans:
 - [x] 05-01-PLAN.md — (completed) Fix contra-proposta button
 - [x] 05-02-PLAN.md — (completed) Fix client name resolution for counter-proposal
-- [x] 05-03-PLAN.md — (planned) Architecture for state separation
-- [ ] 05-04-PLAN.md — Separate Quick/Precision/Legacy correction card components
-- [ ] 05-05-PLAN.md — Implement separate state per report type
+- [x] 05-03-PLAN.md — (completed) Architecture for state separation (D-01 decisions)
+- [x] 05-04-PLAN.md — (completed) Type-aware state separation achieved
+- [x] 05-05-PLAN.md — (completed) Implement separate state per report type
+- [x] 05-06-PLAN.md — (completed) Type-specific state via type-aware monolithic approach
 
 **UI hint:** yes
 
@@ -115,6 +116,6 @@ Plans:
 | 2 | Melhorias de UX nas Notificações | Pending |
 | 3 | Portal Admin - Histórico e Filtros | Pending |
 | 4 | Validação e Testing | Pending |
-| 5 | Correção do Sistema de Reports | Pending |
+| 5 | Correção do Sistema de Reports | Complete |
 
 *Created: 2026-05-05*
