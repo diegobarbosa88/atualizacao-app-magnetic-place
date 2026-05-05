@@ -1765,23 +1765,43 @@ const LegacyCorrectionCard = ({ notif, ...props }) => {
 const renderCorrectionCard = ({ notif, isQuickReport, isPrecisionReport, isLegacy, ...props }) => null;
 
 const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, setSchedules, currentUser, setModalRejeitarAberto, setRejeitarMotivo, setRejeitarNotif, correcoesCorrections }) => {
-  const [editingDrafts, setEditingDrafts] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  // D-01: State completely separated between Quick and Precision
+  const [quickEditingDrafts, setQuickEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_quick_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
-  const [activeWorkerInNotif, setActiveWorkerInNotif] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  const [quickActiveWorker, setQuickActiveWorker] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_quick_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
-  const [activeEditingDay, setActiveEditingDay] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
-  });
-  const [expandedCorrecaoDias, setExpandedCorrecaoDias] = useState(() => {
-    try { const saved = localStorage.getItem('magnetic_correcoes_expanded'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  const [quickActiveDay, setQuickActiveDay] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_quick_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
   });
 
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_drafts', JSON.stringify(editingDrafts)); }, [editingDrafts]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_worker', JSON.stringify(activeWorkerInNotif)); }, [activeWorkerInNotif]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_day', JSON.stringify(activeEditingDay)); }, [activeEditingDay]);
-  useEffect(() => { localStorage.setItem('magnetic_correcoes_expanded', JSON.stringify(expandedCorrecaoDias)); }, [expandedCorrecaoDias]);
+  const [precisionEditingDrafts, setPrecisionEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [precisionActiveWorker, setPrecisionActiveWorker] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_worker'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [precisionActiveDay, setPrecisionActiveDay] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_day'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+  const [precisionExpandedDias, setPrecisionExpandedDias] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_precision_expanded'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  // Legacy: keep old state for notifications without reportType
+  const [legacyEditingDrafts, setLegacyEditingDrafts] = useState(() => {
+    try { const saved = localStorage.getItem('magnetic_legacy_drafts'); return saved ? JSON.parse(saved) : {}; } catch { return {}; }
+  });
+
+  useEffect(() => { localStorage.setItem('magnetic_quick_drafts', JSON.stringify(quickEditingDrafts)); }, [quickEditingDrafts]);
+  useEffect(() => { localStorage.setItem('magnetic_quick_worker', JSON.stringify(quickActiveWorker)); }, [quickActiveWorker]);
+  useEffect(() => { localStorage.setItem('magnetic_quick_day', JSON.stringify(quickActiveDay)); }, [quickActiveDay]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_drafts', JSON.stringify(precisionEditingDrafts)); }, [precisionEditingDrafts]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_worker', JSON.stringify(precisionActiveWorker)); }, [precisionActiveWorker]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_day', JSON.stringify(precisionActiveDay)); }, [precisionActiveDay]);
+  useEffect(() => { localStorage.setItem('magnetic_precision_expanded', JSON.stringify(precisionExpandedDias)); }, [precisionExpandedDias]);
+  useEffect(() => { localStorage.setItem('magnetic_legacy_drafts', JSON.stringify(legacyEditingDrafts)); }, [legacyEditingDrafts]);
 
   // D-06: Independent notification filters per type
   const baseFilter = n =>
@@ -1799,24 +1819,24 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
   const legacyNotifications = (appNotifications || []).filter(n => baseFilter(n) && !n.payload?.reportType);
   const correctionNotifications = [...quickNotifications, ...precisionNotifications, ...legacyNotifications];
 
-  // Inicializar expandedCorrecaoDias para Precision reports (não expandir automaticamente)
+  // Inicializar precisionExpandedDias para Precision reports (não expandir automaticamente)
   useEffect(() => {
-    if (!correctionNotifications || correctionNotifications.length === 0) return;
-    const needsUpdate = correctionNotifications.some(n =>
-      expandedCorrecaoDias[n.id] === undefined
+    if (!precisionNotifications || precisionNotifications.length === 0) return;
+    const needsUpdate = precisionNotifications.some(n =>
+      precisionExpandedDias[n.id] === undefined
     );
     if (needsUpdate) {
-      setExpandedCorrecaoDias(prev => {
+      setPrecisionExpandedDias(prev => {
         const next = { ...prev };
-        correctionNotifications.forEach(n => {
+        precisionNotifications.forEach(n => {
           if (next[n.id] === undefined) {
-            next[n.id] = n.payload?.reportType !== 'precision';
+            next[n.id] = false; // Precision reports start collapsed
           }
         });
         return next;
       });
     }
-  }, [correctionNotifications]);
+  }, [precisionNotifications]);
 
   if (!appNotifications) {
     return <div className="p-8 text-center">Carregando...</div>;
