@@ -2437,8 +2437,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                           {!isEditing && (
                             <button
                               onClick={() => {
-                                setEditingDrafts(prev => ({ ...prev, [notif.id]: JSON.parse(JSON.stringify(currentData)) }));
-                                setActiveEditingDay(prev => ({ ...prev, [notif.id]: displayWorkers[0]?.dailyRecords?.[0]?.date || displayWorkers[0]?.dailyRecords?.[0]?.dateLabel || null }));
+                                const setDrafts = isQuickReport ? setQuickEditingDrafts : isPrecisionReport ? setPrecisionEditingDrafts : setLegacyEditingDrafts;
+                                const setDay = isQuickReport ? setQuickActiveDay : isPrecisionReport ? setPrecisionActiveDay : null;
+                                setDrafts(prev => ({ ...prev, [notif.id]: JSON.parse(JSON.stringify(currentData)) }));
+                                if (setDay) setDay(prev => ({ ...prev, [notif.id]: displayWorkers[0]?.dailyRecords?.[0]?.date || displayWorkers[0]?.dailyRecords?.[0]?.dateLabel || null }));
                               }}
                               className="w-full p-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
                             >
@@ -2879,7 +2881,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                               }
 
                               await handleDelete('app_notifications', notif.id);
-                              setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                              const setDrafts = isQuickReport ? setQuickEditingDrafts : isPrecisionReport ? setPrecisionEditingDrafts : setLegacyEditingDrafts;
+                              setDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
 
                               if (notif.payload?.correcao_id) {
                                 await saveToDb('correcoes', notif.payload.correcao_id, { status: 'resolved' });
@@ -2892,8 +2895,10 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                             <Send size={16} /> Corrigir e Enviar
                           </button>
                           <button onClick={() => {
-                            setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
-                            setActiveEditingDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            const setDrafts = isQuickReport ? setQuickEditingDrafts : isPrecisionReport ? setPrecisionEditingDrafts : setLegacyEditingDrafts;
+                            const setDay = isQuickReport ? setQuickActiveDay : isPrecisionReport ? setPrecisionActiveDay : null;
+                            setDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                            if (setDay) setDay(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                           }} className="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl font-black text-xs uppercase hover:bg-slate-50 transition-all">Cancelar</button>
                           {isEditing && (
                             <button
@@ -2955,7 +2960,8 @@ const CorrecoesAdmin = ({ workers, appNotifications, saveToDb, handleDelete, cli
                                   is_active: false
                                 });
 
-                                setEditingDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
+                                const setDrafts = isQuickReport ? setQuickEditingDrafts : isPrecisionReport ? setPrecisionEditingDrafts : setLegacyEditingDrafts;
+                                setDrafts(prev => { const n = { ...prev }; delete n[notif.id]; return n; });
                                 alert("Contra-proposta enviada ao cliente!");
                               }}
                               className="px-6 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-lg shadow-emerald-200"
