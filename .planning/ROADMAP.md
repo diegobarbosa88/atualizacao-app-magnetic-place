@@ -10,6 +10,12 @@
 
 **Requirements:** SEC-01, SEC-02, SEC-03, SEC-04, ERR-01, ERR-02, ERR-03, DATA-01, DATA-02, DATA-03
 
+**Plans:** 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Move all hardcoded API keys to environment variables
+- [ ] 01-02-PLAN.md — Fix error handling (try/catch/finally, NaN guards, dependency arrays)
+
 **Success Criteria:**
 1. Todas as API keys movidas para .env e referenciadas via import.meta.env
 2. Gemini API key usa Authorization header Bearer em vez de query string
