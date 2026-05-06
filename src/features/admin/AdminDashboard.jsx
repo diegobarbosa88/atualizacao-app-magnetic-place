@@ -58,7 +58,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, appNotifications, saveToDb } = useApp();
+  const { adminStats, clients, workers, appNotifications, saveToDb, setSystemSettings } = useApp();
 
   const notificacoesDeCorrecao = correctionNotifications;
 
@@ -190,8 +190,8 @@ function AdminDashboard(props) {
               {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'expenses', 'reports', 'documentos', 'notificacoes', 'settings'].map(t => (
                 <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && unviewedCorrectionsCount > 0 ? 'animate-pulse' : ''}`}>
                   {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
-                    <span className="flex items-center gap-1">Portal ValidaÃ§Ã£o {unviewedCorrectionsCount > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unviewedCorrectionsCount}</span>}</span>
-                  ) : t === 'schedules' ? 'HorÃ¡rios' : t === 'expenses' ? 'Despesas' : t === 'reports' ? 'RelatÃ³rios' : t === 'documentos' ? 'Documentos' : t === 'notificacoes' ? 'NotificaÃ§Ãµes' : <Settings size={14} />}
+                    <span className="flex items-center gap-1">Portal Validação {unviewedCorrectionsCount > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unviewedCorrectionsCount}</span>}</span>
+                  ) : t === 'schedules' ? 'Horários' : t === 'expenses' ? 'Despesas' : t === 'reports' ? 'Relatórios' : t === 'documentos' ? 'Documentos' : t === 'notificacoes' ? 'Notificações' : <Settings size={14} />}
                 </button>
               ))}
             </div>
