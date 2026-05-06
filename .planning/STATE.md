@@ -2,8 +2,8 @@
 
 **Project:** app-magnetic
 **Milestone:** v2.0 - Arquitetura Modular
-**Phase:** 7 (completed)
-**Last updated:** 2026-05-06 after Phase 7 completion
+**Phase:** 9 (in progress)
+**Last updated:** 2026-05-06 after Phase 9-02 completion
 
 ## Project Reference
 
@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de horas, geração de relatórios e comunicação com clientes é automatizada e sem atritos.
 
-**Current focus:** Phase 7 complete — Admin managers modularized with contexts. Ready for Phase 8.
+**Current focus:** Phase 9 complete — Worker dashboard modularized with context pattern. Ready for Phase 10.
 
 ## Phase Status
 
@@ -24,6 +24,8 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 | 5 | Completed | 6 | 6 |
 | 6 | Completed | 1 | 1 |
 | 7 | Completed | 3 | 3 |
+| 8 | Completed | 1 | 1 |
+| 9 | Completed | 2 | 2 |
 
 ## Decisions
 
@@ -103,6 +105,25 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 - `src/features/admin/ClientManager.jsx` - wrapped with ClientProvider
 - `src/features/admin/ScheduleManager.jsx` - wrapped with ScheduleProvider
 
+## Phase 9 Completions (Worker Dashboard)
+
+### Plans Executed
+- **09-01-PLAN.md** → **09-01-SUMMARY.md** ✓ (skeleton)
+- **09-02-PLAN.md** → **09-02-SUMMARY.md** ✓ (full implementation)
+
+### Modularization Applied
+- WorkerContext extracted for WorkerDashboard local state
+- WorkerDashboard fully autonomous via WorkerProvider wrapping
+- EntryForm and WorkerDocuments inlined in WorkerDashboard feature
+- Old WorkerDashboard removed from app.jsx (632 lines)
+
+### Files Created
+- `src/features/worker/WorkerDashboard.jsx` — Complete worker dashboard
+- `src/features/worker/contexts/WorkerContext.jsx` — Full context implementation
+
+### Files Modified
+- `src/app.jsx` — Removed inline WorkerDashboard, imports from feature
+
 ## Blockers
 
 - Nenhum (Phase 7 completo)
@@ -111,13 +132,13 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 - [x] Phase 6: Verify Context integration and utility functions - DONE
 - [x] Phase 7: Modularização Admin Core (Team/Client/Schedule contexts) - DONE
-- [ ] Pending: Phase 8 planning (Modularização do Admin Portal & Docs)
-- [ ] Pending: Phase 9 planning (Modularização do Worker)
+- [x] Phase 8: Modularização Admin Portal & Docs - DONE
+- [x] Phase 9: Modularização Worker (Dashboard + Registo) - DONE
 - [ ] Pending: Phase 10 planning (Limpeza e Roteamento)
 
 ## Next Steps
 
-1. Move to Phase 8 planning (Modularização do Admin Portal & Docs)
-2. Continue with feature-based modularization
+1. Phase 10: Cleanup app.jsx and finalize routing
+2. Reduce app.jsx to a clean router
 
 *State updated: 2026-05-06*
