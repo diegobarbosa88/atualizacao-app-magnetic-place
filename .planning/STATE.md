@@ -1,9 +1,9 @@
 # State: app-magnetic
 
 **Project:** app-magnetic
-**Milestone:** v1.0
-**Phase:** 5 (completed)
-**Last updated:** 2026-05-05 after Phase 5 completion
+**Milestone:** v2.0 - Arquitetura Modular
+**Phase:** 6 (completed)
+**Last updated:** 2026-05-06 after Phase 6 completion
 
 ## Project Reference
 
@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de horas, geração de relatórios e comunicação com clientes é automatizada e sem atritos.
 
-**Current focus:** All phases complete — v1.0 milestone ready for review
+**Current focus:** Phase 6 infrastructure complete — Context integrated, utilities verified. Ready for Phase 7 modularization.
 
 ## Phase Status
 
@@ -22,6 +22,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 | 3 | Pending | 0 | 0 |
 | 4 | Pending | 0 | 0 |
 | 5 | Completed | 6 | 6 |
+| 6 | Completed | 1 | 1 |
 
 ## Decisions
 
@@ -56,23 +57,42 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 - `src/ClientPortal.jsx` - clientId validation added
 - `.env.example` - Complete template created with all required vars
 
+## Phase 6 Completions
+
+### Plans Executed
+- **06-01-PLAN.md** → **06-01-SUMMARY.md** ✓
+
+### Infrastructure Verified
+- AppContext.jsx already existed with full state management
+- All utility modules verified working (dateUtils.js, formatUtils.js)
+- app.jsx properly consumes AppContext via useApp() hook
+- main.jsx properly wraps App with AppProvider
+
+### Fix Applied
+- CR-06 (Phase 6): Added `currentMonthStr` to AppContext value to fix TeamManager component consumption
+
+### Files Verified
+- `src/context/AppContext.jsx` - Full Context with states, subscriptions, saveToDb, handleDelete
+- `src/utils/dateUtils.js` - All date functions working
+- `src/utils/formatUtils.js` - All format/calculate functions working
+- `src/features/admin/*.jsx` - All consuming Context correctly
+
 ## Blockers
 
-- Nenhum (Wave 1 completo)
+- Nenhum (Phase 6 completo)
 
 ## Todos
 
-- [x] Implementar correções de segurança (SEC-01 a SEC-04) - DONE
-- [x] Corrigir error handling (ERR-01 a ERR-03) - DONE
-- [x] Corrigir race conditions e validações (DATA-01 a DATA-03) - DONE
-- [ ] Pending: Utility scripts in src/ (check_*.js, inspect_*.js) still have hardcoded values - NOTEs in summaries
-- [ ] Wave 2: Any remaining Phase 1 tasks?
+- [x] Phase 6: Verify Context integration and utility functions - DONE
+- [ ] Pending: Phase 7 planning (Modularização do Admin)
+- [ ] Pending: Phase 8 planning (Modularização do Admin Portal & Docs)
+- [ ] Pending: Phase 9 planning (Modularização do Worker)
+- [ ] Pending: Phase 10 planning (Limpeza e Roteamento)
 
 ## Next Steps
 
-1. Review Wave 1 summaries and verify all acceptance criteria met
-2. Check if Phase 1 has any remaining tasks (Wave 2)
-3. If complete, mark Phase 1 as done in ROADMAP.md
-4. Move to Phase 2 planning
+1. Move to Phase 7 planning (Modularização do Admin - Core)
+2. Extract TeamManager, ClientManager, ScheduleManager into fully autonomous modules
+3. Continue with feature-based modularization
 
-*State updated: 2026-05-05*
+*State updated: 2026-05-06*
