@@ -25,19 +25,59 @@ This phase will perform deep analysis, identify all bugs, and fix them.
 <decisions>
 ## Implementation Decisions
 
-### Phase Approach
+### State Architecture
+- **D-01:** State completamente separado entre Quick e Precision Reports:
+  ```javascript
+  quickCorrections[notifId] = {
+    status: 'pending' | 'accepted' | 'rejected' | 'counter_proposal',
+    reason: '',
+    adminEditedWorkers: [],
+    originalMessage: '',
+  }
+
+  precisionCorrections[notifId] = {
+    workers: [],
+    editingDayId: null,
+    activeWorkerId: null,
+    adminChanges: {},
+  }
+  ```
+
+### Hooks por Tipo
+- **D-02:** Cada tipo (Quick/Precision) tem seu próprio hook dedicado
+- **D-03:** Hooks não são partilhados — cada um tem lógica específica para seu tipo
+
+### Componentes de UI
+- **D-04:** Dois componentes separados:
+  - `QuickReportCorrectionCard` — para Quick Reports (badge "Rápido")
+  - `PrecisionReportCorrectionCard` — para Precision Reports (badge "Precisão")
+- **D-05:** Routing no início do render usa `notif.payload?.reportType` para decidir qual componente renderizar
+
+### Filtros de Notificação
+- **D-06:** Filtros completamente independentes entre tipos
+- **D-07:** quickNotifications usa filtro específico para reportType === 'quick'
+- **D-08:** precisionNotifications usa filtro específico para reportType === 'precision'
+
+### Notificações Legacy
+- **D-09:** Notificações sem `reportType` no payload mostram ambos os modos de UI
+- **D-10:** Fallback: componente LegacyCorrectionCard para兼容性
+
+### Regras de Negócio (confirmadas)
+- **Quick Report** (badge "Rápido"): Cliente envia mensagem de texto. Admin pode editar horas, aceitar, rejeitar, enviar contra-proposta.
+- **Precision Report** (badge "Precisão"): Cliente edita dias específicos. Admin pode editar horas de qualquer dia, aceitar, rejeitar, enviar contra-proposta.
+- Ambos permitem admin editar horas — diferença é apenas a origem dos dados
+
+### Implementação Partilhada
+- **D-11:** `parseCorrectionDetails` — já existe globalmente, continuar a usar
+- **D-12:** `calculateDuration` — já existe globalmente, continuar a usar
+- **D-13:** `handleApplyCorrection` — lógica partilhada mas chamada por cada componente
+
+### Fase Approach (mantido de contexto anterior)
 - Deep analysis first — understand what breaks where before fixing
 - Fix systematically — don't just patch symptoms
 - Test each fix — ensure flow works end-to-end
+- Scope is bug fixes and corrections only — new features belong in future phases
 
-### Reporter must NOT add new capabilities during this phase
-- Scope is bug fixes and corrections only
-- New features belong in future phases
-
-### Agent's Discretion
-- Specific bugs to fix (identified during analysis)
-- Implementation approach for each fix
-- Testing strategy to verify fixes
 </decisions>
 
 <canonical_refs>
@@ -45,40 +85,63 @@ This phase will perform deep analysis, identify all bugs, and fix them.
 
 **Downstream agents MUST read these before planning or implementing.**
 
-- `src/app.jsx` — Admin dashboard with CorrecoesAdmin component
-- `src/ClientPortal.jsx` — Client portal with report editing
+### Project Context
+- `.planning/PROJECT.md` — Project vision, constraints, stack
+- `.planning/STATE.md` — Current phase status and prior learnings
+- `.planning/ROADMAP.md` — Phase 5 goal and success criteria
 - `.planning/REQUIREMENTS.md` — Requirements definitions
-- `.planning/STATE.md` — Current project state
 
-**Existing learned patterns:**
-- From Phase 2 learnings: notifications use EmailJS and app_notifications table
-- From Phase 1: Supabase used for all data, realtime subscriptions active
+### Code (main files)
+- `src/app.jsx` — Admin dashboard with CorrecoesAdmin component (lines 1746-3073)
+- `src/ClientPortal.jsx` — Client portal with report editing
+
+### Plans and Summaries
+- `.planning/phases/05-correcao-reports/05-01-SUMMARY.md` — Bug fix: contra-proposta button
+- `.planning/phases/05-correcao-reports/05-02-SUMMARY.md` — Bug fix: client name resolution
+- `.planning/phases/05-correcao-reports/05-03-PLAN.md` — Planned architecture for separation
+
+### External Docs
+- No external specs — requirements fully captured in decisions above
 </canonical_refs>
 
+<code_context>
+## Existing Code Insights
+
+### Reusable Assets
+- `parseCorrectionDetails` function (line ~1800) — already handles both formats
+- `calculateDuration` utility — already exists globally
+- LocalStorage persistence patterns already established for editingDrafts
+
+### Established Patterns
+- Notification filtering: `n.title.includes(...)` + `target_type === 'admin'`
+- Badge counter using `correctionNotifications.length`
+- State persistence via localStorage with JSON serialization
+
+### Integration Points
+- `correcoesCorrections` state from Supabase realtime subscription
+- `app_notifications` table for client-admin communication
+- `logs` table for actual hour records
+
+</code_context>
+
 <specifics>
-## User-Reported Issues
+## Specific Ideas
 
-All points in the correction flow are broken:
+### Arquitetura do State
+- State isolado em objetos separados por tipo de correção
+- adminChanges usa estrutura `{ workerId: { dayDate: { adminEntry, adminExit, ... } } }`
 
-1. **Client sends correction** → Problem unclear
-2. **Admin receives notification** → Not working
-3. **Admin edits records** → Not working
-4. **Admin responds to client** → Not working
+### UI/UX
+- Badge claro "Rápido" vs "Precisão" em cada cartão
+- Componentes pequenos com nomes claros
+- Props partilhadas via componente pai (CorrecoesAdmin)
 
-**Goal:** System should work end-to-end:
-- Client can choose "Mensagem Rápida" or "Ajuste de Precisão"
-- Admin receives notification in real-time
-- Admin can view and edit affected records
-- Admin can apply changes or send counter-proposal
-- Client receives feedback
 </specifics>
 
 <deferred>
 ## Deferred Ideas
 
-- Any new features discovered during analysis → note but don't implement
-- UI/UX improvements outside bug fixes → future phase
-- New notification channels → future phase
+None — discussion stayed within phase scope
 
 </deferred>
 

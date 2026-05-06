@@ -6,7 +6,7 @@ Sistema de gestão de horas e relatórios para profissionais freelancers e empre
 
 ## Core Value
 
-Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de horas, geração de relatórios e comunicação com clientes é automatizada e sem atritos.
+Modularidade e escalabilidade: a gestão de horas e relatórios é automatizada, com uma arquitetura limpa e sustentável que permite o crescimento rápido de novas funcionalidades sem a dívida técnica de um monolito.
 
 ## Requirements
 
@@ -18,15 +18,17 @@ Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de 
 - ✓ Notificações por email ao cliente — existente
 - ✓ Assinaturas digitais — existente
 - ✓ Atualizações realtime via Supabase — existente
+- ✓ Variáveis de ambiente VITE_* — implementado
+- ✓ Error handling robusto — implementado
 
-### Active
+### Active (Refactoring Milestone)
 
-- [ ] Mover secrets de API para environment variables (VITE_*)
-- [ ] Corrigir error handling em handleAiPolish (try/catch/finally)
-- [ ] Corrigir race condition em Supabase subscription (dependency array)
-- [ ] Adicionar validação NaN em reduce operations
-- [ ] Melhorar mensagens de erro (específicas por tipo)
-- [ ] Adicionar validação de input em filtros de base de dados
+- [ ] Implementar sistema de gerenciamento de estado (Context API)
+- [ ] Extrair componentes utilitários e funções auxiliares para `/src/utils` e `/src/components/common`
+- [ ] Modularizar funcionalidades do Admin para `/src/features/admin`
+  - Geral, Equipa, Clientes, Portal Validação, Horários, Despesas, Relatórios, Documentos, Notificações, Envios Clientes, Validação Equipa, Correções, Links
+- [ ] Modularizar funcionalidades do Worker para `/src/features/worker`
+- [ ] Reduzir `app.jsx` a um roteador leve e provedor de contexto
 
 ### Out of Scope
 
@@ -46,23 +48,24 @@ Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de 
 - Deploy: Vercel
 
 **Problemas conhecidos:**
-- API keys hardcoded no código cliente (app.jsx)
-- Error handling inconsistente em operações assíncronas
-- Mensagens de erro genéricas que ocultam causa raiz
+- `app.jsx` monolítico (+5000 linhas)
+- Estado concentrado num único componente, causando re-renders desnecessários
+- Dificuldade de manutenção e teste de funcionalidades individuais
 
 ## Constraints
 
-- **Segurança**: Keys de API nunca devem estar no código cliente
-- **Performance**: Operações de reduce devem lidar com valores inválidos
-- **UX**: Mensagens de erro devem ser específicas e acionáveis
+- **Arquitetura**: Seguir padrão de domínios/funcionalidades
+- **Estado**: Usar Context API para estado compartilhado
+- **Estilo**: Manter Vanilla CSS (App.css) e estética premium atual
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Supabase para realtime | Necessário para atualização instantânea entre admin e portais | — Pending |
-| Environment variables VITE_* | Padrão Vite para variáveis expostas ao cliente | — Pending |
-| Mensagens de erro específicas | Melhor UX e debugging mais rápido | — Pending |
+| Context API | Simplicidade e integração nativa para o tamanho atual | — In Progress |
+| Modularização por Domínio | Melhora a organização e facilita o trabalho paralelo | — Planned |
+| Separação de Lógica (Hooks) | Isolar chamadas de API e lógica de negócio da UI | — Planned |
 
 ---
-*Last updated: 2026-05-05 after initial analysis*
+*Last updated: 2026-05-06 - Modularization Refactor Start*
+

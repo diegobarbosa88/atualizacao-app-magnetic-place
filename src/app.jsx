@@ -2419,6 +2419,10 @@ function AdminDashboard(props) {
           {!auditWorkerId && activeTab === 'portal_validacao' && (
             <ValidationPortal
               onLogin={onLogin}
+              portalMonth={portalMonth}
+              setPortalMonth={setPortalMonth}
+              correctionNotifications={correctionNotifications}
+              clientApprovals={clientApprovals}
               setClienteSelecionado={setClienteSelecionado}
               setModalEmailAberto={setModalEmailAberto}
               setPrintingReport={setPrintingReport}

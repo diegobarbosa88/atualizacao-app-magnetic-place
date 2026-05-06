@@ -1,69 +1,40 @@
-# Requirements: app-magnetic
+# Requirements: Modularização e Gestão de Estado
 
-**Defined:** 2026-05-05
-**Core Value:** Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de horas, geração de relatórios e comunicação com clientes é automatizada e sem atritos.
+Este documento detalha os requisitos para a refatoração do `app-magnetic` de um monolito para uma arquitetura modular baseada em domínios.
 
-## v1 Requirements
+## Infraestrutura de Estado (STATE)
 
-### Security
+- **STATE-01**: Criar um `AppContext` usando a React Context API para gerenciar o estado global da aplicação.
+  - Deve conter: `currentUser`, `systemSettings`, `clients`, `workers`, `schedules`, `logs`, `expenses`, `documents`, `appNotifications`, `correcoesCorrections`, `approvals`, `clientApprovals`.
+  - Deve fornecer funções de mutação (`saveToDb`, `handleDelete`).
+  - Deve lidar com a inicialização do Supabase e as subscrições real-time.
 
-- [ ] **SEC-01**: API keys movidas para environment variables (VITE_GEMINI_API_KEY, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, VITE_CLIENT_PORTAL_URL)
-- [ ] **SEC-02**: EmailJS credentials movidas para environment variables
-- [ ] **SEC-03**: pdf.co API key movida para environment variable
-- [ ] **SEC-04**: Gemini API key removida de query string, usar Authorization header
+## Utilitários e Componentes Comuns (UTIL)
 
-### Error Handling
+- **UTIL-01**: Extrair funções puras e helpers para `/src/utils`.
+  - Exemplos: `calculateDuration`, `formatHours`, `formatDocDate`, `toISODateLocal`, etc.
+- **UTIL-02**: Extrair componentes de UI compartilhados para `/src/components/common`.
+  - Exemplos: `CompanyLogo`, `EntryForm`, `FinancialReportOverlay`.
 
-- [ ] **ERR-01**: handleAiPolish com try/catch/finally guarantee
-- [ ] **ERR-02**: Mensagens de erro específicas por código (401, 429, 500, network error)
-- [ ] **ERR-03**: Validação de NaN em todas as operações reduce com parseFloat
+## Funcionalidades Admin (ADMIN)
 
-### Data Integrity
+- **ADMIN-01 (Geral)**: Módulo de visão geral com estatísticas e cards de resumo.
+- **ADMIN-02 (Equipa)**: Módulo de gestão de trabalhadores (CRUD).
+- **ADMIN-03 (Clientes)**: Módulo de gestão de clientes (CRUD).
+- **ADMIN-04 (Portal Validação)**: Módulo central de validação de horas e envio de e-mails.
+- **ADMIN-05 (Relatórios)**: Módulo de geração de PDFs e exportação ZIP.
+- **ADMIN-06 (Documentos)**: Módulo de upload e gestão de documentos administrativos.
+- **ADMIN-07 (Notificações)**: Módulo de criação e gestão de banners de aviso.
+- **ADMIN-08 (Correções)**: Integração com o portal de correções já existente.
 
-- [ ] **DATA-01**: Supabase subscription com dependency array completo (supabase, initialClientId)
-- [ ] **DATA-02**: Validação de clientId em filtros de base de dados antes de interpolar
-- [ ] **DATA-03**: Verificação de undefined antes de acessar .length em arrays
+## Funcionalidades Worker (WORKER)
 
-## v2 Requirements
+- **WORKER-01 (Dashboard)**: Tela principal do trabalhador com resumo de horas e metas.
+- **WORKER-02 (Registo)**: Interface de inserção e edição de horas (histórico mensal).
+- **WORKER-03 (Documentos)**: Interface de visualização e assinatura digital de documentos.
 
-### Notifications
+## Qualidade e Limpeza (CLEANUP)
 
-- **NOTF-01**: Notificação push para clientes quando relatório é gerado
-- **NOTF-02**: Notificação ao admin quando cliente reporta divergência
-
-### Portal
-
-- **PORTAL-01**: Histórico de reportes por cliente
-- **PORTAL-02**: Filtros avançados no portal admin (por data, status, cliente)
-
-## Out of Scope
-
-| Feature | Reason |
-|---------|--------|
-| Faturação/pagamentos | Não faz parte do scope atual |
-| Aplicação móvel | Web-first, mobile later |
-| Integração com Slack/Teams | Não solicitado pelo utilizador |
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| SEC-01 | Phase 1 | Pending |
-| SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
-| SEC-04 | Phase 1 | Pending |
-| ERR-01 | Phase 1 | Pending |
-| ERR-02 | Phase 1 | Pending |
-| ERR-03 | Phase 1 | Pending |
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-
-**Coverage:**
-- v1 requirements: 10 total
-- Mapped to phases: 10
-- Unmapped: 0 ✓
-
----
-*Requirements defined: 2026-05-05*
-*Last updated: 2026-05-05 after initial requirements definition*
+- **CLEANUP-01**: O arquivo `app.jsx` deve conter apenas a lógica de roteamento (`view` state) e os Providers de contexto.
+- **CLEANUP-02**: Eliminar duplicidade de estilos inlining, movendo o máximo possível para `App.css` ou arquivos CSS específicos de módulo.
+- **CLEANUP-03**: Garantir que a performance não seja degradada (uso de `useMemo` e `useCallback` no Contexto).
