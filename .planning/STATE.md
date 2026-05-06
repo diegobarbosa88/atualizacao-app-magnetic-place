@@ -2,8 +2,8 @@
 
 **Project:** app-magnetic
 **Milestone:** v2.0 - Arquitetura Modular
-**Phase:** 6 (completed)
-**Last updated:** 2026-05-06 after Phase 6 completion
+**Phase:** 7 (completed)
+**Last updated:** 2026-05-06 after Phase 7 completion
 
 ## Project Reference
 
@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de horas, geração de relatórios e comunicação com clientes é automatizada e sem atritos.
 
-**Current focus:** Phase 6 infrastructure complete — Context integrated, utilities verified. Ready for Phase 7 modularization.
+**Current focus:** Phase 7 complete — Admin managers modularized with contexts. Ready for Phase 8.
 
 ## Phase Status
 
@@ -23,6 +23,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 | 4 | Pending | 0 | 0 |
 | 5 | Completed | 6 | 6 |
 | 6 | Completed | 1 | 1 |
+| 7 | Completed | 3 | 3 |
 
 ## Decisions
 
@@ -77,22 +78,46 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 - `src/utils/formatUtils.js` - All format/calculate functions working
 - `src/features/admin/*.jsx` - All consuming Context correctly
 
+## Phase 7 Completions
+
+### Plans Executed
+- **07-01-PLAN.md** → **07-SUMMARY.md** ✓ (TeamContext extraction)
+- **07-02-PLAN.md** → **07-SUMMARY.md** ✓ (ClientContext extraction)
+- **07-03-PLAN.md** → **07-SUMMARY.md** ✓ (ScheduleContext extraction)
+
+### Modularization Applied
+- TeamContext extracted for TeamManager local state
+- ClientContext extracted for ClientManager local state
+- ScheduleContext extracted for ScheduleManager local state
+- All managers now fully autonomous via Provider wrapping
+- index.js exports all context hooks
+
+### Files Created
+- `src/features/admin/contexts/TeamContext.jsx`
+- `src/features/admin/contexts/ClientContext.jsx`
+- `src/features/admin/contexts/ScheduleContext.jsx`
+- `src/features/admin/index.js`
+
+### Files Modified
+- `src/features/admin/TeamManager.jsx` - wrapped with TeamProvider
+- `src/features/admin/ClientManager.jsx` - wrapped with ClientProvider
+- `src/features/admin/ScheduleManager.jsx` - wrapped with ScheduleProvider
+
 ## Blockers
 
-- Nenhum (Phase 6 completo)
+- Nenhum (Phase 7 completo)
 
 ## Todos
 
 - [x] Phase 6: Verify Context integration and utility functions - DONE
-- [ ] Pending: Phase 7 planning (Modularização do Admin)
+- [x] Phase 7: Modularização Admin Core (Team/Client/Schedule contexts) - DONE
 - [ ] Pending: Phase 8 planning (Modularização do Admin Portal & Docs)
 - [ ] Pending: Phase 9 planning (Modularização do Worker)
 - [ ] Pending: Phase 10 planning (Limpeza e Roteamento)
 
 ## Next Steps
 
-1. Move to Phase 7 planning (Modularização do Admin - Core)
-2. Extract TeamManager, ClientManager, ScheduleManager into fully autonomous modules
-3. Continue with feature-based modularization
+1. Move to Phase 8 planning (Modularização do Admin Portal & Docs)
+2. Continue with feature-based modularization
 
 *State updated: 2026-05-06*
