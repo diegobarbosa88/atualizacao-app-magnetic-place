@@ -14,12 +14,10 @@ import {
 import {
   Clock, ChevronLeft, ChevronRight, Calendar, CheckCircle, 
   LogOut, Timer, TrendingUp, Edit2, Save, X, Plus, Users,
-  AlertCircle, Briefcase, FileText, Trash2, UserCircle
+  AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown
 } from 'lucide-react';
 
-// TODO: Full implementation in Plan 02
-
-const WorkerContext = React.createContext(null);
+const WorkerContext = createContext(null);
 
 export const useWorker = () => useContext(WorkerContext);
 
@@ -29,7 +27,7 @@ export const WorkerProvider = ({ children }) => {
     logs, clients, schedules, personalSchedules,
     mainFormData, setMainFormData, handleSaveEntry,
     saveToDb, handleDelete, approvals, handleApproveMonth,
-    systemSettings, documents, appNotifications
+    systemSettings, documents, appNotifications, supabase
   } = useApp();
 
   // Local state
@@ -49,7 +47,7 @@ export const WorkerProvider = ({ children }) => {
     } catch { return []; }
   });
 
-  // Computed values - skeleton implementation for now
+  // Computed values
   const todayStr = toISODateLocal(new Date());
   const monthLogs = logs?.filter(l => l.workerId === currentUser?.id && isSameMonth(l.date, currentMonth)) || [];
   const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + calculateDuration(b.startTime, b.endTime, b.breakStart, b.breakEnd), 0);
@@ -65,6 +63,15 @@ export const WorkerProvider = ({ children }) => {
 
   const currentMonthStr = toISODateLocal(currentMonth).substring(0, 7);
   const myApproval = approvals?.find(a => a.workerId === currentUser?.id && a.month === currentMonthStr);
+
+  const myNotifications = useMemo(() => {
+    if (!appNotifications || !currentUser) return [];
+    return appNotifications.filter(n => 
+      (!n.viewed_by_ids || !n.viewed_by_ids.includes(currentUser.id)) &&
+      (!n.dismissed_by_ids || !n.dismissed_by_ids.includes(currentUser.id)) &&
+      (n.workerId === currentUser.id || !n.workerId)
+    );
+  }, [appNotifications, currentUser]);
 
   // Pending approvals computation
   const pendingApprovals = useMemo(() => {
@@ -92,11 +99,37 @@ export const WorkerProvider = ({ children }) => {
     return pending;
   }, [approvals, currentUser?.id]);
 
-  // Handlers - skeleton implementation for now
+  // Auto-mark notifications as viewed
+  useEffect(() => {
+    if (!currentUser || !appNotifications || appNotifications.length === 0) return;
+
+    myNotifications.forEach(async (notif) => {
+      const viewedIds = notif.viewed_by_ids || [];
+      if (!viewedIds.includes(currentUser.id)) {
+        if (supabase) {
+          await supabase.from('app_notifications').update({
+            viewed_by_ids: [...viewedIds, currentUser.id]
+          }).eq('id', notif.id);
+        }
+      }
+    });
+  }, [currentUser?.id, myNotifications]);
+
+  // Handlers
   const handleDismissNotif = async (id) => {
     const updated = [...dismissedNotifs, id];
     setDismissedNotifs(updated);
     localStorage.setItem(`dismissed_notifs_${currentUser?.id}`, JSON.stringify(updated));
+
+    const notif = appNotifications?.find(n => n.id === id);
+    if (notif && supabase) {
+      const dismissedIds = notif.dismissed_by_ids || [];
+      if (!dismissedIds.includes(currentUser.id)) {
+        await supabase.from('app_notifications').update({
+          dismissed_by_ids: [...dismissedIds, currentUser.id]
+        }).eq('id', id);
+      }
+    }
   };
 
   const handleOpenInlineForm = useCallback((ds) => {
@@ -170,6 +203,7 @@ export const WorkerProvider = ({ children }) => {
     myPersonals,
     currentMonthStr,
     myApproval,
+    myNotifications,
     pendingApprovals,
     // Handlers
     handleDismissNotif,
