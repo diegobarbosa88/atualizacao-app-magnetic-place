@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { useApp } from '../../context/AppContext';
+import { useApp } from '../../../context/AppContext';
 import { 
   toISODateLocal,
   isSameMonth,
   getLastBusinessDayOfMonth
-} from '../../utils/dateUtils';
+} from '../../../utils/dateUtils';
 import {
   formatHours,
   calculateDuration,
   calculateExpectedMonthlyHours,
   getScheduleForDay
-} from '../../utils/formatUtils';
+} from '../../../utils/formatUtils';
 import {
   Clock, ChevronLeft, ChevronRight, Calendar, CheckCircle, 
   LogOut, Timer, TrendingUp, Edit2, Save, X, Plus, Users,

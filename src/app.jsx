@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+Ôªøimport React, { useState, useMemo, useEffect } from 'react';
 import './App.css';
 import {
   AlertCircle, CheckCircle, ChevronLeft, ChevronRight, LogOut, Mail,
@@ -11,11 +11,11 @@ import emailjs from '@emailjs/browser';
 import { useApp } from './context/AppContext';
 import ClientPortal from './ClientPortal.jsx';
 import { WorkerDashboard } from './features/worker';
-import { AdminDashboard } from './features/admin/AdminDashboard';
-import { FinancialReportOverlay } from './features/admin/FinancialReportOverlay';
-import { DocumentsAdmin } from './features/admin/DocumentsAdmin';
-import { NotificationsAdmin } from './features/admin/NotificationsAdmin';
-import { LoginView } from './features/auth/LoginView';
+import AdminDashboard from './features/admin/AdminDashboard';
+import FinancialReportOverlay from './features/admin/FinancialReportOverlay';
+import DocumentsAdmin from './features/admin/DocumentsAdmin';
+import NotificationsAdmin from './features/admin/NotificationsAdmin';
+import LoginView from './features/auth/LoginView';
 import CompanyLogo from './components/common/CompanyLogo';
 import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
@@ -51,7 +51,7 @@ export default function App() {
   } = useApp();
 
   useEffect(() => {
-    document.title = "Magnetic Place | Gest„o";
+    document.title = "Magnetic Place | Gest√£o";
     let link = document.querySelector("link[rel~='icon']");
     if (!link) {
       link = document.createElement('link');
@@ -131,9 +131,9 @@ export default function App() {
 
   useEffect(() => {
     if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
-      const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de CorreÁ„o') || n.title?.includes('MENSAGEM DE DIVERG NCIA'));
+      const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Corre√ß√£o') || n.title?.includes('MENSAGEM DE DIVERG√äNCIA'));
       if (toDismiss.length > 0) {
-        console.log('Auto-descartando notificaÁıes de correÁ„o pois a sub-aba correcoes est· ativa');
+        console.log('Auto-descartando notifica√ß√µes de corre√ß√£o pois a sub-aba correcoes est√° ativa');
         toDismiss.forEach(n => handleDismissNotif(n.id));
       }
     }
@@ -142,7 +142,7 @@ export default function App() {
   const handleBannerClick = (notif) => {
     console.log('Banner clicado:', notif.title);
     handleDismissNotif(notif.id);
-    if ((notif.title?.includes('Pedido de CorreÁ„o') || notif.title?.includes('MENSAGEM DE DIVERG NCIA')) && currentUser.role === 'admin') {
+    if ((notif.title?.includes('Pedido de Corre√ß√£o') || notif.title?.includes('MENSAGEM DE DIVERG√äNCIA')) && currentUser.role === 'admin') {
       setActiveTab('portal_validacao');
       setPortalSubTab('correcoes');
       setView('admin');
@@ -206,25 +206,25 @@ export default function App() {
     const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
     let rawTargetMonth = rejeitarNotif.payload?.month || '';
     if (rawTargetMonth && !rawTargetMonth.match(/^\d{4}-\d{2}$/)) {
-      const months = ['janeiro', 'fevereiro', 'marÁo', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      const months = ['janeiro', 'fevereiro', 'mar√ßo', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
       const lowerMonth = rawTargetMonth.toLowerCase();
       const monthIdx = months.findIndex(m => lowerMonth.includes(m));
       const yearMatch = rawTargetMonth.match(/\d{4}/);
       if (monthIdx >= 0 && yearMatch) rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
     }
-    const monthLabel = (rejeitarNotif.message.match(/?? PerÌodo: (.+)\n/)?.[1] || rawTargetMonth || '').trim();
+    const monthLabel = (rejeitarNotif.message.match(/Per√≠odo: (.+)\n/)?.[1] || rawTargetMonth || '').trim();
     const rejectNotifId = "reject_" + Date.now();
     const fbNotifData = {
       id: rejectNotifId,
-      title: `Reporte de DivergÍncia Rejeitado: ${monthLabel || rawTargetMonth || ''}`,
-      message: `O seu reporte de divergÍncia referente ao perÌodo de ${monthLabel || rawTargetMonth || ''} foi rejeitado pelo administrador.\n\nMotivo: ${rejeitarMotivo.trim()}\n\nPor favor, aceda ao portal para rever e submeter um novo reporte caso necess·rio.`,
+      title: `Reporte de Diverg√™ncia Rejeitado: ${monthLabel || rawTargetMonth || ''}`,
+      message: `O seu reporte de diverg√™ncia referente ao per√≠odo de ${monthLabel || rawTargetMonth || ''} foi rejeitado pelo administrador.\n\nMotivo: ${rejeitarMotivo.trim()}\n\nPor favor, aceda ao portal para rever e submeter um novo reporte caso necess√°rio.`,
       type: 'error', target_type: 'client', target_client_id: String(rejeitarNotif.target_client_id),
       created_at: new Date().toISOString(), is_active: true,
       payload: { type: 'correcao_rejeitada', motivo: rejeitarMotivo.trim() }
     };
-    const monthFromMsg = rejeitarNotif.message.match(/?? PerÌodo: (.+)\n/)?.[1] || '';
+    const monthFromMsg = rejeitarNotif.message.match(/Per√≠odo: (.+)\n/)?.[1] || '';
     if (!rawTargetMonth && monthFromMsg) {
-      const months = ['janeiro', 'fevereiro', 'marÁo', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+      const months = ['janeiro', 'fevereiro', 'mar√ßo', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
       const lowerMonth = monthFromMsg.toLowerCase();
       const monthIdx = months.findIndex(m => lowerMonth.includes(m));
       const yearMatch = monthFromMsg.match(/\d{4}/);
@@ -240,7 +240,7 @@ export default function App() {
     setModalRejeitarAberto(false);
     setRejeitarMotivo('');
     setRejeitarNotif(null);
-    setToastMessage('CorreÁ„o rejeitada e cliente notificado!');
+    setToastMessage('Corre√ß√£o rejeitada e cliente notificado!');
     setTimeout(() => setToastMessage(null), 4000);
   };
 
@@ -257,7 +257,7 @@ export default function App() {
     for (const log of existingLogs) {
       const existingStart = toMins(log.startTime);
       const existingEnd = toMins(log.endTime);
-      if (newStart < existingEnd && newEnd > existingStart) { alert(`J· existe um registo das ${log.startTime} ‡s ${log.endTime} nesse dia.`); return; }
+      if (newStart < existingEnd && newEnd > existingStart) { alert(`J√° existe um registo das ${log.startTime} √†s ${log.endTime} nesse dia.`); return; }
     }
     saveToDb('logs', logId, { ...formData, date: dateToSave, hours, workerId: wId, id: logId });
     if (isMain) { const resetClientId = currentUser?.role === 'worker' ? (currentUser.defaultClientId || '') : ''; setMainFormData(prev => ({ ...prev, description: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', clientId: resetClientId })); }
@@ -272,7 +272,7 @@ export default function App() {
       {(view === 'admin' || view === 'worker') && currentUser && myNotifications.length > 0 && (
         <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
           {myNotifications.map(notif => (
-            <div key={notif.id} onClick={() => handleBannerClick(notif)} className={`pointer-events-auto animate-in slide-in-from-top-4 duration-700 ${notif.title?.includes('Pedido de CorreÁ„o') ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all' : ''}`}>
+            <div key={notif.id} onClick={() => handleBannerClick(notif)} className={`pointer-events-auto animate-in slide-in-from-top-4 duration-700 ${notif.title?.includes('Pedido de Corre√ß√£o') ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all' : ''}`}>
               <div className={`rounded-[2rem] p-0.5 shadow-2xl ${notif.type === 'urgent' ? 'bg-gradient-to-br from-rose-500 to-red-600' : notif.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : notif.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-indigo-500 to-violet-600'}`}>
                 <div className="bg-white/95 backdrop-blur-md rounded-[1.95rem] p-4 shadow-inner">
                   <div className="flex items-center gap-4">
@@ -281,7 +281,7 @@ export default function App() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{notif.title}</h3>
-                      <p className="text-[10px] font-bold text-slate-500 mt-0.5 leading-tight line-clamp-1">{notif.title.includes('Pedido de CorreÁ„o') ? notif.message.split('\n')[0] : notif.message}</p>
+                      <p className="text-[10px] font-bold text-slate-500 mt-0.5 leading-tight line-clamp-1">{notif.title.includes('Pedido de Corre√ß√£o') ? notif.message.split('\n')[0] : notif.message}</p>
                     </div>
                     {notif.is_dismissible && <button onClick={(e) => { e.stopPropagation(); handleDismissNotif(notif.id); }} className="p-1.5 text-slate-300 hover:text-slate-600 transition-all hover:bg-slate-50 rounded-xl"><X size={18} /></button>}
                   </div>
@@ -366,15 +366,15 @@ export default function App() {
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">De:</span><span className="font-medium text-slate-700">nao-responder@magneticplace.pt</span></div>
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Para:</span><span className="font-bold text-indigo-700">{clienteSelecionado.email || 'cliente@exemplo.pt'}</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Assunto:</span><span className="font-medium text-slate-700">AprovaÁ„o de Horas Magnetic Place - {currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Assunto:</span><span className="font-medium text-slate-700">Aprova√ß√£o de Horas Magnetic Place - {currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</span></div>
                 </div>
                 <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
                   <div className="flex justify-center mb-8 pb-6 border-b-2 border-slate-50"><img src="/MAGNETIC (3).png" alt="Logo" className="h-10 object-contain" /></div>
-                  <h4 className="font-black text-lg text-slate-800 mb-4">Ol· {clienteSelecionado.name},</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-6">Os relatÛrios de serviÁo referentes ao perÌodo de <strong className="font-black text-indigo-700">{currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</strong> j· est„o disponÌveis para a sua revis„o e aprovaÁ„o.</p>
+                  <h4 className="font-black text-lg text-slate-800 mb-4">Ol√° {clienteSelecionado.name},</h4>
+                  <p className="text-slate-600 text-sm leading-relaxed mb-6">Os relat√≥rios de servi√ßo referentes ao per√≠odo de <strong className="font-black text-indigo-700">{currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</strong> j√° est√£o dispon√≠veis para a sua revis√£o e aprova√ß√£o.</p>
                   <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 mb-8"><p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Total Registado</p><p className="text-2xl font-black text-indigo-700">{formatHours(logs.filter(l => l.clientId === clienteSelecionado.id).reduce((acc, l) => acc + l.hours, 0))} <span className="text-base font-bold">horas</span></p></div>
-                  <p className="text-slate-500 text-xs leading-relaxed mb-8">Para rever em detalhe as datas, horas, e trabalhadores associados a este perÌodo, por favor utilize o bot„o abaixo:</p>
-                  <div className="text-center mb-10"><div className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200">Aceder ao Portal de ValidaÁ„o</div></div>
+                  <p className="text-slate-500 text-xs leading-relaxed mb-8">Para rever em detalhe as datas, horas, e trabalhadores associados a este per√≠odo, por favor utilize o bot√£o abaixo:</p>
+                  <div className="text-center mb-10"><div className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200">Aceder ao Portal de Valida√ß√£o</div></div>
                   <div className="pt-8 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Equipa Magnetic Place</p></div>
                 </div>
               </div>
@@ -388,36 +388,36 @@ export default function App() {
       })()}
       {modalRejeitarAberto && rejeitarNotif && (() => {
         const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
-        const monthLabel = (rejeitarNotif.message.match(/?? PerÌodo: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
+        const monthLabel = (rejeitarNotif.message.match(/Per√≠odo: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
         return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
             <div className="bg-white rounded-[2rem] shadow-2xl border border-rose-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300">
               <div className="flex justify-between items-center p-6 border-b border-rose-100">
-                <h3 className="font-black text-xl text-rose-600 flex items-center gap-3"><XCircle size={24} /> Rejeitar CorreÁ„o</h3>
+                <h3 className="font-black text-xl text-rose-600 flex items-center gap-3"><XCircle size={24} /> Rejeitar Corre√ß√£o</h3>
                 <button onClick={() => setModalRejeitarAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X size={20} /></button>
               </div>
               <div className="p-6 bg-slate-50 space-y-4">
                 <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
                   <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Para:</span><span className="font-bold text-rose-700">{targetClient?.name || 'Cliente'}</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">E-mail:</span><span className="font-medium text-slate-700">{targetClient?.email || 'N„o definido'}</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">PerÌodo:</span><span className="font-medium text-slate-700">{monthLabel || rejeitarNotif.payload?.month || ''}</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">E-mail:</span><span className="font-medium text-slate-700">{targetClient?.email || 'N√£o definido'}</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Per√≠odo:</span><span className="font-medium text-slate-700">{monthLabel || rejeitarNotif.payload?.month || ''}</span></div>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Motivo da RejeiÁ„o *</label>
-                  <textarea value={rejeitarMotivo} onChange={e => setRejeitarMotivo(e.target.value)} placeholder="Descreva o motivo pelo qual esta correÁ„o est· a ser rejeitada..." rows={4} className="w-full border border-slate-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 resize-none" />
-                  <p className="text-[10px] text-slate-400 mt-2 text-right">{rejeitarMotivo.length} caracteres (mÌnimo 10)</p>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Motivo da Rejei√ß√£o *</label>
+                  <textarea value={rejeitarMotivo} onChange={e => setRejeitarMotivo(e.target.value)} placeholder="Descreva o motivo pelo qual esta corre√ß√£o est√° a ser rejeitada..." rows={4} className="w-full border border-slate-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 resize-none" />
+                  <p className="text-[10px] text-slate-400 mt-2 text-right">{rejeitarMotivo.length} caracteres (m√≠nimo 10)</p>
                 </div>
                 <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
-                  <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest mb-2">PrÈ-visualizaÁ„o do E-mail</p>
+                  <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest mb-2">Pr√©-visualiza√ß√£o do E-mail</p>
                   <div className="bg-white rounded-lg p-4 text-sm space-y-2">
-                    <p className="font-bold text-slate-800">Assunto: Reporte de DivergÍncia Rejeitado: {monthLabel || ''}</p>
-                    <p className="text-slate-600 text-xs leading-relaxed">{rejeitarMotivo.trim().length >= 10 ? <>O seu reporte de divergÍncia referente ao perÌodo de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br /><br /><strong>Motivo:</strong> {rejeitarMotivo.trim()}</> : <span className="text-amber-500">Aguarde... Insira o motivo da rejeiÁ„o.</span>}</p>
+                    <p className="font-bold text-slate-800">Assunto: Reporte de Diverg√™ncia Rejeitado: {monthLabel || ''}</p>
+                    <p className="text-slate-600 text-xs leading-relaxed">{rejeitarMotivo.trim().length >= 10 ? <>O seu reporte de diverg√™ncia referente ao per√≠odo de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br /><br /><strong>Motivo:</strong> {rejeitarMotivo.trim()}</> : <span className="text-amber-500">Aguarde... Insira o motivo da rejei√ß√£o.</span>}</p>
                   </div>
                 </div>
               </div>
               <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-white">
                 <button onClick={() => setModalRejeitarAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
-                <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-6 py-3 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar RejeiÁ„o</button>
+                <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-6 py-3 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar Rejei√ß√£o</button>
               </div>
             </div>
           </div>

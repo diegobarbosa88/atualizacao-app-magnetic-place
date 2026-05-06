@@ -9,13 +9,13 @@ import {
   X, ChevronLeft, ChevronRight, LogOut, Zap, Plus, Trash2, Unlock,
   Building2, Palette, Lock, Settings
 } from 'lucide-react';
-import { TeamManager } from './TeamManager';
-import { ClientManager } from './ClientManager';
-import { ScheduleManager } from './ScheduleManager';
-import { ExpenseManager } from './ExpenseManager';
-import { ValidationPortal } from './ValidationPortal';
-import { DocumentsAdmin } from './DocumentsAdmin';
-import { NotificationsAdmin } from './NotificationsAdmin';
+import TeamManager from './TeamManager';
+import ClientManager from './ClientManager';
+import ScheduleManager from './ScheduleManager';
+import ExpenseManager from './ExpenseManager';
+import ValidationPortal from './ValidationPortal';
+import DocumentsAdmin from './DocumentsAdmin';
+import NotificationsAdmin from './NotificationsAdmin';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -57,7 +57,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, appNotifications, expenses, correcoesCorrections, saveToDb } = useApp();
+  const { adminStats, clients, workers, appNotifications, saveToDb } = useApp();
 
   const notificacoesDeCorrecao = correctionNotifications;
 

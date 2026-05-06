@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { X, Wallet, BrainCircuit, Sparkles } from 'lucide-react';
-import CompanyLogo from '../components/common/CompanyLogo';
+import CompanyLogo from '../../components/common/CompanyLogo';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';

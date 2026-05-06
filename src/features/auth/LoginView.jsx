@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UserCircle, Lock, Download, AlertCircle, ExternalLink, X } from 'lucide-react';
-import CompanyLogo from '../components/common/CompanyLogo';
+import CompanyLogo from '../../components/common/CompanyLogo';
 
 const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
   const [user, setUser] = useState('');
