@@ -42,7 +42,7 @@ export default function App() {
     expenses,
     correcoesCorrections,
     approvals,
-    documents,
+    documents, setDocuments,
     clientApprovals,
     appNotifications,
     saveToDb,
