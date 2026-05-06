@@ -1,3 +1,4 @@
+export { default as AdminDashboard } from './AdminDashboard';
 export { default as TeamManager } from './TeamManager';
 export { default as ClientManager } from './ClientManager';
 export { default as ScheduleManager } from './ScheduleManager';
