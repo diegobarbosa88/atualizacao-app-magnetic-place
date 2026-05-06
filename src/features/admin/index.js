@@ -6,3 +6,4 @@ export { default as ValidationPortal } from './ValidationPortal';
 export { useTeam } from './contexts/TeamContext';
 export { useClient } from './contexts/ClientContext';
 export { useSchedule } from './contexts/ScheduleContext';
+export { useValidationPortal } from './contexts/ValidationPortalContext';
