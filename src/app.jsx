@@ -23,6 +23,7 @@ import ClientManager from './features/admin/ClientManager';
 import ScheduleManager from './features/admin/ScheduleManager';
 import ExpenseManager from './features/admin/ExpenseManager';
 import ValidationPortal from './features/admin/ValidationPortal';
+import { WorkerDashboard } from './features/worker';
 import { useApp } from './context/AppContext';
 import {
   toISODateLocal,
