@@ -110,12 +110,89 @@ Plans:
 
 ## Milestone v1.0
 
-| Phase | Name | Status |
-|-------|------|--------|
-| 1 | Correções de Segurança e Error Handling | Complete |
-| 2 | Melhorias de UX nas Notificações | Pending |
-| 3 | Portal Admin - Histórico e Filtros | Pending |
-| 4 | Validação e Testing | Pending |
 | 5 | Correção do Sistema de Reports | Complete |
 
-*Created: 2026-05-05*
+---
+
+## Phase 6: Infraestrutura de Estado e Utilitários
+
+**Goal:** Preparar o terreno para a modularização criando o Contexto global e movendo funções auxiliares.
+
+**Requirements:** STATE-01, UTIL-01
+
+**Success Criteria:**
+1. Criado `AppContext.jsx` com os estados principais (users, logs, settings).
+2. Funções de utilidade (formatDate, calculateDuration, etc.) movidas para `src/utils/`.
+3. `app.jsx` utiliza o Provider do Contexto.
+
+---
+
+## Phase 7: Modularização do Admin (Core)
+
+**Goal:** Extrair as funcionalidades principais do painel administrativo.
+
+**Requirements:** ADMIN-01, ADMIN-02, ADMIN-03
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — TeamManager context extraction (ADMIN-02)
+- [ ] 07-02-PLAN.md — ClientManager context extraction (ADMIN-03)
+- [ ] 07-03-PLAN.md — ScheduleManager context extraction (ADMIN-02)
+
+**Success Criteria:**
+1. Criada pasta `src/features/admin`.
+2. Funcionalidades "Equipa", "Clientes" e "Horários" extraídas para arquivos próprios.
+3. Dashboards utilizam o Contexto em vez de props perfuradas (prop drilling).
+
+---
+
+## Phase 8: Modularização do Admin (Portal & Docs)
+
+**Goal:** Extrair o Portal de Validação, Relatórios e Gestão de Documentos.
+
+**Requirements:** ADMIN-04, ADMIN-05, ADMIN-06
+
+**Success Criteria:**
+1. Funcionalidades "Portal Validação", "Relatórios" e "Documentos" extraídas.
+2. Sistema de Notificações e Links movidos para componentes independentes.
+
+---
+
+## Phase 9: Modularização do Worker
+
+**Goal:** Extrair o Dashboard do Trabalhador e seus componentes.
+
+**Requirements:** WORKER-01, WORKER-02
+
+**Success Criteria:**
+1. Criada pasta `src/features/worker`.
+2. Dashboard do Trabalhador e formulários de entrada extraídos.
+
+---
+
+## Phase 10: Limpeza e Roteamento
+
+**Goal:** Consolidar o `app.jsx` como um roteador limpo e remover código duplicado.
+
+**Requirements:** CLEANUP-01
+
+**Success Criteria:**
+1. `app.jsx` reduzido drasticamente (idealmente < 200 linhas).
+2. Estrutura de pastas finalizada e organizada por domínio.
+
+---
+
+## Milestone v2.0 - Arquitetura Modular
+
+| Phase | Name | Status |
+|-------|------|--------|
+| 1-5 | Correções e Estabilidade (Legacy) | Complete |
+| 6 | Infraestrutura de Estado e Utilitários | Pending |
+| 7 | Modularização do Admin (Core) | Pending |
+| 8 | Modularização do Admin (Portal & Docs) | Pending |
+| 9 | Modularização do Worker | Pending |
+| 10 | Limpeza e Roteamento | Pending |
+
+*Last updated: 2026-05-06*
+
