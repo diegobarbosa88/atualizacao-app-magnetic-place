@@ -190,10 +190,10 @@ Plans:
 | Phase | Name | Status |
 |-------|------|--------|
 | 1-5 | Correções e Estabilidade (Legacy) | Complete |
-| 6 | Infraestrutura de Estado e Utilitários | Pending |
-| 7 | Modularização do Admin (Core) | Pending |
-| 8 | Modularização do Admin (Portal & Docs) | Pending |
-| 9 | Modularização do Worker | Pending |
+| 6 | Infraestrutura de Estado e Utilitários | Complete |
+| 7 | Modularização do Admin (Core) | Complete |
+| 8 | Modularização do Admin (Portal & Docs) | Complete |
+| 9 | Modularização do Worker | Complete |
 | 10 | Limpeza e Roteamento | Pending |
 
 *Last updated: 2026-05-06*
