@@ -2,8 +2,8 @@
 
 **Project:** app-magnetic
 **Milestone:** v2.0 - Arquitetura Modular
-**Phase:** 9 (in progress)
-**Last updated:** 2026-05-06 after Phase 9-02 completion
+**Phase:** 10 (ready to execute)
+**Last updated:** 2026-05-06 after Phase 10 planning
 
 ## Project Reference
 
@@ -11,7 +11,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 
 **Core value:** Profissionais podem dedicar mais tempo ao trabalho billable porque a gestão de horas, geração de relatórios e comunicação com clientes é automatizada e sem atritos.
 
-**Current focus:** Phase 9 complete — Worker dashboard modularized with context pattern. Ready for Phase 10.
+**Current focus:** Phase 10 planned — Cleanup and routing. Target: reduce app.jsx to <200 lines.
 
 ## Phase Status
 
@@ -26,6 +26,7 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 | 7 | Completed | 3 | 3 |
 | 8 | Completed | 1 | 1 |
 | 9 | Completed | 2 | 2 |
+| 10 | Ready to execute | 4 | 0 |
 
 ## Decisions
 
@@ -124,9 +125,21 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 ### Files Modified
 - `src/app.jsx` — Removed inline WorkerDashboard, imports from feature
 
-## Blockers
+## Phase 10 Planning (Cleanup and Routing)
 
-- Nenhum (Phase 7 completo)
+### Research Findings
+- Critical duplication: EntryForm, WorkerDocuments, CompanyLogo exist in BOTH app.jsx and WorkerDashboard.jsx
+- Duplicate adminStats computed in App function (already in AppContext)
+- 5 major extraction targets (~1800 lines total)
+
+### Plans Created
+- **10-01:** Extract shared components (EntryForm, WorkerDocuments, CompanyLogo, ClientTimesheetReport)
+- **10-02:** Extract feature components (LoginView, FinancialReportOverlay, DocumentsAdmin, NotificationsAdmin)
+- **10-03:** Extract AdminDashboard, refactor app.jsx to pure router
+- **10-04:** Update WorkerDashboard, finalize folder structure
+
+### Target
+- app.jsx reduced to <200 lines (pure router)
 
 ## Todos
 
@@ -134,11 +147,12 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 - [x] Phase 7: Modularização Admin Core (Team/Client/Schedule contexts) - DONE
 - [x] Phase 8: Modularização Admin Portal & Docs - DONE
 - [x] Phase 9: Modularização Worker (Dashboard + Registo) - DONE
-- [ ] Pending: Phase 10 planning (Limpeza e Roteamento)
+- [x] Phase 10: Planning complete - READY TO EXECUTE
 
 ## Next Steps
 
-1. Phase 10: Cleanup app.jsx and finalize routing
-2. Reduce app.jsx to a clean router
+1. Execute Phase 10: /gsd-execute_phase 10
+2. Run all 4 plans to complete cleanup
+3. Finalize folder structure
 
 *State updated: 2026-05-06*

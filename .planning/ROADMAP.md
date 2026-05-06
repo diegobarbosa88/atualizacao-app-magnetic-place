@@ -179,6 +179,14 @@ Plans:
 
 **Requirements:** CLEANUP-01
 
+**Plans:** 4 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Extract common components (CompanyLogo, EntryForm, WorkerDocuments, ClientTimesheetReport)
+- [ ] 10-02-PLAN.md — Extract feature components (LoginView, FinancialReportOverlay, DocumentsAdmin, NotificationsAdmin)
+- [ ] 10-03-PLAN.md — Extract AdminDashboard, refactor app.jsx to pure router, remove duplicate adminStats
+- [ ] 10-04-PLAN.md — Update WorkerDashboard to use common components, finalize folder structure
+
 **Success Criteria:**
 1. `app.jsx` reduzido drasticamente (idealmente < 200 linhas).
 2. Estrutura de pastas finalizada e organizada por domínio.
@@ -194,7 +202,7 @@ Plans:
 | 7 | Modularização do Admin (Core) | Complete |
 | 8 | Modularização do Admin (Portal & Docs) | Complete |
 | 9 | Modularização do Worker | Complete |
-| 10 | Limpeza e Roteamento | Pending |
+| 10 | Limpeza e Roteamento | Ready to execute |
 
 *Last updated: 2026-05-06*
 
