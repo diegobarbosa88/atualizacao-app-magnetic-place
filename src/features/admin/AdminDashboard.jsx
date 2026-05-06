@@ -14,6 +14,7 @@ import ClientManager from './ClientManager';
 import ScheduleManager from './ScheduleManager';
 import ExpenseManager from './ExpenseManager';
 import ValidationPortal from './ValidationPortal';
+import { ValidationPortalProvider } from './contexts/ValidationPortalContext';
 import DocumentsAdmin from './DocumentsAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
 import {
@@ -416,16 +417,14 @@ function AdminDashboard(props) {
           )}
 
           {!auditWorkerId && activeTab === 'portal_validacao' && (
-            <ValidationPortal
-              onLogin={onLogin}
-              portalMonth={portalMonth}
-              setPortalMonth={setPortalMonth}
-              correctionNotifications={correctionNotifications}
-              clientApprovals={clientApprovals}
-              setClienteSelecionado={setClienteSelecionado}
-              setModalEmailAberto={setModalEmailAberto}
-              setPrintingReport={setPrintingReport}
-            />
+            <ValidationPortalProvider>
+              <ValidationPortal
+                onLogin={onLogin}
+                setClienteSelecionado={setClienteSelecionado}
+                setModalEmailAberto={setModalEmailAberto}
+                setPrintingReport={setPrintingReport}
+              />
+            </ValidationPortalProvider>
           )}
           {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
 
