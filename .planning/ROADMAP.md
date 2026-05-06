@@ -153,8 +153,10 @@ Plans:
 
 **Requirements:** ADMIN-04, ADMIN-05, ADMIN-06
 
+Plans:
+- [ ] 08-01-PLAN.md — ValidationPortal context extraction (ADMIN-04)
+
 **Success Criteria:**
-1. Funcionalidades "Portal Validação", "Relatórios" e "Documentos" extraídas.
 2. Sistema de Notificações e Links movidos para componentes independentes.
 
 ---
