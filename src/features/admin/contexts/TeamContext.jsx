@@ -21,7 +21,13 @@ export const TeamProvider = ({ children }) => {
   const handleSaveWorker = useCallback(async () => {
     if (!workerForm.name) return alert('Nome é obrigatório');
     const id = workerForm.id || `worker_${Date.now()}`;
-    await saveToDb('workers', id, { ...workerForm, id });
+    // D-03: Se dataFim existe, automaticamente definir como inativo
+    const workerToSave = {
+      ...workerForm,
+      id,
+      status: workerForm.dataFim ? 'inativo' : (workerForm.status || 'ativo')
+    };
+    await saveToDb('workers', id, workerToSave);
     setIsAddingInTab(false);
     setWorkerForm(INITIAL_WORKER_FORM);
   }, [workerForm, saveToDb]);
