@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSchedule, ScheduleProvider } from './contexts/ScheduleContext';
-import { 
-  Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users, Search, Save, CalendarRange, ArrowRight, CheckCircle2 
+import {
+  Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users, Search, Save, CalendarRange, ArrowRight, CheckCircle2
 } from 'lucide-react';
 
 const ScheduleManagerContent = () => {
@@ -89,11 +89,11 @@ const ScheduleManagerContent = () => {
         <div className="mb-10 bg-white p-6 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
             <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-              <Timer className="text-indigo-600" size={28} /> 
+              <Timer className="text-indigo-600" size={28} />
               {scheduleForm.id ? 'Editar Horário' : 'Criar Novo Horário'}
             </h3>
             <div className="flex gap-3 w-full md:w-auto">
-              <button onClick={() => setIsAddingInTab(false)} className="flex-1 md:flex-none px-6 py-3 text-slate-400 font-bold uppercase text-xs hover:bg-slate-50 rounded-2xl transition-all">Cancelar</button>
+              <button onClick={() => setIsAddingInTab(false)} className="flex-1 md:flex-none px-6 py-3 text-slate-400 font-bold uppercase text-xs hover:bg-slate-50 rounded-2xl transition-all">CANCELAR</button>
               <button onClick={() => handleSaveSchedule(assignmentDates)} className="flex-1 md:flex-none bg-indigo-600 text-white px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:scale-105 transition-all flex items-center justify-center gap-2">
                 <Save size={16} /> Salvar Horário
               </button>
@@ -253,21 +253,21 @@ const ScheduleManagerContent = () => {
                   <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><Users size={18} /></div>
                   <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Atribuição</h4>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Lista de trabalhadores */}
                   <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
                     <div className="relative mb-4">
                       <Search className="absolute left-3 top-3 text-slate-400" size={16} />
-                      <input 
-                        type="text" 
-                        value={workerSearch} 
-                        onChange={e => setWorkerSearch(e.target.value)} 
+                      <input
+                        type="text"
+                        value={workerSearch}
+                        onChange={e => setWorkerSearch(e.target.value)}
                         placeholder="Pesquisar trabalhador..."
                         className="w-full bg-white border border-slate-200 rounded-xl py-3 pl-10 pr-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
                       />
                     </div>
-                    
+
                     <div className="flex flex-col gap-2">
                       {[...workers].sort((a, b) => a.name.localeCompare(b.name)).filter(w => w.name.toLowerCase().includes(workerSearch.toLowerCase())).map(w => {
                         const isAssigned = scheduleForm.assignedWorkers?.includes(w.id);
@@ -280,10 +280,10 @@ const ScheduleManagerContent = () => {
                               if (e.target.checked) {
                                 setAssignmentDates(prev => ({
                                   ...prev,
-                                  [w.id]: { 
-                                    scheduleId: null, 
-                                    dataInicio: new Date().toISOString().split('T')[0], 
-                                    dataFim: '' 
+                                  [w.id]: {
+                                    scheduleId: null,
+                                    dataInicio: new Date().toISOString().split('T')[0],
+                                    dataFim: ''
                                   }
                                 }));
                               }
@@ -309,13 +309,13 @@ const ScheduleManagerContent = () => {
                             <span className="font-black text-indigo-900 text-base">{w.name}</span>
                             <div className="flex gap-2">
                               {scheduleForm.id && (
-                                <button 
+                                <button
                                   onClick={() => loadScheduleHistory(w.id, w.name, scheduleForm.id, scheduleForm.name)}
                                   className="text-xs font-bold text-slate-400 hover:text-indigo-600 px-2 py-1 bg-slate-50 rounded-lg hover:bg-indigo-50 transition-colors flex items-center gap-1"
                                   title="Histórico"
                                 >📅 <span className="hidden xl:inline">Histórico</span></button>
                               )}
-                              <button 
+                              <button
                                 onClick={async () => {
                                   await handleAssignScheduleWithDates(w.id, scheduleForm.id || `s${Date.now()}`, assignmentDates[w.id]?.dataInicio ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataInicio ?? new Date().toISOString().split('T')[0], assignmentDates[w.id]?.dataFim ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataFim ?? null);
                                   setSaveSuccessWorkerId(w.id);
@@ -323,15 +323,15 @@ const ScheduleManagerContent = () => {
                                 }}
                                 className={`${saveSuccessWorkerId === w.id ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-200' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-200'} text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-md transition-all flex items-center gap-1`}
                               >
-                                {saveSuccessWorkerId === w.id ? <><CheckCircle2 size={12}/> Gravado</> : 'Gravar'}
+                                {saveSuccessWorkerId === w.id ? <><CheckCircle2 size={12} /> Gravado</> : 'Gravar'}
                               </button>
                             </div>
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1">
                               <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><CalendarRange size={10} /> Data Início</label>
-                              <input 
-                                type="date" 
+                              <input
+                                type="date"
                                 value={assignmentDates[w.id]?.dataInicio ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataInicio ?? ''}
                                 onChange={(e) => setAssignmentDates(prev => ({
                                   ...prev,
@@ -342,8 +342,8 @@ const ScheduleManagerContent = () => {
                             </div>
                             <div className="space-y-1">
                               <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><CalendarRange size={10} /> Data Fim</label>
-                              <input 
-                                type="date" 
+                              <input
+                                type="date"
                                 value={assignmentDates[w.id]?.dataFim ?? w.assignedScheduleDates?.[scheduleForm.id]?.dataFim ?? ''}
                                 onChange={(e) => setAssignmentDates(prev => ({
                                   ...prev,
@@ -460,7 +460,7 @@ const ScheduleManagerContent = () => {
                       <span className="text-slate-400">→</span>
                       <span className="text-sm font-bold text-indigo-600">{h.data_fim || 'Atual'}</span>
                     </div>
-                    <button 
+                    <button
                       onClick={() => handleDeleteScheduleHistory(h.id)}
                       className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1"
                       title="Apagar registo"

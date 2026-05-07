@@ -5,7 +5,8 @@ import { useClient, ClientProvider } from './contexts/ClientContext';
 import { useSchedule, ScheduleProvider } from './contexts/ScheduleContext';
 import { 
   Users, LayoutGrid, List, UserCircle, Search, Edit2, 
-  Trash2, Timer, Briefcase, CheckCircle, Unlock 
+  Trash2, Timer, Briefcase, CheckCircle, Unlock,
+  User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro
 } from 'lucide-react';
 
 const TeamManagerContent = ({ onLogin }) => {
@@ -113,70 +114,178 @@ const TeamManagerContent = ({ onLogin }) => {
       </div>
 
       {isAddingInTab && (
-        <div className="mb-10 bg-white p-10 rounded-[3rem] shadow-xl border-2 border-indigo-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Nome Completo</label><input type="text" value={workerForm.name} onChange={e => setWorkerForm({ ...workerForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="Nome" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Profissão</label><input type="text" value={workerForm.profissao || ''} onChange={e => setWorkerForm({ ...workerForm, profissao: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="Cargo" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Telemóvel (Senha)</label><input type="text" value={workerForm.tel} onChange={e => setWorkerForm({ ...workerForm, tel: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="9xxxxxxxx" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">NIS</label><input type="text" value={workerForm.nis || ''} onChange={e => setWorkerForm({ ...workerForm, nis: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="Segurança Social" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">NIF</label><input type="text" value={workerForm.nif || ''} onChange={e => setWorkerForm({ ...workerForm, nif: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="Número de Identificação Fiscal" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor Hora (€)</label>
-              <div className="flex gap-2">
-                <input type="number" value={workerForm.valorHora} onChange={e => setWorkerForm({ ...workerForm, valorHora: e.target.value })} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" />
-                <div className="flex flex-col gap-1">
-                  <label className="text-[8px] font-black text-slate-400 uppercase">Valor válido desde</label>
-                  <input type="date" value={workerForm.dataAlteracao || ''} onChange={e => setWorkerForm({ ...workerForm, dataAlteracao: e.target.value })} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none shadow-sm w-36" />
+        <div className="mb-10 bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-6">
+            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <UserCircle className="text-indigo-600" size={28} />
+              {workerForm.id ? 'Editar Colaborador' : 'Novo Colaborador'}
+            </h3>
+            <button onClick={() => setIsAddingInTab(false)} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-wider bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-xl">
+              <X size={16} /> Fechar Form
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* COLUNA ESQUERDA (8 colunas) */}
+            <div className="lg:col-span-8 space-y-8">
+              
+              {/* DADOS DO COLABORADOR */}
+              <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><User size={18} /></div>
+                  <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Dados do Colaborador</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><User size={10} /> Nome Completo</label>
+                    <input type="text" value={workerForm.name} onChange={e => setWorkerForm({ ...workerForm, name: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Ex: João Silva" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Briefcase size={10} /> Profissão</label>
+                    <input type="text" value={workerForm.profissao || ''} onChange={e => setWorkerForm({ ...workerForm, profissao: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Ex: Operador de Caixa" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Phone size={10} /> Telemóvel (Senha)</label>
+                    <input type="text" value={workerForm.tel} onChange={e => setWorkerForm({ ...workerForm, tel: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Ex: 912345678" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><UserCircle size={10} /> Estado da Conta</label>
+                    <select value={workerForm.status || 'ativo'} onChange={e => setWorkerForm({ ...workerForm, status: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all">
+                      <option value="ativo">Ativo (Acesso Permitido)</option>
+                      <option value="inativo">Inativo (Acesso Bloqueado)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-100">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><CalendarRange size={10} /> Data de Início</label>
+                    <input type="date" value={workerForm.dataInicio || ''} onChange={e => setWorkerForm({ ...workerForm, dataInicio: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><CalendarRange size={10} /> Data de Fim</label>
+                    <input type="date" value={workerForm.dataFim || ''} onChange={e => setWorkerForm({ ...workerForm, dataFim: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" />
+                  </div>
+                </div>
+              </div>
+
+              {/* DADOS FINANCEIROS */}
+              <div className="bg-emerald-50/30 p-6 rounded-[2rem] border border-emerald-100 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Wallet size={18} /></div>
+                  <h4 className="font-black text-emerald-800 text-lg uppercase tracking-tight">Dados Financeiros</h4>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><CreditCard size={10} /> NIS</label>
+                    <input type="text" value={workerForm.nis || ''} onChange={e => setWorkerForm({ ...workerForm, nis: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" placeholder="Nº Seg. Social" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><CreditCard size={10} /> NIF</label>
+                    <input type="text" value={workerForm.nif || ''} onChange={e => setWorkerForm({ ...workerForm, nif: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" placeholder="Nº Identificação Fiscal" />
+                  </div>
+                  <div className="space-y-1 md:col-span-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Landmark size={10} /> IBAN</label>
+                    <input type="text" value={workerForm.iban} onChange={e => setWorkerForm({ ...workerForm, iban: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-sm font-mono uppercase font-bold shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" placeholder="PT50..." />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-emerald-100/50">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Euro size={10} /> Valor Hora (€)</label>
+                    <input type="number" step="0.01" value={workerForm.valorHora} onChange={e => setWorkerForm({ ...workerForm, valorHora: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-lg text-emerald-700 font-black outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" placeholder="0.00" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><CalendarRange size={10} /> Valor válido desde</label>
+                    <input type="date" value={workerForm.dataAlteracao || ''} onChange={e => setWorkerForm({ ...workerForm, dataAlteracao: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" />
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">IBAN</label><input type="text" value={workerForm.iban} onChange={e => setWorkerForm({ ...workerForm, iban: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-mono uppercase shadow-sm" placeholder="PT50..." /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado da Conta</label><select value={workerForm.status || 'ativo'} onChange={e => setWorkerForm({ ...workerForm, status: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold"><option value="ativo">Ativo (Acesso Permitido)</option><option value="inativo">Inativo (Acesso Bloqueado)</option></select></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data de Início</label><input type="date" value={workerForm.dataInicio || ''} onChange={e => setWorkerForm({ ...workerForm, dataInicio: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data de Fim</label><input type="date" value={workerForm.dataFim || ''} onChange={e => setWorkerForm({ ...workerForm, dataFim: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" /></div>
-          </div>
-          <div className="mt-8 border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block">Acesso a Clientes</label>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                {clients.map(c => (
-                  <label key={c.id} className="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-100 cursor-pointer hover:bg-indigo-50 transition-colors shadow-sm">
-                    <input type="checkbox" checked={workerForm.assignedClients?.includes(c.id)} onChange={() => {
-                      const current = workerForm.assignedClients || [];
-                      const updated = current.includes(c.id) ? current.filter(id => id !== c.id) : [...current, c.id];
-                      setWorkerForm({ ...workerForm, assignedClients: updated });
-                    }} className="rounded text-indigo-600" />
-                    <span className="text-xs font-bold text-slate-700 truncate">{c.name}</span>
-                  </label>
-                ))}
+
+            {/* COLUNA DIREITA (4 colunas) */}
+            <div className="lg:col-span-4 space-y-6 flex flex-col">
+              
+              {/* ACESSO A CLIENTES */}
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex-1 flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <Building2 size={16} className="text-indigo-600" />
+                  <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest">Acesso a Clientes</h4>
+                </div>
+                
+                <div className="flex-1 min-h-[160px] max-h-[220px] overflow-y-auto pr-2 custom-scrollbar space-y-2 mb-4">
+                  {clients.map(c => {
+                    const isAssigned = workerForm.assignedClients?.includes(c.id);
+                    return (
+                      <label key={c.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer shadow-sm ${isAssigned ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 hover:border-indigo-100'}`}>
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border ${isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
+                          {isAssigned && <CheckCircle size={12} className="text-white" />}
+                        </div>
+                        <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
+                          const current = workerForm.assignedClients || [];
+                          const updated = current.includes(c.id) ? current.filter(id => id !== c.id) : [...current, c.id];
+                          setWorkerForm({ ...workerForm, assignedClients: updated });
+                        }} />
+                        <span className={`text-[11px] font-black uppercase truncate ${isAssigned ? 'text-indigo-900' : 'text-slate-600'}`}>{c.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Unidade Padrão</label>
+                  <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm({ ...workerForm, defaultClientId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all">
+                    <option value="">Nenhuma seleção</option>
+                    {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
               </div>
-              <select value={workerForm.defaultClientId || ''} onChange={e => setWorkerForm({ ...workerForm, defaultClientId: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm">
-                <option value="">Definir Unidade Padrão...</option>
-                {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block">Horários Disponíveis</label>
-              <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                {schedules.map(s => (
-                  <label key={s.id} className="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-100 cursor-pointer hover:bg-indigo-50 transition-colors shadow-sm">
-                    <input type="checkbox" checked={workerForm.assignedSchedules?.includes(s.id)} onChange={() => {
-                      const current = workerForm.assignedSchedules || [];
-                      const updated = current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id];
-                      setWorkerForm({ ...workerForm, assignedSchedules: updated });
-                    }} className="rounded text-indigo-600" />
-                    <span className="text-xs font-bold text-slate-700 truncate">{s.name}</span>
-                  </label>
-                ))}
+
+              {/* HORÁRIOS DISPONÍVEIS */}
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex-1 flex flex-col">
+                <div className="flex items-center gap-2 mb-4">
+                  <Timer size={16} className="text-indigo-600" />
+                  <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest">Horários</h4>
+                </div>
+                
+                <div className="flex-1 min-h-[160px] max-h-[220px] overflow-y-auto pr-2 custom-scrollbar space-y-2 mb-4">
+                  {schedules.map(s => {
+                    const isAssigned = workerForm.assignedSchedules?.includes(s.id);
+                    return (
+                      <label key={s.id} className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer shadow-sm ${isAssigned ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 hover:border-indigo-100'}`}>
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border ${isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
+                          {isAssigned && <CheckCircle size={12} className="text-white" />}
+                        </div>
+                        <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
+                          const current = workerForm.assignedSchedules || [];
+                          const updated = current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id];
+                          setWorkerForm({ ...workerForm, assignedSchedules: updated });
+                        }} />
+                        <span className={`text-[11px] font-black uppercase truncate ${isAssigned ? 'text-indigo-900' : 'text-slate-600'}`}>{s.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Horário Padrão</label>
+                  <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm({ ...workerForm, defaultScheduleId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all">
+                    <option value="">Nenhuma seleção</option>
+                    {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
               </div>
-              <select value={workerForm.defaultScheduleId || ''} onChange={e => setWorkerForm({ ...workerForm, defaultScheduleId: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm">
-                <option value="">Definir Horário Padrão...</option>
-                {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
+
+              {/* AÇÕES */}
+              <div className="pt-2">
+                <button onClick={handleSaveWorker} className="w-full bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1 text-white p-5 rounded-[1.5rem] font-black text-sm uppercase shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-3 border border-indigo-500">
+                  <Save size={20} />
+                  Gravar Colaborador
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="mt-8 flex justify-end gap-3">
-            <button onClick={() => setIsAddingInTab(false)} className="px-6 py-3 text-slate-400 font-bold uppercase text-xs">Cancelar</button>
-            <button onClick={handleSaveWorker} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase shadow-lg">Gravar</button>
           </div>
         </div>
       )}
@@ -356,3 +465,4 @@ const TeamManager = ({ onLogin }) => {
 };
 
 export default TeamManager;
+
