@@ -49,7 +49,7 @@ const createMockClientPortalProps = () => ({
 
 describe('Quick Report UI - Renderização Condicional', () => {
   it('deve renderizar modo triagem com duas opções de reporte', () => {
-    const { setupForTriagemMode } = require('./test-helpers').default();
+    const setupForTriagemMode = require('./test-helpers.cjs').setupForTriagemMode;
     const props = createMockClientPortalProps();
     const { container } = setupForTriagemMode(props);
 

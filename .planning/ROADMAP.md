@@ -270,7 +270,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 13-01-PLAN.md — Relatórios de custo por trabalhador/cliente
+- [x] 13-01-PLAN.md — Relatórios de custo por trabalhador/cliente ✓
 
 **Success Criteria:**
 1. Relatório de custo por trabalhador: soma das horas registadas no mês × valorHora do worker

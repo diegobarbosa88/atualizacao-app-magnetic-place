@@ -25,7 +25,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
     if (!selWorker || !selFile) return alert('Selecione tudo.');
     setUploading(true);
 
-    const clientSupabase = supabase || (window.supabase ? window.supabase.createClient('https://ccvxnrnlbipsojbbrzaw.supabase.co', 'sb_publishable_Ze9r5vColmrZGfhxMwDURg_i4EHktEJ') : null);
+    const clientSupabase = window.supabaseInstance;
     if (!clientSupabase) {
       setUploading(false);
       return alert('A conexão com a base de dados falhou. Por favor, atualize a página (F5) e tente novamente.');
@@ -56,7 +56,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 
       const { file: _unused, ...docToInsert } = newDoc;
 
-      const { error: dbError } = await supabase
+      const { error: dbError } = await clientSupabase
         .from('documents')
         .insert([docToInsert]);
 

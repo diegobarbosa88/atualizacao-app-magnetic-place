@@ -1,14 +1,19 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Users, Building2, TrendingUp, CalendarRange, FileText } from 'lucide-react';
+import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X } from 'lucide-react';
+import { toISODateLocal } from '../../utils/dateUtils';
 
 const CostReports = () => {
-  const { workers, clients, logs } = useApp();
+  const { workers, clients, logs, expenses, saveToDb, handleDelete } = useApp();
   
   const [activeTab, setActiveTab] = useState('workers');
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().substring(0, 7)
   );
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({ 
+    id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) 
+  });
 
   const monthOptions = useMemo(() => {
     const options = [];
@@ -21,6 +26,14 @@ const CostReports = () => {
     }
     return options;
   }, []);
+
+  const handleSaveExpense = async () => {
+    if (!expenseForm.name || !expenseForm.amount) return alert('Descrição e valor são obrigatórios');
+    const eId = expenseForm.id || `e${Date.now()}`;
+    await saveToDb('expenses', eId, { ...expenseForm, id: eId });
+    setIsAddingExpense(false);
+    setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) });
+  };
 
   const workerCosts = useMemo(() => {
     if (!logs || !workers) return [];
@@ -38,12 +51,7 @@ const CostReports = () => {
       const valorHora = Number(worker?.valorHora) || 0;
       const cost = totalHours * valorHora;
       
-      return {
-        id: workerId,
-        name: workerName,
-        totalHours,
-        cost
-      };
+      return { id: workerId, name: workerName, totalHours, cost };
     }).sort((a, b) => b.cost - a.cost);
   }, [logs, workers, selectedMonth]);
 
@@ -63,12 +71,7 @@ const CostReports = () => {
       const valorHora = Number(client?.valorHora) || 0;
       const cost = totalHours * valorHora;
       
-      return {
-        id: clientId,
-        name: clientName,
-        totalHours,
-        cost
-      };
+      return { id: clientId, name: clientName, totalHours, cost };
     }).sort((a, b) => b.cost - a.cost);
   }, [logs, clients, selectedMonth]);
 
@@ -109,6 +112,18 @@ const CostReports = () => {
       };
     }).sort((a, b) => b.margin - a.margin);
   }, [logs, clients, workers, selectedMonth]);
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(e => e.date?.startsWith(selectedMonth));
+  }, [expenses, selectedMonth]);
+
+  const sortedExpenses = useMemo(() => {
+    return [...filteredExpenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [filteredExpenses]);
+
+  const totalExpenses = useMemo(() => {
+    return filteredExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+  }, [filteredExpenses]);
 
   const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
 
@@ -264,12 +279,103 @@ const CostReports = () => {
         </div>
       );
     }
+
+    if (activeTab === 'expenses') {
+      return (
+        <div>
+          {isAddingExpense && (
+            <div className="mb-8 bg-white p-8 rounded-[2rem] shadow-inner border border-slate-100">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Descrição</label>
+                  <input type="text" value={expenseForm.name} onChange={e => setExpenseForm({ ...expenseForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold" placeholder="Descrição..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor (€)</label>
+                  <input type="number" value={expenseForm.amount} onChange={e => setExpenseForm({ ...expenseForm, amount: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold text-rose-600 outline-none shadow-sm" placeholder="0.00" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Tipo</label>
+                  <select value={expenseForm.type} onChange={e => setExpenseForm({ ...expenseForm, type: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold">
+                    <option value="fixo">Fixo</option>
+                    <option value="variável">Variável</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label>
+                  <input type="date" value={expenseForm.date} onChange={e => setExpenseForm({ ...expenseForm, date: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm shadow-sm" />
+                </div>
+              </div>
+              <div className="mt-6 flex items-center gap-3">
+                <button onClick={handleSaveExpense} className="flex-1 bg-rose-600 text-white py-5 rounded-2xl font-black text-sm uppercase shadow-lg hover:bg-rose-700 transition-colors">Registar Gasto</button>
+                <button onClick={() => { setIsAddingExpense(false); setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); }} className="px-6 py-5 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm uppercase shadow-sm hover:bg-slate-200 transition-colors">Cancelar</button>
+              </div>
+            </div>
+          )}
+
+          <div className="overflow-x-auto rounded-[2rem] border border-slate-100">
+            <table className="min-w-full divide-y divide-slate-200 text-left">
+              <thead className="bg-indigo-600">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Data</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Descrição</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-white uppercase">Tipo</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase">Valor</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-white uppercase">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {sortedExpenses.length > 0 ? sortedExpenses.map((exp) => (
+                  <tr key={exp.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
+                      {new Date(exp.date).toLocaleDateString('pt-PT')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-700">
+                      {exp.name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className={`px-4 py-1 rounded-full text-[9px] font-bold uppercase ${exp.type === 'fixo' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
+                        {exp.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap font-black text-rose-600 text-right">
+                      -{formatCurrency(exp.amount)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right">
+                      <button onClick={() => handleDelete('expenses', exp.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-all">
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="5" className="px-6 py-8 text-center text-slate-400 font-medium">
+                      Sem despesas para o período selecionado.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {sortedExpenses.length > 0 && (
+                <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                  <tr>
+                    <td colSpan="3" className="px-6 py-4 font-black uppercase text-slate-800">Total Despesas</td>
+                    <td className="px-6 py-4 font-black text-rose-600 text-right text-lg">-{formatCurrency(totalExpenses)}</td>
+                    <td></td>
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+      );
+    }
   };
 
   const getTitle = () => {
     if (activeTab === 'workers') return 'Custos por Trabalhador';
     if (activeTab === 'clients') return 'Faturação por Cliente';
     if (activeTab === 'margins') return 'Margem Bruta por Cliente';
+    if (activeTab === 'expenses') return 'Despesas';
     return 'Relatórios';
   };
 
@@ -279,18 +385,25 @@ const CostReports = () => {
         <h2 className="text-3xl font-black flex items-center gap-3">
           <FileText size={32} className="text-indigo-600" /> {getTitle()}
         </h2>
-        <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-          <div className="flex items-center gap-2">
-            <CalendarRange size={16} className="text-slate-400" />
-            <select
-              value={selectedMonth}
-              onChange={e => setSelectedMonth(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
-            >
-              {monthOptions.map(opt => (
-                <option key={opt.val} value={opt.val}>{opt.label}</option>
-              ))}
-            </select>
+        <div className="flex items-center gap-4">
+          {activeTab === 'expenses' && (
+            <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-xl transition-all ${isAddingExpense ? 'bg-slate-800 text-white' : 'bg-rose-600 text-white hover:bg-rose-700'}`}>
+              {isAddingExpense ? 'Fechar' : 'Nova Despesa'}
+            </button>
+          )}
+          <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
+            <div className="flex items-center gap-2">
+              <CalendarRange size={16} className="text-slate-400" />
+              <select
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="bg-transparent border-none outline-none text-sm font-bold text-slate-700 cursor-pointer"
+              >
+                {monthOptions.map(opt => (
+                  <option key={opt.val} value={opt.val}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -329,6 +442,17 @@ const CostReports = () => {
           >
             <TrendingUp size={18} />
             Margem Bruta
+          </button>
+          <button 
+            onClick={() => setActiveTab('expenses')} 
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
+              activeTab === 'expenses' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <Receipt size={18} />
+            Despesas
           </button>
         </div>
 

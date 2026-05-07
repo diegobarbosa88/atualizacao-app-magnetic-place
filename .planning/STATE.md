@@ -29,6 +29,20 @@ See: .planning/PROJECT.md (updated 2026-05-05)
 | 10 | Ready to execute | 4 | 0 |
 | 11 | Completed | 6 | 6 |
 | 12 | Completed | 1 | 1 |
+| 13 | Completed | 1 | 1 |
+
+## Phase 13 Completions (Cost Reports)
+
+### Plans Executed
+- **13-01-PLAN.md** → **13-01-SUMMARY.md** ✓
+
+### Achievements
+- CostReports.jsx criado com cálculo de custo por trabalhador e cliente
+- Worker cost = SUM(logs.hours) × workers.valorHora
+- Client cost = SUM(approvals.hours) × clients.valorHora
+- Tab navigation Workers/Clients com filtro mês/ano
+- Integração no AdminDashboard via tab "Custos"
+- Commit: `bab435c` - feat(13-01): integrate CostReports into AdminDashboard navigation
 
 ## Phase 12 Completions (ClientManager UI)
 
