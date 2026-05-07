@@ -11,6 +11,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [sortConfig, setSortConfig] = useState({ key: 'dataEmissao', direction: 'desc' });
 
+  const clientSupabase = typeof window !== 'undefined' ? window.supabaseInstance : null;
+
   const tipos = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
   const requestSort = (key) => {
@@ -25,7 +27,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
     if (!selWorker || !selFile) return alert('Selecione tudo.');
     setUploading(true);
 
-    const clientSupabase = window.supabaseInstance;
     if (!clientSupabase) {
       setUploading(false);
       return alert('A conexão com a base de dados falhou. Por favor, atualize a página (F5) e tente novamente.');
