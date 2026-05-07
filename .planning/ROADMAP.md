@@ -193,6 +193,38 @@ Plans:
 
 ---
 
+---
+
+## Phase 11: Gestão de Ciclo de Vida do Trabalhador
+
+**Goal:** Adicionar datas de início/fim ao registo de trabalhadores e à atribuição de horários. Implementar histórico de evolução dos valores hora.
+
+**Requirements:** WORKER-01, WORKER-02, WORKER-03, WORKER-04, WORKER-05
+
+**Plans:** 4 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Data de início/fim no registo de trabalhador
+- [ ] 11-02-PLAN.md — Atribuição de horários com datas de validade
+- [ ] 11-03-PLAN.md — Histórico de evolução do valor hora
+- [ ] 11-04-PLAN.md — Acesso condicional por data de início/fim
+- [ ] 11-05-PLAN.md — Histórico de períodos de emprego
+- [ ] 11-06-PLAN.md — Histórico de atribuição de horários
+
+**Success Criteria:**
+1. Campo "Data de Início" no formulário de registo de trabalhador
+2. Campo "Data de Fim" que define automaticamente a conta como inativa
+3. Datas de validade na atribuição de horários (preserva históricos)
+4. Histórico de alterações do valor hora (trabalhador e cliente)
+5. Trabalhador só vê notificações de meses >= dataInicio (filtragem de validações)
+6. Admin tem filtro para mostrar/ocultar trabalhadores inativos
+7. Histórico de períodos de emprego — worker pode sair e voltar sem perder dados
+8. Histórico de atribuição de horários — períodos preservados em histórico
+
+**UI hint:** yes
+
+---
+
 ## Milestone v2.0 - Arquitetura Modular
 
 | Phase | Name | Status |
@@ -203,6 +235,7 @@ Plans:
 | 8 | Modularização do Admin (Portal & Docs) | Complete |
 | 9 | Modularização do Worker | Complete |
 | 10 | Limpeza e Roteamento | Ready to execute |
+| 11 | Gestão de Ciclo de Vida do Trabalhador | Complete |
 
-*Last updated: 2026-05-06*
+*Last updated: 2026-05-07*
 

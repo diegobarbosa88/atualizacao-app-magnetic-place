@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -61,7 +62,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     useEffect(() => {
         if (!supabase) return;
         if (!initialClientId || typeof initialClientId !== 'string') {
-            console.warn('Invalid clientId, skipping subscription');
             return;
         }
 
@@ -371,6 +371,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         if (view === 'editar_relatorio') {
             setCorrectionMode('triagem');
             setEditingWorkerId(null);
+        }
+        if (view === 'precision_review') {
+            // Reset editing state when entering precision review
         }
         setCurrentView(view);
         window.scrollTo(0, 0);
@@ -870,7 +873,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     </div>
 
                     {/* Área de Edição (Direita) */}
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 h-full">
                         {!editingWorkerId ? (
                             <div className="bg-white border-2 border-dashed border-slate-200 rounded-[3rem] h-[500px] flex flex-col items-center justify-center text-center p-10">
                                 <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-3xl flex items-center justify-center mb-6">
@@ -880,179 +883,27 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 <p className="text-sm text-slate-400 font-medium max-w-xs">Clique na lista à esquerda para começar a ajustar os horários individuais.</p>
                             </div>
                         ) : (
-                            <div className="animate-fade-in bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden flex flex-col h-full max-h-[80vh]">
-                                {/* Header do Colaborador Sendo Editado */}
-                                <div className="p-8 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
-                                    <div>
-                                        <h3 className="text-2xl font-black text-slate-800">{draftData.find(w => w.id === editingWorkerId)?.name}</h3>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Ajustando registos diários</p>
-                                    </div>
-                                    <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase">Total:</span>
-                                        {(() => {
-                                            const worker = draftData.find(w => w.id === editingWorkerId);
-                                            if (!worker) return null;
-                                            const orig = parseFloat(worker.totalHours) || 0;
-                                            const edit = parseFloat(worker.editedTotalHours) || orig;
-                                            const diff = (edit - orig).toFixed(2);
-                                            const diffSign = diff >= 0 ? '+' : '';
-                                            const diffColor = diff >= 0 ? 'text-emerald-600' : 'text-rose-600';
-                                            return (
-                                                <>
-                                                    <span className="text-sm text-slate-400 line-through">{worker.totalHours}h</span>
-                                                    <span className="text-slate-300">→</span>
-                                                    <span className="bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg font-black text-sm">{worker.editedTotalHours}h</span>
-                                                    {diff !== '0.00' && <span className={`font-black text-[10px] ${diffColor}`}>{diffSign}{diff}h</span>}
-                                                </>
-                                            );
-                                        })()}
-                                    </div>
-                                </div>
-
-                                {/* Lista de Dias */}
-                                <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-white">
-                                    {draftData.find(w => w.id === editingWorkerId)?.dailyRecords.map(day => {
-                                        const origEntry = day.entry === '--:--' ? '' : day.entry;
-                                        const origExit = day.exit === '--:--' ? '' : day.exit;
-                                        const isEmptyValue = (val) => val === '' || val === null || val === undefined;
-                                        const isDayChanged = !isEmptyValue(day.editedEntry) && !isEmptyValue(day.editedExit) &&
-                                            (day.editedEntry !== origEntry || day.editedExit !== origExit ||
-                                             day.editedBreakStart !== (day.breakStart || '') ||
-                                             day.editedBreakEnd !== (day.breakEnd || ''));
-                                        const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
-                                        const isDayCleared = (day.entry && day.entry !== '--:--' && (!day.editedEntry || isClearedPattern(day.editedEntry) || isEmptyValue(day.editedEntry) || !day.editedExit || isClearedPattern(day.editedExit) || isEmptyValue(day.editedExit))) ||
-                                            (day.exit && day.exit !== '--:--' && (!day.editedEntry || isClearedPattern(day.editedEntry) || isEmptyValue(day.editedEntry) || !day.editedExit || isClearedPattern(day.editedExit) || isEmptyValue(day.editedExit)));
-                                        const isDayEditing = editingDayId === day.date;
-                                        const displayEntry = day.editedEntry || day.entry || '--:--';
-                                        const displayExit = day.editedExit || day.exit || '--:--';
-                                        const displayBreakStart = day.editedBreakStart || day.breakStart || '--:--';
-                                        const displayBreakEnd = day.editedBreakEnd || day.breakEnd || '--:--';
-                                        const originalDayHours = parseFloat(day.hours) || 0;
-                                        const displayHours = parseFloat(day.editedHours) || 0;
-                                        const dayDiff = (displayHours - originalDayHours).toFixed(2);
-                                        const dayDiffColor = dayDiff >= 0 ? 'text-emerald-600' : 'text-rose-600';
-                                        const dayDiffSign = dayDiff >= 0 ? '+' : '';
-                                        const shouldShow = day.isVisible || isDayChanged || isDayCleared;
-
-                                        if (!shouldShow) return null;
-
-                                        return (
-                                            <div key={day.date} className={`flex flex-col sm:flex-row sm:justify-between sm:items-center p-4 rounded-xl gap-3 ${isDayCleared ? 'bg-rose-50 border border-rose-100' : isDayChanged ? 'bg-amber-50 border border-amber-100' : (day.isPlaceholder ? 'bg-slate-50/50 border-dashed border-slate-200 opacity-70' : 'bg-slate-50 border border-transparent')} ${isDayEditing ? 'ring-2 ring-indigo-500' : ''}`}>
-                                                <div className="flex items-center gap-3">
-                                                    <button onClick={() => setEditingDayId(isDayEditing ? null : day.date)} className="text-indigo-600 hover:bg-indigo-50 p-1 rounded">
-                                                        <Edit2 size={14} />
-                                                    </button>
-                                                    <span className="font-bold text-[10px] uppercase tracking-wider text-slate-500">{day.date}</span>
-                                                    {isDayCleared && <span className="text-[8px] font-black text-rose-500 bg-rose-100 px-2 py-0.5 rounded uppercase">Apagado</span>}
-                                                </div>
-                                                <div className={`flex flex-col sm:flex-row items-center gap-3 text-xs px-4 py-2 rounded-lg shadow-sm ${isDayCleared ? 'bg-white border border-rose-200' : isDayChanged ? 'bg-white border border-amber-200' : 'bg-white/50 border border-slate-100'}`}>
-                                                    {isDayEditing ? (
-                                                        <>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-slate-400 font-bold text-[9px] uppercase">Turno:</span>
-                                                                <input type="time" value={day.editedEntry || ''} onChange={(e) => handleTimeChange(editingWorkerId, day.date, 'entry', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                                <span className="text-indigo-400">-</span>
-                                                                <input type="time" value={day.editedExit || ''} onChange={(e) => handleTimeChange(editingWorkerId, day.date, 'exit', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                            </div>
-                                                            <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-slate-400 font-bold text-[9px] uppercase">Pausa:</span>
-                                                                <input type="time" value={day.editedBreakStart || ''} onChange={(e) => handleTimeChange(editingWorkerId, day.date, 'breakStart', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                                <span className="text-indigo-400">-</span>
-                                                                <input type="time" value={day.editedBreakEnd || ''} onChange={(e) => handleTimeChange(editingWorkerId, day.date, 'breakEnd', e.target.value)} className="w-20 bg-white border border-indigo-200 rounded-lg p-1 text-xs font-black text-indigo-700 focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                                            </div>
-                                                            {isDayCleared ? null : (
-                                                                <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                            )}
-                                                            {!isDayCleared && (
-                                                                <button onClick={() => { handleTimeChange(editingWorkerId, day.date, 'entry', '--:--'); handleTimeChange(editingWorkerId, day.date, 'exit', '--:--'); handleTimeChange(editingWorkerId, day.date, 'breakStart', '--:--'); handleTimeChange(editingWorkerId, day.date, 'breakEnd', '--:--'); setEditingDayId(null); }} className="p-2 rounded-lg transition-all bg-rose-100 text-rose-600 hover:bg-rose-200" title="Apagar valores">
-                                                                    <Trash2 size={16} />
-                                                                </button>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {isDayCleared ? (
-                                                                <>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-slate-400 font-bold text-[9px] uppercase">Turno:</span>
-                                                                        <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
-                                                                    </div>
-                                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-slate-400 font-bold text-[9px] uppercase">Pausa:</span>
-                                                                        <span className="text-rose-400 font-black text-xs">--:-- - --:--</span>
-                                                                    </div>
-                                                                </>
-                                                            ) : isDayChanged ? (
-                                                                <>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-slate-400 font-bold text-[9px] uppercase">Turno:</span>
-                                                                        <span className="text-slate-400 line-through decoration-rose-400 text-xs">{day.entry || '--:--'} - {day.exit || '--:--'}</span>
-                                                                        <span className="text-slate-300 text-xs">→</span>
-                                                                        <span className="text-amber-600 font-black text-xs">{displayEntry} - {displayExit}</span>
-                                                                    </div>
-                                                                    <div className="hidden sm:block w-px h-4 bg-slate-200"></div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-slate-400 font-bold text-[9px] uppercase">Pausa:</span>
-                                                                        <span className="text-slate-400 line-through decoration-rose-400 text-xs">{(day.breakStart || '--:--')} - {(day.breakEnd || '--:--')}</span>
-                                                                        <span className="text-slate-300 text-xs">→</span>
-                                                                        <span className="text-amber-600 font-black text-xs">{displayBreakStart} - {displayBreakEnd}</span>
-                                                                    </div>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-slate-400 font-bold text-[9px] uppercase">Turno:</span>
-                                                                        <span className="text-slate-600 font-black text-xs">{day.entry || '--:--'} - {day.exit || '--:--'}</span>
-                                                                    </div>
-                                                                    <div className="hidden sm:block w-px h-4 bg-slate-100"></div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        <span className="text-slate-400 font-bold text-[9px] uppercase">Pausa:</span>
-                                                                        <span className="text-slate-600 font-black text-xs">{(day.breakStart || '--:--')} - {(day.breakEnd || '--:--')}</span>
-                                                                    </div>
-                                                                </>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </div>
-                                                {isDayCleared ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="bg-rose-100 text-rose-600 px-2 py-0.5 rounded font-black text-xs">0.00h</span>
-                                                        <span className="text-rose-400 font-black text-[9px]">-{originalDayHours.toFixed(2)}h</span>
-                                                    </div>
-                                                ) : isDayChanged ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <span className="text-xs text-slate-400 line-through">{originalDayHours.toFixed(2)}h</span>
-                                                        <span className="text-slate-300">→</span>
-                                                        <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-black text-xs">{displayHours.toFixed(2)}h</span>
-                                                        <span className={`font-black text-[9px] ${dayDiffColor}`}>{dayDiffSign}{dayDiff}h</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="sm:ml-2 px-2 py-1 rounded font-black bg-slate-100 text-slate-600 text-xs">{displayHours.toFixed(2)}h</span>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                {/* Rodapé da Edição */}
-                                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
-                                    <button
-                                        onClick={() => {
-                                            setDraftData(prev => prev.map(w => {
-                                                if (w.id === editingWorkerId) {
-                                                    return { ...w, dailyRecords: w.dailyRecords.map(d => ({ ...d, isVisible: true })) };
-                                                }
-                                                return w;
-                                            }));
-                                        }}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl font-bold text-[10px] uppercase text-slate-400 hover:text-indigo-600 transition-all"
-                                    >
-                                        <History size={14} /> Mostrar Calendário Completo
-                                    </button>
-                                    <button onClick={() => setEditingWorkerId(null)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-600/20">Concluir este Colaborador</button>
-                                </div>
+                            <div className="h-full">
+                                <PrecisionReportReview
+                                    draftData={draftData}
+                                    originalTotal={originalTotal}
+                                    draftTotal={draftTotal}
+                                    reportJustification={reportJustification}
+                                    readOnly={false}
+                                    showAllDays={true}
+                                    selectedWorkerId={editingWorkerId}
+                                    title={clientData.period}
+                                    subtitle="Ajustando registos diários"
+                                    onBack={() => setEditingWorkerId(null)}
+                                    onEditDay={handleTimeChange}
+                                    onDeleteDay={(workerId, dayDate) => {
+                                        handleTimeChange(workerId, dayDate, 'entry', '--:--');
+                                        handleTimeChange(workerId, dayDate, 'exit', '--:--');
+                                        handleTimeChange(workerId, dayDate, 'breakStart', '--:--');
+                                        handleTimeChange(workerId, dayDate, 'breakEnd', '--:--');
+                                    }}
+                                    onConfirm={() => goToView('rever_alteracoes')}
+                                />
                             </div>
                         )}
                     </div>
@@ -1066,17 +917,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     </div>
                     <textarea rows="4" value={reportJustification} onChange={(e) => setReportJustification(e.target.value)} placeholder="Ex: O João chegou uma hora mais tarde no dia 2..." className="w-full border-2 border-slate-100 rounded-[2rem] p-6 bg-slate-50 text-slate-800 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-inner"></textarea>
                 </section>
-
-                <div className="flex justify-between items-center bg-slate-900 p-8 rounded-[2.5rem] shadow-2xl mt-12 mb-20">
-                    <div className="hidden md:block">
-                        <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1">Diferença Total</p>
-                        <p className="text-white font-black text-xl">{(draftTotal - originalTotal).toFixed(2)} horas</p>
-                    </div>
-                    <div className="flex gap-4 w-full md:w-auto">
-                        <button onClick={() => goToView('inicio')} className="flex-1 md:flex-none px-10 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-white transition-all">Cancelar</button>
-                        <button onClick={() => goToView('rever_alteracoes')} disabled={draftTotal === originalTotal && !reportJustification.trim()} className={`flex-1 md:flex-none px-12 py-5 font-black text-[10px] uppercase tracking-widest text-white rounded-2xl transition-all shadow-xl disabled:opacity-50 ${(draftTotal !== originalTotal || reportJustification.trim()) ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/30' : 'bg-slate-700 cursor-not-allowed'}`}>Rever Alterações</button>
-                    </div>
-                </div>
             </div>
         );
     };
@@ -1096,48 +936,48 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         let correcoesTexto = isQuickMessage ? `💬 MENSAGEM DE DIVERGÊNCIA: ${clientData.name}\n` : `⚠️ PEDIDO DE CORREÇÃO: ${clientData.name}\n`;
         correcoesTexto += `📅 Período: ${clientData.period}\n\n`;
 
-        correcoesTexto += `📊 RESUMO GERAL:\n`;
-        correcoesTexto += `• Total Original: ${originalTotal}h\n`;
-        correcoesTexto += `• Novo Total Sugerido: ${draftTotal}h\n`;
-        correcoesTexto += `• Diferença: ${diffTotal > 0 ? '+' : ''}${diffTotal}h\n\n`;
+        if (!isQuickMessage) {
+            correcoesTexto += `📊 RESUMO GERAL:\n`;
+            correcoesTexto += `• Total Original: ${originalTotal}h\n`;
+            correcoesTexto += `• Novo Total Sugerido: ${draftTotal}h\n`;
+            correcoesTexto += `• Diferença: ${diffTotal > 0 ? '+' : ''}${diffTotal}h\n\n`;
+            correcoesTexto += `👥 DETALHES POR COLABORADOR:\n\n`;
+            changedWorkers.forEach(w => {
+                const wDiff = (w.editedTotalHours - w.totalHours).toFixed(2);
+                correcoesTexto += `👤 ${w.name.toUpperCase()} [ID:${w.id}]\n`;
+                correcoesTexto += `   Total: ${w.totalHours}h ➔ ${w.editedTotalHours}h (${wDiff > 0 ? '+' : ''}${wDiff}h)\n`;
+                correcoesTexto += `   Alterações:\n`;
 
-        correcoesTexto += `👥 DETALHES POR COLABORADOR:\n\n`;
+                const relevantDays = w.dailyRecords.filter(d => {
+                    const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
+                    const originalEntry = d.entry === '--:--' ? '' : d.entry;
+                    const originalExit = d.exit === '--:--' ? '' : d.exit;
+                    const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
+                    const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
+                    return isNewDay ? wasEdited : hasChange;
+                });
 
-        changedWorkers.forEach(w => {
-            const wDiff = (w.editedTotalHours - w.totalHours).toFixed(2);
-            correcoesTexto += `👤 ${w.name.toUpperCase()} [ID:${w.id}]\n`;
-            correcoesTexto += `   Total: ${w.totalHours}h ➔ ${w.editedTotalHours}h (${wDiff > 0 ? '+' : ''}${wDiff}h)\n`;
-            correcoesTexto += `   Alterações:\n`;
+                relevantDays.forEach(d => {
+                    const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
+                    const originalEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
+                    const originalExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
+                    const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
+                    const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
+                    const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
+                    const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
 
-            const relevantDays = isQuickMessage ? w.dailyRecords : w.dailyRecords.filter(d => {
-                const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-                const originalEntry = d.entry === '--:--' ? '' : d.entry;
-                const originalExit = d.exit === '--:--' ? '' : d.exit;
-                const wasEdited = d.editedEntry || d.editedExit || d.editedBreakStart || d.editedBreakEnd;
-                const hasChange = d.editedEntry !== originalEntry || d.editedExit !== originalExit || d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
-                return isNewDay ? wasEdited : hasChange;
+                    const displayDate = d.rawDate && d.rawDate.includes('/') ? d.date : (d.rawDate || d.date);
+                    correcoesTexto += `   • ${displayDate}:\n`;
+                    correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
+                    if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
+                        correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;
+                    }
+                    const origH = isNewDay ? 0 : d.hours;
+                    correcoesTexto += `     - Horas: ${origH}h ➔ ${d.editedHours}h\n`;
+                });
+                correcoesTexto += `\n`;
             });
-
-            relevantDays.forEach(d => {
-                const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
-                const originalEntry = d.entry === '--:--' || !d.entry ? '' : d.entry;
-                const originalExit = d.exit === '--:--' || !d.exit ? '' : d.exit;
-                const originalShift = (!originalEntry || !originalExit || originalEntry === '--' || originalExit === '--') ? '--:--' : `${originalEntry}-${originalExit}`;
-                const editedShift = `${d.editedEntry || '--:--'}-${d.editedExit || '--:--'}`;
-                const originalBreak = `${d.breakStart || '--:--'}-${d.breakEnd || '--:--'}`;
-                const editedBreak = `${d.editedBreakStart || '--:--'}-${d.editedBreakEnd || '--:--'}`;
-
-                const displayDate = d.rawDate && d.rawDate.includes('/') ? d.date : (d.rawDate || d.date);
-                correcoesTexto += `   • ${displayDate}:\n`;
-                correcoesTexto += `     - Turno: ${originalShift} ➔ ${editedShift}\n`;
-                if (originalBreak !== '--:----:--' || editedBreak !== '--:----:--') {
-                    correcoesTexto += `     - Pausa: ${originalBreak} ➔ ${editedBreak}\n`;
-                }
-                const origH = isNewDay ? 0 : d.hours;
-                correcoesTexto += `     - Horas: ${origH}h ➔ ${d.editedHours}h\n`;
-            });
-            correcoesTexto += `\n`;
-        });
+        }
 
         if (reportJustification) {
             correcoesTexto += `💬 JUSTIFICAÇÃO:\n"${reportJustification}"`;
@@ -1146,7 +986,76 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return correcoesTexto;
     };
 
+    const handlePrecisionConfirm = async () => {
+        const correcoesTexto = generateCorrectionMessage(false);
+        const changedWorkers = draftData.map(w => ({
+            ...w,
+            dailyRecords: w.dailyRecords.map(d => ({ ...d, date: d.rawDate || d.date }))
+        }));
+
+        const notifId = "notif_" + Date.now();
+        const newNotif = {
+            id: notifId,
+            title: `Pedido de Correção: ${clientData.name}`,
+            message: correcoesTexto,
+            type: 'warning',
+            target_type: 'admin',
+            target_client_id: initialClientId,
+            target_worker_ids: [],
+            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
+            is_dismissible: true,
+            is_active: true,
+            created_at: new Date().toISOString()
+        };
+        const correcaoId = "correcao_" + Date.now();
+        const correcaoRecord = {
+            id: correcaoId,
+            title: `Pedido de Correção: ${clientData.name}`,
+            message: correcoesTexto,
+            status: 'pending',
+            client_id: initialClientId,
+            month: initialMonth,
+            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
+            created_at: new Date().toISOString()
+        };
+        await saveToDb('correcoes', correcaoId, correcaoRecord);
+
+        const newNotifWithCorrecaoId = {
+            ...newNotif,
+            payload: { ...newNotif.payload, correcao_id: correcaoId }
+        };
+        await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
+
+        goToView('sucesso_reporte');
+    };
+
     const renderReverAlteracoes = () => {
+        if (correctionMode === 'manual') {
+            return (
+                <PrecisionReportReview
+                    draftData={draftData}
+                    originalTotal={originalTotal}
+                    draftTotal={draftTotal}
+                    reportJustification={reportJustification}
+                    onBack={() => goToView('editar_relatorio')}
+                    onConfirm={handlePrecisionConfirm}
+                    onEditDay={handleTimeChange}
+                    onDeleteDay={(workerId, dayDate) => {
+                        handleTimeChange(workerId, dayDate, 'entry', '--:--');
+                        handleTimeChange(workerId, dayDate, 'exit', '--:--');
+                        handleTimeChange(workerId, dayDate, 'breakStart', '--:--');
+                        handleTimeChange(workerId, dayDate, 'breakEnd', '--:--');
+                    }}
+                    readOnly={true}
+                    showAllDays={false}
+                    showAllWorkers={true}
+                    isReviewMode={true}
+                    title="Ajuste de Precisão"
+                    subtitle="Revisão do Reporte"
+                />
+            );
+        }
+
         const isDayChanged = (d) => {
             const originalEntry = d.entry === '--:--' ? '' : d.entry;
             const originalExit = d.exit === '--:--' ? '' : d.exit;
@@ -1243,22 +1152,17 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 <div className="flex justify-end gap-4">
                     <button onClick={() => goToView('editar_relatorio')} className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-800 rounded-xl transition-all shadow-sm">Voltar</button>
                     <button onClick={async () => {
-                        const correcoesTexto = generateCorrectionMessage(false);
-                        const changedWorkers = draftData.map(w => ({
-                            ...w,
-                            dailyRecords: w.dailyRecords.map(d => ({ ...d, date: d.rawDate || d.date }))
-                        }));
-
-                        const notifId = "notif_" + Date.now();
+                        const correcoesTexto = generateCorrectionMessage(true);
+                        const fullMonthSnapshot = draftData;
                         const newNotif = {
-                            id: notifId,
-                            title: `Pedido de Correção: ${clientData.name}`,
+                            id: "notif_" + Date.now(),
+                            title: `Divergência Reportada: ${clientData.name}`,
                             message: correcoesTexto,
                             type: 'warning',
                             target_type: 'admin',
                             target_client_id: initialClientId,
                             target_worker_ids: [],
-                            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
+                            payload: { changes: fullMonthSnapshot, isFullMonth: true, month: initialMonth, reportType: 'quick' },
                             is_dismissible: true,
                             is_active: true,
                             created_at: new Date().toISOString()
@@ -1266,12 +1170,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         const correcaoId = "correcao_" + Date.now();
                         const correcaoRecord = {
                             id: correcaoId,
-                            title: `Pedido de Correção: ${clientData.name}`,
+                            title: `Divergência Reportada: ${clientData.name}`,
                             message: correcoesTexto,
                             status: 'pending',
                             client_id: initialClientId,
                             month: initialMonth,
-                            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
+                            payload: { changes: fullMonthSnapshot, isFullMonth: true, reportType: 'quick' },
                             created_at: new Date().toISOString()
                         };
                         await saveToDb('correcoes', correcaoId, correcaoRecord);
@@ -1579,6 +1483,23 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     {currentView === 'inicio' && renderInicio()}
                     {currentView === 'editar_relatorio' && renderEditarRelatorio()}
                     {currentView === 'rever_alteracoes' && renderReverAlteracoes()}
+                    {currentView === 'precision_review' && (
+                        <PrecisionReportReview
+                            draftData={draftData}
+                            originalTotal={originalTotal}
+                            draftTotal={draftTotal}
+                            reportJustification={reportJustification}
+                            onBack={() => goToView('rever_alteracoes')}
+                            onConfirm={handlePrecisionConfirm}
+                            onEditDay={handleTimeChange}
+                            onDeleteDay={(workerId, dayDate) => {
+                                handleTimeChange(workerId, dayDate, 'entry', '--:--');
+                                handleTimeChange(workerId, dayDate, 'exit', '--:--');
+                                handleTimeChange(workerId, dayDate, 'breakStart', '--:--');
+                                handleTimeChange(workerId, dayDate, 'breakEnd', '--:--');
+                            }}
+                        />
+                    )}
                     {currentView === 'sucesso_assinatura' && renderSucessoAssinatura()}
                     {currentView === 'sucesso_reporte' && renderSucessoReporte()}
                 </main>

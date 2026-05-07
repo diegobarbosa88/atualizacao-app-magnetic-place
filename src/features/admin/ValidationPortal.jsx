@@ -36,7 +36,8 @@ const ValidationPortal = ({
     appNotifications,
     currentUser,
     correctionNotifications,
-    clientApprovals
+    clientApprovals,
+    correcoesCorrections
   } = useApp();
 
   const sortedWorkers = useMemo(() => {
@@ -242,7 +243,7 @@ const ValidationPortal = ({
       {/* Correções Tab */}
       {portalSubTab === 'correcoes' && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <CorrecoesAdminPortal workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} clients={clients} logs={logs} currentUser={currentUser} />
+          <CorrecoesAdminPortal workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} clients={clients} logs={logs} currentUser={currentUser} correcoesCorrections={correcoesCorrections} />
         </div>
       )}
 

@@ -3,7 +3,7 @@ import { Calendar, Coffee, Save, X, Plus, Loader2, Sparkles } from 'lucide-react
 import { callGemini } from '../../utils/aiUtils';
 import { useApp } from '../../context/AppContext';
 
-const EntryForm = ({ data, clients, assignedClients, onChange, onSave, onCancel, showDate = false, isEditing = false, title = "Registar Horário", isInline = false, systemSettings: propSystemSettings }) => {
+const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCancel, showDate = false, isEditing = false, title = "Registar Horário", isInline = false, systemSettings: propSystemSettings }) => {
   const { systemSettings: contextSystemSettings } = useApp();
   const systemSettings = propSystemSettings || contextSystemSettings;
   const [isImproving, setIsImproving] = useState(false);

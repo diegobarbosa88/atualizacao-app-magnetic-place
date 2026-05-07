@@ -21,11 +21,11 @@ const WorkerContext = createContext(null);
 
 export const useWorker = () => useContext(WorkerContext);
 
-export const WorkerProvider = ({ children }) => {
+export const WorkerProvider = ({ children, handleSaveEntry }) => {
   const { 
     currentUser, setCurrentUser, currentMonth, setCurrentMonth,
     logs, clients, schedules, personalSchedules,
-    mainFormData, setMainFormData, handleSaveEntry,
+    mainFormData, setMainFormData,
     saveToDb, handleDelete, approvals, handleApproveMonth,
     systemSettings, documents, appNotifications, supabase
   } = useApp();
@@ -175,6 +175,7 @@ export const WorkerProvider = ({ children }) => {
     // State
     currentUser,
     currentMonth,
+    setCurrentMonth,
     logs,
     clients,
     schedules,

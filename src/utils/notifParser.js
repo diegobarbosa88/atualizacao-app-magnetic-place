@@ -13,24 +13,24 @@ export const parseCorrectionMessage = (message) => {
 };
 
 const parseQuickMessage = (message) => {
-  // Simple regex-based parsing for Quick reports
   const workerMatch = message.match(/👤 (.+?)\n/) || message.match(/Colaborador: (.+?)\n/);
   const periodMatch = message.match(/📅 Período: (.+?)\n/);
-  const totalMatch = message.match(/Total: ([\d.]+)h ➔ ([\d.]+)h/) || message.match(/Diferença: ([\d.]+)h/);
   
-  const clientMatch = message.match(/⚠️ PEDIDO DE CORREÇÃO: (.+)\n/);
+  const clientMatch = message.match(/💬 MENSAGEM DE DIVERGÊNCIA: (.+)\n/) || message.match(/⚠️ PEDIDO DE CORREÇÃO: (.+)\n/);
   const clientName = clientMatch ? clientMatch[1].trim() : "Cliente Desconhecido";
 
-  // Clean the message for the card
-  let cleanMsg = message.split('📅')[0].replace(/⚠️ PEDIDO DE CORREÇÃO: .+\n/, '').trim();
-  if (cleanMsg.length > 100) cleanMsg = cleanMsg.substring(0, 97) + "...";
+  const diffMatch = message.match(/• Diferença: ([+-]?[\d.]+)h/);
+  const diffValue = diffMatch ? diffMatch[1].trim() : "0.0";
+
+  const justifMatch = message.match(/💬 JUSTIFICAÇÃO:\n"(.+)"/);
+  const cleanMsg = justifMatch ? justifMatch[1].trim() : '';
 
   return {
     type: 'quick',
-    workerName: workerMatch ? workerMatch[1].trim() : "Trabalhador",
+    workerName: clientName,
     dateRange: periodMatch ? periodMatch[1].trim() : "Data não especificada",
-    message: cleanMsg || "Pedido de correção sem mensagem adicional.",
-    hoursDiscrepancy: totalMatch ? (parseFloat(totalMatch[2]) - parseFloat(totalMatch[1])).toFixed(1) : "0.0",
+    message: cleanMsg || "Divergência reportada sem mensagem.",
+    hoursDiscrepancy: diffValue,
     clientName
   };
 };

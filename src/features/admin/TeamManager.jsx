@@ -33,6 +33,9 @@ const TeamManagerContent = ({ onLogin }) => {
   const [showWorkerHistory, setShowWorkerHistory] = useState({ show: false, workerId: null, workerName: '' });
   const [workerValorHoraHistory, setWorkerValorHoraHistory] = useState([]);
 
+  // 11-05: Estado para histórico de emprego
+  const [showEmploymentHistory, setShowEmploymentHistory] = useState({ show: false, workerId: null, workerName: '', periods: [] });
+
   // D-06: Função para carregar histórico
   const loadWorkerValorHoraHistory = async (workerId, workerName) => {
     if (!supabase) return;
@@ -43,6 +46,17 @@ const TeamManagerContent = ({ onLogin }) => {
       .order('data_alteracao', { ascending: false });
     setWorkerValorHoraHistory(data || []);
     setShowWorkerHistory({ show: true, workerId, workerName });
+  };
+
+  // 11-05: Função para carregar histórico de emprego
+  const loadEmploymentHistory = async (workerId, workerName) => {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('worker_employment_history')
+      .select('*')
+      .eq('worker_id', workerId)
+      .order('created_at', { ascending: false });
+    setShowEmploymentHistory({ show: true, workerId, workerName, periods: data || [] });
   };
 
   // Contador de inativos
@@ -94,7 +108,7 @@ const TeamManagerContent = ({ onLogin }) => {
             <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '' }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Fechar Form' : 'Novo Trabalhador'}</button>
+          <button onClick={() => { setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Fechar Form' : 'Novo Trabalhador'}</button>
         </div>
       </div>
 
@@ -106,7 +120,15 @@ const TeamManagerContent = ({ onLogin }) => {
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Telemóvel (Senha)</label><input type="text" value={workerForm.tel} onChange={e => setWorkerForm({ ...workerForm, tel: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="9xxxxxxxx" /></div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">NIS</label><input type="text" value={workerForm.nis || ''} onChange={e => setWorkerForm({ ...workerForm, nis: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="Segurança Social" /></div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">NIF</label><input type="text" value={workerForm.nif || ''} onChange={e => setWorkerForm({ ...workerForm, nif: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="Número de Identificação Fiscal" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor Hora (€)</label><input type="number" value={workerForm.valorHora} onChange={e => setWorkerForm({ ...workerForm, valorHora: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" /></div>
+            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor Hora (€)</label>
+              <div className="flex gap-2">
+                <input type="number" value={workerForm.valorHora} onChange={e => setWorkerForm({ ...workerForm, valorHora: e.target.value })} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" />
+                <div className="flex flex-col gap-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase">Valor válido desde</label>
+                  <input type="date" value={workerForm.dataAlteracao || ''} onChange={e => setWorkerForm({ ...workerForm, dataAlteracao: e.target.value })} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none shadow-sm w-36" />
+                </div>
+              </div>
+            </div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">IBAN</label><input type="text" value={workerForm.iban} onChange={e => setWorkerForm({ ...workerForm, iban: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-mono uppercase shadow-sm" placeholder="PT50..." /></div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Estado da Conta</label><select value={workerForm.status || 'ativo'} onChange={e => setWorkerForm({ ...workerForm, status: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold"><option value="ativo">Ativo (Acesso Permitido)</option><option value="inativo">Inativo (Acesso Bloqueado)</option></select></div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data de Início</label><input type="date" value={workerForm.dataInicio || ''} onChange={e => setWorkerForm({ ...workerForm, dataInicio: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" /></div>
@@ -186,9 +208,16 @@ const TeamManagerContent = ({ onLogin }) => {
                     <div className="flex items-center gap-1">
                       <span>{w.valorHora ? `${w.valorHora}€` : 'N/A'}</span>
                       <button 
-                        onClick={() => loadWorkerValorHoraHistory(w.id, w.name)}
+                        onClick={() => loadEmploymentHistory(w.id, w.name)}
                         className="ml-1 text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
-                        title="Ver histórico"
+                        title="Períodos de emprego"
+                      >
+                        📅
+                      </button>
+                      <button 
+                        onClick={() => loadWorkerValorHoraHistory(w.id, w.name)}
+                        className="text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
+                        title="Ver histórico de valor"
                       >
                         📊
                       </button>
@@ -212,7 +241,7 @@ const TeamManagerContent = ({ onLogin }) => {
                   <td className="text-right">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={16} /></button>
-                      <button onClick={() => { setWorkerForm(w); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
+                      <button onClick={() => { setWorkerForm({ ...w, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
                       <button onClick={() => handleDeleteWorker(w.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
                     </div>
                   </td>
@@ -229,7 +258,7 @@ const TeamManagerContent = ({ onLogin }) => {
                 <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600"><UserCircle size={24} /></div>
                 <div className="flex gap-2">
                   <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={14} /></button>
-                  <button onClick={() => { setWorkerForm(w); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
+                  <button onClick={() => { setWorkerForm({ ...w, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
                   <button onClick={() => handleDeleteWorker(w.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
                 </div>
               </div>
@@ -279,6 +308,34 @@ const TeamManagerContent = ({ onLogin }) => {
                       <span className="text-sm font-bold text-indigo-600">{h.valor_novo}€</span>
                     </div>
                     <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 11-05: Modal de Histórico de Emprego */}
+      {showEmploymentHistory.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowEmploymentHistory({ show: false, workerId: null, workerName: '', periods: [] })}>
+          <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-black text-indigo-700">Períodos de Emprego</h3>
+              <button onClick={() => setShowEmploymentHistory({ show: false, workerId: null, workerName: '', periods: [] })} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <p className="text-sm font-bold text-slate-500 mb-4">{showEmploymentHistory.workerName}</p>
+            {showEmploymentHistory.periods.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">Sem períodos registados</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {showEmploymentHistory.periods.map((p, i) => (
+                  <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-600">{p.data_inicio}</span>
+                      <span className="text-slate-400">→</span>
+                      <span className="text-sm font-bold text-indigo-600">{p.data_fim || 'Atual'}</span>
+                    </div>
                   </div>
                 ))}
               </div>

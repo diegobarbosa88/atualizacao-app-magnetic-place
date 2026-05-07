@@ -51,7 +51,7 @@ const ClientManagerContent = () => {
             <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '' }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Voltar' : 'Registar Cliente'}</button>
+          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Voltar' : 'Registar Cliente'}</button>
         </div>
       </div>
 
@@ -60,7 +60,15 @@ const ClientManagerContent = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Empresa</label><input type="text" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" /></div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">NIF</label><input type="text" value={clientForm.nif} onChange={e => setClientForm({ ...clientForm, nif: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor/h (€)</label><input type="number" value={clientForm.valorHora} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" /></div>
+            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor/h (€)</label>
+              <div className="flex gap-2">
+                <input type="number" value={clientForm.valorHora} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" />
+                <div className="flex flex-col gap-1">
+                  <label className="text-[8px] font-black text-slate-400 uppercase">Valor válido desde</label>
+                  <input type="date" value={clientForm.dataAlteracao || ''} onChange={e => setClientForm({ ...clientForm, dataAlteracao: e.target.value })} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none shadow-sm w-36" />
+                </div>
+              </div>
+            </div>
             <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail de Contato</label><input type="email" value={clientForm.email || ''} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="email@exemplo.pt" /></div>
             <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Morada</label><input type="text" value={clientForm.morada} onChange={e => setClientForm({ ...clientForm, morada: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" /></div>
           </div>
@@ -105,7 +113,7 @@ const ClientManagerContent = () => {
                   </td>
                   <td className="text-right">
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => { setClientForm(c); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
+                      <button onClick={() => { setClientForm({ ...c, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
                       <button onClick={() => handleDeleteClient(c.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
                     </div>
                   </td>
@@ -121,7 +129,7 @@ const ClientManagerContent = () => {
               <div className="flex justify-between items-start mb-4">
                 <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600"><Briefcase size={24} /></div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setClientForm(c); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 bg-slate-50 rounded-lg text-amber-500 hover:bg-amber-500 hover:text-white transition-all"><Edit2 size={14} /></button>
+                  <button onClick={() => { setClientForm({ ...c, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 bg-slate-50 rounded-lg text-amber-500 hover:bg-amber-500 hover:text-white transition-all"><Edit2 size={14} /></button>
                   <button onClick={() => handleDeleteClient(c.id)} className="p-2 bg-slate-50 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
                 </div>
               </div>

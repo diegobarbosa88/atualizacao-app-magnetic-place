@@ -4,31 +4,18 @@ const StatusBadge = ({ type, status }) => {
   const getColors = () => {
     switch (type) {
       case 'quick':
-        return { bg: 'rgba(129, 140, 248, 0.2)', text: '#a5b4fc', border: 'rgba(129, 140, 248, 0.4)', label: 'Rápido' };
+        return { bg: 'bg-indigo-100', text: 'text-indigo-600', border: 'border-indigo-200', label: 'Rápido' };
       case 'precision':
-        return { bg: 'rgba(34, 211, 238, 0.2)', text: '#67e8f9', border: 'rgba(34, 211, 238, 0.4)', label: 'Precisão' };
+        return { bg: 'bg-amber-100', text: 'text-amber-600', border: 'border-amber-200', label: 'Precisão' };
       default:
-        return { bg: 'rgba(148, 163, 184, 0.1)', text: '#94a3b8', border: 'rgba(148, 163, 184, 0.2)', label: type };
+        return { bg: 'bg-slate-100', text: 'text-slate-500', border: 'border-slate-200', label: type };
     }
   };
 
   const colors = getColors();
 
   return (
-    <span style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      padding: '4px 10px',
-      borderRadius: '20px',
-      fontSize: '11px',
-      fontWeight: '700',
-      textTransform: 'uppercase',
-      letterSpacing: '0.05em',
-      backgroundColor: colors.bg,
-      color: colors.text,
-      border: `1px solid ${colors.border}`,
-      boxShadow: `0 0 10px ${colors.bg}`
-    }}>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${colors.bg} ${colors.text} ${colors.border} border`}>
       {colors.label}
     </span>
   );

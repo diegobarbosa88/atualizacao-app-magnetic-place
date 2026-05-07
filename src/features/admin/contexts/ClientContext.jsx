@@ -4,21 +4,20 @@ import { useApp } from '../../../context/AppContext';
 const ClientContext = createContext();
 
 // D-07: Função para guardar histórico de alterações do valor hora do cliente
-const saveClientValorHoraHistory = async (clients, saveToDb, clientId, valorNovo) => {
+const saveClientValorHoraHistory = async (clients, saveToDb, clientId, valorNovo, dataAlteracao) => {
   const client = clients.find(c => c.id === clientId);
-  // Apenas criar registo se o valor mudou
   if (!client || client.valorHora === valorNovo) return;
   
-  await saveToDb('client_valorhora_history', null, {
+  await saveToDb('client_valorhora_history', crypto.randomUUID(), {
     client_id: clientId,
     valor_anterior: client.valorHora,
     valor_novo: valorNovo,
-    data_alteracao: new Date().toISOString()
+    data_alteracao: new Date(dataAlteracao).toISOString()
   });
 };
 
 const INITIAL_CLIENT_FORM = {
-  id: null, name: '', morada: '', nif: '', valorHora: '', email: ''
+  id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0]
 };
 
 export const ClientProvider = ({ children }) => {
@@ -36,10 +35,11 @@ export const ClientProvider = ({ children }) => {
     if (clientForm.id) {
       const existingClient = clients.find(c => c.id === clientForm.id);
       if (existingClient && existingClient.valorHora !== clientForm.valorHora) {
-        await saveClientValorHoraHistory(clients, saveToDb, clientForm.id, clientForm.valorHora);
+        await saveClientValorHoraHistory(clients, saveToDb, clientForm.id, clientForm.valorHora, clientForm.dataAlteracao);
       }
     }
-    await saveToDb('clients', id, { ...clientForm, id });
+    const { dataAlteracao, ...restForm } = clientForm;
+    await saveToDb('clients', id, { ...restForm, id });
     setIsAddingInTab(false);
     setClientForm(INITIAL_CLIENT_FORM);
   }, [clientForm, saveToDb, clients]);

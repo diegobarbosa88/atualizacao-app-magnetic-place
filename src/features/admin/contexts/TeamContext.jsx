@@ -3,17 +3,50 @@ import { useApp } from '../../../context/AppContext';
 
 const TeamContext = createContext();
 
-// D-05: Função para guardar histórico de alterações do valor hora do trabalhador
-const saveWorkerValorHoraHistory = async (workers, saveToDb, workerId, valorNovo) => {
+// D-05/11-05: Salvar histórico de emprego (períodos entrada/saída)
+const saveEmploymentHistory = async (saveToDb, workerId, dataInicio, dataFim) => {
+  const supabase = window.supabaseInstance;
+  if (!supabase || !workerId) return;
+  
+  // Buscar último período sem data_fim
+  const { data: lastPeriod } = await supabase
+    .from('worker_employment_history')
+    .select('*')
+    .eq('worker_id', workerId)
+    .is('data_fim', null)
+    .maybeSingle();
+  
+  if (lastPeriod && dataFim) {
+    // Fechar período anterior (dia antes)
+    const prevDate = new Date(dataFim);
+    prevDate.setDate(prevDate.getDate() - 1);
+    const prevDateStr = prevDate.toISOString().split('T')[0];
+    await saveToDb('worker_employment_history', lastPeriod.id, {
+      ...lastPeriod,
+      data_fim: prevDateStr
+    });
+  }
+  
+  if (!lastPeriod || dataFim) {
+    // Criar novo período
+    await saveToDb('worker_employment_history', crypto.randomUUID(), {
+      worker_id: workerId,
+      data_inicio: dataInicio || new Date().toISOString().split('T')[0],
+      data_fim: dataFim || null
+    });
+  }
+};
+
+// D-06: Função para guardar histórico de alterações do valor hora do trabalhador
+const saveWorkerValorHoraHistory = async (workers, saveToDb, workerId, valorNovo, dataAlteracao) => {
   const worker = workers.find(w => w.id === workerId);
-  // Apenas criar registo se o valor mudou
   if (!worker || worker.valorHora === valorNovo) return;
   
-  await saveToDb('worker_valorhora_history', null, {
+  await saveToDb('worker_valorhora_history', crypto.randomUUID(), {
     worker_id: workerId,
     valor_anterior: worker.valorHora,
     valor_novo: valorNovo,
-    data_alteracao: new Date().toISOString()
+    data_alteracao: new Date(dataAlteracao).toISOString()
   });
 };
 
@@ -21,7 +54,7 @@ const INITIAL_WORKER_FORM = {
   id: null, name: '', assignedClients: [], assignedSchedules: [],
   defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '',
   profissao: '', nis: '', nif: '', iban: '', status: 'ativo',
-  dataInicio: '', dataFim: ''
+  dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0]
 };
 
 export const TeamProvider = ({ children }) => {
@@ -40,13 +73,16 @@ export const TeamProvider = ({ children }) => {
     if (workerForm.id) {
       const existingWorker = workers.find(w => w.id === workerForm.id);
       if (existingWorker && existingWorker.valorHora !== workerForm.valorHora) {
-        await saveWorkerValorHoraHistory(workers, saveToDb, workerForm.id, workerForm.valorHora);
+        await saveWorkerValorHoraHistory(workers, saveToDb, workerForm.id, workerForm.valorHora, workerForm.dataAlteracao);
       }
     }
+    // 11-05: Salvar histórico de emprego
+    await saveEmploymentHistory(saveToDb, id, workerForm.dataInicio, workerForm.dataFim);
+    const { dataAlteracao, ...restForm } = workerForm;
     const workerToSave = {
-      ...workerForm,
+      ...restForm,
       id,
-      status: workerForm.dataFim ? 'inativo' : (workerForm.status || 'ativo')
+      status: workerForm.dataFim ? 'inativo' : 'ativo'
     };
     await saveToDb('workers', id, workerToSave);
     setIsAddingInTab(false);

@@ -29,6 +29,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const {
     currentUser,
     currentMonth,
+    setCurrentMonth,
     logs,
     clients,
     schedules,
@@ -90,43 +91,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const workerStartDate = workerDataInicio
     ? new Date(workerDataInicio)
     : null;
-
-  // Helper para verificar se o mês é acessível (>= dataInicio)
-  const isMonthAccessible = (date) => {
-    if (!currentUser?.dataInicio) return true; // Sem data = acessível
-    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-    const workerStart = new Date(currentUser.dataInicio);
-    return monthStart >= workerStart;
-  };
-
-  // Helper para verificar se dataFim bloqueou o acesso
-  const isAccessBlockedByFim = () => {
-    if (!currentUser?.dataFim) return false;
-    const workerEnd = new Date(currentUser.dataFim);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today > workerEnd;
-  };
-
-  const canFillHours = isMonthAccessible(currentMonth) && !isAccessBlockedByFim();
-
-  // Se dataFim passou, mostrar ecrã de acesso bloqueado
-  if (isAccessBlockedByFim()) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-8 text-center max-w-md shadow-xl">
-          <div className="text-6xl mb-4">🔒</div>
-          <h2 className="text-2xl font-black text-slate-800 mb-2">Acesso Bloqueado</h2>
-          <p className="text-sm text-slate-500 mb-4">
-            O teu acesso foi desactivado em {new Date(currentUser.dataFim).toLocaleDateString('pt-PT')}.
-          </p>
-          <p className="text-xs text-slate-400">
-            Contacta o administrador se precisas de reativar o acesso.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   // Filtrar pendingApprovals - só meses >= dataInicio
   const filteredPendingApprovals = pendingApprovals.filter(pending => {
@@ -320,23 +284,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           </div>
         ) : (
           <div className="mb-8">
-            {!canFillHours && (
-              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-                <p className="text-sm font-bold text-amber-600">
-                  {currentUser?.dataInicio
-                    ? `Só podes registar horas a partir de ${new Date(currentUser.dataInicio).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}`
-                    : 'O teu acesso foi desactivado.'}
-                </p>
-              </div>
-            )}
             {successMsg && (
               <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl flex items-center justify-center gap-3 border border-emerald-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
                 <CheckCircle size={24} className="text-emerald-500" />
                 <span>{successMsg}</span>
               </div>
             )}
-            {canFillHours && (
-              <EntryForm
+            <EntryForm
                 data={mainFormData}
                 clients={clients}
                 assignedClients={currentUser?.assignedClients}
@@ -358,7 +312,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 systemSettings={systemSettings}
                 title="Novo Registo de Atividade"
               />
-            )}
           </div>
         )}
 
@@ -625,9 +578,9 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
   );
 };
 
-const WorkerDashboard = ({ onLogout, onLogin }) => {
+const WorkerDashboard = ({ onLogout, onLogin, handleSaveEntry }) => {
   return (
-    <WorkerProvider>
+    <WorkerProvider handleSaveEntry={handleSaveEntry}>
       <WorkerDashboardContent onLogout={onLogout} onLogin={onLogin} />
     </WorkerProvider>
   );

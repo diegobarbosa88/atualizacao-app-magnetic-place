@@ -142,7 +142,7 @@ export default function App() {
   const handleBannerClick = (notif) => {
     console.log('Banner clicado:', notif.title);
     handleDismissNotif(notif.id);
-    if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
+    if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
       setActiveTab('portal_validacao');
       setPortalSubTab('correcoes');
       setView('admin');
@@ -265,7 +265,9 @@ export default function App() {
 
   const handleApproveMonth = (workerId) => { const monthStr = toISODateLocal(currentMonth).substring(0, 7); const id = "appr_" + workerId + "_" + monthStr; saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() }); };
 
-  const urlClient = null, urlMonth = null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlClient = urlParams.get('client');
+  const urlMonth = urlParams.get('month');
 
   return (
     <div className="text-slate-900 bg-slate-50 min-h-screen font-sans">

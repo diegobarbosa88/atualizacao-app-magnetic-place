@@ -13,25 +13,15 @@ const TimeInput = ({ value, onChange, label }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-      {label && <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)' }}>{label}</label>}
+    <div className="flex flex-col gap-1">
+      {label && <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</label>}
       <input
         type="text"
         value={value || ''}
         onChange={handleChange}
         placeholder="00:00"
         maxLength={5}
-        style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
-          borderRadius: '6px',
-          color: 'white',
-          padding: '8px 10px',
-          fontSize: '14px',
-          width: '80px',
-          textAlign: 'center',
-          fontFamily: 'monospace'
-        }}
+        className="bg-white border border-slate-200 rounded-xl text-slate-800 px-3 py-2 text-sm font-mono w-20 text-center focus:ring-2 focus:ring-indigo-500 outline-none"
       />
     </div>
   );
