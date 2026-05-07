@@ -318,8 +318,6 @@ const CostReports = () => {
     return filteredExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
   }, [filteredExpenses]);
 
-  const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
-
   const renderTable = () => {
     if (activeTab === 'workers') {
       return (
