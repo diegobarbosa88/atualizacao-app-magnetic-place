@@ -3,6 +3,20 @@ import { useApp } from '../../../context/AppContext';
 
 const TeamContext = createContext();
 
+// D-05: Função para guardar histórico de alterações do valor hora do trabalhador
+const saveWorkerValorHoraHistory = async (workers, saveToDb, workerId, valorNovo) => {
+  const worker = workers.find(w => w.id === workerId);
+  // Apenas criar registo se o valor mudou
+  if (!worker || worker.valorHora === valorNovo) return;
+  
+  await saveToDb('worker_valorhora_history', null, {
+    worker_id: workerId,
+    valor_anterior: worker.valorHora,
+    valor_novo: valorNovo,
+    data_alteracao: new Date().toISOString()
+  });
+};
+
 const INITIAL_WORKER_FORM = {
   id: null, name: '', assignedClients: [], assignedSchedules: [],
   defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '',
@@ -11,7 +25,7 @@ const INITIAL_WORKER_FORM = {
 };
 
 export const TeamProvider = ({ children }) => {
-  const { saveToDb, handleDelete } = useApp();
+  const { workers, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
   const [workersView, setWorkersView] = useState('list');
@@ -40,6 +54,11 @@ export const TeamProvider = ({ children }) => {
     setWorkerForm(INITIAL_WORKER_FORM);
   }, []);
 
+  // D-05: Função exposta para guardar histórico do valor hora
+  const saveWorkerHistory = useCallback(async (workerId, valorNovo) => {
+    await saveWorkerValorHoraHistory(workers, saveToDb, workerId, valorNovo);
+  }, [workers, saveToDb]);
+
   const value = {
     isAddingInTab, setIsAddingInTab,
     workersView, setWorkersView,
@@ -47,7 +66,9 @@ export const TeamProvider = ({ children }) => {
     workerForm, setWorkerForm,
     handleSaveWorker,
     handleDeleteWorker,
-    resetWorkerForm
+    resetWorkerForm,
+    saveWorkerHistory,
+    workers
   };
 
   return (
