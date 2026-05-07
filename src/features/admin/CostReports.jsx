@@ -53,24 +53,39 @@ const CostReports = () => {
     return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
   };
 
-  const exportToXLS = () => {
+  const getLogoBase64 = async () => {
+    try {
+      const response = await fetch('/MAGNETIC (3).png');
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
+  };
+
+  const exportToXLS = async () => {
     const today = formatDate(new Date());
     const reportTitle = getReportTitle();
     const monthLabel = getMonthLabel();
     const filename = `relatorio-${activeTab}-${selectedMonth}.xls`;
-
-    const formatCurrency = (value) => {
-      return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
-    };
+    const logoBase64 = await getLogoBase64();
 
     let tableRows = '';
     let totalSection = '';
     let headers = '';
-    let colCount = 3;
+    let colgroup = '';
 
     if (activeTab === 'workers') {
+      colgroup = '<colgroup><col style="width: 280px"><col style="width: 120px"><col style="width: 140px"></colgroup>';
       headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Nome</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Total Horas</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Custo (€)</th>';
-      colCount = 3;
       
       workerCosts.forEach((item, idx) => {
         const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
@@ -83,8 +98,8 @@ const CostReports = () => {
     }
 
     if (activeTab === 'clients') {
+      colgroup = '<colgroup><col style="width: 280px"><col style="width: 120px"><col style="width: 140px"></colgroup>';
       headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Nome</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Total Horas</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Faturação (€)</th>';
-      colCount = 3;
       
       clientCosts.forEach((item, idx) => {
         const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
@@ -97,8 +112,8 @@ const CostReports = () => {
     }
 
     if (activeTab === 'margins') {
+      colgroup = '<colgroup><col style="width: 220px"><col style="width: 100px"><col style="width: 130px"><col style="width: 130px"><col style="width: 130px"></colgroup>';
       headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Cliente</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Horas</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Faturação (€)</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Custo (€)</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Margem (€)</th>';
-      colCount = 5;
       
       clientMargins.forEach((item, idx) => {
         const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
@@ -117,8 +132,8 @@ const CostReports = () => {
     }
 
     if (activeTab === 'expenses') {
+      colgroup = '<colgroup><col style="width: 120px"><col style="width: 250px"><col style="width: 100px"><col style="width: 130px"></colgroup>';
       headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Data</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Descrição</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:center;font-weight:bold;border-bottom:2px solid #3730A3;">Tipo</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Valor</th>';
-      colCount = 4;
       
       sortedExpenses.forEach((exp, idx) => {
         const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
@@ -130,30 +145,43 @@ const CostReports = () => {
       totalSection = `<tr style="background:#FEF2F2;"><td colspan="3" style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #DC2626;">Total Despesas</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:#DC2626;border-top:2px solid #DC2626;">-${formatCurrency(totalExpenses)}</td></tr>`;
     }
 
+    const logoHtml = logoBase64 
+      ? `<img src="${logoBase64}" alt="Logo" style="height:60px;width:60px;border-radius:12px;margin-right:16px;" />` 
+      : '';
+
     const html = `<!DOCTYPE html>
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
   <meta charset="utf-8">
   <meta name="Generator" content="Microsoft Excel">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <style>
-    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; background: #f8fafc; }
-    .header { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; padding: 30px 40px; border-radius: 16px 16px 0 0; margin-bottom: 0; }
-    .company { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
-    .title { font-size: 18px; font-weight: 600; opacity: 0.9; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 40px; background: #f8fafc; }
+    .header { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; padding: 30px 40px; border-radius: 16px 16px 0 0; margin-bottom: 0; display: flex; align-items: center; }
+    .logo-container { display: flex; align-items: center; }
+    .company { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px; }
+    .title { font-size: 16px; font-weight: 500; opacity: 0.9; }
     .info-bar { background: white; padding: 20px 40px; display: flex; gap: 40px; border-bottom: 1px solid #e2e8f0; margin-bottom: 0; }
     .info-item { display: flex; flex-direction: column; }
     .info-label { font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 1px; }
     .info-value { font-size: 14px; font-weight: 600; color: #334155; }
     .content { background: white; border-radius: 0 0 16px 16px; padding: 0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
-    table { width: 100%; border-collapse: collapse; margin: 0; }
+    table { width: 100%; border-collapse: collapse; margin: 0; table-layout: fixed; }
+    colgroup { }
     th { background: #4F46E5; color: white; padding: 12px 16px; text-align: left; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    td { overflow: hidden; text-overflow: ellipsis; }
     .footer { margin-top: 20px; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px; }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="company">Magnetic Place</div>
-    <div class="title">${reportTitle}</div>
+    <div class="logo-container">
+      ${logoHtml}
+      <div>
+        <div class="company">Magnetic Place</div>
+        <div class="title">${reportTitle}</div>
+      </div>
+    </div>
   </div>
   <div class="info-bar">
     <div class="info-item">
@@ -171,6 +199,7 @@ const CostReports = () => {
   </div>
   <div class="content">
     <table>
+      ${colgroup}
       <thead>
         <tr>${headers}</tr>
       </thead>
