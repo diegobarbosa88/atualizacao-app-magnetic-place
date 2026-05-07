@@ -47,6 +47,44 @@ export const ScheduleProvider = ({ children }) => {
     await handleDelete('schedules', scheduleId);
   }, [handleDelete]);
 
+  // D-04, D-05: Atribuição com datas de validade preserva histórico
+  const handleAssignScheduleWithDates = useCallback(async (workerId, scheduleId, dataInicio, dataFim) => {
+    const w = workers.find(worker => worker.id === workerId);
+    if (!w) return;
+    
+    // Guardar datas no worker record (não substitui atribuições anteriores)
+    const scheduleDates = w.assignedScheduleDates || {};
+    scheduleDates[scheduleId] = { dataInicio, dataFim };
+    
+    // Also add to assignedSchedules array for backwards compatibility
+    const currentAssigned = w.assignedSchedules || [];
+    const nextAssigned = currentAssigned.includes(scheduleId) 
+      ? currentAssigned 
+      : [...currentAssigned, scheduleId];
+    
+    await saveToDb('workers', w.id, { 
+      ...w, 
+      assignedSchedules: nextAssigned,
+      assignedScheduleDates: scheduleDates 
+    });
+  }, [workers, saveToDb]);
+
+  // Handle para remover atribuição (não remove historial)
+  const handleUnassignSchedule = useCallback(async (workerId, scheduleId) => {
+    const w = workers.find(worker => worker.id === workerId);
+    if (!w) return;
+    
+    // Marcar data_fim como hoje (fim da vigência)
+    const scheduleDates = w.assignedScheduleDates || {};
+    const currentDates = scheduleDates[scheduleId] || { dataInicio: null, dataFim: null };
+    scheduleDates[scheduleId] = { ...currentDates, dataFim: new Date().toISOString().split('T')[0] };
+    
+    await saveToDb('workers', w.id, { 
+      ...w, 
+      assignedScheduleDates: scheduleDates 
+    });
+  }, [workers, saveToDb]);
+
   const resetScheduleForm = useCallback(() => {
     setScheduleForm(INITIAL_SCHEDULE_FORM);
   }, []);
@@ -58,6 +96,8 @@ export const ScheduleProvider = ({ children }) => {
     scheduleForm, setScheduleForm,
     handleSaveSchedule,
     handleDeleteSchedule,
+    handleAssignScheduleWithDates,
+    handleUnassignSchedule,
     resetScheduleForm
   };
 
