@@ -237,5 +237,27 @@ Plans:
 | 10 | Limpeza e Roteamento | Ready to execute |
 | 11 | Gestão de Ciclo de Vida do Trabalhador | Complete |
 
+---
+
+## Phase 12: Modernização UI — ClientManager
+
+**Goal:** Aplicar o design system de alta fidelidade (2 colunas, Indigo/Emerald, rounded-[2.5rem], labels uppercase, ícones lucide-react) ao ClientManager.jsx, replicando a estrutura visual do TeamManager.jsx e ScheduleManager.jsx.
+
+**Requirements:** UI-MOD-01
+
+**Plans:** 1 plan
+
+Plans:
+- [x] 12-01-PLAN.md — Modernização UI do ClientManager.jsx
+
+**Success Criteria:**
+1. Layout 2 colunas: DADOS DO CLIENTE (esquerda) + HORÁRIOS / TRABALHADORES / AÇÕES (direita)
+2. Design system unificado com TeamManager (cores, bordas, tipografia)
+3. Todas as funcionalidades originais preservadas (CRUD, histórico valor hora, sorting, views)
+4. Labels em uppercase com ícones lucide-react
+5. Classes CSS consistentes (rounded-[2.5rem], shadow-xl, border-slate-100)
+
+**UI hint:** yes
+
 *Last updated: 2026-05-07*
 
