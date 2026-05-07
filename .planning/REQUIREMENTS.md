@@ -38,3 +38,19 @@ Este documento detalha os requisitos para a refatoração do `app-magnetic` de u
 - **CLEANUP-01**: O arquivo `app.jsx` deve conter apenas a lógica de roteamento (`view` state) e os Providers de contexto.
 - **CLEANUP-02**: Eliminar duplicidade de estilos inlining, movendo o máximo possível para `App.css` ou arquivos CSS específicos de módulo.
 - **CLEANUP-03**: Garantir que a performance não seja degradada (uso de `useMemo` e `useCallback` no Contexto).
+
+## Relatórios de Custo (COST)
+
+- **COST-01**: Relatório de custo por trabalhador.
+  - Calcular: soma das horas registadas em `logs` × `valorHora` do worker.
+  - Mostrar: lista de trabalhadores com total em euros.
+  - Filtros: período (mês/ano), trabalhador específico.
+
+- **COST-02**: Relatório de custo por cliente.
+  - Calcular: soma das horas aprovadas em `approvals` × `valorHora` do cliente.
+  - Mostrar: lista de clientes com total em euros.
+  - Filtros: período (mês/ano), cliente específico.
+
+- **COST-03**: Interface de visualização no Admin Dashboard.
+  - Separar tabs ou secções para Workers vs Clientes.
+  - Exportar para PDF ou CSV (opcional).

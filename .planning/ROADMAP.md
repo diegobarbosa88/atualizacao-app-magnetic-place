@@ -259,5 +259,25 @@ Plans:
 
 **UI hint:** yes
 
+---
+
+## Phase 13: Relatórios de Custo por Trabalhador/Cliente
+
+**Goal:** Gerar relatório com o valor total em euros de cada trabalhador (total de horas registadas × valor/hora) e o mesmo para clientes. O relatório deve ser acessível no Admin Dashboard.
+
+**Requirements:** COST-01, COST-02, COST-03
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 13-01-PLAN.md — Relatórios de custo por trabalhador/cliente
+
+**Success Criteria:**
+1. Relatório de custo por trabalhador: soma das horas registadas no mês × valorHora do worker
+2. Relatório de custo por cliente: soma das horas aprovadas × valorHora do cliente
+3. Acessível via Admin Dashboard com filtros por período
+
+**UI hint:** yes
+
 *Last updated: 2026-05-07*
 
