@@ -83,10 +83,10 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
       const pathInStorage = doc.url?.includes('/documentos/') ? doc.url.split('/documentos/')[1] : null;
 
       if (pathInStorage) {
-        await supabase.storage.from('documentos').remove([pathInStorage]);
+        await clientSupabase.storage.from('documentos').remove([pathInStorage]);
       }
 
-      const { error } = await supabase
+      const { error } = await clientSupabase
         .from('documents')
         .delete()
         .eq('id', doc.id);

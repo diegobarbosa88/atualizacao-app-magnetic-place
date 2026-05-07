@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FileText, Edit2, X, Download, CheckCircle, Loader2, ChevronDown, Filter } from 'lucide-react';
+import { FileText, Edit2, X, Download, CheckCircle, Loader2, Filter } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 
@@ -30,7 +30,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const canvas = canvasRef.current;
         const parent = canvas.parentElement;
         canvas.width = parent.clientWidth;
-        canvas.height = 160;
+        canvas.height = 200;
         const ctx = canvas.getContext('2d');
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
@@ -57,27 +57,17 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   };
 
   const startDrawing = (e) => {
-    e.preventDefault();
     isDrawing.current = true;
     const { x, y } = getCoordinates(e);
     const ctx = canvasRef.current.getContext('2d');
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#4f46e5';
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
 
   const draw = (e) => {
-    e.preventDefault();
     if (!isDrawing.current) return;
     const { x, y } = getCoordinates(e);
     const ctx = canvasRef.current.getContext('2d');
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#4f46e5';
     ctx.lineTo(x, y);
     ctx.stroke();
     if (!hasSignature) setHasSignature(true);
@@ -235,10 +225,9 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         {activeTab === 'historico' && (
           <button 
             onClick={() => setShowFilters(!showFilters)} 
-            className={`ml-auto px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}
+            className={`ml-auto p-2 rounded-xl ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}
           >
-            <Filter size={14} />
-            Filtros
+            <Filter size={16} />
           </button>
         )}
       </div>
@@ -342,7 +331,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                   Limpar Área
                 </button>
               </div>
-              <div className="relative w-full max-w-2xl mx-auto bg-white border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden shadow-inner" style={{ height: '160px' }}>
+              <div className="relative w-full max-w-2xl mx-auto bg-white border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden shadow-inner">
                 <canvas 
                   ref={canvasRef} 
                   className="w-full cursor-crosshair touch-none" 
