@@ -119,6 +119,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         status: 'Assinado',
         assinaturaUrl: assinaturaUrl,
         dataAssinatura: now,
+        signed_at: now,
         ipAssinatura: userIP,
         pdfAssinadoUrl: pdfAssinadoUrl,
         dataEmissao: selectedDoc.dataEmissao
