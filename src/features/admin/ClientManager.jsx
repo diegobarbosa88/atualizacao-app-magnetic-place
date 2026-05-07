@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import { 
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 const ClientManagerContent = () => {
-  const { clients } = useApp();
+  const { clients, supabase } = useApp();
 
   const {
     isAddingInTab, setIsAddingInTab,
@@ -16,6 +16,22 @@ const ClientManagerContent = () => {
     handleSaveClient,
     handleDeleteClient
   } = useClient();
+
+  // D-07: Estado para histórico de valor hora do cliente
+  const [showClientHistory, setShowClientHistory] = useState({ show: false, clientId: null, clientName: '' });
+  const [clientValorHoraHistory, setClientValorHoraHistory] = useState([]);
+
+  // D-07: Função para carregar histórico
+  const loadClientValorHoraHistory = async (clientId, clientName) => {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('client_valorhora_history')
+      .select('*')
+      .eq('client_id', clientId)
+      .order('data_alteracao', { ascending: false });
+    setClientValorHoraHistory(data || []);
+    setShowClientHistory({ show: true, clientId, clientName });
+  };
 
   const sortedClients = [...clients].sort((a, b) => {
     let res = 0;
@@ -75,7 +91,18 @@ const ClientManagerContent = () => {
                     <p className="text-xs text-slate-400 truncate">NIF: {c.nif || 'N/A'}</p>
                   </td>
                   <td className="text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
-                  <td className="text-sm text-indigo-600 font-black truncate">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
+                  <td className="text-sm text-indigo-600 font-black">
+                    <div className="flex items-center gap-1">
+                      <span className="truncate">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</span>
+                      <button 
+                        onClick={() => loadClientValorHoraHistory(c.id, c.name)}
+                        className="ml-1 text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
+                        title="Ver histórico"
+                      >
+                        📊
+                      </button>
+                    </div>
+                  </td>
                   <td className="text-right">
                     <div className="flex justify-end gap-2">
                       <button onClick={() => { setClientForm(c); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
@@ -106,6 +133,35 @@ const ClientManagerContent = () => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* D-07: Modal de Histórico de Valor Hora do Cliente */}
+      {showClientHistory.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowClientHistory({ show: false, clientId: null, clientName: '' })}>
+          <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-black text-indigo-700">Histórico de Valor Hora</h3>
+              <button onClick={() => setShowClientHistory({ show: false, clientId: null, clientName: '' })} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <p className="text-sm font-bold text-slate-500 mb-4">{showClientHistory.clientName}</p>
+            {clientValorHoraHistory.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">Sem histórico disponível</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {clientValorHoraHistory.map(h => (
+                  <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
+                      <span className="text-slate-400">→</span>
+                      <span className="text-sm font-bold text-indigo-600">{h.valor_novo}€</span>
+                    </div>
+                    <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

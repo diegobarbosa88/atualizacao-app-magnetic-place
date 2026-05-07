@@ -14,7 +14,8 @@ const TeamManagerContent = ({ onLogin }) => {
     schedules, 
     clients, 
     approvals, 
-    currentMonthStr 
+    currentMonthStr,
+    supabase 
   } = useApp();
 
   const {
@@ -27,6 +28,22 @@ const TeamManagerContent = ({ onLogin }) => {
   } = useTeam();
 
   const [showInactive, setShowInactive] = useState(false);
+  
+  // D-06: Estado para histórico de valor hora
+  const [showWorkerHistory, setShowWorkerHistory] = useState({ show: false, workerId: null, workerName: '' });
+  const [workerValorHoraHistory, setWorkerValorHoraHistory] = useState([]);
+
+  // D-06: Função para carregar histórico
+  const loadWorkerValorHoraHistory = async (workerId, workerName) => {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from('worker_valorhora_history')
+      .select('*')
+      .eq('worker_id', workerId)
+      .order('data_alteracao', { ascending: false });
+    setWorkerValorHoraHistory(data || []);
+    setShowWorkerHistory({ show: true, workerId, workerName });
+  };
 
   // Contador de inativos
   const inactiveCount = workers.filter(w => w.status === 'inativo').length;
@@ -150,6 +167,7 @@ const TeamManagerContent = ({ onLogin }) => {
                 <th onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Valor/H</th>
                 <th onClick={() => setWorkersSort(prev => ({ key: 'status', direction: prev.key === 'status' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Acesso {workersSort.key === 'status' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
                 <th className="text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Ações</th>
               </tr>
@@ -164,6 +182,18 @@ const TeamManagerContent = ({ onLogin }) => {
                   </td>
                   <td className="text-sm font-bold text-indigo-600 truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
                   <td className="text-sm font-bold text-indigo-600 truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
+                  <td className="text-sm font-bold text-indigo-600">
+                    <div className="flex items-center gap-1">
+                      <span>{w.valorHora ? `${w.valorHora}€` : 'N/A'}</span>
+                      <button 
+                        onClick={() => loadWorkerValorHoraHistory(w.id, w.name)}
+                        className="ml-1 text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
+                        title="Ver histórico"
+                      >
+                        📊
+                      </button>
+                    </div>
+                  </td>
                   <td className="">
                     <div className="flex items-center">
                       <select
@@ -225,6 +255,35 @@ const TeamManagerContent = ({ onLogin }) => {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* D-06: Modal de Histórico de Valor Hora */}
+      {showWorkerHistory.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowWorkerHistory({ show: false, workerId: null, workerName: '' })}>
+          <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-black text-indigo-700">Histórico de Valor Hora</h3>
+              <button onClick={() => setShowWorkerHistory({ show: false, workerId: null, workerName: '' })} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+            </div>
+            <p className="text-sm font-bold text-slate-500 mb-4">{showWorkerHistory.workerName}</p>
+            {workerValorHoraHistory.length === 0 ? (
+              <p className="text-sm text-slate-400 text-center py-4">Sem histórico disponível</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {workerValorHoraHistory.map(h => (
+                  <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
+                      <span className="text-slate-400">→</span>
+                      <span className="text-sm font-bold text-indigo-600">{h.valor_novo}€</span>
+                    </div>
+                    <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
