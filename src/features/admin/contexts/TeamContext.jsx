@@ -36,6 +36,13 @@ export const TeamProvider = ({ children }) => {
     if (!workerForm.name) return alert('Nome é obrigatório');
     const id = workerForm.id || `worker_${Date.now()}`;
     // D-03: Se dataFim existe, automaticamente definir como inativo
+    // D-06: Salvar histórico se valor hora mudou
+    if (workerForm.id) {
+      const existingWorker = workers.find(w => w.id === workerForm.id);
+      if (existingWorker && existingWorker.valorHora !== workerForm.valorHora) {
+        await saveWorkerValorHoraHistory(workers, saveToDb, workerForm.id, workerForm.valorHora);
+      }
+    }
     const workerToSave = {
       ...workerForm,
       id,
@@ -44,7 +51,7 @@ export const TeamProvider = ({ children }) => {
     await saveToDb('workers', id, workerToSave);
     setIsAddingInTab(false);
     setWorkerForm(INITIAL_WORKER_FORM);
-  }, [workerForm, saveToDb]);
+  }, [workerForm, saveToDb, workers]);
 
   const handleDeleteWorker = useCallback(async (workerId) => {
     await handleDelete('workers', workerId);

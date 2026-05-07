@@ -32,10 +32,17 @@ export const ClientProvider = ({ children }) => {
   const handleSaveClient = useCallback(async () => {
     if (!clientForm.name) return alert('Nome da empresa é obrigatório');
     const id = clientForm.id || `client_${Date.now()}`;
+    // D-07: Salvar histórico se valor hora mudou
+    if (clientForm.id) {
+      const existingClient = clients.find(c => c.id === clientForm.id);
+      if (existingClient && existingClient.valorHora !== clientForm.valorHora) {
+        await saveClientValorHoraHistory(clients, saveToDb, clientForm.id, clientForm.valorHora);
+      }
+    }
     await saveToDb('clients', id, { ...clientForm, id });
     setIsAddingInTab(false);
     setClientForm(INITIAL_CLIENT_FORM);
-  }, [clientForm, saveToDb]);
+  }, [clientForm, saveToDb, clients]);
 
   const handleDeleteClient = useCallback(async (clientId) => {
     await handleDelete('clients', clientId);
