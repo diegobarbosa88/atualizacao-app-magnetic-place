@@ -53,62 +53,142 @@ const CostReports = () => {
     return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
   };
 
-  const exportToCSV = () => {
-    let csv = '';
-    const filename = `relatorio-${activeTab}-${selectedMonth}.csv`;
+  const exportToXLS = () => {
     const today = formatDate(new Date());
     const reportTitle = getReportTitle();
     const monthLabel = getMonthLabel();
+    const filename = `relatorio-${activeTab}-${selectedMonth}.xls`;
 
-    csv += `${reportTitle}\n`;
-    csv += `Período: ${monthLabel}\n`;
-    csv += `Gerado em: ${today}\n`;
-    csv += '\n';
+    const formatCurrency = (value) => {
+      return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
+    };
+
+    let tableRows = '';
+    let totalSection = '';
+    let headers = '';
+    let colCount = 3;
 
     if (activeTab === 'workers') {
-      csv += 'Nome;Total Horas;Custo (€)\n';
-      csv += ';;\n';
-      workerCosts.forEach(item => {
-        csv += `${item.name};${item.totalHours.toFixed(2)};${item.cost.toFixed(2).replace('.', ',')}\n`;
+      headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Nome</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Total Horas</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Custo (€)</th>';
+      colCount = 3;
+      
+      workerCosts.forEach((item, idx) => {
+        const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
+        tableRows += `<tr style="background:${bgColor};"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #E2E8F0;">${item.name}</td><td style="padding:10px 16px;text-align:right;border-bottom:1px solid #E2E8F0;">${item.totalHours.toFixed(2)}h</td><td style="padding:10px 16px;text-align:right;font-weight:600;color:#4F46E5;border-bottom:1px solid #E2E8F0;">${formatCurrency(item.cost)}</td></tr>`;
       });
+      
       const totalHours = workerCosts.reduce((a, i) => a + i.totalHours, 0);
       const totalCost = workerCosts.reduce((a, i) => a + i.cost, 0);
-      csv += `TOTAL;${totalHours.toFixed(2)};${totalCost.toFixed(2).replace('.', ',')}\n`;
-    } else if (activeTab === 'clients') {
-      csv += 'Nome;Total Horas;Faturação (€)\n';
-      csv += ';;\n';
-      clientCosts.forEach(item => {
-        csv += `${item.name};${item.totalHours.toFixed(2)};${item.cost.toFixed(2).replace('.', ',')}\n`;
+      totalSection = `<tr style="background:#EEF2FF;"><td style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #4F46E5;">Total</td><td style="padding:14px 16px;text-align:right;font-weight:800;border-top:2px solid #4F46E5;">${totalHours.toFixed(2)}h</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:#4F46E5;border-top:2px solid #4F46E5;">${formatCurrency(totalCost)}</td></tr>`;
+    }
+
+    if (activeTab === 'clients') {
+      headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Nome</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Total Horas</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Faturação (€)</th>';
+      colCount = 3;
+      
+      clientCosts.forEach((item, idx) => {
+        const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
+        tableRows += `<tr style="background:${bgColor};"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #E2E8F0;">${item.name}</td><td style="padding:10px 16px;text-align:right;border-bottom:1px solid #E2E8F0;">${item.totalHours.toFixed(2)}h</td><td style="padding:10px 16px;text-align:right;font-weight:600;color:#059669;border-bottom:1px solid #E2E8F0;">${formatCurrency(item.cost)}</td></tr>`;
       });
+      
       const totalHours = clientCosts.reduce((a, i) => a + i.totalHours, 0);
       const total = clientCosts.reduce((a, i) => a + i.cost, 0);
-      csv += `TOTAL;${totalHours.toFixed(2)};${total.toFixed(2).replace('.', ',')}\n`;
-    } else if (activeTab === 'margins') {
-      csv += 'Cliente;Horas;Faturação (€);Custo (€);Margem (€)\n';
-      csv += ';;;;\n';
-      clientMargins.forEach(item => {
-        const marginColor = item.margin >= 0 ? '+' : '';
-        csv += `${item.name};${item.totalHours.toFixed(2)};${item.faturation.toFixed(2).replace('.', ',')};${item.cost.toFixed(2).replace('.', ',')};${marginColor}${item.margin.toFixed(2).replace('.', ',')}\n`;
+      totalSection = `<tr style="background:#ECFDF5;"><td style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #059669;">Total</td><td style="padding:14px 16px;text-align:right;font-weight:800;border-top:2px solid #059669;">${totalHours.toFixed(2)}h</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:#059669;border-top:2px solid #059669;">${formatCurrency(total)}</td></tr>`;
+    }
+
+    if (activeTab === 'margins') {
+      headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Cliente</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Horas</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Faturação (€)</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Custo (€)</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Margem (€)</th>';
+      colCount = 5;
+      
+      clientMargins.forEach((item, idx) => {
+        const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
+        const marginColor = item.margin >= 0 ? '#059669' : '#DC2626';
+        const marginSign = item.margin >= 0 ? '+' : '';
+        tableRows += `<tr style="background:${bgColor};"><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #E2E8F0;">${item.name}</td><td style="padding:10px 16px;text-align:right;border-bottom:1px solid #E2E8F0;">${item.totalHours.toFixed(2)}h</td><td style="padding:10px 16px;text-align:right;color:#4F46E5;border-bottom:1px solid #E2E8F0;">${formatCurrency(item.faturation)}</td><td style="padding:10px 16px;text-align:right;color:#DC2626;border-bottom:1px solid #E2E8F0;">${formatCurrency(item.cost)}</td><td style="padding:10px 16px;text-align:right;font-weight:700;color:${marginColor};border-bottom:1px solid #E2E8F0;">${marginSign}${formatCurrency(item.margin)}</td></tr>`;
       });
+      
       const totalF = clientMargins.reduce((a, i) => a + i.faturation, 0);
       const totalC = clientMargins.reduce((a, i) => a + i.cost, 0);
       const totalM = clientMargins.reduce((a, i) => a + i.margin, 0);
       const totalH = clientMargins.reduce((a, i) => a + i.totalHours, 0);
-      csv += `TOTAL;${totalH.toFixed(2)};${totalF.toFixed(2).replace('.', ',')};${totalC.toFixed(2).replace('.', ',')};${totalM >= 0 ? '+' : ''}${totalM.toFixed(2).replace('.', ',')}\n`;
-    } else if (activeTab === 'expenses') {
-      csv += 'Data;Descrição;Tipo;Valor (€)\n';
-      csv += ';;;\n';
-      sortedExpenses.forEach(exp => {
-        csv += `${formatDate(exp.date)};${exp.name};${exp.type};${Number(exp.amount).toFixed(2).replace('.', ',')}\n`;
-      });
-      csv += `TOTAL;;;${totalExpenses.toFixed(2).replace('.', ',')}\n`;
+      const marginTotalColor = totalM >= 0 ? '#059669' : '#DC2626';
+      const marginSign = totalM >= 0 ? '+' : '';
+      totalSection = `<tr style="background:#EEF2FF;"><td style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #4F46E5;">Total</td><td style="padding:14px 16px;text-align:right;font-weight:800;border-top:2px solid #4F46E5;">${totalH.toFixed(2)}h</td><td style="padding:14px 16px;text-align:right;font-weight:800;color:#4F46E5;border-top:2px solid #4F46E5;">${formatCurrency(totalF)}</td><td style="padding:14px 16px;text-align:right;font-weight:800;color:#DC2626;border-top:2px solid #4F46E5;">${formatCurrency(totalC)}</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:${marginTotalColor};border-top:2px solid #4F46E5;">${marginSign}${formatCurrency(totalM)}</td></tr>`;
     }
 
-    csv += '\n---\n';
-    csv += 'Magnetic Place - Sistema de Gestão de Horas';
+    if (activeTab === 'expenses') {
+      headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Data</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Descrição</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:center;font-weight:bold;border-bottom:2px solid #3730A3;">Tipo</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Valor</th>';
+      colCount = 4;
+      
+      sortedExpenses.forEach((exp, idx) => {
+        const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
+        const typeBg = exp.type === 'fixo' ? '#DBEAFE' : '#FEF3C7';
+        const typeColor = exp.type === 'fixo' ? '#1D4ED8' : '#D97706';
+        tableRows += `<tr style="background:${bgColor};"><td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;">${formatDate(exp.date)}</td><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #E2E8F0;">${exp.name}</td><td style="padding:10px 16px;text-align:center;"><span style="background:${typeBg};color:${typeColor};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;">${exp.type}</span></td><td style="padding:10px 16px;text-align:right;font-weight:600;color:#DC2626;border-bottom:1px solid #E2E8F0;">-${formatCurrency(exp.amount)}</td></tr>`;
+      });
+      
+      totalSection = `<tr style="background:#FEF2F2;"><td colspan="3" style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #DC2626;">Total Despesas</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:#DC2626;border-top:2px solid #DC2626;">-${formatCurrency(totalExpenses)}</td></tr>`;
+    }
 
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
+    const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+  <meta charset="utf-8">
+  <meta name="Generator" content="Microsoft Excel">
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 40px; background: #f8fafc; }
+    .header { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; padding: 30px 40px; border-radius: 16px 16px 0 0; margin-bottom: 0; }
+    .company { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+    .title { font-size: 18px; font-weight: 600; opacity: 0.9; }
+    .info-bar { background: white; padding: 20px 40px; display: flex; gap: 40px; border-bottom: 1px solid #e2e8f0; margin-bottom: 0; }
+    .info-item { display: flex; flex-direction: column; }
+    .info-label { font-size: 10px; text-transform: uppercase; color: #94a3b8; font-weight: 700; letter-spacing: 1px; }
+    .info-value { font-size: 14px; font-weight: 600; color: #334155; }
+    .content { background: white; border-radius: 0 0 16px 16px; padding: 0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    table { width: 100%; border-collapse: collapse; margin: 0; }
+    th { background: #4F46E5; color: white; padding: 12px 16px; text-align: left; font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .footer { margin-top: 20px; padding: 20px; text-align: center; color: #94a3b8; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company">Magnetic Place</div>
+    <div class="title">${reportTitle}</div>
+  </div>
+  <div class="info-bar">
+    <div class="info-item">
+      <span class="info-label">Período</span>
+      <span class="info-value">${monthLabel}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Gerado em</span>
+      <span class="info-value">${today}</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">Total Registos</span>
+      <span class="info-value">${activeTab === 'workers' ? workerCosts.length : activeTab === 'clients' ? clientCosts.length : activeTab === 'margins' ? clientMargins.length : sortedExpenses.length}</span>
+    </div>
+  </div>
+  <div class="content">
+    <table>
+      <thead>
+        <tr>${headers}</tr>
+      </thead>
+      <tbody>
+        ${tableRows}
+      </tbody>
+      <tfoot>
+        ${totalSection}
+      </tfoot>
+    </table>
+  </div>
+  <div class="footer">
+    Sistema de Gestão de Horas - Magnetic Place
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -475,7 +555,7 @@ const CostReports = () => {
               {isAddingExpense ? 'Fechar' : 'Nova Despesa'}
             </button>
           )}
-          <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-700 transition-all">
+          <button onClick={exportToXLS} className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-700 transition-all">
             <Download size={16} />
             Exportar
           </button>
