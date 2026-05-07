@@ -61,6 +61,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     isDrawing.current = true;
     const { x, y } = getCoordinates(e);
     const ctx = canvasRef.current.getContext('2d');
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#4f46e5';
     ctx.beginPath();
     ctx.moveTo(x, y);
   };
@@ -70,6 +74,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     if (!isDrawing.current) return;
     const { x, y } = getCoordinates(e);
     const ctx = canvasRef.current.getContext('2d');
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#4f46e5';
     ctx.lineTo(x, y);
     ctx.stroke();
     if (!hasSignature) setHasSignature(true);
