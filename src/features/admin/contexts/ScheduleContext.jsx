@@ -17,12 +17,12 @@ export const ScheduleProvider = ({ children }) => {
   const [schedulesSort, setSchedulesSort] = useState({ key: 'name', direction: 'asc' });
   const [scheduleForm, setScheduleForm] = useState(INITIAL_SCHEDULE_FORM);
 
-  const handleSaveSchedule = useCallback(async () => {
+  const handleSaveSchedule = useCallback(async (assignmentDates = {}) => {
     if (!scheduleForm.name) return alert('Nome do horário é obrigatório');
     const sId = scheduleForm.id || `s${Date.now()}`;
     await saveToDb('schedules', sId, { ...scheduleForm, id: sId });
 
-    // Update workers associations
+    // Update workers associations - now with dates if provided
     for (const w of workers) {
       const isSelected = scheduleForm.assignedWorkers?.includes(w.id);
       const currentAssigned = w.assignedSchedules || [];
@@ -35,7 +35,22 @@ export const ScheduleProvider = ({ children }) => {
       }
 
       if (JSON.stringify(currentAssigned) !== JSON.stringify(nextAssigned)) {
-        await saveToDb('workers', w.id, { ...w, assignedSchedules: nextAssigned });
+        const dates = assignmentDates[w.id];
+        const scheduleDates = w.assignedScheduleDates || {};
+        
+        if (dates && dates.dataInicio) {
+          // Save dates for this schedule assignment
+          scheduleDates[sId] = { 
+            dataInicio: dates.dataInicio, 
+            dataFim: dates.dataFim || null 
+          };
+        }
+        
+        await saveToDb('workers', w.id, { 
+          ...w, 
+          assignedSchedules: nextAssigned,
+          assignedScheduleDates: scheduleDates
+        });
       }
     }
 

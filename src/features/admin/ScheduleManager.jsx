@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSchedule, ScheduleProvider } from './contexts/ScheduleContext';
 import { 
@@ -14,8 +14,13 @@ const ScheduleManagerContent = () => {
     schedulesSort, setSchedulesSort,
     scheduleForm, setScheduleForm,
     handleSaveSchedule,
-    handleDeleteSchedule
+    handleDeleteSchedule,
+    handleAssignScheduleWithDates,
+    handleUnassignSchedule
   } = useSchedule();
+
+  // State para datas de atribuição
+  const [assignmentDates, setAssignmentDates] = useState({});
 
   const sortedSchedules = [...useApp().schedules].sort((a, b) => {
     let res = a.name.localeCompare(b.name);
@@ -156,18 +161,54 @@ const ScheduleManagerContent = () => {
             <label className="text-[10px] font-black text-slate-400 uppercase ml-1 block mb-3">Atribuir aos Trabalhadores</label>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-48 overflow-y-auto p-4 bg-slate-50 rounded-2xl border border-slate-100">
               {workers.map(w => (
-                <label key={w.id} className="flex items-center gap-2 p-3 bg-white rounded-xl border border-slate-100 cursor-pointer hover:border-slate-300 hover:bg-slate-50 transition-colors shadow-sm">
-                  <input type="checkbox" checked={scheduleForm.assignedWorkers?.includes(w.id)} onChange={() => {
-                    const current = scheduleForm.assignedWorkers || [];
-                    const updated = current.includes(w.id) ? current.filter(id => id !== w.id) : [...current, w.id];
-                    setScheduleForm({ ...scheduleForm, assignedWorkers: updated });
-                  }} className="rounded text-indigo-600" />
-                  <span className="text-[10px] font-bold text-slate-700 truncate">{w.name}</span>
-                </label>
+                <div key={w.id} className="flex flex-col gap-2 p-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" checked={scheduleForm.assignedWorkers?.includes(w.id)} onChange={(e) => {
+                      const current = scheduleForm.assignedWorkers || [];
+                      const updated = e.target.checked ? [...current, w.id] : current.filter(id => id !== w.id);
+                      setScheduleForm({ ...scheduleForm, assignedWorkers: updated });
+                      // Initialize dates when checked
+                      if (e.target.checked) {
+                        setAssignmentDates(prev => ({
+                          ...prev,
+                          [w.id]: { 
+                            scheduleId: null, 
+                            dataInicio: new Date().toISOString().split('T')[0], 
+                            dataFim: '' 
+                          }
+                        }));
+                      }
+                    }} className="rounded text-indigo-600" />
+                    <span className="text-[10px] font-bold text-slate-700 truncate">{w.name}</span>
+                  </div>
+                  {scheduleForm.assignedWorkers?.includes(w.id) && (
+                    <div className="flex gap-1 ml-4">
+                      <input 
+                        type="date" 
+                        value={assignmentDates[w.id]?.dataInicio || ''}
+                        onChange={(e) => setAssignmentDates(prev => ({
+                          ...prev,
+                          [w.id]: { ...prev[w.id], dataInicio: e.target.value }
+                        }))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1 text-[9px]"
+                      />
+                      <input 
+                        type="date" 
+                        value={assignmentDates[w.id]?.dataFim || ''}
+                        onChange={(e) => setAssignmentDates(prev => ({
+                          ...prev,
+                          [w.id]: { ...prev[w.id], dataFim: e.target.value }
+                        }))}
+                        placeholder="Fim"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-1 text-[9px]"
+                      />
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
-          <div className="mt-8 flex justify-end gap-3"><button onClick={() => setIsAddingInTab(false)} className="px-6 py-3 text-slate-400 font-bold uppercase text-xs">Cancelar</button><button onClick={handleSaveSchedule} className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-black text-xs uppercase shadow-lg">Salvar Horário</button></div>
+          <div className="mt-8 flex justify-end gap-3"><button onClick={() => setIsAddingInTab(false)} className="px-6 py-3 text-slate-400 font-bold uppercase text-xs">Cancelar</button><button onClick={() => handleSaveSchedule(assignmentDates)} className="bg-indigo-600 text-white px-10 py-3 rounded-xl font-black text-xs uppercase shadow-lg">Salvar Horário</button></div>
         </div>
       )}
 
