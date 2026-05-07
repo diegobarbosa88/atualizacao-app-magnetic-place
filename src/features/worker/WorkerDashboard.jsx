@@ -85,11 +85,62 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
   };
 
+  // Helper: obter data de início do trabalhador atual
+  const workerDataInicio = currentUser?.dataInicio;
+  const workerStartDate = workerDataInicio
+    ? new Date(workerDataInicio)
+    : null;
+
+  // Helper para verificar se o mês é acessível (>= dataInicio)
+  const isMonthAccessible = (date) => {
+    if (!currentUser?.dataInicio) return true; // Sem data = acessível
+    const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
+    const workerStart = new Date(currentUser.dataInicio);
+    return monthStart >= workerStart;
+  };
+
+  // Helper para verificar se dataFim bloqueou o acesso
+  const isAccessBlockedByFim = () => {
+    if (!currentUser?.dataFim) return false;
+    const workerEnd = new Date(currentUser.dataFim);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today > workerEnd;
+  };
+
+  const canFillHours = isMonthAccessible(currentMonth) && !isAccessBlockedByFim();
+
+  // Se dataFim passou, mostrar ecrã de acesso bloqueado
+  if (isAccessBlockedByFim()) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-8 text-center max-w-md shadow-xl">
+          <div className="text-6xl mb-4">🔒</div>
+          <h2 className="text-2xl font-black text-slate-800 mb-2">Acesso Bloqueado</h2>
+          <p className="text-sm text-slate-500 mb-4">
+            O teu acesso foi desactivado em {new Date(currentUser.dataFim).toLocaleDateString('pt-PT')}.
+          </p>
+          <p className="text-xs text-slate-400">
+            Contacta o administrador se precisas de reativar o acesso.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Filtrar pendingApprovals - só meses >= dataInicio
+  const filteredPendingApprovals = pendingApprovals.filter(pending => {
+    if (!workerStartDate) return true; // Sem data de início = sem filtro
+    const pendingMonth = new Date(pending.date);
+    const pendingMonthStart = new Date(pendingMonth.getFullYear(), pendingMonth.getMonth(), 1);
+    return pendingMonthStart >= workerStartDate;
+  });
+
   return (
     <div className="min-h-screen bg-slate-50 pb-32 font-sans relative">
       {currentUser?.isAdminImpersonating && (
         <div className="bg-indigo-600 text-white p-2 text-center text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100]">
-          <span>Modo VisualizaÃ§Ã£o Admin (Impersonando: {currentUser.name})</span>
+          <span>Modo Visualização Admin (Impersonando: {currentUser.name})</span>
           <button
             onClick={() => onLogin('admin')}
             className="bg-white text-indigo-600 px-3 py-1 rounded-full hover:bg-indigo-50 transition-all shadow-sm"
@@ -119,13 +170,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               </span>
             )}
             <Timer size={16} className="shrink-0" />
-            <span className="hidden sm:inline">Meus HorÃ¡rios</span>
+            <span className="hidden sm:inline">Meus Horários</span>
           </button>
           <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-600 transition-all"><LogOut size={18} /></button>
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8">
-        {pendingApprovals.map((pending, idx) => {
+        {filteredPendingApprovals.map((pending, idx) => {
           const isViewingThisMonth = pending.monthStr === currentMonthStr;
           return (
             <div key={`pending-${pending.monthStr}`} className="mb-8 animate-in slide-in-from-top-4 duration-700">
@@ -142,8 +193,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         </h3>
                         <p className="text-sm font-bold text-slate-500 mt-1">
                           {isViewingThisMonth
-                            ? "O mÃªs terminou. Verifica os teus registos e submete para aprovaÃ§Ã£o."
-                            : "Ainda tens horas de um mÃªs anterior por validar. Por favor, revÃª e submete."}
+                            ? "O mês terminou. Verifica os teus registos e submete para aprovação."
+                            : "Ainda tens horas de um mês anterior por validar. Por favor, revê e submete."}
                         </p>
                       </div>
                     </div>
@@ -180,7 +231,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                     </div>
                     <div>
                       <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Assinaturas Pendentes</h3>
-                      <p className="text-sm font-bold text-slate-500 mt-1">Tens documentos importantes que requerem a tua validaÃ§Ã£o e assinatura digital.</p>
+                      <p className="text-sm font-bold text-slate-500 mt-1">Tens documentos importantes que requerem a tua validação e assinatura digital.</p>
                     </div>
                   </div>
                   <button
@@ -201,7 +252,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         <div className="bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] p-5 md:p-8 mb-6 md:mb-8 shadow-2xl text-white flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-700 hidden sm:block"><CompanyLogo className="h-64 w-64 filter invert grayscale" /></div>
           <div className="relative z-10 w-full md:flex-1 mb-2 md:mb-0">
-            <h2 className="text-3xl md:text-5xl font-black mb-4 leading-tight text-white text-center md:text-left uppercase tracking-tighter">OlÃ¡, {currentUser?.name?.split(' ')[0]}!</h2>
+            <h2 className="text-3xl md:text-5xl font-black mb-4 leading-tight text-white text-center md:text-left uppercase tracking-tighter">Olá, {currentUser?.name?.split(' ')[0]}!</h2>
             <div className="flex items-center justify-center md:justify-start gap-3 bg-white/10 p-2 rounded-2xl w-full sm:w-fit">
               <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white"><ChevronLeft size={16} /></button>
               <div className="text-indigo-200 flex items-center gap-2 text-sm font-bold font-mono uppercase tracking-widest min-w-[120px] justify-center"><Calendar size={18} /> {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</div>
@@ -219,7 +270,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               <div className="text-3xl sm:text-5xl font-black">{formatHours(todayHours)}</div>
             </div>
             <div className="bg-indigo-500/20 backdrop-blur-xl p-6 sm:p-8 rounded-3xl md:rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center flex-1 md:min-w-[150px] shadow-inner relative">
-              <p className="text-[10px] font-black uppercase text-indigo-200 mb-1">Total MÃªs</p>
+              <p className="text-[10px] font-black uppercase text-indigo-200 mb-1">Total Mês</p>
               <div className="flex flex-col items-center mb-1 text-center">
                 <div className="text-3xl sm:text-5xl font-black text-indigo-50 flex items-baseline gap-2 justify-center">
                   {formatHours(totalMonthHours)}
@@ -264,39 +315,50 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
               <CheckCircle size={40} className="text-emerald-500" />
             </div>
-            <h3 className="text-2xl font-black uppercase tracking-widest mb-2">MÃªs Validado e Fechado</h3>
-            <p className="text-sm font-bold opacity-70 max-w-md mx-auto">As horas de {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} jÃ¡ foram aprovadas e enviadas para a administraÃ§Ã£o. NÃ£o Ã© possÃ­vel adicionar novos registos ou apagar os existentes.</p>
+            <h3 className="text-2xl font-black uppercase tracking-widest mb-2">Mês Validado e Fechado</h3>
+            <p className="text-sm font-bold opacity-70 max-w-md mx-auto">As horas de {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} já foram aprovadas e enviadas para a administração. Não é possível adicionar novos registos ou apagar os existentes.</p>
           </div>
         ) : (
           <div className="mb-8">
+            {!canFillHours && (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+                <p className="text-sm font-bold text-amber-600">
+                  {currentUser?.dataInicio
+                    ? `Só podes registar horas a partir de ${new Date(currentUser.dataInicio).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}`
+                    : 'O teu acesso foi desactivado.'}
+                </p>
+              </div>
+            )}
             {successMsg && (
               <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl flex items-center justify-center gap-3 border border-emerald-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
                 <CheckCircle size={24} className="text-emerald-500" />
                 <span>{successMsg}</span>
               </div>
             )}
-            <EntryForm
-              data={mainFormData}
-              clients={clients}
-              assignedClients={currentUser?.assignedClients}
-              onChange={setMainFormData}
-              onSave={() => {
-                if (!mainFormData.clientId || !mainFormData.startTime || !mainFormData.endTime) {
+            {canFillHours && (
+              <EntryForm
+                data={mainFormData}
+                clients={clients}
+                assignedClients={currentUser?.assignedClients}
+                onChange={setMainFormData}
+                onSave={() => {
+                  if (!mainFormData.clientId || !mainFormData.startTime || !mainFormData.endTime) {
+                    handleSaveEntry(mainFormData, true);
+                    return;
+                  }
                   handleSaveEntry(mainFormData, true);
-                  return;
-                }
-                handleSaveEntry(mainFormData, true);
-                setSuccessMsg('Registo inserido com sucesso!');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-                setTimeout(() => setSuccessMsg(''), 6000);
-              }}
-              onCancel={() => {
-                setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
-              }}
-              showDate
-              systemSettings={systemSettings}
-              title="Novo Registo de Atividade"
-            />
+                  setSuccessMsg('Registo inserido com sucesso!');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setTimeout(() => setSuccessMsg(''), 6000);
+                }}
+                onCancel={() => {
+                  setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
+                }}
+                showDate
+                systemSettings={systemSettings}
+                title="Novo Registo de Atividade"
+              />
+            )}
           </div>
         )}
 
@@ -304,7 +366,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <div className="hidden md:grid grid-cols-[120px_1fr_150px] gap-6 bg-slate-50 border-b border-slate-100 px-8 py-5">
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Dia</div>
             <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Actividades</div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">AÃ§Ã£o</div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Ação</div>
           </div>
           <div className="divide-y divide-slate-100">
             {daysList.map(ds => {
@@ -313,6 +375,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               const isCurrentInline = inlineEditingDate === ds;
               const isExpanded = expandedDays.includes(ds);
               const dObj = new Date(ds);
+              const dayDate = new Date(ds);
+              const isDayBeforeStart = workerStartDate && dayDate < workerStartDate;
 
               const toggleExpand = () => {
                 if (isExpanded) {
@@ -339,18 +403,21 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         {dayTotalTotal > 0 ? (
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-black text-indigo-600">{formatHours(dayTotalTotal)} registradas</span>
-                            {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">â€¢ Detalhes</span>}
+                            {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">• Detalhes</span>}
                           </div>
                         ) : (
                           <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem registos</span>
                         )}
                       </div>
                       <div className="flex justify-end items-center gap-2">
-                        {!myApproval && (
+                        {!myApproval && !isDayBeforeStart && (
                           <>
-                            <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo RÃ¡pido" className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Zap size={16} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Zap size={16} /></button>
                             <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
                           </>
+                        )}
+                        {isDayBeforeStart && (
+                          <span className="text-[10px] text-slate-300 font-bold">Indisponível</span>
                         )}
                         <div className="ml-1 border-l border-slate-100 pl-3">
                           {isExpanded ? <ChevronUp size={20} className="text-indigo-400" /> : <ChevronDown size={20} className="text-slate-300" />}
@@ -371,7 +438,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                                   <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">{log.startTime}-{log.endTime}</div>
                                   {(log.breakStart || log.breakEnd) && (
                                     <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1.5 rounded-lg border border-orange-100">
-                                      Pausa: {log.breakStart || '--:--'} Ã s {log.breakEnd || '--:--'}
+Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                     </div>
                                   )}
                                 </div>
@@ -385,7 +452,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-4 bg-white rounded-2xl border border-dashed border-slate-200">NÃ£o existem tarefas detalhadas para este dia.</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-4 bg-white rounded-2xl border border-dashed border-slate-200">Não existem tarefas detalhadas para este dia.</p>
                         )}
 
                         {isCurrentInline && (
@@ -420,7 +487,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl animate-in zoom-in-95">
             <div className="flex justify-between items-center mb-8 border-b pb-4">
-              <h3 className="text-2xl font-black flex items-center gap-3"><Timer className="text-indigo-600" /> Meus HorÃ¡rios</h3>
+              <h3 className="text-2xl font-black flex items-center gap-3"><Timer className="text-indigo-600" /> Meus Horários</h3>
               <button onClick={() => setShowSchedulesModal(false)} className="p-2 text-slate-300 hover:text-red-500"><X size={24} /></button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -433,7 +500,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         <p className="text-xs font-black">{s.name}</p>
                         {s.isAdvanced ? (
                           <div className="mt-2 space-y-1">
-                            {[{ v: 1, l: '2Âª' }, { v: 2, l: '3Âª' }, { v: 3, l: '4Âª' }, { v: 4, l: '5Âª' }, { v: 5, l: '6Âª' }, { v: 6, l: 'SÃ¡b' }, { v: 0, l: 'Dom' }].map(d => {
+                            {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                               const config = s.dailyConfigs && s.dailyConfigs[d.v];
                               if (!config || !config.isActive) return null;
                               return (
@@ -454,7 +521,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                               </div>
                             )}
                             <div className="flex gap-0.5 mt-1">
-                              {[{ v: 1, l: '2Âª' }, { v: 2, l: '3Âª' }, { v: 3, l: '4Âª' }, { v: 5, l: '6Âª' }, { v: 6, l: 'SÃ¡b' }, { v: 0, l: 'Dom' }].map(d => {
+                              {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                                 const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
                                 return isActive ? <span key={d.v} className="bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
                               })}
@@ -466,7 +533,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         <Star fill={currentUser?.defaultScheduleId === s.id ? 'currentColor' : 'none'} size={16} />
                       </button>
                     </div>
-                  )) : <p className="text-xs text-slate-400 italic">Sem turnos atribuÃ­dos.</p>}
+                  )) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
                 </div>
               </div>
               <div className="space-y-4">
@@ -478,7 +545,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         <p className="text-xs font-black">{s.name}</p>
                         {s.isAdvanced ? (
                           <div className="mt-2 space-y-1">
-                            {[{ v: 1, l: '2Âª' }, { v: 2, l: '3Âª' }, { v: 3, l: '4Âª' }, { v: 4, l: '5Âª' }, { v: 5, l: '6Âª' }, { v: 6, l: 'SÃ¡b' }, { v: 0, l: 'Dom' }].map(d => {
+                            {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                               const config = s.dailyConfigs && s.dailyConfigs[d.v];
                               if (!config || !config.isActive) return null;
                               return (
@@ -499,7 +566,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                               </div>
                             )}
                             <div className="flex gap-0.5 mt-1">
-                              {[{ v: 1, l: '2Âª' }, { v: 2, l: '3Âª' }, { v: 3, l: '4Âª' }, { v: 5, l: '6Âª' }, { v: 6, l: 'SÃ¡b' }, { v: 0, l: 'Dom' }].map(d => {
+                              {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                                 const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
                                 return isActive ? <span key={d.v} className="bg-emerald-100 text-emerald-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
                               })}
@@ -520,11 +587,11 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   <input type="text" placeholder="Nome do turno..." className="w-full p-2 text-xs rounded-xl border-none outline-none bg-white" value={newPersonalForm.name} onChange={e => setNewPersonalForm({ ...newPersonalForm, name: e.target.value })} />
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-400 ml-1">Entrada</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white font-bold text-indigo-600" value={newPersonalForm.startTime} onChange={e => setNewPersonalForm({ ...newPersonalForm, startTime: e.target.value })} /></div>
-                    <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-400 ml-1">SaÃ­da</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white font-bold text-indigo-600" value={newPersonalForm.endTime} onChange={e => setNewPersonalForm({ ...newPersonalForm, endTime: e.target.value })} /></div>
+                    <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-400 ml-1">Saída</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white font-bold text-indigo-600" value={newPersonalForm.endTime} onChange={e => setNewPersonalForm({ ...newPersonalForm, endTime: e.target.value })} /></div>
                   </div>
 
                   <button type="button" onClick={() => setShowPersonalBreaks(!showPersonalBreaks)} className="text-[9px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 py-1">
-                    {showPersonalBreaks ? 'Ã— Ocultar Pausa' : '+ Adicionar Pausa'}
+                    {showPersonalBreaks ? '× Ocultar Pausa' : '+ Adicionar Pausa'}
                   </button>
 
                   {showPersonalBreaks && (
@@ -534,7 +601,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-1 mt-1 justify-center">
-                    {[{ v: 1, l: '2Âª' }, { v: 2, l: '3Âª' }, { v: 3, l: '4Âª' }, { v: 4, l: '5Âª' }, { v: 5, l: '6Âª' }, { v: 6, l: 'SÃ¡b' }, { v: 0, l: 'Dom' }].map(day => {
+                    {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(day => {
                       const isActive = (newPersonalForm.weekdays || [1, 2, 3, 4, 5]).includes(day.v);
                       return (
                         <button type="button" key={day.v} onClick={() => {

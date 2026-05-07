@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
@@ -26,7 +26,18 @@ const TeamManagerContent = ({ onLogin }) => {
     handleDeleteWorker
   } = useTeam();
 
-  const sortedWorkers = [...workers].sort((a, b) => {
+  const [showInactive, setShowInactive] = useState(false);
+
+  // Contador de inativos
+  const inactiveCount = workers.filter(w => w.status === 'inativo').length;
+
+  // Filtrar workers para display
+  const displayWorkers = workers.filter(w => {
+    if (showInactive) return true; // Mostrar todos
+    return w.status !== 'inativo'; // Só ativos
+  });
+
+  const sortedWorkers = [...displayWorkers].sort((a, b) => {
     let res = 0;
     if (workersSort.key === 'name') res = a.name.localeCompare(b.name);
     if (workersSort.key === 'profissao') res = (a.profissao || '').localeCompare(b.profissao || '');
@@ -51,6 +62,17 @@ const TeamManagerContent = ({ onLogin }) => {
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-black flex items-center gap-3"><Users size={32} className="text-indigo-600" /> Gestão de Colaboradores</h2>
         <div className="flex items-center gap-4">
+          {inactiveCount > 0 && (
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={e => setShowInactive(e.target.checked)}
+                className="rounded border-slate-300"
+              />
+              Mostrar inativos ({inactiveCount})
+            </label>
+          )}
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
             <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>

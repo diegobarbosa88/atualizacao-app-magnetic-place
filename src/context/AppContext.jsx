@@ -75,6 +75,7 @@ export const AppProvider = ({ children }) => {
     const initSupabase = async () => {
       if (window.supabase) {
         supabaseInstance = window.supabase.createClient(supabaseUrl, supabaseKey);
+        window.supabaseInstance = supabaseInstance;
         setIsDbReady(true);
       } else {
         const script = document.createElement('script');
@@ -82,6 +83,7 @@ export const AppProvider = ({ children }) => {
         script.onload = () => {
           if (window.supabase) {
             supabaseInstance = window.supabase.createClient(supabaseUrl, supabaseKey);
+            window.supabaseInstance = supabaseInstance;
             setIsDbReady(true);
           }
         };
@@ -120,7 +122,9 @@ export const AppProvider = ({ children }) => {
             }));
             setter(mapped);
           } else {
-            setter(data);
+            // Deduplicate by ID to prevent duplicate entries
+            const unique = [...new Map(data.map(d => [d.id, d])).values()];
+            setter(unique);
           }
         }
       };
@@ -146,9 +150,31 @@ export const AppProvider = ({ children }) => {
     const channelNotif = supabaseInstance
       .channel('realtime-notifications')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_notifications' }, (payload) => {
-        if (payload.eventType === 'INSERT') setAppNotifications(prev => [payload.new, ...prev]);
-        else if (payload.eventType === 'UPDATE') setAppNotifications(prev => prev.map(n => n.id === payload.new.id ? payload.new : n));
-        else if (payload.eventType === 'DELETE') setAppNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          // Se for UPDATE, verificar se viewed_by_ids contém workers não-alvo (bug do trigger)
+          // Apenas aplicar se não houver workers inválidos no viewed_by_ids
+          const newNotif = payload.new;
+          const targetIds = typeof newNotif.target_worker_ids === 'string'
+            ? JSON.parse(newNotif.target_worker_ids)
+            : (newNotif.target_worker_ids || []);
+          const viewedIds = typeof newNotif.viewed_by_ids === 'string'
+            ? JSON.parse(newNotif.viewed_by_ids)
+            : (newNotif.viewed_by_ids || []);
+
+          // Se viewed_by_ids contém workers que não são alvo, ignorar este UPDATE
+          const hasInvalidViewed = viewedIds.some(vId => !targetIds.includes(vId));
+          if (hasInvalidViewed && payload.eventType === 'UPDATE') {
+            console.log('Ignoring spurious UPDATE from trigger for notification:', newNotif.id);
+            return;
+          }
+
+          setAppNotifications(prev => {
+            const exists = prev.some(x => x.id === newNotif.id);
+            return exists ? prev.map(x => x.id === newNotif.id ? newNotif : x) : [newNotif, ...prev];
+          });
+        } else if (payload.eventType === 'DELETE') {
+          setAppNotifications(prev => prev.filter(n => n.id !== payload.old.id));
+        }
       })
       .subscribe();
 
@@ -245,6 +271,13 @@ export const AppProvider = ({ children }) => {
       if (nis) payload.nis = nis;
     }
 
+    // Para app_notifications, forçar viewed_by_ids e dismissed_by_ids para null/array vazio
+    // Isto evita problemas com triggers ou defaults no Supabase
+    if (tableName === 'app_notifications') {
+      payload.viewed_by_ids = null;
+      payload.dismissed_by_ids = [];
+    }
+
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
     if (error) console.error(`Erro ao gravar em ${tableName}:`, error);
   };
@@ -282,6 +315,27 @@ export const AppProvider = ({ children }) => {
     await supabaseInstance.from(deleteTable).delete().eq('id', id);
   };
 
+  // Helper: verificar se um worker está ativo num determinado mês
+  const isWorkerActiveInMonth = (worker, logDate) => {
+    if (!worker) return false;
+    const logMonth = new Date(logDate);
+    logMonth.setDate(1); // Primeiro dia do mês
+
+    // Verificar data de início
+    if (worker.dataInicio) {
+      const startDate = new Date(worker.dataInicio);
+      if (logMonth < startDate) return false;
+    }
+
+    // Verificar data de fim
+    if (worker.dataFim) {
+      const endDate = new Date(worker.dataFim);
+      if (logMonth > endDate) return false;
+    }
+
+    return true;
+  };
+
   // --- ADMIN STATS ---
   const adminStats = useMemo(() => {
     const monthLogs = logs.filter(l => isSameMonth(l.date, currentMonth));
@@ -296,7 +350,9 @@ export const AppProvider = ({ children }) => {
       const client = clients.find(c => c.id === l.clientId);
       const worker = workers.find(w => w.id === l.workerId);
       if (client) expectedRevenue += l.hours * (Number(client.valorHora) || 0);
-      if (worker) expectedCosts += l.hours * (Number(worker.valorHora) || 0);
+      if (worker && isWorkerActiveInMonth(worker, l.date)) {
+        expectedCosts += l.hours * (Number(worker.valorHora) || 0);
+      }
     });
 
     const monthlyExpenses = expenses.filter(e => isSameMonth(e.date, currentMonth)).reduce((a, b) => a + Number(b.amount), 0);
