@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Users, Building2, CalendarRange, FileText } from 'lucide-react';
+import { Users, Building2, TrendingUp, CalendarRange, FileText } from 'lucide-react';
 
 const CostReports = () => {
   const { workers, clients, logs } = useApp();
@@ -72,15 +72,212 @@ const CostReports = () => {
     }).sort((a, b) => b.cost - a.cost);
   }, [logs, clients, selectedMonth]);
 
-  const currentData = activeTab === 'workers' ? workerCosts : clientCosts;
-  const totalHoursAll = currentData.reduce((acc, item) => acc + item.totalHours, 0);
-  const totalCostAll = currentData.reduce((acc, item) => acc + item.cost, 0);
+  const clientMargins = useMemo(() => {
+    if (!logs || !clients || !workers) return [];
+    
+    const filteredLogs = logs.filter(log => log.date?.startsWith(selectedMonth));
+    
+    const grouped = filteredLogs.reduce((acc, log) => {
+      if (!acc[log.clientId]) {
+        acc[log.clientId] = { totalHours: 0, faturation: 0, cost: 0 };
+      }
+      const hours = Number(log.hours) || 0;
+      const client = clients.find(c => c.id === log.clientId);
+      const worker = workers.find(w => w.id === log.workerId);
+      
+      const clientValor = Number(client?.valorHora) || 0;
+      const workerValor = Number(worker?.valorHora) || 0;
+      
+      acc[log.clientId].totalHours += hours;
+      acc[log.clientId].faturation += hours * clientValor;
+      acc[log.clientId].cost += hours * workerValor;
+      
+      return acc;
+    }, {});
+
+    return Object.entries(grouped).map(([clientId, data]) => {
+      const client = clients.find(c => c.id === clientId);
+      const clientName = client?.name || 'Desconhecido';
+      
+      return {
+        id: clientId,
+        name: clientName,
+        totalHours: data.totalHours,
+        faturation: data.faturation,
+        cost: data.cost,
+        margin: data.faturation - data.cost
+      };
+    }).sort((a, b) => b.margin - a.margin);
+  }, [logs, clients, workers, selectedMonth]);
+
+  const formatCurrency = (value) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(value);
+
+  const renderTable = () => {
+    if (activeTab === 'workers') {
+      return (
+        <div className="overflow-x-auto rounded-[2rem] border border-slate-100">
+          <table className="min-w-full divide-y divide-slate-200 text-left">
+            <thead className="bg-indigo-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Nome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Total Horas</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Custo (€)</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-200">
+              {workerCosts.length > 0 ? workerCosts.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <p className="font-bold text-slate-800">{item.name}</p>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
+                    {item.totalHours.toFixed(2)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap font-black text-indigo-700">
+                    {formatCurrency(item.cost)}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="3" className="px-6 py-8 text-center text-slate-400 font-medium">
+                    Sem dados para o período selecionado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {workerCosts.length > 0 && (
+              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                <tr>
+                  <td className="px-6 py-4 font-black uppercase text-slate-800">Total Custo</td>
+                  <td className="px-6 py-4 font-black text-slate-800">{workerCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(2)}h</td>
+                  <td className="px-6 py-4 font-black text-indigo-700 text-lg">
+                    {formatCurrency(workerCosts.reduce((a, i) => a + i.cost, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      );
+    }
+
+    if (activeTab === 'clients') {
+      return (
+        <div className="overflow-x-auto rounded-[2rem] border border-slate-100">
+          <table className="min-w-full divide-y divide-slate-200 text-left">
+            <thead className="bg-indigo-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Nome</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Total Horas</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Faturação (€)</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-200">
+              {clientCosts.length > 0 ? clientCosts.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <p className="font-bold text-slate-800">{item.name}</p>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
+                    {item.totalHours.toFixed(2)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap font-black text-indigo-700">
+                    {formatCurrency(item.cost)}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="3" className="px-6 py-8 text-center text-slate-400 font-medium">
+                    Sem dados para o período selecionado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {clientCosts.length > 0 && (
+              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                <tr>
+                  <td className="px-6 py-4 font-black uppercase text-slate-800">Total Faturação</td>
+                  <td className="px-6 py-4 font-black text-slate-800">{clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(2)}h</td>
+                  <td className="px-6 py-4 font-black text-indigo-700 text-lg">
+                    {formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      );
+    }
+
+    if (activeTab === 'margins') {
+      return (
+        <div className="overflow-x-auto rounded-[2rem] border border-slate-100">
+          <table className="min-w-full divide-y divide-slate-200 text-left">
+            <thead className="bg-indigo-600">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Cliente</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Horas</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Faturação (€)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Custo (€)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Margem (€)</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-slate-200">
+              {clientMargins.length > 0 ? clientMargins.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <p className="font-bold text-slate-800">{item.name}</p>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
+                    {item.totalHours.toFixed(2)}h
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap font-black text-indigo-700">
+                    {formatCurrency(item.faturation)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap font-black text-rose-600">
+                    {formatCurrency(item.cost)}
+                  </td>
+                  <td className={`px-6 py-4 whitespace-nowrap font-black ${item.margin >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {formatCurrency(item.margin)}
+                  </td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="5" className="px-6 py-8 text-center text-slate-400 font-medium">
+                    Sem dados para o período selecionado.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+            {clientMargins.length > 0 && (
+              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
+                <tr>
+                  <td className="px-6 py-4 font-black uppercase text-slate-800">Total</td>
+                  <td className="px-6 py-4 font-black text-slate-800">{clientMargins.reduce((a, i) => a + i.totalHours, 0).toFixed(2)}h</td>
+                  <td className="px-6 py-4 font-black text-indigo-700">{formatCurrency(clientMargins.reduce((a, i) => a + i.faturation, 0))}</td>
+                  <td className="px-6 py-4 font-black text-rose-600">{formatCurrency(clientMargins.reduce((a, i) => a + i.cost, 0))}</td>
+                  <td className="px-6 py-4 font-black text-lg text-emerald-600">{formatCurrency(clientMargins.reduce((a, i) => a + i.margin, 0))}</td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      );
+    }
+  };
+
+  const getTitle = () => {
+    if (activeTab === 'workers') return 'Custos por Trabalhador';
+    if (activeTab === 'clients') return 'Faturação por Cliente';
+    if (activeTab === 'margins') return 'Margem Bruta por Cliente';
+    return 'Relatórios';
+  };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-3xl font-black flex items-center gap-3">
-          <FileText size={32} className="text-indigo-600" /> {activeTab === 'workers' ? 'Custos por Trabalhador' : 'Faturação por Cliente'}
+          <FileText size={32} className="text-indigo-600" /> {getTitle()}
         </h2>
         <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2">
@@ -122,51 +319,20 @@ const CostReports = () => {
             <Building2 size={18} />
             Clientes
           </button>
+          <button 
+            onClick={() => setActiveTab('margins')} 
+            className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${
+              activeTab === 'margins' 
+                ? 'bg-indigo-600 text-white shadow-md' 
+                : 'text-slate-500 hover:bg-slate-50'
+            }`}
+          >
+            <TrendingUp size={18} />
+            Margem Bruta
+          </button>
         </div>
 
-        <div className="overflow-x-auto rounded-[2rem] border border-slate-100">
-          <table className="min-w-full divide-y divide-slate-200 text-left">
-            <thead className="bg-indigo-600">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Nome</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">Total Horas</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-white uppercase">{activeTab === 'workers' ? 'Custo (€)' : 'Faturação (€)'}</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-slate-200">
-              {currentData.length > 0 ? currentData.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <p className="font-bold text-slate-800">{item.name}</p>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-600">
-                    {item.totalHours.toFixed(2)}h
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-black text-indigo-700">
-                    {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(item.cost)}
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="3" className="px-6 py-8 text-center text-slate-400 font-medium">
-                    Sem dados para o período selecionado.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            {currentData.length > 0 && (
-              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                <tr>
-                  <td className="px-6 py-4 font-black uppercase text-slate-800">Total {activeTab === 'workers' ? 'Custo' : 'Faturação'}</td>
-                  <td className="px-6 py-4 font-black text-slate-800">{totalHoursAll.toFixed(2)}h</td>
-                  <td className="px-6 py-4 font-black text-indigo-700 text-lg">
-                    {new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(totalCostAll)}
-                  </td>
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+        {renderTable()}
       </div>
     </div>
   );
