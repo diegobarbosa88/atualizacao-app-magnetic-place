@@ -316,20 +316,6 @@ const TeamManagerContent = ({ onLogin }) => {
                   <td className="text-sm font-bold text-indigo-600">
                     <div className="flex items-center gap-1">
                       <span>{w.valorHora ? `${w.valorHora}€` : 'N/A'}</span>
-                      <button 
-                        onClick={() => loadEmploymentHistory(w.id, w.name)}
-                        className="ml-1 text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
-                        title="Períodos de emprego"
-                      >
-                        📅
-                      </button>
-                      <button 
-                        onClick={() => loadWorkerValorHoraHistory(w.id, w.name)}
-                        className="text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
-                        title="Ver histórico de valor"
-                      >
-                        📊
-                      </button>
                     </div>
                   </td>
                   <td className="">
@@ -349,6 +335,20 @@ const TeamManagerContent = ({ onLogin }) => {
                   </td>
                   <td className="text-right">
                     <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => loadEmploymentHistory(w.id, w.name)}
+                        className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        title="Períodos de emprego"
+                      >
+                        📅
+                      </button>
+                      <button 
+                        onClick={() => loadWorkerValorHoraHistory(w.id, w.name)}
+                        className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        title="Histórico de valor"
+                      >
+                        📊
+                      </button>
                       <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={16} /></button>
                       <button onClick={() => { setWorkerForm({ ...w, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
                       <button onClick={() => handleDeleteWorker(w.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
@@ -366,6 +366,8 @@ const TeamManagerContent = ({ onLogin }) => {
               <div className="flex justify-between items-start mb-4">
                 <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600"><UserCircle size={24} /></div>
                 <div className="flex gap-2">
+                  <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Períodos de emprego">📅</button>
+                  <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Histórico de valor">📊</button>
                   <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={14} /></button>
                   <button onClick={() => { setWorkerForm({ ...w, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
                   <button onClick={() => handleDeleteWorker(w.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
