@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { Users, Building2, CalendarRange, FileText } from 'lucide-react';
 
 const CostReports = () => {
-  const { workers, clients, logs, approvals } = useApp();
+  const { workers, clients, logs } = useApp();
   
   const [activeTab, setActiveTab] = useState('workers');
   const [selectedMonth, setSelectedMonth] = useState(
@@ -48,14 +48,12 @@ const CostReports = () => {
   }, [logs, workers, selectedMonth]);
 
   const clientCosts = useMemo(() => {
-    if (!approvals || !clients) return [];
+    if (!logs || !clients) return [];
     
-    // Approval structure has month as YYYY-MM
-    const filteredApprovals = approvals.filter(app => app.month === selectedMonth);
+    const filteredLogs = logs.filter(log => log.date?.startsWith(selectedMonth));
     
-    const grouped = filteredApprovals.reduce((acc, app) => {
-      // app structure might have worker_id, hours, clientId
-      acc[app.clientId] = (acc[app.clientId] || 0) + (Number(app.hours) || 0);
+    const grouped = filteredLogs.reduce((acc, log) => {
+      acc[log.clientId] = (acc[log.clientId] || 0) + (Number(log.hours) || 0);
       return acc;
     }, {});
 
@@ -72,7 +70,7 @@ const CostReports = () => {
         cost
       };
     }).sort((a, b) => b.cost - a.cost);
-  }, [approvals, clients, selectedMonth]);
+  }, [logs, clients, selectedMonth]);
 
   const currentData = activeTab === 'workers' ? workerCosts : clientCosts;
   const totalHoursAll = currentData.reduce((acc, item) => acc + item.totalHours, 0);
