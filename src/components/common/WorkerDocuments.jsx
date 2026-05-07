@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Edit2, X, Download, CheckCircle, Loader2, Save } from 'lucide-react';
-import SignatureCanvas from 'react-signature-canvas';
+import { FileText, Edit2, X, Download, CheckCircle, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 
@@ -15,24 +14,28 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showSigner, setShowSigner] = useState(false);
   const [signing, setSigning] = useState(false);
-  const sigCanvas = useRef(null);
+  const [hasSignature, setHasSignature] = useState(false);
+  const canvasRef = useRef(null);
+  const isDrawing = useRef(false);
 
-  // Use context supabase or fallback to window.supabase
   const supabase = contextSupabase || window.supabase;
 
   useEffect(() => {
-    if (showSigner && sigCanvas.current) {
-      const canvas = sigCanvas.current.getCanvas();
-      if (canvas) {
-        setTimeout(() => {
-          const rect = canvas.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            sigCanvas.current.clear();
-          }
-        }, 50);
-      }
+    if (showSigner && canvasRef.current) {
+      const timer = setTimeout(() => {
+        if (!canvasRef.current) return;
+        const canvas = canvasRef.current;
+        const parent = canvas.parentElement;
+        canvas.width = parent.clientWidth;
+        canvas.height = 160;
+        const ctx = canvas.getContext('2d');
+        ctx.lineWidth = 3;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#4f46e5';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setHasSignature(false);
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [showSigner]);
 
@@ -40,22 +43,58 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const pendentes = docs.filter(d => d.status === 'Pendente');
   const historico = docs.filter(d => d.status === 'Assinado');
 
+  const getCoordinates = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    if (e.touches && e.touches.length > 0) {
+      return { x: e.touches[0].clientX - rect.left, y: e.touches[0].clientY - rect.top };
+    }
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+
+  const startDrawing = (e) => {
+    e.preventDefault();
+    isDrawing.current = true;
+    const { x, y } = getCoordinates(e);
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e) => {
+    e.preventDefault();
+    if (!isDrawing.current) return;
+    const { x, y } = getCoordinates(e);
+    const ctx = canvasRef.current.getContext('2d');
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    if (!hasSignature) setHasSignature(true);
+  };
+
+  const stopDrawing = () => {
+    if (isDrawing.current && canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.closePath();
+      isDrawing.current = false;
+    }
+  };
+
+  const clearCanvas = () => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setHasSignature(false);
+  };
+
   const handleSign = async () => {
-    if (!sigCanvas.current || sigCanvas.current.isEmpty()) return alert('Assinatura obrigatória.');
+    if (!hasSignature) return alert('Assinatura obrigatória.');
     setSigning(true);
 
     try {
-      const sigDataUrl = sigCanvas.current.toDataURL('image/png');
-      const sigBlob = await fetch(sigDataUrl).then(r => r.blob());
-      const sigPath = `${currentUser.id}/assinaturas/${Date.now()}.png`;
-      const { data: sigUpload, error: sigError } = await supabase.storage
-        .from('documentos')
-        .upload(sigPath, sigBlob);
-
-      if (sigError) throw new Error(`Erro upload assinatura: ${sigError.message}`);
-
-      const { data: sigUrlData } = supabase.storage.from('documentos').getPublicUrl(sigPath);
-      const assinaturaUrl = sigUrlData.publicUrl;
+      const canvas = canvasRef.current;
+      const assinaturaUrl = canvas.toDataURL('image/png');
 
       const ipResponse = await fetch('https://api.ipify.org?format=json');
       const ipData = await ipResponse.json();
@@ -129,6 +168,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       alert('Documento assinado com sucesso! O PDF será atualizado em breve.');
       setShowSigner(false);
       setSelectedDoc(null);
+      clearCanvas();
     } catch (err) {
       console.error('Erro completo:', err);
       alert(`Erro: ${err.message}`);
@@ -191,7 +231,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h4 className="font-black text-lg">{selectedDoc.tipo}</h4>
-              <button onClick={() => setShowSigner(false)} className="p-2 hover:bg-slate-100 rounded-xl"><X size={20} /></button>
+              <button onClick={() => { setShowSigner(false); clearCanvas(); }} className="p-2 hover:bg-slate-100 rounded-xl"><X size={20} /></button>
             </div>
             <div className="w-full h-96 border rounded-xl mb-4 bg-slate-100 relative">
               {selectedDoc.url ? (
@@ -205,18 +245,34 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
             <div className="bg-slate-50 p-4 rounded-xl mb-4">
               <div className="flex justify-between items-center mb-2">
                 <p className="text-xs font-bold text-slate-500">Desenhe a sua assinatura abaixo:</p>
-                <button type="button" onClick={() => sigCanvas.current?.clear()} className="text-[10px] font-black uppercase text-rose-500 hover:text-rose-700 transition-colors">
+                <button type="button" onClick={clearCanvas} className="text-[10px] font-black uppercase text-rose-500 hover:text-rose-700 transition-colors">
                   Limpar Área
                 </button>
               </div>
-              <div className="border-2 border-dashed border-slate-300 rounded-xl bg-white overflow-hidden shadow-inner h-40">
-                <SignatureCanvas ref={sigCanvas} penColor="black" canvasProps={{ className: 'w-full h-full cursor-crosshair' }} />
+              <div className="relative w-full max-w-2xl mx-auto bg-white border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden shadow-inner" style={{ height: '160px' }}>
+                <canvas 
+                  ref={canvasRef} 
+                  className="w-full cursor-crosshair touch-none" 
+                  style={{ touchAction: 'none' }} 
+                  onMouseDown={startDrawing} 
+                  onMouseMove={draw} 
+                  onMouseUp={stopDrawing} 
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+                {!hasSignature && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">
+                    Assine Aqui
+                  </div>
+                )}
               </div>
             </div>
             <button
               onClick={handleSign}
-              disabled={signing}
-              className="w-full py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              disabled={!hasSignature || signing}
+              className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hasSignature && !signing ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
             >
               {signing ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><CheckCircle size={16} /> Assinar Documento</>}
             </button>
