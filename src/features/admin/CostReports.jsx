@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X } from 'lucide-react';
+import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
 
 const CostReports = () => {
@@ -33,6 +33,57 @@ const CostReports = () => {
     await saveToDb('expenses', eId, { ...expenseForm, id: eId });
     setIsAddingExpense(false);
     setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) });
+  };
+
+  const exportToCSV = () => {
+    let csv = '';
+    let filename = '';
+    const monthLabel = selectedMonth;
+
+    if (activeTab === 'workers') {
+      filename = `custos-trabalhadores-${selectedMonth}.csv`;
+      csv = 'Nome,Total Horas,Custo (€)\n';
+      workerCosts.forEach(item => {
+        csv += `"${item.name}",${item.totalHours.toFixed(2)},${item.cost.toFixed(2)}\n`;
+      });
+      const total = workerCosts.reduce((a, i) => a + i.cost, 0);
+      csv += `"Total",${workerCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(2)},${total.toFixed(2)}`;
+    } else if (activeTab === 'clients') {
+      filename = `faturacao-clientes-${selectedMonth}.csv`;
+      csv = 'Nome,Total Horas,Faturação (€)\n';
+      clientCosts.forEach(item => {
+        csv += `"${item.name}",${item.totalHours.toFixed(2)},${item.cost.toFixed(2)}\n`;
+      });
+      const total = clientCosts.reduce((a, i) => a + i.cost, 0);
+      csv += `"Total",${clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(2)},${total.toFixed(2)}`;
+    } else if (activeTab === 'margins') {
+      filename = `margem-bruta-${selectedMonth}.csv`;
+      csv = 'Cliente,Horas,Faturação (€),Custo (€),Margem (€)\n';
+      clientMargins.forEach(item => {
+        csv += `"${item.name}",${item.totalHours.toFixed(2)},${item.faturation.toFixed(2)},${item.cost.toFixed(2)},${item.margin.toFixed(2)}\n`;
+      });
+      const totalF = clientMargins.reduce((a, i) => a + i.faturation, 0);
+      const totalC = clientMargins.reduce((a, i) => a + i.cost, 0);
+      const totalM = clientMargins.reduce((a, i) => a + i.margin, 0);
+      csv += `"Total",${clientMargins.reduce((a, i) => a + i.totalHours, 0).toFixed(2)},${totalF.toFixed(2)},${totalC.toFixed(2)},${totalM.toFixed(2)}`;
+    } else if (activeTab === 'expenses') {
+      filename = `despesas-${selectedMonth}.csv`;
+      csv = 'Data,Descrição,Tipo,Valor (€)\n';
+      sortedExpenses.forEach(exp => {
+        csv += `"${new Date(exp.date).toLocaleDateString('pt-PT')}","${exp.name}","${exp.type}",${exp.amount}\n`;
+      });
+      csv += `,"Total","",${totalExpenses.toFixed(2)}`;
+    }
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const workerCosts = useMemo(() => {
@@ -391,6 +442,10 @@ const CostReports = () => {
               {isAddingExpense ? 'Fechar' : 'Nova Despesa'}
             </button>
           )}
+          <button onClick={exportToCSV} className="flex items-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl hover:bg-indigo-700 transition-all">
+            <Download size={16} />
+            Exportar
+          </button>
           <div className="flex items-center gap-4 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
             <div className="flex items-center gap-2">
               <CalendarRange size={16} className="text-slate-400" />
