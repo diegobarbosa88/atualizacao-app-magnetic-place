@@ -280,6 +280,24 @@ export const AppProvider = ({ children }) => {
 
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
     if (error) console.error(`Erro ao gravar em ${tableName}:`, error);
+    
+    // Update local state for documents
+    if ((tableName === 'documents' || tableName === 'documentos') && !error) {
+      setDocuments(prev => {
+        const exists = prev.find(d => d.id === payload.id);
+        if (exists) {
+          return prev.map(d => d.id === payload.id ? { ...d, ...payload } : d);
+        }
+        return [...prev, payload];
+      });
+    }
+  };
+
+  const handleApproveMonth = async (workerId) => {
+    const monthStr = toISODateLocal(currentMonth).substring(0, 7);
+    const id = "appr_" + workerId + "_" + monthStr;
+    await saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() });
+  };
   };
 
   const handleDelete = async (colName, id) => {
@@ -395,6 +413,7 @@ export const AppProvider = ({ children }) => {
     adminStats,
     saveToDb,
     handleDelete,
+    handleApproveMonth,
     supabase: supabaseInstance
   };
 
