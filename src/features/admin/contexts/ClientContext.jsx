@@ -3,12 +3,26 @@ import { useApp } from '../../../context/AppContext';
 
 const ClientContext = createContext();
 
+// D-07: Função para guardar histórico de alterações do valor hora do cliente
+const saveClientValorHoraHistory = async (clients, saveToDb, clientId, valorNovo) => {
+  const client = clients.find(c => c.id === clientId);
+  // Apenas criar registo se o valor mudou
+  if (!client || client.valorHora === valorNovo) return;
+  
+  await saveToDb('client_valorhora_history', null, {
+    client_id: clientId,
+    valor_anterior: client.valorHora,
+    valor_novo: valorNovo,
+    data_alteracao: new Date().toISOString()
+  });
+};
+
 const INITIAL_CLIENT_FORM = {
   id: null, name: '', morada: '', nif: '', valorHora: '', email: ''
 };
 
 export const ClientProvider = ({ children }) => {
-  const { saveToDb, handleDelete } = useApp();
+  const { clients, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
   const [clientsView, setClientsView] = useState('list');
@@ -31,6 +45,11 @@ export const ClientProvider = ({ children }) => {
     setClientForm(INITIAL_CLIENT_FORM);
   }, []);
 
+  // D-07: Função exposta para guardar histórico do valor hora do cliente
+  const saveClientHistory = useCallback(async (clientId, valorNovo) => {
+    await saveClientValorHoraHistory(clients, saveToDb, clientId, valorNovo);
+  }, [clients, saveToDb]);
+
   const value = {
     isAddingInTab, setIsAddingInTab,
     clientsView, setClientsView,
@@ -38,7 +57,9 @@ export const ClientProvider = ({ children }) => {
     clientForm, setClientForm,
     handleSaveClient,
     handleDeleteClient,
-    resetClientForm
+    resetClientForm,
+    saveClientHistory,
+    clients
   };
 
   return (
