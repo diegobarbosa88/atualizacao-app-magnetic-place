@@ -298,7 +298,6 @@ export const AppProvider = ({ children }) => {
     const id = "appr_" + workerId + "_" + monthStr;
     await saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() });
   };
-  };
 
   const handleDelete = async (colName, id) => {
     // Local state updates
