@@ -1,11 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { FileText, Edit2, X, Download, CheckCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { FileText, Edit2, X, Download, CheckCircle, Loader2, ChevronDown, Filter } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 
 const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const { supabase: contextSupabase } = useApp() || {};
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('magnetic_worker_doc_tab') || 'pendentes');
+  const [filterType, setFilterType] = useState('all');
+  const [sortBy, setSortBy] = useState('date_desc');
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('magnetic_worker_doc_tab', activeTab);
@@ -176,7 +179,35 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     setSigning(false);
   };
 
-  const docList = activeTab === 'pendentes' ? pendentes : historico;
+  const docList = useMemo(() => {
+    let list = activeTab === 'pendentes' ? pendentes : historico;
+    
+    if (activeTab === 'historico') {
+      if (filterType !== 'all') {
+        list = list.filter(d => d.tipo === filterType);
+      }
+      
+      list = [...list].sort((a, b) => {
+        if (sortBy === 'date_desc') {
+          return (b.dataAssinatura || b.dataEmissao || '').localeCompare(a.dataAssinatura || a.dataEmissao || '');
+        } else if (sortBy === 'date_asc') {
+          return (a.dataAssinatura || a.dataEmissao || '').localeCompare(b.dataAssinatura || b.dataEmissao || '');
+        } else if (sortBy === 'name_asc') {
+          return (a.tipo || '').localeCompare(b.tipo || '');
+        } else if (sortBy === 'name_desc') {
+          return (b.tipo || '').localeCompare(a.tipo || '');
+        }
+        return 0;
+      });
+    }
+    
+    return list;
+  }, [activeTab, pendentes, historico, filterType, sortBy]);
+
+  const uniqueTypes = useMemo(() => {
+    const types = new Set(historico.map(d => d.tipo).filter(Boolean));
+    return Array.from(types).sort();
+  }, [historico]);
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-xl border border-indigo-50/50 mt-8">
@@ -185,26 +216,80 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         <h3 className="font-black text-lg uppercase tracking-tight text-slate-800">Os Meus Documentos</h3>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-4">
         <button onClick={() => setActiveTab('pendentes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'pendentes' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
           Pendentes ({pendentes.length})
         </button>
         <button onClick={() => setActiveTab('historico')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'historico' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
           Histórico ({historico.length})
         </button>
+        
+        {activeTab === 'historico' && (
+          <button 
+            onClick={() => setShowFilters(!showFilters)} 
+            className={`ml-auto px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}
+          >
+            <Filter size={14} />
+            Filtros
+          </button>
+        )}
       </div>
+
+      {activeTab === 'historico' && showFilters && (
+        <div className="bg-slate-50 rounded-xl p-4 mb-4 flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase">Tipo:</label>
+            <select 
+              value={filterType} 
+              onChange={(e) => setFilterType(e.target.value)}
+              className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-bold"
+            >
+              <option value="all">Todos</option>
+              {uniqueTypes.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-bold text-slate-500 uppercase">Ordenar:</label>
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-bold"
+            >
+              <option value="date_desc">Mais Recentes</option>
+              <option value="date_asc">Mais Antigos</option>
+              <option value="name_asc">Nome (A-Z)</option>
+              <option value="name_desc">Nome (Z-A)</option>
+            </select>
+          </div>
+          
+          <span className="text-xs text-slate-400 ml-auto">{docList.length} documento(s)</span>
+        </div>
+      )}
 
       {docList.length === 0 ? (
         <p className="text-slate-400 text-center py-8">Nenhum documento.</p>
       ) : (
         <div className="space-y-3">
-          {docList.sort((a, b) => b.dataEmissao?.localeCompare(a.dataEmissao)).map(doc => (
+          {docList.map(doc => (
             <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
               <div className="flex items-center gap-3">
                 <FileText size={18} className="text-indigo-500" />
                 <div>
                   <p className="text-sm font-bold text-slate-700">{doc.tipo}</p>
-                  <p className="text-[10px] text-slate-400">{formatDocDate(doc.dataEmissao)}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] text-slate-400">Emitido: {formatDocDate(doc.dataEmissao)}</p>
+                    {doc.status === 'Assinado' && doc.dataAssinatura && (
+                      <span className="text-slate-300">|</span>
+                    )}
+                    {doc.status === 'Assinado' && doc.dataAssinatura && (
+                      <p className="text-[10px] text-emerald-600 font-bold">
+                        Assinado: {new Date(doc.dataAssinatura).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
