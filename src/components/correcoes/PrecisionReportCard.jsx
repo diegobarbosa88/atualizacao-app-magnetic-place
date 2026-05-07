@@ -212,7 +212,7 @@ const PrecisionReportCard = ({ notification, onEdit, isEditing, draft, updateFie
 
                         return (
                           <div key={dayIdx} className={`flex items-center gap-1 py-2.5 border-b border-slate-100 last:border-0 ${isExcluded ? 'bg-rose-200' : isAdded ? 'bg-emerald-200' : isEdited ? 'bg-amber-200/50' : ''}`}>
-                            <span className="w-12 text-xs font-bold text-slate-600">{day.date?.slice(0, 2) || '-'}</span>
+                            <span className="w-12 text-xs font-bold text-slate-600">{day.date?.slice(-2) || '-'}</span>
 
                             <div className="flex-1 flex items-center justify-center gap-0.5 text-[10px]">
                               {isEditingCell(idx, dayIdx, 'editedEntry') ? (
