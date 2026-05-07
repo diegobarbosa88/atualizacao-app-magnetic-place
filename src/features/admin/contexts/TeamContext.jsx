@@ -6,7 +6,8 @@ const TeamContext = createContext();
 const INITIAL_WORKER_FORM = {
   id: null, name: '', assignedClients: [], assignedSchedules: [],
   defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '',
-  profissao: '', nis: '', nif: '', iban: '', status: 'ativo'
+  profissao: '', nis: '', nif: '', iban: '', status: 'ativo',
+  dataInicio: '', dataFim: ''
 };
 
 export const TeamProvider = ({ children }) => {
