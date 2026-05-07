@@ -35,11 +35,13 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
 
 
 
+  const isClearedPattern = (val) => val === '--:--' || (val && val.startsWith('--:') && val.includes('-----'));
+
   // Groups logs and metadata for each individual report unit (Client + Worker pair)
   const reportUnits = useMemo(() => {
     if (!month) return [];
 
-    let filteredLogs = logs.filter(l => l.date.startsWith(month));
+    let filteredLogs = logs.filter(l => l.date && l.date.startsWith(month));
 
     // Determine the grouping criteria based on the data provided
     let units = [];
@@ -631,7 +633,9 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                   }
 
                   return dayLogs.map((log, lIdx) => {
-                    const isClearedDay = log.startTime == null && log.endTime == null;
+                    const isClearedDay =
+                      (log.startTime == null && log.endTime == null) ||
+                      (isClearedPattern(log.startTime) && isClearedPattern(log.endTime));
                     const logHours = isClearedDay ? 0 : calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
                     if (!isClearedDay) {
                       weekPerformed += logHours;
@@ -640,8 +644,8 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                       <tr key={`${log.id}-${lIdx}`} className="page-break-inside-avoid">
                         {visibleColumns.day && <td className="text-center font-bold text-slate-700 py-0 col-day">{lIdx === 0 ? `${dayNum} ${dayName}` : ''}</td>}
                         {visibleColumns.start && <td className="text-center font-mono col-time">{log.startTime ?? ''}</td>}
-                        {visibleColumns.breakStart && <td className="text-center font-mono text-slate-400 col-time">{log.breakStart || ''}</td>}
-                        {visibleColumns.breakEnd && <td className="text-center font-mono text-slate-400 col-time">{log.breakEnd || ''}</td>}
+                        {visibleColumns.breakStart && <td className="text-center font-mono text-slate-400 col-time">{isClearedDay ? '' : (log.breakStart || '')}</td>}
+                        {visibleColumns.breakEnd && <td className="text-center font-mono text-slate-400 col-time">{isClearedDay ? '' : (log.breakEnd || '')}</td>}
                         {visibleColumns.end && <td className="text-center font-mono col-time">{log.endTime ?? ''}</td>}
                         {visibleColumns.total && <td className="text-center font-bold text-slate-700 col-time">{isClearedDay ? '' : formatHours(logHours)}</td>}
                         {visibleColumns.project && <td className="text-center font-medium text-slate-700 uppercase whitespace-nowrap col-project" style={{ fontSize: '8px' }}>{isClearedDay ? '' : (unit.client?.name || '')}</td>}
