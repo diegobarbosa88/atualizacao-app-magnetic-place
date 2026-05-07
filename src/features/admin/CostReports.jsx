@@ -35,47 +35,80 @@ const CostReports = () => {
     setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) });
   };
 
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const getReportTitle = () => {
+    if (activeTab === 'workers') return 'CUSTOS POR TRABALHADOR';
+    if (activeTab === 'clients') return 'FATURAÇÃO POR CLIENTE';
+    if (activeTab === 'margins') return 'MARGEM BRUTA POR CLIENTE';
+    if (activeTab === 'expenses') return 'DESPESAS';
+    return 'RELATÓRIO';
+  };
+
+  const getMonthLabel = () => {
+    const [year, month] = selectedMonth.split('-');
+    const date = new Date(year, month - 1);
+    return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }).toUpperCase();
+  };
+
   const exportToCSV = () => {
     let csv = '';
-    let filename = '';
-    const monthLabel = selectedMonth;
+    const filename = `relatorio-${activeTab}-${selectedMonth}.csv`;
+    const today = formatDate(new Date());
+    const reportTitle = getReportTitle();
+    const monthLabel = getMonthLabel();
+
+    csv += `${reportTitle}\n`;
+    csv += `Período: ${monthLabel}\n`;
+    csv += `Gerado em: ${today}\n`;
+    csv += '\n';
 
     if (activeTab === 'workers') {
-      filename = `custos-trabalhadores-${selectedMonth}.csv`;
-      csv = 'Nome,Total Horas,Custo (€)\n';
+      csv += 'Nome;Total Horas;Custo (€)\n';
+      csv += ';;\n';
       workerCosts.forEach(item => {
-        csv += `"${item.name}",${item.totalHours.toFixed(2)},${item.cost.toFixed(2)}\n`;
+        csv += `${item.name};${item.totalHours.toFixed(2)};${item.cost.toFixed(2).replace('.', ',')}\n`;
       });
-      const total = workerCosts.reduce((a, i) => a + i.cost, 0);
-      csv += `"Total",${workerCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(2)},${total.toFixed(2)}`;
+      const totalHours = workerCosts.reduce((a, i) => a + i.totalHours, 0);
+      const totalCost = workerCosts.reduce((a, i) => a + i.cost, 0);
+      csv += `TOTAL;${totalHours.toFixed(2)};${totalCost.toFixed(2).replace('.', ',')}\n`;
     } else if (activeTab === 'clients') {
-      filename = `faturacao-clientes-${selectedMonth}.csv`;
-      csv = 'Nome,Total Horas,Faturação (€)\n';
+      csv += 'Nome;Total Horas;Faturação (€)\n';
+      csv += ';;\n';
       clientCosts.forEach(item => {
-        csv += `"${item.name}",${item.totalHours.toFixed(2)},${item.cost.toFixed(2)}\n`;
+        csv += `${item.name};${item.totalHours.toFixed(2)};${item.cost.toFixed(2).replace('.', ',')}\n`;
       });
+      const totalHours = clientCosts.reduce((a, i) => a + i.totalHours, 0);
       const total = clientCosts.reduce((a, i) => a + i.cost, 0);
-      csv += `"Total",${clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(2)},${total.toFixed(2)}`;
+      csv += `TOTAL;${totalHours.toFixed(2)};${total.toFixed(2).replace('.', ',')}\n`;
     } else if (activeTab === 'margins') {
-      filename = `margem-bruta-${selectedMonth}.csv`;
-      csv = 'Cliente,Horas,Faturação (€),Custo (€),Margem (€)\n';
+      csv += 'Cliente;Horas;Faturação (€);Custo (€);Margem (€)\n';
+      csv += ';;;;\n';
       clientMargins.forEach(item => {
-        csv += `"${item.name}",${item.totalHours.toFixed(2)},${item.faturation.toFixed(2)},${item.cost.toFixed(2)},${item.margin.toFixed(2)}\n`;
+        const marginColor = item.margin >= 0 ? '+' : '';
+        csv += `${item.name};${item.totalHours.toFixed(2)};${item.faturation.toFixed(2).replace('.', ',')};${item.cost.toFixed(2).replace('.', ',')};${marginColor}${item.margin.toFixed(2).replace('.', ',')}\n`;
       });
       const totalF = clientMargins.reduce((a, i) => a + i.faturation, 0);
       const totalC = clientMargins.reduce((a, i) => a + i.cost, 0);
       const totalM = clientMargins.reduce((a, i) => a + i.margin, 0);
-      csv += `"Total",${clientMargins.reduce((a, i) => a + i.totalHours, 0).toFixed(2)},${totalF.toFixed(2)},${totalC.toFixed(2)},${totalM.toFixed(2)}`;
+      const totalH = clientMargins.reduce((a, i) => a + i.totalHours, 0);
+      csv += `TOTAL;${totalH.toFixed(2)};${totalF.toFixed(2).replace('.', ',')};${totalC.toFixed(2).replace('.', ',')};${totalM >= 0 ? '+' : ''}${totalM.toFixed(2).replace('.', ',')}\n`;
     } else if (activeTab === 'expenses') {
-      filename = `despesas-${selectedMonth}.csv`;
-      csv = 'Data,Descrição,Tipo,Valor (€)\n';
+      csv += 'Data;Descrição;Tipo;Valor (€)\n';
+      csv += ';;;\n';
       sortedExpenses.forEach(exp => {
-        csv += `"${new Date(exp.date).toLocaleDateString('pt-PT')}","${exp.name}","${exp.type}",${exp.amount}\n`;
+        csv += `${formatDate(exp.date)};${exp.name};${exp.type};${Number(exp.amount).toFixed(2).replace('.', ',')}\n`;
       });
-      csv += `,"Total","",${totalExpenses.toFixed(2)}`;
+      csv += `TOTAL;;;${totalExpenses.toFixed(2).replace('.', ',')}\n`;
     }
 
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    csv += '\n---\n';
+    csv += 'Magnetic Place - Sistema de Gestão de Horas';
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
