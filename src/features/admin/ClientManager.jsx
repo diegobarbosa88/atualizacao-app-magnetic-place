@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import { 
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro 
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange
 } from 'lucide-react';
 
 const ClientManagerContent = () => {
@@ -56,25 +56,91 @@ const ClientManagerContent = () => {
       </div>
 
       {isAddingInTab && (
-        <div className="mb-10 bg-white p-10 rounded-[3rem] shadow-xl border-2 border-indigo-100">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Empresa</label><input type="text" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">NIF</label><input type="text" value={clientForm.nif} onChange={e => setClientForm({ ...clientForm, nif: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor/h (€)</label>
-              <div className="flex gap-2">
-                <input type="number" value={clientForm.valorHora} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm" />
-                <div className="flex flex-col gap-1">
-                  <label className="text-[8px] font-black text-slate-400 uppercase">Valor válido desde</label>
-                  <input type="date" value={clientForm.dataAlteracao || ''} onChange={e => setClientForm({ ...clientForm, dataAlteracao: e.target.value })} className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-bold outline-none shadow-sm w-36" />
+        <div className="mb-10 bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-6">
+            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
+              <Building2 className="text-indigo-600" size={28} />
+              {clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}
+            </h3>
+            <button onClick={() => setIsAddingInTab(false)} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-wider bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-xl">
+              <X size={16} /> Fechar Form
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* COLUNA ESQUERDA (8 colunas) */}
+            <div className="lg:col-span-8 space-y-8">
+              
+              {/* DADOS DO CLIENTE */}
+              <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><Briefcase size={18} /></div>
+                  <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Dados do Cliente</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Building2 size={10} /> Empresa</label>
+                    <input type="text" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Nome da empresa" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><CreditCard size={10} /> NIF</label>
+                    <input type="text" value={clientForm.nif || ''} onChange={e => setClientForm({ ...clientForm, nif: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Nº de Contribuinte" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Mail size={10} /> E-mail de Contato</label>
+                    <input type="email" value={clientForm.email || ''} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="email@exemplo.pt" />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><MapPin size={10} /> Morada</label>
+                    <input type="text" value={clientForm.morada || ''} onChange={e => setClientForm({ ...clientForm, morada: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Morada completa" />
+                  </div>
+                </div>
+              </div>
+
+              {/* DADOS FINANCEIROS */}
+              <div className="bg-emerald-50/30 p-6 rounded-[2rem] border border-emerald-100 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Euro size={18} /></div>
+                  <h4 className="font-black text-emerald-800 text-lg uppercase tracking-tight">Dados Financeiros</h4>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-emerald-100/50">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Euro size={10} /> Valor Hora (€)</label>
+                    <input type="number" step="0.01" value={clientForm.valorHora || ''} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-lg text-emerald-700 font-black outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" placeholder="0.00" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><CalendarRange size={10} /> Valor válido desde</label>
+                    <input type="date" value={clientForm.dataAlteracao || ''} onChange={e => setClientForm({ ...clientForm, dataAlteracao: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" />
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="space-y-1"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">E-mail de Contato</label><input type="email" value={clientForm.email || ''} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" placeholder="email@exemplo.pt" /></div>
-            <div className="space-y-1 md:col-span-2"><label className="text-[10px] font-black text-slate-400 uppercase ml-1">Morada</label><input type="text" value={clientForm.morada} onChange={e => setClientForm({ ...clientForm, morada: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm" /></div>
-          </div>
-          <div className="mt-6 flex justify-end gap-3">
-            <button onClick={() => setIsAddingInTab(false)} className="px-6 py-3 text-slate-400 font-bold uppercase text-xs">Cancelar</button>
-            <button onClick={handleSaveClient} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase shadow-lg">Salvar</button>
+
+            {/* COLUNA DIREITA (4 colunas) */}
+            <div className="lg:col-span-4 space-y-6 flex flex-col">
+              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex-1">
+                <div className="flex items-center gap-2 mb-4">
+                  <Briefcase size={16} className="text-indigo-600" />
+                  <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest">Informação Adicional</h4>
+                </div>
+                <p className="text-xs text-slate-500 mb-4">
+                  Ao atualizar o valor/hora de um cliente, todos os registos futuros e os pendentes do mês atual serão atualizados com o novo valor.
+                </p>
+                <p className="text-xs text-slate-500">
+                  Regista a morada e os detalhes de faturação para constarem nos relatórios enviados.
+                </p>
+              </div>
+
+              {/* AÇÕES */}
+              <div className="pt-2">
+                <button onClick={handleSaveClient} className="w-full bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1 text-white p-5 rounded-[1.5rem] font-black text-sm uppercase shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-3 border border-indigo-500">
+                  <Save size={20} />
+                  Gravar Cliente
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -113,8 +179,8 @@ const ClientManagerContent = () => {
                   </td>
                   <td className="text-right">
                     <div className="flex justify-end gap-2">
-                      <button onClick={() => { setClientForm({ ...c, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDeleteClient(c.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
+                      <button onClick={() => { setClientForm({ ...c, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all focus:ring-2 focus:ring-amber-200 outline-none" title="Editar"><Edit2 size={16} /></button>
+                      <button onClick={() => handleDeleteClient(c.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all focus:ring-2 focus:ring-red-200 outline-none" title="Apagar"><Trash2 size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -125,12 +191,15 @@ const ClientManagerContent = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedClients.map(c => (
-            <div key={c.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-200 transition-all">
+            <div key={c.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-md hover:shadow-lg hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300">
               <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600"><Briefcase size={24} /></div>
+                <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl text-indigo-600">
+                  <Briefcase size={24} />
+                </div>
                 <div className="flex gap-2">
-                  <button onClick={() => { setClientForm({ ...c, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 bg-slate-50 rounded-lg text-amber-500 hover:bg-amber-500 hover:text-white transition-all"><Edit2 size={14} /></button>
-                  <button onClick={() => handleDeleteClient(c.id)} className="p-2 bg-slate-50 rounded-lg text-red-500 hover:bg-red-500 hover:text-white transition-all"><Trash2 size={14} /></button>
+                  <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Ver histórico">📊</button>
+                  <button onClick={() => { setClientForm({ ...c, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
+                  <button onClick={() => handleDeleteClient(c.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
                 </div>
               </div>
               <h4 className="text-xl font-black text-indigo-700 mb-1">{c.name}</h4>
