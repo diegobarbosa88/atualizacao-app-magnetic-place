@@ -274,7 +274,7 @@ const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pd
           signed_at: now,
           signed_ip: userIP,
           signature_data: stampBase64,
-          pdfAssinadoUrl: pdfAssinadoUrl
+          signed_pdf_url: pdfAssinadoUrl
         };
         const { error } = await supabase.from('worker_documents').update(docData).eq('id', selectedDoc.id);
         if (error) throw error;

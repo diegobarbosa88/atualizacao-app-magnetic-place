@@ -448,12 +448,28 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                       <td className="px-4 py-4 rounded-r-2xl border-y border-r border-slate-100 text-right">
                         <div className="flex justify-end items-center gap-2">
                           <button 
-                            onClick={() => setSelectedDocView(doc)}
-                            className="p-2 bg-white text-indigo-600 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                            title="Visualizar"
+                            onClick={() => {
+                              if (doc.status === 'signed' && doc.signed_pdf_url) {
+                                window.open(doc.signed_pdf_url, '_blank');
+                              } else {
+                                setSelectedDocView(doc);
+                              }
+                            }}
+                            className={`p-2 bg-white rounded-xl border transition-all shadow-sm ${doc.status === 'signed' ? 'text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white' : 'text-indigo-600 border-indigo-100 hover:bg-indigo-600 hover:text-white'}`}
+                            title={doc.status === 'signed' ? "Ver PDF Assinado" : "Visualizar"}
                           >
-                            <Eye size={16} />
+                            {doc.status === 'signed' ? <CheckCircle size={16} /> : <Eye size={16} />}
                           </button>
+                          {doc.status === 'signed' && doc.signed_pdf_url && (
+                            <a 
+                              href={doc.signed_pdf_url}
+                              download={`${doc.title}_signed.pdf`}
+                              className="p-2 bg-white text-blue-600 rounded-xl border border-blue-100 hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                              title="Download PDF"
+                            >
+                              <Download size={16} />
+                            </a>
+                          )}
                           <button 
                             onClick={() => handleDeleteDoc(doc.id)}
                             className="p-2 bg-white text-rose-500 rounded-xl border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
