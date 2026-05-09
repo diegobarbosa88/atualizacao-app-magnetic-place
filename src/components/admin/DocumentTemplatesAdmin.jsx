@@ -65,6 +65,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [generatedDocs, setGeneratedDocs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -113,11 +114,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         if (tmplRes.error) throw tmplRes.error;
         if (docsRes.error) throw docsRes.error;
         setTemplates(tmplRes.data || []);
-        const mapped = (docsRes.data || []).map(doc => ({
-          ...doc,
-          worker: workers.find(w => w.id === doc.worker_id) || { name: 'Desconhecido' }
-        }));
-        setGeneratedDocs(mapped);
+        setGeneratedDocs(docsRes.data || []);
       } catch (err) {
         if (!cancelled) console.error('Erro ao carregar dados:', err);
       } finally {
@@ -130,7 +127,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
 
     load();
     return () => { cancelled = true; };
-  }, [supabase, workers]);
+  }, [supabase]);
 
   const loadTemplates = async () => {
     if (!supabase) return;
@@ -156,15 +153,11 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       const { data, error } = await supabase
         .from('worker_documents')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(200);
       if (error) throw error;
-      
-      // Map worker names
-      const mapped = (data || []).map(doc => ({
-        ...doc,
-        worker: workers.find(w => w.id === doc.worker_id) || { name: 'Desconhecido' }
-      }));
-      setGeneratedDocs(mapped);
+
+      setGeneratedDocs(data || []);
     } catch (err) {
       console.error("Erro ao carregar documentos:", err);
     } finally {
@@ -176,7 +169,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     if (!previewData.name.trim()) return alert("Nome é obrigatório");
     if (!supabase) return;
 
-    setLoading(true);
+    setSaving(true);
     try {
       const payload = {
         name: previewData.name,
@@ -203,7 +196,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     } catch (err) {
       alert("Erro ao gravar: " + err.message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
@@ -389,11 +382,19 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     return replaceTemplateFields(previewData.html_content, mockWorker, systemSettings);
   };
 
+  const docsWithWorkers = useMemo(
+    () => generatedDocs.map(doc => ({
+      ...doc,
+      worker: workers.find(w => w.id === doc.worker_id) || { name: 'Desconhecido' }
+    })),
+    [generatedDocs, workers]
+  );
+
   const filteredDocs = useMemo(() => {
-    return generatedDocs
+    return docsWithWorkers
       .filter(d => docFilter === 'all' || d.status === docFilter)
       .filter(d => !docSearch || d.title.toLowerCase().includes(docSearch.toLowerCase()) || (d.worker?.name || '').toLowerCase().includes(docSearch.toLowerCase()));
-  }, [generatedDocs, docFilter, docSearch]);
+  }, [docsWithWorkers, docFilter, docSearch]);
 
   return (
     <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -718,12 +719,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
 
             <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-slate-50">
               <button onClick={() => setShowModal(false)} className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Cancelar</button>
-              <button 
-                onClick={handleSave} 
-                disabled={loading}
+              <button
+                onClick={handleSave}
+                disabled={saving}
                 className="flex items-center gap-3 px-10 py-4 bg-indigo-600 hover:bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-indigo-100 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
                 {editingId ? 'Gravar Alterações' : 'Criar Template'}
               </button>
             </div>
