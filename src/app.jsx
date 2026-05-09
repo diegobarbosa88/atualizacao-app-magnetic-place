@@ -173,9 +173,9 @@ export default function App() {
     const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
     const modalLinkUnico = clienteSelecionado.link_gerado || `${CLIENT_PORTAL_URL}/?view=client_portal&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
-    const EMAILJS_SERVICE_ID = "service_xvt0vm8";
-    const EMAILJS_TEMPLATE_ID = "template_o5csfq8";
-    const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
+    const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+    const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_PORTAL;
+    const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
     try {
       const templateParams = {
         to_email: clienteSelecionado.email || 'contato@cliente.pt',

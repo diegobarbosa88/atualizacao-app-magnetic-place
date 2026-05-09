@@ -1,9 +1,9 @@
 
 import emailjs from '@emailjs/browser';
 
-export const EMAILJS_SERVICE_ID = "service_xvt0vm8";
-export const EMAILJS_TEMPLATE_ID_NOTIF = "template_xmexrgp";
-export const EMAILJS_PUBLIC_KEY = "SzlA6KKCD4miw0CR9";
+export const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+export const EMAILJS_TEMPLATE_ID_NOTIF = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_NOTIF;
+export const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 const emailTranslations = {
   es: {
