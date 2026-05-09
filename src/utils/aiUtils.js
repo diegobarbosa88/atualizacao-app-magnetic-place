@@ -9,7 +9,8 @@
 export async function callGemini(prompt, systemInstruction = "", apiKey = "") {
   if (!apiKey) return "A IA precisa de uma chave API configurada.";
   
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+  const model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
     systemInstruction: { parts: [{ text: systemInstruction }] }
