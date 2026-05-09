@@ -30,6 +30,9 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
     await saveToDb('app_notifications', id, newNotif);
     setTitle('');
     setMessage('');
+    setType('info');
+    setTargetType('all');
+    setIsDismissible(true);
     setSelectedWorkers([]);
     setLoading(false);
     alert('Aviso criado com sucesso!');
@@ -144,11 +147,10 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
           <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhum aviso criado.</p>
         ) : (
           appNotifications.filter(n =>
-            n.is_active &&
             !n.title?.includes('Pedido de Correção') &&
             !n.title?.includes('Contra-proposta')
           ).map(notif => (
-            <div key={notif.id} className="bg-white p-4 rounded-3xl border border-slate-100 flex items-center justify-between shadow-sm hover:shadow-md transition-all">
+            <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
               <div className="flex items-center gap-4">
                 <div className={`p-3 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' :
                   notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
