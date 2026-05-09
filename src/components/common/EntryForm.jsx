@@ -17,13 +17,20 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
   const handleAiPolish = async () => {
     if (!data.description) return;
     setIsImproving(true);
-    const res = await callGemini(
-      `Melhore esta descrição de tarefa para um relatório de horas profissional. Responda APENAS com a descrição polida. Sem conselhos e sem frases introdutórias (ex: não comece com "A descrição melhorada seria..." ou "às vezes isso acontece..."). Texto original: "${data.description}"`,
-      "Você é um redator profissional muito rigoroso.",
-      systemSettings?.geminiApiKey
-    );
-    onChange({ ...data, description: res.trim() });
-    setIsImproving(false);
+    try {
+      const res = await callGemini(
+        `Melhore esta descrição de tarefa para um relatório de horas profissional. Responda APENAS com a descrição polida. Sem conselhos e sem frases introdutórias (ex: não comece com "A descrição melhorada seria..." ou "às vezes isso acontece..."). Texto original: "${data.description}"`,
+        "Você é um redator profissional muito rigoroso.",
+        systemSettings?.geminiApiKey
+      );
+      if (res && !res.startsWith('Erro') && !res.startsWith('A IA') && !res.startsWith('Ocorreu')) {
+        onChange({ ...data, description: res.trim() });
+      } else {
+        alert(res);
+      }
+    } finally {
+      setIsImproving(false);
+    }
   };
 
   return (
