@@ -581,7 +581,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                 {selectedDoc.url ? (
                   <iframe src={`${selectedDoc.url}#toolbar=0`} className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : selectedDoc.generated_html ? (
-                  <iframe srcDoc={selectedDoc.generated_html} sandbox="allow-same-origin" className="w-full h-full rounded-xl" title="Document Preview" />
+                  <iframe srcDoc={selectedDoc.generated_html} sandbox="allow-scripts" className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-slate-400">Documento não disponível</p>
