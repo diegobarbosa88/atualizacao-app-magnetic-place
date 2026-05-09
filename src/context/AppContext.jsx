@@ -14,7 +14,7 @@ export const AppProvider = ({ children }) => {
   // --- SYSTEM SETTINGS ---
   const [systemSettings, setSystemSettings] = useState(() => {
     const defaults = {
-      adminPassword: 'admin',
+      adminPassword: '',
       companyName: 'MAGNETIC PLACE',
       darkMode: false,
       appWidth: '1920',

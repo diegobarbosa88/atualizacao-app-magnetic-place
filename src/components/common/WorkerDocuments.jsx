@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { createRoot } from 'react-dom/client';
-import html2canvas from 'html2canvas';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { FileText, Edit2, X, Download, CheckCircle, Loader2, Filter, FileSignature } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
@@ -8,8 +6,7 @@ import { replaceTemplateFields } from '../../utils/templateFields';
 import SignatureStamp from './SignatureStamp';
 
 const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
-  const { supabase: contextSupabase } = useApp() || {};
-  const supabase = contextSupabase || window.supabase;
+  const { supabase } = useApp();
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('magnetic_worker_doc_tab') || 'pendentes');
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('date_desc');
@@ -20,13 +17,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     localStorage.setItem('magnetic_worker_doc_tab', activeTab);
   }, [activeTab]);
 
-  useEffect(() => {
-    if (currentUser?.id && supabase) {
-      loadTemplateDocs();
-    }
-  }, [currentUser?.id]);
-
-  const loadTemplateDocs = async () => {
+  const loadTemplateDocs = useCallback(async () => {
+    if (!currentUser?.id || !supabase) return;
     try {
       const { data } = await supabase
         .from('worker_documents')
@@ -37,13 +29,18 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     } catch (err) {
       console.error('Erro ao carregar documentos de templates:', err);
     }
-  };
+  }, [currentUser?.id, supabase]);
+
+  useEffect(() => {
+    loadTemplateDocs();
+  }, [loadTemplateDocs]);
 
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showSigner, setShowSigner] = useState(false);
   const [signing, setSigning] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [workerIp, setWorkerIp] = useState('A obter IP...');
+  const [signerOpenedAt, setSignerOpenedAt] = useState('');
   const canvasRef = useRef(null);
   const stampRef = useRef(null);
   const isDrawing = useRef(false);
@@ -69,6 +66,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
   useEffect(() => {
     if (showSigner) {
+      setSignerOpenedAt(new Date().toISOString());
       fetch('https://api.ipify.org?format=json')
         .then(res => res.json())
         .then(data => setWorkerIp(data.ip || 'Desconhecido'))
@@ -76,9 +74,18 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     }
   }, [showSigner]);
 
-  const docs = documents?.filter(d => d.workerId === currentUser?.id) || [];
-  const pendentes = docs.filter(d => d.status === 'Pendente').concat(templateDocs.filter(d => d.status === 'pending'));
-  const historico = docs.filter(d => d.status === 'Assinado').concat(templateDocs.filter(d => d.status === 'signed'));
+  const docs = useMemo(
+    () => documents?.filter(d => d.workerId === currentUser?.id) || [],
+    [documents, currentUser?.id]
+  );
+  const pendentes = useMemo(
+    () => docs.filter(d => d.status === 'Pendente').concat(templateDocs.filter(d => d.status === 'pending')),
+    [docs, templateDocs]
+  );
+  const historico = useMemo(
+    () => docs.filter(d => d.status === 'Assinado').concat(templateDocs.filter(d => d.status === 'signed')),
+    [docs, templateDocs]
+  );
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
@@ -131,96 +138,223 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       const canvas = canvasRef.current;
       const assinaturaUrl = canvas.toDataURL('image/png');
 
-      const ipResponse = await fetch('https://api.ipify.org?format=json');
-      const ipData = await ipResponse.json();
-      const userIP = ipData.ip || 'Desconhecido';
+      const userIP = (workerIp && workerIp !== 'A obter IP...') ? workerIp : 'Desconhecido';
       const now = new Date().toISOString();
-      const workerName = currentUser?.name || 'Desconhecido';
 
-      if (!stampRef.current) {
-        throw new Error('Stamp ref not ready');
-      }
+      // ── 1. Draw stamp using Canvas 2D API — zero CSS, zero oklch risk ──
+      const stampBase64 = await new Promise((resolve) => {
+        const SCALE = 2;
+        const W = 580, H = 130;
+        const c = document.createElement('canvas');
+        c.width = W * SCALE;
+        c.height = H * SCALE;
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.scale(SCALE, SCALE);
 
-      const root = createRoot(stampRef.current);
-      root.render(
-        React.createElement(SignatureStamp, {
-          signature: assinaturaUrl,
-          workerName: workerName,
-          ip: userIP,
-          datetime: now,
-          id: selectedDoc.id
-        })
-      );
-
-      await new Promise(resolve => {
-        const maxWait = 3000;
-        const checkInterval = 100;
-        let waited = 0;
-        const check = () => {
-          if (stampRef.current && stampRef.current.querySelector('.bg-indigo-600')) {
-            resolve();
-          } else if (waited >= maxWait) {
-            resolve();
-          } else {
-            waited += checkInterval;
-            setTimeout(check, checkInterval);
-          }
+        const rrect = (x, y, w, h, r) => {
+          ctx.beginPath();
+          ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
+          ctx.arcTo(x + w, y, x + w, y + r, r);
+          ctx.lineTo(x + w, y + h - r);
+          ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+          ctx.lineTo(x + r, y + h);
+          ctx.arcTo(x, y + h, x, y + h - r, r);
+          ctx.lineTo(x, y + r);
+          ctx.arcTo(x, y, x + r, y, r);
+          ctx.closePath();
         };
-        setTimeout(check, 50);
+
+        // Outer card background + border
+        ctx.fillStyle = '#f8fafc'; rrect(1, 1, W - 2, H - 14, 12); ctx.fill();
+        ctx.strokeStyle = '#e0e7ff'; ctx.lineWidth = 2; rrect(1, 1, W - 2, H - 14, 12); ctx.stroke();
+
+        // Signature image box
+        ctx.fillStyle = '#ffffff'; rrect(10, 10, 105, H - 34, 8); ctx.fill();
+        ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1; rrect(10, 10, 105, H - 34, 8); ctx.stroke();
+
+        const drawText = () => {
+          // Badge (indigo square + checkmark)
+          ctx.fillStyle = '#4f46e5'; rrect(126, 11, 8, 8, 2); ctx.fill();
+          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(128, 15.5); ctx.lineTo(130, 17.5); ctx.lineTo(133, 13.5); ctx.stroke();
+
+          ctx.fillStyle = '#4f46e5'; ctx.font = 'bold 8.5px Arial';
+          ctx.fillText('VALIDAÇÃO DIGITAL', 140, 20);
+
+          const dateStr = new Date(now).toLocaleString('pt-PT');
+          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Data/Hora:', 126, 38);
+          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(dateStr, 200, 38);
+
+          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Endereço IP:', 126, 52);
+          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(userIP || 'N/D', 200, 52);
+
+          ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(126, 59); ctx.lineTo(W - 10, 59); ctx.stroke();
+
+          ctx.fillStyle = '#94a3b8'; ctx.font = '6px Arial'; ctx.fillText('ID:', 126, 70);
+          ctx.font = '6px monospace';
+          ctx.fillText(selectedDoc.id ? selectedDoc.id.substring(0, 20) + '...' : '', 140, 70);
+
+          ctx.fillStyle = '#94a3b8'; ctx.font = '5px Arial';
+          ctx.fillText('Documento validado eletronicamente', 0, H - 3);
+
+          resolve(c.toDataURL('image/png'));
+        };
+
+        const sigImg = new Image();
+        sigImg.onload = () => {
+          ctx.globalCompositeOperation = 'multiply';
+          ctx.drawImage(sigImg, 16, 16, 93, H - 46);
+          ctx.globalCompositeOperation = 'source-over';
+          drawText();
+        };
+        sigImg.onerror = () => drawText();
+        sigImg.src = assinaturaUrl;
       });
 
-      const actualWidth = stampRef.current.scrollWidth || 560;
-      const actualHeight = stampRef.current.scrollHeight || 150;
-
-      const stampCanvas = await html2canvas(stampRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        width: actualWidth,
-        height: actualHeight,
-        x: 0,
-        y: 0
-      });
-
-      const stampBase64 = stampCanvas.toDataURL('image/png');
-
-      if (stampBase64.length < 5000) {
-        root.unmount();
-        throw new Error('Stamp capture failed - image too small');
-      }
-
-      root.unmount();
-
+      // ── 2. Generate PDF ──
       let pdfBlob;
-      
-      if (selectedDoc.templateId && selectedDoc.generated_html) {
-        const previewEl = document.createElement('div');
-        previewEl.innerHTML = selectedDoc.generated_html;
-        previewEl.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:794px;padding:40px;background:white;font-family:Arial,sans-serif;';
-        document.body.appendChild(previewEl);
-        
-        let html2pdf = window.html2pdf;
-        if (!html2pdf) {
+
+      const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
+
+      if (isTemplateDoc && selectedDoc.generated_html) {
+        // Parse template HTML via DOMParser and inject scripts BEFORE writing to iframe
+        const parser = new DOMParser();
+        const tmplDoc = parser.parseFromString(selectedDoc.generated_html, 'text/html');
+
+        // Force Tailwind v3 (hex colors, no oklch)
+        tmplDoc.querySelectorAll('script[src]').forEach(s => {
+          if ((s.getAttribute('src') || '').includes('tailwindcss')) {
+            s.setAttribute('src', 'https://cdn.tailwindcss.com/3.4.16');
+          }
+        });
+
+        // Inject html2canvas into <head> at parse time (no post-write DOM manipulation)
+        const h2cTag = tmplDoc.createElement('script');
+        h2cTag.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+        (tmplDoc.head || tmplDoc.documentElement).appendChild(h2cTag);
+
+        // Inject CSS to normalise A4 width and remove body margins
+        const normCSS = tmplDoc.createElement('style');
+        normCSS.textContent = [
+          'html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width: 210mm !important; min-height: 297mm !important; }',
+          '.document-container { width: 210mm !important; min-height: 297mm !important; margin: 0 !important; padding: 20mm !important; box-shadow: none !important; box-sizing: border-box !important; }',
+          '* { box-sizing: border-box !important; }'
+        ].join('\n');
+        (tmplDoc.head || tmplDoc.documentElement).appendChild(normCSS);
+
+        const cleanHtml = '<!DOCTYPE html>' + tmplDoc.documentElement.outerHTML;
+
+        const iframe = document.createElement('iframe');
+        // A4 = 210mm, which is ~794px at 96dpi. We use a bit more for safe rendering.
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:800px;height:1200px;border:none;overflow:hidden;';
+        document.body.appendChild(iframe);
+
+        try {
+          iframe.contentDocument.open();
+          iframe.contentDocument.write(cleanHtml);
+          iframe.contentDocument.close();
+
+          // Poll until both Tailwind v3 and html2canvas are ready inside the iframe
           await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-            script.onload = () => { html2pdf = window.html2pdf; resolve(); };
-            script.onerror = reject;
-            document.head.appendChild(script);
+            const deadline = Date.now() + 15000;
+            const check = () => {
+              if (Date.now() > deadline) {
+                reject(new Error('Timeout a aguardar html2canvas/Tailwind (15s)'));
+                return;
+              }
+              const win = iframe.contentWindow;
+              if (win?.html2canvas && (win.tailwind || iframe.contentDocument.readyState === 'complete')) {
+                setTimeout(resolve, 600);
+              } else {
+                setTimeout(check, 150);
+              }
+            };
+            setTimeout(check, 300);
           });
+
+          // Measure real content height and resize iframe
+          const docEl = iframe.contentDocument.querySelector('.document-container') || iframe.contentDocument.body;
+          const contentH = docEl.scrollHeight + 100;
+          iframe.style.height = contentH + 'px';
+          await new Promise(resolve => setTimeout(resolve, 100));
+
+          // Append stamp image at bottom of document
+          const stampDiv = iframe.contentDocument.createElement('div');
+          stampDiv.style.cssText = 'margin-top:32px;display:flex;justify-content:flex-end;padding-right:8px;page-break-inside:avoid;';
+          const stampImgEl = iframe.contentDocument.createElement('img');
+          stampImgEl.src = stampBase64;
+          stampImgEl.style.cssText = 'width:300px;height:auto;';
+          stampDiv.appendChild(stampImgEl);
+          docEl.appendChild(stampDiv);
+          await new Promise(resolve => setTimeout(resolve, 200));
+
+          // Capture with 2x scale (safer for memory) and exact pixel alignment
+          const captureEl = iframe.contentDocument.querySelector('.document-container') || iframe.contentDocument.body;
+          const captureH = captureEl.scrollHeight;
+          const captureW = captureEl.scrollWidth;
+          
+          const iframeCanvas = await iframe.contentWindow.html2canvas(captureEl, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            width: captureW,
+            height: captureH,
+            windowWidth: captureW,
+            windowHeight: captureH,
+            logging: false,
+            onclone: (clonedDoc) => {
+              const el = clonedDoc.querySelector('.document-container') || clonedDoc.body;
+              el.style.width = '210mm';
+              el.style.margin = '0';
+            }
+          });
+
+          // Load jsPDF and assemble PDF page-by-page
+          let jsPDF = window.jspdf?.jsPDF;
+          if (!jsPDF) {
+            await new Promise((resolve, reject) => {
+              const s = document.createElement('script');
+              s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+              s.onload = () => { jsPDF = window.jspdf.jsPDF; resolve(); };
+              s.onerror = reject;
+              document.head.appendChild(s);
+            });
+          }
+
+          const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+          const pageW = pdf.internal.pageSize.getWidth();
+          const pageH = pdf.internal.pageSize.getHeight();
+          const imgData = iframeCanvas.toDataURL('image/jpeg', 0.92);
+          
+          // The critical part: ensure totalImgH is calculated based on actual A4 width
+          const totalImgH = pageW * (iframeCanvas.height / iframeCanvas.width);
+
+          let yOff = 0;
+          let pageNum = 1;
+          const totalPages = Math.ceil(totalImgH / (pageH - 1)); // 1mm overlap buffer
+
+          while (yOff < totalImgH - 1) { 
+            if (pageNum > 1) pdf.addPage();
+            
+            // Add the document content
+            pdf.addImage(imgData, 'JPEG', 0, -yOff, pageW, totalImgH, undefined, 'FAST');
+            
+            // Add page numbering
+            pdf.setFontSize(8);
+            pdf.setTextColor(150, 150, 150);
+            pdf.text(`Página ${pageNum} de ${Math.max(pageNum, totalPages)}`, pageW / 2, pageH - 8, { align: 'center' });
+            
+            yOff += pageH;
+            pageNum++;
+          }
+          pdfBlob = pdf.output('blob');
+        } finally {
+          if (document.body.contains(iframe)) document.body.removeChild(iframe);
         }
-        
-        pdfBlob = await html2pdf().set({
-          margin: 0,
-          filename: `${selectedDoc.title || 'document'}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(previewEl).output('blob');
-        
-        document.body.removeChild(previewEl);
+
       } else {
+        // ── Non-template docs: use PDF.co API to stamp existing PDF ──
         const stampPath = `${currentUser.id}/stamps/${Date.now()}.png`;
         const stampBlob = await fetch(stampBase64).then(r => r.blob());
         const { error: stampError } = await supabase.storage
@@ -230,51 +364,43 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const { data: stampUrlData } = supabase.storage.from('documentos').getPublicUrl(stampPath);
         const stampPublicUrl = stampUrlData.publicUrl;
 
-        const pdfCoUrl = 'https://api.pdf.co/v1/pdf/edit/add';
-        const pdfCoKey = import.meta.env.VITE_PDFCO_API_KEY || 'diegobarbosa@magneticplace.pt_QTV2lppvP8euGSGmWWAEU9iZTpb81mZIQqOJM1r9zsVW4weRfuolLhkdzXFTpNFU';
-
-        const imgResponse = await fetch(pdfCoUrl, {
+        const pdfCoKey = import.meta.env.VITE_PDFCO_API_KEY;
+        if (!pdfCoKey) throw new Error('VITE_PDFCO_API_KEY não configurada. Contacte o administrador.');
+        const imgResponse = await fetch('https://api.pdf.co/v1/pdf/edit/add', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-api-key': pdfCoKey },
           body: JSON.stringify({
             url: selectedDoc.url,
             name: 'Documento_Assinado',
-            images: [
-              { url: stampPublicUrl, x: 300, y: 755, width: 230, height: 55 }
-            ]
+            images: [{ url: stampPublicUrl, x: 300, y: 755, width: 230, height: 55 }]
           })
         });
-
         const imgResult = await imgResponse.json();
         if (imgResult.error) throw new Error(imgResult.error);
-
-        const pdfCoTempUrl = imgResult.url;
-        pdfBlob = await fetch(pdfCoTempUrl).then(async r => {
+        pdfBlob = await fetch(imgResult.url).then(async r => {
           if (!r.ok) throw new Error('Erro ao baixar PDF temporário do PDF.co');
-          return await r.blob();
+          return r.blob();
         });
       }
 
+      // ── 3. Upload signed PDF to Supabase Storage ──
       const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
-      const { data: pdfUpload, error: pdfError } = await supabase.storage
+      const { error: pdfError } = await supabase.storage
         .from('documentos')
         .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+      if (pdfError) throw new Error(`Erro ao guardar PDF: ${pdfError.message}`);
 
-      if (pdfError) throw new Error(`Erro ao guardar PDF no seu storage: ${pdfError.message}`);
-
-const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pdfPath);
+      const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pdfPath);
       const pdfAssinadoUrl = pdfUrlData.publicUrl;
 
-      const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
-      
+      // ── 4. Persist metadata to database ──
       if (isTemplateDoc) {
         const docData = {
-          id: selectedDoc.id,
           status: 'signed',
           signed_at: now,
           signed_ip: userIP,
           signature_data: stampBase64,
-          pdfAssinadoUrl: pdfAssinadoUrl
+          signed_pdf_url: pdfAssinadoUrl
         };
         const { error } = await supabase.from('worker_documents').update(docData).eq('id', selectedDoc.id);
         if (error) throw error;
@@ -296,15 +422,17 @@ const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pd
         };
         await saveToDb('documentos', selectedDoc.id, docData);
       }
-      alert('Documento assinado com sucesso! O PDF será atualizado em breve.');
+
+      alert('Documento assinado com sucesso!');
       setShowSigner(false);
       setSelectedDoc(null);
       clearCanvas();
     } catch (err) {
       console.error('Erro completo:', err);
-      alert(`Erro: ${err.message}`);
+      alert(`Erro: ${err.message || 'Erro desconhecido'}`);
+    } finally {
+      setSigning(false);
     }
-    setSigning(false);
   };
 
   const docList = useMemo(() => {
@@ -451,7 +579,7 @@ const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pd
                 {selectedDoc.url ? (
                   <iframe src={`${selectedDoc.url}#toolbar=0`} className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : selectedDoc.generated_html ? (
-                  <iframe srcDoc={selectedDoc.generated_html} className="w-full h-full rounded-xl" title="Document Preview" />
+                  <iframe srcDoc={selectedDoc.generated_html} sandbox="allow-same-origin" className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-slate-400">Documento não disponível</p>
@@ -481,10 +609,10 @@ const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pd
                   <div className="border border-slate-200 rounded-2xl p-4 mb-4">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 text-center">Pré-visualização do Stamp</p>
                     <div className="flex justify-center">
-                      <SignatureStamp 
-                        signature={canvasRef.current ? canvasRef.current.toDataURL('image/png') : ''} 
-                        ip={workerIp} 
-                        datetime={new Date().toISOString()} 
+                      <SignatureStamp
+                        signature={canvasRef.current ? canvasRef.current.toDataURL('image/png') : ''}
+                        ip={workerIp}
+                        datetime={signerOpenedAt}
                         id={selectedDoc.id}
                       />
                     </div>

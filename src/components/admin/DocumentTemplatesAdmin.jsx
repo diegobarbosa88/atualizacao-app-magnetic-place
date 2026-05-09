@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, Filter, CheckCircle, Clock, EyeOff, FileSignature } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, Filter, CheckCircle, Clock, EyeOff, FileSignature, Sparkles } from 'lucide-react';
 import { TEMPLATE_FIELDS, replaceTemplateFields } from '../../utils/templateFields';
 import { useApp } from '../../context/AppContext';
 
@@ -89,10 +89,47 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [docFilter, setDocFilter] = useState('all');
   const [docSearch, setDocSearch] = useState('');
 
+  // AI states
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [showAIPanel, setShowAIPanel] = useState(false);
+
+  const editorRef = useRef(null);
+
   useEffect(() => {
-    loadTemplates();
-    loadGeneratedDocs();
-  }, []);
+    if (!supabase) return;
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setLoadingDocs(true);
+      try {
+        const [tmplRes, docsRes] = await Promise.all([
+          supabase.from('document_templates').select('*').order('name'),
+          supabase.from('worker_documents').select('*').order('created_at', { ascending: false }).limit(200)
+        ]);
+        if (cancelled) return;
+        if (tmplRes.error) throw tmplRes.error;
+        if (docsRes.error) throw docsRes.error;
+        setTemplates(tmplRes.data || []);
+        const mapped = (docsRes.data || []).map(doc => ({
+          ...doc,
+          worker: workers.find(w => w.id === doc.worker_id) || { name: 'Desconhecido' }
+        }));
+        setGeneratedDocs(mapped);
+      } catch (err) {
+        if (!cancelled) console.error('Erro ao carregar dados:', err);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+          setLoadingDocs(false);
+        }
+      }
+    };
+
+    load();
+    return () => { cancelled = true; };
+  }, [supabase, workers]);
 
   const loadTemplates = async () => {
     if (!supabase) return;
@@ -126,7 +163,6 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         ...doc,
         worker: workers.find(w => w.id === doc.worker_id) || { name: 'Desconhecido' }
       }));
-      
       setGeneratedDocs(mapped);
     } catch (err) {
       console.error("Erro ao carregar documentos:", err);
@@ -214,14 +250,20 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         const { error } = await supabase
           .from('worker_documents')
           .insert([newDoc]);
-        
+
         if (error) throw error;
       });
 
-      await Promise.all(promises);
+      const results = await Promise.allSettled(promises);
+      const failed = results.filter(r => r.status === 'rejected');
       setShowGenerateModal(false);
       loadGeneratedDocs();
-      alert(`${selectedWorkers.length} documentos gerados com sucesso!`);
+      if (failed.length > 0) {
+        alert(`${results.length - failed.length} documentos gerados. ${failed.length} falharam — verifique a consola.`);
+        failed.forEach(f => console.error('Falha ao gerar documento:', f.reason));
+      } else {
+        alert(`${selectedWorkers.length} documentos gerados com sucesso!`);
+      }
     } catch (err) {
       alert("Erro ao gerar documentos: " + err.message);
     } finally {
@@ -246,32 +288,109 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   };
 
   const insertField = (tag) => {
-    const editor = document.getElementById('html-editor');
+    const editor = editorRef.current;
     if (!editor) return;
-    
+
     const start = editor.selectionStart;
     const end = editor.selectionEnd;
     const text = previewData.html_content;
     const before = text.substring(0, start);
     const after = text.substring(end);
-    
+
     setPreviewData({
       ...previewData,
       html_content: before + tag + after
     });
-    
+
     setShowFieldList(false);
   };
 
+  const handleGenerateAI = async () => {
+    if (!aiPrompt.trim()) return alert("Descreva o que deseja gerar");
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) return alert("API Key do Gemini não configurada");
+
+    setIsGeneratingAI(true);
+    try {
+      const prompt = `
+        Aja como um especialista em documentos legais e administrativos. 
+        Gere um template de documento HTML para: "${aiPrompt}".
+        
+        REGRAS CRÍTICAS:
+        1. Use apenas HTML puro e classes do Tailwind CSS v3.
+        2. Estrutura obrigatória: O conteúdo principal deve estar dentro de uma div com a classe "document-container".
+        3. Use estes placeholders exatos onde apropriado:
+           ${TEMPLATE_FIELDS.map(f => `${f.tag} (${f.label})`).join(', ')}
+        4. O design deve ser profissional, limpo e pronto para impressão (A4).
+        5. Retorne APENAS o código HTML completo, começando com <!DOCTYPE html> e terminando com </html>. Não inclua explicações ou markdown.
+        6. Garanta que o estilo no <head> seja compatível com visualização profissional.
+      `;
+
+      // Try gemini-1.5-flash-latest with a fallback to gemini-pro
+      let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+
+      // Fallback if first model fails
+      if (!response.ok) {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        });
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || `Erro HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+        throw new Error(`A IA recusou gerar o conteúdo (${finishReason}). Reformule o pedido.`);
+      }
+
+      let generatedHtml = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      generatedHtml = generatedHtml.replace(/^```html\n?/, '').replace(/\n?```$/, '').trim();
+
+      if (!generatedHtml || (!generatedHtml.includes('<!DOCTYPE') && !generatedHtml.includes('<html'))) {
+        throw new Error("A IA não retornou HTML válido. Reformule o pedido.");
+      }
+
+      setPreviewData({ ...previewData, html_content: generatedHtml });
+      setShowAIPanel(false);
+      setAiPrompt('');
+    } catch (err) {
+      console.error("Erro AI:", err);
+      alert("Erro ao gerar com IA: " + err.message);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(previewData.html_content);
-    alert("Código HTML copiado!");
+    navigator.clipboard.writeText(previewData.html_content)
+      .then(() => alert('Código HTML copiado!'))
+      .catch(() => alert('Não foi possível copiar. Selecione o código manualmente.'));
   };
 
   const previewHtml = () => {
-    const mockWorker = workers[0] || {};
+    const mockWorker = workers[0] || { name: 'Nome Exemplo', role: 'Função Exemplo' };
     return replaceTemplateFields(previewData.html_content, mockWorker, systemSettings);
   };
+
+  const filteredDocs = useMemo(() => {
+    return generatedDocs
+      .filter(d => docFilter === 'all' || d.status === docFilter)
+      .filter(d => !docSearch || d.title.toLowerCase().includes(docSearch.toLowerCase()) || (d.worker?.name || '').toLowerCase().includes(docSearch.toLowerCase()));
+  }, [generatedDocs, docFilter, docSearch]);
 
   return (
     <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -419,10 +538,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                   </td>
                 </tr>
               ) : (
-                generatedDocs
-                  .filter(d => docFilter === 'all' || d.status === docFilter)
-                  .filter(d => !docSearch || d.title.toLowerCase().includes(docSearch.toLowerCase()) || (d.worker?.name || '').toLowerCase().includes(docSearch.toLowerCase()))
-                  .map(doc => (
+                filteredDocs.map(doc => (
                     <tr key={doc.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300 group">
                       <td className="px-4 py-4 rounded-l-2xl border-y border-l border-slate-100">
                         <div className="flex items-center gap-3">
@@ -519,6 +635,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código HTML</span>
                     <div className="flex gap-2">
                       <button 
+                        onClick={() => setShowAIPanel(!showAIPanel)}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all shadow-sm ${showAIPanel ? 'bg-purple-600 text-white' : 'bg-purple-50 border border-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white'}`}
+                      >
+                        <Sparkles size={14} /> Gerar com IA
+                      </button>
+                      <button 
                         onClick={() => setShowFieldList(!showFieldList)}
                         className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter bg-white border border-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                       >
@@ -527,6 +649,28 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                       </button>
                     </div>
                   </div>
+                  
+                  {showAIPanel && (
+                    <div className="p-4 bg-purple-50 border-b border-purple-100 animate-in slide-in-from-top-2">
+                      <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest mb-2 ml-1">Descreva o documento que deseja:</p>
+                      <div className="flex gap-2">
+                        <textarea
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          placeholder="Ex: Contrato de prestação de serviços com cláusula de confidencialidade..."
+                          className="flex-1 p-3 bg-white border border-purple-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-purple-500 min-h-[80px]"
+                        />
+                        <button
+                          onClick={handleGenerateAI}
+                          disabled={isGeneratingAI || !aiPrompt.trim()}
+                          className="px-4 bg-purple-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-2 min-w-[80px]"
+                        >
+                          {isGeneratingAI ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
+                          {isGeneratingAI ? '...' : 'Gerar'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   
                   {showFieldList && (
                     <div className="p-4 bg-white grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border-b border-slate-100">
@@ -544,7 +688,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                   )}
                   
                   <textarea
-                    id="html-editor"
+                    ref={editorRef}
                     value={previewData.html_content}
                     onChange={(e) => setPreviewData({ ...previewData, html_content: e.target.value })}
                     className="w-full h-80 p-6 font-mono text-xs border-0 resize-none outline-none bg-white text-slate-600"
@@ -561,6 +705,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                 <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-200">
                   <iframe
                     srcDoc={previewHtml()}
+                    sandbox="allow-same-origin"
                     className="w-full h-full border-0"
                     title="Preview"
                   />
@@ -690,10 +835,15 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
               <div className="flex gap-2">
                 <button 
                   onClick={() => {
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write(selectedDocView.generated_html);
-                    printWindow.document.close();
-                    printWindow.print();
+                    const blob = new Blob([selectedDocView.generated_html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const printWindow = window.open(url, '_blank', 'noopener,noreferrer');
+                    if (printWindow) {
+                      printWindow.addEventListener('load', () => {
+                        printWindow.print();
+                        URL.revokeObjectURL(url);
+                      });
+                    }
                   }}
                   className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all"
                 >
@@ -707,11 +857,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
             
             <div className="flex-1 bg-slate-100 p-8 overflow-y-auto shadow-inner">
               <div className="mx-auto bg-white shadow-2xl w-full max-w-[21cm] min-h-[29.7cm] p-[2cm] border border-slate-200">
-                <iframe 
-                  srcDoc={selectedDocView.generated_html} 
-                  className="w-full h-full border-0" 
+                <iframe
+                  srcDoc={selectedDocView.generated_html}
+                  sandbox="allow-same-origin"
+                  className="w-full h-full border-0"
                   style={{ height: '25cm' }}
-                  title="Document Preview" 
+                  title="Document Preview"
                 />
               </div>
             </div>
