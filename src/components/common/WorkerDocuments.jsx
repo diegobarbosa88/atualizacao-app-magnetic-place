@@ -208,7 +208,14 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const sigImg = new Image();
         sigImg.onload = () => {
           ctx.globalCompositeOperation = 'multiply';
-          ctx.drawImage(sigImg, 16, 16, 93, H - 46);
+          // Maintain aspect ratio within the stamp box (93 × 84)
+          const boxW = 93, boxH = H - 46;
+          const sigAspect = sigImg.width / (sigImg.height || 1);
+          const drawW = Math.min(boxW, boxH * sigAspect);
+          const drawH = drawW / sigAspect;
+          const drawX = 16 + (boxW - drawW) / 2;
+          const drawY = 16 + (boxH - drawH) / 2;
+          ctx.drawImage(sigImg, drawX, drawY, drawW, drawH);
           ctx.globalCompositeOperation = 'source-over';
           drawText();
         };
