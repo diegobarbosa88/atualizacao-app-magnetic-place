@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { FileText, Eye, CheckCircle, Trash2, Search, Upload, Loader2 } from 'lucide-react';
 import { formatDocDate } from '../../utils/dateUtils';
+import { useApp } from '../../context/AppContext';
 
 const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
+  const { supabase: clientSupabase } = useApp();
   const [selWorker, setSelWorker] = useState('');
   const [selTipo, setSelTipo] = useState('Recibo de Vencimento');
   const [selFile, setSelFile] = useState(null);
@@ -10,8 +12,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [sortConfig, setSortConfig] = useState({ key: 'dataEmissao', direction: 'desc' });
-
-  const clientSupabase = typeof window !== 'undefined' ? window.supabaseInstance : null;
 
   const tipos = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
@@ -78,6 +78,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
   };
 
   const handleDeleteDoc = async (doc) => {
+    if (!clientSupabase) return alert('Conexão indisponível. Actualize a página.');
     if (!window.confirm('Apagar documento permanentemente?')) return;
 
     try {
