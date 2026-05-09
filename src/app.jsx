@@ -127,7 +127,7 @@ export default function App() {
         }
       }
     });
-  }, [currentUser?.id]);
+  }, [currentUser?.id, myNotifications, supabase]);
 
   useEffect(() => {
     if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
