@@ -4,6 +4,7 @@ import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 import { replaceTemplateFields } from '../../utils/templateFields';
 import SignatureStamp from './SignatureStamp';
+import { isPending, isSigned } from '../../constants/documentStatus';
 
 const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const { supabase } = useApp();
@@ -79,11 +80,11 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     [documents, currentUser?.id]
   );
   const pendentes = useMemo(
-    () => docs.filter(d => d.status === 'Pendente').concat(templateDocs.filter(d => d.status === 'pending')),
+    () => docs.filter(d => isPending(d.status)).concat(templateDocs.filter(d => isPending(d.status))),
     [docs, templateDocs]
   );
   const historico = useMemo(
-    () => docs.filter(d => d.status === 'Assinado').concat(templateDocs.filter(d => d.status === 'signed')),
+    () => docs.filter(d => isSigned(d.status)).concat(templateDocs.filter(d => isSigned(d.status))),
     [docs, templateDocs]
   );
 
@@ -140,6 +141,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
       const userIP = (workerIp && workerIp !== 'A obter IP...') ? workerIp : 'Desconhecido';
       const now = new Date().toISOString();
+      const docId = selectedDoc?.id ?? '';
 
       // ── 1. Draw stamp using Canvas 2D API — zero CSS, zero oklch risk ──
       const stampBase64 = await new Promise((resolve) => {
@@ -193,7 +195,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
           ctx.fillStyle = '#94a3b8'; ctx.font = '6px Arial'; ctx.fillText('ID:', 126, 70);
           ctx.font = '6px monospace';
-          ctx.fillText(selectedDoc.id ? selectedDoc.id.substring(0, 20) + '...' : '', 140, 70);
+          ctx.fillText(docId ? docId.substring(0, 20) + '...' : '', 140, 70);
 
           ctx.fillStyle = '#94a3b8'; ctx.font = '5px Arial';
           ctx.fillText('Documento validado eletronicamente', 0, H - 3);
@@ -536,10 +538,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                   <p className="text-sm font-bold text-slate-700">{doc.tipo || doc.title}</p>
                   <div className="flex items-center gap-2">
                     <p className="text-[10px] text-slate-400">Emitido: {formatDocDate(doc.dataEmissao || doc.created_at)}</p>
-                    {(doc.status === 'Assinado' || doc.status === 'signed') && (doc.dataAssinatura || doc.signed_at) && (
+                    {isSigned(doc.status) && (doc.dataAssinatura || doc.signed_at) && (
                       <span className="text-slate-300">|</span>
                     )}
-                    {(doc.status === 'Assinado' || doc.status === 'signed') && (doc.dataAssinatura || doc.signed_at) && (
+                    {isSigned(doc.status) && (doc.dataAssinatura || doc.signed_at) && (
                       <p className="text-[10px] text-emerald-600 font-bold">
                         Assinado: {new Date(doc.dataAssinatura || doc.signed_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -548,10 +550,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${(doc.status === 'Pendente' || doc.status === 'pending') ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                  {doc.status === 'pending' ? 'Pendente' : doc.status}
+                <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${isPending(doc.status) ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                  {isPending(doc.status) ? 'Pendente' : 'Assinado'}
                 </span>
-                {(doc.status === 'Pendente' || doc.status === 'pending') ? (
+                {isPending(doc.status) ? (
                   <button onClick={() => { setSelectedDoc(doc); setShowSigner(true); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl">
                     <Edit2 size={14} />
                   </button>

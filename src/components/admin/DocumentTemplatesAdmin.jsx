@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { isSigned, isPending } from '../../constants/documentStatus';
 import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, Filter, CheckCircle, Clock, EyeOff, FileSignature, Sparkles } from 'lucide-react';
 import { TEMPLATE_FIELDS, replaceTemplateFields } from '../../utils/templateFields';
 import { useApp } from '../../context/AppContext';
@@ -310,11 +311,13 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) return alert("API Key do Gemini não configurada");
 
+    const sanitizedPrompt = aiPrompt.trim().slice(0, 500).replace(/["""]/g, '');
+
     setIsGeneratingAI(true);
     try {
       const prompt = `
-        Aja como um especialista em documentos legais e administrativos. 
-        Gere um template de documento HTML para: "${aiPrompt}".
+        Aja como um especialista em documentos legais e administrativos.
+        Gere um template de documento HTML para: "${sanitizedPrompt}".
         
         REGRAS CRÍTICAS:
         1. Use apenas HTML puro e classes do Tailwind CSS v3.
@@ -542,8 +545,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     <tr key={doc.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300 group">
                       <td className="px-4 py-4 rounded-l-2xl border-y border-l border-slate-100">
                         <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-xl ${doc.status === 'signed' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                            {doc.status === 'signed' ? <CheckCircle size={16} /> : <Clock size={16} />}
+                          <div className={`p-2 rounded-xl ${isSigned(doc.status) ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                            {isSigned(doc.status) ? <CheckCircle size={16} /> : <Clock size={16} />}
                           </div>
                           <div>
                             <p className="text-sm font-black text-slate-800 leading-none mb-1">{doc.title}</p>
@@ -557,8 +560,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                         </span>
                       </td>
                       <td className="px-4 py-4 border-y border-slate-100 text-center">
-                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${doc.status === 'signed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                          {doc.status === 'signed' ? 'Assinado' : 'Pendente'}
+                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter ${isSigned(doc.status) ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {isSigned(doc.status) ? 'Assinado' : 'Pendente'}
                         </span>
                       </td>
                       <td className="px-4 py-4 rounded-r-2xl border-y border-r border-slate-100 text-right">
@@ -869,9 +872,9 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
             
             <div className="px-8 py-4 bg-white border-t border-slate-100 flex justify-between items-center">
               <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${selectedDocView.status === 'signed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                <span className={`w-3 h-3 rounded-full ${isSigned(selectedDocView.status) ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                  {selectedDocView.status === 'signed' ? 'Assinado' : 'Pendente'}
+                  {isSigned(selectedDocView.status) ? 'Assinado' : 'Pendente'}
                 </span>
               </div>
               <p className="text-[9px] font-bold text-slate-400">DOC_ID: {selectedDocView.id}</p>
