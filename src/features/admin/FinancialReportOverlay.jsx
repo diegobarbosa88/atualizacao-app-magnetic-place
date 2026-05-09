@@ -26,10 +26,13 @@ const FinancialReportOverlay = ({ logs, workers, clients, expenses, finFilter, s
 
   const generateInsight = async () => {
     setIsAnalyzing(true);
-    const prompt = `Analise financeiramente os dados: Faturamento ${stats.revenue}€, Custos Staff ${stats.teamCosts}€, Outras Despesas ${stats.totalExpenses}€, Lucro ${stats.netProfit}€. Sugira 3 estratégias curtas para melhorar o lucro.`;
-    const res = await callGemini(prompt, "Você é um consultor financeiro sênior da empresa.", systemSettings.geminiApiKey);
-    setInsight(res);
-    setIsAnalyzing(false);
+    try {
+      const prompt = `Analise financeiramente os dados: Faturamento ${stats.revenue}€, Custos Staff ${stats.teamCosts}€, Outras Despesas ${stats.totalExpenses}€, Lucro ${stats.netProfit}€. Sugira 3 estratégias curtas para melhorar o lucro.`;
+      const res = await callGemini(prompt, "Você é um consultor financeiro sênior da empresa.", systemSettings.geminiApiKey);
+      setInsight(res);
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   return (
