@@ -148,7 +148,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       // ── 1. Draw stamp using Canvas 2D API — zero CSS, zero oklch risk ──
       const stampBase64 = await new Promise((resolve) => {
         const SCALE = 2;
-        const W = 580, H = 130;
+        const W = 580, H = 160;
         const c = document.createElement('canvas');
         c.width = W * SCALE;
         c.height = H * SCALE;
@@ -172,32 +172,32 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         ctx.fillStyle = '#f8fafc'; rrect(1, 1, W - 2, H - 14, 12); ctx.fill();
         ctx.strokeStyle = '#e0e7ff'; ctx.lineWidth = 2; rrect(1, 1, W - 2, H - 14, 12); ctx.stroke();
 
-        // Signature image box
-        ctx.fillStyle = '#ffffff'; rrect(10, 10, 105, H - 34, 8); ctx.fill();
-        ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1; rrect(10, 10, 105, H - 34, 8); ctx.stroke();
+        // Signature image box — widened to 280px to accommodate natural 3:1 signature ratio
+        ctx.fillStyle = '#ffffff'; rrect(10, 10, 280, H - 34, 8); ctx.fill();
+        ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1; rrect(10, 10, 280, H - 34, 8); ctx.stroke();
 
         const drawText = () => {
-          // Badge (indigo square + checkmark)
-          ctx.fillStyle = '#4f46e5'; rrect(126, 11, 8, 8, 2); ctx.fill();
+          // Badge (indigo square + checkmark) — text section starts at x=296
+          ctx.fillStyle = '#4f46e5'; rrect(296, 11, 8, 8, 2); ctx.fill();
           ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.moveTo(128, 15.5); ctx.lineTo(130, 17.5); ctx.lineTo(133, 13.5); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(298, 15.5); ctx.lineTo(300, 17.5); ctx.lineTo(303, 13.5); ctx.stroke();
 
           ctx.fillStyle = '#4f46e5'; ctx.font = 'bold 8.5px Arial';
-          ctx.fillText('VALIDAÇÃO DIGITAL', 140, 20);
+          ctx.fillText('VALIDAÇÃO DIGITAL', 310, 20);
 
           const dateStr = new Date(now).toLocaleString('pt-PT');
-          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Data/Hora:', 126, 38);
-          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(dateStr, 200, 38);
+          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Data/Hora:', 296, 38);
+          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(dateStr, 370, 38);
 
-          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Endereço IP:', 126, 52);
-          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(userIP || 'N/D', 200, 52);
+          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Endereço IP:', 296, 52);
+          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(userIP || 'N/D', 370, 52);
 
           ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(126, 59); ctx.lineTo(W - 10, 59); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(296, 59); ctx.lineTo(W - 10, 59); ctx.stroke();
 
-          ctx.fillStyle = '#94a3b8'; ctx.font = '6px Arial'; ctx.fillText('ID:', 126, 70);
+          ctx.fillStyle = '#94a3b8'; ctx.font = '6px Arial'; ctx.fillText('ID:', 296, 70);
           ctx.font = '6px monospace';
-          ctx.fillText(docId ? docId.substring(0, 20) + '...' : '', 140, 70);
+          ctx.fillText(docId ? docId.substring(0, 20) + '...' : '', 310, 70);
 
           ctx.fillStyle = '#94a3b8'; ctx.font = '5px Arial';
           ctx.fillText('Documento validado eletronicamente', 0, H - 3);
@@ -208,8 +208,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const sigImg = new Image();
         sigImg.onload = () => {
           ctx.globalCompositeOperation = 'multiply';
-          // Maintain aspect ratio within the stamp box (93 × 84)
-          const boxW = 93, boxH = H - 46;
+          // Signature box is 268×114px — maintain aspect ratio of user's signature canvas
+          const boxW = 268, boxH = H - 46;
           const sigAspect = sigImg.width / (sigImg.height || 1);
           const drawW = Math.min(boxW, boxH * sigAspect);
           const drawH = drawW / sigAspect;
@@ -295,7 +295,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           stampDiv.style.cssText = 'margin-top:32px;display:flex;justify-content:flex-end;padding-right:8px;page-break-inside:avoid;';
           const stampImgEl = iframe.contentDocument.createElement('img');
           stampImgEl.src = stampBase64;
-          stampImgEl.style.cssText = 'width:300px;height:auto;';
+          stampImgEl.style.cssText = 'width:420px;height:auto;';
           stampDiv.appendChild(stampImgEl);
           docEl.appendChild(stampDiv);
           await new Promise(resolve => setTimeout(resolve, 200));
@@ -383,7 +383,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           body: JSON.stringify({
             url: selectedDoc.url,
             name: 'Documento_Assinado',
-            images: [{ url: stampPublicUrl, x: 300, y: 755, width: 230, height: 55 }]
+            images: [{ url: stampPublicUrl, x: 200, y: 720, width: 380, height: 105 }]
           })
         });
         const imgResult = await imgResponse.json();
