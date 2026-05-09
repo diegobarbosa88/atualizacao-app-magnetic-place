@@ -79,14 +79,16 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     () => documents?.filter(d => d.workerId === currentUser?.id) || [],
     [documents, currentUser?.id]
   );
-  const pendentes = useMemo(
-    () => docs.filter(d => isPending(d.status)).concat(templateDocs.filter(d => isPending(d.status))),
-    [docs, templateDocs]
-  );
-  const historico = useMemo(
-    () => docs.filter(d => isSigned(d.status)).concat(templateDocs.filter(d => isSigned(d.status))),
-    [docs, templateDocs]
-  );
+  const pendentes = useMemo(() => {
+    const combined = docs.filter(d => isPending(d.status))
+      .concat(templateDocs.filter(d => isPending(d.status)));
+    return [...new Map(combined.map(d => [d.id, d])).values()];
+  }, [docs, templateDocs]);
+  const historico = useMemo(() => {
+    const combined = docs.filter(d => isSigned(d.status))
+      .concat(templateDocs.filter(d => isSigned(d.status)));
+    return [...new Map(combined.map(d => [d.id, d])).values()];
+  }, [docs, templateDocs]);
 
   const getCoordinates = (e) => {
     const canvas = canvasRef.current;
