@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UserCircle, Lock, Download, AlertCircle, ExternalLink, X } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
+import './LoginView.css';
 
 const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
   const [user, setUser] = useState('');
@@ -156,16 +157,6 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
         </form>
       </div>
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes bounce-subtle {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-4px); }
-        }
-        .animate-bounce-subtle {
-          animation: bounce-subtle 3s infinite ease-in-out;
-        }
-      `}} />
     </div>
   );
 };

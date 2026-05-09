@@ -1,0 +1,260 @@
+/* --- FUNDO DA TELA E ESTILO DA PÁGINA A4 --- */
+body {
+  background-color: #f1f5f9;
+}
+
+.a4-paper {
+  width: 794px;
+  min-height: 1123px;
+  background: white;
+  margin: 40px auto;
+  padding: 40px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  color: #0f172a;
+  line-height: 1 !important;
+  position: relative;
+}
+
+.a4-paper .print-table tr {
+  height: 12px !important;
+}
+
+.a4-paper .print-table td {
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+  line-height: 0.8 !important;
+  font-size: 6.5pt !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.a4-paper .p-3 {
+  padding-top: 2px !important;
+  padding-bottom: 2px !important;
+  margin-top: 2px !important;
+  margin-bottom: 4px !important;
+}
+
+.a4-paper .p-3 .text-xl {
+  font-size: 12pt !important;
+  line-height: 1 !important;
+}
+
+.a4-paper .mt-8 {
+  margin-top: 8px !important;
+}
+
+.a4-paper .column-header-row th {
+  padding: 1px 2px !important;
+  height: 14px !important;
+}
+
+.a4-paper .week-row td {
+  padding-top: 1px !important;
+  padding-bottom: 1px !important;
+  height: 18px !important;
+  font-size: 8.5pt !important;
+}
+
+.a4-paper .print-table td div,
+.a4-paper .print-table td span {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+.a4-paper .week-spacing {
+  margin-top: 0px !important;
+  margin-bottom: 0px !important;
+}
+
+@media print, .zip-export-mode {
+  body {
+    background-color: white !important;
+  }
+  .a4-paper {
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+  }
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+}
+
+.a4-paper.page-break:first-of-type {
+  break-before: auto !important;
+  page-break-before: auto !important;
+}
+
+* {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.a4-paper * {
+  -webkit-print-color-adjust: exact !important;
+  print-color-adjust: exact !important;
+}
+
+.a4-paper .print-table th,
+.a4-paper .print-table td {
+  padding: 3px 4px !important;
+  font-size: 7.5pt !important;
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.a4-paper .week-row td {
+  padding: 6px 8px !important;
+  font-size: 9pt !important;
+  font-weight: 900 !important;
+  border-bottom: 1.5px solid #cbd5e1 !important;
+  background-color: #f8fafc !important;
+}
+
+.a4-paper .column-header-row th {
+  font-size: 6.5pt !important;
+  padding: 3px 4px !important;
+  background-color: #f1f5f9 !important;
+  text-transform: uppercase;
+}
+
+/* CONTAINER PRINCIPAL DO RELATÓRIO */
+.report-container, .pdf-export-mode {
+  background: white !important;
+  color: #1e293b !important;
+  font-family: 'Inter', sans-serif;
+  max-width: 794px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ESCONDER ELEMENTOS NA HORA DE IMPRIMIR */
+@media print {
+  .no-print { display: none !important; }
+  .report-container { padding: 0; max-width: 100%; }
+
+  /* Garantir quebras de página corretas */
+  .a4-paper {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+  .a4-paper:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* Evitar quebra dentro de elementos */
+  .page-break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Forçar quebra antes de cada relatório */
+  .a4-paper {
+    page-break-before: auto !important;
+  }
+}
+
+/* TABELAS UNIFICADAS */
+.report-table { border-collapse: collapse; width: 100%; table-layout: auto; margin-bottom: 4px; }
+.report-table th, .report-table td {
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 2px 4px !important;
+}
+.report-table th {
+  background-color: #f8fafc !important;
+  color: #64748b !important;
+  font-size: 7pt !important;
+  text-transform: uppercase;
+}
+.report-table td { font-size: 8pt !important; }
+
+/* Larguras fixas para todas as tabelas terem colunas alinhadas */
+.report-table .col-day { width: 40px; min-width: 40px; }
+.report-table .col-time { width: 60px; min-width: 60px; }
+.report-table .col-project { min-width: 120px; }
+.report-table .col-comment { width: auto; }
+
+.week-row td {
+  background-color: #f8fafc !important;
+  font-weight: 900 !important;
+  font-size: 9pt !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  padding: 0 !important;
+}
+
+.column-header-row th {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  font-weight: 800 !important;
+}
+
+/* QUEBRAS DE PÁGINA */
+.page-break-inside-avoid { break-inside: avoid !important; page-break-inside: avoid !important; }
+
+/* ESTILOS ADICIONAIS */
+.week-spacing { margin-top: 12px !important; }
+.signature-box { height: 25px !important; }
+.employee-bar-print { padding: 4px 10px !important; margin-bottom: 8px !important; border-radius: 0 !important; border: none !important; }
+.week-header { background: #f1f5f9; font-weight: 700; color: #334155; }
+.employee-bar { background: #f1f5f9; padding: 8px 15px; border-radius: 4px; margin-bottom: 12px; border: none !important; }
+
+/* ZIP EXPORT MODE */
+.zip-export-mode {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.zip-export-mode html, .zip-export-mode body {
+  height: auto !important;
+  overflow: visible !important;
+}
+
+.zip-export-mode .page-break {
+  break-before: auto !important;
+  page-break-before: auto !important;
+}
+
+.zip-export-mode .mt-8 { margin-top: 16px !important; }
+.zip-export-mode .pb-2 { padding-bottom: 8px !important; }
+.zip-export-mode .mb-4 { margin-bottom: 12px !important; }
+.zip-export-mode .mb-2 { margin-bottom: 0px !important; }
+.zip-export-mode .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 0px !important; }
+.zip-export-mode .border-b-2.border-slate-900 {
+  border-bottom: 2px solid #0f172a !important;
+}
+.zip-export-mode .text-xl { font-size: 14pt !important; }
+.zip-export-mode .text-sm { font-size: 10pt !important; }
+.zip-export-mode .text-\[10px\] { font-size: 8pt !important; }
+.zip-export-mode .text-\[9px\] { font-size: 7pt !important; }
+.zip-export-mode .text-\[7px\] { font-size: 6pt !important; }
+.zip-export-mode .week-spacing { margin-top: 8px !important; }
+.zip-export-mode .print-table th,
+.zip-export-mode .print-table td {
+  padding: 3px 4px !important;
+  font-size: 7.5pt !important;
+  border: none !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+.zip-export-mode .week-row td {
+  padding: 6px 8px !important;
+  font-size: 9pt !important;
+  font-weight: 900 !important;
+  border-bottom: 1.5px solid #cbd5e1 !important;
+  background-color: #f8fafc !important;
+}
+.zip-export-mode .column-header-row th {
+  font-size: 6.5pt !important;
+  padding: 3px 4px !important;
+  background-color: #f1f5f9 !important;
+  text-transform: uppercase;
+}
