@@ -329,7 +329,7 @@ export default function App() {
       )}
       {view === 'worker' && (
         <WorkerDashboard
-          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, schedules: [], personalSchedules: [], mainFormData, setMainFormData, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
+          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, mainFormData, setMainFormData, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
         />
       )}
       {view === 'client_portal' && (
