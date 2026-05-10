@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Download, Loader2, Printer, CheckCircle, Settings2 } from 'lucide-react';
+import { Download, Loader2, Printer, Settings2 } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
+import ValidationStamp from './ValidationStamp';
 import './ClientTimesheetReport.css';
 import { toISODateLocal, isSameMonth, getLastBusinessDayOfMonth, formatDocDate, monthToYYYYMM, getISOWeek } from '../../utils/dateUtils';
 import { formatHours, calculateDuration, calculateExpectedMonthlyHours, calculateExpectedDailyHours, getScheduleForDay, formatCurrency, toTimeInputValue } from '../../utils/formatUtils';
@@ -444,35 +445,14 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
               const approval = clientApprovals?.find(a => a.client_id === unit.client?.id && a.month === month);
               if (approval?.signature_base64) {
                 return (
-                  <div className="mt-8 pt-6 border-t border-slate-100 page-break-inside-avoid">
+                  <div className="mt-3 pt-6 border-t border-slate-100 page-break-inside-avoid">
                     <div className="flex flex-col items-end">
-                      <div className="bg-slate-50 border-2 border-indigo-100 rounded-2xl p-4 relative overflow-hidden shadow-sm flex items-center gap-4">
-                        <div className="absolute top-0 right-0 p-1 opacity-5"><CheckCircle size={40} /></div>
-                        <div className="bg-white border border-slate-100 rounded-lg p-1.5 shadow-inner">
-                          <img src={approval.signature_base64} alt="Assinatura" className="h-12 w-auto mix-blend-multiply" />
-                        </div>
-                        <div className="flex flex-col">
-                          <div className="flex items-center gap-1.5 text-indigo-600 font-black text-[9px] uppercase tracking-widest mb-1.5">
-                            <span className="bg-indigo-600 text-white p-0.5 rounded-sm"><CheckCircle size={8} /></span>
-                            VALIDAÇÃO DIGITAL
-                          </div>
-                          <div className="space-y-0.5">
-                            <p className="text-[6.5px] font-bold text-slate-500 uppercase tracking-tight flex justify-between gap-3">
-                              <span>Data/Hora:</span>
-                              <span className="text-slate-800 font-black">{new Date(approval.created_at).toLocaleString('pt-PT')}</span>
-                            </p>
-                            <p className="text-[6.5px] font-bold text-slate-500 uppercase tracking-tight flex justify-between gap-3">
-                              <span>Endereço IP:</span>
-                              <span className="text-slate-800 font-black">{approval.client_ip || 'N/D'}</span>
-                            </p>
-                            <p className="text-[6.5px] font-bold text-slate-400 uppercase tracking-tight flex justify-between gap-3 mt-1 pt-1 border-t border-slate-100">
-                              <span>ID:</span>
-                              <span className="font-mono text-slate-400">{approval.id.substring(0, 16)}...</span>
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[5px] font-bold text-slate-400 mt-1.5 uppercase tracking-[0.2em]">Documento validado eletronicamente</p>
+                      <ValidationStamp
+                        signature={approval.signature_base64}
+                        datetime={approval.created_at}
+                        ip={approval.client_ip}
+                        id={approval.id}
+                      />
                     </div>
                   </div>
                 );

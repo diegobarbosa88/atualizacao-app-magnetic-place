@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { FileText, Edit2, X, Download, CheckCircle, Loader2, Filter, FileSignature } from 'lucide-react';
+import html2canvas from 'html2canvas';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 import { replaceTemplateFields } from '../../utils/templateFields';
-import SignatureStamp from './SignatureStamp';
+import { getStampHTML } from '../../hooks/useSignatureStamp';
 import { isPending, isSigned } from '../../constants/documentStatus';
+import { cropSignatureCanvas } from '../../utils/signatureCanvas';
 
 const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const { supabase } = useApp();
@@ -43,7 +45,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const [workerIp, setWorkerIp] = useState('A obter IP...');
   const [signerOpenedAt, setSignerOpenedAt] = useState('');
   const canvasRef = useRef(null);
-  const stampRef = useRef(null);
   const isDrawing = useRef(false);
 
   useEffect(() => {
@@ -138,285 +139,203 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     setSigning(true);
 
     try {
-      const canvas = canvasRef.current;
-      const assinaturaUrl = canvas.toDataURL('image/png');
-
       const userIP = (workerIp && workerIp !== 'A obter IP...') ? workerIp : 'Desconhecido';
       const now = new Date().toISOString();
       const docId = selectedDoc?.id ?? '';
-
-      // ── 1. Draw stamp using Canvas 2D API — zero CSS, zero oklch risk ──
-      const stampBase64 = await new Promise((resolve) => {
-        const SCALE = 2;
-        const W = 580, H = 160;
-        const c = document.createElement('canvas');
-        c.width = W * SCALE;
-        c.height = H * SCALE;
-        const ctx = c.getContext('2d', { willReadFrequently: true });
-        ctx.scale(SCALE, SCALE);
-
-        const rrect = (x, y, w, h, r) => {
-          ctx.beginPath();
-          ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y);
-          ctx.arcTo(x + w, y, x + w, y + r, r);
-          ctx.lineTo(x + w, y + h - r);
-          ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
-          ctx.lineTo(x + r, y + h);
-          ctx.arcTo(x, y + h, x, y + h - r, r);
-          ctx.lineTo(x, y + r);
-          ctx.arcTo(x, y, x + r, y, r);
-          ctx.closePath();
-        };
-
-        // Outer card background + border
-        ctx.fillStyle = '#f8fafc'; rrect(1, 1, W - 2, H - 14, 12); ctx.fill();
-        ctx.strokeStyle = '#e0e7ff'; ctx.lineWidth = 2; rrect(1, 1, W - 2, H - 14, 12); ctx.stroke();
-
-        // Signature image box — widened to 280px to accommodate natural 3:1 signature ratio
-        ctx.fillStyle = '#ffffff'; rrect(10, 10, 280, H - 34, 8); ctx.fill();
-        ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1; rrect(10, 10, 280, H - 34, 8); ctx.stroke();
-
-        const drawText = () => {
-          // Badge (indigo square + checkmark) — text section starts at x=296
-          ctx.fillStyle = '#4f46e5'; rrect(296, 11, 8, 8, 2); ctx.fill();
-          ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5;
-          ctx.beginPath(); ctx.moveTo(298, 15.5); ctx.lineTo(300, 17.5); ctx.lineTo(303, 13.5); ctx.stroke();
-
-          ctx.fillStyle = '#4f46e5'; ctx.font = 'bold 8.5px Arial';
-          ctx.fillText('VALIDAÇÃO DIGITAL', 310, 20);
-
-          const dateStr = new Date(now).toLocaleString('pt-PT');
-          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Data/Hora:', 296, 38);
-          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(dateStr, 370, 38);
-
-          ctx.fillStyle = '#64748b'; ctx.font = '7px Arial'; ctx.fillText('Endereço IP:', 296, 52);
-          ctx.fillStyle = '#1e293b'; ctx.font = 'bold 7px Arial'; ctx.fillText(userIP || 'N/D', 370, 52);
-
-          ctx.strokeStyle = '#f1f5f9'; ctx.lineWidth = 1;
-          ctx.beginPath(); ctx.moveTo(296, 59); ctx.lineTo(W - 10, 59); ctx.stroke();
-
-          ctx.fillStyle = '#94a3b8'; ctx.font = '6px Arial'; ctx.fillText('ID:', 296, 70);
-          ctx.font = '6px monospace';
-          ctx.fillText(docId ? docId.substring(0, 20) + '...' : '', 310, 70);
-
-          ctx.fillStyle = '#94a3b8'; ctx.font = '5px Arial';
-          ctx.fillText('Documento validado eletronicamente', 0, H - 3);
-
-          resolve(c.toDataURL('image/png'));
-        };
-
-        const sigImg = new Image();
-        sigImg.onload = () => {
-          ctx.globalCompositeOperation = 'multiply';
-          // Signature box is 268×114px — maintain aspect ratio of user's signature canvas
-          const boxW = 268, boxH = H - 46;
-          const sigAspect = sigImg.width / (sigImg.height || 1);
-          const drawW = Math.min(boxW, boxH * sigAspect);
-          const drawH = drawW / sigAspect;
-          const drawX = 16 + (boxW - drawW) / 2;
-          const drawY = 16 + (boxH - drawH) / 2;
-          ctx.drawImage(sigImg, drawX, drawY, drawW, drawH);
-          ctx.globalCompositeOperation = 'source-over';
-          drawText();
-        };
-        sigImg.onerror = () => drawText();
-        sigImg.src = assinaturaUrl;
-      });
-
-      // ── 2. Generate PDF ──
-      let pdfBlob;
+      const signatureDataURL = canvasRef.current ? cropSignatureCanvas(canvasRef.current) : '';
 
       const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
 
       if (isTemplateDoc && selectedDoc.generated_html) {
-        // Parse template HTML via DOMParser and inject scripts BEFORE writing to iframe
         const parser = new DOMParser();
         const tmplDoc = parser.parseFromString(selectedDoc.generated_html, 'text/html');
 
-        // Force Tailwind v3 (hex colors, no oklch)
-        tmplDoc.querySelectorAll('script[src]').forEach(s => {
-          if ((s.getAttribute('src') || '').includes('tailwindcss')) {
-            s.setAttribute('src', 'https://cdn.tailwindcss.com/3.4.16');
-          }
-        });
-
-        // Inject html2canvas into <head> at parse time (no post-write DOM manipulation)
-        const h2cTag = tmplDoc.createElement('script');
-        h2cTag.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-        (tmplDoc.head || tmplDoc.documentElement).appendChild(h2cTag);
-
-        // Inject CSS to normalise A4 width and remove body margins
         const normCSS = tmplDoc.createElement('style');
         normCSS.textContent = [
-          'html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width: 210mm !important; min-height: 297mm !important; }',
-          '.document-container { width: 210mm !important; min-height: 297mm !important; margin: 0 !important; padding: 20mm !important; box-shadow: none !important; box-sizing: border-box !important; }',
+          'html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width: 210mm !important; }',
+          'body { width: 210mm !important; min-height: 297mm !important; margin: 15mm !important; box-sizing: border-box !important; }',
+          '.document-container { width: 210mm !important; min-height: 297mm !important; margin: 15mm !important; padding: 0 !important; box-shadow: none !important; box-sizing: border-box !important; }',
+          '@media print { body { margin: 15mm !important; } .document-container { margin: 15mm !important; } .signature-block, .signature-area { page-break-inside: avoid !important; break-inside: avoid !important; } }',
           '* { box-sizing: border-box !important; }'
         ].join('\n');
         (tmplDoc.head || tmplDoc.documentElement).appendChild(normCSS);
 
+        const stampDiv = tmplDoc.createElement('div');
+        stampDiv.innerHTML = getStampHTML({
+          signatureDataURL,
+          datetime: signerOpenedAt,
+          ip: userIP,
+          id: docId
+        });
+
+        const container = tmplDoc.querySelector('.document-container') || tmplDoc.body;
+
+        // Tentar injetar na zona de assinatura do template (primeiro .signature-area)
+        const sigArea = container.querySelector('.signature-area');
+        if (sigArea) {
+          sigArea.innerHTML = '';
+          sigArea.appendChild(stampDiv);
+        } else {
+          container.appendChild(stampDiv);
+        }
+
         const cleanHtml = '<!DOCTYPE html>' + tmplDoc.documentElement.outerHTML;
 
         const iframe = document.createElement('iframe');
-        // A4 = 210mm, which is ~794px at 96dpi. We use a bit more for safe rendering.
-        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:800px;height:1200px;border:none;overflow:hidden;';
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:820px;height:1200px;border:none;';
         document.body.appendChild(iframe);
 
-        try {
-          iframe.contentDocument.open();
-          iframe.contentDocument.write(cleanHtml);
-          iframe.contentDocument.close();
+        iframe.contentDocument.open();
+        iframe.contentDocument.write(cleanHtml);
+        iframe.contentDocument.close();
 
-          // Poll until both Tailwind v3 and html2canvas are ready inside the iframe
+        // Aguardar html2canvas estar disponível no iframe
+        await new Promise((resolve, reject) => {
+          const h2cScript = iframe.contentDocument.createElement('script');
+          h2cScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          h2cScript.onload = () => setTimeout(resolve, 400);
+          h2cScript.onerror = () => reject(new Error('Falha ao carregar html2canvas no iframe'));
+          (iframe.contentDocument.head || iframe.contentDocument.documentElement).appendChild(h2cScript);
+        });
+
+        const body = iframe.contentDocument.body;
+
+        let jsPDF = window.jspdf?.jsPDF;
+        if (!jsPDF) {
           await new Promise((resolve, reject) => {
-            const deadline = Date.now() + 15000;
-            const check = () => {
-              if (Date.now() > deadline) {
-                reject(new Error('Timeout a aguardar html2canvas/Tailwind (15s)'));
-                return;
-              }
-              const win = iframe.contentWindow;
-              if (win?.html2canvas && (win.tailwind || iframe.contentDocument.readyState === 'complete')) {
-                setTimeout(resolve, 600);
-              } else {
-                setTimeout(check, 150);
-              }
-            };
-            setTimeout(check, 300);
+            const s = document.createElement('script');
+            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            s.onload = () => { jsPDF = window.jspdf.jsPDF; resolve(); };
+            s.onerror = () => reject(new Error('Falha ao carregar jsPDF'));
+            document.head.appendChild(s);
           });
-
-          // Measure real content height and resize iframe
-          const docEl = iframe.contentDocument.querySelector('.document-container') || iframe.contentDocument.body;
-          const contentH = docEl.scrollHeight + 100;
-          iframe.style.height = contentH + 'px';
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Append stamp image at bottom of document
-          const stampDiv = iframe.contentDocument.createElement('div');
-          stampDiv.style.cssText = 'margin-top:32px;display:flex;justify-content:flex-end;padding-right:8px;page-break-inside:avoid;';
-          const stampImgEl = iframe.contentDocument.createElement('img');
-          stampImgEl.src = stampBase64;
-          stampImgEl.style.cssText = 'width:420px;height:auto;';
-          stampDiv.appendChild(stampImgEl);
-          docEl.appendChild(stampDiv);
-          await new Promise(resolve => setTimeout(resolve, 200));
-
-          // Capture with 2x scale (safer for memory) and exact pixel alignment
-          const captureEl = iframe.contentDocument.querySelector('.document-container') || iframe.contentDocument.body;
-          const captureH = captureEl.scrollHeight;
-          const captureW = captureEl.scrollWidth;
-          
-          const iframeCanvas = await iframe.contentWindow.html2canvas(captureEl, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            width: captureW,
-            height: captureH,
-            windowWidth: captureW,
-            windowHeight: captureH,
-            logging: false,
-            onclone: (clonedDoc) => {
-              const el = clonedDoc.querySelector('.document-container') || clonedDoc.body;
-              el.style.width = '210mm';
-              el.style.margin = '0';
-            }
-          });
-
-          // Load jsPDF and assemble PDF page-by-page
-          let jsPDF = window.jspdf?.jsPDF;
-          if (!jsPDF) {
-            await new Promise((resolve, reject) => {
-              const s = document.createElement('script');
-              s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-              s.onload = () => { jsPDF = window.jspdf.jsPDF; resolve(); };
-              s.onerror = reject;
-              document.head.appendChild(s);
-            });
-          }
-
-          const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-          const pageW = pdf.internal.pageSize.getWidth();
-          const pageH = pdf.internal.pageSize.getHeight();
-          const imgData = iframeCanvas.toDataURL('image/jpeg', 0.92);
-          
-          // The critical part: ensure totalImgH is calculated based on actual A4 width
-          const totalImgH = pageW * (iframeCanvas.height / iframeCanvas.width);
-
-          let yOff = 0;
-          let pageNum = 1;
-          const totalPages = Math.ceil(totalImgH / (pageH - 1)); // 1mm overlap buffer
-
-          while (yOff < totalImgH - 1) { 
-            if (pageNum > 1) pdf.addPage();
-            
-            // Add the document content
-            pdf.addImage(imgData, 'JPEG', 0, -yOff, pageW, totalImgH, undefined, 'FAST');
-            
-            // Add page numbering
-            pdf.setFontSize(8);
-            pdf.setTextColor(150, 150, 150);
-            pdf.text(`Página ${pageNum} de ${Math.max(pageNum, totalPages)}`, pageW / 2, pageH - 8, { align: 'center' });
-            
-            yOff += pageH;
-            pageNum++;
-          }
-          pdfBlob = pdf.output('blob');
-        } finally {
-          if (document.body.contains(iframe)) document.body.removeChild(iframe);
         }
 
-      } else {
-        // ── Non-template docs: use PDF.co API to stamp existing PDF ──
-        const stampPath = `${currentUser.id}/stamps/${Date.now()}.png`;
-        const stampBlob = await fetch(stampBase64).then(r => r.blob());
-        const { error: stampError } = await supabase.storage
+        const captureCanvas = await iframe.contentWindow.html2canvas(body, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: '#ffffff',
+          logging: false,
+          onclone: (clonedDoc) => {
+            clonedDoc.querySelectorAll('*').forEach(e => {
+              e.style.cssText = (e.style.cssText || '').replace(/oklch\([^)]+\)/g, '#ffffff');
+            });
+            clonedDoc.querySelectorAll('style').forEach(style => {
+              style.textContent = style.textContent.replace(/oklch\([^)]+\)/g, '#ffffff');
+            });
+          }
+        });
+
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgData = captureCanvas.toDataURL('image/jpeg', 0.92);
+
+        const totalImgH = pageW * (captureCanvas.height / captureCanvas.width);
+
+        let yOff = 0;
+        let pageNum = 1;
+        const overlap = 1;
+        while (yOff + overlap < totalImgH) {
+          if (pageNum > 1) pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', 0, -(yOff - (pageNum - 1) * overlap), pageW, totalImgH, undefined, 'FAST');
+          pdf.setFontSize(8);
+          pdf.setTextColor(150, 150, 150);
+          pdf.text(`Página ${pageNum}`, pageW / 2, pageH - 8, { align: 'center' });
+          yOff += pageH;
+          pageNum++;
+        }
+
+        const pdfBlob = pdf.output('blob');
+        document.body.removeChild(iframe);
+
+        const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
+        const { error: pdfError } = await supabase.storage
           .from('documentos')
-          .upload(stampPath, stampBlob, { contentType: 'image/png' });
-        if (stampError) throw new Error(`Erro ao guardar stamp: ${stampError.message}`);
-        const { data: stampUrlData } = supabase.storage.from('documentos').getPublicUrl(stampPath);
-        const stampPublicUrl = stampUrlData.publicUrl;
+          .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+        if (pdfError) throw new Error(`Erro ao guardar PDF: ${pdfError.message}`);
 
-        const pdfCoKey = import.meta.env.VITE_PDFCO_API_KEY;
-        if (!pdfCoKey) throw new Error('VITE_PDFCO_API_KEY não configurada. Contacte o administrador.');
-        const imgResponse = await fetch('https://api.pdf.co/v1/pdf/edit/add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': pdfCoKey },
-          body: JSON.stringify({
-            url: selectedDoc.url,
-            name: 'Documento_Assinado',
-            images: [{ url: stampPublicUrl, x: 200, y: 720, width: 380, height: 105 }]
-          })
-        });
-        const imgResult = await imgResponse.json();
-        if (imgResult.error) throw new Error(imgResult.error);
-        pdfBlob = await fetch(imgResult.url).then(async r => {
-          if (!r.ok) throw new Error('Erro ao baixar PDF temporário do PDF.co');
-          return r.blob();
-        });
-      }
+        const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pdfPath);
+        const pdfAssinadoUrl = pdfUrlData.publicUrl;
 
-      // ── 3. Upload signed PDF to Supabase Storage ──
-      const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
-      const { error: pdfError } = await supabase.storage
-        .from('documentos')
-        .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
-      if (pdfError) throw new Error(`Erro ao guardar PDF: ${pdfError.message}`);
-
-      const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pdfPath);
-      const pdfAssinadoUrl = pdfUrlData.publicUrl;
-
-      // ── 4. Persist metadata to database ──
-      if (isTemplateDoc) {
         const docData = {
           status: 'signed',
           signed_at: now,
           signed_ip: userIP,
-          signature_data: stampBase64,
+          signature_data: signatureDataURL,
           signed_pdf_url: pdfAssinadoUrl
         };
         const { error } = await supabase.from('worker_documents').update(docData).eq('id', selectedDoc.id);
         if (error) throw error;
         setTemplateDocs(prev => prev.map(d => d.id === selectedDoc.id ? { ...d, ...docData } : d));
+
       } else {
+        const stampPath = `${currentUser.id}/stamps/${Date.now()}.png`;
+        const tempDiv = document.createElement('div');
+        tempDiv.style.cssText = 'position:fixed;left:-99999px;top:0;';
+        tempDiv.innerHTML = getStampHTML({
+          signatureDataURL,
+          datetime: signerOpenedAt,
+          ip: userIP,
+          id: docId
+        });
+        document.body.appendChild(tempDiv);
+        let stampBase64;
+        try {
+          const tempCanvas = await html2canvas(tempDiv, {
+            backgroundColor: '#ffffff',
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            onclone: (clonedDoc) => {
+              clonedDoc.querySelectorAll('*').forEach(el => {
+                el.style.cssText = (el.style.cssText || '').replace(/oklch\([^)]+\)/g, '#ffffff');
+              });
+              clonedDoc.querySelectorAll('style').forEach(style => {
+                style.textContent = style.textContent.replace(/oklch\([^)]+\)/g, '#ffffff');
+              });
+            }
+          });
+          stampBase64 = tempCanvas.toDataURL('image/png');
+        } finally {
+          if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
+        }
+
+        const { error: stampError } = await supabase.storage
+          .from('documentos')
+          .upload(stampPath, await fetch(stampBase64).then(r => r.blob()), { contentType: 'image/png' });
+        if (stampError) throw new Error(`Erro ao guardar stamp: ${stampError.message}`);
+        const { data: stampUrlData } = supabase.storage.from('documentos').getPublicUrl(stampPath);
+        const stampPublicUrl = stampUrlData.publicUrl;
+
+        const { PDFDocument } = await import('pdf-lib');
+        const originalPdfBytes = await fetch(selectedDoc.url).then(r => {
+          if (!r.ok) throw new Error('Erro ao baixar PDF original');
+          return r.arrayBuffer();
+        });
+        const pdfDoc = await PDFDocument.load(originalPdfBytes);
+        const pngImage = await pdfDoc.embedPng(stampBase64);
+        const pages = pdfDoc.getPages();
+        const lastPage = pages[pages.length - 1];
+        const { width: pageWidth } = lastPage.getSize();
+        const stampWidth = 280;
+        const stampHeight = 80;
+        lastPage.drawImage(pngImage, {
+          x: pageWidth - stampWidth - 30,
+          y: 30,
+          width: stampWidth,
+          height: stampHeight,
+        });
+        const pdfBlob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
+
+        const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
+        const { error: pdfError } = await supabase.storage
+          .from('documentos')
+          .upload(pdfPath, pdfBlob, { contentType: 'application/pdf', upsert: true });
+        if (pdfError) throw new Error(`Erro ao guardar PDF: ${pdfError.message}`);
+        const { data: pdfUrlData } = supabase.storage.from('documentos').getPublicUrl(pdfPath);
+        const pdfAssinadoUrl = pdfUrlData.publicUrl;
+
         const docData = {
           id: selectedDoc.id,
           workerId: selectedDoc.workerId,
@@ -424,7 +343,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           nomeFicheiro: selectedDoc.nomeFicheiro,
           url: selectedDoc.url,
           status: 'Assinado',
-          assinaturaUrl: stampBase64,
+          assinaturaUrl: signatureDataURL,
           dataAssinatura: now,
           signed_at: now,
           ipAssinatura: userIP,
@@ -577,9 +496,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         </div>
       )}
 
-      {showSigner && selectedDoc && (
+{showSigner && selectedDoc && (
         <>
-          <div ref={stampRef} style={{ position: 'fixed', left: '-9999px', top: '-9999px', zIndex: -1 }} />
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
@@ -615,18 +533,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                         Assine Aqui
                       </div>
                     )}
-                  </div>
-                  
-                  <div className="border border-slate-200 rounded-2xl p-4 mb-4">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 text-center">Pré-visualização do Stamp</p>
-                    <div className="flex justify-center">
-                      <SignatureStamp
-                        signature={canvasRef.current ? canvasRef.current.toDataURL('image/png') : ''}
-                        ip={workerIp}
-                        datetime={signerOpenedAt}
-                        id={selectedDoc.id}
-                      />
-                    </div>
                   </div>
                   <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-2xl mx-auto">
                     <button onClick={clearCanvas} className="w-full sm:w-auto px-6 py-4 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Limpar Quadro</button>

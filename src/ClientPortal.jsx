@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
+import ValidationStamp from './components/common/ValidationStamp';
+import { cropSignatureCanvas } from './utils/signatureCanvas';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -622,15 +624,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             </div>
 
                             <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center gap-3">
-                                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center gap-4 max-w-sm">
-                                    <div className="bg-white p-2 rounded-lg shadow-sm border border-slate-100">
-                                        <img src={approvalData?.signature_base64} alt="Sua Assinatura" className="h-10 w-auto mix-blend-multiply" />
-                                    </div>
-                                    <div className="text-left">
-                                        <p className="text-[8px] font-black text-indigo-600 uppercase tracking-widest">Sua Assinatura Digital</p>
-                                        <p className="text-[7px] font-bold text-slate-400 mt-0.5">IP: {approvalData?.client_ip}</p>
-                                    </div>
-                                </div>
+                                <ValidationStamp
+                                    signature={approvalData?.signature_base64}
+                                    datetime={approvalData?.created_at}
+                                    ip={approvalData?.client_ip}
+                                    id={approvalData?.id}
+                                />
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">A possibilidade de edição foi desativada após a aprovação.</p>
                             </div>
                         </div>
@@ -651,7 +650,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
                                 <button onClick={() => {
                                     const canvas = canvasRef.current;
-                                    const base64Image = canvas.toDataURL('image/png');
+                                    const base64Image = cropSignatureCanvas(canvas);
                                     setSignatureSaved(base64Image);
                                     const safeClientId = String(initialClientId || 'unknown');
                                     const safeMonth = String(initialMonth || 'unknown');
