@@ -8,15 +8,21 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; }
+    body { width: 210mm; min-height: 297mm; margin: 15mm; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
     .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-    .field { margin: 15px 0; }
+    .content { margin-bottom: 20px; }
+    .field { margin: 8px 0; }
     .label { font-weight: bold; color: #555; }
-    .value { font-size: 14px; }
-    .footer { margin-top: 50px; border-top: 1px solid #ccc; padding-top: 20px; text-align: center; font-size: 12px; color: #666; }
-    .signature-block { margin-top: 60px; display: flex; justify-content: space-between; }
-    .signature-area { width: 45%; text-align: center; }
+    .value { font-size: 12pt; }
+    .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; text-align: center; font-size: 10pt; color: #666; }
+    .signature-block { margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid; break-inside: avoid; }
+    .signature-area { width: 45%; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+    @media print {
+      body { margin: 15mm !important; width: 210mm !important; }
+      .signature-block, .signature-area { page-break-inside: avoid !important; break-inside: avoid !important; }
+    }
   </style>
 </head>
 <body>
@@ -24,7 +30,7 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
     <h1>DECLARAÇÃO DE TRABALHADOR</h1>
     <p>{{current_date}}</p>
   </div>
-  
+
   <div class="content">
     <p>Eu, <strong>{{worker_name}}</strong>, portador do CC nº <strong>{{worker_cc_number}}</strong>, válido até <strong>{{worker_cc_validity}}</strong>,</p>
     <p>NIF: <strong>{{worker_nif}}</strong>, NISS: <strong>{{worker_niss}}</strong></p>
@@ -43,12 +49,13 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
     <br>
     <p>Contacto de Emergência: <strong>{{worker_emergency_contact}}</strong> - <strong>{{worker_emergency_phone}}</strong></p>
   </div>
-  
+
   <div class="signature-block">
-    <div class="signature-area">
+    <div class="signature-area" id="worker-signature-placeholder">
       <p>O Declarante</p>
-      <hr style="border: 1px solid #333; margin-top: 40px;">
-      <p style="font-size: 12px;">{{worker_name}}</p>
+      <div style="width:224px;height:64px;border:2px dashed #cbd5e1;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-top:10px;background:#f9fafc;page-break-inside:avoid;break-inside:avoid;">
+        <span style="color:#94a3b8;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;">Aguardando Assinatura</span>
+      </div>
     </div>
     <div class="signature-area">
       <p>A Empresa</p>
@@ -90,6 +97,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   // Filters
   const [docFilter, setDocFilter] = useState('all');
   const [docSearch, setDocSearch] = useState('');
+  const [sortKey, setSortKey] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
 
   // AI states
   const [aiPrompt, setAiPrompt] = useState('');
@@ -265,6 +274,27 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     }
   };
 
+  const handleDownloadSigned = async (doc) => {
+    if (!doc.signed_pdf_url) return;
+    try {
+      const response = await fetch(doc.signed_pdf_url);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = `${doc.title || 'documento'}_${doc.worker?.name || 'colaborador'}_assinado.pdf`.replace(/[\s/\\?%*:|"<>]+/g, '_');
+      a.download = safeName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao baixar documento assinado:', err);
+      alert(`Erro ao baixar: ${err.message || 'desconhecido'}`);
+    }
+  };
+
   const handleDeleteDoc = async (id) => {
     if (!window.confirm("Apagar este documento gerado?")) return;
     if (!supabase) return;
@@ -297,6 +327,30 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     });
 
     setShowFieldList(false);
+  };
+
+  const insertSignaturePlaceholder = () => {
+    const placeholder = `<div class="signature-area" id="worker-signature-placeholder">
+  <p>O Declarante</p>
+  <div style="width:224px;height:64px;border:2px dashed #cbd5e1;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-top:10px;background:#f9fafc;page-break-inside:avoid;break-inside:avoid;">
+    <span style="color:#94a3b8;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;">Aguardando Assinatura</span>
+  </div>
+</div>`;
+    const editor = editorRef.current;
+    if (editor) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const text = previewData.html_content;
+      setPreviewData({
+        ...previewData,
+        html_content: text.substring(0, start) + placeholder + text.substring(end)
+      });
+    } else {
+      setPreviewData(prev => ({
+        ...prev,
+        html_content: prev.html_content + '\n' + placeholder
+      }));
+    }
   };
 
   const handleGenerateAI = async () => {
@@ -391,10 +445,38 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   );
 
   const filteredDocs = useMemo(() => {
-    return docsWithWorkers
+    const list = docsWithWorkers
       .filter(d => docFilter === 'all' || d.status === docFilter)
       .filter(d => !docSearch || d.title.toLowerCase().includes(docSearch.toLowerCase()) || (d.worker?.name || '').toLowerCase().includes(docSearch.toLowerCase()));
-  }, [docsWithWorkers, docFilter, docSearch]);
+
+    const sorted = [...list].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === 'title') {
+        cmp = (a.title || '').localeCompare(b.title || '') || (a.worker?.name || '').localeCompare(b.worker?.name || '');
+      } else if (sortKey === 'date') {
+        cmp = (a.created_at || '').localeCompare(b.created_at || '');
+      } else if (sortKey === 'status') {
+        cmp = (isSigned(a.status) ? 1 : 0) - (isSigned(b.status) ? 1 : 0);
+      }
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+
+    return sorted;
+  }, [docsWithWorkers, docFilter, docSearch, sortKey, sortDir]);
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'date' ? 'desc' : 'asc');
+    }
+  };
+
+  const SortIcon = ({ k }) => {
+    if (sortKey !== k) return <ChevronDown size={10} className="opacity-20" />;
+    return sortDir === 'asc' ? <ChevronUp size={10} /> : <ChevronDown size={10} />;
+  };
 
   return (
     <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -520,9 +602,24 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
           <table className="w-full text-left border-separate border-spacing-y-2">
             <thead>
               <tr className="text-slate-400">
-                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Documento / Colaborador</th>
-                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-center">Data</th>
-                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-center">Estado</th>
+                <th
+                  onClick={() => handleSort('title')}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer select-none hover:text-slate-700 transition-colors"
+                >
+                  <span className="inline-flex items-center gap-1">Documento / Colaborador <SortIcon k="title" /></span>
+                </th>
+                <th
+                  onClick={() => handleSort('date')}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-center cursor-pointer select-none hover:text-slate-700 transition-colors"
+                >
+                  <span className="inline-flex items-center gap-1">Data <SortIcon k="date" /></span>
+                </th>
+                <th
+                  onClick={() => handleSort('status')}
+                  className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-center cursor-pointer select-none hover:text-slate-700 transition-colors"
+                >
+                  <span className="inline-flex items-center gap-1">Estado <SortIcon k="status" /></span>
+                </th>
                 <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ação</th>
               </tr>
             </thead>
@@ -556,8 +653,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                         </div>
                       </td>
                       <td className="px-4 py-4 border-y border-slate-100 text-center">
-                        <span className="text-xs font-bold text-slate-500 font-mono">
-                          {new Date(doc.created_at).toLocaleDateString('pt-PT')}
+                        <span className="text-xs font-bold text-slate-500 font-mono whitespace-nowrap">
+                          {new Date(doc.created_at).toLocaleString('pt-PT', { dateStyle: 'short', timeStyle: 'short' })}
                         </span>
                       </td>
                       <td className="px-4 py-4 border-y border-slate-100 text-center">
@@ -567,14 +664,23 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                       </td>
                       <td className="px-4 py-4 rounded-r-2xl border-y border-r border-slate-100 text-right">
                         <div className="flex justify-end items-center gap-2">
-                          <button 
+                          <button
                             onClick={() => setSelectedDocView(doc)}
                             className="p-2 bg-white text-indigo-600 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                             title="Visualizar"
                           >
                             <Eye size={16} />
                           </button>
-                          <button 
+                          {isSigned(doc.status) && doc.signed_pdf_url && (
+                            <button
+                              onClick={() => handleDownloadSigned(doc)}
+                              className="p-2 bg-white text-emerald-600 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                              title="Baixar Documento Assinado"
+                            >
+                              <Download size={16} />
+                            </button>
+                          )}
+                          <button
                             onClick={() => handleDeleteDoc(doc.id)}
                             className="p-2 bg-white text-rose-500 rounded-xl border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
                             title="Apagar"
@@ -650,6 +756,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                       >
                         <Code size={14} /> Placeholders
                         {showFieldList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </button>
+                      <button
+                        onClick={insertSignaturePlaceholder}
+                        className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                      >
+                        <FileSignature size={14} /> Assinatura
                       </button>
                     </div>
                   </div>

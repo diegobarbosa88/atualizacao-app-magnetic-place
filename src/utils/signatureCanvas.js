@@ -1,5 +1,6 @@
-export function cropSignatureCanvas(canvas, padding = 8) {
+export function cropSignatureCanvas(canvas, opts = {}) {
   if (!canvas) return null;
+  const { padding = 8, targetWidth, targetHeight } = typeof opts === 'number' ? { padding: opts } : opts;
   const { width, height } = canvas;
   if (!width || !height) return canvas.toDataURL('image/png');
 
@@ -33,8 +34,21 @@ export function cropSignatureCanvas(canvas, padding = 8) {
   const cropH = maxY - minY + 1;
 
   const out = document.createElement('canvas');
-  out.width = cropW;
-  out.height = cropH;
-  out.getContext('2d').drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+
+  if (targetWidth && targetHeight) {
+    out.width = targetWidth;
+    out.height = targetHeight;
+    const scale = Math.min(targetWidth / cropW, targetHeight / cropH);
+    const drawW = cropW * scale;
+    const drawH = cropH * scale;
+    const offsetX = (targetWidth - drawW) / 2;
+    const offsetY = (targetHeight - drawH) / 2;
+    out.getContext('2d').drawImage(canvas, minX, minY, cropW, cropH, offsetX, offsetY, drawW, drawH);
+  } else {
+    out.width = cropW;
+    out.height = cropH;
+    out.getContext('2d').drawImage(canvas, minX, minY, cropW, cropH, 0, 0, cropW, cropH);
+  }
+
   return out.toDataURL('image/png');
 }

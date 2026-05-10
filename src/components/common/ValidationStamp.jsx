@@ -4,7 +4,7 @@ const ValidationStamp = ({ signature, datetime, ip, id }) => {
   const dateStr = datetime ? new Date(datetime).toLocaleString('pt-PT') : '';
   const idStr = id ? String(id).substring(0, 16) + '...' : '';
   const ipStr = ip || 'N/D';
-  const rowStyle = { fontSize: '6.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', justifyContent: 'space-between', gap: '12px', margin: 0 };
+  const rowStyle = { fontSize: '6.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', justifyContent: 'space-between', gap: '12px', margin: 0, whiteSpace: 'nowrap' };
   const valueStyle = { color: '#0f172a', fontWeight: 900 };
 
   return (
@@ -50,13 +50,13 @@ const ValidationStamp = ({ signature, datetime, ip, id }) => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4f46e5', fontWeight: 900, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>
-          <span style={{ backgroundColor: '#4f46e5', color: '#ffffff', padding: '2px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '12px', height: '12px', boxSizing: 'border-box' }}>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#4f46e5', fontWeight: 900, fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px', lineHeight: 1, whiteSpace: 'nowrap' }}>
+          <span style={{ backgroundColor: '#4f46e5', color: '#ffffff', borderRadius: '3px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '11px', height: '11px', boxSizing: 'border-box', flexShrink: 0 }}>
+            <svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
           </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', height: '12px', lineHeight: 1 }}>VALIDAÇÃO DIGITAL</span>
+          VALIDAÇÃO DIGITAL
         </div>
 
         <p style={rowStyle}>
@@ -71,7 +71,7 @@ const ValidationStamp = ({ signature, datetime, ip, id }) => {
           <span>ID:</span>
           <span style={{ fontFamily: 'monospace', color: '#94a3b8' }}>{idStr}</span>
         </p>
-        <p style={{ fontSize: '5px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '4px 0 0 0' }}>
+        <p style={{ fontSize: '5px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.2em', margin: '4px 0 0 0', whiteSpace: 'nowrap' }}>
           DOCUMENTO VALIDADO ELETRONICAMENTE
         </p>
       </div>

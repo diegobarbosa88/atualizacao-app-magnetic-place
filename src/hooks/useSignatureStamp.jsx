@@ -19,7 +19,6 @@ export const getStampHTML = ({ signatureDataURL, datetime, ip, id }) => {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
       text-indent: 0 !important;
       text-align: left !important;
-      white-space: normal !important;
       font-style: normal !important;
       font-variant: normal !important;
       text-decoration: none !important;

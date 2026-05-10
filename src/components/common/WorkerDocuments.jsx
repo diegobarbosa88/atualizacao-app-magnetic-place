@@ -142,7 +142,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       const userIP = (workerIp && workerIp !== 'A obter IP...') ? workerIp : 'Desconhecido';
       const now = new Date().toISOString();
       const docId = selectedDoc?.id ?? '';
-      const signatureDataURL = canvasRef.current ? cropSignatureCanvas(canvasRef.current) : '';
+      const signatureDataURL = canvasRef.current ? cropSignatureCanvas(canvasRef.current, { targetWidth: 240, targetHeight: 84 }) : '';
 
       const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
 
