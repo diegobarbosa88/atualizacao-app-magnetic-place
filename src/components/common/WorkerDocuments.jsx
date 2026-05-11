@@ -7,6 +7,74 @@ import { replaceTemplateFields } from '../../utils/templateFields';
 import { getStampHTML } from '../../hooks/useSignatureStamp';
 import { isPending, isSigned } from '../../constants/documentStatus';
 import { cropSignatureCanvas } from '../../utils/signatureCanvas';
+import workerDocumentsCSS from './WorkerDocuments.css?inline';
+
+// Converte oklch(L C H [/ A]) para grayscale aproximado, preservando lightness.
+// Necessário porque o html2canvas usado pelo html2pdf não parseia oklch (CSS Color L4),
+// e o Tailwind v4 gera todas as cores em oklch por defeito.
+const oklchToGray = (match) => {
+  const m = match.match(/oklch\(\s*([\d.]+)(%?)/i);
+  if (!m) return '#000';
+  let L = parseFloat(m[1]);
+  if (m[2] === '%') L = L / 100;
+  // Aplicar uma curva gamma simples para aproximar a luminosidade percebida
+  const v = Math.max(0, Math.min(255, Math.round(Math.pow(L, 1 / 2.2) * 255)));
+  const hex = v.toString(16).padStart(2, '0');
+  return `#${hex}${hex}${hex}`;
+};
+
+const replaceOklch = (text) =>
+  (text || '').replace(/oklch\([^)]+\)/gi, (m) => oklchToGray(m));
+
+const stripOklch = (clonedDoc) => {
+  clonedDoc.querySelectorAll('*').forEach(el => {
+    if (el.style && el.style.cssText) {
+      el.style.cssText = replaceOklch(el.style.cssText);
+    }
+  });
+  clonedDoc.querySelectorAll('style').forEach(style => {
+    style.textContent = replaceOklch(style.textContent);
+  });
+};
+
+
+const SIGNATURE_PLACEHOLDER_HTML = `<div class="mt-8 pt-6 border-t border-slate-100 opacity-30 page-break-inside-avoid"><div class="flex flex-col items-end"><div class="w-56 h-16 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center"><span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aguardando Assinatura</span></div></div></div>`;
+
+const injectTailwindCDN = (doc) => {
+  // Remover quaisquer scripts Tailwind pré-existentes no template (frequentemente com plugins deprecados
+  // como ?plugins=aspect-ratio,line-clamp que produzem warnings na consola).
+  doc.querySelectorAll('script[src*="tailwindcss"]').forEach(s => s.remove());
+
+  // Injetar o nosso (CDN limpo, sem plugins deprecados).
+  const script = doc.createElement('script');
+  script.src = 'https://cdn.tailwindcss.com';
+  (doc.head || doc.documentElement).appendChild(script);
+};
+
+const injectSignaturePlaceholder = (html) => {
+  if (!html) return html;
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    injectTailwindCDN(doc);
+
+    const sigArea = doc.querySelector('.signature-area');
+    if (sigArea) {
+      sigArea.innerHTML = SIGNATURE_PLACEHOLDER_HTML;
+    } else {
+      const container = doc.querySelector('.document-container') || doc.body;
+      if (container) {
+        const wrap = doc.createElement('div');
+        wrap.innerHTML = SIGNATURE_PLACEHOLDER_HTML;
+        container.appendChild(wrap.firstChild);
+      }
+    }
+    return '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+  } catch {
+    return html;
+  }
+};
 
 const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const { supabase } = useApp();
@@ -142,112 +210,114 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       const userIP = (workerIp && workerIp !== 'A obter IP...') ? workerIp : 'Desconhecido';
       const now = new Date().toISOString();
       const docId = selectedDoc?.id ?? '';
-      const signatureDataURL = canvasRef.current ? cropSignatureCanvas(canvasRef.current, { targetWidth: 240, targetHeight: 84 }) : '';
+      const signatureDataURL = canvasRef.current ? cropSignatureCanvas(canvasRef.current) : '';
 
       const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
 
       if (isTemplateDoc && selectedDoc.generated_html) {
+        // 1. Parse template e injetar Tailwind CDN + CSS do cliente + stamp HTML na signature-area
         const parser = new DOMParser();
         const tmplDoc = parser.parseFromString(selectedDoc.generated_html, 'text/html');
 
-        const normCSS = tmplDoc.createElement('style');
-        normCSS.textContent = [
-          'html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; width: 210mm !important; }',
-          'body { width: 210mm !important; min-height: 297mm !important; margin: 15mm !important; box-sizing: border-box !important; }',
-          '.document-container { width: 210mm !important; min-height: 297mm !important; margin: 15mm !important; padding: 0 !important; box-shadow: none !important; box-sizing: border-box !important; }',
-          '@media print { body { margin: 15mm !important; } .document-container { margin: 15mm !important; } .signature-block, .signature-area { page-break-inside: avoid !important; break-inside: avoid !important; } }',
-          '* { box-sizing: border-box !important; }'
-        ].join('\n');
-        (tmplDoc.head || tmplDoc.documentElement).appendChild(normCSS);
+        injectTailwindCDN(tmplDoc);
 
-        const stampDiv = tmplDoc.createElement('div');
-        stampDiv.innerHTML = getStampHTML({
+        // WorkerDocuments.css espelha 100% ClientTimesheetReport.css + overrides locais
+        const workerCSStag = tmplDoc.createElement('style');
+        workerCSStag.textContent = workerDocumentsCSS;
+        (tmplDoc.head || tmplDoc.documentElement).appendChild(workerCSStag);
+
+        // 2. Envolver o conteúdo do body num <div class="a4-paper"> (igual ao cliente)
+        const a4 = tmplDoc.createElement('div');
+        a4.className = 'a4-paper';
+        a4.id = 'worker-a4-paper';
+        // Mover todos os filhos do body para dentro do .a4-paper
+        while (tmplDoc.body.firstChild) {
+          a4.appendChild(tmplDoc.body.firstChild);
+        }
+        tmplDoc.body.appendChild(a4);
+
+        // Override do body do template (remover width/margin originais que conflituam com .a4-paper)
+        const bodyResetCSS = tmplDoc.createElement('style');
+        bodyResetCSS.textContent = 'body { width: auto !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }';
+        (tmplDoc.head || tmplDoc.documentElement).appendChild(bodyResetCSS);
+
+        // 3. Stamp HTML via renderToString do ValidationStamp unificado (+ QR code de verificação)
+        const stampMarkup = await getStampHTML({
           signatureDataURL,
           datetime: signerOpenedAt,
           ip: userIP,
-          id: docId
+          id: docId,
         });
 
-        const container = tmplDoc.querySelector('.document-container') || tmplDoc.body;
-
-        // Tentar injetar na zona de assinatura do template (primeiro .signature-area)
-        const sigArea = container.querySelector('.signature-area');
+        const sigArea = a4.querySelector('.signature-area');
         if (sigArea) {
-          sigArea.innerHTML = '';
-          sigArea.appendChild(stampDiv);
+          sigArea.innerHTML = stampMarkup;
         } else {
-          container.appendChild(stampDiv);
+          const wrap = tmplDoc.createElement('div');
+          wrap.innerHTML = stampMarkup;
+          a4.appendChild(wrap);
         }
 
         const cleanHtml = '<!DOCTYPE html>' + tmplDoc.documentElement.outerHTML;
 
+        // 2. Iframe ligeiramente maior que .a4-paper (794px + margens 40px = 874px) para .a4-paper respirar
         const iframe = document.createElement('iframe');
-        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:820px;height:1200px;border:none;';
+        iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:900px;height:1300px;border:none;';
         document.body.appendChild(iframe);
 
         iframe.contentDocument.open();
         iframe.contentDocument.write(cleanHtml);
         iframe.contentDocument.close();
 
-        // Aguardar html2canvas estar disponível no iframe
+        // Aguardar Tailwind CDN carregar + paint
+        await new Promise(r => setTimeout(r, 800));
+
+        // Carregar html2pdf dentro do iframe (html2canvas precisa do mesmo realm para capturar)
         await new Promise((resolve, reject) => {
-          const h2cScript = iframe.contentDocument.createElement('script');
-          h2cScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-          h2cScript.onload = () => setTimeout(resolve, 400);
-          h2cScript.onerror = () => reject(new Error('Falha ao carregar html2canvas no iframe'));
-          (iframe.contentDocument.head || iframe.contentDocument.documentElement).appendChild(h2cScript);
+          const h2pScript = iframe.contentDocument.createElement('script');
+          h2pScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+          h2pScript.onload = () => setTimeout(resolve, 200);
+          h2pScript.onerror = () => reject(new Error('Falha ao carregar html2pdf no iframe'));
+          (iframe.contentDocument.head || iframe.contentDocument.documentElement).appendChild(h2pScript);
         });
 
-        const body = iframe.contentDocument.body;
+        let pdfBlob;
+        try {
+          // Capturar o .a4-paper — EXATAMENTE o mesmo elemento que o cliente captura
+          const target = iframe.contentDocument.querySelector('.a4-paper') || iframe.contentDocument.body;
 
-        let jsPDF = window.jspdf?.jsPDF;
-        if (!jsPDF) {
-          await new Promise((resolve, reject) => {
-            const s = document.createElement('script');
-            s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            s.onload = () => { jsPDF = window.jspdf.jsPDF; resolve(); };
-            s.onerror = () => reject(new Error('Falha ao carregar jsPDF'));
-            document.head.appendChild(s);
-          });
+          // OPÇÕES — arrays construídos com o Array do iframe para passar o instanceof check do html2pdf
+          const ifW = iframe.contentWindow;
+          const opt = {
+            // [top, left, bottom, right] mm — top em todas as páginas
+            margin: ifW.Array.of(14, 0, 0, 0),
+            filename: `${selectedDoc.id}_signed_${Date.now()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 1.5,
+              useCORS: true,
+              logging: false,
+              onclone: stripOklch,
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: {
+              mode: ifW.Array.of('avoid-all', 'css', 'legacy'),
+              avoid: ifW.Array.of(
+                'section',
+                '.section',
+                '[data-section]',
+                '.signature-block',
+                '.signature-area',
+                '.magnetic-validation-stamp',
+                '.page-break-inside-avoid',
+              ),
+            },
+          };
+
+          pdfBlob = await ifW.html2pdf().set(opt).from(target).output('blob');
+        } finally {
+          document.body.removeChild(iframe);
         }
-
-        const captureCanvas = await iframe.contentWindow.html2canvas(body, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff',
-          logging: false,
-          onclone: (clonedDoc) => {
-            clonedDoc.querySelectorAll('*').forEach(e => {
-              e.style.cssText = (e.style.cssText || '').replace(/oklch\([^)]+\)/g, '#ffffff');
-            });
-            clonedDoc.querySelectorAll('style').forEach(style => {
-              style.textContent = style.textContent.replace(/oklch\([^)]+\)/g, '#ffffff');
-            });
-          }
-        });
-
-        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
-        const pageW = pdf.internal.pageSize.getWidth();
-        const pageH = pdf.internal.pageSize.getHeight();
-        const imgData = captureCanvas.toDataURL('image/jpeg', 0.92);
-
-        const totalImgH = pageW * (captureCanvas.height / captureCanvas.width);
-
-        let yOff = 0;
-        let pageNum = 1;
-        const overlap = 1;
-        while (yOff + overlap < totalImgH) {
-          if (pageNum > 1) pdf.addPage();
-          pdf.addImage(imgData, 'JPEG', 0, -(yOff - (pageNum - 1) * overlap), pageW, totalImgH, undefined, 'FAST');
-          pdf.setFontSize(8);
-          pdf.setTextColor(150, 150, 150);
-          pdf.text(`Página ${pageNum}`, pageW / 2, pageH - 8, { align: 'center' });
-          yOff += pageH;
-          pageNum++;
-        }
-
-        const pdfBlob = pdf.output('blob');
-        document.body.removeChild(iframe);
 
         const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
         const { error: pdfError } = await supabase.storage
@@ -271,34 +341,54 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
       } else {
         const stampPath = `${currentUser.id}/stamps/${Date.now()}.png`;
-        const tempDiv = document.createElement('div');
-        tempDiv.style.cssText = 'position:fixed;left:-99999px;top:0;';
-        tempDiv.innerHTML = getStampHTML({
+        // Pré-renderizar o stamp num iframe isolado com WorkerDocuments.css aplicado,
+        // dentro de .a4-paper > .signature-area (igual ao pipeline da rota template).
+        const stampHTML = await getStampHTML({
           signatureDataURL,
           datetime: signerOpenedAt,
           ip: userIP,
           id: docId
         });
-        document.body.appendChild(tempDiv);
+        const stampDocHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${workerDocumentsCSS}</style><style>
+          html, body { margin:0; padding:0; background:#fff; }
+          .a4-paper { width:auto !important; min-height:auto !important; padding:0 !important; margin:0 !important; box-shadow:none !important; display:inline-block; }
+        </style></head><body><div class="a4-paper"><div class="signature-area">${stampHTML}</div></div></body></html>`;
+
+        const stampIframe = document.createElement('iframe');
+        stampIframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:500px;height:200px;border:none;';
+        document.body.appendChild(stampIframe);
+        stampIframe.contentDocument.open();
+        stampIframe.contentDocument.write(stampDocHtml);
+        stampIframe.contentDocument.close();
+
+        // Aguardar paint
+        await new Promise(r => setTimeout(r, 200));
+
+        // Carregar html2canvas no iframe
+        await new Promise((resolve, reject) => {
+          const s = stampIframe.contentDocument.createElement('script');
+          s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+          s.onload = () => setTimeout(resolve, 150);
+          s.onerror = () => reject(new Error('Falha ao carregar html2canvas (stamp)'));
+          (stampIframe.contentDocument.head || stampIframe.contentDocument.documentElement).appendChild(s);
+        });
+
         let stampBase64;
+        let stampAspectRatio = 290 / 80; // fallback
         try {
-          const tempCanvas = await html2canvas(tempDiv, {
+          const stampTarget = stampIframe.contentDocument.querySelector('.magnetic-validation-stamp')
+            || stampIframe.contentDocument.querySelector('.a4-paper');
+          const tempCanvas = await stampIframe.contentWindow.html2canvas(stampTarget, {
             backgroundColor: '#ffffff',
-            scale: 2,
+            scale: 3,
             useCORS: true,
             logging: false,
-            onclone: (clonedDoc) => {
-              clonedDoc.querySelectorAll('*').forEach(el => {
-                el.style.cssText = (el.style.cssText || '').replace(/oklch\([^)]+\)/g, '#ffffff');
-              });
-              clonedDoc.querySelectorAll('style').forEach(style => {
-                style.textContent = style.textContent.replace(/oklch\([^)]+\)/g, '#ffffff');
-              });
-            }
+            onclone: stripOklch,
           });
           stampBase64 = tempCanvas.toDataURL('image/png');
+          stampAspectRatio = tempCanvas.width / tempCanvas.height;
         } finally {
-          if (tempDiv.parentNode) tempDiv.parentNode.removeChild(tempDiv);
+          if (stampIframe.parentNode) stampIframe.parentNode.removeChild(stampIframe);
         }
 
         const { error: stampError } = await supabase.storage
@@ -318,8 +408,9 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const pages = pdfDoc.getPages();
         const lastPage = pages[pages.length - 1];
         const { width: pageWidth } = lastPage.getSize();
-        const stampWidth = 280;
-        const stampHeight = 80;
+        // Manter aspect ratio natural do stamp (em vez de forçar 280×80, que esticava)
+        const stampWidth = 207;
+        const stampHeight = stampWidth / stampAspectRatio;
         lastPage.drawImage(pngImage, {
           x: pageWidth - stampWidth - 30,
           y: 30,
@@ -367,12 +458,12 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
   const docList = useMemo(() => {
     let list = activeTab === 'pendentes' ? pendentes : historico;
-    
+
     if (activeTab === 'historico') {
       if (filterType !== 'all') {
         list = list.filter(d => (d.tipo || d.title || '') === filterType);
       }
-      
+
       list = [...list].sort((a, b) => {
         if (sortBy === 'date_desc') {
           return (b.dataAssinatura || b.signed_at || b.dataEmissao || b.created_at || '').localeCompare(a.dataAssinatura || a.signed_at || a.dataEmissao || a.created_at || '');
@@ -386,7 +477,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         return 0;
       });
     }
-    
+
     return list;
   }, [activeTab, pendentes, historico, filterType, sortBy]);
 
@@ -409,10 +500,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         <button onClick={() => setActiveTab('historico')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'historico' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
           Histórico ({historico.length})
         </button>
-        
+
         {activeTab === 'historico' && (
-          <button 
-            onClick={() => setShowFilters(!showFilters)} 
+          <button
+            onClick={() => setShowFilters(!showFilters)}
             className={`ml-auto p-2 rounded-xl ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}
           >
             <Filter size={16} />
@@ -424,8 +515,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         <div className="bg-slate-50 rounded-xl p-4 mb-4 flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <label className="text-xs font-bold text-slate-500 uppercase">Tipo:</label>
-            <select 
-              value={filterType} 
+            <select
+              value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-bold"
             >
@@ -435,11 +526,11 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
               ))}
             </select>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <label className="text-xs font-bold text-slate-500 uppercase">Ordenar:</label>
-            <select 
-              value={sortBy} 
+            <select
+              value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-bold"
             >
@@ -449,7 +540,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
               <option value="name_desc">Nome (Z-A)</option>
             </select>
           </div>
-          
+
           <span className="text-xs text-slate-400 ml-auto">{docList.length} documento(s)</span>
         </div>
       )}
@@ -496,7 +587,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         </div>
       )}
 
-{showSigner && selectedDoc && (
+      {showSigner && selectedDoc && (
         <>
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -508,7 +599,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                 {selectedDoc.url ? (
                   <iframe src={`${selectedDoc.url}#toolbar=0`} className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : selectedDoc.generated_html ? (
-                  <iframe srcDoc={selectedDoc.generated_html} sandbox="allow-scripts" className="w-full h-full rounded-xl" title="Document Preview" />
+                  <iframe srcDoc={injectSignaturePlaceholder(selectedDoc.generated_html)} sandbox="allow-scripts" className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : (
                   <div className="flex items-center justify-center h-full">
                     <p className="text-slate-400">Documento não disponível</p>
@@ -516,27 +607,27 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                 )}
               </div>
               <div className="relative w-full max-w-2xl mx-auto border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden mb-4 shadow-inner">
-                    <canvas 
-                      ref={canvasRef} 
-                      className="w-full cursor-crosshair touch-none" 
-                      style={{ touchAction: 'none' }} 
-                      onMouseDown={startDrawing} 
-                      onMouseMove={draw} 
-                      onMouseUp={stopDrawing} 
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                    />
-                    {!hasSignature && (
-                      <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">
-                        Assine Aqui
-                      </div>
-                    )}
+                <canvas
+                  ref={canvasRef}
+                  className="w-full cursor-crosshair touch-none"
+                  style={{ touchAction: 'none' }}
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+                {!hasSignature && (
+                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">
+                    Assine Aqui
                   </div>
-                  <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-2xl mx-auto">
-                    <button onClick={clearCanvas} className="w-full sm:w-auto px-6 py-4 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Limpar Quadro</button>
-                  </div>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-2xl mx-auto">
+                <button onClick={clearCanvas} className="w-full sm:w-auto px-6 py-4 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Limpar Quadro</button>
+              </div>
               <button
                 onClick={handleSign}
                 disabled={!hasSignature || signing}

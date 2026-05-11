@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ValidationStamp = ({ signature, datetime, ip, id }) => {
+const ValidationStamp = ({ signature, datetime, ip, id, qrCode }) => {
   const dateStr = datetime ? new Date(datetime).toLocaleString('pt-PT') : '';
   const idStr = id ? String(id).substring(0, 16) + '...' : '';
   const ipStr = ip || 'N/D';
@@ -75,6 +75,24 @@ const ValidationStamp = ({ signature, datetime, ip, id }) => {
           DOCUMENTO VALIDADO ELETRONICAMENTE
         </p>
       </div>
+
+      {qrCode && (
+        <div style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '6px',
+          padding: '3px',
+          boxSizing: 'border-box',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <img src={qrCode} alt="QR de verificação" style={{ width: '52px', height: '52px', display: 'block', imageRendering: 'pixelated' }} />
+          <span style={{ fontSize: '4.5px', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px', whiteSpace: 'nowrap' }}>VERIFICAR</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -376,30 +376,49 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         6. Garanta que o estilo no <head> seja compatível com visualização profissional.
       `;
 
-      // Try gemini-1.5-flash-latest with a fallback to gemini-pro
-      let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
+      // Tentar uma cadeia de modelos até encontrar um disponível para esta API key.
+      // O 1º é o configurado (ou default); depois fallbacks comuns.
+      const configured = import.meta.env.VITE_GEMINI_MODEL;
+      const modelCandidates = [
+        configured,
+        'gemini-2.5-flash',
+        'gemini-2.0-flash-001',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash-002',
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-pro-latest',
+        'gemini-pro',
+      ].filter(Boolean);
 
-      // Fallback if first model fails
-      if (!response.ok) {
-        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+      let response;
+      let lastErrorMsg = '';
+      let usedModel = '';
+      for (const m of modelCandidates) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
+        response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }]
-          })
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
         });
+        if (response.ok) {
+          usedModel = m;
+          break;
+        }
+        try {
+          const errData = await response.clone().json();
+          lastErrorMsg = errData.error?.message || `HTTP ${response.status}`;
+          // Só fazer fallback se for 404 (model not found). Outros erros (auth, quota) — abortar.
+          if (response.status !== 404) break;
+        } catch {
+          lastErrorMsg = `HTTP ${response.status}`;
+        }
       }
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || `Erro HTTP ${response.status}`);
+      if (!response || !response.ok) {
+        console.error('Gemini API: nenhum modelo da cadeia funcionou. Último erro:', lastErrorMsg);
+        throw new Error(lastErrorMsg || 'Nenhum modelo Gemini disponível para esta API key.');
       }
+      if (usedModel) console.log('[Gemini] Modelo utilizado:', usedModel);
 
       const data = await response.json();
       const finishReason = data.candidates?.[0]?.finishReason;

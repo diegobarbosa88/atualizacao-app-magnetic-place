@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
-import ValidationStamp from './components/common/ValidationStamp';
+import ValidationStamp from './components/common/ValidationStampWithQR';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {

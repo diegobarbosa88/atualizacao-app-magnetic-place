@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Download, Loader2, Printer, Settings2 } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
-import ValidationStamp from './ValidationStamp';
+import ValidationStamp from './ValidationStampWithQR';
 import './ClientTimesheetReport.css';
 import { toISODateLocal, isSameMonth, getLastBusinessDayOfMonth, formatDocDate, monthToYYYYMM, getISOWeek } from '../../utils/dateUtils';
 import { formatHours, calculateDuration, calculateExpectedMonthlyHours, calculateExpectedDailyHours, getScheduleForDay, formatCurrency, toTimeInputValue } from '../../utils/formatUtils';

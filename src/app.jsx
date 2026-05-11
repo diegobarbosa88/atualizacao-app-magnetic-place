@@ -20,6 +20,7 @@ import CompanyLogo from './components/common/CompanyLogo';
 import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
+import VerificationPortal from './components/common/VerificationPortal';
 import {
   toISODateLocal, isSameMonth
 } from './utils/dateUtils';
@@ -268,6 +269,13 @@ export default function App() {
   const urlParams = new URLSearchParams(window.location.search);
   const urlClient = urlParams.get('client');
   const urlMonth = urlParams.get('month');
+  const urlView = urlParams.get('view');
+  const urlVerifyId = urlParams.get('id');
+
+  // Portal público de verificação de assinaturas (não requer login)
+  if (urlView === 'verify' && urlVerifyId) {
+    return <VerificationPortal signatureId={urlVerifyId} />;
+  }
 
   return (
     <div className="text-slate-900 bg-slate-50 min-h-screen font-sans">

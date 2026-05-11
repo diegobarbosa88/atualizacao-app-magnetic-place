@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { renderToString } from 'react-dom/server';
 import html2canvas from 'html2canvas';
+import QRCode from 'qrcode';
 import ValidationStamp from '../components/common/ValidationStamp';
 
 function stripOklch(cssText) {
@@ -8,14 +9,37 @@ function stripOklch(cssText) {
   return cssText.replace(/oklch\([^)]+\)/g, '#ffffff');
 }
 
-export const getStampHTML = ({ signatureDataURL, datetime, ip, id }) => {
+const buildVerifyUrl = (id) => {
+  if (!id) return '';
+  const origin = (typeof window !== 'undefined' && window.location)
+    ? `${window.location.origin}${window.location.pathname}`
+    : '';
+  return `${origin}?view=verify&id=${encodeURIComponent(id)}`;
+};
+
+export const generateQRCodeDataURL = async (id) => {
+  try {
+    if (!id) return '';
+    return await QRCode.toDataURL(buildVerifyUrl(id), {
+      errorCorrectionLevel: 'M',
+      margin: 1,
+      width: 200,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    });
+  } catch (err) {
+    console.error('Erro ao gerar QR code:', err);
+    return '';
+  }
+};
+
+export const getStampHTML = async ({ signatureDataURL, datetime, ip, id }) => {
+  const qrCode = await generateQRCodeDataURL(id);
   const stampMarkup = renderToString(
-    <ValidationStamp signature={signatureDataURL} datetime={datetime} ip={ip} id={id} />
+    <ValidationStamp signature={signatureDataURL} datetime={datetime} ip={ip} id={id} qrCode={qrCode} />
   );
   const scopeCSS = `
     .magnetic-validation-stamp,
     .magnetic-validation-stamp * {
-      line-height: 1.2 !important;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
       text-indent: 0 !important;
       text-align: left !important;

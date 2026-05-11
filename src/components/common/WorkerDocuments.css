@@ -1,3 +1,7 @@
+/* WorkerDocuments — espelho EXATO de ClientTimesheetReport.css.
+   Aplicado dentro do iframe que renderiza o template do trabalhador antes da captura para PDF.
+   O conteúdo do template é envolvido num <div class="a4-paper"> em runtime para que estas regras se apliquem. */
+
 /* --- FUNDO DA TELA E ESTILO DA PÁGINA A4 --- */
 body {
   background-color: #f1f5f9;
@@ -274,4 +278,64 @@ body {
   padding: 3px 4px !important;
   background-color: #f1f5f9 !important;
   text-transform: uppercase;
+}
+
+/* ============================================================
+   OVERRIDES ESPECÍFICOS DO WORKER
+   (aplicados depois das regras acima para casos onde o template
+   do trabalhador difere do relatório de horas do cliente)
+   ============================================================ */
+
+/* No iframe do worker, o body deve ser branco (não slate) e sem margens */
+body {
+  background-color: #ffffff !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Override do .a4-paper no worker: padding lateral standard A4, top compacto para o header colar mais ao topo */
+.a4-paper {
+  padding: 24px 56px 40px 56px !important;
+}
+
+/* Forçar elementos dentro do .a4-paper a não fazer overflow horizontal */
+.a4-paper * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Logo/imagens no topo: garantir respiração e respeitar tamanho natural se couber */
+.a4-paper > img:first-child,
+.a4-paper .header img,
+.a4-paper .logo,
+.a4-paper .logo img {
+  display: block;
+  margin: 0 auto 16px auto;
+  height: auto !important;
+}
+
+/* Tabelas dentro do .a4-paper: layout fixo + width 100% para respeitar container */
+.a4-paper table {
+  table-layout: fixed !important;
+  width: 100% !important;
+}
+
+/* Stamp: tamanho consistente em todas as rotas — equivalente a ~207pt no PDF final
+   (corresponde a zoom 0.95 sobre o tamanho natural de ~290px do ValidationStamp) */
+.a4-paper .magnetic-validation-stamp {
+  zoom: 0.95;
+}
+
+/* Quebra de página por SECTION — cada section é uma unidade INQUEBRÁVEL */
+section,
+.section,
+.a4-paper section,
+.a4-paper .section,
+.a4-paper [data-section],
+.a4-paper .signature-area,
+.a4-paper .signature-block,
+.a4-paper .magnetic-validation-stamp {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+  -webkit-column-break-inside: avoid !important;
 }
