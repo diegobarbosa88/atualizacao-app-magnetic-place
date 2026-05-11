@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { isSigned, isPending } from '../../constants/documentStatus';
 import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, Filter, CheckCircle, Clock, EyeOff, FileSignature, Sparkles } from 'lucide-react';
 import { TEMPLATE_FIELDS, replaceTemplateFields } from '../../utils/templateFields';
+import { getPreviewHtml } from '../../utils/dragPreviewUtils';
 import { useApp } from '../../context/AppContext';
 
 const DEFAULT_TEMPLATE = `<!DOCTYPE html>
@@ -19,6 +20,7 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
     .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; text-align: center; font-size: 10pt; color: #666; }
     .signature-block { margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid; break-inside: avoid; }
     .signature-area { width: 45%; text-align: center; page-break-inside: avoid; break-inside: avoid; }
+    .qrcode-area { position: absolute; top: 10px; right: 10px; page-break-inside: avoid; break-inside: avoid; }
     @media print {
       body { margin: 15mm !important; width: 210mm !important; }
       .signature-block, .signature-area { page-break-inside: avoid !important; break-inside: avoid !important; }
@@ -26,6 +28,11 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
   </style>
 </head>
 <body>
+  <div id="worker-qrcode-placeholder" style="position:absolute; left:700px; top:50px; width:100px; height:100px;">
+    <div style="width:100%;height:100%;border:2px dashed #6366f1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.1);">
+      <span style="font-size:8px;font-weight:900;color:#6366f1;text-transform:uppercase;letter-spacing:0.05em;font-family:'Inter',sans-serif;">QR Code</span>
+    </div>
+  </div>
   <div class="header">
     <h1>DECLARAÇÃO DE TRABALHADOR</h1>
     <p>{{current_date}}</p>
@@ -50,14 +57,14 @@ const DEFAULT_TEMPLATE = `<!DOCTYPE html>
     <p>Contacto de Emergência: <strong>{{worker_emergency_contact}}</strong> - <strong>{{worker_emergency_phone}}</strong></p>
   </div>
 
-  <div class="signature-block">
-    <div class="signature-area" id="worker-signature-placeholder">
-      <p>O Declarante</p>
-      <div style="width:224px;height:64px;border:2px dashed #cbd5e1;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-top:10px;background:#f9fafc;page-break-inside:avoid;break-inside:avoid;">
-        <span style="color:#94a3b8;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;">Aguardando Assinatura</span>
-      </div>
+  <div id="worker-signature-placeholder" style="position:absolute; left:100px; top:700px; width:290px;">
+    <div style="width:290px;height:80px;border:2px dashed #10b981;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.1);page-break-inside:avoid;break-inside:avoid;">
+      <span style="font-size:9px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;font-family:'Inter',sans-serif;">Assinatura</span>
     </div>
-    <div class="signature-area">
+  </div>
+
+  <div class="signature-block">
+    <div style="width:290px;">
       <p>A Empresa</p>
       <hr style="border: 1px solid #333; margin-top: 40px;">
       <p style="font-size: 12px;">{{company_name}}</p>
@@ -73,6 +80,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [loading, setLoading] = useState(false);
   const [loadingDocs, setLoadingDocs] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [previewHeight, setPreviewHeight] = useState(500);
+  const [showPreviewSettings, setShowPreviewSettings] = useState(false);
   
   // Modal states
   const [showModal, setShowModal] = useState(false);
@@ -104,8 +113,65 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [aiPrompt, setAiPrompt] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [showAIPanel, setShowAIPanel] = useState(false);
+  const [previewPositions, setPreviewPositions] = useState({});
+  const [previewZoom, setPreviewZoom] = useState(100);
+  const iframeRef = useRef(null);
+  const isDraggingRef = useRef(false);
 
   const editorRef = useRef(null);
+
+  useEffect(() => {
+    const handleMessage = (e) => {
+      if (e.data?.type === 'elementMoved') {
+        const { id, left, top } = e.data;
+        if (!id || !left || !top) return;
+
+        isDraggingRef.current = true;
+
+        if (iframeRef.current && iframeRef.current.contentDocument) {
+          const el = iframeRef.current.contentDocument.getElementById(id);
+          if (el) {
+            el.style.left = left;
+            el.style.top = top;
+          }
+        }
+
+        setPreviewPositions(prev => ({ ...prev, [id]: { left, top } }));
+
+        setTimeout(() => {
+          isDraggingRef.current = false;
+        }, 100);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  useEffect(() => {
+    if (isDraggingRef.current) return;
+    if (Object.keys(previewPositions).length === 0) return;
+
+    let newHtml = previewData.html_content;
+    if (!newHtml) return;
+
+    Object.entries(previewPositions).forEach(([id, pos]) => {
+      const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`<div([^>]*)\\sid="${escapedId}"([^>]*)>`, 'i');
+
+      newHtml = newHtml.replace(regex, (match, beforeId, afterId) => {
+        const existingStyle = (beforeId.match(/style="([^"]*)"/i) || afterId.match(/style="([^"]*)"/i) || ['', ''])[1];
+        const newStyle = existingStyle
+          ? `${existingStyle} left:${pos.left}; top:${pos.top};`
+          : `position:absolute; left:${pos.left}; top:${pos.top};`;
+        return `<div${beforeId}id="${id}"${afterId} style="${newStyle}">`;
+      });
+    });
+
+    if (newHtml !== previewData.html_content) {
+      setPreviewData(prev => ({ ...prev, html_content: newHtml }));
+    }
+  }, [previewData.html_content, previewPositions]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -330,12 +396,19 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   };
 
   const insertSignaturePlaceholder = () => {
-    const placeholder = `<div class="signature-area" id="worker-signature-placeholder">
-  <p>O Declarante</p>
-  <div style="width:224px;height:64px;border:2px dashed #cbd5e1;border-radius:16px;display:flex;align-items:center;justify-content:center;margin-top:10px;background:#f9fafc;page-break-inside:avoid;break-inside:avoid;">
-    <span style="color:#94a3b8;font-size:8px;font-weight:800;text-transform:uppercase;letter-spacing:0.1em;">Aguardando Assinatura</span>
+    const signaturePlaceholder = `<div id="worker-signature-placeholder" style="position:absolute; left:100px; top:700px; width:290px;">
+  <div style="width:290px;height:80px;border:2px dashed #10b981;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.1);page-break-inside:avoid;break-inside:avoid;">
+    <span style="font-size:9px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;font-family:'Inter',sans-serif;">Assinatura</span>
   </div>
 </div>`;
+
+    const qrPlaceholder = `<div id="worker-qrcode-placeholder" style="position:absolute; left:700px; top:50px; width:100px; height:100px;">
+  <div style="width:100%;height:100%;border:2px dashed #6366f1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.1);page-break-inside:avoid;break-inside:avoid;">
+    <span style="font-size:8px;font-weight:900;color:#6366f1;text-transform:uppercase;letter-spacing:0.05em;font-family:'Inter',sans-serif;">QR Code</span>
+  </div>
+</div>`;
+
+    const combined = signaturePlaceholder + '\n' + qrPlaceholder;
     const editor = editorRef.current;
     if (editor) {
       const start = editor.selectionStart;
@@ -343,12 +416,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       const text = previewData.html_content;
       setPreviewData({
         ...previewData,
-        html_content: text.substring(0, start) + placeholder + text.substring(end)
+        html_content: text.substring(0, start) + combined + text.substring(end)
       });
     } else {
       setPreviewData(prev => ({
         ...prev,
-        html_content: prev.html_content + '\n' + placeholder
+        html_content: prev.html_content + '\n' + combined
       }));
     }
   };
@@ -452,7 +525,88 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
 
   const previewHtml = () => {
     const mockWorker = workers[0] || { name: 'Nome Exemplo', role: 'Função Exemplo' };
-    return replaceTemplateFields(previewData.html_content, mockWorker, systemSettings);
+    let html = replaceTemplateFields(previewData.html_content, mockWorker, systemSettings);
+    
+    // Add drag styles and script
+    const dragStyles = `
+      <style>
+        #worker-qrcode-placeholder, #worker-signature-placeholder {
+          cursor: move !important;
+          position: absolute !important;
+          z-index: 1000 !important;
+        }
+        #worker-qrcode-placeholder {
+          border: 2px dashed #6366f1 !important;
+          background: rgba(99, 102, 241, 0.1) !important;
+          padding: 4px !important;
+        }
+        #worker-signature-placeholder {
+          border: 2px dashed #10b981 !important;
+          background: rgba(16, 185, 129, 0.1) !important;
+          padding: 4px !important;
+        }
+        #worker-qrcode-placeholder:hover, #worker-signature-placeholder:hover {
+          background: rgba(99, 102, 241, 0.2) !important;
+        }
+      </style>
+    `;
+    
+    const dragScript = `
+      <script>
+        (function() {
+          const placeholders = [
+            document.getElementById('worker-qrcode-placeholder'),
+            document.getElementById('worker-signature-placeholder')
+          ];
+          
+          placeholders.forEach(el => {
+            if (!el) return;
+            
+            // Ensure position is absolute
+            if (!el.style.position || el.style.position === 'static') {
+              el.style.position = 'absolute';
+            }
+            
+            el.addEventListener('mousedown', function(e) {
+              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+              
+              e.preventDefault();
+              const startX = e.clientX;
+              const startY = e.clientY;
+              const origLeft = el.offsetLeft;
+              const origTop = el.offsetTop;
+              
+              function onMouseMove(e) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                el.style.left = (origLeft + dx) + 'px';
+                el.style.top = (origTop + dy) + 'px';
+              }
+              
+              function onMouseUp() {
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                
+                // Send position to React
+                if (window.parent !== window) {
+                  window.parent.postMessage({
+                    type: 'elementMoved',
+                    id: el.id,
+                    left: el.style.left,
+                    top: el.style.top
+                  }, '*');
+                }
+              }
+              
+              document.addEventListener('mousemove', onMouseMove);
+              document.addEventListener('mouseup', onMouseUp);
+            });
+          });
+        })();
+      </script>
+    `;
+    
+    return dragStyles + dragScript + html;
   };
 
   const docsWithWorkers = useMemo(
@@ -828,22 +982,57 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     onChange={(e) => setPreviewData({ ...previewData, html_content: e.target.value })}
                     className="w-full h-80 p-6 font-mono text-xs border-0 resize-none outline-none bg-white text-slate-600"
                     spellCheck={false}
-                  />
+/>
                 </div>
               </div>
 
-              <div className="flex flex-col h-full bg-slate-50 rounded-[2.5rem] p-6 border border-slate-100 shadow-inner">
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Live Preview</span>
-                  <div className="bg-emerald-500/10 text-emerald-600 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest animate-pulse">Ativo</div>
-                </div>
-                <div className="flex-1 bg-white rounded-2xl overflow-hidden shadow-xl border border-slate-200">
-                  <iframe
-                    srcDoc={previewHtml()}
-                    sandbox="allow-same-origin"
-                    className="w-full h-full border-0"
-                    title="Preview"
-                  />
+              <div className="space-y-6">
+                <div className="flex flex-col bg-slate-50 rounded-[2.5rem] p-4 border border-slate-100 shadow-inner overflow-hidden" style={{ height: `${previewHeight}px` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preview</div>
+                    <button
+                      onClick={() => setShowPreviewSettings(!showPreviewSettings)}
+                      className="text-[9px] font-black text-indigo-600 uppercase tracking-wider hover:text-indigo-800 transition-colors"
+                    >
+                      {showPreviewSettings ? 'Ocultar' : 'Ajustar'} Tamanho
+                    </button>
+                  </div>
+                  {showPreviewSettings && (
+                    <div className="flex items-center gap-3 mb-2 p-2 bg-white rounded-xl border border-slate-100">
+                      <span className="text-[9px] font-bold text-slate-500 uppercase">Altura:</span>
+                      <input
+                        type="range"
+                        min="300"
+                        max="800"
+                        value={previewHeight}
+                        onChange={(e) => setPreviewHeight(parseInt(e.target.value))}
+                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <span className="text-[9px] font-black text-indigo-600 tabular-nums">{previewHeight}px</span>
+                      <div className="w-px h-4 bg-slate-200" />
+                      <span className="text-[9px] font-bold text-slate-500 uppercase">Zoom:</span>
+                      <input
+                        type="range"
+                        min="50"
+                        max="200"
+                        value={previewZoom}
+                        onChange={(e) => setPreviewZoom(parseInt(e.target.value))}
+                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                      />
+                      <span className="text-[9px] font-black text-indigo-600 tabular-nums">{previewZoom}%</span>
+                    </div>
+                  )}
+                  <div className="flex-1 overflow-auto rounded-xl bg-slate-100 p-4 flex justify-center">
+                    <div style={{ transform: `scale(${previewZoom / 100})`, transformOrigin: 'top center', display: 'inline-block' }}>
+                      <iframe
+                        ref={iframeRef}
+                        srcDoc={getPreviewHtml(previewData.html_content, 100)}
+                        className="bg-white shadow-xl"
+                        title="Preview"
+                        style={{ width: '794px', height: '1123px' }}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

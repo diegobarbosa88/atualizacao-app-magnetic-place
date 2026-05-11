@@ -242,14 +242,22 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         (tmplDoc.head || tmplDoc.documentElement).appendChild(bodyResetCSS);
 
         // 3. Stamp HTML via renderToString do ValidationStamp unificado (+ QR code de verificação)
-        const stampMarkup = await getStampHTML({
+        const { stampHTML: stampMarkup, qrCodeDataURL } = await getStampHTML({
           signatureDataURL,
           datetime: signerOpenedAt,
           ip: userIP,
           id: docId,
         });
 
-        const sigArea = a4.querySelector('.signature-area');
+        // 3.1 Injectar QR code no placeholder do template
+        if (qrCodeDataURL) {
+          const qrPlaceholder = a4.querySelector('#worker-qrcode-placeholder');
+          if (qrPlaceholder) {
+            qrPlaceholder.innerHTML = `<img src="${qrCodeDataURL}" alt="QR de verificação" style="width:100%;height:100%;display:block;image-rendering:pixelated;border-radius:8px;" />`;
+          }
+        }
+
+        const sigArea = a4.querySelector('#worker-signature-placeholder') || a4.querySelector('.signature-area');
         if (sigArea) {
           sigArea.innerHTML = stampMarkup;
         } else {
@@ -343,7 +351,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const stampPath = `${currentUser.id}/stamps/${Date.now()}.png`;
         // Pré-renderizar o stamp num iframe isolado com WorkerDocuments.css aplicado,
         // dentro de .a4-paper > .signature-area (igual ao pipeline da rota template).
-        const stampHTML = await getStampHTML({
+        const { stampHTML: stampHTMLFromFn, qrCodeDataURL } = await getStampHTML({
           signatureDataURL,
           datetime: signerOpenedAt,
           ip: userIP,
@@ -352,7 +360,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const stampDocHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${workerDocumentsCSS}</style><style>
           html, body { margin:0; padding:0; background:#fff; }
           .a4-paper { width:auto !important; min-height:auto !important; padding:0 !important; margin:0 !important; box-shadow:none !important; display:inline-block; }
-        </style></head><body><div class="a4-paper"><div class="signature-area">${stampHTML}</div></div></body></html>`;
+        </style></head><body><div class="a4-paper"><div class="signature-area">${stampHTMLFromFn}${qrCodeDataURL ? `<img src="${qrCodeDataURL}" class="worker-qrcode-img" style="display:block;width:64px;height:64px;margin-top:8px;border:1px solid #e2e8f0;border-radius:4px;padding:2px;background:#fff;" />` : ''}</div></div></body></html>`;
 
         const stampIframe = document.createElement('iframe');
         stampIframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:500px;height:200px;border:none;';

@@ -60,7 +60,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings } = useApp();
+  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings, supabase } = useApp();
 
   const notificacoesDeCorrecao = correctionNotifications;
 
@@ -696,7 +696,7 @@ function AdminDashboard(props) {
             <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} />
           )}
           {!auditWorkerId && activeTab === 'templates' && (
-            <DocumentTemplatesAdmin workers={workers} />
+            <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
           )}
           {!auditWorkerId && activeTab === 'notificacoes' && (
             <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} />
