@@ -200,10 +200,6 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       }
       const valStart = propIdx + propName.length + 1;
       let valEnd = styleStr.indexOf(';', valStart);
-      const pxIdx = styleStr.indexOf('px', valStart);
-      if (pxIdx !== -1 && pxIdx < valEnd && styleStr[pxIdx + 2] === ';') {
-        valEnd = pxIdx + 3;
-      }
       if (valEnd === -1 || valEnd <= valStart) {
         valEnd = styleStr.length;
       }
