@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { isSigned } from '../../constants/documentStatus';
-import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, CheckCircle, Clock, FileSignature, Sparkles } from 'lucide-react';
+import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, CheckCircle, Clock, FileSignature, Sparkles, QrCode } from 'lucide-react';
 import { TEMPLATE_FIELDS } from '../../utils/templateFields';
 import { getPreviewHtml } from '../../utils/dragPreviewUtils';
 import { useApp } from '../../context/AppContext';
@@ -124,11 +124,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   };
 
   const insertSignaturePlaceholder = () => {
+    if (previewData.html_content.includes('worker-signature-placeholder')) return;
     const signatureHtml = SIGNATURE_PLACEHOLDER_HTML;
-    const qrcodeHtml = QRCODE_PLACEHOLDER_HTML;
-    const combined = (signatureHtml + '\n' + qrcodeHtml).trim();
-    if (!combined) return;
-
     const editor = editorRef.current;
     if (editor) {
       const start = editor.selectionStart;
@@ -136,25 +133,82 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       const text = previewData.html_content;
       setPreviewData({
         ...previewData,
-        html_content: text.substring(0, start) + '\n' + combined + text.substring(end)
+        html_content: text.substring(0, start) + '\n' + signatureHtml + text.substring(end)
       });
     } else {
       setPreviewData(prev => ({
         ...prev,
-        html_content: prev.html_content + '\n' + combined
+        html_content: prev.html_content + '\n' + signatureHtml
       }));
     }
+    setPreviewPositions(prev => {
+      if (prev['worker-signature-placeholder']) return prev;
+      return { ...prev, 'worker-signature-placeholder': { left: '0px', top: '0px' } };
+    });
+  };
 
+  const removeSignaturePlaceholder = () => {
+    let html = previewData.html_content;
+    const regex = /<div[^>]*id="worker-signature-placeholder"[^>]*>[\s\S]*?<\/div>/gi;
+    html = html.replace(regex, '').trim();
+    setPreviewData(prev => ({ ...prev, html_content: html }));
     setPreviewPositions(prev => {
       const next = { ...prev };
-      if (!next['worker-signature-placeholder']) {
-        next['worker-signature-placeholder'] = { left: '0px', top: '0px' };
-      }
-      if (!next['worker-qrcode-placeholder']) {
-        next['worker-qrcode-placeholder'] = { left: '0px', top: '0px' };
-      }
+      delete next['worker-signature-placeholder'];
       return next;
     });
+  };
+
+  const toggleSignaturePlaceholder = () => {
+    if (previewData.html_content.includes('worker-signature-placeholder')) {
+      removeSignaturePlaceholder();
+    } else {
+      insertSignaturePlaceholder();
+    }
+  };
+
+  const insertQrcodePlaceholder = () => {
+    if (previewData.html_content.includes('worker-qrcode-placeholder')) return;
+    const qrcodeHtml = QRCODE_PLACEHOLDER_HTML;
+    const editor = editorRef.current;
+    if (editor) {
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const text = previewData.html_content;
+      setPreviewData({
+        ...previewData,
+        html_content: text.substring(0, start) + '\n' + qrcodeHtml + text.substring(end)
+      });
+    } else {
+      setPreviewData(prev => ({
+        ...prev,
+        html_content: prev.html_content + '\n' + qrcodeHtml
+      }));
+    }
+    setPreviewPositions(prev => {
+      if (prev['worker-qrcode-placeholder']) return prev;
+      return { ...prev, 'worker-qrcode-placeholder': { left: '0px', top: '0px' } };
+    });
+  };
+
+  const removeQrcodePlaceholder = () => {
+    let html = previewData.html_content;
+    const regex = /<div[^>]*id="worker-qrcode-placeholder"[^>]*>[\s\S]*?<\/div>/gi;
+    html = html.replace(regex, '').trim();
+    setPreviewData(prev => ({ ...prev, html_content: html }));
+    setPreviewPositions(prev => {
+      const next = { ...prev };
+      delete next['worker-qrcode-placeholder'];
+      return next;
+    });
+  };
+
+  const toggleQrcodePlaceholder = () => {
+    if (previewData.html_content.includes('worker-qrcode-placeholder')) {
+      removeQrcodePlaceholder();
+    } else {
+      insertQrcodePlaceholder();
+    }
   };
 
   const generateAIWrapper = async () => {
@@ -590,10 +644,16 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                         {showFieldList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                       </button>
                       <button
-                        onClick={insertSignaturePlaceholder}
-                        className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
+                        onClick={toggleSignaturePlaceholder}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all shadow-sm ${previewData.html_content.includes('worker-signature-placeholder') ? 'bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white'}`}
                       >
-                        <FileSignature size={14} /> Assinatura
+                        <FileSignature size={14} /> {previewData.html_content.includes('worker-signature-placeholder') ? 'Remover' : 'Assinatura'}
+                      </button>
+                      <button
+                        onClick={toggleQrcodePlaceholder}
+                        className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all shadow-sm ${previewData.html_content.includes('worker-qrcode-placeholder') ? 'bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-indigo-50 border border-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white'}`}
+                      >
+                        <QrCode size={14} /> {previewData.html_content.includes('worker-qrcode-placeholder') ? 'Remover' : 'QR Code'}
                       </button>
                     </div>
                   </div>
