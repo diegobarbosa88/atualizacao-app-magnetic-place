@@ -1,56 +1,66 @@
-# Requirements: Modularização e Gestão de Estado
+# Requirements: app-magnetic — v3.0 Automação de Documentos Contratuais
 
-Este documento detalha os requisitos para a refatoração do `app-magnetic` de um monolito para uma arquitetura modular baseada em domínios.
+**Defined:** 2026-05-12
+**Core Value:** Modularidade e escalabilidade: a gestão de horas e relatórios é automatizada, com uma arquitetura limpa e sustentável que permite o crescimento rápido de novas funcionalidades sem a dívida técnica de um monolito.
 
-## Infraestrutura de Estado (STATE)
+## v1 Requirements (v3.0 Milestone)
 
-- **STATE-01**: Criar um `AppContext` usando a React Context API para gerenciar o estado global da aplicação.
-  - Deve conter: `currentUser`, `systemSettings`, `clients`, `workers`, `schedules`, `logs`, `expenses`, `documents`, `appNotifications`, `correcoesCorrections`, `approvals`, `clientApprovals`.
-  - Deve fornecer funções de mutação (`saveToDb`, `handleDelete`).
-  - Deve lidar com a inicialização do Supabase e as subscrições real-time.
+Requirements for the Contract Document Automation system. Each maps to roadmap phases.
 
-## Utilitários e Componentes Comuns (UTIL)
+### Template Management (Editor de Blocos JSON)
 
-- **UTIL-01**: Extrair funções puras e helpers para `/src/utils`.
-  - Exemplos: `calculateDuration`, `formatHours`, `formatDocDate`, `toISODateLocal`, etc.
-- **UTIL-02**: Extrair componentes de UI compartilhados para `/src/components/common`.
-  - Exemplos: `CompanyLogo`, `EntryForm`, `FinancialReportOverlay`.
+- [ ] **DOCS-01**: Gestor/HR pode criar template de documento com blocos de texto ordenáveis
+- [ ] **DOCS-02**: Gestor/HR pode inserir variáveis dinâmicas `{{variavel}}` nos blocos de texto
+- [ ] **DOCS-03**: Sistema exporta template como array JSON limpo (estrutura: tipo, conteudo, ordem)
+- [ ] **DOCS-04**: Gestor/HR pode guardar e editar templates na base de dados Supabase
 
-## Funcionalidades Admin (ADMIN)
+### Viewer e Assinatura (Trabalhador)
 
-- **ADMIN-01 (Geral)**: Módulo de visão geral com estatísticas e cards de resumo.
-- **ADMIN-02 (Equipa)**: Módulo de gestão de trabalhadores (CRUD).
-- **ADMIN-03 (Clientes)**: Módulo de gestão de clientes (CRUD).
-- **ADMIN-04 (Portal Validação)**: Módulo central de validação de horas e envio de e-mails.
-- **ADMIN-05 (Relatórios)**: Módulo de geração de PDFs e exportação ZIP.
-- **ADMIN-06 (Documentos)**: Módulo de upload e gestão de documentos administrativos.
-- **ADMIN-07 (Notificações)**: Módulo de criação e gestão de banners de aviso.
-- **ADMIN-08 (Correções)**: Integração com o portal de correções já existente.
+- [ ] **DOCS-05**: Viewer HTML responsivo lê JSON do template e substitui `{{variavel}}` por dados reais
+- [ ] **DOCS-06**: Renderização mobile-first (telemóveis) com layout amigável
+- [ ] **DOCS-07**: Trabalhador pode clicar "Assinar Digitalmente" — regista timestamp e estado no Supabase
+- [ ] **DOCS-08**: Histórico de versões do documento (cada assinatura cria nova versão)
 
-## Funcionalidades Worker (WORKER)
+### Motor PDF (pdfmake)
 
-- **WORKER-01 (Dashboard)**: Tela principal do trabalhador com resumo de horas e metas.
-- **WORKER-02 (Registo)**: Interface de inserção e edição de horas (histórico mensal).
-- **WORKER-03 (Documentos)**: Interface de visualização e assinatura digital de documentos.
+- [ ] **DOCS-09**: Motor PDF mapeia JSON do documento para docDefinition do pdfmake (não HTML→PDF)
+- [ ] **DOCS-10**: Bloco signature configurado com `unbreakable: true` (se não couber na página atual, passa inteiro para a próxima)
+- [ ] **DOCS-11**: PDF com margens 50mm esquerda/direita, 60mm cima/baixo
+- [ ] **DOCS-12**: PDF com numeração de página no rodapé (formato "Página X de Y")
+- [ ] **DOCS-13**: Geração de PDF no browser (cliente) sem necessidade de servidor
 
-## Qualidade e Limpeza (CLEANUP)
+## Out of Scope
 
-- **CLEANUP-01**: O arquivo `app.jsx` deve conter apenas a lógica de roteamento (`view` state) e os Providers de contexto.
-- **CLEANUP-02**: Eliminar duplicidade de estilos inlining, movendo o máximo possível para `App.css` ou arquivos CSS específicos de módulo.
-- **CLEANUP-03**: Garantir que a performance não seja degradada (uso de `useMemo` e `useCallback` no Contexto).
+| Feature | Reason |
+|---------|--------|
+| Assinatura digital qualificada (e.g. EU eIDAS) | Requer certificação e middleware específico — não faz parte do scope v1 |
+| Templates com lógica condicional complexa | Variáveis simples `{{variavel}}` são suficientes para v1 |
+| Edição de documento pelo trabalhador | Só visualização e assinatura — edição só pelo Gestor/HR |
+| Geração de PDF no servidor | Cliente-side com pdfmake é suficiente e mais simples |
 
-## Relatórios de Custo (COST)
+## Traceability
 
-- **COST-01**: Relatório de custo por trabalhador.
-  - Calcular: soma das horas registadas em `logs` × `valorHora` do worker.
-  - Mostrar: lista de trabalhadores com total em euros.
-  - Filtros: período (mês/ano), trabalhador específico.
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DOCS-01 | Phase 14 | Pending |
+| DOCS-02 | Phase 14 | Pending |
+| DOCS-03 | Phase 14 | Pending |
+| DOCS-04 | Phase 14 | Pending |
+| DOCS-05 | Phase 15 | Pending |
+| DOCS-06 | Phase 15 | Pending |
+| DOCS-07 | Phase 15 | Pending |
+| DOCS-08 | Phase 15 | Pending |
+| DOCS-09 | Phase 16 | Pending |
+| DOCS-10 | Phase 16 | Pending |
+| DOCS-11 | Phase 16 | Pending |
+| DOCS-12 | Phase 16 | Pending |
+| DOCS-13 | Phase 16 | Pending |
 
-- **COST-02**: Relatório de custo por cliente.
-  - Calcular: soma das horas aprovadas em `approvals` × `valorHora` do cliente.
-  - Mostrar: lista de clientes com total em euros.
-  - Filtros: período (mês/ano), cliente específico.
+**Coverage:**
+- v1 requirements: 13 total
+- Mapped to phases: 13
+- Unmapped: 0
 
-- **COST-03**: Interface de visualização no Admin Dashboard.
-  - Separar tabs ou secções para Workers vs Clientes.
-  - Exportar para PDF ou CSV (opcional).
+---
+*Requirements defined: 2026-05-12*
+*Last updated: 2026-05-12 after v3.0 milestone initialization*

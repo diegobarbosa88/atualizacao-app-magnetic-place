@@ -279,5 +279,58 @@ Plans:
 
 **UI hint:** yes
 
-*Last updated: 2026-05-07*
+---
+
+## Milestone v3.0 — Automação de Documentos Contratuais
+
+## Phase 14: Editor de Blocos JSON (Template Manager)
+
+**Goal:** Criar interface para Gestor/HR criar templates de documentos contratuais usando um editor de blocos JSON estruturado.
+
+**Requirements:** DOCS-01, DOCS-02
+
+**Success Criteria:**
+1. Interface de drag-and-drop para adicionar/remover/reordenar blocos
+2. Tipos de bloco suportados: title, subtitle, paragraph, signature
+3. Suporte a variáveis dinâmicas `{{variavel}}` no texto dos blocos
+4. Exportar template como array JSON limpo
+5. Guardar/editar templates na base de dados Supabase
+
+**UI hint:** yes
+
+---
+
+## Phase 15: Viewer Responsivo e Assinatura Digital
+
+**Goal:** Criar viewer para o trabalhador visualizar o documento, substituir variáveis e assinar digitalmente.
+
+**Requirements:** DOCS-03, DOCS-04
+
+**Success Criteria:**
+1. Viewer HTML responsivo que lê JSON do template
+2. Substituição de `{{variavel}}` por dados reais da base de dados
+3. Renderização amigável em telemóveis (mobile-first)
+4. Botão "Assinar Digitalmente" que regista timestamp e estado
+5. Histórico de versões do documento assinado
+
+**UI hint:** yes
+
+---
+
+## Phase 16: Motor PDF com pdfmake
+
+**Goal:** Implementar geração de PDF matematicamente perfeita usando pdfmake (não HTML→PDF).
+
+**Requirements:** DOCS-05, DOCS-06, DOCS-07
+
+**Success Criteria:**
+1. Mapeamento direto de JSON para docDefinition do pdfmake
+2. Bloco signature com `unbreakable: true` (se não couber, passa inteiro para próxima página)
+3. Margens: 50mm esquerda/direita, 60mm cima/baixo
+4. Numeração de página no rodapé (formato "Página X de Y")
+5. Geração de PDF no cliente (browser) sem servidor
+
+**UI hint:** yes
+
+*Last updated: 2026-05-12*
 
