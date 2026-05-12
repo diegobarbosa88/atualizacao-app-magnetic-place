@@ -1,10 +1,14 @@
-export const getPreviewHtml = (html, zoom = 100) => {
+import { replaceTemplateFields } from './templateFields';
+
+export const getPreviewHtml = (html, workerData = {}, systemData = {}, zoom = 100) => {
   const scale = zoom / 100;
+  const processedHtml = replaceTemplateFields(html, workerData, systemData);
+
   const dragStyles = `
     <style>
-      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: visible; }
-      body { position: relative; box-sizing: border-box; }
-      .a4-page { width: 210mm; min-height: 297mm; margin: 0; padding: 15mm; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; position: relative; background: white; }
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: visible; background: #f1f5f9; }
+      body { display: flex; justify-content: center; align-items: flex-start; position: relative; box-sizing: border-box; }
+      .a4-page { width: 210mm; min-height: 297mm; margin: 0; padding: 15mm; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; position: relative; background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
       #worker-qrcode-placeholder, #worker-signature-placeholder {
         cursor: move !important;
         position: absolute !important;
@@ -26,71 +30,69 @@ export const getPreviewHtml = (html, zoom = 100) => {
         min-height: 80px;
       }
       @media print {
-        html, body { margin: 0; padding: 0; }
-        .a4-page { width: 210mm; margin: 0; padding: 15mm; }
+        html, body { margin: 0; padding: 0; background: white; }
+        .a4-page { width: 210mm; margin: 0; padding: 15mm; box-shadow: none; }
       }
     </style>
   `;
-  
-  const wrappedHtml = html.replace('<body>', '<body><div class="a4-page">').replace('</body>', '</div></body>');
-  
+
   const dragScript = `
     <script>
       (function() {
         function initDraggable() {
-          const placeholders = [
-            document.getElementById('worker-qrcode-placeholder'),
-            document.getElementById('worker-signature-placeholder')
-          ];
-          
-          placeholders.forEach(el => {
-            if (!el) return;
-            
+          var ids = ['worker-qrcode-placeholder', 'worker-signature-placeholder'];
+
+          for (var i = 0; i < ids.length; i++) {
+            var el = document.getElementById(ids[i]);
+            if (!el) continue;
+
             if (!el.style.position || el.style.position === 'static' || el.style.position === '') {
               el.style.position = 'absolute';
             }
-            
-            el.addEventListener('mousedown', function(e) {
-              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
-              if (e.target.closest('button')) return;
-              
-              e.preventDefault();
-              e.stopPropagation();
-              
-              const rect = el.getBoundingClientRect();
-              const startX = e.clientX;
-              const startY = e.clientY;
-              const origLeft = parseInt(el.style.left) || rect.left;
-              const origTop = parseInt(el.style.top) || rect.top;
-              
-              function onMouseMove(e) {
+
+            el.addEventListener('mousedown', (function(currentEl) {
+              return function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') return;
+                if (e.target.closest('button')) return;
+
                 e.preventDefault();
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                el.style.left = (origLeft + dx) + 'px';
-                el.style.top = (origTop + dy) + 'px';
-              }
-              
-              function onMouseUp(e) {
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                
-                if (window.parent !== window) {
-                  window.parent.postMessage({
-                    type: 'elementMoved',
-                    id: el.id,
-                    left: el.style.left,
-                    top: el.style.top
-                  }, '*');
+                e.stopPropagation();
+
+                var rect = currentEl.getBoundingClientRect();
+                var startX = e.clientX;
+                var startY = e.clientY;
+                var rawLeft = parseInt(currentEl.style.left);
+                var rawTop = parseInt(currentEl.style.top);
+                var origLeft = isNaN(rawLeft) ? rect.left : rawLeft;
+                var origTop = isNaN(rawTop) ? rect.top : rawTop;
+
+                function onMouseMove(e) {
+                  e.preventDefault();
+                  currentEl.style.left = (origLeft + (e.clientX - startX)) + 'px';
+                  currentEl.style.top = (origTop + (e.clientY - startY)) + 'px';
                 }
-              }
-              
-              document.addEventListener('mousemove', onMouseMove);
-              document.addEventListener('mouseup', onMouseUp);
-            });
-          });
+
+                function onMouseUp() {
+                  document.removeEventListener('mousemove', onMouseMove);
+                  document.removeEventListener('mouseup', onMouseUp);
+
+                  if (window.parent !== window) {
+                    window.parent.postMessage({
+                      type: 'elementMoved',
+                      id: currentEl.id,
+                      left: currentEl.style.left,
+                      top: currentEl.style.top
+                    }, '*');
+                  }
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+              };
+            })(el));
+          }
         }
-        
+
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', initDraggable);
         } else {
@@ -99,6 +101,26 @@ export const getPreviewHtml = (html, zoom = 100) => {
       })();
     </script>
   `;
-  
-  return dragStyles + dragScript + wrappedHtml;
+
+  const headMatch = processedHtml.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
+  const hasHead = headMatch !== null;
+  const bodyMatch = processedHtml.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const hasBody = bodyMatch !== null;
+
+  if (!hasBody) {
+    const content = processedHtml;
+    return '<!DOCTYPE html><html><head>' + dragStyles + '</head><body>' + content + dragScript + '</body></html>';
+  }
+
+  let result = processedHtml;
+
+  if (hasHead) {
+    result = result.replace(/(<\/head>)/i, dragStyles + '$1');
+  } else {
+    result = result.replace(/(<html[^>]*>)/i, '$1<head>' + dragStyles + '</head>');
+  }
+
+  result = result.replace(/(<\/body>)/i, dragScript + '$1');
+
+  return result;
 };

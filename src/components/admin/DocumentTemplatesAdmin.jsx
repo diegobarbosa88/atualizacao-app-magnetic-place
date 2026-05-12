@@ -1,88 +1,30 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { isSigned, isPending } from '../../constants/documentStatus';
-import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, Filter, CheckCircle, Clock, EyeOff, FileSignature, Sparkles } from 'lucide-react';
-import { TEMPLATE_FIELDS, replaceTemplateFields } from '../../utils/templateFields';
+import { isSigned } from '../../constants/documentStatus';
+import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, CheckCircle, Clock, FileSignature, Sparkles } from 'lucide-react';
+import { TEMPLATE_FIELDS } from '../../utils/templateFields';
 import { getPreviewHtml } from '../../utils/dragPreviewUtils';
 import { useApp } from '../../context/AppContext';
-
-const DEFAULT_TEMPLATE = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { width: 210mm; min-height: 297mm; margin: 15mm; box-sizing: border-box; font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.4; }
-    .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-    .content { margin-bottom: 20px; }
-    .field { margin: 8px 0; }
-    .label { font-weight: bold; color: #555; }
-    .value { font-size: 12pt; }
-    .footer { margin-top: 30px; border-top: 1px solid #ccc; padding-top: 15px; text-align: center; font-size: 10pt; color: #666; }
-    .signature-block { margin-top: 40px; display: flex; justify-content: space-between; page-break-inside: avoid; break-inside: avoid; }
-    .signature-area { width: 45%; text-align: center; page-break-inside: avoid; break-inside: avoid; }
-    .qrcode-area { position: absolute; top: 10px; right: 10px; page-break-inside: avoid; break-inside: avoid; }
-    @media print {
-      body { margin: 15mm !important; width: 210mm !important; }
-      .signature-block, .signature-area { page-break-inside: avoid !important; break-inside: avoid !important; }
-    }
-  </style>
-</head>
-<body>
-  <div id="worker-qrcode-placeholder" style="position:absolute; left:700px; top:50px; width:100px; height:100px;">
-    <div style="width:100%;height:100%;border:2px dashed #6366f1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.1);">
-      <span style="font-size:8px;font-weight:900;color:#6366f1;text-transform:uppercase;letter-spacing:0.05em;font-family:'Inter',sans-serif;">QR Code</span>
-    </div>
-  </div>
-  <div class="header">
-    <h1>DECLARAÇÃO DE TRABALHADOR</h1>
-    <p>{{current_date}}</p>
-  </div>
-
-  <div class="content">
-    <p>Eu, <strong>{{worker_name}}</strong>, portador do CC nº <strong>{{worker_cc_number}}</strong>, válido até <strong>{{worker_cc_validity}}</strong>,</p>
-    <p>NIF: <strong>{{worker_nif}}</strong>, NISS: <strong>{{worker_niss}}</strong></p>
-    <p>Residente em: <strong>{{worker_address}}</strong>, <strong>{{worker_postal_code}}</strong> <strong>{{worker_city}}</strong></p>
-    <p>Email: <strong>{{worker_email}}</strong> | Telm: <strong>{{worker_phone}}</strong></p>
-    <br>
-    <p>Nacionalidade: <strong>{{worker_nacionality}}</strong></p>
-    <p>Data de Nascimento: <strong>{{worker_birth_date}}</strong></p>
-    <p>Local de Nascimento: <strong>{{worker_birth_place}}</strong></p>
-    <br>
-    <p>Função/Cargo: <strong>{{worker_role}}</strong></p>
-    <p>Data de Início: <strong>{{worker_start_date}}</strong></p>
-    <p>Valor/Hora: <strong>{{worker_valor_hora}}</strong> €</p>
-    <br>
-    <p>IBAN: <strong>{{worker_iban}}</strong></p>
-    <br>
-    <p>Contacto de Emergência: <strong>{{worker_emergency_contact}}</strong> - <strong>{{worker_emergency_phone}}</strong></p>
-  </div>
-
-  <div id="worker-signature-placeholder" style="position:absolute; left:100px; top:700px; width:290px;">
-    <div style="width:290px;height:80px;border:2px dashed #10b981;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.1);page-break-inside:avoid;break-inside:avoid;">
-      <span style="font-size:9px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;font-family:'Inter',sans-serif;">Assinatura</span>
-    </div>
-  </div>
-
-  <div class="signature-block">
-    <div style="width:290px;">
-      <p>A Empresa</p>
-      <hr style="border: 1px solid #333; margin-top: 40px;">
-      <p style="font-size: 12px;">{{company_name}}</p>
-    </div>
-  </div>
-</body>
-</html>`;
+import { useDocumentTemplates, DEFAULT_TEMPLATE, SIGNATURE_PLACEHOLDER_HTML, QRCODE_PLACEHOLDER_HTML, extractPositionsFromHtml } from '../../hooks/useDocumentTemplates';
 
 export default function DocumentTemplatesAdmin({ workers = [] }) {
   const { systemSettings, supabase } = useApp();
-  const [templates, setTemplates] = useState([]);
-  const [generatedDocs, setGeneratedDocs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingDocs, setLoadingDocs] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [previewHeight, setPreviewHeight] = useState(500);
   const [showPreviewSettings, setShowPreviewSettings] = useState(false);
-  
+
+  const {
+    templates,
+    generatedDocs,
+    loading,
+    loadingDocs,
+    saving,
+    handleSave,
+    handleDeleteTemplate,
+    handleGenerateDocuments,
+    handleGenerateAI,
+    handleDownloadSigned,
+    handleDeleteDoc
+  } = useDocumentTemplates(supabase);
+
   // Modal states
   const [showModal, setShowModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
@@ -116,266 +58,52 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [previewPositions, setPreviewPositions] = useState({});
   const [previewZoom, setPreviewZoom] = useState(100);
   const iframeRef = useRef(null);
-  const isDraggingRef = useRef(false);
-
   const editorRef = useRef(null);
 
   useEffect(() => {
+    if (!editingId) {
+      setPreviewPositions({});
+      return;
+    }
+    const html = previewData.html_content;
+    if (!html) return;
+    const extracted = extractPositionsFromHtml(html);
+    setPreviewPositions(extracted);
+  }, [editingId, previewData.html_content]);
+
+  useEffect(() => {
+    let debounceTimer = null;
     const handleMessage = (e) => {
       if (e.data?.type === 'elementMoved') {
         const { id, left, top } = e.data;
         if (!id || !left || !top) return;
 
-        isDraggingRef.current = true;
-
-        if (iframeRef.current && iframeRef.current.contentDocument) {
-          const el = iframeRef.current.contentDocument.getElementById(id);
-          if (el) {
-            el.style.left = left;
-            el.style.top = top;
-          }
-        }
-
-        setPreviewPositions(prev => ({ ...prev, [id]: { left, top } }));
-
-        setTimeout(() => {
-          isDraggingRef.current = false;
-        }, 100);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          setPreviewPositions(prev => ({ ...prev, [id]: { left, top } }));
+        }, 16);
       }
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      clearTimeout(debounceTimer);
+      window.removeEventListener('message', handleMessage);
+    };
   }, []);
 
   useEffect(() => {
-    if (isDraggingRef.current) return;
     if (Object.keys(previewPositions).length === 0) return;
-
-    let newHtml = previewData.html_content;
-    if (!newHtml) return;
-
-    Object.entries(previewPositions).forEach(([id, pos]) => {
-      const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const regex = new RegExp(`<div([^>]*)\\sid="${escapedId}"([^>]*)>`, 'i');
-
-      newHtml = newHtml.replace(regex, (match, beforeId, afterId) => {
-        const existingStyle = (beforeId.match(/style="([^"]*)"/i) || afterId.match(/style="([^"]*)"/i) || ['', ''])[1];
-        const newStyle = existingStyle
-          ? `${existingStyle} left:${pos.left}; top:${pos.top};`
-          : `position:absolute; left:${pos.left}; top:${pos.top};`;
-        return `<div${beforeId}id="${id}"${afterId} style="${newStyle}">`;
-      });
-    });
-
-    if (newHtml !== previewData.html_content) {
-      setPreviewData(prev => ({ ...prev, html_content: newHtml }));
-    }
-  }, [previewData.html_content, previewPositions]);
-
-  useEffect(() => {
-    if (!supabase) return;
-    let cancelled = false;
-
-    const load = async () => {
-      setLoading(true);
-      setLoadingDocs(true);
-      try {
-        const [tmplRes, docsRes] = await Promise.all([
-          supabase.from('document_templates').select('*').order('name'),
-          supabase.from('worker_documents').select('*').order('created_at', { ascending: false }).limit(200)
-        ]);
-        if (cancelled) return;
-        if (tmplRes.error) throw tmplRes.error;
-        if (docsRes.error) throw docsRes.error;
-        setTemplates(tmplRes.data || []);
-        setGeneratedDocs(docsRes.data || []);
-      } catch (err) {
-        if (!cancelled) console.error('Erro ao carregar dados:', err);
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-          setLoadingDocs(false);
+    if (iframeRef.current && iframeRef.current.contentDocument) {
+      Object.entries(previewPositions).forEach(([id, pos]) => {
+        const el = iframeRef.current.contentDocument.getElementById(id);
+        if (el) {
+          el.style.left = pos.left;
+          el.style.top = pos.top;
         }
-      }
-    };
-
-    load();
-    return () => { cancelled = true; };
-  }, [supabase]);
-
-  const loadTemplates = async () => {
-    if (!supabase) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('document_templates')
-        .select('*')
-        .order('name');
-      if (error) throw error;
-      setTemplates(data || []);
-    } catch (err) {
-      console.error("Erro ao carregar templates:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadGeneratedDocs = async () => {
-    if (!supabase) return;
-    setLoadingDocs(true);
-    try {
-      const { data, error } = await supabase
-        .from('worker_documents')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(200);
-      if (error) throw error;
-
-      setGeneratedDocs(data || []);
-    } catch (err) {
-      console.error("Erro ao carregar documentos:", err);
-    } finally {
-      setLoadingDocs(false);
-    }
-  };
-
-  const handleSave = async () => {
-    if (!previewData.name.trim()) return alert("Nome é obrigatório");
-    if (!supabase) return;
-
-    setSaving(true);
-    try {
-      const payload = {
-        name: previewData.name,
-        description: previewData.description,
-        html_content: previewData.html_content,
-        updated_at: new Date().toISOString()
-      };
-
-      if (editingId) {
-        const { error } = await supabase
-          .from('document_templates')
-          .update(payload)
-          .eq('id', editingId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('document_templates')
-          .insert([payload]);
-        if (error) throw error;
-      }
-
-      setShowModal(false);
-      loadTemplates();
-    } catch (err) {
-      alert("Erro ao gravar: " + err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteTemplate = async (id) => {
-    if (!window.confirm("Apagar este template permanentemente?")) return;
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from('document_templates')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-      loadTemplates();
-    } catch (err) {
-      alert("Erro ao apagar: " + err.message);
-    }
-  };
-
-  const handleGenerateDocuments = async () => {
-    if (!selectedTemplate || selectedWorkers.length === 0) return;
-    if (!supabase) return;
-
-    setGenerating(true);
-    try {
-      const promises = selectedWorkers.map(async (workerId) => {
-        const worker = workers.find(w => w.id === workerId);
-        if (!worker) return;
-
-        const generatedHtml = replaceTemplateFields(
-          selectedTemplate.html_content,
-          worker,
-          systemSettings
-        );
-
-        const newDoc = {
-          template_id: selectedTemplate.id,
-          worker_id: workerId,
-          title: selectedTemplate.name,
-          generated_html: generatedHtml,
-          status: 'pending',
-          created_at: new Date().toISOString()
-        };
-
-        const { error } = await supabase
-          .from('worker_documents')
-          .insert([newDoc]);
-
-        if (error) throw error;
       });
-
-      const results = await Promise.allSettled(promises);
-      const failed = results.filter(r => r.status === 'rejected');
-      setShowGenerateModal(false);
-      loadGeneratedDocs();
-      if (failed.length > 0) {
-        alert(`${results.length - failed.length} documentos gerados. ${failed.length} falharam — verifique a consola.`);
-        failed.forEach(f => console.error('Falha ao gerar documento:', f.reason));
-      } else {
-        alert(`${selectedWorkers.length} documentos gerados com sucesso!`);
-      }
-    } catch (err) {
-      alert("Erro ao gerar documentos: " + err.message);
-    } finally {
-      setGenerating(false);
     }
-  };
-
-  const handleDownloadSigned = async (doc) => {
-    if (!doc.signed_pdf_url) return;
-    try {
-      const response = await fetch(doc.signed_pdf_url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const safeName = `${doc.title || 'documento'}_${doc.worker?.name || 'colaborador'}_assinado.pdf`.replace(/[\s/\\?%*:|"<>]+/g, '_');
-      a.download = safeName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Erro ao baixar documento assinado:', err);
-      alert(`Erro ao baixar: ${err.message || 'desconhecido'}`);
-    }
-  };
-
-  const handleDeleteDoc = async (id) => {
-    if (!window.confirm("Apagar este documento gerado?")) return;
-    if (!supabase) return;
-
-    try {
-      const { error } = await supabase
-        .from('worker_documents')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-      loadGeneratedDocs();
-    } catch (err) {
-      alert("Erro ao apagar: " + err.message);
-    }
-  };
+  }, [previewPositions]);
 
   const insertField = (tag) => {
     const editor = editorRef.current;
@@ -396,19 +124,11 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   };
 
   const insertSignaturePlaceholder = () => {
-    const signaturePlaceholder = `<div id="worker-signature-placeholder" style="position:absolute; left:100px; top:700px; width:290px;">
-  <div style="width:290px;height:80px;border:2px dashed #10b981;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.1);page-break-inside:avoid;break-inside:avoid;">
-    <span style="font-size:9px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;font-family:'Inter',sans-serif;">Assinatura</span>
-  </div>
-</div>`;
+    const signatureHtml = SIGNATURE_PLACEHOLDER_HTML;
+    const qrcodeHtml = QRCODE_PLACEHOLDER_HTML;
+    const combined = (signatureHtml + '\n' + qrcodeHtml).trim();
+    if (!combined) return;
 
-    const qrPlaceholder = `<div id="worker-qrcode-placeholder" style="position:absolute; left:700px; top:50px; width:100px; height:100px;">
-  <div style="width:100%;height:100%;border:2px dashed #6366f1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.1);page-break-inside:avoid;break-inside:avoid;">
-    <span style="font-size:8px;font-weight:900;color:#6366f1;text-transform:uppercase;letter-spacing:0.05em;font-family:'Inter',sans-serif;">QR Code</span>
-  </div>
-</div>`;
-
-    const combined = signaturePlaceholder + '\n' + qrPlaceholder;
     const editor = editorRef.current;
     if (editor) {
       const start = editor.selectionStart;
@@ -416,7 +136,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       const text = previewData.html_content;
       setPreviewData({
         ...previewData,
-        html_content: text.substring(0, start) + combined + text.substring(end)
+        html_content: text.substring(0, start) + '\n' + combined + text.substring(end)
       });
     } else {
       setPreviewData(prev => ({
@@ -424,96 +144,121 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         html_content: prev.html_content + '\n' + combined
       }));
     }
+
+    setPreviewPositions(prev => {
+      const next = { ...prev };
+      if (!next['worker-signature-placeholder']) {
+        next['worker-signature-placeholder'] = { left: '0px', top: '0px' };
+      }
+      if (!next['worker-qrcode-placeholder']) {
+        next['worker-qrcode-placeholder'] = { left: '0px', top: '0px' };
+      }
+      return next;
+    });
   };
 
-  const handleGenerateAI = async () => {
-    if (!aiPrompt.trim()) return alert("Descreva o que deseja gerar");
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return alert("API Key do Gemini não configurada");
-
-    const sanitizedPrompt = aiPrompt.trim().slice(0, 500).replace(/["""]/g, '');
-
+  const generateAIWrapper = async () => {
     setIsGeneratingAI(true);
     try {
-      const prompt = `
-        Aja como um especialista em documentos legais e administrativos.
-        Gere um template de documento HTML para: "${sanitizedPrompt}".
-        
-        REGRAS CRÍTICAS:
-        1. Use apenas HTML puro e classes do Tailwind CSS v3.
-        2. Estrutura obrigatória: O conteúdo principal deve estar dentro de uma div com a classe "document-container".
-        3. Use estes placeholders exatos onde apropriado:
-           ${TEMPLATE_FIELDS.map(f => `${f.tag} (${f.label})`).join(', ')}
-        4. O design deve ser profissional, limpo e pronto para impressão (A4).
-        5. Retorne APENAS o código HTML completo, começando com <!DOCTYPE html> e terminando com </html>. Não inclua explicações ou markdown.
-        6. Garanta que o estilo no <head> seja compatível com visualização profissional.
-      `;
-
-      // Tentar uma cadeia de modelos até encontrar um disponível para esta API key.
-      // O 1º é o configurado (ou default); depois fallbacks comuns.
-      const configured = import.meta.env.VITE_GEMINI_MODEL;
-      const modelCandidates = [
-        configured,
-        'gemini-2.5-flash',
-        'gemini-2.0-flash-001',
-        'gemini-1.5-flash-latest',
-        'gemini-1.5-flash-002',
-        'gemini-1.5-flash-8b',
-        'gemini-1.5-pro-latest',
-        'gemini-pro',
-      ].filter(Boolean);
-
-      let response;
-      let lastErrorMsg = '';
-      let usedModel = '';
-      for (const m of modelCandidates) {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
-        response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        if (response.ok) {
-          usedModel = m;
-          break;
-        }
-        try {
-          const errData = await response.clone().json();
-          lastErrorMsg = errData.error?.message || `HTTP ${response.status}`;
-          // Só fazer fallback se for 404 (model not found). Outros erros (auth, quota) — abortar.
-          if (response.status !== 404) break;
-        } catch {
-          lastErrorMsg = `HTTP ${response.status}`;
-        }
-      }
-
-      if (!response || !response.ok) {
-        console.error('Gemini API: nenhum modelo da cadeia funcionou. Último erro:', lastErrorMsg);
-        throw new Error(lastErrorMsg || 'Nenhum modelo Gemini disponível para esta API key.');
-      }
-      if (usedModel) console.log('[Gemini] Modelo utilizado:', usedModel);
-
-      const data = await response.json();
-      const finishReason = data.candidates?.[0]?.finishReason;
-      if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
-        throw new Error(`A IA recusou gerar o conteúdo (${finishReason}). Reformule o pedido.`);
-      }
-
-      let generatedHtml = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-      generatedHtml = generatedHtml.replace(/^```html\n?/, '').replace(/\n?```$/, '').trim();
-
-      if (!generatedHtml || (!generatedHtml.includes('<!DOCTYPE') && !generatedHtml.includes('<html'))) {
-        throw new Error("A IA não retornou HTML válido. Reformule o pedido.");
-      }
-
+      const generatedHtml = await handleGenerateAI(aiPrompt);
       setPreviewData({ ...previewData, html_content: generatedHtml });
+      const newPositions = extractPositionsFromHtml(generatedHtml);
+      setPreviewPositions(newPositions);
       setShowAIPanel(false);
       setAiPrompt('');
     } catch (err) {
-      console.error("Erro AI:", err);
       alert("Erro ao gerar com IA: " + err.message);
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const saveWrapper = async () => {
+    let finalHtml = previewData.html_content;
+
+    const ids = Object.keys(previewPositions);
+    const livePositions = {};
+
+    if (iframeRef.current && iframeRef.current.contentDocument) {
+      ids.forEach(id => {
+        const el = iframeRef.current.contentDocument.getElementById(id);
+        if (el) {
+          livePositions[id] = {
+            left: el.style.left || '0px',
+            top: el.style.top || '0px'
+          };
+        }
+      });
+    }
+
+    const positionsToSave = ids.length > 0 && Object.keys(livePositions).length > 0 ? livePositions : previewPositions;
+
+    ids.forEach(id => {
+      const pos = positionsToSave[id];
+      if (!pos) return;
+      const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const openTag = '<div id="' + escapedId + '"';
+      let idx = finalHtml.indexOf(openTag);
+      while (idx !== -1) {
+        const styleStart = finalHtml.indexOf('style="', idx);
+        if (styleStart === -1 || styleStart > idx + 300) break;
+        const styleEndQuote = finalHtml.indexOf('"', styleStart + 7);
+        if (styleEndQuote === -1) break;
+        const styleVal = finalHtml.substring(styleStart + 7, styleEndQuote);
+        const leftVal = pos.left || '0px';
+        const topVal = pos.top || '0px';
+        let updated = styleVal;
+        const leftIdx = updated.indexOf('left:');
+        const semiLeftIdx = updated.lastIndexOf(';', leftIdx !== -1 ? leftIdx : 0);
+        const leftEnd = updated.indexOf('px', leftIdx !== -1 ? leftIdx + 5 : 0);
+        const leftStart = leftIdx !== -1 ? (semiLeftIdx !== -1 ? semiLeftIdx + 1 : leftIdx) : -1;
+        if (leftStart !== -1 && leftEnd !== -1) {
+          updated = updated.substring(0, leftStart) + 'left:' + leftVal + updated.substring(leftEnd + 2);
+        } else {
+          const leftInsertIdx = updated.indexOf('position:');
+          if (leftInsertIdx !== -1) {
+            updated = updated.substring(0, leftInsertIdx + 9) + 'left:' + leftVal + ';' + updated.substring(leftInsertIdx + 9);
+          }
+        }
+        const topIdx = updated.indexOf('top:');
+        const semiTopIdx = updated.lastIndexOf(';', topIdx !== -1 ? topIdx : 0);
+        const topEnd = updated.indexOf('px', topIdx !== -1 ? topIdx + 4 : 0);
+        const topStart = topIdx !== -1 ? (semiTopIdx !== -1 ? semiTopIdx + 1 : topIdx) : -1;
+        if (topStart !== -1 && topEnd !== -1) {
+          updated = updated.substring(0, topStart) + 'top:' + topVal + updated.substring(topEnd + 2);
+        } else {
+          const topInsertIdx = updated.indexOf('left:');
+          if (topInsertIdx !== -1) {
+            updated = updated.substring(0, topInsertIdx) + 'top:' + topVal + ';' + updated.substring(topInsertIdx);
+          }
+        }
+        finalHtml = finalHtml.substring(0, styleStart + 7) + updated + finalHtml.substring(styleEndQuote + 1);
+        idx = finalHtml.indexOf(openTag, idx + 1);
+      }
+    });
+    try {
+      await handleSave({ ...previewData, html_content: finalHtml }, editingId);
+      setShowModal(false);
+    } catch (err) {
+      alert("Erro ao gravar: " + err.message);
+    }
+  };
+
+  const generateDocumentsWrapper = async () => {
+    if (!selectedTemplate || selectedWorkers.length === 0) return;
+    setGenerating(true);
+    try {
+      const result = await handleGenerateDocuments(selectedTemplate, selectedWorkers, workers, systemSettings, previewPositions);
+      setShowGenerateModal(false);
+      if (result.failed > 0) {
+        alert(`${result.total - result.failed} documentos gerados. ${result.failed} falharam.`);
+      } else {
+        alert(`${selectedWorkers.length} documentos gerados com sucesso!`);
+      }
+    } catch (err) {
+      alert("Erro ao gerar documentos: " + err.message);
+    } finally {
+      setGenerating(false);
     }
   };
 
@@ -525,88 +270,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
 
   const previewHtml = () => {
     const mockWorker = workers[0] || { name: 'Nome Exemplo', role: 'Função Exemplo' };
-    let html = replaceTemplateFields(previewData.html_content, mockWorker, systemSettings);
-    
-    // Add drag styles and script
-    const dragStyles = `
-      <style>
-        #worker-qrcode-placeholder, #worker-signature-placeholder {
-          cursor: move !important;
-          position: absolute !important;
-          z-index: 1000 !important;
-        }
-        #worker-qrcode-placeholder {
-          border: 2px dashed #6366f1 !important;
-          background: rgba(99, 102, 241, 0.1) !important;
-          padding: 4px !important;
-        }
-        #worker-signature-placeholder {
-          border: 2px dashed #10b981 !important;
-          background: rgba(16, 185, 129, 0.1) !important;
-          padding: 4px !important;
-        }
-        #worker-qrcode-placeholder:hover, #worker-signature-placeholder:hover {
-          background: rgba(99, 102, 241, 0.2) !important;
-        }
-      </style>
-    `;
-    
-    const dragScript = `
-      <script>
-        (function() {
-          const placeholders = [
-            document.getElementById('worker-qrcode-placeholder'),
-            document.getElementById('worker-signature-placeholder')
-          ];
-          
-          placeholders.forEach(el => {
-            if (!el) return;
-            
-            // Ensure position is absolute
-            if (!el.style.position || el.style.position === 'static') {
-              el.style.position = 'absolute';
-            }
-            
-            el.addEventListener('mousedown', function(e) {
-              if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-              
-              e.preventDefault();
-              const startX = e.clientX;
-              const startY = e.clientY;
-              const origLeft = el.offsetLeft;
-              const origTop = el.offsetTop;
-              
-              function onMouseMove(e) {
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                el.style.left = (origLeft + dx) + 'px';
-                el.style.top = (origTop + dy) + 'px';
-              }
-              
-              function onMouseUp() {
-                document.removeEventListener('mousemove', onMouseMove);
-                document.removeEventListener('mouseup', onMouseUp);
-                
-                // Send position to React
-                if (window.parent !== window) {
-                  window.parent.postMessage({
-                    type: 'elementMoved',
-                    id: el.id,
-                    left: el.style.left,
-                    top: el.style.top
-                  }, '*');
-                }
-              }
-              
-              document.addEventListener('mousemove', onMouseMove);
-              document.addEventListener('mouseup', onMouseUp);
-            });
-          });
-        })();
-      </script>
-    `;
-    
-    return dragStyles + dragScript + html;
+    return getPreviewHtml(previewData.html_content, mockWorker, systemSettings);
   };
 
   const docsWithWorkers = useMemo(
@@ -950,7 +614,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                           className="flex-1 p-3 bg-white border border-purple-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-purple-500 min-h-[80px]"
                         />
                         <button
-                          onClick={handleGenerateAI}
+                          onClick={generateAIWrapper}
                           disabled={isGeneratingAI || !aiPrompt.trim()}
                           className="px-4 bg-purple-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-2 min-w-[80px]"
                         >
@@ -1026,7 +690,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     <div style={{ transform: `scale(${previewZoom / 100})`, transformOrigin: 'top center', display: 'inline-block' }}>
                       <iframe
                         ref={iframeRef}
-                        srcDoc={getPreviewHtml(previewData.html_content, 100)}
+                        srcDoc={previewHtml()}
                         className="bg-white shadow-xl"
                         title="Preview"
                         style={{ width: '794px', height: '1123px' }}
@@ -1040,7 +704,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
             <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-slate-50">
               <button onClick={() => setShowModal(false)} className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Cancelar</button>
               <button
-                onClick={handleSave}
+                onClick={saveWrapper}
                 disabled={saving}
                 className="flex items-center gap-3 px-10 py-4 bg-indigo-600 hover:bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-indigo-100 disabled:opacity-50"
               >
@@ -1129,7 +793,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
             <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-slate-50">
               <button onClick={() => setShowGenerateModal(false)} className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Cancelar</button>
               <button
-                onClick={handleGenerateDocuments}
+                onClick={generateDocumentsWrapper}
                 disabled={!selectedTemplate || selectedWorkers.length === 0 || generating}
                 className="flex items-center gap-3 px-10 py-4 bg-purple-600 hover:bg-slate-900 text-white rounded-2xl font-black uppercase text-xs tracking-widest transition-all shadow-xl shadow-purple-100 disabled:opacity-50"
               >
