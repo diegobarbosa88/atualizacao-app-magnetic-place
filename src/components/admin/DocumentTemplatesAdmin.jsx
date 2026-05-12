@@ -199,14 +199,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         return styleStr + propName + ':' + newVal + ';';
       }
       const valStart = propIdx + propName.length + 1;
-      let endCandidate = styleStr.indexOf(';', valStart);
-      let pxIdx = styleStr.indexOf('px', valStart);
-      let valEnd;
-      if (pxIdx !== -1 && styleStr[pxIdx + 1] === 'x') {
-        valEnd = pxIdx + 2;
-      } else if (endCandidate !== -1) {
-        valEnd = endCandidate;
-      } else {
+      let valEnd = styleStr.indexOf(';', valStart);
+      const pxIdx = styleStr.indexOf('px', valStart);
+      if (pxIdx !== -1 && pxIdx < valEnd && styleStr[pxIdx + 2] === ';') {
+        valEnd = pxIdx + 3;
+      }
+      if (valEnd === -1 || valEnd <= valStart) {
         valEnd = styleStr.length;
       }
       return styleStr.substring(0, valStart) + newVal + styleStr.substring(valEnd);
