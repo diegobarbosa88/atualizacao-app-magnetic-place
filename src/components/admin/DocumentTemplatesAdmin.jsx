@@ -193,11 +193,30 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
 
     const positionsToSave = ids.length > 0 && Object.keys(livePositions).length > 0 ? livePositions : previewPositions;
 
+    const replaceStyleValue = (styleStr, propName, newVal) => {
+      const propIdx = styleStr.indexOf(propName + ':');
+      if (propIdx === -1) {
+        const posIdx = styleStr.indexOf('position:');
+        if (posIdx !== -1) {
+          return styleStr.substring(0, posIdx + 9) + propName + ':' + newVal + ';' + styleStr.substring(posIdx + 9);
+        }
+        return styleStr + propName + ':' + newVal + ';';
+      }
+      const valStart = propIdx + propName.length + 1;
+      let valEnd = styleStr.indexOf('px', valStart);
+      let semi = styleStr.indexOf(';', valStart);
+      if (valEnd === -1 || (semi !== -1 && semi < valEnd)) {
+        valEnd = semi !== -1 ? semi : styleStr.length;
+      } else {
+        valEnd = valEnd + 2;
+      }
+      return styleStr.substring(0, valStart) + newVal + styleStr.substring(valEnd);
+    };
+
     ids.forEach(id => {
       const pos = positionsToSave[id];
       if (!pos) return;
-      const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const openTag = '<div id="' + escapedId + '"';
+      const openTag = '<div id="' + id + '"';
       let idx = finalHtml.indexOf(openTag);
       while (idx !== -1) {
         const styleStart = finalHtml.indexOf('style="', idx);
@@ -205,33 +224,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         const styleEndQuote = finalHtml.indexOf('"', styleStart + 7);
         if (styleEndQuote === -1) break;
         const styleVal = finalHtml.substring(styleStart + 7, styleEndQuote);
-        const leftVal = pos.left || '0px';
-        const topVal = pos.top || '0px';
-        let updated = styleVal;
-        const leftIdx = updated.indexOf('left:');
-        const semiLeftIdx = updated.lastIndexOf(';', leftIdx !== -1 ? leftIdx : 0);
-        const leftEnd = updated.indexOf('px', leftIdx !== -1 ? leftIdx + 5 : 0);
-        const leftStart = leftIdx !== -1 ? (semiLeftIdx !== -1 ? semiLeftIdx + 1 : leftIdx) : -1;
-        if (leftStart !== -1 && leftEnd !== -1) {
-          updated = updated.substring(0, leftStart) + 'left:' + leftVal + updated.substring(leftEnd + 2);
-        } else {
-          const leftInsertIdx = updated.indexOf('position:');
-          if (leftInsertIdx !== -1) {
-            updated = updated.substring(0, leftInsertIdx + 9) + 'left:' + leftVal + ';' + updated.substring(leftInsertIdx + 9);
-          }
-        }
-        const topIdx = updated.indexOf('top:');
-        const semiTopIdx = updated.lastIndexOf(';', topIdx !== -1 ? topIdx : 0);
-        const topEnd = updated.indexOf('px', topIdx !== -1 ? topIdx + 4 : 0);
-        const topStart = topIdx !== -1 ? (semiTopIdx !== -1 ? semiTopIdx + 1 : topIdx) : -1;
-        if (topStart !== -1 && topEnd !== -1) {
-          updated = updated.substring(0, topStart) + 'top:' + topVal + updated.substring(topEnd + 2);
-        } else {
-          const topInsertIdx = updated.indexOf('left:');
-          if (topInsertIdx !== -1) {
-            updated = updated.substring(0, topInsertIdx) + 'top:' + topVal + ';' + updated.substring(topInsertIdx);
-          }
-        }
+        let updated = replaceStyleValue(styleVal, 'left', pos.left || '0px');
+        updated = replaceStyleValue(updated, 'top', pos.top || '0px');
         finalHtml = finalHtml.substring(0, styleStart + 7) + updated + finalHtml.substring(styleEndQuote + 1);
         idx = finalHtml.indexOf(openTag, idx + 1);
       }
