@@ -86,26 +86,34 @@ export function replacePlaceholdersWithComponents(html, worker, positions = {}) 
   const signatureStyle = `position:absolute;left:${signaturePos.left || '0px'};top:${signaturePos.top || '0px'};width:290px;`;
   const qrcodeStyle = `position:absolute;left:${qrcodePos.left || '0px'};top:${qrcodePos.top || '0px'};width:100px;height:100px;`;
 
-  const escapedSignatureId = signatureId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const escapedQrcodeId = qrcodeId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const replaceStyle = (styleStr, newStyle) => {
+    const posIdx = styleStr.indexOf('position:');
+    if (posIdx !== -1) {
+      const semiAfterPos = styleStr.indexOf(';', posIdx);
+      return styleStr.substring(0, posIdx) + newStyle + styleStr.substring(semiAfterPos + 1);
+    }
+    return newStyle + styleStr;
+  };
 
-  const signatureRegex = new RegExp(`<div([^>]*)\\sid="${escapedSignatureId}"([^>]*)>[\\s\\S]*?</div>`, 'gi');
-  const qrcodeRegex = new RegExp(`<div([^>]*)\\sid="${escapedQrcodeId}"([^>]*)>[\\s\\S]*?</div>`, 'gi');
+  const ids = [signatureId, qrcodeId];
+  const styles = [signatureStyle, qrcodeStyle];
 
-  const signatureHtml = `<div id="${signatureId}" style="${signatureStyle}">
-  <div style="width:290px;height:80px;border:2px solid #10b981;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.05);page-break-inside:avoid;break-inside:avoid;">
-    <span style="font-size:9px;font-weight:600;color:#10b981;font-family:Arial,sans-serif;">${worker?.name || 'Assinatura do Trabalhador'}</span>
-  </div>
-</div>`;
-
-  const qrcodeHtml = `<div id="${qrcodeId}" style="${qrcodeStyle}">
-  <div style="width:100%;height:100%;border:2px solid #6366f1;border-radius:8px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.05);page-break-inside:avoid;break-inside:avoid;">
-    <span style="font-size:7px;font-weight:600;color:#6366f1;font-family:Arial,sans-serif;text-align:center;">QR Code<br>${worker?.name || ''}</span>
-  </div>
-</div>`;
-
-  result = result.replace(signatureRegex, signatureHtml);
-  result = result.replace(qrcodeRegex, qrcodeHtml);
+  ids.forEach((id, i) => {
+    if (!id) return;
+    const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const openTag = '<div id="' + escapedId + '"';
+    let idx = result.indexOf(openTag);
+    while (idx !== -1) {
+      const styleStart = result.indexOf('style="', idx);
+      if (styleStart === -1 || styleStart > idx + 300) break;
+      const styleEndQuote = result.indexOf('"', styleStart + 7);
+      if (styleEndQuote === -1) break;
+      const styleVal = result.substring(styleStart + 7, styleEndQuote);
+      const updated = replaceStyle(styleVal, styles[i]);
+      result = result.substring(0, styleStart + 7) + updated + result.substring(styleEndQuote + 1);
+      idx = result.indexOf(openTag, idx + 1);
+    }
+  });
 
   return result;
 }
