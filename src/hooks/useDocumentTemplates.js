@@ -25,7 +25,7 @@ export const SIGNATURE_PLACEHOLDER_HTML = `<div id="worker-signature-placeholder
 </div>`;
 
 export const QRCODE_PLACEHOLDER_HTML = `<div id="worker-qrcode-placeholder" style="position:absolute; left:0px; top:0px; width:100px; height:100px;">
-  <div style="width:100%;height:100%;border:2px dashed #6366f1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.1);page-break-inside:avoid;break-inside:avoid;">
+  <div style="width:100px;height:100px;border:2px dashed #6366f1;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.1);page-break-inside:avoid;break-inside:avoid;">
     <span style="font-size:8px;font-weight:900;color:#6366f1;text-transform:uppercase;letter-spacing:0.05em;font-family:'Inter',sans-serif;">QR Code</span>
   </div>
 </div>`;
