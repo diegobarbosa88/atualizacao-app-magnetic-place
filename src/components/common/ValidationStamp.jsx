@@ -1,6 +1,6 @@
 import React from 'react';
 
-const ValidationStamp = ({ signature, datetime, ip, id, qrCode }) => {
+const ValidationStamp = ({ signature, datetime, ip, id, qrCode, hideQrCode = false }) => {
   const dateStr = datetime ? new Date(datetime).toLocaleString('pt-PT') : '';
   const idStr = id ? String(id).substring(0, 16) + '...' : '';
   const ipStr = ip || 'N/D';
@@ -76,7 +76,7 @@ const ValidationStamp = ({ signature, datetime, ip, id, qrCode }) => {
         </p>
       </div>
 
-      {qrCode && (
+      {qrCode && !hideQrCode && (
         <div style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e2e8f0',

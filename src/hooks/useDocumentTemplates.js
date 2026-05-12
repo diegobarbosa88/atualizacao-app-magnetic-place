@@ -18,9 +18,11 @@ export const PLACEHOLDER_ELEMENTS = {
   'worker-signature-placeholder': { label: 'Assinatura', defaultX: 0, defaultY: 0 }
 };
 
-export const SIGNATURE_PLACEHOLDER_HTML = `<div id="worker-signature-placeholder" style="position:absolute; left:0px; top:0px; width:290px;">
-  <div style="width:290px;height:80px;border:2px dashed #10b981;border-radius:14px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,0.1);page-break-inside:avoid;break-inside:avoid;">
-    <span style="font-size:9px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:0.1em;font-family:'Inter',sans-serif;">Assinatura</span>
+export const SIGNATURE_PLACEHOLDER_HTML = `<div id="worker-signature-placeholder" class="mt-8 pt-6 border-t border-slate-100 opacity-30 page-break-inside-avoid" style="position:absolute; left:0px; top:0px; width:290px;">
+  <div class="flex flex-col items-end">
+    <div class="w-56 h-16 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center">
+      <span class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aguardando Assinatura</span>
+    </div>
   </div>
 </div>`;
 
@@ -245,6 +247,12 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         if (!worker) return;
         let generatedHtml = replaceTemplateFields(selectedTemplate.html_content, worker, systemSettings);
         generatedHtml = replacePlaceholdersWithComponents(generatedHtml, worker, positions);
+        if (!generatedHtml.includes('id="worker-signature-placeholder"')) {
+          generatedHtml = generatedHtml.replace(/<\/body>/i, SIGNATURE_PLACEHOLDER_HTML + '\n</body>');
+        }
+        if (!generatedHtml.includes('id="worker-qrcode-placeholder"')) {
+          generatedHtml = generatedHtml.replace(/<\/body>/i, QRCODE_PLACEHOLDER_HTML + '\n</body>');
+        }
         const newDoc = {
           template_id: selectedTemplate.id,
           worker_id: workerId,

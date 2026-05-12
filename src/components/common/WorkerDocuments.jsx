@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
 import { replaceTemplateFields } from '../../utils/templateFields';
-import { getStampHTML } from '../../hooks/useSignatureStamp';
+import { getStampHTML, generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
 import { isPending, isSigned } from '../../constants/documentStatus';
 import { cropSignatureCanvas } from '../../utils/signatureCanvas';
 import workerDocumentsCSS from './WorkerDocuments.css?inline';
@@ -215,7 +215,15 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
 
       if (isTemplateDoc && selectedDoc.generated_html) {
-        // 1. Parse template e injetar Tailwind CDN + CSS do cliente + stamp HTML na signature-area
+        // 1. Gerar stamp HTML via getStampHTML (igual ao que o cliente usa)
+        const { stampHTML: stampMarkup, qrCodeDataURL } = await getStampHTML({
+          signatureDataURL,
+          datetime: signerOpenedAt,
+          ip: userIP,
+          id: docId,
+        });
+
+        // 2. Parse template e injetar Tailwind CDN + CSS
         const parser = new DOMParser();
         const tmplDoc = parser.parseFromString(selectedDoc.generated_html, 'text/html');
 
@@ -226,51 +234,79 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         workerCSStag.textContent = workerDocumentsCSS;
         (tmplDoc.head || tmplDoc.documentElement).appendChild(workerCSStag);
 
-        // 2. Envolver o conteúdo do body num <div class="a4-paper"> (igual ao cliente)
+        // 3. Envolver o conteúdo do body num <div class="a4-paper"> (igual ao cliente)
         const a4 = tmplDoc.createElement('div');
         a4.className = 'a4-paper';
         a4.id = 'worker-a4-paper';
-        // Mover todos os filhos do body para dentro do .a4-paper
         while (tmplDoc.body.firstChild) {
           a4.appendChild(tmplDoc.body.firstChild);
         }
         tmplDoc.body.appendChild(a4);
 
-        // Override do body do template (remover width/margin originais que conflituam com .a4-paper)
+        // Override do body do template
         const bodyResetCSS = tmplDoc.createElement('style');
         bodyResetCSS.textContent = 'body { width: auto !important; margin: 0 !important; padding: 0 !important; background: #fff !important; }';
         (tmplDoc.head || tmplDoc.documentElement).appendChild(bodyResetCSS);
 
-        // 3. Stamp HTML via renderToString do ValidationStamp unificado (+ QR code de verificação)
-        const { stampHTML: stampMarkup, qrCodeDataURL } = await getStampHTML({
-          signatureDataURL,
-          datetime: signerOpenedAt,
-          ip: userIP,
-          id: docId,
-        });
-
-        // 3.1 Injectar QR code no placeholder do template
-        if (qrCodeDataURL) {
-          const qrPlaceholder = a4.querySelector('#worker-qrcode-placeholder');
-          if (qrPlaceholder) {
-            qrPlaceholder.innerHTML = `<img src="${qrCodeDataURL}" alt="QR de verificação" style="width:100%;height:100%;display:block;image-rendering:pixelated;border-radius:8px;" />`;
-          }
+        // 4. Criar placeholders se não existirem (obrigatório para o stamp aparecer)
+        let sigArea = tmplDoc.querySelector('#worker-signature-placeholder');
+        if (!sigArea) {
+          sigArea = tmplDoc.createElement('div');
+          sigArea.id = 'worker-signature-placeholder';
+          sigArea.style.cssText = 'position:absolute;left:0px;top:0px;width:300px;height:150px;';
+          a4.appendChild(sigArea);
         }
 
-        const sigArea = a4.querySelector('#worker-signature-placeholder') || a4.querySelector('.signature-area');
-        if (sigArea) {
-          sigArea.innerHTML = stampMarkup;
-        } else {
-          const wrap = tmplDoc.createElement('div');
-          wrap.innerHTML = stampMarkup;
-          a4.appendChild(wrap);
+        let qrPlaceholder = tmplDoc.querySelector('#worker-qrcode-placeholder');
+        if (!qrPlaceholder) {
+          qrPlaceholder = tmplDoc.createElement('div');
+          qrPlaceholder.id = 'worker-qrcode-placeholder';
+          qrPlaceholder.style.cssText = 'position:absolute;left:0px;top:0px;width:100px;height:100px;';
+          a4.appendChild(qrPlaceholder);
         }
+
+        // 5. Criar estrutura igual ao cliente no placeholder de assinatura
+        // Primeiro: guardar a posição original do placeholder do template
+        const originalLeft = sigArea.style.left || '0px';
+        const originalTop = sigArea.style.top || '0px';
+        console.log('DEBUG: Preserving signature placeholder position - left:', originalLeft, 'top:', originalTop);
+
+        // Segundo: remover todo o conteúdo interno do placeholder
+        while (sigArea.firstChild) {
+          sigArea.removeChild(sigArea.firstChild);
+        }
+        // Terceiro: limpar todos os atributos de estilo do placeholder
+        sigArea.removeAttribute('style');
+        sigArea.removeAttribute('class');
+        sigArea.setAttribute('class', 'page-break-inside-avoid');
+        // Manter position:absolute com a posição original do template
+        sigArea.style.cssText = `position:absolute;left:${originalLeft};top:${originalTop};width:290px;border:none;background:transparent;padding:0;margin:0;`;
+
+        // Injetar o stamp markup diretamente no placeholder (sem wrappers extra)
+        sigArea.innerHTML = stampMarkup;
+
+        // Injetar QR code fixo na parte inferior direita (dentro do .a4-paper para ser capturado pelo html2pdf)
+        const qrCodeFixed = tmplDoc.createElement('div');
+        qrCodeFixed.id = 'qr-code-fixed';
+        qrCodeFixed.style.cssText = 'position:absolute;right:5mm;bottom:5mm;width:20mm;height:20mm;z-index:99999;';
+        qrCodeFixed.innerHTML = `<img src="${qrCodeDataURL}" style="width:100%;height:100%;object-fit:contain;" />`;
+        a4.appendChild(qrCodeFixed);
+        console.log('DEBUG: QR code fixo injetado com src:', qrCodeDataURL ? 'presente' : 'vazio');
+
+        // DEBUG: ver o que está dentro do sigArea após modificações
+        console.log('DEBUG: sigArea innerHTML após modificações:', sigArea.innerHTML.substring(0, 500));
 
         const cleanHtml = '<!DOCTYPE html>' + tmplDoc.documentElement.outerHTML;
 
-        // 2. Iframe ligeiramente maior que .a4-paper (794px + margens 40px = 874px) para .a4-paper respirar
+        // DEBUG
+        console.log('DEBUG: cleanHtml contains worker-signature-placeholder?', cleanHtml.includes('worker-signature-placeholder'));
+        console.log('DEBUG: cleanHtml contains magnetic-validation-stamp?', cleanHtml.includes('magnetic-validation-stamp'));
+        console.log('DEBUG: cleanHtml contains VALIDAÇÃO DIGITAL?', cleanHtml.includes('VALIDAÇÃO DIGITAL'));
+
+        // 5. Criar iframe e escrever o HTML
         const iframe = document.createElement('iframe');
         iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:900px;height:1300px;border:none;';
+        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
         document.body.appendChild(iframe);
 
         iframe.contentDocument.open();
@@ -278,13 +314,35 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         iframe.contentDocument.close();
 
         // Aguardar Tailwind CDN carregar + paint
-        await new Promise(r => setTimeout(r, 800));
+        await new Promise(r => setTimeout(r, 1000));
 
-        // Carregar html2pdf dentro do iframe (html2canvas precisa do mesmo realm para capturar)
+        // DEBUG: verificar se placeholder e stamp existem no iframe
+        const sigInIframe = iframe.contentDocument.querySelector('#worker-signature-placeholder');
+        const stampInIframe = iframe.contentDocument.querySelector('.magnetic-validation-stamp');
+        const a4InIframe = iframe.contentDocument.querySelector('.a4-paper');
+        const qrInIframe = iframe.contentDocument.querySelector('#qr-code-fixed');
+        console.log('DEBUG: Placeholder no iframe?', !!sigInIframe);
+        console.log('DEBUG: Stamp no iframe?', !!stampInIframe);
+        console.log('DEBUG: QR code fixo no iframe?', !!qrInIframe);
+        console.log('DEBUG: A4 paper no iframe?', !!a4InIframe);
+        if (sigInIframe) {
+          console.log('DEBUG: Placeholder innerHTML:', sigInIframe.innerHTML.substring(0, 500));
+        }
+        if (qrInIframe) {
+          console.log('DEBUG: QR code src:', qrInIframe.innerHTML.substring(0, 100));
+        }
+        if (a4InIframe) {
+          console.log('DEBUG: A4 paper innerHTML (last 500 chars):', a4InIframe.innerHTML.slice(-500));
+        }
+
+        // 6. Carregar html2pdf e gerar PDF
         await new Promise((resolve, reject) => {
           const h2pScript = iframe.contentDocument.createElement('script');
           h2pScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-          h2pScript.onload = () => setTimeout(resolve, 200);
+          h2pScript.onload = () => {
+            console.log('DEBUG: html2pdf loaded');
+            setTimeout(resolve, 500);
+          };
           h2pScript.onerror = () => reject(new Error('Falha ao carregar html2pdf no iframe'));
           (iframe.contentDocument.head || iframe.contentDocument.documentElement).appendChild(h2pScript);
         });
@@ -305,7 +363,17 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
               scale: 1.5,
               useCORS: true,
               logging: false,
-              onclone: stripOklch,
+              onclone: (clonedDoc) => {
+                stripOklch(clonedDoc);
+                const clonedStamp = clonedDoc.querySelector('.magnetic-validation-stamp');
+                const clonedA4 = clonedDoc.querySelector('.a4-paper');
+                console.log('DEBUG onclone: clonedStamp exists?', !!clonedStamp);
+                console.log('DEBUG onclone: clonedA4 exists?', !!clonedA4);
+                if (clonedA4) {
+                  console.log('DEBUG onclone: clonedA4 innerHTML length:', clonedA4.innerHTML.length);
+                  console.log('DEBUG onclone: clonedA4 contains stamp?', clonedA4.innerHTML.includes('magnetic-validation-stamp'));
+                }
+              },
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
             pagebreak: {
@@ -322,7 +390,18 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
             },
           };
 
-          pdfBlob = await ifW.html2pdf().set(opt).from(target).output('blob');
+          console.log('DEBUG: target element tagName:', target.tagName);
+          console.log('DEBUG: target children count:', target.children.length);
+          console.log('DEBUG: target innerHTML length:', target.innerHTML.length);
+          console.log('DEBUG: target contains magnetic-validation-stamp?', target.innerHTML.includes('magnetic-validation-stamp'));
+
+          try {
+            pdfBlob = await ifW.html2pdf().set(opt).from(target).output('blob');
+            console.log('DEBUG: pdfBlob size:', pdfBlob.size, 'bytes');
+          } catch (pdfErr) {
+            console.error('DEBUG: pdf generation error:', pdfErr);
+            throw pdfErr;
+          }
         } finally {
           document.body.removeChild(iframe);
         }

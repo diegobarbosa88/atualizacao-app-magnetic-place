@@ -33,9 +33,9 @@ export const generateQRCodeDataURL = async (id) => {
 };
 
 export const getStampHTML = async ({ signatureDataURL, datetime, ip, id }) => {
-  const qrCode = await generateQRCodeDataURL(id);
+  const qrCodeDataURL = await generateQRCodeDataURL(id);
   const stampMarkup = renderToString(
-    <ValidationStamp signature={signatureDataURL} datetime={datetime} ip={ip} id={id} qrCode={qrCode} />
+    <ValidationStamp signature={signatureDataURL} datetime={datetime} ip={ip} id={id} hideQrCode={true} />
   );
   const scopeCSS = `
     .magnetic-validation-stamp,
@@ -48,7 +48,10 @@ export const getStampHTML = async ({ signatureDataURL, datetime, ip, id }) => {
       text-decoration: none !important;
     }
   `;
-  return `<style>${scopeCSS}</style><div class="magnetic-validation-stamp" style="margin-top:32px;padding-top:24px;border-top:1px solid #e2e8f0;page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:column;align-items:flex-end;">${stampMarkup}</div>`;
+  return {
+    stampHTML: `<style>${scopeCSS}</style><div class="magnetic-validation-stamp" style="page-break-inside:avoid;break-inside:avoid;display:flex;flex-direction:column;align-items:flex-end;">${stampMarkup}</div>`,
+    qrCodeDataURL
+  };
 };
 
 export const useSignatureStamp = () => {
