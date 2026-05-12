@@ -257,12 +257,10 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           a4.appendChild(sigArea);
         }
 
-        let qrPlaceholder = tmplDoc.querySelector('#worker-qrcode-placeholder');
-        if (!qrPlaceholder) {
-          qrPlaceholder = tmplDoc.createElement('div');
-          qrPlaceholder.id = 'worker-qrcode-placeholder';
-          qrPlaceholder.style.cssText = 'position:absolute;left:0px;top:0px;width:100px;height:100px;';
-          a4.appendChild(qrPlaceholder);
+        // Remover placeholder QR code do template (será substituído pelo QR fixo)
+        const existingQrPlaceholder = tmplDoc.querySelector('#worker-qrcode-placeholder');
+        if (existingQrPlaceholder) {
+          existingQrPlaceholder.remove();
         }
 
         // 5. Criar estrutura igual ao cliente no placeholder de assinatura
