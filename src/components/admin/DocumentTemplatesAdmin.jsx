@@ -196,20 +196,16 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     const replaceStyleValue = (styleStr, propName, newVal) => {
       const propIdx = styleStr.indexOf(propName + ':');
       if (propIdx === -1) {
-        const posIdx = styleStr.indexOf('position:');
-        if (posIdx !== -1) {
-          return styleStr.substring(0, posIdx + 9) + propName + ':' + newVal + ';' + styleStr.substring(posIdx + 9);
-        }
         return styleStr + propName + ':' + newVal + ';';
       }
       const valStart = propIdx + propName.length + 1;
-      let valEnd = styleStr.indexOf('px', valStart);
-      let semi = styleStr.indexOf(';', valStart);
-      if (valEnd === -1 || (semi !== -1 && semi < valEnd)) {
-        valEnd = semi !== -1 ? semi : styleStr.length;
-      } else {
-        valEnd = valEnd + 2;
+      let endCandidate = styleStr.indexOf(';', valStart);
+      let pxCandidate = styleStr.indexOf('px', valStart);
+      let valEnd = endCandidate;
+      if (pxCandidate !== -1 && (valEnd === -1 || pxCandidate + 2 < endCandidate)) {
+        valEnd = pxCandidate + 2;
       }
+      if (valEnd === -1) valEnd = styleStr.length;
       return styleStr.substring(0, valStart) + newVal + styleStr.substring(valEnd);
     };
 
