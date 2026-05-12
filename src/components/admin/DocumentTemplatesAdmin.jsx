@@ -200,10 +200,18 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       }
       const valStart = propIdx + propName.length + 1;
       let valEnd = styleStr.indexOf(';', valStart);
+      const pctIdx = styleStr.indexOf('%', valStart);
+      if (pctIdx !== -1 && (valEnd === -1 || pctIdx < valEnd)) {
+        valEnd = pctIdx + 1;
+      }
       if (valEnd === -1 || valEnd <= valStart) {
         valEnd = styleStr.length;
       }
-      return styleStr.substring(0, valStart) + newVal + styleStr.substring(valEnd);
+      let result = styleStr.substring(0, valStart) + newVal + styleStr.substring(valEnd);
+      if (pctIdx !== -1 && (valEnd === -1 || pctIdx < valEnd)) {
+        result = result.replace('%', 'px');
+      }
+      return result;
     };
 
     ids.forEach(id => {
