@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   FileText, Plus, Trash2, X, Upload, Send, Users, Loader2, Download,
-  Search, CheckCircle, Clock, FileSignature, AlertCircle, Eye, Settings,
+  Search, CheckCircle, Clock, FileSignature, AlertCircle, Eye, Edit3,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
@@ -15,6 +15,8 @@ import {
   renderDocx,
   buildRenderData,
 } from '../../utils/docxTemplateService';
+import { convertDocxToPdf } from '../../utils/pdfCoService';
+import { PDFDocument } from 'pdf-lib';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 
 export default function DocumentTemplatesAdmin({ workers = [] }) {
@@ -26,13 +28,15 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     loadingDocs,
     saving,
     handleUploadTemplate,
+    handleUpdateTemplate,
     handleDeleteTemplate,
     handleGenerateDocuments,
     handleDownloadGenerated,
     handleDeleteDoc,
   } = useDocumentTemplates(supabase);
 
-  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showEditorModal, setShowEditorModal] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState(null); // null = criar novo, objeto = editar
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
@@ -40,7 +44,21 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [genProgress, setGenProgress] = useState(null);
 
   const [preview, setPreview] = useState(null);
-  const [stampConfig, setStampConfig] = useState(null); // { template, x, y, page }
+
+  const openCreateModal = () => {
+    setEditingTemplate(null);
+    setShowEditorModal(true);
+  };
+
+  const openEditModal = (template) => {
+    setEditingTemplate(template);
+    setShowEditorModal(true);
+  };
+
+  const closeEditorModal = () => {
+    setShowEditorModal(false);
+    setEditingTemplate(null);
+  };
 
   const openTemplatePreview = async (template) => {
     setPreview({ title: template.name, loading: true, blob: null, error: '' });
@@ -81,14 +99,6 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     }
   };
 
-  const [uploadName, setUploadName] = useState('');
-  const [uploadDescription, setUploadDescription] = useState('');
-  const [uploadFile, setUploadFile] = useState(null);
-  const [previewFields, setPreviewFields] = useState(null);
-  const [previewError, setPreviewError] = useState('');
-  const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef(null);
-
   const [docSearch, setDocSearch] = useState('');
   const [docFilter, setDocFilter] = useState('all');
 
@@ -112,74 +122,6 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       return true;
     });
   }, [generatedDocs, docFilter, docSearch, workerById]);
-
-  const resetUploadModal = () => {
-    setShowUploadModal(false);
-    setUploadName('');
-    setUploadDescription('');
-    setUploadFile(null);
-    setPreviewFields(null);
-    setPreviewError('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleFileChange = async (e) => {
-    const f = e.target.files?.[0];
-    setPreviewError('');
-    setPreviewFields(null);
-    if (!f) {
-      setUploadFile(null);
-      return;
-    }
-    const isDocx = f.name.toLowerCase().endsWith('.docx')
-      || f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-    if (!isDocx) {
-      setPreviewError('Apenas ficheiros Word (.docx) são suportados.');
-      setUploadFile(null);
-      return;
-    }
-    setUploadFile(f);
-    if (!uploadName.trim()) {
-      setUploadName(f.name.replace(/\.docx$/i, ''));
-    }
-    try {
-      const buf = await readFileAsArrayBuffer(f);
-      const tags = extractTags(buf);
-      setPreviewFields(tags);
-      if (tags.length === 0) {
-        setPreviewError('Não foi encontrada nenhuma variável { } neste documento. Adiciona tags como {worker_name} no Word antes de fazer upload.');
-      }
-    } catch (err) {
-      console.error('Erro a ler .docx:', err);
-      setPreviewError('Não foi possível ler o ficheiro: ' + err.message);
-    }
-  };
-
-  const submitUpload = async () => {
-    if (!uploadFile) {
-      setPreviewError('Selecione um ficheiro .docx.');
-      return;
-    }
-    if (!uploadName.trim()) {
-      setPreviewError('Nome é obrigatório.');
-      return;
-    }
-    setUploading(true);
-    setPreviewError('');
-    try {
-      await handleUploadTemplate({
-        name: uploadName,
-        description: uploadDescription,
-        file: uploadFile,
-      });
-      resetUploadModal();
-    } catch (err) {
-      console.error('Erro no upload:', err);
-      setPreviewError('Erro ao guardar: ' + err.message);
-    } finally {
-      setUploading(false);
-    }
-  };
 
   const openGenerateModal = (template) => {
     setSelectedTemplate(template);
@@ -221,7 +163,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
           <p className="text-sm text-slate-500 mt-1">Templates Word (.docx) com variáveis preenchidas automaticamente.</p>
         </div>
         <button
-          onClick={() => setShowUploadModal(true)}
+          onClick={openCreateModal}
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700"
         >
           <Plus className="w-4 h-4" />
@@ -269,16 +211,11 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     <Eye className="w-3 h-3" />
                   </button>
                   <button
-                    onClick={() => setStampConfig({
-                      template: t,
-                      x: t.stamp_x ?? 0,
-                      y: t.stamp_y ?? 0,
-                      page: t.stamp_page || 'last',
-                    })}
+                    onClick={() => openEditModal(t)}
                     className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100"
-                    title="Configurar posição do carimbo"
+                    title="Editar template e posição do carimbo"
                   >
-                    <Settings className="w-3 h-3" /> Stamp
+                    <Edit3 className="w-3 h-3" /> Editar
                   </button>
                   <button
                     onClick={() => openGenerateModal(t)}
@@ -391,98 +328,29 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         )}
       </div>
 
-      {showUploadModal && (
-        <Modal onClose={resetUploadModal} title="Novo Template (Word .docx)">
-          <div className="space-y-4">
-            <div>
-              <label className="text-xs font-bold text-slate-600 uppercase">Nome</label>
-              <input
-                value={uploadName}
-                onChange={e => setUploadName(e.target.value)}
-                placeholder="Ex: Contrato de Trabalho"
-                className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-slate-600 uppercase">Descrição (opcional)</label>
-              <input
-                value={uploadDescription}
-                onChange={e => setUploadDescription(e.target.value)}
-                placeholder="Curta descrição interna"
-                className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-slate-600 uppercase">Ficheiro Word (.docx)</label>
-              <div className="mt-1 flex items-center gap-3">
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  onChange={handleFileChange}
-                  className="text-sm"
-                />
-                {uploadFile && <span className="text-xs text-slate-500">{uploadFile.name}</span>}
-              </div>
-              <p className="text-xs text-slate-400 mt-2">
-                As variáveis no Word devem estar entre chavetas <code className="bg-slate-100 px-1 rounded">{'{worker_name}'}</code> e usar os nomes da lista abaixo.
-              </p>
-            </div>
-
-            {previewError && (
-              <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{previewError}</span>
-              </div>
-            )}
-
-            {previewFields && previewFields.length > 0 && (
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
-                  Variáveis detetadas ({previewFields.length})
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {previewFields.map(name => <FieldBadge key={name} name={name} />)}
-                </div>
-              </div>
-            )}
-
-            <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-1">
-              <p><strong>Carimbo de Assinatura:</strong> Inclui{' '}
-              <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-indigo-100">{`{%signature_stamp}`}</code>{' '}
-              (com o sinal <code>%</code>) no Word onde queres que o carimbo digital apareça.</p>
-              <p className="text-indigo-600"><strong>Dica:</strong> Tamanho default ~99x49mm. Para ajustar, coloca o tag numa tabela/moldura e redimensiona a celula no Word. O QR code de verificacao e aplicado automaticamente em todas as paginas do PDF final.</p>
-            </div>
-
-            <details className="bg-slate-50 border border-slate-200 rounded-xl p-3">
-              <summary className="text-xs font-bold uppercase tracking-wider text-slate-600 cursor-pointer">
-                Variáveis disponíveis (nomes a usar no Word)
-              </summary>
-              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-60 overflow-y-auto">
-                {KNOWN_FIELD_NAMES.map(f => (
-                  <div key={f.name} className="flex items-baseline gap-2 text-xs">
-                    <code className="font-mono text-indigo-600">{f.name}</code>
-                    <span className="text-slate-500 truncate">{f.label}</span>
-                  </div>
-                ))}
-              </div>
-            </details>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button onClick={resetUploadModal} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
-                Cancelar
-              </button>
-              <button
-                onClick={submitUpload}
-                disabled={uploading || saving || !uploadFile}
-                className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                Guardar Template
-              </button>
-            </div>
-          </div>
-        </Modal>
+      {showEditorModal && (
+        <TemplateEditorModal
+          template={editingTemplate}
+          supabase={supabase}
+          onClose={closeEditorModal}
+          onSave={async (data) => {
+            try {
+              if (editingTemplate) {
+                await handleUpdateTemplate({
+                  id: editingTemplate.id,
+                  oldDocxPath: editingTemplate.template_docx_path,
+                  ...data,
+                });
+              } else {
+                await handleUploadTemplate(data);
+              }
+              closeEditorModal();
+            } catch (err) {
+              throw err; // Propagar erro para o modal mostrar
+            }
+          }}
+          saving={saving}
+        />
       )}
 
       {showGenerateModal && selectedTemplate && (
@@ -571,53 +439,30 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         />
       )}
 
-      {stampConfig && (
-        <StampConfigModal
-          config={stampConfig}
-          onClose={() => setStampConfig(null)}
-          onSave={async (newConfig) => {
-            try {
-              const { error } = await supabase
-                .from('document_templates')
-                .update({
-                  stamp_x: newConfig.x,
-                  stamp_y: newConfig.y,
-                  stamp_page: newConfig.page,
-                })
-                .eq('id', stampConfig.template.id);
-              if (error) throw error;
-              // Atualizar template na lista local
-              const idx = templates.findIndex(t => t.id === stampConfig.template.id);
-              if (idx >= 0) {
-                templates[idx] = {
-                  ...templates[idx],
-                  stamp_x: newConfig.x,
-                  stamp_y: newConfig.y,
-                  stamp_page: newConfig.page,
-                };
-              }
-              setStampConfig(null);
-            } catch (err) {
-              alert('Erro ao guardar: ' + err.message);
-            }
-          }}
-        />
-      )}
     </div>
   );
 }
 
-function StampConfigModal({ config, onClose, onSave }) {
-  const [x, setX] = useState(config.x || 0);
-  const [y, setY] = useState(config.y || 0);
-  const [page, setPage] = useState(config.page || 'last');
-  const [saving, setSaving] = useState(false);
-
-  const handleSave = async () => {
-    setSaving(true);
-    await onSave({ x: Number(x), y: Number(y), page });
-    setSaving(false);
-  };
+function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
+  const isEditing = !!template;
+  const fileInputRef = useRef(null);
+  
+  // Form state
+  const [name, setName] = useState(template?.name || '');
+  const [description, setDescription] = useState(template?.description || '');
+  const [file, setFile] = useState(null);
+  const [previewFields, setPreviewFields] = useState(template?.template_fields || null);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  
+  // Stamp position state
+  const [stampX, setStampX] = useState(template?.stamp_x ?? 130);
+  const [stampY, setStampY] = useState(template?.stamp_y ?? 30);
+  const [stampPage, setStampPage] = useState(template?.stamp_page || 'last');
+  
+  // PDF preview state
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
 
   // Presets para posições comuns
   const presets = [
@@ -627,121 +472,327 @@ function StampConfigModal({ config, onClose, onSave }) {
     { label: 'Superior Direito', x: 130, y: 260 },
   ];
 
+  // Gerar preview da última página do PDF (extraída isoladamente para posicionamento exato)
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl = null;
+    const generatePreview = async () => {
+      const sourceFile = file;
+      const existingPath = template?.template_docx_path;
+
+      if (!sourceFile && !existingPath) {
+        setPdfPreviewUrl(null);
+        return;
+      }
+
+      setLoadingPreview(true);
+      try {
+        let docxBlob;
+        if (sourceFile) {
+          docxBlob = sourceFile;
+        } else if (existingPath && supabase) {
+          const buffer = await downloadTemplateBytes(supabase, existingPath);
+          docxBlob = new Blob([buffer], {
+            type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          });
+        }
+
+        if (cancelled || !docxBlob) return;
+
+        // 1. Converter docx → PDF completo via PDF.co
+        const fullPdfBlob = await convertDocxToPdf(docxBlob);
+        if (cancelled) return;
+
+        // 2. Extrair apenas a última página com pdf-lib para um PDF de uma página
+        const fullPdfBytes = await fullPdfBlob.arrayBuffer();
+        const fullPdf = await PDFDocument.load(fullPdfBytes);
+        const lastIndex = fullPdf.getPageCount() - 1;
+
+        const singlePagePdf = await PDFDocument.create();
+        const [copiedPage] = await singlePagePdf.copyPages(fullPdf, [lastIndex]);
+        singlePagePdf.addPage(copiedPage);
+        const singlePageBytes = await singlePagePdf.save();
+        if (cancelled) return;
+
+        const singlePageBlob = new Blob([singlePageBytes], { type: 'application/pdf' });
+        createdUrl = URL.createObjectURL(singlePageBlob);
+        setPdfPreviewUrl(createdUrl);
+      } catch (err) {
+        console.error('Erro ao gerar preview PDF:', err);
+        if (!cancelled) setPdfPreviewUrl(null);
+      } finally {
+        if (!cancelled) setLoadingPreview(false);
+      }
+    };
+
+    generatePreview();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [file, template?.template_docx_path, supabase]);
+
+  const handleFileChange = async (e) => {
+    const f = e.target.files?.[0];
+    setError('');
+    if (!f) {
+      setFile(null);
+      if (!isEditing) setPreviewFields(null);
+      return;
+    }
+    const isDocx = f.name.toLowerCase().endsWith('.docx')
+      || f.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    if (!isDocx) {
+      setError('Apenas ficheiros Word (.docx) são suportados.');
+      setFile(null);
+      return;
+    }
+    setFile(f);
+    if (!name.trim()) {
+      setName(f.name.replace(/\.docx$/i, ''));
+    }
+    try {
+      const buf = await readFileAsArrayBuffer(f);
+      const tags = extractTags(buf);
+      setPreviewFields(tags);
+      if (tags.length === 0) {
+        setError('Não foi encontrada nenhuma variável { } neste documento.');
+      }
+    } catch (err) {
+      console.error('Erro a ler .docx:', err);
+      setError('Não foi possível ler o ficheiro: ' + err.message);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!isEditing && !file) {
+      setError('Selecione um ficheiro .docx.');
+      return;
+    }
+    if (!name.trim()) {
+      setError('Nome é obrigatório.');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      await onSave({
+        name,
+        description,
+        file: file || undefined,
+        stamp_x: Number(stampX),
+        stamp_y: Number(stampY),
+        stamp_page: stampPage,
+      });
+    } catch (err) {
+      console.error('Erro ao guardar:', err);
+      setError('Erro ao guardar: ' + err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <Modal onClose={onClose} title={`Posição do Carimbo — ${config.template.name}`}>
-      <div className="space-y-4">
-        <p className="text-sm text-slate-600">
-          Define onde o carimbo de validação digital vai aparecer no PDF assinado.
-          As coordenadas são em milímetros a partir do canto inferior esquerdo da página.
-        </p>
-
-        {/* Presets */}
-        <div>
-          <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Posições Predefinidas</label>
-          <div className="flex flex-wrap gap-2">
-            {presets.map(p => (
-              <button
-                key={p.label}
-                onClick={() => { setX(p.x); setY(p.y); }}
-                className="px-3 py-1.5 text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Coordenadas manuais */}
-        <div className="grid grid-cols-2 gap-4">
+    <Modal onClose={onClose} title={isEditing ? `Editar Template` : 'Novo Template'} wide>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Coluna esquerda: Formulário */}
+        <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase">Posição X (mm da esquerda)</label>
+            <label className="text-xs font-bold text-slate-600 uppercase">Nome</label>
             <input
-              type="number"
-              value={x}
-              onChange={e => setX(e.target.value)}
-              min={0}
-              max={210}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Ex: Contrato de Trabalho"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
             />
           </div>
           <div>
-            <label className="text-xs font-bold text-slate-600 uppercase">Posição Y (mm do fundo)</label>
+            <label className="text-xs font-bold text-slate-600 uppercase">Descrição (opcional)</label>
             <input
-              type="number"
-              value={y}
-              onChange={e => setY(e.target.value)}
-              min={0}
-              max={297}
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500"
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Curta descrição interna"
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500"
             />
           </div>
-        </div>
-
-        {/* Página */}
-        <div>
-          <label className="text-xs font-bold text-slate-600 uppercase">Aplicar em</label>
-          <select
-            value={page}
-            onChange={e => setPage(e.target.value)}
-            className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500"
-          >
-            <option value="last">Última página</option>
-            <option value="first">Primeira página</option>
-            <option value="all">Todas as páginas</option>
-          </select>
-        </div>
-
-        {/* Preview visual */}
-        <div className="bg-slate-100 rounded-xl p-4">
-          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Pré-visualização (A4: 210x297mm)</p>
-          <div 
-            className="relative bg-white border border-slate-300 rounded-lg mx-auto"
-            style={{ width: '150px', height: '212px' }} // A4 proporcional
-          >
-            {/* Stamp preview */}
-            <div
-              className="absolute bg-purple-500 rounded text-white text-[6px] font-bold flex items-center justify-center"
-              style={{
-                width: '50px',  // ~70mm em escala
-                height: '18px', // ~25mm em escala
-                left: `${(x / 210) * 150}px`,
-                bottom: `${(y / 297) * 212}px`,
-              }}
-            >
-              STAMP
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase">
+              Ficheiro Word (.docx) {isEditing && <span className="text-slate-400 font-normal">(opcional - substituir)</span>}
+            </label>
+            <div className="mt-1 flex items-center gap-3">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                onChange={handleFileChange}
+                className="text-sm"
+              />
             </div>
-            {/* QR preview (canto inferior direito) */}
-            <div
-              className="absolute bg-indigo-400 rounded text-white text-[5px] font-bold flex items-center justify-center"
-              style={{
-                width: '15px',
-                height: '15px',
-                right: '5px',
-                bottom: '5px',
-              }}
-            >
-              QR
+            {isEditing && !file && (
+              <p className="text-xs text-slate-500 mt-1">Ficheiro atual será mantido se não selecionar um novo.</p>
+            )}
+          </div>
+
+          {previewFields && previewFields.length > 0 && (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 mb-2">
+                Variáveis detetadas ({previewFields.length})
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {previewFields.map(fname => <FieldBadge key={fname} name={fname} />)}
+              </div>
+            </div>
+          )}
+
+          {/* Posição do Carimbo */}
+          <div className="border-t border-slate-200 pt-4">
+            <h4 className="text-sm font-bold text-slate-700 mb-3">Posição do Carimbo</h4>
+            
+            {/* Presets */}
+            <div className="mb-3">
+              <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Posições Predefinidas</label>
+              <div className="flex flex-wrap gap-2">
+                {presets.map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => { setStampX(p.x); setStampY(p.y); }}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
+                      stampX === p.x && stampY === p.y
+                        ? 'text-purple-700 bg-purple-100 border-purple-300'
+                        : 'text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Coordenadas manuais */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">X (mm)</label>
+                <input
+                  type="number"
+                  value={stampX}
+                  onChange={e => setStampX(e.target.value)}
+                  min={0}
+                  max={210}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Y (mm)</label>
+                <input
+                  type="number"
+                  value={stampY}
+                  onChange={e => setStampY(e.target.value)}
+                  min={0}
+                  max={297}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Página</label>
+                <select
+                  value={stampPage}
+                  onChange={e => setStampPage(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-sm"
+                >
+                  <option value="last">Última</option>
+                  <option value="first">Primeira</option>
+                  <option value="all">Todas</option>
+                </select>
+              </div>
             </div>
           </div>
+
+          <details className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+            <summary className="text-xs font-bold uppercase tracking-wider text-slate-600 cursor-pointer">
+              Variáveis disponíveis
+            </summary>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-40 overflow-y-auto">
+              {KNOWN_FIELD_NAMES.map(f => (
+                <div key={f.name} className="flex items-baseline gap-2 text-xs">
+                  <code className="font-mono text-indigo-600">{f.name}</code>
+                  <span className="text-slate-500 truncate">{f.label}</span>
+                </div>
+              ))}
+            </div>
+          </details>
         </div>
 
-        <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
-          <strong>Nota:</strong> O tamanho do carimbo é ~70x25mm. O QR code é sempre aplicado no canto inferior direito de todas as páginas.
-        </div>
+        {/* Coluna direita: Preview da última página em A4 fixo */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-bold text-slate-700">Pré-visualização da Última Página</h4>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50"
+          <div
+            className="bg-slate-100 rounded-xl p-2 mx-auto"
+            style={{ aspectRatio: '210 / 297', maxWidth: '420px' }}
           >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-            Guardar
-          </button>
+            <div className="relative w-full h-full">
+              {loadingPreview ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                  <span className="text-xs">A gerar preview...</span>
+                </div>
+              ) : pdfPreviewUrl ? (
+                <>
+                  <iframe
+                    src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
+                    className="absolute inset-0 w-full h-full rounded-lg border border-slate-300 bg-white"
+                    title="Preview última página"
+                  />
+                  {/* Overlay do carimbo: 70x25mm em A4 (210x297mm) */}
+                  <div
+                    className="absolute bg-purple-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-purple-700"
+                    style={{
+                      width: `${(70 / 210) * 100}%`,
+                      height: `${(25 / 297) * 100}%`,
+                      left: `${(stampX / 210) * 100}%`,
+                      bottom: `${(stampY / 297) * 100}%`,
+                    }}
+                  >
+                    CARIMBO
+                  </div>
+                </>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+                  <FileText className="w-12 h-12" />
+                  <span className="text-xs text-center px-4">
+                    {isEditing ? 'A carregar preview...' : 'Seleciona um ficheiro .docx para ver o preview'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+            <strong>Nota:</strong> O carimbo (70×25mm) é desenhado a partir do canto inferior-esquerdo (X, Y em mm). O QR é colocado automaticamente em todas as páginas — não precisa de posicionamento.
+          </div>
         </div>
+      </div>
+
+      {error && (
+        <div className="mt-4 flex items-start gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-xs text-rose-700">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-200">
+        <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
+          Cancelar
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || saving || (!isEditing && !file)}
+          className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {(submitting || saving) ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+          {isEditing ? 'Guardar Alterações' : 'Criar Template'}
+        </button>
       </div>
     </Modal>
   );
@@ -763,10 +814,10 @@ function FieldBadge({ name }) {
   );
 }
 
-function Modal({ onClose, title, children }) {
+function Modal({ onClose, title, children, wide = false }) {
   return (
     <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[200] flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-white w-full max-w-2xl rounded-[2rem] p-6 shadow-2xl my-8">
+      <div className={`bg-white w-full ${wide ? 'max-w-5xl' : 'max-w-2xl'} rounded-[2rem] p-6 shadow-2xl my-8`}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-black text-slate-800">{title}</h2>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600">

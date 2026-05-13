@@ -84,7 +84,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     return () => { cancelled = true; };
   }, [supabase]);
 
-  const handleUploadTemplate = useCallback(async ({ name, description, file }) => {
+  const handleUploadTemplate = useCallback(async ({ name, description, file, stamp_x, stamp_y, stamp_page }) => {
     if (!supabase) throw new Error('Supabase não configurado');
     if (!name?.trim()) throw new Error('Nome é obrigatório');
     if (!file) throw new Error('Selecione um ficheiro .docx');
@@ -108,6 +108,9 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
           description: description || '',
           template_docx_path: uploadedPath,
           template_fields: tags,
+          stamp_x: stamp_x ?? 130,
+          stamp_y: stamp_y ?? 30,
+          stamp_page: stamp_page || 'last',
           created_at: now,
           updated_at: now,
         }])
@@ -118,6 +121,63 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
       await loadTemplates();
       return data;
     } catch (err) {
+      if (uploadedPath) {
+        try { await deleteTemplateFile(supabase, uploadedPath); } catch (_) { /* best-effort */ }
+      }
+      throw err;
+    } finally {
+      setSaving(false);
+    }
+  }, [supabase, loadTemplates]);
+
+  const handleUpdateTemplate = useCallback(async ({ id, name, description, file, stamp_x, stamp_y, stamp_page, oldDocxPath }) => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    if (!id) throw new Error('ID do template é obrigatório');
+    if (!name?.trim()) throw new Error('Nome é obrigatório');
+
+    setSaving(true);
+    let uploadedPath = null;
+    try {
+      const updateData = {
+        name: name.trim(),
+        description: description || '',
+        stamp_x: stamp_x ?? 130,
+        stamp_y: stamp_y ?? 30,
+        stamp_page: stamp_page || 'last',
+        updated_at: new Date().toISOString(),
+      };
+
+      // Se foi fornecido um novo ficheiro, fazer upload
+      if (file) {
+        const isDocx = file.name?.toLowerCase().endsWith('.docx')
+          || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        if (!isDocx) throw new Error('Apenas ficheiros Word (.docx) são suportados');
+
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const tags = extractTags(arrayBuffer);
+        uploadedPath = await uploadTemplateFile(supabase, file);
+        
+        updateData.template_docx_path = uploadedPath;
+        updateData.template_fields = tags;
+      }
+
+      const { data, error } = await supabase
+        .from('document_templates')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+
+      // Se foi feito upload de novo ficheiro e havia um antigo, apagar o antigo
+      if (uploadedPath && oldDocxPath) {
+        try { await deleteTemplateFile(supabase, oldDocxPath); } catch (_) { /* best-effort */ }
+      }
+
+      await loadTemplates();
+      return data;
+    } catch (err) {
+      // Se falhou e já tinha feito upload, limpar
       if (uploadedPath) {
         try { await deleteTemplateFile(supabase, uploadedPath); } catch (_) { /* best-effort */ }
       }
@@ -271,6 +331,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     loadTemplates,
     loadGeneratedDocs,
     handleUploadTemplate,
+    handleUpdateTemplate,
     handleDeleteTemplate,
     handleGenerateDocuments,
     handleDownloadGenerated,

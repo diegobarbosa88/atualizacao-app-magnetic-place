@@ -2,9 +2,7 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import ImageModule from 'docxtemplater-image-module-free';
 import { TEMPLATE_FIELDS, getWorkerFieldValue } from './templateFields';
-
 export const TEMPLATES_BUCKET = 'document_templates';
-
 export const STAMP_TAG = 'signature_stamp';
 
 export const KNOWN_FIELD_NAMES = [
