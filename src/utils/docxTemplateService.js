@@ -55,7 +55,7 @@ export function extractTags(arrayBuffer) {
   const doc = loadDocFromBuffer(arrayBuffer);
   const fullText = doc.getFullText() || '';
   const tags = new Set();
-  const re = /\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
+  const re = /\{%?([a-zA-Z_][a-zA-Z0-9_]*)\}/g;
   let m;
   while ((m = re.exec(fullText)) !== null) {
     tags.add(m[1]);
