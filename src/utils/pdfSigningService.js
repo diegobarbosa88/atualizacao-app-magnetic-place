@@ -1,11 +1,40 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
 const INDIGO = rgb(0.31, 0.275, 0.898);
+const INDIGO_BG_SOFT = rgb(0.973, 0.98, 1.0);
+const INDIGO_BORDER_SOFT = rgb(0.886, 0.91, 0.96);
 const SLATE_900 = rgb(0.059, 0.09, 0.165);
 const SLATE_600 = rgb(0.39, 0.455, 0.545);
 const SLATE_400 = rgb(0.58, 0.639, 0.722);
+const SLATE_300 = rgb(0.796, 0.835, 0.882);
 const SLATE_100 = rgb(0.945, 0.965, 0.976);
 const EMERALD = rgb(0.063, 0.725, 0.506);
+
+/**
+ * Gera um SVG path de rectângulo com cantos arredondados, com origem
+ * em (0, 0) e altura `h` em SVG (eixo Y descendente).
+ *
+ * Para o posicionar corretamente em PDF com pdf-lib, usa o wrapper
+ * drawRoundedRect que compensa o flip Y aplicado por drawSvgPath.
+ */
+function roundedRectPath(w, h, r) {
+  return `M ${r},0 L ${w - r},0 Q ${w},0 ${w},${r} L ${w},${h - r} Q ${w},${h} ${w - r},${h} L ${r},${h} Q 0,${h} 0,${h - r} L 0,${r} Q 0,0 ${r},0 Z`;
+}
+
+/**
+ * Desenha um rectângulo arredondado em coordenadas PDF (x, y = canto
+ * inferior-esquerdo). Trata o Y-flip que pdf-lib aplica em drawSvgPath
+ * por defeito, traduzindo a origem do path para PDF (x, y + h).
+ */
+function drawRoundedRect(page, { x, y, w, h, r, color, borderColor, borderWidth = 0 }) {
+  page.drawSvgPath(roundedRectPath(w, h, r), {
+    x,
+    y: y + h,
+    color,
+    borderColor,
+    borderWidth,
+  });
+}
 
 async function blobOrDataUrlToBytes(input) {
   if (!input) return null;
@@ -23,7 +52,7 @@ async function tryEmbedImage(pdfDoc, bytes) {
   if (!bytes) return null;
   try {
     return await pdfDoc.embedPng(bytes);
-  } catch (_) {}
+  } catch (_) { }
   try {
     return await pdfDoc.embedJpg(bytes);
   } catch (err) {
@@ -104,7 +133,7 @@ export async function addSignatureProtocolPage(pdfInput, {
   cursorY -= 10;
   page.drawLine({
     start: { x: margin, y: cursorY },
-    end:   { x: width - margin, y: cursorY },
+    end: { x: width - margin, y: cursorY },
     thickness: 0.5, color: SLATE_400,
   });
   cursorY -= 24;
@@ -213,8 +242,6 @@ export async function applyQrToAllPages(pdfInput, qrDataUrl, { verifyLabel = 'VE
     page.drawRectangle({
       x: boxX, y: boxY, width: boxW, height: boxH,
       color: rgb(1, 1, 1),
-      borderColor: SLATE_400,
-      borderWidth: 0.5,
     });
     page.drawImage(qrImage, {
       x: boxX + boxPad, y: boxY + boxPad + labelH,
@@ -237,76 +264,218 @@ export async function applyQrToAllPages(pdfInput, qrDataUrl, { verifyLabel = 'VE
 const MM_TO_PT = 2.83465;
 
 /**
- * Aplica o carimbo de validação (stamp PNG) no PDF.
- * 
- * @param {Blob|Uint8Array|ArrayBuffer} pdfInput - PDF de entrada
- * @param {Uint8Array|Blob|string} stampImageInput - Imagem PNG do carimbo
- * @param {Object} options - Opções de posicionamento
- * @param {number} options.xMm - Posição X em mm (da esquerda)
- * @param {number} options.yMm - Posição Y em mm (do fundo)
- * @param {string} options.page - 'first', 'last', ou 'all'
- * @param {number} options.stampWidthMm - Largura do stamp em mm (default 70)
- * @param {number} options.stampHeightMm - Altura do stamp em mm (default 25)
- * @returns {Promise<Uint8Array>} PDF com carimbo aplicado
+ * Aplica o carimbo de assinatura digital no PDF, desenhado vetorialmente.
+ *
+ * @param {Blob|Uint8Array|ArrayBuffer} pdfInput
+ * @param {Object} options
+ * @param {string} options.workerName
+ * @param {string} options.signatureDataUrl - PNG/JPEG data URL da assinatura desenhada
+ * @param {string} options.signedAt - ISO date
+ * @param {string} options.signedIp
+ * @param {string} options.serialLabel
+ * @param {number} options.xMm - Canto inferior-esquerdo X em mm
+ * @param {number} options.yMm - Canto inferior-esquerdo Y em mm
+ * @param {string} options.page - 'first' | 'last' | 'all'
+ * @param {number} options.stampWidthMm - default 70
+ * @param {number} options.stampHeightMm - default 25
  */
-export async function applyStampToPage(pdfInput, stampImageInput, { 
-  xMm = 130,        // posição X em mm (default: direita)
-  yMm = 30,         // posição Y em mm (default: inferior)
-  page = 'last',    // 'first', 'last', 'all'
+export async function applyStampToPage(pdfInput, {
+  workerName = '',
+  signatureDataUrl = null,
+  signedAt = null,
+  signedIp = '',
+  serialLabel = '',
+  xMm = 130,
+  yMm = 30,
+  page = 'last',
   stampWidthMm = 70,
   stampHeightMm = 25,
 } = {}) {
   const pdfBytes = await blobOrDataUrlToBytes(pdfInput);
   const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
 
-  const stampBytes = await blobOrDataUrlToBytes(stampImageInput);
-  const stampImage = await tryEmbedImage(pdfDoc, stampBytes);
-  
-  if (!stampImage) {
-    console.warn('[pdfSigningService] Stamp não disponível — pulando overlay.');
-    return await pdfDoc.save();
+  const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  let signatureImage = null;
+  if (signatureDataUrl) {
+    const sigBytes = await blobOrDataUrlToBytes(signatureDataUrl);
+    signatureImage = await tryEmbedImage(pdfDoc, sigBytes);
   }
 
-  // Converter mm para pontos
-  const stampX = xMm * MM_TO_PT;
-  const stampY = yMm * MM_TO_PT;
-  const stampWidth = stampWidthMm * MM_TO_PT;
-  const stampHeight = stampHeightMm * MM_TO_PT;
+  const x = xMm * MM_TO_PT;
+  const y = yMm * MM_TO_PT;
+  const w = stampWidthMm * MM_TO_PT;
+  const h = stampHeightMm * MM_TO_PT;
 
   const pages = pdfDoc.getPages();
-  
-  // Determinar quais páginas aplicar
   let targetPages = [];
-  if (page === 'first') {
-    targetPages = [pages[0]];
-  } else if (page === 'last') {
-    targetPages = [pages[pages.length - 1]];
-  } else if (page === 'all') {
-    targetPages = pages;
-  }
+  if (page === 'first') targetPages = [pages[0]];
+  else if (page === 'last') targetPages = [pages[pages.length - 1]];
+  else if (page === 'all') targetPages = pages;
 
   for (const targetPage of targetPages) {
-    // Desenhar fundo branco com borda
-    targetPage.drawRectangle({
-      x: stampX - 4,
-      y: stampY - 4,
-      width: stampWidth + 8,
-      height: stampHeight + 8,
-      color: rgb(1, 1, 1),
-      borderColor: SLATE_400,
-      borderWidth: 0.5,
-    });
-
-    // Desenhar imagem do stamp
-    targetPage.drawImage(stampImage, {
-      x: stampX,
-      y: stampY,
-      width: stampWidth,
-      height: stampHeight,
+    drawWorkerStamp(targetPage, {
+      x, y, w, h,
+      workerName, signatureImage, signedAt, signedIp, serialLabel,
+      helv, helvBold,
     });
   }
 
   return await pdfDoc.save();
+}
+
+function drawWorkerStamp(page, {
+  x, y, w, h,
+  workerName, signatureImage, signedAt, signedIp, serialLabel,
+  helv, helvBold,
+}) {
+  // ---- 1. Cartão exterior (cantos arredondados, fundo azul super claro) ----
+  drawRoundedRect(page, {
+    x, y, w, h, r: 6,
+    color: INDIGO_BG_SOFT,
+    borderColor: INDIGO_BORDER_SOFT,
+    borderWidth: 0.8,
+  });
+
+  const pad = 5;
+
+  // ---- 2. Caixa de assinatura (esquerda, ~28% da largura) ----
+  const sigBoxW = Math.min(50, w * 0.28);
+  const sigBoxH = h - pad * 2;
+  const sigBoxX = x + pad;
+  const sigBoxY = y + pad;
+
+  drawRoundedRect(page, {
+    x: sigBoxX, y: sigBoxY, w: sigBoxW, h: sigBoxH, r: 4,
+    color: rgb(1, 1, 1),
+    borderColor: INDIGO_BORDER_SOFT,
+    borderWidth: 0.6,
+  });
+
+  if (signatureImage) {
+    const imgPad = 3;
+    const innerW = sigBoxW - imgPad * 2;
+    const innerH = sigBoxH - imgPad * 2;
+    const aspect = signatureImage.width / signatureImage.height;
+    let drawW, drawH;
+    if (aspect > innerW / innerH) {
+      drawW = innerW;
+      drawH = drawW / aspect;
+    } else {
+      drawH = innerH;
+      drawW = drawH * aspect;
+    }
+    page.drawImage(signatureImage, {
+      x: sigBoxX + (sigBoxW - drawW) / 2,
+      y: sigBoxY + (sigBoxH - drawH) / 2,
+      width: drawW,
+      height: drawH,
+    });
+  } else {
+    const placeholder = 'Assinatura';
+    const tw = helv.widthOfTextAtSize(placeholder, 5);
+    page.drawText(placeholder, {
+      x: sigBoxX + (sigBoxW - tw) / 2,
+      y: sigBoxY + sigBoxH / 2 - 1.5,
+      size: 5, font: helv, color: SLATE_400,
+    });
+  }
+
+  // ---- 3. Coluna direita ----
+  const rightColX = sigBoxX + sigBoxW + 8;
+  const rightEdge = x + w - pad - 2;
+  const topY = y + h - pad - 4;
+
+  // Badge verde com check branco
+  const cx = rightColX + 4;
+  const cy = topY - 2.5;
+  page.drawCircle({ x: cx, y: cy, size: 4.5, color: EMERALD });
+  page.drawLine({
+    start: { x: cx - 2, y: cy - 0.3 },
+    end: { x: cx - 0.5, y: cy - 1.8 },
+    thickness: 1.1, color: rgb(1, 1, 1),
+  });
+  page.drawLine({
+    start: { x: cx - 0.5, y: cy - 1.8 },
+    end: { x: cx + 2.3, y: cy + 1.4 },
+    thickness: 1.1, color: rgb(1, 1, 1),
+  });
+
+  page.drawText('VALIDAÇÃO DIGITAL', {
+    x: cx + 8,
+    y: topY - 4,
+    size: 7,
+    font: helvBold,
+    color: INDIGO,
+  });
+
+  // ---- 4. Linhas de dados (label esq · valor direita-alinhado) ----
+  let dateStr = '—';
+  if (signedAt) {
+    const d = new Date(signedAt);
+    const dPart = d.toLocaleDateString('pt-PT');
+    const tPart = d.toLocaleTimeString('pt-PT', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+    dateStr = `${dPart}, ${tPart}`;
+  }
+
+  const fields = [];
+  if (workerName) fields.push({ label: 'Nome:', value: workerName, color: SLATE_900 });
+  fields.push({ label: 'Data/Hora:', value: dateStr, color: SLATE_900 });
+  fields.push({ label: 'IP:', value: signedIp || '—', color: SLATE_900 });
+  if (serialLabel) fields.push({ label: 'ID:', value: serialLabel, color: INDIGO });
+
+  const labelSize = 5.5;
+  const valueSize = 5.5;
+  const rowHeight = fields.length > 3 ? 8.5 : 10.5;
+  let currentY = topY - 16;
+
+  for (const f of fields) {
+    // Label à esquerda
+    page.drawText(f.label, {
+      x: rightColX, y: currentY,
+      size: labelSize, font: helv, color: SLATE_600,
+    });
+
+    // Valor alinhado à direita (com truncagem se necessário)
+    let valStr = f.value;
+    const labelWidth = helv.widthOfTextAtSize(f.label, labelSize);
+    const maxValWidth = rightEdge - rightColX - labelWidth - 6;
+
+    let valWidth = helvBold.widthOfTextAtSize(valStr, valueSize);
+    while (valWidth > maxValWidth && valStr.length > 3) {
+      valStr = valStr.slice(0, -2) + '…';
+      valWidth = helvBold.widthOfTextAtSize(valStr, valueSize);
+    }
+
+    page.drawText(valStr, {
+      x: rightEdge - valWidth, y: currentY,
+      size: valueSize, font: helvBold, color: f.color,
+    });
+
+    currentY -= rowHeight;
+  }
+
+  // ---- 5. Separador tracejado ----
+  const lineY = y + 13;
+  page.drawLine({
+    start: { x: rightColX, y: lineY },
+    end: { x: rightEdge, y: lineY },
+    thickness: 0.5,
+    color: SLATE_300,
+    dashArray: [2, 2],
+  });
+
+  // ---- 6. Rodapé verde ----
+  page.drawText('DOCUMENTO VALIDADO ELETRONICAMENTE', {
+    x: rightColX,
+    y: lineY - 6.5,
+    size: 4.5,
+    font: helvBold,
+    color: EMERALD,
+  });
 }
 
 export function formatSerialLabel(serial, prefix = 'MGN') {

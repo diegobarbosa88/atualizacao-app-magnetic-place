@@ -13,7 +13,6 @@ import {
 import { convertDocxToPdf } from '../../utils/pdfCoService';
 import { formatSerialLabel, applyQrToAllPages, applyStampToPage } from '../../utils/pdfSigningService';
 import { generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
-import { generateStampImageBytes } from '../../utils/stampImageService';
 
 export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
   const { supabase, systemSettings } = useApp();
@@ -184,16 +183,6 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
       const serialLabel = formatSerialLabel(serial);
 
       const qrDataUrl = await generateQRCodeDataURL(docRecord.id);
-      
-      // Gerar imagem do carimbo de validação
-      const stampBytes = await generateStampImageBytes({
-        workerName: workerData?.name,
-        signedAt,
-        signedIp: workerIp,
-        serialLabel,
-        qrDataUrl,
-        signatureDataUrl,
-      });
 
       // Preencher template DOCX com dados do trabalhador (sem stamp - será aplicado no PDF)
       const tmplBuffer = await downloadTemplateBytes(supabase, template.template_docx_path);
@@ -202,11 +191,16 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
 
       // Converter DOCX para PDF
       const pdfBlob = await convertDocxToPdf(filledDocxBlob);
-      
-      // Aplicar stamp na posição configurada no template
-      const pdfWithStamp = await applyStampToPage(pdfBlob, stampBytes, {
-        xMm: template.stamp_x ?? 130,      // default: direita
-        yMm: template.stamp_y ?? 30,       // default: inferior
+
+      // Aplicar carimbo vetorial na posição configurada no template
+      const pdfWithStamp = await applyStampToPage(pdfBlob, {
+        workerName: workerData?.name,
+        signatureDataUrl,
+        signedAt,
+        signedIp: workerIp,
+        serialLabel,
+        xMm: template.stamp_x ?? 130,
+        yMm: template.stamp_y ?? 30,
         page: template.stamp_page || 'last',
         stampWidthMm: 70,
         stampHeightMm: 25,
