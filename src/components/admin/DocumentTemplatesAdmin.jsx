@@ -375,6 +375,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
               </div>
             )}
 
+            <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg p-3">
+              <strong>💡 Carimbo de Assinatura:</strong> Inclui{' '}
+              <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-indigo-100">{`{signature_stamp}`}</code>{' '}
+              no Word onde queres que o carimbo digital apareça (canto inferior direito da última página é o local típico). O tamanho da célula/parágrafo controla o tamanho visual do carimbo.
+            </div>
+
             <details className="bg-slate-50 border border-slate-200 rounded-xl p-3">
               <summary className="text-xs font-bold uppercase tracking-wider text-slate-600 cursor-pointer">
                 Variáveis disponíveis (nomes a usar no Word)

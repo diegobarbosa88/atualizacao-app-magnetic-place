@@ -1,14 +1,20 @@
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
+import ImageModule from 'docxtemplater-image-module-free';
 import { TEMPLATE_FIELDS, getWorkerFieldValue } from './templateFields';
 
 export const TEMPLATES_BUCKET = 'document_templates';
 
-export const KNOWN_FIELD_NAMES = TEMPLATE_FIELDS.map(f => ({
-  name: f.tag.replace(/[{}]/g, ''),
-  label: f.label,
-  source: f.source,
-}));
+export const STAMP_TAG = 'signature_stamp';
+
+export const KNOWN_FIELD_NAMES = [
+  ...TEMPLATE_FIELDS.map(f => ({
+    name: f.tag.replace(/[{}]/g, ''),
+    label: f.label,
+    source: f.source,
+  })),
+  { name: STAMP_TAG, label: 'Carimbo de Assinatura Digital', source: 'image' },
+];
 
 const KNOWN_FIELD_LOOKUP = Object.fromEntries(
   KNOWN_FIELD_NAMES.map(f => [f.name.toLowerCase(), f])
@@ -112,14 +118,50 @@ export function buildRenderData(workerData = {}, systemData = {}) {
   return data;
 }
 
-export function renderDocx(arrayBuffer, renderData) {
-  const doc = loadDocFromBuffer(arrayBuffer);
+export function renderDocx(arrayBuffer, renderData, { imageMap = null } = {}) {
+  let zip;
   try {
-    doc.render(renderData);
+    zip = new PizZip(arrayBuffer);
+  } catch (err) {
+    throw new Error('Ficheiro .docx inválido ou corrompido (zip ilegível).');
+  }
+
+  const modules = [];
+  if (imageMap) {
+    modules.push(new ImageModule({
+      centered: false,
+      getImage: (tagValue) => imageMap[tagValue] || null,
+      getSize: () => [200, 100],
+    }));
+  }
+
+  let doc;
+  try {
+    doc = new Docxtemplater(zip, {
+      paragraphLoop: true,
+      linebreaks: true,
+      modules,
+      nullGetter: () => '',
+    });
+  } catch (err) {
+    const detail = err?.properties?.errors?.map(e => e?.properties?.explanation).filter(Boolean).join('; ');
+    throw new Error('Template .docx inválido' + (detail ? `: ${detail}` : '.'));
+  }
+
+  const data = { ...renderData };
+  if (imageMap) {
+    for (const key of Object.keys(imageMap)) data[key] = key;
+  } else {
+    data[STAMP_TAG] = '';
+  }
+
+  try {
+    doc.render(data);
   } catch (err) {
     const details = err?.properties?.errors?.map(e => e?.properties?.explanation).filter(Boolean).join('; ');
     throw new Error('Falha ao preencher o template' + (details ? `: ${details}` : '.'));
   }
+
   return doc.getZip().generate({
     type: 'blob',
     mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',

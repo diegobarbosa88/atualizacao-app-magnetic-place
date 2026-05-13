@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { FileText, Edit2, X, Download, CheckCircle, Loader2, Filter, FileSignature } from 'lucide-react';
+import { FileText, Edit2, X, Download, CheckCircle, Loader2, Filter, FileSignature, Pencil } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useApp } from '../../context/AppContext';
 import { formatDocDate } from '../../utils/dateUtils';
@@ -670,8 +670,12 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                   {isPending(doc.status) ? 'Pendente' : 'Assinado'}
                 </span>
                 {isPending(doc.status) ? (
-                  <button onClick={() => openDoc(doc)} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl">
-                    <Edit2 size={14} />
+                  <button
+                    onClick={() => openDoc(doc)}
+                    className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl"
+                    title="Assinar documento"
+                  >
+                    <Pencil size={18} />
                   </button>
                 ) : (
                   <a href={doc.pdfAssinadoUrl || doc.signed_pdf_url || doc.url} target="_blank" rel="noopener noreferrer" className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl">
@@ -738,11 +742,15 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       )}
 
       {acroformDoc && (
-        <div className="fixed inset-0 z-[150] bg-white overflow-auto">
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4">
           <DocumentViewer
             document={acroformDoc}
             onBack={() => { setAcroformDoc(null); loadTemplateDocs(); }}
-            onSigned={() => loadTemplateDocs()}
+            onSigned={() => {
+              setAcroformDoc(null);
+              loadTemplateDocs();
+              try { alert('Documento assinado com sucesso!'); } catch (_) {}
+            }}
           />
         </div>
       )}
