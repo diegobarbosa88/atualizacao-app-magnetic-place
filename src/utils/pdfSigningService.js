@@ -558,81 +558,78 @@ function drawAdminStamp(page, {
   companyName, responsibleName, responsibleRole, signedAt, signatureImage,
   helv, helvBold,
 }) {
-  const STAMP_COLOR = rgb(0.12, 0.28, 0.58); // Azul institucional clássico
+  const GOLD = rgb(0.85, 0.65, 0.13);
+  const NAVY = rgb(0.05, 0.15, 0.35);
 
-  // 1. Moldura exterior transparente com contorno duplo
-  drawRoundedRect(page, {
-    x, y, w, h, r: 2,
-    borderColor: STAMP_COLOR,
-    borderWidth: 1.5,
-  });
+  // 1. O "Selo" Circular (Lado direito)
+  const r = (h * 0.85) / 2;
+  const sealX = x + w - r - 5;
+  const sealY = y + h / 2;
 
-  // Moldura interior
-  drawRoundedRect(page, {
-    x: x + 2, y: y + 2, w: w - 4, h: h - 4, r: 1,
-    borderColor: STAMP_COLOR,
-    borderWidth: 0.5,
-  });
-
-  // 2. Marca de água "APROVADO" (Em fundo)
-  const watermarkText = 'APROVADO';
-  const wmSize = 12;
-  const wmW = helvBold.widthOfTextAtSize(watermarkText, wmSize);
-  page.drawText(watermarkText, {
-    x: x + (w - wmW) / 2,
-    y: y + (h / 2) - (wmSize / 3),
-    size: wmSize, font: helvBold, color: rgb(0.85, 0.9, 0.95),
-  });
-
-  // 3. Cabeçalho: Nome da Empresa
-  let empStr = (companyName || 'EMPRESA').toUpperCase();
-  let empW = helvBold.widthOfTextAtSize(empStr, 6.5);
-  // Truncar se necessário
-  while (empW > w - 8 && empStr.length > 3) {
-    empStr = empStr.slice(0, -2) + '…';
-    empW = helvBold.widthOfTextAtSize(empStr, 6.5);
-  }
-  page.drawText(empStr, {
-    x: x + (w - empW) / 2,
-    y: y + h - 10,
-    size: 6.5, font: helvBold, color: STAMP_COLOR,
-  });
-
-  // Linha separadora do topo
-  page.drawLine({
-    start: { x: x + 4, y: y + h - 14 },
-    end: { x: x + w - 4, y: y + h - 14 },
-    thickness: 0.5, color: STAMP_COLOR,
-  });
-
-  // 4. Rodapé: Responsável e Data
-  let dateStr = signedAt ? new Date(signedAt).toLocaleDateString('pt-PT') : '';
-  let bottomStr = `${responsibleName || 'Responsável'} • ${dateStr}`;
-  let botW = helv.widthOfTextAtSize(bottomStr, 5);
-  while (botW > w - 8 && bottomStr.length > 10) {
-    let parts = bottomStr.split(' • ');
-    if (parts[0].length > 3) parts[0] = parts[0].slice(0, -2) + '…';
-    bottomStr = `${parts[0]} • ${parts[1]}`;
-    botW = helv.widthOfTextAtSize(bottomStr, 5);
-  }
+  // Círculos do selo (fundo beije clarinho, borda dourada)
+  page.drawCircle({ x: sealX, y: sealY, size: r, color: rgb(0.99, 0.98, 0.96), borderColor: GOLD, borderWidth: 1.5 });
+  page.drawCircle({ x: sealX, y: sealY, size: r - 2.5, color: undefined, borderColor: GOLD, borderWidth: 0.5 });
   
-  page.drawText(bottomStr, {
-    x: x + (w - botW) / 2,
-    y: y + 6,
-    size: 5, font: helv, color: STAMP_COLOR,
+  // Detalhe de Estrelas no topo/base do selo
+  page.drawText('*', { x: sealX - 2.5, y: sealY + r - 9, size: 6, font: helvBold, color: GOLD });
+  page.drawText('*', { x: sealX - 2.5, y: sealY - r + 4, size: 6, font: helvBold, color: GOLD });
+
+  // Texto no meio do selo
+  const sealT1 = 'SELO';
+  const sealT2 = 'OFICIAL';
+  const sw1 = helvBold.widthOfTextAtSize(sealT1, 6);
+  const sw2 = helvBold.widthOfTextAtSize(sealT2, 6);
+  page.drawText(sealT1, { x: sealX - sw1/2, y: sealY + 2, size: 6, font: helvBold, color: NAVY });
+  page.drawText(sealT2, { x: sealX - sw2/2, y: sealY - 6, size: 6, font: helvBold, color: NAVY });
+
+  // 2. Título do Certificado
+  const leftW = w - (r * 2) - 15;
+  let currentY = y + h - 10;
+
+  page.drawText('CERTIFICADO DE AUTENTICIDADE', {
+    x: x + 5, y: currentY, size: 7.5, font: helvBold, color: NAVY,
   });
 
-  // Linha separadora da base
-  page.drawLine({
-    start: { x: x + 4, y: y + 14 },
-    end: { x: x + w - 4, y: y + 14 },
-    thickness: 0.5, color: STAMP_COLOR,
-  });
+  currentY -= 12;
 
-  // 5. Área da Assinatura (Centro)
+  // 3. Metadados
+  let dateStr = signedAt ? new Date(signedAt).toLocaleDateString('pt-PT') : '—';
+  let timeStr = signedAt ? new Date(signedAt).toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'}) : '—';
+  const empStr = companyName || 'Empresa';
+  let roleStr = responsibleRole ? `(${responsibleRole})` : '';
+
+  const labelW = 22; // Margem para os dados
+  
+  page.drawText('Entidade:', { x: x + 5, y: currentY, size: 5, font: helv, color: SLATE_400 });
+  // Truncar entidade
+  let truncEmp = empStr;
+  let eW = helvBold.widthOfTextAtSize(truncEmp, 5.5);
+  while (eW > leftW - labelW && truncEmp.length > 3) {
+    truncEmp = truncEmp.slice(0, -2) + '…';
+    eW = helvBold.widthOfTextAtSize(truncEmp, 5.5);
+  }
+  page.drawText(truncEmp, { x: x + 5 + labelW, y: currentY, size: 5.5, font: helvBold, color: NAVY });
+  
+  currentY -= 9;
+
+  page.drawText('Por:', { x: x + 5, y: currentY, size: 5, font: helv, color: SLATE_400 });
+  let truncResp = `${responsibleName || 'Responsável'} ${roleStr}`;
+  let rW = helvBold.widthOfTextAtSize(truncResp, 5.5);
+  while (rW > leftW - labelW && truncResp.length > 3) {
+    truncResp = truncResp.slice(0, -2) + '…';
+    rW = helvBold.widthOfTextAtSize(truncResp, 5.5);
+  }
+  page.drawText(truncResp, { x: x + 5 + labelW, y: currentY, size: 5.5, font: helvBold, color: NAVY });
+  
+  currentY -= 9;
+
+  page.drawText('Emissão:', { x: x + 5, y: currentY, size: 5, font: helv, color: SLATE_400 });
+  page.drawText(`${dateStr} às ${timeStr}`, { x: x + 5 + labelW, y: currentY, size: 5.5, font: helvBold, color: NAVY });
+
+  // 4. Assinatura a sobrepor-se ao certificado (Muito grande, "feita à mão")
   if (signatureImage) {
-    const sigW = w - 8;
-    const sigH = h - 30; // espaço disponível entre as linhas
+    const sigW = leftW + 10; 
+    const sigH = h - 8;
     const aspect = signatureImage.width / signatureImage.height;
     let drawW, drawH;
     if (aspect > sigW / sigH) {
@@ -642,13 +639,22 @@ function drawAdminStamp(page, {
       drawH = sigH;
       drawW = drawH * aspect;
     }
+    
+    // A assinatura não tem fundo para se poder sobrepor aos textos da forma o mais realista possível
     page.drawImage(signatureImage, {
-      x: x + (w - drawW) / 2,
-      y: y + 14 + (h - 28 - drawH) / 2,
+      x: x + 5 + (sigW - drawW) / 2,
+      y: y + 4 + (sigH - drawH) / 2,
       width: drawW,
       height: drawH,
     });
   }
+
+  // 5. Linha base remate dourada
+  page.drawLine({
+    start: { x: x + 5, y: y + 5 },
+    end: { x: sealX - r - 5, y: y + 5 },
+    thickness: 0.5, color: GOLD,
+  });
 }
 
 export function formatSerialLabel(serial, prefix = 'MGN') {
