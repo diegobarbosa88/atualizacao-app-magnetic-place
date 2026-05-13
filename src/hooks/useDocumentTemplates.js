@@ -358,6 +358,13 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
       if (!res.ok) throw new Error('Falha a obter PDF assinado: ' + res.status);
       const pdfBlob = await res.blob();
 
+      // Buscar logo da Magnetic Place
+      let companyLogoBytes = null;
+      try {
+        const logoRes = await fetch('/icon-512x512.png');
+        if (logoRes.ok) companyLogoBytes = await logoRes.arrayBuffer();
+      } catch (e) { console.warn('Falha a obter logo:', e); }
+
       // 3. Aplicar admin stamp
       const adminSignedAt = new Date().toISOString();
       const finalPdfBytes = await applyAdminStampToPage(pdfBlob, {
@@ -365,6 +372,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         responsibleName: companySignature.responsibleName || '',
         responsibleRole: companySignature.responsibleRole || '',
         signatureDataUrl: companySignature.signatureDataUrl,
+        companyLogoBytes,
         signedAt: adminSignedAt,
         xMm: tmpl?.stamp_admin_x ?? 20,
         yMm: tmpl?.stamp_admin_y ?? 30,

@@ -507,55 +507,73 @@ function drawWorkerStamp(page, {
  * @param {number} options.stampWidthMm - default 70
  * @param {number} options.stampHeightMm - default 25
  */
-export async function applyAdminStampToPage(pdfInput, {
-  companyName = '',
-  responsibleName = '',
-  responsibleRole = '',
-  signatureDataUrl = null,
-  signedAt = null,
-  xMm = 50,
-  yMm = 30,
-  page = 'last',
+export async function applyAdminStampToPage(pdfBlob, {
+  companyName, responsibleName, responsibleRole, signedAt, signatureDataUrl,
+  companyLogoBytes,
+  xMm = 20, yMm = 30, page = 'last',
   stampWidthMm = 70,
   stampHeightMm = 25,
 } = {}) {
-  const pdfBytes = await blobOrDataUrlToBytes(pdfInput);
-  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+  try {
+    const arrayBuffer = await (pdfBlob.arrayBuffer ? pdfBlob.arrayBuffer() : pdfBlob);
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
 
-  const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
 
-  let signatureImage = null;
-  if (signatureDataUrl) {
-    const sigBytes = await blobOrDataUrlToBytes(signatureDataUrl);
-    signatureImage = await tryEmbedImage(pdfDoc, sigBytes);
+    let sigImage = null;
+    if (signatureDataUrl) {
+      try {
+        const base64Data = signatureDataUrl.split(',')[1];
+        if (base64Data) {
+          const uint8Array = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+          sigImage = await pdfDoc.embedPng(uint8Array);
+        }
+      } catch (err) {
+        console.warn('Falha ao embeber assinatura admin:', err);
+      }
+    }
+
+    let logoImage = null;
+    if (companyLogoBytes) {
+      try {
+        logoImage = await pdfDoc.embedPng(companyLogoBytes);
+      } catch (e) {
+        console.warn('Falha ao embeber logo admin:', e);
+      }
+    }
+
+    const x = xMm * MM_TO_PT;
+    const y = yMm * MM_TO_PT;
+    const w = stampWidthMm * MM_TO_PT;
+    const h = stampHeightMm * MM_TO_PT;
+
+    const pages = pdfDoc.getPages();
+    let targetPages = [];
+    if (page === 'first') targetPages = [pages[0]];
+    else if (page === 'last') targetPages = [pages[pages.length - 1]];
+    else if (page === 'all') targetPages = pages;
+
+    for (const targetPage of targetPages) {
+      drawAdminStamp(targetPage, {
+        x, y, w, h,
+        companyName, responsibleName, responsibleRole, signedAt, signatureImage: sigImage,
+        companyLogoImage: logoImage,
+        helv, helvBold,
+      });
+    }
+
+    return await pdfDoc.save();
+  } catch (err) {
+    console.error('Erro ao aplicar carimbo administrativo:', err);
+    throw err;
   }
-
-  const x = xMm * MM_TO_PT;
-  const y = yMm * MM_TO_PT;
-  const w = stampWidthMm * MM_TO_PT;
-  const h = stampHeightMm * MM_TO_PT;
-
-  const pages = pdfDoc.getPages();
-  let targetPages = [];
-  if (page === 'first') targetPages = [pages[0]];
-  else if (page === 'last') targetPages = [pages[pages.length - 1]];
-  else if (page === 'all') targetPages = pages;
-
-  for (const targetPage of targetPages) {
-    drawAdminStamp(targetPage, {
-      x, y, w, h,
-      companyName, responsibleName, responsibleRole, signedAt, signatureImage,
-      helv, helvBold,
-    });
-  }
-
-  return await pdfDoc.save();
 }
 
 function drawAdminStamp(page, {
   x, y, w, h,
   companyName, responsibleName, responsibleRole, signedAt, signatureImage,
+  companyLogoImage,
   helv, helvBold,
 }) {
   const GOLD = rgb(0.85, 0.65, 0.13);
@@ -570,17 +588,29 @@ function drawAdminStamp(page, {
   page.drawCircle({ x: sealX, y: sealY, size: r, color: rgb(0.99, 0.98, 0.96), borderColor: GOLD, borderWidth: 1.5 });
   page.drawCircle({ x: sealX, y: sealY, size: r - 2.5, color: undefined, borderColor: GOLD, borderWidth: 0.5 });
   
-  // Detalhe de Estrelas no topo/base do selo
-  page.drawText('*', { x: sealX - 2.5, y: sealY + r - 9, size: 6, font: helvBold, color: GOLD });
-  page.drawText('*', { x: sealX - 2.5, y: sealY - r + 4, size: 6, font: helvBold, color: GOLD });
+  if (companyLogoImage) {
+    // Desenha o logotipo no centro do selo
+    const lgW = r * 1.3;
+    const lgH = (companyLogoImage.height / companyLogoImage.width) * lgW;
+    page.drawImage(companyLogoImage, {
+      x: sealX - lgW / 2,
+      y: sealY - lgH / 2,
+      width: lgW,
+      height: lgH,
+    });
+  } else {
+    // Detalhe de Estrelas no topo/base do selo
+    page.drawText('*', { x: sealX - 2.5, y: sealY + r - 9, size: 6, font: helvBold, color: GOLD });
+    page.drawText('*', { x: sealX - 2.5, y: sealY - r + 4, size: 6, font: helvBold, color: GOLD });
 
-  // Texto no meio do selo
-  const sealT1 = 'SELO';
-  const sealT2 = 'OFICIAL';
-  const sw1 = helvBold.widthOfTextAtSize(sealT1, 6);
-  const sw2 = helvBold.widthOfTextAtSize(sealT2, 6);
-  page.drawText(sealT1, { x: sealX - sw1/2, y: sealY + 2, size: 6, font: helvBold, color: NAVY });
-  page.drawText(sealT2, { x: sealX - sw2/2, y: sealY - 6, size: 6, font: helvBold, color: NAVY });
+    // Texto no meio do selo
+    const sealT1 = 'SELO';
+    const sealT2 = 'OFICIAL';
+    const sw1 = helvBold.widthOfTextAtSize(sealT1, 6);
+    const sw2 = helvBold.widthOfTextAtSize(sealT2, 6);
+    page.drawText(sealT1, { x: sealX - sw1/2, y: sealY + 2, size: 6, font: helvBold, color: NAVY });
+    page.drawText(sealT2, { x: sealX - sw2/2, y: sealY - 6, size: 6, font: helvBold, color: NAVY });
+  }
 
   // 2. Título do Certificado
   const leftW = w - (r * 2) - 15;
