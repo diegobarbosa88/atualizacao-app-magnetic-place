@@ -13,6 +13,7 @@ import {
 import { convertDocxToPdf } from '../../utils/pdfCoService';
 import { formatSerialLabel, applyQrToAllPages, applyStampToPage } from '../../utils/pdfSigningService';
 import { generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
+import { DOC_STATUS } from '../../constants/documentStatus';
 
 export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
   const { supabase, systemSettings } = useApp();
@@ -221,7 +222,7 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
       const { error: dbErr } = await supabase
         .from('worker_documents')
         .update({
-          status: 'signed',
+          status: DOC_STATUS.AWAITING_ADMIN,
           signed_at: signedAt,
           signed_ip: workerIp,
           signed_pdf_url: publicUrl,

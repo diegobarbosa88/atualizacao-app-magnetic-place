@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
-import { isSigned } from '../../constants/documentStatus';
+import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
 import {
   KNOWN_FIELD_NAMES,
   isKnownField,
@@ -20,7 +20,7 @@ import { PDFDocument } from 'pdf-lib';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 
 export default function DocumentTemplatesAdmin({ workers = [] }) {
-  const { supabase, systemSettings } = useApp();
+  const { supabase, systemSettings, companySignature } = useApp();
   const {
     templates,
     generatedDocs,
@@ -33,7 +33,9 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     handleGenerateDocuments,
     handleDownloadGenerated,
     handleDeleteDoc,
+    handleApproveDocument,
   } = useDocumentTemplates(supabase);
+  const [approvingId, setApprovingId] = useState(null);
 
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null); // null = criar novo, objeto = editar
@@ -111,7 +113,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const filteredDocs = useMemo(() => {
     return generatedDocs.filter(doc => {
       if (docFilter === 'signed' && !isSigned(doc.status)) return false;
-      if (docFilter === 'pending' && isSigned(doc.status)) return false;
+      if (docFilter === 'pending' && (isSigned(doc.status) || isAwaitingAdmin(doc.status))) return false;
+      if (docFilter === 'awaiting_admin' && !isAwaitingAdmin(doc.status)) return false;
       if (docSearch) {
         const q = docSearch.toLowerCase();
         const w = workerById[doc.worker_id];
@@ -122,6 +125,26 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
       return true;
     });
   }, [generatedDocs, docFilter, docSearch, workerById]);
+
+  const onApproveDoc = async (doc) => {
+    if (!handleApproveDocument) return;
+    if (!companySignature?.signatureDataUrl) {
+      alert('Configura primeiro a assinatura da empresa em Definições.');
+      return;
+    }
+    setApprovingId(doc.id);
+    try {
+      await handleApproveDocument(doc, {
+        companyName: systemSettings?.companyName,
+        companySignature,
+      });
+    } catch (err) {
+      console.error('Erro a aprovar documento:', err);
+      alert('Erro: ' + (err.message || err));
+    } finally {
+      setApprovingId(null);
+    }
+  };
 
   const openGenerateModal = (template) => {
     setSelectedTemplate(template);
@@ -256,8 +279,9 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
               className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
             >
               <option value="all">Todos</option>
-              <option value="pending">Pendentes</option>
-              <option value="signed">Assinados</option>
+              <option value="pending">Pendentes (trabalhador)</option>
+              <option value="awaiting_admin">Aguardam aprovação</option>
+              <option value="signed">Assinados (finalizados)</option>
             </select>
           </div>
         </div>
@@ -272,19 +296,32 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
             {filteredDocs.map(doc => {
               const worker = workerById[doc.worker_id];
               const signed = isSigned(doc.status);
+              const awaitingAdmin = isAwaitingAdmin(doc.status);
+              const isApproving = approvingId === doc.id;
               return (
                 <li key={doc.id} className="p-4 flex items-center gap-4 hover:bg-slate-50">
                   {signed ? (
                     <CheckCircle className="w-8 h-8 text-emerald-500 flex-shrink-0" />
+                  ) : awaitingAdmin ? (
+                    <FileSignature className="w-8 h-8 text-indigo-500 flex-shrink-0" />
                   ) : (
                     <Clock className="w-8 h-8 text-amber-500 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 truncate">{doc.title}</h4>
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <h4 className="font-bold text-slate-800 truncate">{doc.title}</h4>
+                      {awaitingAdmin && (
+                        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
+                          Aguarda aprovação
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-500 truncate">
                       {worker?.name || 'Trabalhador desconhecido'} ·{' '}
                       {signed
-                        ? `Assinado em ${doc.signed_at ? new Date(doc.signed_at).toLocaleString('pt-PT') : ''}`
+                        ? `Aprovado em ${doc.admin_signed_at ? new Date(doc.admin_signed_at).toLocaleString('pt-PT') : (doc.signed_at ? new Date(doc.signed_at).toLocaleString('pt-PT') : '')}`
+                        : awaitingAdmin
+                        ? `Trabalhador assinou em ${doc.signed_at ? new Date(doc.signed_at).toLocaleString('pt-PT') : ''}`
                         : `Pendente desde ${new Date(doc.created_at).toLocaleDateString('pt-PT')}`}
                     </p>
                   </div>
@@ -303,13 +340,24 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     >
                       <Download className="w-3 h-3" /> Word
                     </button>
+                    {awaitingAdmin && (
+                      <button
+                        onClick={() => onApproveDoc(doc)}
+                        disabled={isApproving || saving}
+                        className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50"
+                        title="Aplicar carimbo da empresa e finalizar"
+                      >
+                        {isApproving ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileSignature className="w-3 h-3" />}
+                        Aprovar e Assinar
+                      </button>
+                    )}
                     {doc.signed_pdf_url && (
                       <a
                         href={doc.signed_pdf_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100"
-                        title="Abrir PDF assinado"
+                        title="Abrir PDF"
                       >
                         <Download className="w-3 h-3" /> PDF
                       </a>
@@ -455,10 +503,15 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   
-  // Stamp position state
+  // Worker stamp position state
   const [stampX, setStampX] = useState(template?.stamp_x ?? 130);
   const [stampY, setStampY] = useState(template?.stamp_y ?? 30);
   const [stampPage, setStampPage] = useState(template?.stamp_page || 'last');
+
+  // Admin (company) stamp position state
+  const [stampAdminX, setStampAdminX] = useState(template?.stamp_admin_x ?? 20);
+  const [stampAdminY, setStampAdminY] = useState(template?.stamp_admin_y ?? 30);
+  const [stampAdminPage, setStampAdminPage] = useState(template?.stamp_admin_page || 'last');
   
   // PDF preview state
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
@@ -583,6 +636,9 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
         stamp_x: Number(stampX),
         stamp_y: Number(stampY),
         stamp_page: stampPage,
+        stamp_admin_x: Number(stampAdminX),
+        stamp_admin_y: Number(stampAdminY),
+        stamp_admin_page: stampAdminPage,
       });
     } catch (err) {
       console.error('Erro ao guardar:', err);
@@ -644,11 +700,13 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
             </div>
           )}
 
-          {/* Posição do Carimbo */}
+          {/* Posição do Carimbo do Trabalhador */}
           <div className="border-t border-slate-200 pt-4">
-            <h4 className="text-sm font-bold text-slate-700 mb-3">Posição do Carimbo</h4>
-            
-            {/* Presets */}
+            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-purple-500" />
+              Carimbo do Trabalhador
+            </h4>
+
             <div className="mb-3">
               <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Posições Predefinidas</label>
               <div className="flex flex-wrap gap-2">
@@ -669,7 +727,6 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
               </div>
             </div>
 
-            {/* Coordenadas manuais */}
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">X (mm)</label>
@@ -699,6 +756,71 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
                   value={stampPage}
                   onChange={e => setStampPage(e.target.value)}
                   className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500 text-sm"
+                >
+                  <option value="last">Última</option>
+                  <option value="first">Primeira</option>
+                  <option value="all">Todas</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Posição do Carimbo da Empresa (Responsável Magnetic Place) */}
+          <div className="border-t border-slate-200 pt-4">
+            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              Carimbo da Empresa (Responsável)
+            </h4>
+
+            <div className="mb-3">
+              <label className="text-xs font-bold text-slate-500 uppercase mb-2 block">Posições Predefinidas</label>
+              <div className="flex flex-wrap gap-2">
+                {presets.map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    onClick={() => { setStampAdminX(p.x); setStampAdminY(p.y); }}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-colors ${
+                      stampAdminX === p.x && stampAdminY === p.y
+                        ? 'text-indigo-700 bg-indigo-100 border-indigo-300'
+                        : 'text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">X (mm)</label>
+                <input
+                  type="number"
+                  value={stampAdminX}
+                  onChange={e => setStampAdminX(e.target.value)}
+                  min={0}
+                  max={210}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Y (mm)</label>
+                <input
+                  type="number"
+                  value={stampAdminY}
+                  onChange={e => setStampAdminY(e.target.value)}
+                  min={0}
+                  max={297}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">Página</label>
+                <select
+                  value={stampAdminPage}
+                  onChange={e => setStampAdminPage(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 text-sm"
                 >
                   <option value="last">Última</option>
                   <option value="first">Primeira</option>
@@ -744,7 +866,7 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
                     className="absolute inset-0 w-full h-full rounded-lg border border-slate-300 bg-white"
                     title="Preview última página"
                   />
-                  {/* Overlay do carimbo: 70x25mm em A4 (210x297mm) */}
+                  {/* Overlay do carimbo do trabalhador: 70x25mm em A4 */}
                   <div
                     className="absolute bg-purple-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-purple-700"
                     style={{
@@ -754,7 +876,19 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
                       bottom: `${(stampY / 297) * 100}%`,
                     }}
                   >
-                    CARIMBO
+                    TRABALHADOR
+                  </div>
+                  {/* Overlay do carimbo da empresa: 70x25mm em A4 */}
+                  <div
+                    className="absolute bg-indigo-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-indigo-700"
+                    style={{
+                      width: `${(70 / 210) * 100}%`,
+                      height: `${(25 / 297) * 100}%`,
+                      left: `${(stampAdminX / 210) * 100}%`,
+                      bottom: `${(stampAdminY / 297) * 100}%`,
+                    }}
+                  >
+                    EMPRESA
                   </div>
                 </>
               ) : (
@@ -768,8 +902,16 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
             </div>
           </div>
 
-          <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
-            <strong>Nota:</strong> O carimbo (70×25mm) é desenhado a partir do canto inferior-esquerdo (X, Y em mm). O QR é colocado automaticamente em todas as páginas — não precisa de posicionamento.
+          <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
+            <p>
+              <span className="inline-block w-2 h-2 rounded-full bg-purple-500 mr-1" />
+              <strong>Trabalhador</strong> — aplicado quando o trabalhador assina.
+            </p>
+            <p>
+              <span className="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1" />
+              <strong>Empresa</strong> — aplicado depois pelo responsável da Magnetic Place ao aprovar.
+            </p>
+            <p className="text-slate-400 pt-1">Ambos os carimbos têm 70×25mm, posicionados a partir do canto inferior-esquerdo. O QR é colocado automaticamente em todas as páginas.</p>
           </div>
         </div>
       </div>

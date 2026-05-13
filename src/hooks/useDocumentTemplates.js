@@ -8,8 +8,11 @@ import {
   renderDocx,
   buildRenderData,
   triggerDocxDownload,
+  TEMPLATES_BUCKET,
 } from '../utils/docxTemplateService';
 import { sendWorkerDocumentEmail } from '../utils/emailUtils';
+import { applyAdminStampToPage } from '../utils/pdfSigningService';
+import { DOC_STATUS } from '../constants/documentStatus';
 
 export function useDocumentTemplates(supabase, { onError } = {}) {
   const [templates, setTemplates] = useState([]);
@@ -84,7 +87,11 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     return () => { cancelled = true; };
   }, [supabase]);
 
-  const handleUploadTemplate = useCallback(async ({ name, description, file, stamp_x, stamp_y, stamp_page }) => {
+  const handleUploadTemplate = useCallback(async ({
+    name, description, file,
+    stamp_x, stamp_y, stamp_page,
+    stamp_admin_x, stamp_admin_y, stamp_admin_page,
+  }) => {
     if (!supabase) throw new Error('Supabase não configurado');
     if (!name?.trim()) throw new Error('Nome é obrigatório');
     if (!file) throw new Error('Selecione um ficheiro .docx');
@@ -111,6 +118,9 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
           stamp_x: stamp_x ?? 130,
           stamp_y: stamp_y ?? 30,
           stamp_page: stamp_page || 'last',
+          stamp_admin_x: stamp_admin_x ?? 20,
+          stamp_admin_y: stamp_admin_y ?? 30,
+          stamp_admin_page: stamp_admin_page || 'last',
           created_at: now,
           updated_at: now,
         }])
@@ -130,7 +140,12 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     }
   }, [supabase, loadTemplates]);
 
-  const handleUpdateTemplate = useCallback(async ({ id, name, description, file, stamp_x, stamp_y, stamp_page, oldDocxPath }) => {
+  const handleUpdateTemplate = useCallback(async ({
+    id, name, description, file,
+    stamp_x, stamp_y, stamp_page,
+    stamp_admin_x, stamp_admin_y, stamp_admin_page,
+    oldDocxPath,
+  }) => {
     if (!supabase) throw new Error('Supabase não configurado');
     if (!id) throw new Error('ID do template é obrigatório');
     if (!name?.trim()) throw new Error('Nome é obrigatório');
@@ -144,6 +159,9 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         stamp_x: stamp_x ?? 130,
         stamp_y: stamp_y ?? 30,
         stamp_page: stamp_page || 'last',
+        stamp_admin_x: stamp_admin_x ?? 20,
+        stamp_admin_y: stamp_admin_y ?? 30,
+        stamp_admin_page: stamp_admin_page || 'last',
         updated_at: new Date().toISOString(),
       };
 
@@ -310,6 +328,77 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     triggerDocxDownload(blob, `${safeTitle}_${safeWorker}.docx`);
   }, [supabase]);
 
+  /**
+   * Admin/responsável aprova um documento `awaiting_admin`:
+   * 1. Faz download do PDF que o trabalhador assinou
+   * 2. Aplica o carimbo da empresa na posição configurada no template
+   * 3. Upload do PDF final
+   * 4. Atualiza worker_documents: status='signed', admin_signed_at=now
+   */
+  const handleApproveDocument = useCallback(async (doc, { companyName, companySignature } = {}) => {
+    if (!supabase) throw new Error('Supabase não configurado');
+    if (!doc?.id) throw new Error('Documento inválido');
+    if (!doc.signed_pdf_url) throw new Error('Documento ainda não foi assinado pelo trabalhador');
+    if (!companySignature?.signatureDataUrl) {
+      throw new Error('Configura primeiro a assinatura da empresa nas Definições.');
+    }
+
+    setSaving(true);
+    try {
+      // 1. Buscar template para obter posição do admin stamp
+      const { data: tmpl, error: tErr } = await supabase
+        .from('document_templates')
+        .select('stamp_admin_x, stamp_admin_y, stamp_admin_page')
+        .eq('id', doc.template_id)
+        .single();
+      if (tErr) throw tErr;
+
+      // 2. Download do PDF assinado pelo trabalhador
+      const res = await fetch(doc.signed_pdf_url);
+      if (!res.ok) throw new Error('Falha a obter PDF assinado: ' + res.status);
+      const pdfBlob = await res.blob();
+
+      // 3. Aplicar admin stamp
+      const adminSignedAt = new Date().toISOString();
+      const finalPdfBytes = await applyAdminStampToPage(pdfBlob, {
+        companyName: companyName || '',
+        responsibleName: companySignature.responsibleName || '',
+        responsibleRole: companySignature.responsibleRole || '',
+        signatureDataUrl: companySignature.signatureDataUrl,
+        signedAt: adminSignedAt,
+        xMm: tmpl?.stamp_admin_x ?? 20,
+        yMm: tmpl?.stamp_admin_y ?? 30,
+        page: tmpl?.stamp_admin_page || 'last',
+      });
+      const finalBlob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+
+      // 4. Upload (sobrescreve o anterior)
+      const finalPath = `signed/${doc.id}_admin_${Date.now()}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from(TEMPLATES_BUCKET)
+        .upload(finalPath, finalBlob, { contentType: 'application/pdf', upsert: true });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from(TEMPLATES_BUCKET).getPublicUrl(finalPath);
+      const publicUrl = pub?.publicUrl || finalPath;
+
+      // 5. Atualiza o registo
+      const { error: dbErr } = await supabase
+        .from('worker_documents')
+        .update({
+          status: DOC_STATUS.SIGNED,
+          admin_signed_at: adminSignedAt,
+          signed_pdf_url: publicUrl,
+        })
+        .eq('id', doc.id);
+      if (dbErr) throw dbErr;
+
+      await loadGeneratedDocs();
+      return { signedPdfUrl: publicUrl, adminSignedAt };
+    } finally {
+      setSaving(false);
+    }
+  }, [supabase, loadGeneratedDocs]);
+
   const handleDeleteDoc = useCallback(async (id) => {
     if (!window.confirm('Apagar este documento gerado?')) return;
     if (!supabase) return;
@@ -336,5 +425,6 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     handleGenerateDocuments,
     handleDownloadGenerated,
     handleDeleteDoc,
+    handleApproveDocument,
   };
 }

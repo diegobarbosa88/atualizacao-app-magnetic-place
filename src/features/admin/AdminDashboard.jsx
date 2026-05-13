@@ -7,7 +7,7 @@ import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History,
   Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle,
   X, ChevronLeft, ChevronRight, LogOut, Zap, Plus, Trash2, Unlock,
-  Building2, Palette, Lock, Settings
+  Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2
 } from 'lucide-react';
 import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
@@ -60,7 +60,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings, supabase } = useApp();
+  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
 
   const notificacoesDeCorrecao = correctionNotifications;
 
@@ -786,6 +786,12 @@ function AdminDashboard(props) {
                   </div>
                 </div>
 
+                {/* Assinatura da Empresa (Responsável) */}
+                <CompanySignatureSettings
+                  companySignature={companySignature}
+                  saveCompanySignature={saveCompanySignature}
+                />
+
                 {/* Personalização Visual */}
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
@@ -839,6 +845,130 @@ function AdminDashboard(props) {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [sigDataUrl, setSigDataUrl] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  // Hidratar quando os dados chegam do servidor
+  useEffect(() => {
+    setName(companySignature?.responsibleName || '');
+    setRole(companySignature?.responsibleRole || '');
+    setSigDataUrl(companySignature?.signatureDataUrl || '');
+  }, [companySignature?.responsibleName, companySignature?.responsibleRole, companySignature?.signatureDataUrl]);
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    setError('');
+    setMessage('');
+    if (!file) return;
+    if (!/^image\/(png|jpe?g)$/i.test(file.type)) {
+      setError('Use uma imagem PNG ou JPEG.');
+      return;
+    }
+    if (file.size > 800_000) {
+      setError('Imagem demasiado grande (máx. 800 KB). Reduz a resolução.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setSigDataUrl(String(reader.result));
+    reader.onerror = () => setError('Falha a ler a imagem.');
+    reader.readAsDataURL(file);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    setMessage('');
+    try {
+      await saveCompanySignature({
+        responsibleName: name.trim(),
+        responsibleRole: role.trim(),
+        signatureDataUrl: sigDataUrl,
+      });
+      setMessage('Assinatura da empresa guardada com sucesso.');
+    } catch (err) {
+      setError('Erro ao guardar: ' + (err.message || err));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileSignature size={20} /></div>
+        <h3 className="font-black text-lg text-slate-800">Assinatura da Empresa</h3>
+      </div>
+      <p className="text-xs text-slate-500 mb-6">
+        Carimbo aplicado pelo responsável da Magnetic Place quando aprova um documento assinado pelo trabalhador.
+      </p>
+
+      <div className="space-y-4">
+        <div>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Nome do Responsável</p>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: João Silva"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+          />
+        </div>
+        <div>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Cargo</p>
+          <input
+            type="text"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            placeholder="Ex: Diretor, Gestor de RH"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+          />
+        </div>
+        <div>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Imagem da Assinatura</p>
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <label className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl cursor-pointer w-fit">
+                <Upload size={16} />
+                {sigDataUrl ? 'Substituir' : 'Carregar imagem'}
+                <input type="file" accept="image/png,image/jpeg" onChange={handleFile} className="hidden" />
+              </label>
+              <p className="text-[11px] text-slate-400 mt-2">PNG ou JPEG, fundo transparente preferível, máx. 800 KB.</p>
+            </div>
+            <div className="w-40 h-20 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden">
+              {sigDataUrl ? (
+                <img src={sigDataUrl} alt="Assinatura" className="max-w-full max-h-full object-contain" />
+              ) : (
+                <span className="text-[10px] text-slate-400 font-bold uppercase">Sem assinatura</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {error && (
+          <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2 font-bold">{error}</div>
+        )}
+        {message && (
+          <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2 font-bold">{message}</div>
+        )}
+
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+          Guardar
+        </button>
+      </div>
     </div>
   );
 }

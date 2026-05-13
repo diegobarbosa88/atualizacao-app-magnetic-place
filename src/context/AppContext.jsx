@@ -70,6 +70,13 @@ export const AppProvider = ({ children }) => {
   const [appNotifications, setAppNotifications] = useState([]);
   const [isDbReady, setIsDbReady] = useState(false);
 
+  // Company-wide settings persisted on Supabase (admin/responsible signature)
+  const [companySignature, setCompanySignatureState] = useState({
+    responsibleName: '',
+    responsibleRole: '',
+    signatureDataUrl: '',
+  });
+
   // --- SUPABASE INITIALIZATION ---
   useEffect(() => {
     const initSupabase = async () => {
@@ -141,6 +148,24 @@ export const AppProvider = ({ children }) => {
         fetchTable('documents', setDocuments),
         fetchTable('app_notifications', setAppNotifications),
         fetchTable('correcoes', setCorrecoesCorrections),
+        (async () => {
+          const { data, error } = await supabaseInstance
+            .from('system_settings')
+            .select('responsible_name, responsible_role, company_signature_data_url')
+            .eq('id', 1)
+            .maybeSingle();
+          if (error) {
+            console.error('Erro ao carregar system_settings:', error);
+            return;
+          }
+          if (data) {
+            setCompanySignatureState({
+              responsibleName: data.responsible_name || '',
+              responsibleRole: data.responsible_role || '',
+              signatureDataUrl: data.company_signature_data_url || '',
+            });
+          }
+        })(),
       ]);
     };
 
@@ -391,8 +416,29 @@ export const AppProvider = ({ children }) => {
 
   const currentMonthStr = toISODateLocal(currentMonth).substring(0, 7);
 
+  const saveCompanySignature = async ({ responsibleName, responsibleRole, signatureDataUrl }) => {
+    if (!supabaseInstance) throw new Error('Supabase ainda não está disponível.');
+    const payload = {
+      id: 1,
+      responsible_name: responsibleName ?? '',
+      responsible_role: responsibleRole ?? '',
+      company_signature_data_url: signatureDataUrl ?? '',
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabaseInstance
+      .from('system_settings')
+      .upsert(payload, { onConflict: 'id' });
+    if (error) throw error;
+    setCompanySignatureState({
+      responsibleName: payload.responsible_name,
+      responsibleRole: payload.responsible_role,
+      signatureDataUrl: payload.company_signature_data_url,
+    });
+  };
+
   const value = {
     systemSettings, setSystemSettings,
+    companySignature, saveCompanySignature,
     view, setView,
     currentUser, setCurrentUser,
     currentMonth, setCurrentMonth,
