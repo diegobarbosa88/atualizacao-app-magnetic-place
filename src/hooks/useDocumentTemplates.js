@@ -3,6 +3,51 @@ import { replaceTemplateFields, TEMPLATE_FIELDS } from '../utils/templateFields'
 
 export const DEFAULT_TEMPLATE = '';
 
+export function blocksToHtml(blocks, worker, systemSettings = {}) {
+  if (!blocks || !Array.isArray(blocks) || blocks.length === 0) {
+    return '';
+  }
+
+  const sortedBlocks = [...blocks].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  let html = '<div class="document-container">\n';
+
+  sortedBlocks.forEach(block => {
+    switch (block.type) {
+      case 'title':
+        html += `  <h1 class="font-black text-2xl text-slate-800 mb-4">${escapeHtml(block.content || '')}</h1>\n`;
+        break;
+      case 'subtitle':
+        html += `  <h2 class="font-bold text-base text-slate-600 mb-3">${escapeHtml(block.content || '')}</h2>\n`;
+        break;
+      case 'paragraph': {
+        let content = block.content || '';
+        if (worker && Object.keys(worker).length > 0) {
+          content = replaceTemplateFields(content, worker, systemSettings);
+        }
+        html += `  <p class="text-slate-700 mb-4 leading-relaxed">${escapeHtml(content)}</p>\n`;
+        break;
+      }
+      case 'signature':
+        html += `  <div class="mt-8 pt-6 border-t border-slate-200 page-break-inside-avoid">
+    <div class="w-full h-24 bg-amber-50 border-2 border-dashed border-amber-200 rounded-2xl flex items-center justify-center">
+      <span class="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Assinatura</span>
+    </div>
+  </div>\n`;
+        break;
+    }
+  });
+
+  html += '</div>\n';
+  return html;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
 const DEFAULT_PLACEHOLDERS = [
   { id: 'qrcode', elementId: 'worker-qrcode-placeholder', text: 'QR CODE', x: 0, y: 0, fontSize: 8, fontWeight: 'bold' },
   { id: 'carimbo', elementId: 'worker-signature-placeholder', text: 'ASSINATURA', x: 0, y: 0, fontSize: 9, fontWeight: 'bold' }
@@ -193,15 +238,15 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     return () => { cancelled = true; };
   }, [supabase]);
 
-  const handleSave = useCallback(async (previewData, editingId) => {
+  const handleSave = useCallback(async (previewData, editingId, blocks = []) => {
     if (!previewData.name.trim()) throw new Error("Nome é obrigatório");
     if (!supabase) throw new Error("Supabase não configurado");
     setSaving(true);
     try {
       const payload = {
         name: previewData.name,
-        description: previewData.description,
-        html_content: previewData.html_content,
+        description: previewData.description || '',
+        blocks: JSON.stringify(blocks),
         updated_at: new Date().toISOString()
       };
       if (editingId) {
@@ -237,22 +282,23 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     }
   }, [supabase, loadTemplates]);
 
-  const handleGenerateDocuments = useCallback(async (selectedTemplate, selectedWorkers, workers, systemSettings, positions = {}) => {
+  const handleGenerateDocuments = useCallback(async (selectedTemplate, selectedWorkers, workers, systemSettings) => {
     if (!selectedTemplate || selectedWorkers.length === 0) throw new Error("Template ou trabalhadores não selecionados");
     if (!supabase) throw new Error("Supabase não configurado");
     setSaving(true);
     try {
+      const templateBlocks = typeof selectedTemplate.blocks === 'string'
+        ? JSON.parse(selectedTemplate.blocks)
+        : (selectedTemplate.blocks || []);
+
+      if (templateBlocks.length === 0) {
+        throw new Error("Template não tem blocos definidos");
+      }
+
       const promises = selectedWorkers.map(async (workerId) => {
         const worker = workers.find(w => w.id === workerId);
         if (!worker) return;
-        let generatedHtml = replaceTemplateFields(selectedTemplate.html_content, worker, systemSettings);
-        generatedHtml = replacePlaceholdersWithComponents(generatedHtml, worker, positions);
-        if (!generatedHtml.includes('id="worker-signature-placeholder"')) {
-          generatedHtml = generatedHtml.replace(/<\/body>/i, SIGNATURE_PLACEHOLDER_HTML + '\n</body>');
-        }
-        if (!generatedHtml.includes('id="worker-qrcode-placeholder"')) {
-          generatedHtml = generatedHtml.replace(/<\/body>/i, QRCODE_PLACEHOLDER_HTML + '\n</body>');
-        }
+        const generatedHtml = blocksToHtml(templateBlocks, worker, systemSettings);
         const newDoc = {
           template_id: selectedTemplate.id,
           worker_id: workerId,
@@ -273,71 +319,167 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     }
   }, [supabase, loadGeneratedDocs]);
 
-  const handleGenerateAI = useCallback(async (aiPrompt) => {
+const handleGenerateAI = useCallback(async (aiPrompt) => {
     if (!aiPrompt.trim()) throw new Error("Descreva o que deseja gerar");
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key do Gemini não configurada");
     const sanitizedPrompt = aiPrompt.trim().slice(0, 500).replace(/["""]/g, '');
-    const prompt = `
-      Aja como um especialista em documentos legais e administrativos.
-      Gere um template de documento HTML para: "${sanitizedPrompt}".
-      
-      REGRAS CRÍTICAS:
-      1. Use apenas HTML puro e classes do Tailwind CSS v3.
-      2. Estrutura obrigatória: O conteúdo principal deve estar dentro de uma div com a classe "document-container".
-      3. Use estes placeholders exatos onde apropriado:
-         ${TEMPLATE_FIELDS.map(f => `${f.tag} (${f.label})`).join(', ')}
-      4. O design deve ser profissional, limpo e pronto para impressão (A4).
-      5. Retorne APENAS o código HTML completo, começando com <!DOCTYPE html> e terminando com </html>. Não inclua explicações ou markdown.
-      6. Garanta que o estilo no <head> seja compatível com visualização profissional.
-    `;
-    const configured = import.meta.env.VITE_GEMINI_MODEL;
-    const modelCandidates = [
-      configured,
-      'gemini-2.5-flash',
-      'gemini-2.0-flash-001',
-      'gemini-1.5-flash-latest',
-      'gemini-1.5-flash-002',
-      'gemini-1.5-flash-8b',
-      'gemini-1.5-pro-latest',
-      'gemini-pro',
-    ].filter(Boolean);
-    let response;
-    let lastErrorMsg = '';
-    let usedModel = '';
-    for (const m of modelCandidates) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
-      response = await fetch(url, {
+
+    const SYSTEM_PROMPT = `Você é um especialista jurídico e de RH. Gere documentos profissionais em português.
+Seu trabalho é retornar EXCLUSIVAMENTE um array JSON válido com blocos documentais.
+Não retorne HTML, Markdown, ou qualquer outro formato além de JSON puro.
+Cada bloco DEVE ter: id (formato: "bloco_1", "bloco_2", etc.), type, e content.
+
+TIPOS DE BLOCOS PERMITIDOS:
+- "title": Título principal do documento (ex: "CONTRATO DE TRABALHO")
+- "subtitle": Subtítulo ou cláusula (ex: "CLÁUSULA 1.ª — OBJECTO")
+- "paragraph": Texto normal do documento (pode conter variáveis {{variavel}})
+- "signature": Bloco de assinaturas FINAL (content DEVE ser string vazia "")
+
+VARIÁVEIS PERMITIDAS:
+${TEMPLATE_FIELDS.map(f => `  - ${f.tag} (${f.label})`).join('\n')}
+
+REGRAS OBRIGATÓRIAS:
+1. Array JSON válido, sem texto adicional fora do array
+2. Blocos em sequência lógica (título → cláusulas → texto → assinatura)
+3. Documento completo e profissional para impressão A4
+4. Usar português formal
+5. Para "signature", content = ""
+6. IDs únicos: "bloco_1", "bloco_2", "bloco_3", etc.
+7. NUNCA retorne HTML ou markdown`;
+
+    const USER_PROMPT = `Gere um documento para: "${sanitizedPrompt}"
+
+Array JSON de blocos:`;
+
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+    const openaiModel = import.meta.env.VITE_OPENAI_MODEL;
+    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+    let blocks;
+
+    // OpenAI path
+    if (apiKey) {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: openaiModel || 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: USER_PROMPT }
+          ],
+          response_format: { type: 'json_object' },
+          temperature: 0.3
+        })
       });
-      if (response.ok) {
-        usedModel = m;
-        break;
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error?.message || `OpenAI API error: ${response.status}`);
       }
+
+      const data = await response.json();
+      const generatedText = data.choices?.[0]?.message?.content || '';
+
       try {
-        const errData = await response.clone().json();
-        lastErrorMsg = errData.error?.message || `HTTP ${response.status}`;
-        if (response.status !== 404) break;
+        const parsed = JSON.parse(generatedText);
+        blocks = parsed.blocks || parsed.document || parsed.content || [];
+        if (!Array.isArray(blocks)) {
+          if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+            const firstKey = Object.keys(parsed)[0];
+            const possibleArray = parsed[firstKey];
+            if (Array.isArray(possibleArray)) {
+              blocks = possibleArray;
+            } else {
+              throw new Error("JSON returned is not an array of blocks");
+            }
+          } else {
+            throw new Error("JSON returned is not an array of blocks");
+          }
+        }
       } catch {
-        lastErrorMsg = `HTTP ${response.status}`;
+        const cleaned = generatedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        try {
+          const parsed = JSON.parse(cleaned);
+          blocks = parsed.blocks || parsed.document || parsed.content || [];
+        } catch {
+          throw new Error("A IA não retornou JSON válido de blocos. Reformule o pedido.");
+        }
       }
     }
-    if (!response || !response.ok) {
-      throw new Error(lastErrorMsg || 'Nenhum modelo Gemini disponível para esta API key.');
+    // Gemini path
+    else if (geminiApiKey) {
+      const configured = import.meta.env.VITE_GEMINI_MODEL;
+      const modelCandidates = [
+        configured,
+        'gemini-2.5-flash',
+        'gemini-2.0-flash-001',
+        'gemini-1.5-flash-latest',
+        'gemini-1.5-flash-002',
+        'gemini-1.5-flash-8b',
+      ].filter(Boolean);
+
+      let response;
+      let lastErrorMsg = '';
+      for (const m of modelCandidates) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${geminiApiKey}`;
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${SYSTEM_PROMPT}\n\n${USER_PROMPT}` }] }],
+            generationConfig: { temperature: 0.3 }
+          })
+        });
+        if (response.ok) break;
+        try {
+          const errData = await response.clone().json();
+          lastErrorMsg = errData.error?.message || `HTTP ${response.status}`;
+          if (response.status !== 404) break;
+        } catch {
+          lastErrorMsg = `HTTP ${response.status}`;
+        }
+      }
+
+      if (!response?.ok) {
+        throw new Error(lastErrorMsg || 'Nenhum modelo disponível.');
+      }
+
+      const data = await response.json();
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
+        throw new Error(`A IA recusou gerar o conteúdo (${finishReason}).`);
+      }
+
+      let generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      generatedText = generatedText.replace(/^```json\n?/g, '').replace(/^```\n?/g, '').replace(/\n?```$/g, '').trim();
+
+      try {
+        blocks = JSON.parse(generatedText);
+      } catch {
+        throw new Error("A IA não retornou JSON válido.");
+      }
     }
-    const data = await response.json();
-    const finishReason = data.candidates?.[0]?.finishReason;
-    if (finishReason === 'SAFETY' || finishReason === 'RECITATION') {
-      throw new Error(`A IA recusou gerar o conteúdo (${finishReason}). Reformule o pedido.`);
+    else {
+      throw new Error("Nenhuma API Key configurada (OpenAI ou Gemini)");
     }
-    let generatedHtml = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    generatedHtml = generatedHtml.replace(/^```html\n?/, '').replace(/\n?```$/, '').trim();
-    if (!generatedHtml || (!generatedHtml.includes('<!DOCTYPE') && !generatedHtml.includes('<html'))) {
-      throw new Error("A IA não retornou HTML válido. Reformule o pedido.");
+
+    if (!Array.isArray(blocks) || blocks.length === 0) {
+      throw new Error("A IA não retornou blocos válidos.");
     }
-    return generatedHtml;
+
+    const validTypes = ['title', 'subtitle', 'paragraph', 'signature'];
+    blocks.forEach((block, index) => {
+      if (!block.id) block.id = `bloco_${index + 1}`;
+      if (!block.type || !validTypes.includes(block.type)) {
+        throw new Error(`Bloco ${index + 1} tem tipo inválido: ${block.type}`);
+      }
+      if (block.type === 'signature') block.content = '';
+    });
+
+    return blocks;
   }, []);
 
   const handleDownloadSigned = useCallback(async (doc) => {
@@ -390,6 +532,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     PLACEHOLDER_ELEMENTS,
     PLACEHOLDER_IDS,
     SIGNATURE_PLACEHOLDER_HTML,
-    QRCODE_PLACEHOLDER_HTML
+    QRCODE_PLACEHOLDER_HTML,
+    blocksToHtml
   };
 }

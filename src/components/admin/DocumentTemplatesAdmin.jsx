@@ -1,10 +1,18 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { isSigned } from '../../constants/documentStatus';
-import { FileText, Plus, Edit2, Trash2, X, Save, Eye, Code, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, CheckCircle, Clock, FileSignature, Sparkles, QrCode } from 'lucide-react';
-import { TEMPLATE_FIELDS } from '../../utils/templateFields';
-import { getPreviewHtml } from '../../utils/dragPreviewUtils';
+import { FileText, Plus, Edit2, Trash2, X, Save, Eye, ChevronDown, ChevronUp, Send, Users, Loader2, Download, Search, CheckCircle, Clock, FileSignature, Sparkles, FileDown } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useDocumentTemplates, DEFAULT_TEMPLATE, SIGNATURE_PLACEHOLDER_HTML, QRCODE_PLACEHOLDER_HTML, extractPositionsFromHtml } from '../../hooks/useDocumentTemplates';
+import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
+import { BlockEditor } from './BlockEditor';
+import { blocksToPdfMake } from '../../utils/pdfGenerator';
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+const _vfs = pdfFonts?.pdfMake?.vfs || pdfFonts?.vfs || pdfFonts;
+if (typeof pdfMake.addVirtualFileSystem === 'function') {
+  pdfMake.addVirtualFileSystem(_vfs);
+} else {
+  pdfMake.vfs = _vfs;
+}
 
 export default function DocumentTemplatesAdmin({ workers = [] }) {
   const { systemSettings, supabase } = useApp();
@@ -34,11 +42,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [editingId, setEditingId] = useState(null);
   const [previewData, setPreviewData] = useState({
     name: '',
-    description: '',
-    html_content: DEFAULT_TEMPLATE
+    description: ''
   });
-  const [showFieldList, setShowFieldList] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
+  const [blocks, setBlocks] = useState([]);
+  const [modalTab, setModalTab] = useState('edit');
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
   
   // Generation states
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -58,18 +67,76 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [previewPositions, setPreviewPositions] = useState({});
   const [previewZoom, setPreviewZoom] = useState(100);
   const iframeRef = useRef(null);
-  const editorRef = useRef(null);
 
   useEffect(() => {
-    if (!editingId) {
-      setPreviewPositions({});
+    if (modalTab !== 'preview' || blocks.length === 0) {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+        setPdfPreviewUrl(null);
+      }
+      setPdfLoading(false);
       return;
     }
-    const html = previewData.html_content;
-    if (!html) return;
-    const extracted = extractPositionsFromHtml(html);
-    setPreviewPositions(extracted);
-  }, [editingId, previewData.html_content]);
+
+    let cancelled = false;
+
+    const generatePreview = () => {
+      if (cancelled) return;
+
+      try {
+        setPdfLoading(true);
+        const docDef = blocksToPdfMake(blocks, {}, null);
+
+        if (!docDef || !docDef.content || docDef.content.length === 0) {
+          console.error('[PDF Preview] docDef inválido ou sem conteúdo:', docDef);
+          setPdfLoading(false);
+          return;
+        }
+
+        const pdfDoc = pdfMake.createPdf(docDef);
+
+        if (!pdfDoc) {
+          console.error('[PDF Preview] createPdf retornou null');
+          setPdfLoading(false);
+          return;
+        }
+
+        pdfDoc.getBlob()
+          .then((blob) => {
+            if (cancelled) return;
+
+            if (!blob) {
+              console.error('[PDF Preview] getBlob retornou blob null');
+              setPdfLoading(false);
+              return;
+            }
+
+            console.log('[PDF Preview] Blob gerado com sucesso, size:', blob.size);
+
+            if (pdfPreviewUrl) {
+              URL.revokeObjectURL(pdfPreviewUrl);
+            }
+            const url = URL.createObjectURL(blob);
+            setPdfPreviewUrl(url);
+            setPdfLoading(false);
+          })
+          .catch((error) => {
+            if (cancelled) return;
+            console.error('[PDF Preview] Erro no getBlob:', error);
+            setPdfLoading(false);
+          });
+      } catch (error) {
+        console.error('[PDF Preview] Erro ao gerar PDF:', error);
+        setPdfLoading(false);
+      }
+    };
+
+    generatePreview();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [modalTab, blocks]);
 
   useEffect(() => {
     let debounceTimer = null;
@@ -105,119 +172,12 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     }
   }, [previewPositions]);
 
-  const insertField = (tag) => {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    const start = editor.selectionStart;
-    const end = editor.selectionEnd;
-    const text = previewData.html_content;
-    const before = text.substring(0, start);
-    const after = text.substring(end);
-
-    setPreviewData({
-      ...previewData,
-      html_content: before + tag + after
-    });
-
-    setShowFieldList(false);
-  };
-
-  const insertSignaturePlaceholder = () => {
-    if (previewData.html_content.includes('worker-signature-placeholder')) return;
-    const signatureHtml = SIGNATURE_PLACEHOLDER_HTML;
-    const editor = editorRef.current;
-    if (editor) {
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
-      const text = previewData.html_content;
-      setPreviewData({
-        ...previewData,
-        html_content: text.substring(0, start) + '\n' + signatureHtml + text.substring(end)
-      });
-    } else {
-      setPreviewData(prev => ({
-        ...prev,
-        html_content: prev.html_content + '\n' + signatureHtml
-      }));
-    }
-    setPreviewPositions(prev => {
-      if (prev['worker-signature-placeholder']) return prev;
-      return { ...prev, 'worker-signature-placeholder': { left: '0px', top: '0px' } };
-    });
-  };
-
-  const removeSignaturePlaceholder = () => {
-    let html = previewData.html_content;
-    const regex = /<div[^>]*id="worker-signature-placeholder"[^>]*>[\s\S]*?<\/div>/gi;
-    html = html.replace(regex, '').trim();
-    setPreviewData(prev => ({ ...prev, html_content: html }));
-    setPreviewPositions(prev => {
-      const next = { ...prev };
-      delete next['worker-signature-placeholder'];
-      return next;
-    });
-  };
-
-  const toggleSignaturePlaceholder = () => {
-    if (previewData.html_content.includes('worker-signature-placeholder')) {
-      removeSignaturePlaceholder();
-    } else {
-      insertSignaturePlaceholder();
-    }
-  };
-
-  const insertQrcodePlaceholder = () => {
-    if (previewData.html_content.includes('worker-qrcode-placeholder')) return;
-    const qrcodeHtml = QRCODE_PLACEHOLDER_HTML;
-    const editor = editorRef.current;
-    if (editor) {
-      const start = editor.selectionStart;
-      const end = editor.selectionEnd;
-      const text = previewData.html_content;
-      setPreviewData({
-        ...previewData,
-        html_content: text.substring(0, start) + '\n' + qrcodeHtml + text.substring(end)
-      });
-    } else {
-      setPreviewData(prev => ({
-        ...prev,
-        html_content: prev.html_content + '\n' + qrcodeHtml
-      }));
-    }
-    setPreviewPositions(prev => {
-      if (prev['worker-qrcode-placeholder']) return prev;
-      return { ...prev, 'worker-qrcode-placeholder': { left: '0px', top: '0px' } };
-    });
-  };
-
-  const removeQrcodePlaceholder = () => {
-    let html = previewData.html_content;
-    const regex = /<div[^>]*id="worker-qrcode-placeholder"[^>]*>[\s\S]*?<\/div>/gi;
-    html = html.replace(regex, '').trim();
-    setPreviewData(prev => ({ ...prev, html_content: html }));
-    setPreviewPositions(prev => {
-      const next = { ...prev };
-      delete next['worker-qrcode-placeholder'];
-      return next;
-    });
-  };
-
-  const toggleQrcodePlaceholder = () => {
-    if (previewData.html_content.includes('worker-qrcode-placeholder')) {
-      removeQrcodePlaceholder();
-    } else {
-      insertQrcodePlaceholder();
-    }
-  };
-
   const generateAIWrapper = async () => {
     setIsGeneratingAI(true);
     try {
-      const generatedHtml = await handleGenerateAI(aiPrompt);
-      setPreviewData({ ...previewData, html_content: generatedHtml });
-      const newPositions = extractPositionsFromHtml(generatedHtml);
-      setPreviewPositions(newPositions);
+      const generatedBlocks = await handleGenerateAI(aiPrompt);
+      setBlocks(generatedBlocks);
+      setModalTab('edit');
       setShowAIPanel(false);
       setAiPrompt('');
     } catch (err) {
@@ -228,65 +188,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   };
 
   const saveWrapper = async () => {
-    let finalHtml = previewData.html_content;
-
-    const ids = Object.keys(previewPositions);
-    const livePositions = {};
-
-    if (iframeRef.current && iframeRef.current.contentDocument) {
-      ids.forEach(id => {
-        const el = iframeRef.current.contentDocument.getElementById(id);
-        if (el) {
-          livePositions[id] = {
-            left: el.style.left || '0px',
-            top: el.style.top || '0px'
-          };
-        }
-      });
-    }
-
-    const positionsToSave = ids.length > 0 && Object.keys(livePositions).length > 0 ? livePositions : previewPositions;
-
-    const replaceStyleValue = (styleStr, propName, newVal) => {
-      const propIdx = styleStr.indexOf(propName + ':');
-      if (propIdx === -1) {
-        return styleStr + propName + ':' + newVal + ';';
-      }
-      const valStart = propIdx + propName.length + 1;
-      let valEnd = styleStr.indexOf(';', valStart);
-      const pctIdx = styleStr.indexOf('%', valStart);
-      if (pctIdx !== -1 && (valEnd === -1 || pctIdx < valEnd)) {
-        valEnd = pctIdx + 1;
-      }
-      if (valEnd === -1 || valEnd <= valStart) {
-        valEnd = styleStr.length;
-      }
-      let result = styleStr.substring(0, valStart) + newVal + styleStr.substring(valEnd);
-      if (pctIdx !== -1 && (valEnd === -1 || pctIdx < valEnd)) {
-        result = result.replace('%', 'px');
-      }
-      return result;
-    };
-
-    ids.forEach(id => {
-      const pos = positionsToSave[id];
-      if (!pos) return;
-      const openTag = '<div id="' + id + '"';
-      let idx = finalHtml.indexOf(openTag);
-      while (idx !== -1) {
-        const styleStart = finalHtml.indexOf('style="', idx);
-        if (styleStart === -1 || styleStart > idx + 300) break;
-        const styleEndQuote = finalHtml.indexOf('"', styleStart + 7);
-        if (styleEndQuote === -1) break;
-        const styleVal = finalHtml.substring(styleStart + 7, styleEndQuote);
-        let updated = replaceStyleValue(styleVal, 'left', pos.left || '0px');
-        updated = replaceStyleValue(updated, 'top', pos.top || '0px');
-        finalHtml = finalHtml.substring(0, styleStart + 7) + updated + finalHtml.substring(styleEndQuote + 1);
-        idx = finalHtml.indexOf(openTag, idx + 1);
-      }
-    });
     try {
-      await handleSave({ ...previewData, html_content: finalHtml }, editingId);
+      await handleSave(previewData, editingId, blocks);
       setShowModal(false);
     } catch (err) {
       alert("Erro ao gravar: " + err.message);
@@ -297,7 +200,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     if (!selectedTemplate || selectedWorkers.length === 0) return;
     setGenerating(true);
     try {
-      const result = await handleGenerateDocuments(selectedTemplate, selectedWorkers, workers, systemSettings, previewPositions);
+      const result = await handleGenerateDocuments(selectedTemplate, selectedWorkers, workers, systemSettings);
       setShowGenerateModal(false);
       if (result.failed > 0) {
         alert(`${result.total - result.failed} documentos gerados. ${result.failed} falharam.`);
@@ -309,17 +212,6 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     } finally {
       setGenerating(false);
     }
-  };
-
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(previewData.html_content)
-      .then(() => alert('Código HTML copiado!'))
-      .catch(() => alert('Não foi possível copiar. Selecione o código manualmente.'));
-  };
-
-  const previewHtml = () => {
-    const mockWorker = workers[0] || { name: 'Nome Exemplo', role: 'Função Exemplo' };
-    return getPreviewHtml(previewData.html_content, mockWorker, systemSettings);
   };
 
   const docsWithWorkers = useMemo(
@@ -377,7 +269,8 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
           <button 
             onClick={() => {
               setEditingId(null);
-              setPreviewData({ name: '', description: '', html_content: DEFAULT_TEMPLATE });
+              setPreviewData({ name: '', description: '' });
+              setBlocks([]);
               setShowModal(true);
             }}
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-slate-900 text-white rounded-xl font-black uppercase text-[10px] tracking-widest transition-all shadow-lg shadow-indigo-100 active:scale-95"
@@ -420,9 +313,10 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                       setEditingId(t.id);
                       setPreviewData({
                         name: t.name,
-                        description: t.description,
-                        html_content: t.html_content
+                        description: t.description
                       });
+                      const templateBlocks = typeof t.blocks === 'string' ? JSON.parse(t.blocks) : (t.blocks || []);
+                      setBlocks(templateBlocks);
                       setShowModal(true);
                     }}
                     className="p-1.5 bg-white text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg border border-indigo-100 transition-all"
@@ -602,8 +496,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="space-y-6">
+<div className="space-y-6">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 ml-2 uppercase tracking-widest">Nome do Template *</label>
                   <input
@@ -628,133 +521,103 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
 
                 <div className="border border-slate-100 rounded-[2rem] overflow-hidden bg-slate-50">
                   <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Código HTML</span>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setShowAIPanel(!showAIPanel)}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all shadow-sm ${showAIPanel ? 'bg-purple-600 text-white' : 'bg-purple-50 border border-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white'}`}
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => setModalTab('edit')}
+                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${modalTab === 'edit' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                       >
-                        <Sparkles size={14} /> Gerar com IA
-                      </button>
-                      <button 
-                        onClick={() => setShowFieldList(!showFieldList)}
-                        className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter bg-white border border-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                      >
-                        <Code size={14} /> Placeholders
-                        {showFieldList ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        Editar
                       </button>
                       <button
-                        onClick={toggleSignaturePlaceholder}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all shadow-sm ${previewData.html_content.includes('worker-signature-placeholder') ? 'bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-emerald-50 border border-emerald-100 text-emerald-700 hover:bg-emerald-600 hover:text-white'}`}
+                        onClick={() => setModalTab('preview')}
+                        className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all ${modalTab === 'preview' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}
                       >
-                        <FileSignature size={14} /> {previewData.html_content.includes('worker-signature-placeholder') ? 'Remover' : 'Assinatura'}
-                      </button>
-                      <button
-                        onClick={toggleQrcodePlaceholder}
-                        className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all shadow-sm ${previewData.html_content.includes('worker-qrcode-placeholder') ? 'bg-rose-50 border border-rose-200 text-rose-600 hover:bg-rose-600 hover:text-white' : 'bg-indigo-50 border border-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white'}`}
-                      >
-                        <QrCode size={14} /> {previewData.html_content.includes('worker-qrcode-placeholder') ? 'Remover' : 'QR Code'}
+                        Pré-visualizar PDF
                       </button>
                     </div>
-                  </div>
-                  
-                  {showAIPanel && (
-                    <div className="p-4 bg-purple-50 border-b border-purple-100 animate-in slide-in-from-top-2">
-                      <p className="text-[9px] font-black text-purple-600 uppercase tracking-widest mb-2 ml-1">Descreva o documento que deseja:</p>
-                      <div className="flex gap-2">
-                        <textarea
-                          value={aiPrompt}
-                          onChange={(e) => setAiPrompt(e.target.value)}
-                          placeholder="Ex: Contrato de prestação de serviços com cláusula de confidencialidade..."
-                          className="flex-1 p-3 bg-white border border-purple-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-purple-500 min-h-[80px]"
-                        />
+                    {modalTab === 'edit' && (
+                      <div className="flex gap-1">
                         <button
-                          onClick={generateAIWrapper}
-                          disabled={isGeneratingAI || !aiPrompt.trim()}
-                          className="px-4 bg-purple-600 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-900 transition-all disabled:opacity-50 flex flex-col items-center justify-center gap-2 min-w-[80px]"
+                          onClick={() => setShowAIPanel(!showAIPanel)}
+                          disabled={isGeneratingAI}
+                          className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all shadow-sm ${showAIPanel ? 'bg-purple-600 text-white' : 'bg-purple-50 border border-purple-200 text-purple-700 hover:bg-purple-600 hover:text-white'} ${isGeneratingAI ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
-                          {isGeneratingAI ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
-                          {isGeneratingAI ? '...' : 'Gerar'}
+                          {isGeneratingAI ? <Loader2 className="animate-spin" size={14} /> : <Sparkles size={14} />}
+                          {isGeneratingAI ? 'A gerar...' : 'Gerar com IA'}
                         </button>
                       </div>
-                    </div>
-                  )}
-                  
-                  {showFieldList && (
-                    <div className="p-4 bg-white grid grid-cols-2 gap-2 max-h-48 overflow-y-auto border-b border-slate-100">
-                      {TEMPLATE_FIELDS.map(field => (
-                        <button
-                          key={field.tag}
-                          onClick={() => insertField(field.tag)}
-                          className="text-left px-3 py-2 bg-slate-50 hover:bg-indigo-50 rounded-xl border border-slate-100 transition-all"
-                        >
-                          <p className="font-mono text-[10px] font-black text-indigo-600">{field.tag}</p>
-                          <p className="text-[9px] text-slate-400">{field.label}</p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <textarea
-                    ref={editorRef}
-                    value={previewData.html_content}
-                    onChange={(e) => setPreviewData({ ...previewData, html_content: e.target.value })}
-                    className="w-full h-80 p-6 font-mono text-xs border-0 resize-none outline-none bg-white text-slate-600"
-                    spellCheck={false}
-/>
-                </div>
-              </div>
+                    )}
+                    {modalTab === 'preview' && blocks.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const docDef = blocksToPdfMake(blocks, {}, null);
+                          pdfMake.createPdf(docDef).download(previewData.name || 'documento');
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all"
+                      >
+                        <FileDown size={14} /> Descarregar PDF
+                      </button>
+                    )}
+                  </div>
 
-              <div className="space-y-6">
-                <div className="flex flex-col bg-slate-50 rounded-[2.5rem] p-4 border border-slate-100 shadow-inner overflow-hidden" style={{ height: `${previewHeight}px` }}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Preview</div>
-                    <button
-                      onClick={() => setShowPreviewSettings(!showPreviewSettings)}
-                      className="text-[9px] font-black text-indigo-600 uppercase tracking-wider hover:text-indigo-800 transition-colors"
-                    >
-                      {showPreviewSettings ? 'Ocultar' : 'Ajustar'} Tamanho
-                    </button>
-                  </div>
-                  {showPreviewSettings && (
-                    <div className="flex items-center gap-3 mb-2 p-2 bg-white rounded-xl border border-slate-100">
-                      <span className="text-[9px] font-bold text-slate-500 uppercase">Altura:</span>
-                      <input
-                        type="range"
-                        min="300"
-                        max="800"
-                        value={previewHeight}
-                        onChange={(e) => setPreviewHeight(parseInt(e.target.value))}
-                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                      />
-                      <span className="text-[9px] font-black text-indigo-600 tabular-nums">{previewHeight}px</span>
-                      <div className="w-px h-4 bg-slate-200" />
-                      <span className="text-[9px] font-bold text-slate-500 uppercase">Zoom:</span>
-                      <input
-                        type="range"
-                        min="50"
-                        max="200"
-                        value={previewZoom}
-                        onChange={(e) => setPreviewZoom(parseInt(e.target.value))}
-                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                      />
-                      <span className="text-[9px] font-black text-indigo-600 tabular-nums">{previewZoom}%</span>
+                  {modalTab === 'edit' ? (
+                      <div className="h-[500px] overflow-y-auto">
+                        {isGeneratingAI ? (
+                          <div className="flex flex-col items-center justify-center h-full">
+                            <Loader2 size={32} className="text-purple-600 animate-spin mb-4" />
+                            <p className="text-sm font-bold text-slate-600">A gerar documento com IA...</p>
+                            <p className="text-xs text-slate-400 mt-1">Aguarde um momento</p>
+                          </div>
+                        ) : (
+                          <BlockEditor blocks={blocks} onChange={setBlocks} />
+                        )}
+                      </div>
+                    ) : (
+                    <div className="h-[500px] flex flex-col items-center justify-center bg-slate-100 rounded-b-2xl">
+                      {blocks.length === 0 ? (
+                        <div className="text-center px-6">
+                          <div className="w-16 h-16 bg-slate-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <FileDown size={24} className="text-slate-400" />
+                          </div>
+                          <p className="text-sm font-bold text-slate-500 mb-1">Nenhum bloco adicionado</p>
+                          <p className="text-xs text-slate-400">Adicione blocos na tab Editar para ver o PDF</p>
+                        </div>
+                      ) : pdfLoading ? (
+                        <div className="text-center px-6">
+                          <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <Loader2 size={24} className="text-indigo-600 animate-spin" />
+                          </div>
+                          <p className="text-sm font-bold text-slate-500 mb-1">A gerar PDF...</p>
+                          <p className="text-xs text-slate-400">Aguarde um momento</p>
+                        </div>
+                      ) : pdfPreviewUrl ? (
+                        <iframe
+                          src={pdfPreviewUrl}
+                          className="w-full h-full min-h-[480px] border-0 rounded-lg"
+                          title="PDF Preview"
+                        />
+                      ) : (
+                        <div className="text-center px-6">
+                          <div className="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <FileDown size={24} className="text-indigo-600" />
+                          </div>
+                          <p className="text-sm font-bold text-slate-700 mb-1">Pré-visualização PDF</p>
+                          <p className="text-xs text-slate-500 mb-4">Clique em "Descarregar PDF" para ver o resultado</p>
+                          <button
+                            onClick={() => {
+                              const docDef = blocksToPdfMake(blocks, {}, null);
+                              pdfMake.createPdf(docDef).download(previewData.name || 'documento');
+                            }}
+                            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-indigo-700 transition-all mx-auto"
+                          >
+                            <FileDown size={16} /> Descarregar PDF
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
-                  <div className="flex-1 overflow-auto rounded-xl bg-slate-100 p-4 flex justify-center">
-                    <div style={{ transform: `scale(${previewZoom / 100})`, transformOrigin: 'top center', display: 'inline-block' }}>
-                      <iframe
-                        ref={iframeRef}
-                        srcDoc={previewHtml()}
-                        className="bg-white shadow-xl"
-                        title="Preview"
-                        style={{ width: '794px', height: '1123px' }}
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
-            </div>
 
             <div className="flex justify-end gap-3 mt-10 pt-6 border-t border-slate-50">
               <button onClick={() => setShowModal(false)} className="px-8 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Cancelar</button>
