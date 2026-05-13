@@ -524,7 +524,31 @@ export async function applyAdminStampToPage(pdfBlob, {
     let sigImage = null;
     if (signatureDataUrl) {
       try {
-        const base64Data = signatureDataUrl.split(',')[1];
+        let finalDataUrl = signatureDataUrl;
+
+        // Converter a assinatura para Azul (estilo caneta BIC) no ambiente de browser
+        if (typeof document !== 'undefined') {
+          const img = new Image();
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = signatureDataUrl;
+          });
+
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          
+          ctx.drawImage(img, 0, 0);
+          ctx.globalCompositeOperation = 'source-in';
+          ctx.fillStyle = '#0f3f87'; // Azul tinta autêntico
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          
+          finalDataUrl = canvas.toDataURL('image/png');
+        }
+
+        const base64Data = finalDataUrl.split(',')[1];
         if (base64Data) {
           const uint8Array = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
           sigImage = await pdfDoc.embedPng(uint8Array);
@@ -581,18 +605,16 @@ function drawAdminStamp(page, {
   const GRAY_LIGHT = rgb(0.7, 0.75, 0.8);
   const GRAY_DARK = rgb(0.4, 0.45, 0.5);
 
-  // Sem fundo, completamente transparente para máxima elegância
+  // Sem fundo, completamente transparente
 
-  // 1. Linha vertical esquerda (Estilo citação/bloco arquitetónico)
+  // 1. Linha vertical esquerda fina (delimita o bloco visual)
   page.drawLine({
     start: { x: x + 2, y: y },
     end: { x: x + 2, y: y + h },
-    thickness: 2, color: THEME_ACCENT,
+    thickness: 1.5, color: THEME_ACCENT,
   });
 
-  const leftPad = 10;
-  const leftW = w * 0.45;
-  const contentX = x + leftPad;
+  const contentX = x + 10;
   
   // 2. Logo e Cabeçalho
   let currentY = y + h - 14;
@@ -614,39 +636,27 @@ function drawAdminStamp(page, {
     });
   }
 
-  // Linha separadora subtil
+  // Linha separadora do cabeçalho preenche quase a largura total
   page.drawLine({
     start: { x: contentX, y: currentY - 4 },
-    end: { x: contentX + leftW - leftPad, y: currentY - 4 },
+    end: { x: x + w - 4, y: currentY - 4 },
     thickness: 0.5, color: GRAY_LIGHT,
   });
 
   currentY -= 14;
 
-  // 3. Informações de Autoria Estruturadas
+  // 3. Informações (Sem cortar o texto, deixamos fluir)
   const labelCol = contentX;
   const valCol = contentX + 26;
   const rowSpace = 8;
 
   page.drawText('Autor:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
-  let rName = responsibleName || 'Responsável Legal';
-  let rW = helvBold.widthOfTextAtSize(rName, 4.5);
-  while(rW > (leftW - 26) && rName.length > 5) {
-    rName = rName.slice(0, -2) + '…';
-    rW = helvBold.widthOfTextAtSize(rName, 4.5);
-  }
-  page.drawText(rName, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
+  page.drawText(responsibleName || 'Responsável Legal', { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
   
   currentY -= rowSpace;
 
   page.drawText('Entidade:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
-  let cName = companyName || 'Empresa';
-  let cW = helvBold.widthOfTextAtSize(cName, 4.5);
-  while(cW > (leftW - 26) && cName.length > 5) {
-    cName = cName.slice(0, -2) + '…';
-    cW = helvBold.widthOfTextAtSize(cName, 4.5);
-  }
-  page.drawText(cName, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
+  page.drawText(companyName || 'Empresa', { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
 
   currentY -= rowSpace;
 
@@ -656,16 +666,14 @@ function drawAdminStamp(page, {
 
   currentY -= rowSpace;
 
-  // Um toque tecnológico - Hash ID ou Token
-  // Isso dá um nível altíssimo de confiança percebida
   const hashVal = signedAt ? `MGN-${new Date(signedAt).getTime().toString(16).toUpperCase()}` : 'MGN-VERIFIED';
   page.drawText('Token ID:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
   page.drawText(hashVal, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: THEME_ACCENT });
 
-  // 4. Assinatura Natural à Direita
-  const sigX = x + leftW + 8;
-  const sigW = w - leftW - 8;
-  const sigH = h;
+  // 4. Assinatura Natural Gigante a Sobrepor os Dados
+  const sigX = contentX + 15; // Começa a sobrepor o conteúdo ligeiramente para a direita
+  const sigW = w - 20; // Ocupa a grande maioria do espaço da caixa
+  const sigH = h - 6;
   
   if (signatureImage) {
     const aspect = signatureImage.width / signatureImage.height;
@@ -677,7 +685,7 @@ function drawAdminStamp(page, {
       drawH = sigH;
       drawW = drawH * aspect;
     }
-    // Assinatura completamente limpa e enorme a acompanhar o documento
+    
     page.drawImage(signatureImage, {
       x: sigX + (sigW - drawW) / 2,
       y: y + (sigH - drawH) / 2,
