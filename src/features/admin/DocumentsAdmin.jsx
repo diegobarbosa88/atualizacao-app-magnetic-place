@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { FileText, Eye, CheckCircle, Trash2, Search, Upload, Loader2 } from 'lucide-react';
 import { formatDocDate } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
+import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 
-const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
+const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings, supabase }) => {
   const { supabase: clientSupabase } = useApp();
+  const [activeSubTab, setActiveSubTab] = useState('documentos');
   const [selWorker, setSelWorker] = useState('');
   const [selTipo, setSelTipo] = useState('Recibo de Vencimento');
   const [selFile, setSelFile] = useState(null);
@@ -106,14 +108,35 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
 
   return (
     <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3 mb-8 border-b border-slate-50 pb-6">
-        <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
-          <FileText size={20} />
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-50 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
+            <FileText size={20} />
+          </div>
+          <h3 className="font-black text-xl text-slate-800 uppercase tracking-tight">Centro de Documentos</h3>
         </div>
-        <h3 className="font-black text-xl text-slate-800 uppercase tracking-tight">Gestão de Documentos</h3>
+
+        <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 self-start md:self-auto">
+          <button 
+            onClick={() => setActiveSubTab('documentos')} 
+            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'documentos' ? 'bg-white text-indigo-600 shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Emitidos
+          </button>
+          <button 
+            onClick={() => setActiveSubTab('templates')} 
+            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+          >
+            Templates
+          </button>
+        </div>
       </div>
 
-      <div className="bg-slate-50/50 rounded-[2rem] p-6 mb-8 border border-slate-100">
+      {activeSubTab === 'templates' ? (
+        <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
+      ) : (
+        <>
+          <div className="bg-slate-50/50 rounded-[2rem] p-6 mb-8 border border-slate-100">
         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-1">Upload de Novo Ficheiro (PDF)</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div className="space-y-1">
@@ -302,6 +325,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments }) => {
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   );
 };
