@@ -187,6 +187,52 @@ export async function addSignatureProtocolPage(pdfInput, {
   return await pdfDoc.save();
 }
 
+export async function applyQrToAllPages(pdfInput, qrDataUrl, { verifyLabel = 'VERIFICAR', qrSize = 56, margin = 24 } = {}) {
+  const pdfBytes = await blobOrDataUrlToBytes(pdfInput);
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+  const qrBytes = await blobOrDataUrlToBytes(qrDataUrl);
+  const qrImage = await tryEmbedImage(pdfDoc, qrBytes);
+  if (!qrImage) {
+    console.warn('[pdfSigningService] QR não disponível — pulando overlay.');
+    return await pdfDoc.save();
+  }
+
+  const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pages = pdfDoc.getPages();
+
+  for (const page of pages) {
+    const { width } = page.getSize();
+    const labelH = 10;
+    const boxPad = 4;
+    const boxX = width - qrSize - margin - boxPad;
+    const boxY = margin;
+    const boxW = qrSize + boxPad * 2;
+    const boxH = qrSize + boxPad * 2 + labelH;
+
+    page.drawRectangle({
+      x: boxX, y: boxY, width: boxW, height: boxH,
+      color: rgb(1, 1, 1),
+      borderColor: SLATE_400,
+      borderWidth: 0.5,
+    });
+    page.drawImage(qrImage, {
+      x: boxX + boxPad, y: boxY + boxPad + labelH,
+      width: qrSize, height: qrSize,
+    });
+    const labelWidth = font.widthOfTextAtSize(verifyLabel, 6);
+    page.drawText(verifyLabel, {
+      x: boxX + boxW / 2 - labelWidth / 2,
+      y: boxY + boxPad,
+      size: 6,
+      font,
+      color: SLATE_400,
+    });
+  }
+
+  return await pdfDoc.save();
+}
+
 export function formatSerialLabel(serial, prefix = 'MGN') {
   if (serial === null || serial === undefined) return null;
   const year = new Date().getFullYear();

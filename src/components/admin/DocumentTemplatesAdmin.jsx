@@ -434,10 +434,11 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
               </div>
             )}
 
-            <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg p-3">
-              <strong>💡 Carimbo de Assinatura:</strong> Inclui{' '}
+            <div className="text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg p-3 space-y-1">
+              <p><strong>Carimbo de Assinatura:</strong> Inclui{' '}
               <code className="font-mono bg-white px-1.5 py-0.5 rounded border border-indigo-100">{`{%signature_stamp}`}</code>{' '}
-              (com o sinal <code>%</code>) no Word onde queres que o carimbo digital apareça. O tamanho da célula/parágrafo controla o tamanho visual do carimbo.
+              (com o sinal <code>%</code>) no Word onde queres que o carimbo digital apareça.</p>
+              <p className="text-indigo-600"><strong>Dica:</strong> Tamanho default ~99x49mm. Para ajustar, coloca o tag numa tabela/moldura e redimensiona a celula no Word. O QR code de verificacao e aplicado automaticamente em todas as paginas do PDF final.</p>
             </div>
 
             <details className="bg-slate-50 border border-slate-200 rounded-xl p-3">

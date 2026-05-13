@@ -12,7 +12,7 @@ import {
   TEMPLATES_BUCKET,
 } from '../../utils/docxTemplateService';
 import { convertDocxToPdf } from '../../utils/cloudConvertService';
-import { formatSerialLabel } from '../../utils/pdfSigningService';
+import { formatSerialLabel, applyQrToAllPages } from '../../utils/pdfSigningService';
 import { generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
 import { generateStampImageBytes } from '../../utils/stampImageService';
 
@@ -201,8 +201,9 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
       });
 
       const pdfBlob = await convertDocxToPdf(signedDocxBlob);
-      const finalBytes = new Uint8Array(await pdfBlob.arrayBuffer());
-      const finalBlob = new Blob([finalBytes], { type: 'application/pdf' });
+      // Aplicar QR code em todas as páginas do PDF
+      const pdfWithQr = await applyQrToAllPages(pdfBlob, qrDataUrl);
+      const finalBlob = new Blob([pdfWithQr], { type: 'application/pdf' });
 
       const signedPath = `signed/${docRecord.id}_${Date.now()}.pdf`;
       const { error: upErr } = await supabase.storage
