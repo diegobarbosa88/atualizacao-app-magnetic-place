@@ -8,11 +8,10 @@ import {
   downloadTemplateBytes,
   renderDocx,
   buildRenderData,
-  STAMP_TAG,
   TEMPLATES_BUCKET,
 } from '../../utils/docxTemplateService';
 import { convertDocxToPdf } from '../../utils/pdfCoService';
-import { formatSerialLabel, applyQrToAllPages } from '../../utils/pdfSigningService';
+import { formatSerialLabel, applyQrToAllPages, applyStampToPage } from '../../utils/pdfSigningService';
 import { generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
 import { generateStampImageBytes } from '../../utils/stampImageService';
 
@@ -185,6 +184,8 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
       const serialLabel = formatSerialLabel(serial);
 
       const qrDataUrl = await generateQRCodeDataURL(docRecord.id);
+      
+      // Gerar imagem do carimbo de validação
       const stampBytes = await generateStampImageBytes({
         workerName: workerData?.name,
         signedAt,
@@ -194,15 +195,25 @@ export function DocumentViewer({ document: docRecord, onBack, onSigned }) {
         signatureDataUrl,
       });
 
+      // Preencher template DOCX com dados do trabalhador (sem stamp - será aplicado no PDF)
       const tmplBuffer = await downloadTemplateBytes(supabase, template.template_docx_path);
       const renderData = buildRenderData(workerData, systemSettings || {});
-      const signedDocxBlob = renderDocx(tmplBuffer, renderData, {
-        imageMap: { [STAMP_TAG]: stampBytes },
-      });
+      const filledDocxBlob = renderDocx(tmplBuffer, renderData);
 
-      const pdfBlob = await convertDocxToPdf(signedDocxBlob);
+      // Converter DOCX para PDF
+      const pdfBlob = await convertDocxToPdf(filledDocxBlob);
+      
+      // Aplicar stamp na posição configurada no template
+      const pdfWithStamp = await applyStampToPage(pdfBlob, stampBytes, {
+        xMm: template.stamp_x ?? 130,      // default: direita
+        yMm: template.stamp_y ?? 30,       // default: inferior
+        page: template.stamp_page || 'last',
+        stampWidthMm: 70,
+        stampHeightMm: 25,
+      });
+      
       // Aplicar QR code em todas as páginas do PDF
-      const pdfWithQr = await applyQrToAllPages(pdfBlob, qrDataUrl);
+      const pdfWithQr = await applyQrToAllPages(pdfWithStamp, qrDataUrl);
       const finalBlob = new Blob([pdfWithQr], { type: 'application/pdf' });
 
       const signedPath = `signed/${docRecord.id}_${Date.now()}.pdf`;

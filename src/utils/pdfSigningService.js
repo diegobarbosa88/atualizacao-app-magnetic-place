@@ -233,6 +233,82 @@ export async function applyQrToAllPages(pdfInput, qrDataUrl, { verifyLabel = 'VE
   return await pdfDoc.save();
 }
 
+// Conversão mm para pontos PDF (1 mm = 2.83465 pt)
+const MM_TO_PT = 2.83465;
+
+/**
+ * Aplica o carimbo de validação (stamp PNG) no PDF.
+ * 
+ * @param {Blob|Uint8Array|ArrayBuffer} pdfInput - PDF de entrada
+ * @param {Uint8Array|Blob|string} stampImageInput - Imagem PNG do carimbo
+ * @param {Object} options - Opções de posicionamento
+ * @param {number} options.xMm - Posição X em mm (da esquerda)
+ * @param {number} options.yMm - Posição Y em mm (do fundo)
+ * @param {string} options.page - 'first', 'last', ou 'all'
+ * @param {number} options.stampWidthMm - Largura do stamp em mm (default 70)
+ * @param {number} options.stampHeightMm - Altura do stamp em mm (default 25)
+ * @returns {Promise<Uint8Array>} PDF com carimbo aplicado
+ */
+export async function applyStampToPage(pdfInput, stampImageInput, { 
+  xMm = 130,        // posição X em mm (default: direita)
+  yMm = 30,         // posição Y em mm (default: inferior)
+  page = 'last',    // 'first', 'last', 'all'
+  stampWidthMm = 70,
+  stampHeightMm = 25,
+} = {}) {
+  const pdfBytes = await blobOrDataUrlToBytes(pdfInput);
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+  const stampBytes = await blobOrDataUrlToBytes(stampImageInput);
+  const stampImage = await tryEmbedImage(pdfDoc, stampBytes);
+  
+  if (!stampImage) {
+    console.warn('[pdfSigningService] Stamp não disponível — pulando overlay.');
+    return await pdfDoc.save();
+  }
+
+  // Converter mm para pontos
+  const stampX = xMm * MM_TO_PT;
+  const stampY = yMm * MM_TO_PT;
+  const stampWidth = stampWidthMm * MM_TO_PT;
+  const stampHeight = stampHeightMm * MM_TO_PT;
+
+  const pages = pdfDoc.getPages();
+  
+  // Determinar quais páginas aplicar
+  let targetPages = [];
+  if (page === 'first') {
+    targetPages = [pages[0]];
+  } else if (page === 'last') {
+    targetPages = [pages[pages.length - 1]];
+  } else if (page === 'all') {
+    targetPages = pages;
+  }
+
+  for (const targetPage of targetPages) {
+    // Desenhar fundo branco com borda
+    targetPage.drawRectangle({
+      x: stampX - 4,
+      y: stampY - 4,
+      width: stampWidth + 8,
+      height: stampHeight + 8,
+      color: rgb(1, 1, 1),
+      borderColor: SLATE_400,
+      borderWidth: 0.5,
+    });
+
+    // Desenhar imagem do stamp
+    targetPage.drawImage(stampImage, {
+      x: stampX,
+      y: stampY,
+      width: stampWidth,
+      height: stampHeight,
+    });
+  }
+
+  return await pdfDoc.save();
+}
+
 export function formatSerialLabel(serial, prefix = 'MGN') {
   if (serial === null || serial === undefined) return null;
   const year = new Date().getFullYear();

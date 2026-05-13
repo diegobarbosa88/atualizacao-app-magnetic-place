@@ -130,9 +130,8 @@ export function renderDocx(arrayBuffer, renderData, { imageMap = null } = {}) {
   if (imageMap) {
     modules.push(new ImageModule({
       centered: false,
+      fileType: 'docx',
       getImage: (tagValue) => imageMap[tagValue] || null,
-      // Tamanho do carimbo de assinatura em pontos (1 pt = 1/72 polegadas)
-      // 280x100 pt = ~99x35mm - corresponde às dimensões do ValidationStamp (sem QR)
       getSize: () => [280, 100],
     }));
   }

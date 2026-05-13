@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef } from 'react';
 import {
   FileText, Plus, Trash2, X, Upload, Send, Users, Loader2, Download,
-  Search, CheckCircle, Clock, FileSignature, AlertCircle, Eye,
+  Search, CheckCircle, Clock, FileSignature, AlertCircle, Eye, Settings,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
@@ -40,6 +40,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [genProgress, setGenProgress] = useState(null);
 
   const [preview, setPreview] = useState(null);
+  const [stampConfig, setStampConfig] = useState(null); // { template, x, y, page }
 
   const openTemplatePreview = async (template) => {
     setPreview({ title: template.name, loading: true, blob: null, error: '' });
@@ -266,6 +267,18 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                     title="Pré-visualizar template (sem dados)"
                   >
                     <Eye className="w-3 h-3" />
+                  </button>
+                  <button
+                    onClick={() => setStampConfig({
+                      template: t,
+                      x: t.stamp_x ?? 0,
+                      y: t.stamp_y ?? 0,
+                      page: t.stamp_page || 'last',
+                    })}
+                    className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100"
+                    title="Configurar posição do carimbo"
+                  >
+                    <Settings className="w-3 h-3" /> Stamp
                   </button>
                   <button
                     onClick={() => openGenerateModal(t)}
@@ -557,7 +570,180 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
           onClose={() => setPreview(null)}
         />
       )}
+
+      {stampConfig && (
+        <StampConfigModal
+          config={stampConfig}
+          onClose={() => setStampConfig(null)}
+          onSave={async (newConfig) => {
+            try {
+              const { error } = await supabase
+                .from('document_templates')
+                .update({
+                  stamp_x: newConfig.x,
+                  stamp_y: newConfig.y,
+                  stamp_page: newConfig.page,
+                })
+                .eq('id', stampConfig.template.id);
+              if (error) throw error;
+              // Atualizar template na lista local
+              const idx = templates.findIndex(t => t.id === stampConfig.template.id);
+              if (idx >= 0) {
+                templates[idx] = {
+                  ...templates[idx],
+                  stamp_x: newConfig.x,
+                  stamp_y: newConfig.y,
+                  stamp_page: newConfig.page,
+                };
+              }
+              setStampConfig(null);
+            } catch (err) {
+              alert('Erro ao guardar: ' + err.message);
+            }
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function StampConfigModal({ config, onClose, onSave }) {
+  const [x, setX] = useState(config.x || 0);
+  const [y, setY] = useState(config.y || 0);
+  const [page, setPage] = useState(config.page || 'last');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await onSave({ x: Number(x), y: Number(y), page });
+    setSaving(false);
+  };
+
+  // Presets para posições comuns
+  const presets = [
+    { label: 'Inferior Direito', x: 130, y: 30 },
+    { label: 'Inferior Esquerdo', x: 20, y: 30 },
+    { label: 'Inferior Centro', x: 75, y: 30 },
+    { label: 'Superior Direito', x: 130, y: 260 },
+  ];
+
+  return (
+    <Modal onClose={onClose} title={`Posição do Carimbo — ${config.template.name}`}>
+      <div className="space-y-4">
+        <p className="text-sm text-slate-600">
+          Define onde o carimbo de validação digital vai aparecer no PDF assinado.
+          As coordenadas são em milímetros a partir do canto inferior esquerdo da página.
+        </p>
+
+        {/* Presets */}
+        <div>
+          <label className="text-xs font-bold text-slate-600 uppercase mb-2 block">Posições Predefinidas</label>
+          <div className="flex flex-wrap gap-2">
+            {presets.map(p => (
+              <button
+                key={p.label}
+                onClick={() => { setX(p.x); setY(p.y); }}
+                className="px-3 py-1.5 text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Coordenadas manuais */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase">Posição X (mm da esquerda)</label>
+            <input
+              type="number"
+              value={x}
+              onChange={e => setX(e.target.value)}
+              min={0}
+              max={210}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-slate-600 uppercase">Posição Y (mm do fundo)</label>
+            <input
+              type="number"
+              value={y}
+              onChange={e => setY(e.target.value)}
+              min={0}
+              max={297}
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500"
+            />
+          </div>
+        </div>
+
+        {/* Página */}
+        <div>
+          <label className="text-xs font-bold text-slate-600 uppercase">Aplicar em</label>
+          <select
+            value={page}
+            onChange={e => setPage(e.target.value)}
+            className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-purple-500"
+          >
+            <option value="last">Última página</option>
+            <option value="first">Primeira página</option>
+            <option value="all">Todas as páginas</option>
+          </select>
+        </div>
+
+        {/* Preview visual */}
+        <div className="bg-slate-100 rounded-xl p-4">
+          <p className="text-xs font-bold text-slate-500 uppercase mb-2">Pré-visualização (A4: 210x297mm)</p>
+          <div 
+            className="relative bg-white border border-slate-300 rounded-lg mx-auto"
+            style={{ width: '150px', height: '212px' }} // A4 proporcional
+          >
+            {/* Stamp preview */}
+            <div
+              className="absolute bg-purple-500 rounded text-white text-[6px] font-bold flex items-center justify-center"
+              style={{
+                width: '50px',  // ~70mm em escala
+                height: '18px', // ~25mm em escala
+                left: `${(x / 210) * 150}px`,
+                bottom: `${(y / 297) * 212}px`,
+              }}
+            >
+              STAMP
+            </div>
+            {/* QR preview (canto inferior direito) */}
+            <div
+              className="absolute bg-indigo-400 rounded text-white text-[5px] font-bold flex items-center justify-center"
+              style={{
+                width: '15px',
+                height: '15px',
+                right: '5px',
+                bottom: '5px',
+              }}
+            >
+              QR
+            </div>
+          </div>
+        </div>
+
+        <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3">
+          <strong>Nota:</strong> O tamanho do carimbo é ~70x25mm. O QR code é sempre aplicado no canto inferior direito de todas as páginas.
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">
+            Cancelar
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+            Guardar
+          </button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
