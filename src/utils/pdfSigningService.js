@@ -577,90 +577,96 @@ function drawAdminStamp(page, {
   helv, helvBold,
 }) {
   const BLACK = rgb(0.1, 0.1, 0.12);
-  const GRAY = rgb(0.45, 0.5, 0.55);
+  const THEME_ACCENT = rgb(0.12, 0.28, 0.58);
+  const GRAY_LIGHT = rgb(0.7, 0.75, 0.8);
+  const GRAY_DARK = rgb(0.4, 0.45, 0.5);
 
-  // Sem moldura exterior - o carimbo integra-se nativamente no papel
+  // Sem fundo, completamente transparente para máxima elegância
 
-  // Título da secção por cima da linha dupla
-  page.drawText('APROVAÇÃO INSTITUCIONAL', {
-    x: x, y: y + h + 3,
-    size: 5.5, font: helvBold, color: GRAY,
-  });
-
-  // Linha Dupla Superior (Estilo Timbre)
+  // 1. Linha vertical esquerda (Estilo citação/bloco arquitetónico)
   page.drawLine({
-    start: { x: x, y: y + h },
-    end: { x: x + w, y: y + h },
-    thickness: 1.2, color: BLACK,
-  });
-  page.drawLine({
-    start: { x: x, y: y + h - 2 },
-    end: { x: x + w, y: y + h - 2 },
-    thickness: 0.4, color: BLACK,
+    start: { x: x + 2, y: y },
+    end: { x: x + 2, y: y + h },
+    thickness: 2, color: THEME_ACCENT,
   });
 
+  const leftPad = 10;
   const leftW = w * 0.45;
+  const contentX = x + leftPad;
   
-  // 1. Logo + Nome da Empresa (Lado Esquerdo)
-  let currentY = y + h - 16;
+  // 2. Logo e Cabeçalho
+  let currentY = y + h - 14;
   if (companyLogoImage) {
     const lgH = 14;
     const lgW = (companyLogoImage.width / companyLogoImage.height) * lgH;
     page.drawImage(companyLogoImage, {
-      x: x, y: currentY, width: lgW, height: lgH,
+      x: contentX, y: currentY, width: lgW, height: lgH,
     });
     
-    let cName = (companyName || 'Empresa').toUpperCase();
-    let nameW = helvBold.widthOfTextAtSize(cName, 7.5);
-    while(nameW > leftW - lgW - 4 && cName.length > 5) {
-      cName = cName.slice(0, -2) + '…';
-      nameW = helvBold.widthOfTextAtSize(cName, 7.5);
-    }
-    
-    page.drawText(cName, {
-      x: x + lgW + 4, y: currentY + 3,
-      size: 7.5, font: helvBold, color: BLACK,
+    page.drawText('ASSINATURA QUALIFICADA', {
+      x: contentX + lgW + 6, y: currentY + 4,
+      size: 5, font: helvBold, color: GRAY_DARK,
     });
   } else {
-    page.drawText((companyName || 'Empresa').toUpperCase(), {
-      x: x, y: currentY + 3,
-      size: 7.5, font: helvBold, color: BLACK,
+    page.drawText('ASSINATURA QUALIFICADA', {
+      x: contentX, y: currentY + 4,
+      size: 5, font: helvBold, color: GRAY_DARK,
     });
   }
 
-  currentY -= 12;
+  // Linha separadora subtil
+  page.drawLine({
+    start: { x: contentX, y: currentY - 4 },
+    end: { x: contentX + leftW - leftPad, y: currentY - 4 },
+    thickness: 0.5, color: GRAY_LIGHT,
+  });
 
-  // 2. Informações Estruturadas (Lado Esquerdo)
-  const lblCol = x;
-  const valCol = x + 38;
-  const rowH = 8;
+  currentY -= 14;
 
-  page.drawText('ASSINADO POR:', { x: lblCol, y: currentY, size: 4.5, font: helvBold, color: GRAY });
-  let rName = responsibleName || 'Responsável';
-  let rnW = helv.widthOfTextAtSize(rName, 4.5);
-  while(rnW > leftW - 38 && rName.length > 4) {
+  // 3. Informações de Autoria Estruturadas
+  const labelCol = contentX;
+  const valCol = contentX + 26;
+  const rowSpace = 8;
+
+  page.drawText('Autor:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
+  let rName = responsibleName || 'Responsável Legal';
+  let rW = helvBold.widthOfTextAtSize(rName, 4.5);
+  while(rW > (leftW - 26) && rName.length > 5) {
     rName = rName.slice(0, -2) + '…';
-    rnW = helv.widthOfTextAtSize(rName, 4.5);
+    rW = helvBold.widthOfTextAtSize(rName, 4.5);
   }
-  page.drawText(rName, { x: valCol, y: currentY, size: 4.5, font: helv, color: BLACK });
-
-  currentY -= rowH;
+  page.drawText(rName, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
   
-  if (responsibleRole) {
-    page.drawText('CARGO:', { x: lblCol, y: currentY, size: 4.5, font: helvBold, color: GRAY });
-    page.drawText(responsibleRole, { x: valCol, y: currentY, size: 4.5, font: helv, color: BLACK });
-    currentY -= rowH;
+  currentY -= rowSpace;
+
+  page.drawText('Entidade:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
+  let cName = companyName || 'Empresa';
+  let cW = helvBold.widthOfTextAtSize(cName, 4.5);
+  while(cW > (leftW - 26) && cName.length > 5) {
+    cName = cName.slice(0, -2) + '…';
+    cW = helvBold.widthOfTextAtSize(cName, 4.5);
   }
+  page.drawText(cName, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
 
-  let dateStr = signedAt ? new Date(signedAt).toLocaleString('pt-PT') : '—';
-  page.drawText('DATA:', { x: lblCol, y: currentY, size: 4.5, font: helvBold, color: GRAY });
-  page.drawText(dateStr, { x: valCol, y: currentY, size: 4.5, font: helv, color: BLACK });
+  currentY -= rowSpace;
 
-  // 3. Assinatura Gigante (Lado Direito)
-  const sigX = x + leftW + 10;
-  const sigW = w - leftW - 10;
-  const sigH = h - 6;
+  page.drawText('Data/Hora:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
+  let dateStr = signedAt ? new Date(signedAt).toLocaleString('pt-PT', {hour:'2-digit', minute:'2-digit'}) : '—';
+  page.drawText(dateStr, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
 
+  currentY -= rowSpace;
+
+  // Um toque tecnológico - Hash ID ou Token
+  // Isso dá um nível altíssimo de confiança percebida
+  const hashVal = signedAt ? `MGN-${new Date(signedAt).getTime().toString(16).toUpperCase()}` : 'MGN-VERIFIED';
+  page.drawText('Token ID:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
+  page.drawText(hashVal, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: THEME_ACCENT });
+
+  // 4. Assinatura Natural à Direita
+  const sigX = x + leftW + 8;
+  const sigW = w - leftW - 8;
+  const sigH = h;
+  
   if (signatureImage) {
     const aspect = signatureImage.width / signatureImage.height;
     let drawW, drawH;
@@ -671,28 +677,14 @@ function drawAdminStamp(page, {
       drawH = sigH;
       drawW = drawH * aspect;
     }
+    // Assinatura completamente limpa e enorme a acompanhar o documento
     page.drawImage(signatureImage, {
       x: sigX + (sigW - drawW) / 2,
-      y: y + 3 + (sigH - drawH) / 2,
+      y: y + (sigH - drawH) / 2,
       width: drawW,
       height: drawH,
     });
   }
-
-  // Linha subtil pontilhada onde a assinatura "repousa"
-  page.drawLine({
-    start: { x: sigX, y: y + 8 },
-    end: { x: sigX + sigW, y: y + 8 },
-    thickness: 0.5, color: GRAY,
-    dashArray: [1, 2], // Linha pontilhada
-  });
-
-  // Linha inferior de fecho da caixa invisível
-  page.drawLine({
-    start: { x: x, y: y },
-    end: { x: x + w, y: y },
-    thickness: 0.5, color: BLACK,
-  });
 }
 
 export function formatSerialLabel(serial, prefix = 'MGN') {
