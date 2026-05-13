@@ -44,3 +44,10 @@ COMMENT ON COLUMN worker_documents.admin_signed_at IS 'Timestamp when the admin/
 
 -- Note: status values are stored as TEXT and not constrained at the DB level,
 -- so adding the new 'awaiting_admin' state requires no DDL.
+
+-- 4. RLS Policies for system_settings
+ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow public read system_settings" ON system_settings FOR SELECT USING (true);
+CREATE POLICY "Allow public insert system_settings" ON system_settings FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public update system_settings" ON system_settings FOR UPDATE USING (true);
