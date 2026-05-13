@@ -558,33 +558,81 @@ function drawAdminStamp(page, {
   companyName, responsibleName, responsibleRole, signedAt, signatureImage,
   helv, helvBold,
 }) {
-  // 1. Fundo retangular muito subtil e borda fina
+  const STAMP_COLOR = rgb(0.12, 0.28, 0.58); // Azul institucional clássico
+
+  // 1. Moldura exterior transparente com contorno duplo
   drawRoundedRect(page, {
-    x, y, w, h, r: 0,
-    color: rgb(0.99, 0.99, 0.99), // Fundo quase branco
-    borderColor: SLATE_400,
+    x, y, w, h, r: 2,
+    borderColor: STAMP_COLOR,
+    borderWidth: 1.5,
+  });
+
+  // Moldura interior
+  drawRoundedRect(page, {
+    x: x + 2, y: y + 2, w: w - 4, h: h - 4, r: 1,
+    borderColor: STAMP_COLOR,
     borderWidth: 0.5,
   });
 
-  // 2. Faixa lateral esquerda (Indigo corporativo)
-  const stripW = 10;
-  page.drawRectangle({
-    x: x, y: y, width: stripW, height: h,
-    color: INDIGO,
+  // 2. Marca de água "APROVADO" (Em fundo)
+  const watermarkText = 'APROVADO';
+  const wmSize = 12;
+  const wmW = helvBold.widthOfTextAtSize(watermarkText, wmSize);
+  page.drawText(watermarkText, {
+    x: x + (w - wmW) / 2,
+    y: y + (h / 2) - (wmSize / 3),
+    size: wmSize, font: helvBold, color: rgb(0.85, 0.9, 0.95),
   });
 
-  // Ícone circular (tipo chip/selo) no topo da faixa
-  const cx = x + stripW / 2;
-  const cy = y + h - 8;
-  page.drawCircle({ x: cx, y: cy, size: 3, color: rgb(1,1,1) });
-  
-  // 3. Área da assinatura (lado esquerdo)
-  const sigX = x + stripW + 6;
-  const sigW = w * 0.35;
-  const sigH = h - 12;
-  const sigY = y + 6;
+  // 3. Cabeçalho: Nome da Empresa
+  let empStr = (companyName || 'EMPRESA').toUpperCase();
+  let empW = helvBold.widthOfTextAtSize(empStr, 6.5);
+  // Truncar se necessário
+  while (empW > w - 8 && empStr.length > 3) {
+    empStr = empStr.slice(0, -2) + '…';
+    empW = helvBold.widthOfTextAtSize(empStr, 6.5);
+  }
+  page.drawText(empStr, {
+    x: x + (w - empW) / 2,
+    y: y + h - 10,
+    size: 6.5, font: helvBold, color: STAMP_COLOR,
+  });
 
+  // Linha separadora do topo
+  page.drawLine({
+    start: { x: x + 4, y: y + h - 14 },
+    end: { x: x + w - 4, y: y + h - 14 },
+    thickness: 0.5, color: STAMP_COLOR,
+  });
+
+  // 4. Rodapé: Responsável e Data
+  let dateStr = signedAt ? new Date(signedAt).toLocaleDateString('pt-PT') : '';
+  let bottomStr = `${responsibleName || 'Responsável'} • ${dateStr}`;
+  let botW = helv.widthOfTextAtSize(bottomStr, 5);
+  while (botW > w - 8 && bottomStr.length > 10) {
+    let parts = bottomStr.split(' • ');
+    if (parts[0].length > 3) parts[0] = parts[0].slice(0, -2) + '…';
+    bottomStr = `${parts[0]} • ${parts[1]}`;
+    botW = helv.widthOfTextAtSize(bottomStr, 5);
+  }
+  
+  page.drawText(bottomStr, {
+    x: x + (w - botW) / 2,
+    y: y + 6,
+    size: 5, font: helv, color: STAMP_COLOR,
+  });
+
+  // Linha separadora da base
+  page.drawLine({
+    start: { x: x + 4, y: y + 14 },
+    end: { x: x + w - 4, y: y + 14 },
+    thickness: 0.5, color: STAMP_COLOR,
+  });
+
+  // 5. Área da Assinatura (Centro)
   if (signatureImage) {
+    const sigW = w - 8;
+    const sigH = h - 30; // espaço disponível entre as linhas
     const aspect = signatureImage.width / signatureImage.height;
     let drawW, drawH;
     if (aspect > sigW / sigH) {
@@ -595,76 +643,12 @@ function drawAdminStamp(page, {
       drawW = drawH * aspect;
     }
     page.drawImage(signatureImage, {
-      x: sigX + (sigW - drawW) / 2,
-      y: sigY + (sigH - drawH) / 2,
+      x: x + (w - drawW) / 2,
+      y: y + 14 + (h - 28 - drawH) / 2,
       width: drawW,
       height: drawH,
     });
-  } else {
-    page.drawText('Assinatura', {
-      x: sigX, y: sigY + sigH / 2,
-      size: 5, font: helv, color: SLATE_400,
-    });
   }
-
-  // Linha separadora vertical suave entre assinatura e dados
-  const sepX = sigX + sigW + 4;
-  page.drawLine({
-    start: { x: sepX, y: y + 4 },
-    end: { x: sepX, y: y + h - 4 },
-    thickness: 0.5,
-    color: SLATE_300,
-  });
-
-  // 4. Área de dados (Metadados à direita)
-  const infoX = sepX + 6;
-  let currentY = y + h - 10;
-
-  // Título da secção de certificação
-  page.drawText('ASSINADO DIGITALMENTE', {
-    x: infoX, y: currentY,
-    size: 6.5, font: helvBold, color: INDIGO,
-  });
-  
-  currentY -= 11;
-
-  // Linha 1: Por (Responsável)
-  page.drawText('Por:', { x: infoX, y: currentY, size: 5, font: helv, color: SLATE_400 });
-  const respName = responsibleName || 'Responsável';
-  page.drawText(respName, { x: infoX + 12, y: currentY, size: 5.5, font: helvBold, color: SLATE_900 });
-
-  currentY -= 8;
-
-  // Linha 2: Entidade / Cargo
-  const roleStr = responsibleRole ? `(${responsibleRole})` : '';
-  const empStr = companyName ? `${companyName} ${roleStr}` : roleStr;
-  page.drawText('Entidade:', { x: infoX, y: currentY, size: 5, font: helv, color: SLATE_400 });
-  
-  let empWidth = helvBold.widthOfTextAtSize(empStr, 5);
-  let finalEmpStr = empStr;
-  const maxW = x + w - (infoX + 20) - 4; // limite direito do carimbo
-  while (empWidth > maxW && finalEmpStr.length > 5) {
-    finalEmpStr = finalEmpStr.slice(0, -2) + '…';
-    empWidth = helvBold.widthOfTextAtSize(finalEmpStr, 5);
-  }
-  page.drawText(finalEmpStr, { x: infoX + 20, y: currentY, size: 5, font: helvBold, color: SLATE_900 });
-
-  currentY -= 8;
-
-  // Linha 3: Data
-  page.drawText('Data:', { x: infoX, y: currentY, size: 5, font: helv, color: SLATE_400 });
-  let dateStr = '—';
-  if (signedAt) {
-    const d = new Date(signedAt);
-    dateStr = `${d.toLocaleDateString('pt-PT')} ${d.toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'})}`;
-  }
-  page.drawText(dateStr, { x: infoX + 13, y: currentY, size: 5, font: helvBold, color: SLATE_900 });
-
-  currentY -= 8;
-
-  // Linha 4: Status (Verde)
-  page.drawText('Status:', { x: infoX, y: currentY, size: 5, font: helv, color: SLATE_400 });
-  page.drawText('Validação Corporativa', { x: infoX + 16, y: currentY, size: 5, font: helvBold, color: EMERALD });
 }
 
 export function formatSerialLabel(serial, prefix = 'MGN') {
