@@ -11,7 +11,7 @@ import {
   STAMP_TAG,
   TEMPLATES_BUCKET,
 } from '../../utils/docxTemplateService';
-import { convertDocxToPdf } from '../../utils/cloudConvertService';
+import { convertDocxToPdf } from '../../utils/pdfCoService';
 import { formatSerialLabel, applyQrToAllPages } from '../../utils/pdfSigningService';
 import { generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
 import { generateStampImageBytes } from '../../utils/stampImageService';
