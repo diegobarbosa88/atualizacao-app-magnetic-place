@@ -558,161 +558,168 @@ function drawAdminStamp(page, {
   companyName, responsibleName, responsibleRole, signedAt, signatureImage,
   helv, helvBold,
 }) {
-  // ---- 1. Cartão exterior ----
+  const pad = 4;
+
+  // ---- 1. Moldura principal (Branca, linha fina e elegante) ----
   drawRoundedRect(page, {
-    x, y, w, h, r: 6,
-    color: INDIGO_BG_SOFT,
-    borderColor: INDIGO_BORDER_SOFT,
+    x, y, w, h, r: 3,
+    color: rgb(1, 1, 1),
+    borderColor: SLATE_400,
     borderWidth: 0.8,
   });
 
-  const pad = 5;
-
-  // ---- 2. Caixa da assinatura institucional (paisagem, centrada em Y) ----
-  const sigBoxW = w * 0.36;
-  const sigBoxH = h * 0.65;
-  const sigBoxX = x + pad;
-  const sigBoxY = y + (h - sigBoxH) / 2;
-
-  drawRoundedRect(page, {
-    x: sigBoxX, y: sigBoxY, w: sigBoxW, h: sigBoxH, r: 4,
-    color: rgb(1, 1, 1),
-    borderColor: INDIGO_BORDER_SOFT,
-    borderWidth: 0.6,
-  });
-
-  if (signatureImage) {
-    const imgPad = 3;
-    const innerW = sigBoxW - imgPad * 2;
-    const innerH = sigBoxH - imgPad * 2;
-    const aspect = signatureImage.width / signatureImage.height;
-    let drawW, drawH;
-    if (aspect > innerW / innerH) {
-      drawW = innerW;
-      drawH = drawW / aspect;
-    } else {
-      drawH = innerH;
-      drawW = drawH * aspect;
-    }
-    page.drawImage(signatureImage, {
-      x: sigBoxX + (sigBoxW - drawW) / 2,
-      y: sigBoxY + (sigBoxH - drawH) / 2,
-      width: drawW,
-      height: drawH,
-    });
-  } else {
-    const placeholder = 'Assinatura';
-    const tw = helv.widthOfTextAtSize(placeholder, 5);
-    page.drawText(placeholder, {
-      x: sigBoxX + (sigBoxW - tw) / 2,
-      y: sigBoxY + sigBoxH / 2 - 1.5,
-      size: 5, font: helv, color: SLATE_400,
-    });
-  }
-
-  // ---- 3. Coluna direita ----
-  const rightColX = sigBoxX + sigBoxW + 8;
-  const rightEdge = x + w - pad - 2;
-  const topY = y + h - pad - 4;
-  const colCenter = (rightColX + rightEdge) / 2;
-
-  // Header centrado: badge INDIGO + "ASSINATURA DA EMPRESA"
-  const headerText = 'ASSINATURA DA EMPRESA';
-  const headerTextSize = 7;
-  const iconRadius = 4.5;
-  const iconToTextOffset = 8;
-  const headerTextW = helvBold.widthOfTextAtSize(headerText, headerTextSize);
-  const headerGroupW = iconRadius + iconToTextOffset + headerTextW;
-  const headerGroupStartX = colCenter - headerGroupW / 2;
-  const cx = headerGroupStartX + iconRadius;
-  const cy = topY - 2.5;
-
-  page.drawCircle({ x: cx, y: cy, size: iconRadius, color: INDIGO });
+  // Linha vertical separadora
+  const midX = x + (w * 0.45);
   page.drawLine({
-    start: { x: cx - 2, y: cy - 0.3 },
-    end: { x: cx - 0.5, y: cy - 1.8 },
-    thickness: 1.1, color: rgb(1, 1, 1),
-  });
-  page.drawLine({
-    start: { x: cx - 0.5, y: cy - 1.8 },
-    end: { x: cx + 2.3, y: cy + 1.4 },
-    thickness: 1.1, color: rgb(1, 1, 1),
-  });
-
-  page.drawText(headerText, {
-    x: cx + iconToTextOffset,
-    y: topY - 4,
-    size: headerTextSize,
-    font: helvBold,
-    color: INDIGO,
-  });
-
-  // ---- 4. Linhas de dados ----
-  let dateStr = '—';
-  if (signedAt) {
-    const d = new Date(signedAt);
-    const dPart = d.toLocaleDateString('pt-PT');
-    const tPart = d.toLocaleTimeString('pt-PT', {
-      hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
-    dateStr = `${dPart}, ${tPart}`;
-  }
-
-  const fields = [];
-  if (companyName) fields.push({ label: 'Empresa:', value: companyName, color: SLATE_900 });
-  if (responsibleName) fields.push({ label: 'Responsável:', value: responsibleName, color: SLATE_900 });
-  if (responsibleRole) fields.push({ label: 'Cargo:', value: responsibleRole, color: SLATE_900 });
-  fields.push({ label: 'Data/Hora:', value: dateStr, color: INDIGO });
-
-  const labelSize = 5.5;
-  const valueSize = 5.5;
-  const rowHeight = fields.length > 3 ? 8.5 : 10.5;
-  let currentY = topY - 16;
-
-  for (const f of fields) {
-    page.drawText(f.label, {
-      x: rightColX, y: currentY,
-      size: labelSize, font: helv, color: SLATE_600,
-    });
-
-    let valStr = f.value;
-    const labelWidth = helv.widthOfTextAtSize(f.label, labelSize);
-    const maxValWidth = rightEdge - rightColX - labelWidth - 6;
-
-    let valWidth = helvBold.widthOfTextAtSize(valStr, valueSize);
-    while (valWidth > maxValWidth && valStr.length > 3) {
-      valStr = valStr.slice(0, -2) + '…';
-      valWidth = helvBold.widthOfTextAtSize(valStr, valueSize);
-    }
-
-    page.drawText(valStr, {
-      x: rightEdge - valWidth, y: currentY,
-      size: valueSize, font: helvBold, color: f.color,
-    });
-
-    currentY -= rowHeight;
-  }
-
-  // ---- 5. Separador tracejado ----
-  const lineY = y + 13;
-  page.drawLine({
-    start: { x: rightColX, y: lineY },
-    end: { x: rightEdge, y: lineY },
+    start: { x: midX, y: y + 5 },
+    end: { x: midX, y: y + h - 5 },
     thickness: 0.5,
     color: SLATE_300,
     dashArray: [2, 2],
   });
 
-  // ---- 6. Rodapé indigo ----
-  const footerText = 'APROVADO ELETRONICAMENTE PELA EMPRESA';
-  const footerSize = 4.5;
-  const footerW = helvBold.widthOfTextAtSize(footerText, footerSize);
-  page.drawText(footerText, {
-    x: colCenter - footerW / 2,
-    y: lineY - 6.5,
-    size: footerSize,
-    font: helvBold,
-    color: INDIGO,
+  // ===== 2. SECÇÃO ESQUERDA: Assinatura e Responsável =====
+  const leftW = midX - x;
+  const sigW = leftW - 10;
+  const sigH = h * 0.55;
+  const sigX = x + 5;
+  const sigY = y + h - sigH - 5;
+
+  if (signatureImage) {
+    const aspect = signatureImage.width / signatureImage.height;
+    let drawW, drawH;
+    if (aspect > sigW / sigH) {
+      drawW = sigW;
+      drawH = drawW / aspect;
+    } else {
+      drawH = sigH;
+      drawW = drawH * aspect;
+    }
+    page.drawImage(signatureImage, {
+      x: sigX + (sigW - drawW) / 2,
+      y: sigY + (sigH - drawH) / 2,
+      width: drawW,
+      height: drawH,
+    });
+  } else {
+    const placeholder = 'Sem Assinatura';
+    const tw = helv.widthOfTextAtSize(placeholder, 5);
+    page.drawText(placeholder, {
+      x: sigX + (sigW - tw) / 2,
+      y: sigY + sigH / 2 - 1.5,
+      size: 5, font: helv, color: SLATE_400,
+    });
+  }
+
+  // Linha onde a assinatura assenta
+  const lineY = sigY - 2;
+  page.drawLine({
+    start: { x: sigX + 5, y: lineY },
+    end: { x: sigX + sigW - 5, y: lineY },
+    thickness: 0.5,
+    color: SLATE_400,
+  });
+
+  // Nome e Cargo do Responsável (centrado debaixo da assinatura)
+  const leftCenter = x + (leftW / 2);
+  const respName = responsibleName || 'Assinatura Autorizada';
+  const respRole = responsibleRole || companyName;
+
+  let nWidth = helvBold.widthOfTextAtSize(respName, 6);
+  let trRespName = respName;
+  while (nWidth > sigW && trRespName.length > 3) {
+    trRespName = trRespName.slice(0, -2) + '…';
+    nWidth = helvBold.widthOfTextAtSize(trRespName, 6);
+  }
+  page.drawText(trRespName, {
+    x: leftCenter - (nWidth / 2),
+    y: lineY - 8,
+    size: 6, font: helvBold, color: SLATE_900,
+  });
+
+  if (respRole) {
+    let rWidth = helv.widthOfTextAtSize(respRole, 5);
+    let trRespRole = respRole;
+    while (rWidth > sigW && trRespRole.length > 3) {
+      trRespRole = trRespRole.slice(0, -2) + '…';
+      rWidth = helv.widthOfTextAtSize(trRespRole, 5);
+    }
+    page.drawText(trRespRole, {
+      x: leftCenter - (rWidth / 2),
+      y: lineY - 14,
+      size: 5, font: helv, color: SLATE_600,
+    });
+  }
+
+  // ===== 3. SECÇÃO DIREITA: Selo e Metadados =====
+  const rightX = midX + 8;
+  const rightW = (x + w) - rightX - 4;
+  let currentY = y + h - 10;
+
+  // Título
+  const title = 'DOCUMENTO APROVADO';
+  page.drawText(title, {
+    x: rightX, y: currentY,
+    size: 7, font: helvBold, color: INDIGO,
+  });
+  currentY -= 11;
+
+  // Linhas de dados formatados como tabela
+  let dateStr = '—';
+  if (signedAt) {
+    const d = new Date(signedAt);
+    dateStr = `${d.toLocaleDateString('pt-PT')} às ${d.toLocaleTimeString('pt-PT', {hour:'2-digit', minute:'2-digit'})}`;
+  }
+
+  const fields = [];
+  if (companyName) fields.push({ l: 'Entidade:', v: companyName });
+  fields.push({ l: 'Emissão:', v: dateStr });
+  fields.push({ l: 'Validade:', v: 'Autenticado' });
+
+  const lblW = 18; // Espaço reservado para a label
+  for (const f of fields) {
+    page.drawText(f.l, {
+      x: rightX, y: currentY,
+      size: 5, font: helv, color: SLATE_400,
+    });
+    
+    let vStr = f.v;
+    let vWidth = helvBold.widthOfTextAtSize(vStr, 5);
+    const maxVW = rightW - lblW;
+    while (vWidth > maxVW && vStr.length > 3) {
+      vStr = vStr.slice(0, -2) + '…';
+      vWidth = helvBold.widthOfTextAtSize(vStr, 5);
+    }
+    page.drawText(vStr, {
+      x: rightX + lblW, y: currentY,
+      size: 5, font: helvBold, color: SLATE_900,
+    });
+    currentY -= 8;
+  }
+
+  // ===== 4. Badge/Checkmark e Texto de Rodapé =====
+  const badgeRadius = 4;
+  const badgeX = x + w - badgeRadius - 6;
+  const badgeY = y + badgeRadius + 6;
+  
+  page.drawCircle({ x: badgeX, y: badgeY, size: badgeRadius, color: EMERALD });
+  page.drawLine({
+    start: { x: badgeX - 1.5, y: badgeY - 0.5 },
+    end: { x: badgeX - 0.5, y: badgeY - 1.5 },
+    thickness: 0.8, color: rgb(1,1,1),
+  });
+  page.drawLine({
+    start: { x: badgeX - 0.5, y: badgeY - 1.5 },
+    end: { x: badgeX + 2, y: badgeY + 1 },
+    thickness: 0.8, color: rgb(1,1,1),
+  });
+
+  const footerTxt = 'SELADO COM INTEGRIDADE';
+  const fW = helvBold.widthOfTextAtSize(footerTxt, 4.5);
+  page.drawText(footerTxt, {
+    x: badgeX - badgeRadius - 3 - fW,
+    y: badgeY - 1.5,
+    size: 4.5, font: helvBold, color: EMERALD,
   });
 }
 
