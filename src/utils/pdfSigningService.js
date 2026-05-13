@@ -340,11 +340,11 @@ function drawWorkerStamp(page, {
 
   const pad = 5;
 
-  // ---- 2. Caixa de assinatura (esquerda, ~28% da largura) ----
-  const sigBoxW = Math.min(50, w * 0.28);
-  const sigBoxH = h - pad * 2;
+  // ---- 2. Caixa de assinatura (esquerda, paisagem ~36%×65%, centrada em Y) ----
+  const sigBoxW = w * 0.36;
+  const sigBoxH = h * 0.65;
   const sigBoxX = x + pad;
-  const sigBoxY = y + pad;
+  const sigBoxY = y + (h - sigBoxH) / 2;
 
   drawRoundedRect(page, {
     x: sigBoxX, y: sigBoxY, w: sigBoxW, h: sigBoxH, r: 4,
@@ -386,11 +386,20 @@ function drawWorkerStamp(page, {
   const rightColX = sigBoxX + sigBoxW + 8;
   const rightEdge = x + w - pad - 2;
   const topY = y + h - pad - 4;
+  const colCenter = (rightColX + rightEdge) / 2;
 
-  // Badge verde com check branco
-  const cx = rightColX + 4;
+  // Cabeçalho centrado: badge verde com check + "VALIDAÇÃO DIGITAL"
+  const headerText = 'VALIDAÇÃO DIGITAL';
+  const headerTextSize = 7;
+  const iconRadius = 4.5;
+  const iconToTextOffset = 8; // distância do centro do ícone ao início do texto
+  const headerTextW = helvBold.widthOfTextAtSize(headerText, headerTextSize);
+  const headerGroupW = iconRadius + iconToTextOffset + headerTextW;
+  const headerGroupStartX = colCenter - headerGroupW / 2;
+  const cx = headerGroupStartX + iconRadius;
   const cy = topY - 2.5;
-  page.drawCircle({ x: cx, y: cy, size: 4.5, color: EMERALD });
+
+  page.drawCircle({ x: cx, y: cy, size: iconRadius, color: EMERALD });
   page.drawLine({
     start: { x: cx - 2, y: cy - 0.3 },
     end: { x: cx - 0.5, y: cy - 1.8 },
@@ -402,10 +411,10 @@ function drawWorkerStamp(page, {
     thickness: 1.1, color: rgb(1, 1, 1),
   });
 
-  page.drawText('VALIDAÇÃO DIGITAL', {
-    x: cx + 8,
+  page.drawText(headerText, {
+    x: cx + iconToTextOffset,
     y: topY - 4,
-    size: 7,
+    size: headerTextSize,
     font: helvBold,
     color: INDIGO,
   });
@@ -468,11 +477,14 @@ function drawWorkerStamp(page, {
     dashArray: [2, 2],
   });
 
-  // ---- 6. Rodapé verde ----
-  page.drawText('DOCUMENTO VALIDADO ELETRONICAMENTE', {
-    x: rightColX,
+  // ---- 6. Rodapé verde (centrado na coluna direita) ----
+  const footerText = 'DOCUMENTO VALIDADO ELETRONICAMENTE';
+  const footerSize = 4.5;
+  const footerW = helvBold.widthOfTextAtSize(footerText, footerSize);
+  page.drawText(footerText, {
+    x: colCenter - footerW / 2,
     y: lineY - 6.5,
-    size: 4.5,
+    size: footerSize,
     font: helvBold,
     color: EMERALD,
   });
