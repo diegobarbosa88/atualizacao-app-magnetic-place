@@ -8,6 +8,7 @@ import { getStampHTML, generateQRCodeDataURL } from '../../hooks/useSignatureSta
 import { isPending, isSigned } from '../../constants/documentStatus';
 import { cropSignatureCanvas } from '../../utils/signatureCanvas';
 import workerDocumentsCSS from './WorkerDocuments.css?inline';
+import { DocumentViewer } from '../worker/DocumentViewer';
 
 // Converte oklch(L C H [/ A]) para grayscale aproximado, preservando lightness.
 // Necessário porque o html2canvas usado pelo html2pdf não parseia oklch (CSS Color L4),
@@ -108,6 +109,17 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showSigner, setShowSigner] = useState(false);
+  const [acroformDoc, setAcroformDoc] = useState(null);
+
+  const openDoc = useCallback((doc) => {
+    const isAcroform = !!(doc.template_id || doc.templateId) && !doc.generated_html;
+    if (isAcroform) {
+      setAcroformDoc(doc);
+    } else {
+      setSelectedDoc(doc);
+      setShowSigner(true);
+    }
+  }, []);
   const [signing, setSigning] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [workerIp, setWorkerIp] = useState('A obter IP...');
@@ -658,7 +670,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                   {isPending(doc.status) ? 'Pendente' : 'Assinado'}
                 </span>
                 {isPending(doc.status) ? (
-                  <button onClick={() => { setSelectedDoc(doc); setShowSigner(true); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl">
+                  <button onClick={() => openDoc(doc)} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl">
                     <Edit2 size={14} />
                   </button>
                 ) : (
@@ -723,6 +735,16 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
             </div>
           </div>
         </>
+      )}
+
+      {acroformDoc && (
+        <div className="fixed inset-0 z-[150] bg-white overflow-auto">
+          <DocumentViewer
+            document={acroformDoc}
+            onBack={() => { setAcroformDoc(null); loadTemplateDocs(); }}
+            onSigned={() => loadTemplateDocs()}
+          />
+        </div>
       )}
     </div>
   );

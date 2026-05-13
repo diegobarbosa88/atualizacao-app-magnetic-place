@@ -99,3 +99,38 @@ export const sendNotificationEmail = async (clientEmail, clientName, notifTitle,
     return false;
   }
 };
+
+/**
+ * Envia uma notificação a um trabalhador sobre um novo documento gerado.
+ * Link aponta para o portal do trabalhador (?view=worker[&doc=<id>]).
+ * @returns {Promise<boolean>}
+ */
+export const sendWorkerDocumentEmail = async ({
+  workerEmail,
+  workerName,
+  documentTitle,
+  documentId,
+  portalBaseUrl,
+}) => {
+  if (!workerEmail) return false;
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID_NOTIF || !EMAILJS_PUBLIC_KEY) {
+    console.warn('[emailUtils] EmailJS não configurado — email não enviado.');
+    return false;
+  }
+  try {
+    const base = portalBaseUrl || (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '');
+    const docParam = documentId ? `&doc=${encodeURIComponent(documentId)}` : '';
+    const templateParams = {
+      to_email: workerEmail,
+      to_name: workerName || 'Trabalhador',
+      notification_title: `Novo documento para assinar: ${documentTitle}`,
+      notification_message: `Olá ${workerName || ''}, recebeste um documento para assinar. Acede ao portal do trabalhador para visualizar e assinar digitalmente.`,
+      link_unico: `${base}?view=worker${docParam}`,
+    };
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, templateParams, EMAILJS_PUBLIC_KEY);
+    return true;
+  } catch (error) {
+    console.error('Falha no envio de email ao trabalhador:', error);
+    return false;
+  }
+};
