@@ -4,8 +4,8 @@ import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import {
-  LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History,
-  Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users,
+  LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
+  Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users, Download,
   X, ChevronLeft, ChevronRight, LogOut, Zap, Plus, Trash2, Unlock,
   Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2, PenTool
 } from 'lucide-react';
@@ -234,34 +234,6 @@ function AdminDashboard(props) {
     if (!reportFilter.month) return workers.filter(w => w.is_active !== false).length;
     return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.workerId))].length;
   }, [logs, reportFilter.month, workers]);
-
-  if (printingReport) {
-    return (
-      <div className="min-h-screen bg-slate-50 print:bg-white print:border-none print:shadow-none font-sans text-slate-900">
-        <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
-          <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-6" style={{ maxWidth: `var(--app-max-width)` }}>
-            <div className="flex items-center justify-between w-full md:w-auto">
-              <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase shrink-0">
-                <CompanyLogo className="h-8 w-8" />
-                <span className="inline">{systemSettings.companyName}</span>
-              </div>
-            </div>
-            <div className="flex-1 flex justify-center w-full md:w-auto">
-              <div className="flex items-center gap-3">
-                <button onClick={() => setPrintingReport(null)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-md transition-all">
-                  <ChevronLeft size={16} /> Voltar aos Relatórios
-                </button>
-              </div>
-            </div>
-            <div className="hidden md:flex items-center gap-4">
-              <button onClick={onLogout} title="Sair" className="p-3 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={24} /></button>
-            </div>
-          </div>
-        </nav>
-        <ClientTimesheetReport data={printingReport} onBack={() => setPrintingReport(null)} />
-      </div>
-    );
-  }
 
   const handleOpenInlineForm = (ds) => {
     setInlineEditingDate(ds);
@@ -745,6 +717,30 @@ function AdminDashboard(props) {
                 </div>
               </div>
 
+              {/* Modal de Relatório */}
+              {printingReport && (
+                <div
+                  className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto print:bg-transparent print:backdrop-blur-none print:p-0 print:static print:overflow-visible"
+                  onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}
+                >
+                  <div className="w-full max-w-5xl my-8 bg-white rounded-[3rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
+                    <div className="no-print flex items-center justify-between p-6 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><FileText size={20} /></div>
+                        <div>
+                          <h3 className="font-black text-lg text-slate-800">A Visualizar Relatório</h3>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">{printingReport.month}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setPrintingReport(null)} className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all">
+                        <X size={20} />
+                      </button>
+                    </div>
+                    <ClientTimesheetReport data={printingReport} onBack={() => setPrintingReport(null)} isEmbedded={true} />
+                  </div>
+                </div>
+              )}
+
               {/* Histórico Recente */}
               <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
                 <div className="flex items-center gap-3 mb-5">
@@ -779,8 +775,16 @@ function AdminDashboard(props) {
                             <td className="px-5 py-3 text-right">
                               <button onClick={() => {
                                 setReportFilter(prev => ({ ...prev, month: entry.month, clientId: entry.clientId, workerId: entry.workerId }));
+                                setTimeout(() => {
+                                  const clientSelected = entry.clientId ? clients.find(c => c.id === entry.clientId) : null;
+                                  if (entry.clientId || entry.workerId) {
+                                    setPrintingReport({ client: clientSelected, logs, workers, clients, month: entry.month, workerId: entry.workerId, clientApprovals });
+                                  } else {
+                                    setPrintingReport({ isGlobal: true, month: entry.month, logs, workers, clients, clientApprovals });
+                                  }
+                                }, 50);
                               }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">
-                                Ver Filtros
+                                Ver
                               </button>
                             </td>
                           </tr>

@@ -157,6 +157,53 @@ body {
   .no-print { display: none !important; }
   .report-container { padding: 0; max-width: 100%; }
 
+  /* Isolar o relatório: esconder tudo, depois mostrar só o relatório */
+  html, body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  body * {
+    visibility: hidden !important;
+  }
+  .pdf-export-mode,
+  .pdf-export-mode * {
+    visibility: visible !important;
+  }
+  .pdf-export-mode {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+  /* Neutralizar o backdrop do modal (que mesmo invisível ocuparia espaço/posição) */
+  .fixed.inset-0 {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    z-index: auto !important;
+    overflow: visible !important;
+  }
+  .embedded-mode {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
   /* Garantir quebras de página corretas */
   .a4-paper {
     page-break-after: always !important;
@@ -269,9 +316,18 @@ body {
   border-bottom: 1.5px solid #cbd5e1 !important;
   background-color: #f8fafc !important;
 }
-.zip-export-mode .column-header-row th {
-  font-size: 6.5pt !important;
-  padding: 3px 4px !important;
-  background-color: #f1f5f9 !important;
-  text-transform: uppercase;
+/* EMBEDDED MODE (modal) */
+.embedded-mode {
+  background: white !important;
+}
+.embedded-mode .a4-paper {
+  margin: 20px auto;
+  padding: 20px;
+  width: 100%;
+  max-width: 794px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.embedded-mode .report-container {
+  max-width: 100%;
+  padding: 0;
 }
