@@ -780,6 +780,22 @@ function AdminDashboard(props) {
                       onChange={(e) => setSystemSettings(prev => ({ ...prev, companyName: e.target.value }))}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                     />
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Morada</p>
+                    <input
+                      type="text"
+                      value={systemSettings.companyAddress || ''}
+                      onChange={(e) => setSystemSettings(prev => ({ ...prev, companyAddress: e.target.value }))}
+                      placeholder="Rua, nº, código postal, localidade"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                    />
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">NIF</p>
+                    <input
+                      type="text"
+                      value={systemSettings.companyNif || ''}
+                      onChange={(e) => setSystemSettings(prev => ({ ...prev, companyNif: e.target.value }))}
+                      placeholder="Nº de Identificação Fiscal"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                    />
                   </div>
                 </div>
 

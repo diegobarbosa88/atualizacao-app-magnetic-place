@@ -4,9 +4,10 @@ import { useTeam, TeamProvider } from './contexts/TeamContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import { useSchedule, ScheduleProvider } from './contexts/ScheduleContext';
 import { 
-  Users, LayoutGrid, List, UserCircle, Search, Edit2, 
+  Users, LayoutGrid, List, UserCircle, Search, Edit2,
   Trash2, Timer, Briefcase, CheckCircle, Unlock,
-  User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro
+  User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro,
+  MapPin, Fingerprint, Mail
 } from 'lucide-react';
 
 const TeamManagerContent = ({ onLogin }) => {
@@ -150,11 +151,26 @@ const TeamManagerContent = ({ onLogin }) => {
                     <input type="text" value={workerForm.tel} onChange={e => setWorkerForm({ ...workerForm, tel: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Ex: 912345678" />
                   </div>
                   <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Mail size={10} /> Email</label>
+                    <input type="email" value={workerForm.email || ''} onChange={e => setWorkerForm({ ...workerForm, email: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="exemplo@dominio.pt" />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><UserCircle size={10} /> Estado da Conta</label>
                     <select value={workerForm.status || 'ativo'} onChange={e => setWorkerForm({ ...workerForm, status: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all">
                       <option value="ativo">Ativo (Acesso Permitido)</option>
                       <option value="inativo">Inativo (Acesso Bloqueado)</option>
                     </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 border-t border-slate-100">
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><MapPin size={10} /> Morada</label>
+                    <input type="text" value={workerForm.address || ''} onChange={e => setWorkerForm({ ...workerForm, address: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Rua, nº, código postal, localidade" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Fingerprint size={10} /> DNI</label>
+                    <input type="text" value={workerForm.dni || ''} onChange={e => setWorkerForm({ ...workerForm, dni: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Documento de Identificação" />
                   </div>
                 </div>
 

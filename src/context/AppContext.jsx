@@ -16,6 +16,8 @@ export const AppProvider = ({ children }) => {
     const defaults = {
       adminPassword: '',
       companyName: 'MAGNETIC PLACE',
+      companyAddress: '',
+      companyNif: '',
       darkMode: false,
       appWidth: '1920',
       geminiApiKey: ''
@@ -290,10 +292,13 @@ export const AppProvider = ({ children }) => {
         hours: data.hours || data.totalHours
       };
     } else if (tableName === 'workers') {
-      const { status, nis, is_active, ...rest } = data;
+      // morada: chave legacy de schema antigo — usar `address` em vez disso
+      const { status, nis, is_active, morada, ...rest } = data;
       const currentStatus = status || (is_active === false ? 'inativo' : 'ativo');
       payload = { ...rest, is_active: currentStatus === 'ativo', id };
       if (nis) payload.nis = nis;
+      // Migração silenciosa: se ainda vier `morada` no objecto e não houver `address`, preserva o valor
+      if (morada && !payload.address) payload.address = morada;
     }
 
     // Para app_notifications, forçar viewed_by_ids e dismissed_by_ids para null/array vazio

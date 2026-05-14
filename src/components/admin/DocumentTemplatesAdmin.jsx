@@ -1,41 +1,32 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-  FileText, Plus, Trash2, X, Upload, Send, Users, Loader2, Download,
-  Search, CheckCircle, Clock, FileSignature, AlertCircle, Eye, Edit3,
+  FileText, Plus, Trash2, X, Send, Users, Loader2,
+  AlertCircle, Eye, Edit3, CheckCircle,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
-import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
 import {
   KNOWN_FIELD_NAMES,
   isKnownField,
   extractTags,
   readFileAsArrayBuffer,
   downloadTemplateBytes,
-  renderDocx,
-  buildRenderData,
 } from '../../utils/docxTemplateService';
 import { convertDocxToPdf } from '../../utils/pdfCoService';
 import { PDFDocument } from 'pdf-lib';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 
 export default function DocumentTemplatesAdmin({ workers = [] }) {
-  const { supabase, systemSettings, companySignature } = useApp();
+  const { supabase } = useApp();
   const {
     templates,
-    generatedDocs,
     loading,
-    loadingDocs,
     saving,
     handleUploadTemplate,
     handleUpdateTemplate,
     handleDeleteTemplate,
     handleGenerateDocuments,
-    handleDownloadGenerated,
-    handleDeleteDoc,
-    handleApproveDocument,
   } = useDocumentTemplates(supabase);
-  const [approvingId, setApprovingId] = useState(null);
 
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null); // null = criar novo, objeto = editar
@@ -76,75 +67,11 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     }
   };
 
-  const openGeneratedDocPreview = async (doc) => {
-    const workerName = workerById[doc.worker_id]?.name || '';
-    const title = `${doc.title}${workerName ? ` — ${workerName}` : ''}`;
-    setPreview({ title, loading: true, blob: null, error: '' });
-    try {
-      if (!doc.template_id) throw new Error('Documento sem template associado.');
-      const { data: tmpl, error: tErr } = await supabase
-        .from('document_templates').select('*').eq('id', doc.template_id).single();
-      if (tErr) throw tErr;
-      if (!tmpl?.template_docx_path) throw new Error('Template sem ficheiro .docx');
-
-      const { data: worker, error: wErr } = await supabase
-        .from('workers').select('*').eq('id', doc.worker_id).single();
-      if (wErr) throw wErr;
-
-      const buffer = await downloadTemplateBytes(supabase, tmpl.template_docx_path);
-      const renderData = buildRenderData(worker || {}, systemSettings || {});
-      const filledBlob = renderDocx(buffer, renderData);
-      setPreview({ title, loading: false, blob: filledBlob, error: '' });
-    } catch (err) {
-      console.error('Falha a abrir preview de doc gerado:', err);
-      setPreview({ title, loading: false, blob: null, error: err.message || 'Erro a carregar documento.' });
-    }
-  };
-
-  const [docSearch, setDocSearch] = useState('');
-  const [docFilter, setDocFilter] = useState('all');
-
   const workerById = useMemo(() => {
     const m = {};
     workers.forEach(w => { m[w.id] = w; });
     return m;
   }, [workers]);
-
-  const filteredDocs = useMemo(() => {
-    return generatedDocs.filter(doc => {
-      if (docFilter === 'signed' && !isSigned(doc.status)) return false;
-      if (docFilter === 'pending' && (isSigned(doc.status) || isAwaitingAdmin(doc.status))) return false;
-      if (docFilter === 'awaiting_admin' && !isAwaitingAdmin(doc.status)) return false;
-      if (docSearch) {
-        const q = docSearch.toLowerCase();
-        const w = workerById[doc.worker_id];
-        const title = (doc.title || '').toLowerCase();
-        const wname = (w?.name || '').toLowerCase();
-        if (!title.includes(q) && !wname.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [generatedDocs, docFilter, docSearch, workerById]);
-
-  const onApproveDoc = async (doc) => {
-    if (!handleApproveDocument) return;
-    if (!companySignature?.signatureDataUrl) {
-      alert('Configura primeiro a assinatura da empresa em Definições.');
-      return;
-    }
-    setApprovingId(doc.id);
-    try {
-      await handleApproveDocument(doc, {
-        companyName: systemSettings?.companyName,
-        companySignature,
-      });
-    } catch (err) {
-      console.error('Erro a aprovar documento:', err);
-      alert('Erro: ' + (err.message || err));
-    } finally {
-      setApprovingId(null);
-    }
-  };
 
   const openGenerateModal = (template) => {
     setSelectedTemplate(template);
@@ -256,122 +183,6 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                 </div>
               </li>
             ))}
-          </ul>
-        )}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between gap-3 flex-wrap">
-          <h3 className="font-bold text-slate-700">Documentos Gerados</h3>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                value={docSearch}
-                onChange={e => setDocSearch(e.target.value)}
-                placeholder="Procurar..."
-                className="pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg w-48 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <select
-              value={docFilter}
-              onChange={e => setDocFilter(e.target.value)}
-              className="px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500"
-            >
-              <option value="all">Todos</option>
-              <option value="pending">Pendentes (trabalhador)</option>
-              <option value="awaiting_admin">Aguardam aprovação</option>
-              <option value="signed">Assinados (finalizados)</option>
-            </select>
-          </div>
-        </div>
-        {loadingDocs ? (
-          <div className="p-8 text-center text-slate-400">
-            <Loader2 className="w-6 h-6 animate-spin mx-auto" />
-          </div>
-        ) : filteredDocs.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-sm">Nenhum documento gerado.</div>
-        ) : (
-          <ul className="divide-y divide-slate-100">
-            {filteredDocs.map(doc => {
-              const worker = workerById[doc.worker_id];
-              const signed = isSigned(doc.status);
-              const awaitingAdmin = isAwaitingAdmin(doc.status);
-              const isApproving = approvingId === doc.id;
-              return (
-                <li key={doc.id} className="p-4 flex items-center gap-4 hover:bg-slate-50">
-                  {signed ? (
-                    <CheckCircle className="w-8 h-8 text-emerald-500 flex-shrink-0" />
-                  ) : awaitingAdmin ? (
-                    <FileSignature className="w-8 h-8 text-indigo-500 flex-shrink-0" />
-                  ) : (
-                    <Clock className="w-8 h-8 text-amber-500 flex-shrink-0" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <h4 className="font-bold text-slate-800 truncate">{doc.title}</h4>
-                      {awaitingAdmin && (
-                        <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded-full">
-                          Aguarda aprovação
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-500 truncate">
-                      {worker?.name || 'Trabalhador desconhecido'} ·{' '}
-                      {signed
-                        ? `Aprovado em ${doc.admin_signed_at ? new Date(doc.admin_signed_at).toLocaleString('pt-PT') : (doc.signed_at ? new Date(doc.signed_at).toLocaleString('pt-PT') : '')}`
-                        : awaitingAdmin
-                        ? `Trabalhador assinou em ${doc.signed_at ? new Date(doc.signed_at).toLocaleString('pt-PT') : ''}`
-                        : `Pendente desde ${new Date(doc.created_at).toLocaleDateString('pt-PT')}`}
-                    </p>
-                  </div>
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => openGeneratedDocPreview(doc)}
-                      className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
-                      title="Pré-visualizar com dados do trabalhador"
-                    >
-                      <Eye className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => handleDownloadGenerated(doc, systemSettings).catch(err => alert('Erro: ' + err.message))}
-                      className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100"
-                      title="Gerar .docx para este trabalhador"
-                    >
-                      <Download className="w-3 h-3" /> Word
-                    </button>
-                    {awaitingAdmin && (
-                      <button
-                        onClick={() => onApproveDoc(doc)}
-                        disabled={isApproving || saving}
-                        className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50"
-                        title="Aplicar carimbo da empresa e finalizar"
-                      >
-                        {isApproving ? <Loader2 className="w-3 h-3 animate-spin" /> : <FileSignature className="w-3 h-3" />}
-                        Aprovar e Assinar
-                      </button>
-                    )}
-                    {doc.signed_pdf_url && (
-                      <a
-                        href={doc.signed_pdf_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100"
-                        title="Abrir PDF"
-                      >
-                        <Download className="w-3 h-3" /> PDF
-                      </a>
-                    )}
-                    <button
-                      onClick={() => handleDeleteDoc(doc.id)}
-                      className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </li>
-              );
-            })}
           </ul>
         )}
       </div>

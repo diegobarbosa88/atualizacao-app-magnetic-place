@@ -52,8 +52,9 @@ const saveWorkerValorHoraHistory = async (workers, saveToDb, workerId, valorNovo
 
 const INITIAL_WORKER_FORM = {
   id: null, name: '', assignedClients: [], assignedSchedules: [],
-  defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '',
+  defaultClientId: '', defaultScheduleId: '', tel: '', email: '', valorHora: '',
   profissao: '', nis: '', nif: '', iban: '', status: 'ativo',
+  address: '', dni: '',
   dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0]
 };
 

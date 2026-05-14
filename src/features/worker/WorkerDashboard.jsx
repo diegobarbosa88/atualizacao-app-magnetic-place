@@ -40,6 +40,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     inlineEditingDate, setInlineEditingDate,
     successMsg, setSuccessMsg,
     inlineFormData, setInlineFormData,
+    mainFormData, setMainFormData,
     showSchedulesModal, setShowSchedulesModal,
     showProgress, setShowProgress,
     expandedDays, setExpandedDays,
@@ -67,7 +68,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     handleApproveMonth
   } = useWorker();
 
-  const { mainFormData, setMainFormData, setCurrentUser } = useApp();
+  const { setCurrentUser } = useApp();
 
   const formatShortName = (fullName) => {
     if (!fullName) return '';
@@ -216,7 +217,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         <div className="bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] p-5 md:p-8 mb-6 md:mb-8 shadow-2xl text-white flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-700 hidden sm:block"><CompanyLogo className="h-64 w-64 filter invert grayscale" /></div>
           <div className="relative z-10 w-full md:flex-1 mb-2 md:mb-0">
-            <h2 className="text-3xl md:text-5xl font-black mb-4 leading-tight text-white text-center md:text-left uppercase tracking-tighter">Olá, {currentUser?.name?.split(' ')[0]}!</h2>
+            <div className="text-3xl md:text-5xl font-black mb-4 leading-tight text-white text-center md:text-left uppercase tracking-tighter">Olá, {currentUser?.name?.split(' ')[0]}!</div>
             <div className="flex items-center justify-center md:justify-start gap-3 bg-white/10 p-2 rounded-2xl w-full sm:w-fit">
               <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white"><ChevronLeft size={16} /></button>
               <div className="text-indigo-200 flex items-center gap-2 text-sm font-bold font-mono uppercase tracking-widest min-w-[120px] justify-center"><Calendar size={18} /> {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</div>
@@ -437,18 +438,18 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
       </main>
 
       {showSchedulesModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-2xl rounded-[3rem] p-10 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-center mb-8 border-b pb-4">
-              <h3 className="text-2xl font-black flex items-center gap-3"><Timer className="text-indigo-600" /> Meus Horários</h3>
-              <button onClick={() => setShowSchedulesModal(false)} className="p-2 text-slate-300 hover:text-red-500"><X size={24} /></button>
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-3xl sm:rounded-[2rem] p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 my-3 sm:my-6 max-h-[calc(100vh-2rem)] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4 sm:mb-5 border-b pb-2 sm:pb-3">
+              <h3 className="text-base sm:text-xl font-black flex items-center gap-2"><Timer className="text-indigo-600" size={18} /> Meus Horários</h3>
+              <button onClick={() => setShowSchedulesModal(false)} className="p-1.5 text-slate-300 hover:text-red-500"><X size={20} /></button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+              <div className="space-y-3">
                 <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pela Empresa</h4>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {assigned.length > 0 ? assigned.map(s => (
-                    <div key={s.id} className={`p-4 rounded-2xl border flex justify-between items-center ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                    <div key={s.id} className={`p-3 rounded-xl border flex justify-between items-center ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
                       <div>
                         <p className="text-xs font-black">{s.name}</p>
                         {s.isAdvanced ? (
@@ -489,11 +490,11 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                   )) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
                 </div>
               </div>
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pessoais</h4>
-                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                   {myPersonals.map(s => (
-                    <div key={s.id} className={`p-4 rounded-2xl border flex justify-between items-center ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50/50 border-emerald-100'}`}>
+                    <div key={s.id} className={`p-3 rounded-xl border flex justify-between items-center ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50/50 border-emerald-100'}`}>
                       <div>
                         <p className="text-xs font-black">{s.name}</p>
                         {s.isAdvanced ? (
@@ -536,7 +537,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                     </div>
                   ))}
                 </div>
-                <div className="p-4 bg-slate-50 rounded-3xl border border-dashed border-slate-300 space-y-3">
+                <div className="p-3 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2">
                   <input type="text" placeholder="Nome do turno..." className="w-full p-2 text-xs rounded-xl border-none outline-none bg-white" value={newPersonalForm.name} onChange={e => setNewPersonalForm({ ...newPersonalForm, name: e.target.value })} />
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-400 ml-1">Entrada</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white font-bold text-indigo-600" value={newPersonalForm.startTime} onChange={e => setNewPersonalForm({ ...newPersonalForm, startTime: e.target.value })} /></div>
@@ -567,7 +568,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                       );
                     })}
                   </div>
-                  <button onClick={savePersonalSchedule} className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase mt-2 shadow-md">Adicionar Pessoal</button>
+                  <button onClick={savePersonalSchedule} className="w-full py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase mt-1.5 shadow-md">Adicionar Pessoal</button>
                 </div>
               </div>
             </div>

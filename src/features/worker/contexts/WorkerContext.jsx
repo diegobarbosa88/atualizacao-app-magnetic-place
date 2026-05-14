@@ -22,10 +22,9 @@ const WorkerContext = createContext(null);
 export const useWorker = () => useContext(WorkerContext);
 
 export const WorkerProvider = ({ children, handleSaveEntry }) => {
-  const { 
+  const {
     currentUser, setCurrentUser, currentMonth, setCurrentMonth,
     logs, clients, schedules, personalSchedules,
-    mainFormData, setMainFormData,
     saveToDb, handleDelete, approvals, handleApproveMonth,
     systemSettings, documents, appNotifications, supabase
   } = useApp();
@@ -34,6 +33,16 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
   const [inlineEditingDate, setInlineEditingDate] = useState(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [inlineFormData, setInlineFormData] = useState({});
+  const [mainFormData, setMainFormData] = useState({
+    id: null,
+    date: toISODateLocal(new Date()),
+    clientId: '',
+    startTime: '',
+    breakStart: '',
+    breakEnd: '',
+    endTime: '',
+    description: ''
+  });
   const [showSchedulesModal, setShowSchedulesModal] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [expandedDays, setExpandedDays] = useState([]);
@@ -187,6 +196,7 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     inlineEditingDate, setInlineEditingDate,
     successMsg, setSuccessMsg,
     inlineFormData, setInlineFormData,
+    mainFormData, setMainFormData,
     showSchedulesModal, setShowSchedulesModal,
     showProgress, setShowProgress,
     expandedDays, setExpandedDays,

@@ -76,7 +76,6 @@ export default function App() {
   const [auditWorkerId, setAuditWorkerId] = useState(null);
   const [showFinReport, setShowFinReport] = useState(false);
   const [finFilter, setFinFilter] = useState({ start: toISODateLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), end: toISODateLocal(new Date()) });
-  const [mainFormData, setMainFormData] = useState({ id: null, date: toISODateLocal(new Date()), clientId: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
 
   const [dismissedNotifs, setDismissedNotifs] = useState(() => {
     if (!currentUser) return [];
@@ -337,7 +336,7 @@ export default function App() {
       )}
       {view === 'worker' && (
         <WorkerDashboard
-          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, mainFormData, setMainFormData, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
+          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
         />
       )}
       {view === 'client_portal' && (
