@@ -92,19 +92,25 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
         }];
       }
     } else if (!client && workerId) {
-      // Worker mode (Aggregation): One worker across ALL clients they worked for
-      const workerLogs = filteredLogs.filter(l => l.workerId === workerId);
+      // Worker mode (Consolidated): One worker across ALL clients — single report unit
+      const workerLogs = filteredLogs.filter(l => l.workerId === workerId).sort((a, b) => a.date.localeCompare(b.date));
       const clientIds = [...new Set(workerLogs.map(l => l.clientId))];
-      units = clientIds.map(cId => {
-        const unitLogs = workerLogs.filter(l => l.clientId === cId).sort((a, b) => a.date.localeCompare(b.date));
-        return {
-          client: clients.find(c => c.id === cId),
-          worker: workers.find(w => w.id === workerId),
-          logs: unitLogs,
-          totalHours: unitLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
-          id: cId
-        };
+      const clientBreakdowns = clientIds.map(cId => {
+        const cLogs = workerLogs.filter(l => l.clientId === cId);
+        const cName = clients.find(c => c.id === cId)?.name || '';
+        const cHours = cLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+        return { clientId: cId, clientName: cName, hours: cHours };
       });
+      const workerTotal = clientBreakdowns.reduce((acc, c) => acc + c.hours, 0);
+      units = [{
+        client: { id: null, name: 'Vários Clientes' },
+        worker: workers.find(w => w.id === workerId),
+        logs: workerLogs,
+        totalHours: workerTotal,
+        id: workerId,
+        clientBreakdowns: clientBreakdowns.sort((a, b) => a.clientName.localeCompare(b.clientName)),
+        isWorkerOnly: true
+      }];
     }
 
     // Sort units: by Client Name then Worker Name
@@ -152,7 +158,8 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
       const monthDisplay = daysInMonthList.length > 0
         ? new Date(daysInMonthList[0]).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
         : '';
-      const newTitle = `${shortName} - ${unit.client?.name || 'Empresa'} - ${monthDisplay}`;
+      const clientLabel = unit.isWorkerOnly ? 'Vários Clientes' : (unit.client?.name || 'Empresa');
+      const newTitle = `${shortName} - ${clientLabel} - ${monthDisplay}`;
       document.title = newTitle;
     } else if (month) {
       const monthDisplay = daysInMonthList.length > 0
@@ -328,7 +335,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                   {daysInMonthList.length > 0 && new Date(daysInMonthList[0]).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
                 </div>
                 <div className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
-                  Folha de Horas Mensal • {unit.client?.name || ''}
+                  {unit.isWorkerOnly ? 'Folha de Horas Mensal • Vários Clientes' : `Folha de Horas Mensal • ${unit.client?.name || ''}`}
                 </div>
               </div>
             </div>
@@ -387,7 +394,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                         {visibleColumns.breakEnd && <td className="text-center font-mono text-slate-400 col-time">{isClearedDay ? '' : (log.breakEnd || '')}</td>}
                         {visibleColumns.end && <td className="text-center font-mono col-time">{log.endTime ?? ''}</td>}
                         {visibleColumns.total && <td className="text-center font-bold text-slate-700 col-time">{isClearedDay ? '' : formatHours(logHours)}</td>}
-                        {visibleColumns.project && <td className="text-center font-medium text-slate-700 uppercase whitespace-nowrap col-project" style={{ fontSize: '8px' }}>{isClearedDay ? '' : (unit.client?.name || '')}</td>}
+                        {visibleColumns.project && <td className="text-center font-medium text-slate-700 uppercase whitespace-nowrap col-project" style={{ fontSize: '8px' }}>{isClearedDay ? '' : (unit.isWorkerOnly ? (clients.find(c => c.id === log.clientId)?.name || '') : (unit.client?.name || ''))}</td>}
                         {visibleColumns.comment && <td className="text-center text-slate-500 italic col-comment" style={{ fontSize: '8px' }}>{log.description || ''}</td>}
                       </tr>
                     );
@@ -429,13 +436,23 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
 
             {/* Final Monthly Summary Section (Isolated from weekly tables) */}
             <div className="bg-white text-black p-4 shadow-none border-y-2 border-slate-900 mt-1 page-break-inside-avoid">
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60">RESUMO MENSAL</span>
-                <div className="flex items-center gap-6">
-                  <div className="flex flex-col items-end">
-                    <span className="text-[7px] font-bold uppercase opacity-50 mb-0.5">TOTAL REGISTRADO</span>
-                    <span className="text-xl font-black text-indigo-600">{formatHours(unit.totalHours)}</span>
-                  </div>
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60">RESUMO MENSAL</span>
+                  {unit.isWorkerOnly && unit.clientBreakdowns ? (
+                    <div className="mt-2 space-y-0.5">
+                      {unit.clientBreakdowns.map(cb => (
+                        <div key={cb.clientId} className="flex items-center gap-4 text-[8px]">
+                          <span className="font-bold text-slate-600 uppercase w-32 truncate">{cb.clientName}</span>
+                          <span className="font-black text-indigo-700">{formatHours(cb.hours)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="flex flex-col items-end">
+                  <span className="text-[7px] font-bold uppercase opacity-50 mb-0.5">TOTAL REGISTRADO</span>
+                  <span className="text-xl font-black text-indigo-600">{formatHours(unit.totalHours)}</span>
                 </div>
               </div>
             </div>

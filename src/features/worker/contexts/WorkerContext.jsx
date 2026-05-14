@@ -43,6 +43,13 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     endTime: '',
     description: ''
   });
+
+  // Hidrata clientId com o default do utilizador ao montar/mudar de utilizador
+  useEffect(() => {
+    if (currentUser?.defaultClientId) {
+      setMainFormData(prev => prev.clientId ? prev : { ...prev, clientId: currentUser.defaultClientId });
+    }
+  }, [currentUser?.defaultClientId]);
   const [showSchedulesModal, setShowSchedulesModal] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [expandedDays, setExpandedDays] = useState([]);

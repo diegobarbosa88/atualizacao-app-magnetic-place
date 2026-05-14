@@ -44,8 +44,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     showSchedulesModal, setShowSchedulesModal,
     showProgress, setShowProgress,
     expandedDays, setExpandedDays,
-    showPersonalBreaks, setShowPersonalBreaks,
-    newPersonalForm, setNewPersonalForm,
     monthLogs,
     todayHours,
     totalMonthHours,
@@ -53,14 +51,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     expectedHours,
     daysList,
     assigned,
-    myPersonals,
     currentMonthStr,
     myApproval,
     pendingApprovals,
     handleDismissNotif,
     handleOpenInlineForm,
     handleQuickRegister,
-    savePersonalSchedule,
     setDefaultSchedule,
     handleSaveEntry,
     saveToDb,
@@ -69,6 +65,24 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   } = useWorker();
 
   const { setCurrentUser } = useApp();
+
+  const [expandedSchedules, setExpandedSchedules] = useState(() =>
+    currentUser?.defaultScheduleId ? new Set([currentUser.defaultScheduleId]) : new Set()
+  );
+  useEffect(() => {
+    if (currentUser?.defaultScheduleId) {
+      setExpandedSchedules(prev => prev.has(currentUser.defaultScheduleId)
+        ? prev
+        : new Set([...prev, currentUser.defaultScheduleId]));
+    }
+  }, [currentUser?.defaultScheduleId]);
+  const toggleScheduleExpand = (id) => {
+    setExpandedSchedules(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
 
   const formatShortName = (fullName) => {
     if (!fullName) return '';
@@ -444,131 +458,60 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
               <h3 className="text-base sm:text-xl font-black flex items-center gap-2"><Timer className="text-indigo-600" size={18} /> Meus Horários</h3>
               <button onClick={() => setShowSchedulesModal(false)} className="p-1.5 text-slate-300 hover:text-red-500"><X size={20} /></button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            <div>
               <div className="space-y-3">
                 <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pela Empresa</h4>
                 <div className="space-y-1.5">
-                  {assigned.length > 0 ? assigned.map(s => (
-                    <div key={s.id} className={`p-3 rounded-xl border flex justify-between items-center ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
-                      <div>
-                        <p className="text-xs font-black">{s.name}</p>
-                        {s.isAdvanced ? (
-                          <div className="mt-2 space-y-1">
-                            {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                              const config = s.dailyConfigs && s.dailyConfigs[d.v];
-                              if (!config || !config.isActive) return null;
-                              return (
-                                <div key={d.v} className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-600">
-                                  <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded flex-shrink-0 w-6 text-center uppercase">{d.l}</span>
-                                  <span>{config.startTime}-{config.endTime}</span>
-                                  {config.breakStart && <span className="text-orange-500 flex items-center ml-1"><Coffee size={10} className="mr-0.5" /> {config.breakStart}-{config.breakEnd}</span>}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-sm sm:text-base font-black text-slate-900 mb-1 leading-none">{s.startTime || '--:--'} - {s.endTime || '--:--'}</p>
-                            {s.breakStart && (
-                              <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 uppercase">
-                                <Coffee size={10} /> Pausa: {s.breakStart} - {s.breakEnd || '--:--'}
-                              </div>
-                            )}
-                            <div className="flex gap-0.5 mt-1">
-                              {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                                const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                                return isActive ? <span key={d.v} className="bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
+                  {assigned.length > 0 ? assigned.map(s => {
+                    const isExpanded = expandedSchedules.has(s.id);
+                    return (
+                    <div key={s.id} onClick={() => toggleScheduleExpand(s.id)} className={`p-3 rounded-xl border cursor-pointer hover:shadow-sm transition-all flex flex-col gap-2 ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                      <div className="flex justify-between items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <p className="text-xs font-black truncate">{s.name}</p>
+                          {isExpanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-300 flex-shrink-0" />}
+                        </div>
+                        <button onClick={(e) => { e.stopPropagation(); setDefaultSchedule(s.id); }} title="Definir como Padrão" className={`p-2 rounded-xl transition-all flex-shrink-0 ${currentUser?.defaultScheduleId === s.id ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}>
+                          <Star fill={currentUser?.defaultScheduleId === s.id ? 'currentColor' : 'none'} size={16} />
+                        </button>
+                      </div>
+                      {isExpanded && (
+                        <div>
+                          {s.isAdvanced ? (
+                            <div className="space-y-1">
+                              {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
+                                const config = s.dailyConfigs && s.dailyConfigs[d.v];
+                                if (!config || !config.isActive) return null;
+                                return (
+                                  <div key={d.v} className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded flex-shrink-0 w-6 text-center uppercase">{d.l}</span>
+                                    <span>{config.startTime}-{config.endTime}</span>
+                                    {config.breakStart && <span className="text-orange-500 flex items-center ml-1"><Coffee size={10} className="mr-0.5" /> {config.breakStart}-{config.breakEnd}</span>}
+                                  </div>
+                                );
                               })}
                             </div>
-                          </>
-                        )}
-                      </div>
-                      <button onClick={() => setDefaultSchedule(s.id)} title="Definir como PadrÃ£o" className={`p-2 rounded-xl transition-all ${currentUser?.defaultScheduleId === s.id ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}>
-                        <Star fill={currentUser?.defaultScheduleId === s.id ? 'currentColor' : 'none'} size={16} />
-                      </button>
-                    </div>
-                  )) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pessoais</h4>
-                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-                  {myPersonals.map(s => (
-                    <div key={s.id} className={`p-3 rounded-xl border flex justify-between items-center ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50/50 border-emerald-100'}`}>
-                      <div>
-                        <p className="text-xs font-black">{s.name}</p>
-                        {s.isAdvanced ? (
-                          <div className="mt-2 space-y-1">
-                            {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                              const config = s.dailyConfigs && s.dailyConfigs[d.v];
-                              if (!config || !config.isActive) return null;
-                              return (
-                                <div key={d.v} className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-600">
-                                  <span className="bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded flex-shrink-0 w-6 text-center uppercase">{d.l}</span>
-                                  <span>{config.startTime}-{config.endTime}</span>
-                                  {config.breakStart && <span className="text-orange-500 flex items-center ml-1"><Coffee size={10} className="mr-0.5" /> {config.breakStart}-{config.breakEnd}</span>}
+                          ) : (
+                            <>
+                              <p className="text-sm sm:text-base font-black text-slate-900 mb-1 leading-none">{s.startTime || '--:--'} - {s.endTime || '--:--'}</p>
+                              {s.breakStart && (
+                                <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 uppercase">
+                                  <Coffee size={10} /> Pausa: {s.breakStart} - {s.breakEnd || '--:--'}
                                 </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <>
-                            <p className="text-sm sm:text-base font-black text-slate-900 mb-1 leading-none">{s.startTime || '--:--'} - {s.endTime || '--:--'}</p>
-                            {s.breakStart && (
-                              <div className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase">
-                                <Coffee size={10} /> Pausa: {s.breakStart} - {s.breakEnd || '--:--'}
+                              )}
+                              <div className="flex gap-0.5 mt-1">
+                                {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
+                                  const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
+                                  return isActive ? <span key={d.v} className="bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
+                                })}
                               </div>
-                            )}
-                            <div className="flex gap-0.5 mt-1">
-                              {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                                const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                                return isActive ? <span key={d.v} className="bg-emerald-100 text-emerald-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => setDefaultSchedule(s.id)} title="Definir como PadrÃ£o" className={`p-2 rounded-xl transition-all ${currentUser?.defaultScheduleId === s.id ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}>
-                          <Star fill={currentUser?.defaultScheduleId === s.id ? 'currentColor' : 'none'} size={14} />
-                        </button>
-                        <button onClick={() => handleDelete('personalSchedules', s.id)} className="p-2 text-red-300 hover:text-red-500 bg-white rounded-xl"><Trash2 size={14} /></button>
-                      </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-                <div className="p-3 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-2">
-                  <input type="text" placeholder="Nome do turno..." className="w-full p-2 text-xs rounded-xl border-none outline-none bg-white" value={newPersonalForm.name} onChange={e => setNewPersonalForm({ ...newPersonalForm, name: e.target.value })} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-400 ml-1">Entrada</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white font-bold text-indigo-600" value={newPersonalForm.startTime} onChange={e => setNewPersonalForm({ ...newPersonalForm, startTime: e.target.value })} /></div>
-                    <div className="space-y-1"><label className="text-[8px] font-black uppercase text-slate-400 ml-1">Saída</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white font-bold text-indigo-600" value={newPersonalForm.endTime} onChange={e => setNewPersonalForm({ ...newPersonalForm, endTime: e.target.value })} /></div>
-                  </div>
-
-                  <button type="button" onClick={() => setShowPersonalBreaks(!showPersonalBreaks)} className="text-[9px] font-black uppercase text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 py-1">
-                    {showPersonalBreaks ? '× Ocultar Pausa' : '+ Adicionar Pausa'}
-                  </button>
-
-                  {showPersonalBreaks && (
-                    <div className="grid grid-cols-2 gap-2 p-2 bg-white/50 rounded-xl animate-in slide-in-from-top-1 duration-200">
-                      <div className="space-y-1"><label className="text-[8px] font-black uppercase text-orange-400 ml-1">Pausa I.</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white text-orange-600" value={newPersonalForm.breakStart} onChange={e => setNewPersonalForm({ ...newPersonalForm, breakStart: e.target.value })} /></div>
-                      <div className="space-y-1"><label className="text-[8px] font-black uppercase text-orange-400 ml-1">Pausa F.</label><input type="time" className="w-full p-2 text-xs rounded-xl border-none bg-white text-orange-600" value={newPersonalForm.breakEnd} onChange={e => setNewPersonalForm({ ...newPersonalForm, breakEnd: e.target.value })} /></div>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-1 mt-1 justify-center">
-                    {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(day => {
-                      const isActive = (newPersonalForm.weekdays || [1, 2, 3, 4, 5]).includes(day.v);
-                      return (
-                        <button type="button" key={day.v} onClick={() => {
-                          const current = newPersonalForm.weekdays || [1, 2, 3, 4, 5];
-                          const updated = isActive ? current.filter(d => d !== day.v) : [...current, day.v];
-                          setNewPersonalForm({ ...newPersonalForm, weekdays: updated });
-                        }} className={`px-2 py-1 rounded text-[9px] font-black transition-all ${isActive ? 'bg-indigo-600 text-white shadow-sm' : 'bg-white text-slate-400 hover:bg-slate-200'}`}>
-                          {day.l}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button onClick={savePersonalSchedule} className="w-full py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase mt-1.5 shadow-md">Adicionar Pessoal</button>
+                  );
+                  }) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
                 </div>
               </div>
             </div>

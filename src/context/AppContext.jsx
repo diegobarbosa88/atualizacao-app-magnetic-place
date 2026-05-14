@@ -293,12 +293,13 @@ export const AppProvider = ({ children }) => {
       };
     } else if (tableName === 'workers') {
       // morada: chave legacy de schema antigo — usar `address` em vez disso
-      const { status, nis, is_active, morada, ...rest } = data;
+      const { status, nis, is_active, morada, isAdminImpersonating, ...rest } = data;
       const currentStatus = status || (is_active === false ? 'inativo' : 'ativo');
       payload = { ...rest, is_active: currentStatus === 'ativo', id };
       if (nis) payload.nis = nis;
       // Migração silenciosa: se ainda vier `morada` no objecto e não houver `address`, preserva o valor
       if (morada && !payload.address) payload.address = morada;
+      // isAdminImpersonating é campo transient de sessão — nunca persistir
     }
 
     // Para app_notifications, forçar viewed_by_ids e dismissed_by_ids para null/array vazio

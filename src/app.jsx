@@ -155,9 +155,6 @@ export default function App() {
     setView(role);
     localStorage.setItem('magnetic_view', role);
     localStorage.setItem('magnetic_user', JSON.stringify(userData));
-    if (role === 'worker' && user) {
-      setMainFormData(prev => ({ ...prev, clientId: user.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '' }));
-    }
   };
 
   const handleLogout = () => {
@@ -257,7 +254,7 @@ export default function App() {
     for (const log of existingLogs) {
       const existingStart = toMins(log.startTime);
       const existingEnd = toMins(log.endTime);
-      if (newStart < existingEnd && newEnd > existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
+      if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
     }
     saveToDb('logs', logId, { ...formData, date: dateToSave, hours, workerId: wId, id: logId });
     if (isMain) { const resetClientId = currentUser?.role === 'worker' ? (currentUser.defaultClientId || '') : ''; setMainFormData(prev => ({ ...prev, description: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', clientId: resetClientId })); }
