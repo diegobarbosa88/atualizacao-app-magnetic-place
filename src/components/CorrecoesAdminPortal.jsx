@@ -5,7 +5,7 @@ import { useEditDraft } from '../hooks/useEditDraft';
 import { parseCorrectionMessage } from '../utils/notifParser';
 import { sendNotificationEmail } from '../utils/emailUtils';
 import { calculateDuration } from '../utils/formatUtils';
-import { CheckCircle, XCircle, AlertCircle, ChevronDown } from 'lucide-react';
+import { CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
 
 const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, currentUser, correcoesCorrections }) => {
   const [expandedSections, setExpandedSections] = useState({ quick: true, precision: true });
@@ -26,19 +26,6 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
-  };
-
-  const handleSave = async () => {
-    if (!draft) return;
-    
-    try {
-      console.log('Saving correction to DB:', draft);
-      await handleDelete('app_notifications', draft.id);
-      alert(`Correção para ${draft.parsedData?.workerName || draft.parsedData?.clientName} aplicada com sucesso!`);
-      clearDraft();
-    } catch (error) {
-      alert('Erro ao salvar correção: ' + error.message);
-    }
   };
 
   const handleApply = async ({ localEdits, deletedDays, workersData, notification }) => {
@@ -78,20 +65,35 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           const editedBreakEnd = localEdits[breakEndKey] || day.breakEnd;
 
           if (localEdits[entryKey] || localEdits[exitKey] || localEdits[breakStartKey] || localEdits[breakEndKey]) {
-            const logEntry = logs.find(l => 
-              String(l.workerId) === String(worker.id) && 
+            const logEntry = logs.find(l =>
+              String(l.workerId) === String(worker.id) &&
               l.date === day.rawDate
             );
+            const hours = calculateDuration(editedEntry, editedExit, editedBreakStart, editedBreakEnd);
+            const normStart = editedEntry === '--:--' ? null : editedEntry;
+            const normEnd = editedExit === '--:--' ? null : editedExit;
 
             if (logEntry) {
-              const hours = calculateDuration(editedEntry, editedExit, editedBreakStart, editedBreakEnd);
               await saveToDb('logs', logEntry.id, {
                 ...logEntry,
-                startTime: editedEntry === '--:--' ? null : editedEntry,
-                endTime: editedExit === '--:--' ? null : editedExit,
+                startTime: normStart,
+                endTime: normEnd,
                 breakStart: editedBreakStart,
                 breakEnd: editedBreakEnd,
-                hours: hours
+                hours
+              });
+            } else if (normStart && normEnd && day.rawDate) {
+              const newId = `l${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+              await saveToDb('logs', newId, {
+                id: newId,
+                workerId: worker.id,
+                clientId,
+                date: day.rawDate,
+                startTime: normStart,
+                endTime: normEnd,
+                breakStart: editedBreakStart || null,
+                breakEnd: editedBreakEnd || null,
+                hours
               });
             }
           }
@@ -206,12 +208,10 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
 
         if (isDeleted) {
           if (day.logId) {
-            await saveToDb('logs', day.logId, {
-              id: day.logId,
-              hours: 0,
-              startTime: null,
-              endTime: null
-            });
+            const logEntry = logs.find(l => String(l.id) === String(day.logId));
+            if (logEntry) {
+              await saveToDb('logs', logEntry.id, { ...logEntry, hours: 0, startTime: null, endTime: null });
+            }
           }
           continue;
         }
@@ -226,15 +226,35 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           const newEnd = editExit || day.exit || day.end;
           const newBreakStart = editBreakStart || day.breakStart;
           const newBreakEnd = editBreakEnd || day.breakEnd;
+          const normStart = newStart === '--:--' ? null : newStart;
+          const normEnd = newEnd === '--:--' ? null : newEnd;
+          const rowDate = day.rawDate || day.date;
+          const hours = day.editedHours || day.hours || calculateDuration(normStart, normEnd, newBreakStart, newBreakEnd);
 
           if (day.logId) {
-            await saveToDb('logs', day.logId, {
-              id: day.logId,
-              startTime: newStart === '--:--' ? null : newStart,
-              endTime: newEnd === '--:--' ? null : newEnd,
-              breakStart: newBreakStart,
-              breakEnd: newBreakEnd,
-              hours: day.editedHours || day.hours
+            const logEntry = logs.find(l => String(l.id) === String(day.logId));
+            if (logEntry) {
+              await saveToDb('logs', logEntry.id, {
+                ...logEntry,
+                startTime: normStart,
+                endTime: normEnd,
+                breakStart: newBreakStart,
+                breakEnd: newBreakEnd,
+                hours
+              });
+            }
+          } else if (normStart && normEnd && rowDate) {
+            const newId = `l${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+            await saveToDb('logs', newId, {
+              id: newId,
+              workerId: worker.id,
+              clientId,
+              date: rowDate,
+              startTime: normStart,
+              endTime: normEnd,
+              breakStart: newBreakStart || null,
+              breakEnd: newBreakEnd || null,
+              hours
             });
           }
         }
@@ -418,25 +438,14 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
             )}
           </div>
 
-          <div className="flex gap-3">
-            <button 
-              onClick={handleSave}
-              className="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
-            >
-              <CheckCircle size={16} /> Confirmar
-            </button>
-            <button 
-              onClick={handleReject}
-              className="py-3 px-4 bg-rose-50 text-rose-600 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 transition-colors"
-            >
-              <XCircle size={16} />
-            </button>
-          </div>
-          <button 
+          <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
+            Use os botões <span className="font-bold">Aplicar</span> / <span className="font-bold">Rejeitar</span> dentro do cartão para guardar ou descartar as alterações.
+          </p>
+          <button
             onClick={clearDraft}
-            className="w-full mt-3 py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors"
+            className="w-full py-2 text-slate-400 font-bold text-[10px] uppercase tracking-widest hover:text-slate-600 transition-colors border border-slate-200 rounded-xl"
           >
-            Descartar
+            Fechar
           </button>
         </div>
       )}

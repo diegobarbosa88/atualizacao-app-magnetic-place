@@ -3,6 +3,9 @@ import { useApp } from '../../context/AppContext';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
+import CompanyValidationStamp from '../../components/common/CompanyValidationStamp';
+import CompanyClassicStamp from '../../components/common/CompanyClassicStamp';
+import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
   Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users, Download,
@@ -271,8 +274,15 @@ function AdminDashboard(props) {
     const updatedHistory = [historyEntry, ...reportHistory].slice(0, 5);
     setReportHistory(updatedHistory);
     localStorage.setItem('reportHistory', JSON.stringify(updatedHistory));
-    setPrintingReport({ client: clientSelected, logs, workers, clients, month: reportFilter.month, workerId: reportFilter.workerId, clientApprovals });
+    setPrintingReport({ client: clientSelected, month: reportFilter.month, workerId: reportFilter.workerId });
   };
+
+  // Derivado reactivo: enriquece o snapshot leve de `printingReport` com os arrays vivos do AppContext.
+  // Sem isto, aplicar uma correção enquanto o modal está aberto mostraria dados antigos.
+  const reportData = useMemo(() => {
+    if (!printingReport) return null;
+    return { ...printingReport, logs, workers, clients, clientApprovals };
+  }, [printingReport, logs, workers, clients, clientApprovals]);
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 font-sans text-slate-900">
@@ -710,7 +720,7 @@ function AdminDashboard(props) {
                     const updatedHistory = [historyEntry, ...reportHistory].slice(0, 5);
                     setReportHistory(updatedHistory);
                     localStorage.setItem('reportHistory', JSON.stringify(updatedHistory));
-                    setPrintingReport({ isGlobal: true, month: reportFilter.month, logs, workers, clients, clientApprovals });
+                    setPrintingReport({ isGlobal: true, month: reportFilter.month });
                   }} disabled={!reportFilter.month} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
                     <Zap size={18} className="text-amber-400" /> Gerar Tudo do Mês
                   </button>
@@ -736,7 +746,7 @@ function AdminDashboard(props) {
                         <X size={20} />
                       </button>
                     </div>
-                    <ClientTimesheetReport data={printingReport} onBack={() => setPrintingReport(null)} isEmbedded={true} />
+                    <ClientTimesheetReport data={reportData} onBack={() => setPrintingReport(null)} isEmbedded={true} />
                   </div>
                 </div>
               )}
@@ -778,9 +788,9 @@ function AdminDashboard(props) {
                                 setTimeout(() => {
                                   const clientSelected = entry.clientId ? clients.find(c => c.id === entry.clientId) : null;
                                   if (entry.clientId || entry.workerId) {
-                                    setPrintingReport({ client: clientSelected, logs, workers, clients, month: entry.month, workerId: entry.workerId, clientApprovals });
+                                    setPrintingReport({ client: clientSelected, month: entry.month, workerId: entry.workerId });
                                   } else {
-                                    setPrintingReport({ isGlobal: true, month: entry.month, logs, workers, clients, clientApprovals });
+                                    setPrintingReport({ isGlobal: true, month: entry.month });
                                   }
                                 }, 50);
                               }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">
@@ -992,6 +1002,7 @@ function AdminDashboard(props) {
 }
 
 function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
+  const { stampStyle, setStampStyle } = useApp();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [sigDataUrl, setSigDataUrl] = useState('');
@@ -1094,6 +1105,49 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
           Guardar
         </button>
+
+        <div className="pt-6 mt-2 border-t border-slate-100 space-y-4">
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+            Estilo do carimbo aplicado aos documentos
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setStampStyle('tech')}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'tech' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Tech Data-Grid</div>
+              <div className="text-[10px] text-slate-500 mt-1">Auditoria técnica + token (sem assinatura desenhada)</div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setStampStyle('classic')}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'classic' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Logo + Assinatura</div>
+              <div className="text-[10px] text-slate-500 mt-1">Logo da empresa + assinatura desenhada azul</div>
+            </button>
+          </div>
+
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2">
+            Pré-visualização
+          </p>
+          {stampStyle === 'classic' ? (
+            <CompanyClassicStamp
+              responsibleName={name || 'Nome do Responsável'}
+              responsibleRole={role}
+              signedAt={new Date().toISOString()}
+              signatureDataUrl={sigDataUrl}
+            />
+          ) : (
+            <CompanyValidationStamp
+              responsibleName={name || 'Nome do Responsável'}
+              signedAt={new Date().toISOString()}
+              device={parseDeviceLabel()}
+              ip="192.168.x.x"
+            />
+          )}
+        </div>
       </div>
 
       {showSignaturePad && (

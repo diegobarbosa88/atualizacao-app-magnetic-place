@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   FileText, Eye, Trash2, Search, Upload, Loader2, Plus, X,
-  Clock, FileSignature, CheckCircle, Download,
+  Clock, FileSignature, CheckCircle, Download, ChevronUp, ChevronDown,
 } from 'lucide-react';
 import { formatDocDate } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
@@ -14,11 +14,27 @@ import {
 } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
+import { parseDeviceLabel, fetchPublicIp } from '../../utils/deviceUtils';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
+const SortableTh = ({ label, columnKey, sortKey, sortDir, onSort }) => {
+  const active = sortKey === columnKey;
+  return (
+    <th
+      onClick={() => onSort(columnKey)}
+      className="px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer select-none hover:text-slate-600 transition-colors"
+    >
+      <span className="inline-flex items-center gap-1">
+        {label}
+        {active && (sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
+      </span>
+    </th>
+  );
+};
+
 const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings, supabase }) => {
-  const { supabase: clientSupabase, companySignature } = useApp();
+  const { supabase: clientSupabase, companySignature, stampStyle } = useApp();
   const [activeSubTab, setActiveSubTab] = useState('documentos');
 
   const {
@@ -42,6 +58,17 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const [sourceFilter, setSourceFilter] = useState('all');   // all | manual | template
   const [approvingId, setApprovingId] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [sortKey, setSortKey] = useState('createdAt');
+  const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
+
+  const handleSort = (key) => {
+    if (sortKey === key) {
+      setSortDir(d => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir(key === 'createdAt' ? 'desc' : 'asc');
+    }
+  };
 
   // Modal de upload manual
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -83,12 +110,12 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         raw: d,
       };
     });
-    return [...manuais, ...gerados].sort((a, b) => (b.createdAt?.getTime() || 0) - (a.createdAt?.getTime() || 0));
+    return [...manuais, ...gerados];
   }, [documents, generatedDocs, workerById]);
 
   const filteredDocs = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
-    return unifiedDocs.filter(d => {
+    const list = unifiedDocs.filter(d => {
       if (stateFilter !== 'all' && d.state !== stateFilter) return false;
       if (sourceFilter !== 'all' && d.source !== sourceFilter) return false;
       if (q) {
@@ -98,7 +125,28 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       }
       return true;
     });
-  }, [unifiedDocs, stateFilter, sourceFilter, searchTerm]);
+
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const getVal = (d) => {
+      switch (sortKey) {
+        case 'createdAt': return d.createdAt ? d.createdAt.getTime() : null;
+        case 'workerName': return d.workerName || null;
+        case 'title': return d.title || null;
+        case 'source': return d.source || null;
+        case 'state': return d.state || null;
+        default: return null;
+      }
+    };
+    return [...list].sort((a, b) => {
+      const va = getVal(a);
+      const vb = getVal(b);
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1;  // nulls always last
+      if (vb == null) return -1;
+      if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+      return String(va).localeCompare(String(vb), 'pt', { sensitivity: 'base' }) * dir;
+    });
+  }, [unifiedDocs, stateFilter, sourceFilter, searchTerm, sortKey, sortDir]);
 
   const counts = useMemo(() => {
     const c = { all: unifiedDocs.length, pending: 0, awaiting_admin: 0, signed: 0 };
@@ -187,9 +235,14 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     }
     setApprovingId(raw.id);
     try {
+      const adminDevice = parseDeviceLabel();
+      const adminIp = await fetchPublicIp();
       await handleApproveDocument(raw, {
         companyName: systemSettings?.companyName,
         companySignature,
+        adminIp,
+        adminDevice,
+        stampStyle,
       });
     } catch (err) {
       console.error('Erro a aprovar documento:', err);
@@ -350,11 +403,11 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             <table className="w-full text-left border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-slate-400">
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Colaborador</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Documento</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Origem</th>
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Estado</th>
+                  <SortableTh label="Data" columnKey="createdAt" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Colaborador" columnKey="workerName" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Documento" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Origem" columnKey="source" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortableTh label="Estado" columnKey="state" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
                   <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
                 </tr>
               </thead>

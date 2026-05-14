@@ -155,7 +155,7 @@ const ValidationPortal = ({
                         <div className="flex justify-end gap-2">
                           {c.status === 'validado' ? (
                             <>
-                              <button onClick={() => { if (window.confirm('Anular validação?')) { const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (appr) handleDelete('client_approvals', appr.id); } }} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Anular Validação"><RotateCcw size={18} /></button>
+                              <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); } catch (err) { alert('Erro ao anular validação: ' + (err?.message || err)); } }} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Anular Validação"><RotateCcw size={18} /></button>
                               <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Baixar Relatório"><Download size={18} /></button>
                             </>
                           ) : (
@@ -215,7 +215,7 @@ const ValidationPortal = ({
                         </button>
                         {!w.isApproved ? (
                           <button
-                            onClick={() => { const id = "appr_" + w.id + "_" + portalMonthStr; saveToDb('approvals', id, { id, workerId: w.id, month: portalMonthStr, timestamp: new Date().toISOString() }); }}
+                            onClick={async () => { const id = "appr_" + w.id + "_" + portalMonthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: portalMonthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro ao aprovar horas: ' + (err?.message || err)); } }}
                             className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                             title="Aprovar Horas"
                           >
@@ -223,7 +223,7 @@ const ValidationPortal = ({
                           </button>
                         ) : (
                           <button
-                            onClick={() => handleDelete('approvals', w.approval.id)}
+                            onClick={async () => { try { await handleDelete('approvals', w.approval.id); } catch (err) { alert('Erro ao anular aprovação: ' + (err?.message || err)); } }}
                             className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"
                             title="Anular Aprovação"
                           >
