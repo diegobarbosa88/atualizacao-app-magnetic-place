@@ -5,7 +5,7 @@ import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History,
-  Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle,
+  Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users,
   X, ChevronLeft, ChevronRight, LogOut, Zap, Plus, Trash2, Unlock,
   Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2, PenTool
 } from 'lucide-react';
@@ -216,28 +216,46 @@ function AdminDashboard(props) {
 
   const [inlineEditingDate, setInlineEditingDate] = useState(null);
   const [inlineFormData, setInlineFormData] = useState({});
+  const [reportHistory, setReportHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('reportHistory') || '[]'); } catch { return []; }
+  });
+
+  const activeReportsCount = useMemo(() => {
+    if (!reportFilter.month) return 0;
+    return logs.filter(l => l.date?.startsWith(reportFilter.month)).length;
+  }, [logs, reportFilter.month]);
+
+  const activeClientsCount = useMemo(() => {
+    if (!reportFilter.month) return clients.length;
+    return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.clientId))].length;
+  }, [logs, reportFilter.month, clients]);
+
+  const activeWorkersCount = useMemo(() => {
+    if (!reportFilter.month) return workers.filter(w => w.is_active !== false).length;
+    return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.workerId))].length;
+  }, [logs, reportFilter.month, workers]);
 
   if (printingReport) {
     return (
       <div className="min-h-screen bg-slate-50 print:bg-white print:border-none print:shadow-none font-sans text-slate-900">
-        <nav className="bg-white border-b border-slate-200 min-h-[4rem] flex flex-col md:flex-row items-center px-4 md:px-8 justify-between sticky top-0 z-40 shadow-sm gap-y-4 py-3 print:hidden">
-          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 w-full md:w-auto">
+        <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
+          <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-6" style={{ maxWidth: `var(--app-max-width)` }}>
             <div className="flex items-center justify-between w-full md:w-auto">
-              <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase">
+              <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase shrink-0">
                 <CompanyLogo className="h-8 w-8" />
-                <span className="inline">MAGNETIC PLACE</span>
+                <span className="inline">{systemSettings.companyName}</span>
               </div>
             </div>
-            <div className="flex overflow-x-auto w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 opacity-50 cursor-not-allowed">
-              {['overview', 'team', 'clients', 'schedules', 'expenses', 'reports', 'settings'].map(t => (
-                <button key={t} disabled className="whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'schedules' ? 'Horários' : t === 'expenses' ? 'Despesas' : t === 'settings' ? 'Configurações' : 'Relatórios'}
+            <div className="flex-1 flex justify-center w-full md:w-auto">
+              <div className="flex items-center gap-3">
+                <button onClick={() => setPrintingReport(null)} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 shadow-md transition-all">
+                  <ChevronLeft size={16} /> Voltar aos Relatórios
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
-          <div className="hidden md:flex items-center gap-4 ml-auto md:ml-0">
-            <button onClick={onLogout} title="Sair" className="p-3 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={24} /></button>
+            <div className="hidden md:flex items-center gap-4">
+              <button onClick={onLogout} title="Sair" className="p-3 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={24} /></button>
+            </div>
           </div>
         </nav>
         <ClientTimesheetReport data={printingReport} onBack={() => setPrintingReport(null)} />
@@ -268,6 +286,19 @@ function AdminDashboard(props) {
   const handleGenerateClientReport = () => {
     if (!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)) return;
     const clientSelected = reportFilter.clientId ? clients.find(c => c.id === reportFilter.clientId) : null;
+    const workerSelected = reportFilter.workerId ? workers.find(w => w.id === reportFilter.workerId) : null;
+    const historyEntry = {
+      id: `rh_${Date.now()}`,
+      month: reportFilter.month,
+      clientId: reportFilter.clientId || '',
+      clientName: clientSelected?.name || (reportFilter.workerId ? 'Vários Clientes' : ''),
+      workerId: reportFilter.workerId || '',
+      workerName: workerSelected?.name || (reportFilter.clientId ? 'Todos' : ''),
+      timestamp: new Date().toISOString()
+    };
+    const updatedHistory = [historyEntry, ...reportHistory].slice(0, 5);
+    setReportHistory(updatedHistory);
+    localStorage.setItem('reportHistory', JSON.stringify(updatedHistory));
     setPrintingReport({ client: clientSelected, logs, workers, clients, month: reportFilter.month, workerId: reportFilter.workerId, clientApprovals });
   };
 
@@ -391,7 +422,7 @@ function AdminDashboard(props) {
           })()}
 
           {!auditWorkerId && activeTab === 'overview' && (
-            <div className="animate-in fade-in duration-500 space-y-8" style={{ maxWidth: '1440px', margin: '0 auto' }}>
+            <div className="animate-in fade-in duration-500 space-y-8">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3"><LayoutGrid size={32} className="text-indigo-600" /> Dashboard Geral</h2>
                 <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
@@ -630,40 +661,134 @@ function AdminDashboard(props) {
             </div>
           )}
 
-          {!auditWorkerId && activeTab === 'reports' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black flex items-center gap-3"><FileText size={32} className="text-indigo-600" /> Folhas de Horas para Clientes</h2>
+{!auditWorkerId && activeTab === 'reports' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3"><FileText size={32} className="text-indigo-600" /> Folhas de Horas para Clientes</h2>
               </div>
-              <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-slate-200">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
+                  <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl w-fit"><Users size={24} /></div>
+                  <div>
+                    <p className="text-3xl font-black text-slate-800">{activeWorkersCount}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaboradores com Registos</p>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
+                  <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl w-fit"><Building2 size={24} /></div>
+                  <div>
+                    <p className="text-3xl font-black text-slate-800">{activeClientsCount}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes Activos</p>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
+                </div>
+                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
+                  <div className="bg-amber-50 text-amber-600 p-3 rounded-2xl w-fit"><Activity size={24} /></div>
+                  <div>
+                    <p className="text-3xl font-black text-slate-800">{activeReportsCount}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registos</p>
+                  </div>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
+                </div>
+              </div>
+
+              {/* Filtros */}
+              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
                       <option value="">-- Escolher Cliente --</option>
                       {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
+                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
                       <option value="">-- Todos os Colaboradores --</option>
                       {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                     </select>
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês (Ano-Mês)</label>
-                    <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
+                    <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
                   </div>
                 </div>
+              </div>
+
+              {/* Botões de ação */}
+              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
                 <div className="flex flex-col md:flex-row gap-4">
-                  <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    <FileText size={20} /> Gerar Selecção
+                  <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
+                    <FileText size={18} /> Gerar Selecção
                   </button>
-                  <button onClick={() => setPrintingReport({ isGlobal: true, month: reportFilter.month, logs, workers, clients, clientApprovals })} disabled={!reportFilter.month} className="px-8 py-5 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    <Zap size={20} className="text-amber-400" /> Gerar Tudo do Mês
+                  <button onClick={() => {
+                    const historyEntry = {
+                      id: `rh_${Date.now()}`,
+                      month: reportFilter.month,
+                      clientId: '',
+                      clientName: 'Todos os Clientes',
+                      workerId: '',
+                      workerName: 'Todos',
+                      timestamp: new Date().toISOString()
+                    };
+                    const updatedHistory = [historyEntry, ...reportHistory].slice(0, 5);
+                    setReportHistory(updatedHistory);
+                    localStorage.setItem('reportHistory', JSON.stringify(updatedHistory));
+                    setPrintingReport({ isGlobal: true, month: reportFilter.month, logs, workers, clients, clientApprovals });
+                  }} disabled={!reportFilter.month} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
+                    <Zap size={18} className="text-amber-400" /> Gerar Tudo do Mês
                   </button>
                 </div>
+              </div>
+
+              {/* Histórico Recente */}
+              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><History size={20} /></div>
+                  <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
+                </div>
+                {reportHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="bg-slate-50 p-4 rounded-2xl mb-3"><FileText size={32} className="text-slate-300" /></div>
+                    <p className="text-sm font-bold text-slate-400">Ainda sem relatórios gerados</p>
+                    <p className="text-[10px] text-slate-300 mt-1">Gere um relatório para o ver aqui</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
+                    <table className="min-w-full divide-y divide-slate-200">
+                      <thead className="bg-slate-50">
+                        <tr>
+                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Mês</th>
+                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
+                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
+                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Gerado em</th>
+                          <th className="px-5 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-slate-100">
+                        {reportHistory.map(entry => (
+                          <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
+                            <td className="px-5 py-3 text-sm font-black text-slate-700">{entry.month}</td>
+                            <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.clientName}</td>
+                            <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.workerName}</td>
+                            <td className="px-5 py-3 text-xs text-slate-400">{new Date(entry.timestamp).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
+                            <td className="px-5 py-3 text-right">
+                              <button onClick={() => {
+                                setReportFilter(prev => ({ ...prev, month: entry.month, clientId: entry.clientId, workerId: entry.workerId }));
+                              }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">
+                                Ver Filtros
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </div>
           )}
