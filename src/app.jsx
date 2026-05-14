@@ -352,6 +352,7 @@ export default function App() {
             <ClientTimesheetReport
               data={{ client: clients.find(c => c.id === urlClient), logs, workers, clients, month: urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
               isEmbedded={true}
+              hideActions={true}
               onBack={() => { }}
             />
           )}

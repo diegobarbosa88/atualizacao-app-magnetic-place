@@ -610,9 +610,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 <CheckCircle size={48} />
                             </div>
                             <h3 className="font-black text-3xl text-slate-800 uppercase tracking-tighter mb-4">Relatório Validado</h3>
-                            <p className="text-slate-500 text-sm font-bold uppercase tracking-widest max-w-md mx-auto mb-10 leading-relaxed">
-                                Este relatório já foi validado e assinado digitalmente em <span className="text-emerald-600">{new Date(approvalData?.created_at).toLocaleString('pt-PT')}</span>.
-                            </p>
+                            <div className="text-center mb-10">
+                                <p className="text-slate-500 text-sm font-medium leading-relaxed">
+                                    Este relatório já foi validado e assinado digitalmente em:
+                                </p>
+                                <p className="text-emerald-600 text-base font-bold mt-2">
+                                    {new Date(approvalData?.created_at).toLocaleString('pt-PT')}
+                                </p>
+                            </div>
 
                             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-lg mx-auto">
                                 <button
