@@ -1,10 +1,11 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Download, Loader2, Printer, Settings2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { Download, Loader2, Printer, Settings2, FileText } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
 import ValidationStamp from './ValidationStampWithQR';
 import './ClientTimesheetReport.css';
 import { toISODateLocal, isSameMonth, getLastBusinessDayOfMonth, formatDocDate, monthToYYYYMM, getISOWeek } from '../../utils/dateUtils';
 import { formatHours, calculateDuration, calculateExpectedMonthlyHours, calculateExpectedDailyHours, getScheduleForDay, formatCurrency, toTimeInputValue } from '../../utils/formatUtils';
+import { convertHtmlToDocx, triggerDownload } from '../../utils/timesheetTemplateService';
 
 const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
   const { client, logs, workers, clients, month, workerId, clientApprovals } = data;
@@ -21,6 +22,8 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
   });
 
   const [isZipping, setIsZipping] = useState(false);
+  const [isDownloadingDocx, setIsDownloadingDocx] = useState(false);
+  const reportContainerRef = useRef(null);
 
   const columns = [
     { id: 'day', label: 'Dia', width: '30px' },
@@ -171,128 +174,283 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
     return () => {
       document.title = originalTitle;
     };
-  }, [reportUnits, daysInMonthList, month]);
+}, [reportUnits, daysInMonthList, month]);
 
   const handleGenerateZip = async () => {
     setIsZipping(true);
     try {
-      let JSZip = window.JSZip;
-      if (!JSZip) {
-        JSZip = await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
-          script.onload = () => resolve(window.JSZip);
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
+      const JSZipLib = (await import('jszip')).default;
+      const html2canvas = (await import('html2canvas-pro')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const zip = new JSZipLib();
+
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
       }
 
-      let html2pdf = window.html2pdf;
-      if (!html2pdf) {
-        html2pdf = await new Promise((resolve, reject) => {
-          const script = document.createElement('script');
-          script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-          script.onload = () => resolve(window.html2pdf);
-          script.onerror = reject;
-          document.head.appendChild(script);
-        });
-      }
-
-      const zip = new JSZip();
-
-      // 1. Gerar PDFs dentro das pastas (por trabalhador)
       for (let i = 0; i < reportUnits.length; i++) {
         const unit = reportUnits[i];
-        const clientName = unit.client?.name || "Sem_Cliente";
-        const workerName = unit.worker?.name || "Sem_Colaborador";
+        const clientName = (unit.client?.name || 'Sem_Cliente').replace(/[^a-zA-Z0-9]/g, '_');
+        const workerName = (unit.worker?.name || 'Sem_Colaborador').replace(/[^a-zA-Z0-9]/g, '_');
 
-        const clientFolder = zip.folder(clientName);
-        const originalElement = document.getElementById(`report-unit-${i}`);
+        const folder = zip.folder(clientName);
+        if (!folder) continue;
 
-        if (originalElement) {
-          originalElement.scrollIntoView({ behavior: 'instant', block: 'start' });
+        const liveNode = document.getElementById(`report-unit-${i}`);
+        if (!liveNode) continue;
 
-          // Guardamos os estilos originais
-          const originalPaddingTop = originalElement.style.paddingTop;
-          const originalPaddingBottom = originalElement.style.paddingBottom;
-          const originalMinHeight = originalElement.style.minHeight;
+        const clone = liveNode.cloneNode(true);
 
-          // Aplicamos os ajustes
-          originalElement.style.paddingTop = '15px';
-          originalElement.style.paddingBottom = '10px';
-          originalElement.style.minHeight = 'auto';
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff;z-index:-1;';
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
 
-          await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 100));
 
-          const opt = {
-            margin: 0,
-            filename: `Relatorio_${workerName.replace(/[^a-zA-Z0-9]/g, '_')}_${month}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: {
-              scale: 1.5,
-              useCORS: true,
-              logging: false
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-          };
+        const canvas = await html2canvas(clone, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#ffffff',
+          windowWidth: 794,
+          width: clone.offsetWidth || 794,
+          height: clone.offsetHeight,
+        });
 
-          const pdfBlob = await html2pdf().set(opt).from(originalElement).output('blob');
-          clientFolder.file(opt.filename, pdfBlob);
+        document.body.removeChild(wrapper);
 
-          // Devolve a tela ao normal
-          originalElement.style.paddingTop = originalPaddingTop;
-          originalElement.style.paddingBottom = originalPaddingBottom;
-          originalElement.style.minHeight = originalMinHeight;
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = pdfWidth / imgWidth;
+        const heightInMm = imgHeight * ratio;
+
+        const PAGE_TOLERANCE_MM = 5;
+        if (heightInMm <= pdfHeight + PAGE_TOLERANCE_MM) {
+          pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, heightInMm);
+        } else {
+          let position = 0;
+          let remaining = heightInMm;
+          while (remaining > PAGE_TOLERANCE_MM) {
+            pdf.addImage(imgData, 'JPEG', 0, -position, pdfWidth, heightInMm);
+            remaining -= pdfHeight;
+            if (remaining > PAGE_TOLERANCE_MM) {
+              pdf.addPage();
+              position += pdfHeight;
+            }
+          }
         }
+
+        folder.file(`Relatorio_${workerName}_${month}.pdf`, pdf.output('blob'));
       }
 
-      // --- CORREÇÃO DO ERRO DO ZIP ---
-      const blob = await zip.generateAsync({ type: "blob" });
-      const url = window.URL.createObjectURL(blob);
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
-      a.style.display = 'none';
       a.href = url;
       a.download = `relatorios de horas ${month}.zip`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Erro ao gerar ZIP com PDFs:", error);
-      alert("Ocorreu um erro ao processar os PDFs. Tente novamente.");
+      console.error('Erro ao gerar ZIP com PDFs:', error);
+      alert('Ocorreu um erro ao processar os PDFs. Tente novamente.');
     } finally {
       setIsZipping(false);
-
-      // Dá 100 milissegundos para o React remover o botão de "Carregando"
-      setTimeout(() => {
-        const alvoTopo = document.getElementById('topo-da-pagina');
-
-        if (alvoTopo) {
-          // Desliza a tela de volta para o elemento alvo (garantido!)
-          alvoTopo.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        } else {
-          // Fallback caso você esqueça de colocar o ID
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-      }, 100);
     }
+  };
+
+  const handleDownloadDocx = async () => {
+    if (reportUnits.length === 0) return;
+    setIsDownloadingDocx(true);
+    try {
+      const unit = reportUnits[0];
+      const workerName = (unit.worker?.name || 'Colaborador').replace(/[^a-zA-Z0-9]/g, '_');
+      const html = buildPdfContent(unit);
+      const docxBuffer = await convertHtmlToDocx(html);
+      const blob = new Blob([docxBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+      triggerDownload(blob, `Relatorio_${workerName}_${month}.docx`);
+    } catch (error) {
+      console.error('Erro ao gerar DOCX:', error);
+      alert('Ocorreu um erro ao gerar o DOCX. Tente novamente.');
+    } finally {
+      setIsDownloadingDocx(false);
+    }
+  };
+
+  const buildPdfContent = (unit) => {
+    const vc = visibleColumns;
+    const monthDisplay = daysInMonthList.length > 0 ? new Date(daysInMonthList[0]).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' }) : month;
+    const clientLabel = unit.isWorkerOnly ? 'Folha de Horas Mensal • Vários Clientes' : `Folha de Horas Mensal • ${unit.client?.name || ''}`;
+    const workerLabel = unit.worker?.name || 'Vários Colaboradores';
+
+    let html = `<div style="width:794px;padding:40px;box-sizing:border-box;font-family:Inter,sans-serif;font-size:8pt;color:#0f172a;background:#fff;line-height:1;">`;
+
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:30px;padding-bottom:12px;border-bottom:2px solid #0f172a;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:44px;height:44px;background:#6366f1;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20pt;font-weight:900;color:#fff;">MP</div>
+        <div>
+          <div style="font-size:17pt;font-weight:900;text-transform:uppercase;letter-spacing:-0.02em;color:#0f172a;">Magnetic Place</div>
+          <div style="font-size:8pt;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:#94a3b8;margin-top:2px;">Unipessoal LDA</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:12pt;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;color:#1e293b;">${monthDisplay}</div>
+        <div style="font-size:9pt;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;margin-top:2px;">${clientLabel}</div>
+      </div>
+    </div>`;
+
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 16px;background:#f8fafc;border:1px solid #e2e8f0;margin-bottom:16px;margin-top:48px;">
+      <div>
+        <div style="font-size:7pt;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#64748b;">Colaborador</div>
+        <div style="font-size:12pt;font-weight:900;text-transform:uppercase;color:#1e293b;margin-top:2px;">${workerLabel}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:7pt;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#6366f1;">Total Registado</div>
+        <div style="font-size:13pt;font-weight:900;color:#6366f1;margin-top:2px;">${formatHours(unit.totalHours)}</div>
+      </div>
+    </div>`;
+
+    const colWidths = [];
+    if (vc.day) colWidths.push({ id: 'day', label: 'Dia', w: 50 });
+    if (vc.start) colWidths.push({ id: 'start', label: 'Entrada', w: 60 });
+    if (vc.breakStart) colWidths.push({ id: 'breakStart', label: 'I. Desc', w: 55 });
+    if (vc.breakEnd) colWidths.push({ id: 'breakEnd', label: 'F. Desc', w: 55 });
+    if (vc.end) colWidths.push({ id: 'end', label: 'Saída', w: 60 });
+    if (vc.total) colWidths.push({ id: 'total', label: 'Total', w: 55 });
+    if (vc.project) colWidths.push({ id: 'project', label: 'Projeto', w: 220 });
+    if (vc.comment) colWidths.push({ id: 'comment', label: 'Comentário', w: 120 });
+
+    const colStyle = (c) => `width:${c.w}px;min-width:${c.w}px;max-width:${c.w}px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;`;
+
+    html += `<div style="margin-bottom:8px;">`;
+    weeksData.forEach(([weekNum, dates]) => {
+      const rows = [];
+      colWidths.forEach(c => { rows.push({ ...c, rows: [] }); });
+
+      dates.forEach(dateStr => {
+        const dayLogs = unit.logs.filter(l => l.date === dateStr);
+        const dateObj = new Date(dateStr);
+        const dayNum = String(dateObj.getDate()).padStart(2, '0');
+        const dayName = dateObj.toLocaleDateString('pt-BR', { weekday: 'short' }).substring(0, 3).toUpperCase();
+
+        if (dayLogs.length === 0) {
+          const rowData = { day: `${dayNum} ${dayName}`, start: '', breakStart: '', breakEnd: '', end: '', total: '', project: '', comment: '' };
+          colWidths.forEach(c => { rows.find(x => x.id === c.id).rows.push({ content: rowData[c.id], isEmpty: true }); });
+        } else {
+          dayLogs.forEach((log, lIdx) => {
+            const isCleared = (log.startTime == null && log.endTime == null) || (log.startTime === '--:--' && log.endTime === '--:--');
+            const logH = isCleared ? 0 : calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+            const cName = unit.isWorkerOnly ? (clients.find(c => c.id === log.clientId)?.name || '') : (unit.client?.name || '');
+            const rowData = {
+              day: lIdx === 0 ? `${dayNum} ${dayName}` : '',
+              start: log.startTime || '',
+              breakStart: isCleared ? '' : (log.breakStart || ''),
+              breakEnd: isCleared ? '' : (log.breakEnd || ''),
+              end: log.endTime || '',
+              total: isCleared ? '' : formatHours(logH),
+              project: isCleared ? '' : cName.toUpperCase(),
+              comment: log.description || ''
+            };
+            colWidths.forEach(c => { rows.find(x => x.id === c.id).rows.push({ content: rowData[c.id], isEmpty: false, isBold: c.id === 'day' || c.id === 'total' }); });
+          });
+        }
+      });
+
+      html += `<div style="page-break-inside:avoid;margin-bottom:8px;">
+        <table style="table-layout:fixed;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <td colspan="${colWidths.length}" style="font-size:9pt;font-weight:900;padding:6px 8px;color:#334155;background:#f1f5f9;">SEMANA ${weekNum}</td>
+              <td colspan="2" style="font-size:7pt;font-weight:700;text-align:right;padding:6px 8px;color:#64748b;text-transform:uppercase;background:#f1f5f9;">Total Semanal:</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              ${colWidths.map(c => `<th style="width:${c.w}px;min-width:${c.w}px;max-width:${c.w}px;padding:3px 4px;font-size:6.5pt;font-weight:800;text-transform:uppercase;color:#475569;text-align:center;background:#f1f5f9;white-space:nowrap;">${c.label}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>`;
+
+      const maxRows = Math.max(...rows.map(r => r.rows.length));
+      for (let ri = 0; ri < maxRows; ri++) {
+        html += `<tr style="border-bottom:1px solid #e2e8f0;">`;
+        rows.forEach(r => {
+          const cell = r.rows[ri] || { content: '', isEmpty: true };
+          const fontSize = r.id === 'project' || r.id === 'comment' ? '7pt' : '8pt';
+          const fontWeight = cell.isBold ? '700' : '400';
+          const color = r.id === 'breakStart' || r.id === 'breakEnd' ? '#94a3b8' : (r.id === 'project' || r.id === 'comment' ? '#475569' : '#334155');
+          const fontStyle = r.id === 'comment' ? 'italic' : 'normal';
+          html += `<td style="${colStyle(r)}padding:2px 4px;font-size:${fontSize};font-weight:${fontWeight};font-style:${fontStyle};color:${color};${r.id === 'comment' ? 'text-align:left;' : ''}">${cell.content}</td>`;
+        });
+        html += `</tr>`;
+      }
+      html += `</tbody></table></div>`;
+    });
+
+    html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:16px;border-top:2px solid #0f172a;border-bottom:2px solid #0f172a;margin-top:4px;page-break-inside:avoid;background:#fff;">
+      <div>`;
+    if (unit.isWorkerOnly && unit.clientBreakdowns) {
+      html += `<span style="font-size:9pt;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:#64748b;">RESUMO MENSAL</span>`;
+      unit.clientBreakdowns.forEach(cb => {
+        html += `<div style="display:flex;align-items:center;gap:16px;margin-top:4px;">
+          <span style="font-size:8pt;font-weight:700;text-transform:uppercase;color:#475569;width:128px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${cb.clientName}</span>
+          <span style="font-size:9pt;font-weight:900;color:#4338ca;">${formatHours(cb.hours)}</span>
+        </div>`;
+      });
+    } else {
+      html += `<span style="font-size:9pt;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:#64748b;">RESUMO MENSAL</span>`;
+    }
+    html += `</div><div style="text-align:right;"><span style="font-size:7pt;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:2px;display:block;">TOTAL REGISTADO</span><span style="font-size:20pt;font-weight:900;color:#6366f1;">${formatHours(unit.totalHours)}</span></div></div>`;
+
+    const approval = clientApprovals?.find(a => a.client_id === unit.client?.id && a.month === month);
+    if (approval?.signature_base64) {
+      html += `<div style="margin-top:12px;padding-top:24px;border-top:1px solid #e2e8f0;text-align:right;page-break-inside:avoid;">
+        <div style="display:inline-block;padding:8px;border:1px dashed #cbd5e1;border-radius:12px;">
+          <div style="font-size:7pt;font-weight:700;text-transform:uppercase;color:#94a3b8;margin-bottom:4px;">Assinatura do Cliente</div>
+          <img src="${approval.signature_base64}" style="height:60px;max-width:200px;" />
+          <div style="font-size:6pt;color:#94a3b8;margin-top:4px;">${approval.created_at ? new Date(approval.created_at).toLocaleString('pt-PT') : ''}</div>
+        </div>
+      </div>`;
+    } else {
+      html += `<div style="margin-top:32px;padding-top:24px;border-top:1px solid #e2e8f0;opacity:0.3;text-align:right;page-break-inside:avoid;">
+        <div style="display:inline-block;width:224px;height:64px;border:2px dashed #cbd5e1;border-radius:12px;display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:8pt;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#94a3b8;">Aguardando Assinatura</span>
+        </div>
+      </div>`;
+    }
+
+    html += `</div>`;
+    html += `</div>`;
+    return html;
   };
 
   return (
     <div className={`bg-white min-h-screen font-sans text-slate-900 ${isEmbedded ? 'relative w-full' : 'absolute inset-0 z-[500]'} overflow-y-auto print:bg-white print:static print:overflow-visible print:inset-auto print:z-0 print:min-h-0 print:shadow-none print:border-none`}>
 
-      <div className="max-w-5xl mx-auto p-4 sm:p-12 report-container pdf-export-mode">
-        {!isEmbedded && (
-          <div id="topo-da-pagina" className="no-print flex flex-col gap-6 mb-8 pb-6 border-b">
-            <div className="flex justify-between items-center">
+      <div ref={reportContainerRef} className={isEmbedded ? 'w-full pdf-export-mode' : 'max-w-5xl mx-auto p-4 sm:p-12 report-container pdf-export-mode'}>
+        <div id="topo-da-pagina" className="no-print flex flex-col gap-6 mb-8 pb-6 border-b">
+          <div className="flex justify-between items-center">
+            {isEmbedded ? null : (
               <button onClick={onBack} className="px-6 py-2 bg-slate-100 text-slate-600 font-bold text-xs uppercase rounded-xl hover:bg-slate-200 transition-colors">Voltar</button>
-              <div className="flex gap-3">
-                <button id="magnetic-zip-btn" onClick={handleGenerateZip} disabled={isZipping} className="px-6 py-2 bg-emerald-600 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50">
-                  {isZipping ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} Baixar ZIP (PDFs)
-                </button>
-                <button onClick={() => window.print()} className="px-6 py-2.5 bg-slate-900 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-all"><Printer size={16} /> Imprimir / PDF ({reportUnits.length} {reportUnits.length === 1 ? 'Folha' : 'Folhas'})</button>
-              </div>
+            )}
+            <div className="flex gap-3">
+              <button id="magnetic-zip-btn" onClick={handleGenerateZip} disabled={isZipping} className="px-5 py-2.5 bg-emerald-600 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50">
+                {isZipping ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} ZIP
+              </button>
+              <button onClick={handleDownloadDocx} disabled={isDownloadingDocx} className="px-5 py-2.5 bg-indigo-600 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-indigo-700 transition-all disabled:opacity-50">
+                {isDownloadingDocx ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />} DOCX
+              </button>
+              <button onClick={() => window.print()} className="px-5 py-2.5 bg-slate-900 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-all"><Printer size={16} /> PDF/Imprimir</button>
             </div>
+          </div>
 
+          {!isEmbedded && (
             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200">
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-2">
@@ -316,8 +474,8 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
                 ))}
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {reportUnits.map((unit, idx) => (
           <div key={`${unit.id}-${idx}`} id={`report-unit-${idx}`} className="a4-paper">
@@ -434,56 +592,57 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false }) => {
               })}
             </div>
 
-            {/* Final Monthly Summary Section (Isolated from weekly tables) */}
-            <div className="bg-white text-black p-4 shadow-none border-y-2 border-slate-900 mt-1 page-break-inside-avoid">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60">RESUMO MENSAL</span>
-                  {unit.isWorkerOnly && unit.clientBreakdowns ? (
-                    <div className="mt-2 space-y-0.5">
-                      {unit.clientBreakdowns.map(cb => (
-                        <div key={cb.clientId} className="flex items-center gap-4 text-[8px]">
-                          <span className="font-bold text-slate-600 uppercase w-32 truncate">{cb.clientName}</span>
-                          <span className="font-black text-indigo-700">{formatHours(cb.hours)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="text-[7px] font-bold uppercase opacity-50 mb-0.5">TOTAL REGISTRADO</span>
-                  <span className="text-xl font-black text-indigo-600">{formatHours(unit.totalHours)}</span>
+            {/* Final Monthly Summary + Signature (tied together to avoid orphan stamp) */}
+            <div className="mt-1 page-break-inside-avoid">
+              <div className="bg-white text-black p-4 shadow-none border-y-2 border-slate-900">
+                <div className="flex justify-between items-start">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60">RESUMO MENSAL</span>
+                    {unit.isWorkerOnly && unit.clientBreakdowns ? (
+                      <div className="mt-2 space-y-0.5">
+                        {unit.clientBreakdowns.map(cb => (
+                          <div key={cb.clientId} className="flex items-center gap-4 text-[8px]">
+                            <span className="font-bold text-slate-600 uppercase w-32 truncate">{cb.clientName}</span>
+                            <span className="font-black text-indigo-700">{formatHours(cb.hours)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-[7px] font-bold uppercase opacity-50 mb-0.5">TOTAL REGISTRADO</span>
+                    <span className="text-xl font-black text-indigo-600">{formatHours(unit.totalHours)}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Signature Section at the bottom */}
-            {(() => {
-              const approval = clientApprovals?.find(a => a.client_id === unit.client?.id && a.month === month);
-              if (approval?.signature_base64) {
+              {(() => {
+                const approval = clientApprovals?.find(a => a.client_id === unit.client?.id && a.month === month);
+                if (approval?.signature_base64) {
+                  return (
+                    <div className="mt-2 pt-2">
+                      <div className="flex flex-col items-end">
+                        <ValidationStamp
+                          signature={approval.signature_base64}
+                          datetime={approval.created_at}
+                          ip={approval.client_ip}
+                          id={approval.id}
+                        />
+                      </div>
+                    </div>
+                  );
+                }
                 return (
-                  <div className="mt-3 pt-6 border-t border-slate-100 page-break-inside-avoid">
+                  <div className="mt-3 pt-2 opacity-30">
                     <div className="flex flex-col items-end">
-                      <ValidationStamp
-                        signature={approval.signature_base64}
-                        datetime={approval.created_at}
-                        ip={approval.client_ip}
-                        id={approval.id}
-                      />
+                      <div className="w-56 h-16 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aguardando Assinatura</span>
+                      </div>
                     </div>
                   </div>
                 );
-              }
-              return (
-                <div className="mt-8 pt-6 border-t border-slate-100 opacity-30 page-break-inside-avoid">
-                  <div className="flex flex-col items-end">
-                    <div className="w-56 h-16 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Aguardando Assinatura</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
+              })()}
+            </div>
           </div>
         ))}
       </div>
