@@ -226,7 +226,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
   const handleGenerateDocuments = useCallback(async (
     selectedTemplate,
     selectedWorkers,
-    { onProgress, workersById, sendEmail = true } = {}
+    { onProgress, workersById, sendEmail = true, clientId = null } = {}
   ) => {
     if (!selectedTemplate || !selectedWorkers?.length) {
       throw new Error('Template ou trabalhadores não selecionados');
@@ -255,6 +255,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
             .insert([{
               template_id: selectedTemplate.id,
               worker_id: workerId,
+              client_id: clientId || null,
               title: selectedTemplate.name,
               status: 'pending',
               created_at: new Date().toISOString(),
@@ -320,8 +321,14 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
       .single();
     if (wErr) throw wErr;
 
+    let clientData = null;
+    if (doc.client_id) {
+      const { data: c } = await supabase.from('clients').select('*').eq('id', doc.client_id).maybeSingle();
+      clientData = c || null;
+    }
+
     const buffer = await downloadTemplateBytes(supabase, tmpl.template_docx_path);
-    const renderData = buildRenderData(worker || {}, systemSettings);
+    const renderData = buildRenderData(worker || {}, systemSettings, clientData);
     const blob = renderDocx(buffer, renderData);
     const safeTitle = (doc.title || 'documento').replace(/[\s/\\?%*:|"<>]+/g, '_');
     const safeWorker = (worker?.name || doc.worker_id || '').replace(/[\s/\\?%*:|"<>]+/g, '_');
@@ -335,7 +342,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
    * 3. Upload do PDF final
    * 4. Atualiza worker_documents: status='signed', admin_signed_at=now
    */
-  const handleApproveDocument = useCallback(async (doc, { companyName, companySignature } = {}) => {
+  const handleApproveDocument = useCallback(async (doc, { companyName, companySignature, adminIp, adminDevice, stampStyle } = {}) => {
     if (!supabase) throw new Error('Supabase não configurado');
     if (!doc?.id) throw new Error('Documento inválido');
     if (!doc.signed_pdf_url) throw new Error('Documento ainda não foi assinado pelo trabalhador');
@@ -374,6 +381,9 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         signatureDataUrl: companySignature.signatureDataUrl,
         companyLogoBytes,
         signedAt: adminSignedAt,
+        ip: adminIp,
+        device: adminDevice,
+        stampStyle,
         xMm: tmpl?.stamp_admin_x ?? 20,
         yMm: tmpl?.stamp_admin_y ?? 30,
         page: tmpl?.stamp_admin_page || 'last',

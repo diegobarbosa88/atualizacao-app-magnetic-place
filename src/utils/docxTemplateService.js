@@ -1,7 +1,7 @@
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import ImageModule from 'docxtemplater-image-module-free';
-import { TEMPLATE_FIELDS, getWorkerFieldValue } from './templateFields';
+import { TEMPLATE_FIELDS, getWorkerFieldValue, getClientFieldValue } from './templateFields';
 export const TEMPLATES_BUCKET = 'document_templates';
 export const STAMP_TAG = 'signature_stamp';
 
@@ -86,7 +86,7 @@ export async function deleteTemplateFile(supabase, path) {
   await supabase.storage.from(TEMPLATES_BUCKET).remove([path]);
 }
 
-export function buildRenderData(workerData = {}, systemData = {}) {
+export function buildRenderData(workerData = {}, systemData = {}, clientData = null) {
   const data = {};
   for (const f of KNOWN_FIELD_NAMES) {
     if (f.source === 'system') {
@@ -109,6 +109,8 @@ export function buildRenderData(workerData = {}, systemData = {}) {
         default:
           data[f.name] = '';
       }
+    } else if (f.source && f.source.startsWith('clients.')) {
+      data[f.name] = getClientFieldValue(clientData || {}, `{{${f.name}}}`) || '';
     } else {
       data[f.name] = getWorkerFieldValue(workerData || {}, `{{${f.name}}}`) || '';
     }

@@ -954,24 +954,42 @@ function drawAdminStampCorporate(page, {
     });
   }
 
-  // Assinatura
+  // Caixa rectangular 2:1 para a assinatura
+  const availX = x + PAD + 16;
+  const availY = y + 12;
+  const availW = w - PAD * 2 - 18;
+  const availH = h - HEADER_H - 14;
+  // Box com proporção 2:1 (largura : altura) que cabe na zona disponível
+  let boxW = availW;
+  let boxH = boxW / 2;
+  if (boxH > availH) {
+    boxH = availH;
+    boxW = boxH * 2;
+  }
+  const boxX = availX + (availW - boxW) / 2;
+  const boxY = availY + (availH - boxH) / 2;
+  page.drawRectangle({
+    x: boxX, y: boxY, width: boxW, height: boxH,
+    color: WHITE, borderColor: NAVY_SOFT, borderWidth: 0.3,
+  });
+
+  // Assinatura dentro da caixa, mantendo aspect
   if (signatureImage) {
-    const sigAreaX = x + PAD + 16;
-    const sigAreaY = y + 12;
-    const sigAreaW = w - PAD * 2 - 18;
-    const sigAreaH = h - HEADER_H - 14;
+    const innerPad = 1.5;
+    const innerW = boxW - innerPad * 2;
+    const innerH = boxH - innerPad * 2;
     const aspect = signatureImage.width / signatureImage.height;
     let drawW, drawH;
-    if (aspect > sigAreaW / sigAreaH) {
-      drawW = sigAreaW;
+    if (aspect > innerW / innerH) {
+      drawW = innerW;
       drawH = drawW / aspect;
     } else {
-      drawH = sigAreaH;
+      drawH = innerH;
       drawW = drawH * aspect;
     }
     page.drawImage(signatureImage, {
-      x: sigAreaX + (sigAreaW - drawW) / 2,
-      y: sigAreaY + (sigAreaH - drawH) / 2,
+      x: boxX + (boxW - drawW) / 2,
+      y: boxY + (boxH - drawH) / 2,
       width: drawW,
       height: drawH,
     });

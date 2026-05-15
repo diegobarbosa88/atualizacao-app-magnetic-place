@@ -132,15 +132,14 @@ const CompanyCorporateStamp = ({
       {/* Linha dourada de separação */}
       <div style={{ height: '2px', background: `linear-gradient(90deg, ${GOLD_DEEP}, ${GOLD}, ${GOLD_DEEP})` }} />
 
-      {/* Corpo: assinatura + watermark do logo */}
+      {/* Corpo: brasão + caixa de assinatura 2:1 + watermark */}
       <div
         style={{
           position: 'relative',
-          height: '100px',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          padding: '8px 16px',
+          gap: '12px',
+          padding: '12px 16px',
           background: PAPER,
           overflow: 'hidden',
         }}
@@ -165,10 +164,7 @@ const CompanyCorporateStamp = ({
         {/* Brasão monogram à esquerda */}
         <div
           style={{
-            position: 'absolute',
-            left: '14px',
-            top: '50%',
-            transform: 'translateY(-50%)',
+            flex: '0 0 auto',
             width: '52px',
             height: '52px',
             borderRadius: '50%',
@@ -179,6 +175,7 @@ const CompanyCorporateStamp = ({
             background: '#fff',
             boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             opacity: 0.85,
+            zIndex: 1,
           }}
         >
           <img
@@ -188,26 +185,41 @@ const CompanyCorporateStamp = ({
           />
         </div>
 
-        {/* Assinatura */}
-        {signatureDataUrl ? (
-          <img
-            src={signatureDataUrl}
-            alt="Assinatura"
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              maxHeight: '85px',
-              maxWidth: '60%',
-              objectFit: 'contain',
-              filter: INK_FILTER,
-              marginLeft: '40px',
-            }}
-          />
-        ) : (
-          <span style={{ color: SLATE_SOFT, fontSize: '10px', fontStyle: 'italic', marginLeft: '40px' }}>
-            (Desenhe a assinatura nas Definições)
-          </span>
-        )}
+        {/* Caixa rectangular 2:1 para a assinatura */}
+        <div
+          style={{
+            flex: '1 1 auto',
+            position: 'relative',
+            zIndex: 1,
+            aspectRatio: '2 / 1',
+            maxHeight: '100px',
+            background: '#fff',
+            border: `1px solid ${NAVY_SOFT}`,
+            borderRadius: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            padding: '4px',
+          }}
+        >
+          {signatureDataUrl ? (
+            <img
+              src={signatureDataUrl}
+              alt="Assinatura"
+              style={{
+                maxHeight: '100%',
+                maxWidth: '100%',
+                objectFit: 'contain',
+                filter: INK_FILTER,
+              }}
+            />
+          ) : (
+            <span style={{ color: SLATE_SOFT, fontSize: '10px', fontStyle: 'italic' }}>
+              (Assinatura)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Footer: nome / cargo / data / serial */}

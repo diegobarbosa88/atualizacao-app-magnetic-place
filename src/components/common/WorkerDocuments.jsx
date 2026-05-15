@@ -9,6 +9,7 @@ import { isPending, isSigned } from '../../constants/documentStatus';
 import { cropSignatureCanvas } from '../../utils/signatureCanvas';
 import workerDocumentsCSS from './WorkerDocuments.css?inline';
 import { DocumentViewer } from '../worker/DocumentViewer';
+import SignDrawModal from '../worker/SignDrawModal';
 
 // Converte oklch(L C H [/ A]) para grayscale aproximado, preservando lightness.
 // Necessário porque o html2canvas usado pelo html2pdf não parseia oklch (CSS Color L4),
@@ -109,6 +110,9 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [showSigner, setShowSigner] = useState(false);
+  const [showSignPad, setShowSignPad] = useState(false);
+  const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewError, setPreviewError] = useState('');
   const [acroformDoc, setAcroformDoc] = useState(null);
 
   const openDoc = useCallback((doc) => {
@@ -127,6 +131,33 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
 
+  // Buscar o ficheiro como blob para garantir que renderiza em <iframe>
+  // independentemente do Content-Disposition do storage.
+  useEffect(() => {
+    let cancelled = false;
+    let createdUrl = null;
+    setPreviewBlobUrl(null);
+    setPreviewError('');
+    const src = selectedDoc?.url;
+    if (!showSigner || !src) return;
+    (async () => {
+      try {
+        const res = await fetch(src);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (cancelled) return;
+        createdUrl = URL.createObjectURL(blob);
+        setPreviewBlobUrl(createdUrl);
+      } catch (err) {
+        if (!cancelled) setPreviewError(err.message || 'Falha a carregar o documento');
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (createdUrl) URL.revokeObjectURL(createdUrl);
+    };
+  }, [showSigner, selectedDoc?.url]);
+
   useEffect(() => {
     if (showSigner && canvasRef.current) {
       const timer = setTimeout(() => {
@@ -134,7 +165,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         const canvas = canvasRef.current;
         const parent = canvas.parentElement;
         canvas.width = parent.clientWidth;
-        canvas.height = 200;
+        canvas.height = window.innerWidth < 640 ? 140 : 200;
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.lineWidth = 3;
@@ -214,15 +245,17 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     setHasSignature(false);
   };
 
-  const handleSign = async () => {
-    if (!hasSignature) return alert('Assinatura obrigatória.');
+  const handleSign = async (signatureFromModal) => {
+    const signatureDataURL = typeof signatureFromModal === 'string' && signatureFromModal
+      ? signatureFromModal
+      : (canvasRef.current ? cropSignatureCanvas(canvasRef.current) : '');
+    if (!signatureDataURL) return alert('Assinatura obrigatória.');
     setSigning(true);
 
     try {
       const userIP = (workerIp && workerIp !== 'A obter IP...') ? workerIp : 'Desconhecido';
       const now = new Date().toISOString();
       const docId = selectedDoc?.id ?? '';
-      const signatureDataURL = canvasRef.current ? cropSignatureCanvas(canvasRef.current) : '';
 
       const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
 
@@ -542,6 +575,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       }
 
       alert('Documento assinado com sucesso!');
+      setShowSignPad(false);
       setShowSigner(false);
       setSelectedDoc(null);
       clearCanvas();
@@ -690,15 +724,42 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
       {showSigner && selectedDoc && (
         <>
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-black text-lg">{selectedDoc.tipo || selectedDoc.title}</h4>
-                <button onClick={() => { setShowSigner(false); clearCanvas(); }} className="p-2 hover:bg-slate-100 rounded-xl"><X size={20} /></button>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-stretch sm:items-center justify-center p-2 sm:p-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 max-w-5xl w-full max-h-[95vh] h-full sm:h-auto overflow-y-auto flex flex-col gap-3 sm:gap-4">
+              <div className="flex justify-between items-center">
+                <h4 className="font-black text-base sm:text-lg truncate pr-2">{selectedDoc.tipo || selectedDoc.title}</h4>
+                <button onClick={() => { setShowSigner(false); setShowSignPad(false); clearCanvas(); }} className="p-2 hover:bg-slate-100 rounded-xl shrink-0"><X size={20} /></button>
               </div>
-              <div className="w-full h-96 border rounded-xl mb-4 bg-slate-100 relative overflow-hidden">
+              <div className="w-full flex-1 min-h-[60vh] sm:min-h-[70vh] border rounded-xl bg-slate-100 relative overflow-hidden">
                 {selectedDoc.url ? (
-                  <iframe src={`${selectedDoc.url}#toolbar=0`} className="w-full h-full rounded-xl" title="Document Preview" />
+                  <>
+                    {previewBlobUrl ? (
+                      <iframe
+                        src={`${previewBlobUrl}#toolbar=0&view=FitH`}
+                        className="w-full h-full rounded-xl"
+                        title="Pré-visualização do documento"
+                      />
+                    ) : previewError ? (
+                      <div className="flex flex-col items-center justify-center h-full gap-3 p-4 text-center">
+                        <p className="text-rose-600 text-sm font-bold">Erro a carregar: {previewError}</p>
+                        <a href={selectedDoc.url} target="_blank" rel="noreferrer" className="px-4 py-2 bg-indigo-600 text-white text-xs font-black uppercase tracking-widest rounded-xl">
+                          Abrir noutra aba
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                      </div>
+                    )}
+                    <a
+                      href={selectedDoc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="absolute top-2 right-2 bg-white/90 backdrop-blur text-indigo-600 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:bg-white"
+                    >
+                      Abrir noutra aba
+                    </a>
+                  </>
                 ) : selectedDoc.generated_html ? (
                   <iframe srcDoc={injectSignaturePlaceholder(selectedDoc.generated_html)} sandbox="allow-scripts" className="w-full h-full rounded-xl" title="Document Preview" />
                 ) : (
@@ -707,37 +768,23 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                   </div>
                 )}
               </div>
-              <div className="relative w-full max-w-2xl mx-auto border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden mb-4 shadow-inner">
-                <canvas
-                  ref={canvasRef}
-                  className="w-full cursor-crosshair touch-none"
-                  style={{ touchAction: 'none' }}
-                  onMouseDown={startDrawing}
-                  onMouseMove={draw}
-                  onMouseUp={stopDrawing}
-                  onMouseLeave={stopDrawing}
-                  onTouchStart={startDrawing}
-                  onTouchMove={draw}
-                  onTouchEnd={stopDrawing}
-                />
-                {!hasSignature && (
-                  <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">
-                    Assine Aqui
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-2xl mx-auto">
-                <button onClick={clearCanvas} className="w-full sm:w-auto px-6 py-4 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Limpar Quadro</button>
-              </div>
               <button
-                onClick={handleSign}
-                disabled={!hasSignature || signing}
-                className={`w-full py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${hasSignature && !signing ? 'bg-indigo-600 hover:bg-indigo-700 text-white' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}
+                onClick={() => setShowSignPad(true)}
+                disabled={signing}
+                className="w-full py-4 sm:py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                {signing ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><CheckCircle size={16} /> Assinar Documento</>}
+                {signing ? <><Loader2 size={18} className="animate-spin" /> A processar...</> : <><FileSignature size={18} /> Assinar Digitalmente</>}
               </button>
             </div>
           </div>
+          {showSignPad && (
+            <SignDrawModal
+              workerName={currentUser?.name || currentUser?.nome}
+              working={signing}
+              onClose={() => setShowSignPad(false)}
+              onSign={(dataUrl) => handleSign(dataUrl)}
+            />
+          )}
         </>
       )}
 

@@ -17,7 +17,7 @@ import { PDFDocument } from 'pdf-lib';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 
 export default function DocumentTemplatesAdmin({ workers = [] }) {
-  const { supabase } = useApp();
+  const { supabase, clients } = useApp();
   const {
     templates,
     loading,
@@ -33,6 +33,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [generating, setGenerating] = useState(false);
   const [genProgress, setGenProgress] = useState(null);
 
@@ -76,6 +77,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
   const openGenerateModal = (template) => {
     setSelectedTemplate(template);
     setSelectedWorkers([]);
+    setSelectedClientId('');
     setShowGenerateModal(true);
   };
 
@@ -86,6 +88,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     try {
       const res = await handleGenerateDocuments(selectedTemplate, selectedWorkers, {
         workersById: workerById,
+        clientId: selectedClientId || null,
         onProgress: (p) => setGenProgress(p),
       });
       const parts = [`${res.succeeded}/${res.total} documento(s) gerado(s)`];
@@ -221,6 +224,21 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
             <p className="text-sm text-slate-600">
               Seleciona os trabalhadores que vão receber este documento. Será enviado um email se o trabalhador tiver email definido.
             </p>
+            <div>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-1">Cliente (para tags <code className="font-mono text-[10px]">{'{{client_*}}'}</code>)</label>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                disabled={generating}
+                className="w-full border border-slate-200 rounded-xl p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">— Sem cliente —</option>
+                {(clients || []).map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-slate-400 mt-1">Se omitido, as tags client_* ficam vazias no documento.</p>
+            </div>
             <div className="max-h-80 overflow-y-auto border border-slate-200 rounded-xl divide-y divide-slate-100">
               {workers.length === 0 ? (
                 <div className="p-4 text-sm text-slate-400 text-center">Nenhum trabalhador na lista.</div>
@@ -327,6 +345,7 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
   // PDF preview state
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [copiedTag, setCopiedTag] = useState(null);
 
   // Presets para posições comuns
   const presets = [
@@ -643,15 +662,37 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
 
           <details className="bg-slate-50 border border-slate-200 rounded-xl p-3">
             <summary className="text-xs font-bold uppercase tracking-wider text-slate-600 cursor-pointer">
-              Variáveis disponíveis
+              Variáveis disponíveis <span className="font-normal text-slate-400 normal-case">— clica para copiar</span>
             </summary>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-40 overflow-y-auto">
-              {KNOWN_FIELD_NAMES.map(f => (
-                <div key={f.name} className="flex items-baseline gap-2 text-xs">
-                  <code className="font-mono text-indigo-600">{f.name}</code>
-                  <span className="text-slate-500 truncate">{f.label}</span>
-                </div>
-              ))}
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-60 overflow-y-auto">
+              {KNOWN_FIELD_NAMES.map(f => {
+                const tag = `{{${f.name}}}`;
+                const copy = async () => {
+                  try {
+                    await navigator.clipboard.writeText(tag);
+                    setCopiedTag(f.name);
+                    setTimeout(() => setCopiedTag((cur) => (cur === f.name ? null : cur)), 1200);
+                  } catch (err) {
+                    console.warn('Falha a copiar:', err);
+                  }
+                };
+                const isCopied = copiedTag === f.name;
+                return (
+                  <button
+                    type="button"
+                    key={f.name}
+                    onClick={copy}
+                    title={`Copiar ${tag}`}
+                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}
+                  >
+                    <code className={`font-mono ${isCopied ? 'text-emerald-700' : 'text-indigo-600'}`}>{tag}</code>
+                    <span className="text-slate-500 truncate flex-1">{f.label}</span>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-slate-300'}`}>
+                      {isCopied ? 'Copiado' : 'Copiar'}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </details>
         </div>

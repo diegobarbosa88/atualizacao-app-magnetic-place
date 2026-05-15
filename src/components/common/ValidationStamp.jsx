@@ -1,7 +1,9 @@
 import React from 'react';
 
-const STAMP_WIDTH = 333;
+const STAMP_WIDTH = 380;
 const STAMP_HEIGHT = 100;
+const SIG_BOX_WIDTH = 140;
+const SIG_BOX_HEIGHT = 70;
 
 const ValidationStamp = ({ signature, datetime, ip, id, qrCode, hideQrCode = false }) => {
   const dateStr = datetime ? new Date(datetime).toLocaleString('pt-PT') : '';
@@ -24,24 +26,25 @@ const ValidationStamp = ({ signature, datetime, ip, id, qrCode, hideQrCode = fal
       boxSizing: 'border-box',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
     }}>
-      {/* Assinatura */}
+      {/* Assinatura — caixa rectangular 2:1 */}
       <div style={{
         backgroundColor: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: '8px',
-        padding: '6px',
+        padding: '4px',
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: '80px',
+        width: `${SIG_BOX_WIDTH}px`,
+        height: `${SIG_BOX_HEIGHT}px`,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
       }}>
         {signature ? (
-          <img src={signature} alt="Assinatura" style={{ height: '70px', width: 'auto', maxWidth: '80px', display: 'block', objectFit: 'contain' }} />
+          <img src={signature} alt="Assinatura" style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
         ) : (
-          <div style={{ width: '70px', height: '50px', border: '1px dashed #cbd5e1', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span style={{ color: '#94a3b8', fontSize: '7px', fontWeight: 800, textTransform: 'uppercase' }}>Assinatura</span>
-          </div>
+          <span style={{ color: '#94a3b8', fontSize: '8px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Assinatura</span>
         )}
       </div>
 
