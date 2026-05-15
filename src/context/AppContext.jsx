@@ -296,7 +296,7 @@ export const AppProvider = ({ children }) => {
     else if (colName === 'approvals') updateState(setApprovals);
     else if (colName === 'client_approvals') updateState(setClientApprovals);
     else if (colName === 'app_notifications') prependState(setAppNotifications);
-    else if (colName === 'correcoes') prependState(setCorrecoesCorrections);
+    else if (colName === 'correcoes' || colName === 'corrections') prependState(setCorrecoesCorrections);
     else if (colName === 'documents' || colName === 'documentos') updateState(setDocuments);
 
     // Supabase Persistence
@@ -367,7 +367,7 @@ export const AppProvider = ({ children }) => {
     else if (colName === 'approvals') filterState(setApprovals);
     else if (colName === 'client_approvals') filterState(setClientApprovals);
     else if (colName === 'app_notifications') filterState(setAppNotifications);
-    else if (colName === 'correcoes') filterState(setCorrecoesCorrections);
+    else if (colName === 'correcoes' || colName === 'corrections') filterState(setCorrecoesCorrections);
     else if (colName === 'documents' || colName === 'documentos') {
       const doc = documents.find(x => x.id === id);
       filterState(setDocuments);

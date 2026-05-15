@@ -823,7 +823,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         payload: { changes: fullMonthSnapshot, isFullMonth: true, reportType: 'quick' },
                                         created_at: new Date().toISOString()
                                     };
-                                    await saveToDb('correcoes', correcaoId, correcaoRecord);
+                                    await saveToDb('corrections', correcaoId, correcaoRecord);
 
                                     // Include correcao_id in notification payload so admin can update status
                                     const newNotifWithCorrecaoId = {
@@ -1029,7 +1029,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
             created_at: new Date().toISOString()
         };
-        await saveToDb('correcoes', correcaoId, correcaoRecord);
+        await saveToDb('corrections', correcaoId, correcaoRecord);
 
         const newNotifWithCorrecaoId = {
             ...newNotif,
@@ -1189,7 +1189,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             payload: { changes: fullMonthSnapshot, isFullMonth: true, reportType: 'quick' },
                             created_at: new Date().toISOString()
                         };
-                        await saveToDb('correcoes', correcaoId, correcaoRecord);
+                        await saveToDb('corrections', correcaoId, correcaoRecord);
 
                         const newNotifWithCorrecaoId = {
                             ...newNotif,

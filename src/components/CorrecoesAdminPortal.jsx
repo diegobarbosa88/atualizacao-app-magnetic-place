@@ -103,7 +103,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
       if (correcaoId) {
         const correcao = correcoesCorrections?.find(c => c.id === correcaoId);
         if (correcao) {
-          await saveToDb('correcoes', correcaoId, { ...correcao, status: 'applied' });
+          await saveToDb('corrections', correcaoId, { ...correcao, status: 'applied' });
         }
       }
 
@@ -154,7 +154,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
       if (correcaoId) {
         const correcao = correcoesCorrections?.find(c => c.id === correcaoId);
         if (correcao) {
-          await saveToDb('correcoes', correcaoId, { ...correcao, status: 'rejected' });
+          await saveToDb('corrections', correcaoId, { ...correcao, status: 'rejected' });
         }
       }
 
@@ -263,7 +263,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
       if (correcaoId) {
         const correcao = correcoesCorrections?.find(c => c.id === correcaoId);
         if (correcao) {
-          await saveToDb('correcoes', correcaoId, { ...correcao, status: 'applied' });
+          await saveToDb('corrections', correcaoId, { ...correcao, status: 'applied' });
         }
       }
 

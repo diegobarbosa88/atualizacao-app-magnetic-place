@@ -231,7 +231,7 @@ export default function App() {
     if (targetClient?.email) await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth);
     if (rejeitarNotif.payload?.correcao_id) {
       const existingCorrecao = correcoesCorrections.find(c => c.id === rejeitarNotif.payload.correcao_id);
-      if (existingCorrecao) await saveToDb('correcoes', rejeitarNotif.payload.correcao_id, { ...existingCorrecao, status: 'rejected' });
+      if (existingCorrecao) await saveToDb('corrections', rejeitarNotif.payload.correcao_id, { ...existingCorrecao, status: 'rejected' });
     }
     await handleDelete('app_notifications', rejeitarNotif.id);
     setModalRejeitarAberto(false);
