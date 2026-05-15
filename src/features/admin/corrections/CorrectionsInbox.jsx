@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import {
   markUnderReview,
   setItemResolution,
   applyCorrection,
   rejectCorrection,
+  applyAdminDraftToQuick,
+  markResolved,
 } from '../../../utils/correctionsApi';
 import { calculateDuration } from '../../../utils/formatUtils';
 import TimeTextInput from '../../../components/common/TimeTextInput';
+import { StepPrecision } from '../../client-report/ClientReportFlow';
 
 const STATUS_LABEL = {
   submitted: { label: 'Submetido', cls: 'bg-amber-100 text-amber-700' },
@@ -223,10 +226,19 @@ const ItemRow = ({ item, supabase, disabled, setCorrectionItems }) => {
 };
 
 const CorrectionDetail = ({ correction, items, onBack }) => {
-  const { supabase, clients, logs, currentUser, setCorrections, setCorrectionItems } = useApp();
+  const { supabase, clients, workers, logs, currentUser, setCorrections, setCorrectionItems } = useApp();
   const client = clients.find((c) => String(c.id) === String(correction.client_id));
   const clientName = client?.name || 'Cliente';
   const [busy, setBusy] = useState(false);
+
+  const clientWorkers = useMemo(() => {
+    const ids = new Set(
+      (logs || [])
+        .filter((l) => String(l.clientId) === String(correction.client_id) && (l.date || '').startsWith(correction.month))
+        .map((l) => String(l.workerId))
+    );
+    return (workers || []).filter((w) => ids.has(String(w.id)));
+  }, [workers, logs, correction.client_id, correction.month]);
 
   React.useEffect(() => {
     if (correction.status === 'submitted' && supabase) {
@@ -271,6 +283,60 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
       onBack();
     } catch (e) {
       alert('Erro ao aplicar: ' + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onQuickApplyDraft = async ({ items: draftItems }) => {
+    if (!draftItems || draftItems.length === 0) {
+      alert('Não foram feitas alterações. Use "Marcar como Resolvido" se considera o pedido tratado.');
+      return;
+    }
+    if (!confirm(`Aplicar ${draftItems.length} alteração(ões) ao relatório de ${clientName}?`)) return;
+    setBusy(true);
+    try {
+      await applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer: currentUser?.id, clientName });
+      setCorrections((prev) =>
+        prev.map((c) =>
+          c.id === correction.id
+            ? { ...c, status: 'applied', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id || null }
+            : c
+        )
+      );
+      alert('Alterações aplicadas. Cliente notificado.');
+      onBack();
+    } catch (e) {
+      alert('Erro ao aplicar: ' + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onMarkResolved = async () => {
+    const note = prompt('Nota opcional para o cliente (Enter para deixar vazio):') || '';
+    if (!confirm('Marcar como resolvido sem alterar horários?')) return;
+    setBusy(true);
+    try {
+      await markResolved(supabase, {
+        correctionId: correction.id,
+        clientId: correction.client_id,
+        month: correction.month,
+        note,
+        reviewer: currentUser?.id,
+        clientName,
+      });
+      setCorrections((prev) =>
+        prev.map((c) =>
+          c.id === correction.id
+            ? { ...c, status: 'applied', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id || null }
+            : c
+        )
+      );
+      alert('Correção marcada como resolvida.');
+      onBack();
+    } catch (e) {
+      alert('Erro: ' + e.message);
     } finally {
       setBusy(false);
     }
@@ -339,28 +405,74 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         )}
       </header>
 
-      <div className="space-y-3">
-        {items.length === 0 && (
-          <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm text-slate-500">
-            Sem items detalhados (correção do tipo rápido — cliente apenas sinalizou divergência no mês).
+      {correction.type === 'quick' && !isClosed && (
+        <>
+          <div className="bg-white rounded-3xl border-2 border-amber-200 p-6 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+                <MessageCircle size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Mensagem do cliente</p>
+                <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{correction.justification || '(sem texto)'}</p>
           </div>
-        )}
-        {items.map((it) => (
-          <ItemRow key={it.id} item={it} supabase={supabase} disabled={isClosed} setCorrectionItems={setCorrectionItems} />
-        ))}
-      </div>
 
-      {!isClosed && (
-        <div className="sticky bottom-4 bg-white rounded-2xl border border-slate-100 p-4 shadow-lg flex items-center justify-between gap-3">
-          <div className="text-xs text-slate-500">
-            {total > 0 && !canApply && <>Resolva todos os {total} items antes de aplicar.</>}
-            {canApply && <>Pronto para aplicar.</>}
+          <div className="bg-white rounded-3xl border border-slate-100 p-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Editor</p>
+                <p className="text-sm text-slate-600">Faça as alterações que considera correctas e aplique ao relatório.</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
+                <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+              </div>
+            </div>
+            <StepPrecision
+              workers={clientWorkers}
+              logs={logs}
+              month={correction.month}
+              busy={busy}
+              showBack={false}
+              showJustification={false}
+              submitLabel="Aplicar Alterações ao Relatório"
+              onSubmit={onQuickApplyDraft}
+            />
           </div>
-          <div className="flex gap-2">
-            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar Tudo</button>
-            <button onClick={onApply} disabled={busy || !canApply} className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aplicar</button>
+        </>
+      )}
+
+      {(correction.type !== 'quick' || isClosed) && (
+        <>
+          <div className="space-y-3">
+            {items.length === 0 && (
+              <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm text-slate-500">
+                {correction.type === 'quick'
+                  ? 'Correção rápida sem alterações aplicadas (apenas mensagem do cliente).'
+                  : 'Sem items detalhados.'}
+              </div>
+            )}
+            {items.map((it) => (
+              <ItemRow key={it.id} item={it} supabase={supabase} disabled={isClosed} setCorrectionItems={setCorrectionItems} />
+            ))}
           </div>
-        </div>
+
+          {!isClosed && correction.type !== 'quick' && (
+            <div className="sticky bottom-4 bg-white rounded-2xl border border-slate-100 p-4 shadow-lg flex items-center justify-between gap-3">
+              <div className="text-xs text-slate-500">
+                {total > 0 && !canApply && <>Resolva todos os {total} items antes de aplicar.</>}
+                {canApply && <>Pronto para aplicar.</>}
+              </div>
+              <div className="flex gap-2">
+                <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar Tudo</button>
+                <button onClick={onApply} disabled={busy || !canApply} className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aplicar</button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -474,7 +586,11 @@ const CorrectionsInbox = () => {
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${STATUS_LABEL[c.status]?.cls}`}>{STATUS_LABEL[c.status]?.label}</span>
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">{c.type}</span>
                 </div>
-                <p className="text-xs text-slate-500 mt-1">{items.length} item(s) • {pending} pendente(s)</p>
+                {c.type === 'quick' ? (
+                  <p className="text-xs text-slate-600 mt-1 italic line-clamp-2">"{(c.justification || '(sem texto)').slice(0, 120)}{(c.justification || '').length > 120 ? '…' : ''}"</p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">{items.length} item(s) • {pending} pendente(s)</p>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Submetido</p>

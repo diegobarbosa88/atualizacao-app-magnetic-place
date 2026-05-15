@@ -135,9 +135,20 @@ const hoursFor = (shape) => {
   return calculateDuration(shape.startTime, shape.endTime, shape.breakStart, shape.breakEnd) || 0;
 };
 
-const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
+export const StepPrecision = ({
+  workers,
+  logs,
+  month,
+  onSubmit,
+  onBack,
+  busy,
+  submitLabel,
+  showBack = true,
+  showJustification = true,
+  initialJustification = '',
+}) => {
   const [entries, setEntries] = useState({}); // { [workerId]: { [date]: Entry } }
-  const [justification, setJustification] = useState('');
+  const [justification, setJustification] = useState(initialJustification || '');
   const [activeWorker, setActiveWorker] = useState(null);
   const [addingNewDay, setAddingNewDay] = useState(false);
   const [newDayDraft, setNewDayDraft] = useState({ date: '', startTime: '', endTime: '', breakStart: '', breakEnd: '' });
@@ -275,9 +286,11 @@ const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
 
   return (
     <div className="animate-fade-in max-w-5xl mx-auto py-6">
-      <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest mb-4">
-        <ChevronLeft size={14} /> Mudar método
-      </button>
+      {showBack && (
+        <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest mb-4">
+          <ChevronLeft size={14} /> Mudar método
+        </button>
+      )}
 
       <header className="bg-white rounded-3xl border border-slate-100 p-6 mb-6 flex items-center justify-between flex-wrap gap-4">
         <div>
@@ -489,20 +502,24 @@ const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
       </div>
 
       <div className="mt-6 bg-white rounded-3xl border border-slate-100 p-6">
-        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Justificação (opcional)</label>
-        <textarea
-          rows="3"
-          value={justification}
-          onChange={(e) => setJustification(e.target.value)}
-          className="w-full border-2 border-slate-100 rounded-2xl p-4 bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-          placeholder="Contexto adicional para o admin..."
-        />
+        {showJustification && (
+          <>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Justificação (opcional)</label>
+            <textarea
+              rows="3"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              className="w-full border-2 border-slate-100 rounded-2xl p-4 bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              placeholder="Contexto adicional..."
+            />
+          </>
+        )}
         <button
           disabled={busy || itemsCount === 0}
           onClick={() => onSubmit({ justification, items: buildItems() })}
-          className="mt-4 w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm disabled:opacity-50"
+          className={`${showJustification ? 'mt-4' : ''} w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm disabled:opacity-50`}
         >
-          {busy ? 'A enviar...' : `Enviar ${itemsCount} alteração(ões) ao Admin`}
+          {busy ? 'A processar...' : (submitLabel || `Enviar ${itemsCount} alteração(ões) ao Admin`)}
         </button>
       </div>
     </div>

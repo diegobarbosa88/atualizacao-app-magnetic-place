@@ -208,7 +208,6 @@ export const AppProvider = ({ children }) => {
           // Se viewed_by_ids contém workers que não são alvo, ignorar este UPDATE
           const hasInvalidViewed = viewedIds.some(vId => !targetIds.includes(vId));
           if (hasInvalidViewed && payload.eventType === 'UPDATE') {
-            console.log('Ignoring spurious UPDATE from trigger for notification:', newNotif.id);
             return;
           }
 

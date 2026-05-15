@@ -62,10 +62,15 @@ export async function submitCorrection(supabase, payload) {
   }
 
   // Thin notification pointer (no payload duplication)
+  const typeLabel = (payload.type || 'quick') === 'precision' ? 'Precisão' : 'Rápido';
+  const msgRaw = payload.type === 'precision'
+    ? `${items.length} alteração(ões) submetida(s).${payload.justification ? '\n\n' + payload.justification : ''}`
+    : (payload.justification || 'Nova correção submetida.');
+  const msg = msgRaw.length > 220 ? msgRaw.slice(0, 220) + '…' : msgRaw;
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
-    title: 'Pedido de Correção',
-    message: payload.justification || 'Nova correção submetida.',
+    title: `Pedido de Correção · ${payload.month} · ${typeLabel}`,
+    message: msg,
     type: 'warning',
     target_type: 'admin',
     target_client_id: String(payload.clientId),
@@ -164,6 +169,67 @@ export async function applyCorrection(supabase, { correction, items, logs, revie
     target_type: 'client',
     target_client_id: String(correction.client_id),
     payload: { correction_id: correction.id, kind: 'applied' },
+    is_active: true,
+    is_dismissible: true,
+    created_at: new Date().toISOString(),
+  });
+}
+
+/**
+ * Admin builds items on the fly (typically from a quick correction) and applies them
+ * straight away. Each draft item is inserted as `accepted` with `final = proposed`,
+ * then standard apply runs.
+ */
+export async function applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer, clientName }) {
+  if (!supabase) throw new Error('Supabase indisponível');
+  if (!draftItems || draftItems.length === 0) throw new Error('Nenhuma alteração para aplicar.');
+
+  const rows = draftItems.map((it) => {
+    const proposed = it.proposed ? buildLogShape(it.proposed) : null;
+    return {
+      id: newId('citem'),
+      correction_id: correction.id,
+      worker_id: it.workerId ? String(it.workerId) : null,
+      worker_name: it.workerName || null,
+      date: it.date || null,
+      before: it.before ? buildLogShape(it.before) : null,
+      proposed,
+      final: proposed,
+      item_status: 'accepted',
+    };
+  });
+
+  const { error: e1 } = await supabase.from('correction_items').insert(rows);
+  if (e1) throw e1;
+
+  await applyCorrection(supabase, { correction, items: rows, logs, reviewer, clientName });
+}
+
+/**
+ * Close a correction as applied without writing to logs (admin handled it elsewhere
+ * or the message did not require a change).
+ */
+export async function markResolved(supabase, { correctionId, clientId, month, note, reviewer, clientName }) {
+  const { error } = await supabase
+    .from('corrections')
+    .update({
+      status: 'applied',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewer ? String(reviewer) : null,
+    })
+    .eq('id', correctionId);
+  if (error) throw error;
+
+  await supabase.from('app_notifications').insert({
+    id: newId('notif'),
+    title: `Correção Resolvida: ${clientName || ''}`.trim(),
+    message: note
+      ? `O administrador analisou o seu pedido (${month}).\n\n${note}`
+      : `O administrador analisou o seu pedido para ${month}.`,
+    type: 'success',
+    target_type: 'client',
+    target_client_id: String(clientId),
+    payload: { correction_id: correctionId, kind: 'resolved' },
     is_active: true,
     is_dismissible: true,
     created_at: new Date().toISOString(),
