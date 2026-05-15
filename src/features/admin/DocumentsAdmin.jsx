@@ -88,6 +88,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         subtitle: d.tipo,
         state,
         createdAt: d.dataEmissao ? new Date(d.dataEmissao) : null,
+        signedAtWorker: d.dataAssinatura ? new Date(d.dataAssinatura) : null,
+        signedAtAdmin: null,
         viewUrl: d.url,
         signedPdfUrl: d.pdfAssinadoUrl,
         raw: d,
@@ -105,6 +107,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         state,
         createdAt: d.created_at ? new Date(d.created_at) : null,
         signedAt: d.admin_signed_at ? new Date(d.admin_signed_at) : (d.signed_at ? new Date(d.signed_at) : null),
+        signedAtWorker: d.signed_at ? new Date(d.signed_at) : null,
+        signedAtAdmin: d.admin_signed_at ? new Date(d.admin_signed_at) : null,
         signedPdfUrl: d.signed_pdf_url,
         raw: d,
       };
@@ -442,6 +446,20 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
                         <td className="px-4 py-4 border-y border-slate-100">
                           <p className="text-xs font-bold text-slate-700 truncate max-w-[260px]" title={d.title}>{d.title}</p>
                           {d.subtitle && <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[260px]">{d.subtitle}</p>}
+                          {(d.signedAtWorker || d.signedAtAdmin) && (
+                            <div className="mt-1 flex flex-col gap-0.5">
+                              {d.signedAtWorker && (
+                                <p className="text-[10px] text-emerald-600 font-bold">
+                                  Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}
+                                </p>
+                              )}
+                              {d.signedAtAdmin && (
+                                <p className="text-[10px] text-indigo-600 font-bold">
+                                  Magnetic Place: {formatDocDate(d.signedAtAdmin.toISOString(), true)}
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-4 border-y border-slate-100">{renderSourceChip(d.source)}</td>
                         <td className="px-4 py-4 border-y border-slate-100">{renderStateBadge(d.state)}</td>

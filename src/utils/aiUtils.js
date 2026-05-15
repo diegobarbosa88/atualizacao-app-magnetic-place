@@ -9,11 +9,11 @@
 export async function callGemini(prompt, systemInstruction = "", apiKey = "") {
   if (!apiKey) return "A IA precisa de uma chave API configurada.";
   
-  const model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.0-flash';
+  const model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   const payload = {
-    contents: [{ parts: [{ text: prompt }] }],
-    systemInstruction: { parts: [{ text: systemInstruction }] }
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
   };
 
   try {
@@ -28,7 +28,7 @@ export async function callGemini(prompt, systemInstruction = "", apiKey = "") {
       return data.candidates?.[0]?.content?.parts?.[0]?.text || "Erro na resposta.";
     } else {
       const errorData = await response.json();
-      console.error('Gemini API Error:', errorData);
+      console.error('Gemini API Error:', JSON.stringify(errorData));
       return `Erro API (${response.status}): ${errorData.error?.message || 'Falha na comunicação'}`;
     }
   } catch (error) { 

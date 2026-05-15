@@ -521,8 +521,9 @@ export async function applyAdminStampToPage(pdfBlob, {
   // Defaults dependem do estilo
   const isClassic = stampStyle === 'classic';
   const isCorporate = stampStyle === 'corporate';
-  const finalW = stampWidthMm ?? (isClassic || isCorporate ? 95 : 70);
-  const finalH = stampHeightMm ?? (isCorporate ? 38 : isClassic ? 30 : 25);
+  const isMirror = stampStyle === 'mirror';
+  const finalW = stampWidthMm ?? (isClassic || isCorporate ? 95 : isMirror ? 100 : 70);
+  const finalH = stampHeightMm ?? (isCorporate ? 38 : isClassic ? 30 : isMirror ? 30 : 25);
 
   try {
     const arrayBuffer = await (pdfBlob.arrayBuffer ? pdfBlob.arrayBuffer() : pdfBlob);
@@ -543,7 +544,7 @@ export async function applyAdminStampToPage(pdfBlob, {
         console.warn('Falha ao embeber logo admin:', e);
       }
     }
-    if ((isClassic || isCorporate) && signatureDataUrl) {
+    if ((isClassic || isCorporate || isMirror) && signatureDataUrl) {
       try {
         let finalDataUrl = signatureDataUrl;
         const inkColor = isCorporate ? '#0b1d3a' : '#0f3f87';
@@ -599,6 +600,13 @@ export async function applyAdminStampToPage(pdfBlob, {
           responsibleName, responsibleRole, signedAt,
           signatureImage: sigImage, logoImage,
           helv, helvBold, courier,
+        });
+      } else if (isMirror) {
+        drawAdminStampMirror(targetPage, {
+          x, y, w, h,
+          responsibleName, responsibleRole, signedAt, ip,
+          signatureImage: sigImage, logoImage,
+          helv, helvBold,
         });
       } else {
         drawAdminStamp(targetPage, {
@@ -733,6 +741,107 @@ function drawAdminStamp(page, {
   const dateW = helvBold.widthOfTextAtSize(dateStr, 5.5);
   page.drawText(dateStr, {
     x: footerX + footerW - 4 - dateW, y: footerY + 2.5, size: 5.5, font: helvBold, color: SLATE_900,
+  });
+}
+
+function drawAdminStampMirror(page, {
+  x, y, w, h,
+  responsibleName, responsibleRole, signedAt, ip,
+  signatureImage, logoImage,
+  helv, helvBold,
+}) {
+  // Espelho do ValidationStamp do trabalhador — fundo branco, mesmas dimensões/layout
+  const BLUE       = rgb(0.145, 0.306, 0.922);  // #2563eb
+  const INDIGO_BDR = rgb(0.878, 0.898, 1.0);    // #e0e7ff
+  const SLATE_900  = rgb(0.059, 0.090, 0.165);  // #0f172a
+  const SLATE_600  = rgb(0.278, 0.337, 0.412);  // #475569
+  const WHITE      = rgb(1, 1, 1);
+
+  const PAD    = 5;
+  const R      = 8;
+  const SIG_W  = w * 0.37;  // ~37% para a caixa de assinatura (igual ao worker)
+
+  // Fundo branco com borda indigo arredondada
+  drawRoundedRect(page, { x, y, w, h, r: R, color: WHITE, borderColor: INDIGO_BDR, borderWidth: 1.2 });
+
+  // ── Caixa de assinatura (sem contorno) ──────────────────────────────────
+  const sigAreaX = x + PAD;
+  const sigAreaY = y + PAD;
+  const sigAreaW = SIG_W - PAD;
+  const sigAreaH = h - PAD * 2;
+
+  // Logo como marca de água (opacity ~0.08)
+  if (logoImage) {
+    const logoAspect = logoImage.width / logoImage.height;
+    const logoH = sigAreaH * 0.85;
+    const logoW = logoH * logoAspect;
+    page.drawImage(logoImage, {
+      x: sigAreaX + (sigAreaW - logoW) / 2,
+      y: sigAreaY + (sigAreaH - logoH) / 2,
+      width: logoW,
+      height: logoH,
+      opacity: 0.08,
+    });
+  }
+
+  // Assinatura desenhada por cima da marca de água
+  if (signatureImage) {
+    const aspect = signatureImage.width / signatureImage.height;
+    const imgH = Math.min(sigAreaH - 4, (sigAreaW - 4) / aspect);
+    const imgW = imgH * aspect;
+    page.drawImage(signatureImage, {
+      x: sigAreaX + (sigAreaW - imgW) / 2,
+      y: sigAreaY + (sigAreaH - imgH) / 2,
+      width: imgW,
+      height: imgH,
+    });
+  }
+
+  // ── Área de dados (lado direito) ────────────────────────────────────────
+  const dataX = x + SIG_W + PAD;
+  const dataW = w - SIG_W - PAD * 2;
+  let curY = y + h - PAD - 4;
+
+  // Badge azul + título (igual ao worker mas azul)
+  page.drawCircle({ x: dataX + 4, y: curY - 1.5, size: 4.5, color: BLUE });
+  // checkmark simplificado via linha
+  page.drawLine({ start: { x: dataX + 1.8, y: curY - 2.5 }, end: { x: dataX + 3.5, y: curY - 0.5 }, thickness: 1, color: WHITE });
+  page.drawLine({ start: { x: dataX + 3.5, y: curY - 0.5 }, end: { x: dataX + 6.5, y: curY - 4 }, thickness: 1, color: WHITE });
+
+  page.drawText('APROVACAO EMPRESARIAL', {
+    x: dataX + 11, y: curY - 3.5, size: 5.8, font: helvBold, color: BLUE,
+  });
+  curY -= 11;
+
+  // Campos
+  const labelSize = 5;
+  const valueSize = 5.5;
+  const rowGap = 6;
+
+  const drawRow = (label, value) => {
+    page.drawText(label, { x: dataX, y: curY, size: labelSize, font: helv, color: SLATE_600 });
+    const valW = helvBold.widthOfTextAtSize(String(value), valueSize);
+    page.drawText(String(value), { x: dataX + dataW - valW, y: curY, size: valueSize, font: helvBold, color: SLATE_900 });
+    curY -= rowGap;
+  };
+
+  drawRow('Nome:', responsibleName || '—');
+  if (responsibleRole) drawRow('Cargo:', responsibleRole);
+
+  let dateStr = '—';
+  if (signedAt) {
+    const d = new Date(signedAt);
+    const pad = (n) => String(n).padStart(2, '0');
+    dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  drawRow('Data/Hora:', dateStr);
+  drawRow('IP:', ip || 'N/D');
+
+  // Rodapé azul (igual ao worker mas azul)
+  const footerY = y + PAD;
+  page.drawLine({ start: { x: dataX, y: footerY + 4 }, end: { x: dataX + dataW, y: footerY + 4 }, thickness: 0.4, color: INDIGO_BDR });
+  page.drawText('DOCUMENTO APROVADO PELO REPRESENTANTE', {
+    x: dataX, y: footerY, size: 4, font: helvBold, color: BLUE,
   });
 }
 

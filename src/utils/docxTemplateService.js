@@ -49,6 +49,37 @@ function loadDocFromBuffer(arrayBuffer) {
   }
 }
 
+const DEFAULT_PAGE_MARGINS_MM = { top: 20, right: 20, bottom: 20, left: 20 };
+const TWIPS_PER_MM = 56.6929;
+
+export function extractPageGeometry(arrayBuffer) {
+  try {
+    const zip = new PizZip(arrayBuffer);
+    const docXml = zip.file('word/document.xml')?.asText();
+    if (!docXml) return { ...DEFAULT_PAGE_MARGINS_MM };
+    const match = docXml.match(/<w:pgMar\b([^/>]*)\/?>/);
+    if (!match) return { ...DEFAULT_PAGE_MARGINS_MM };
+    const attrs = match[1];
+    const read = (name) => {
+      const m = attrs.match(new RegExp(`w:${name}="(-?\\d+)"`));
+      return m ? Number(m[1]) : null;
+    };
+    const top = read('top');
+    const right = read('right');
+    const bottom = read('bottom');
+    const left = read('left');
+    const toMm = (twips) => (twips == null ? null : Math.max(0, twips / TWIPS_PER_MM));
+    return {
+      top: toMm(top) ?? DEFAULT_PAGE_MARGINS_MM.top,
+      right: toMm(right) ?? DEFAULT_PAGE_MARGINS_MM.right,
+      bottom: toMm(bottom) ?? DEFAULT_PAGE_MARGINS_MM.bottom,
+      left: toMm(left) ?? DEFAULT_PAGE_MARGINS_MM.left,
+    };
+  } catch {
+    return { ...DEFAULT_PAGE_MARGINS_MM };
+  }
+}
+
 export function extractTags(arrayBuffer) {
   const doc = loadDocFromBuffer(arrayBuffer);
   const fullText = doc.getFullText() || '';
@@ -110,9 +141,9 @@ export function buildRenderData(workerData = {}, systemData = {}, clientData = n
           data[f.name] = '';
       }
     } else if (f.source && f.source.startsWith('clients.')) {
-      data[f.name] = getClientFieldValue(clientData || {}, `{{${f.name}}}`) || '';
+      data[f.name] = getClientFieldValue(clientData || {}, `{${f.name}}`) || '';
     } else {
-      data[f.name] = getWorkerFieldValue(workerData || {}, `{{${f.name}}}`) || '';
+      data[f.name] = getWorkerFieldValue(workerData || {}, `{${f.name}}`) || '';
     }
   }
   return data;
@@ -124,6 +155,29 @@ export function renderDocx(arrayBuffer, renderData, { imageMap = null } = {}) {
     zip = new PizZip(arrayBuffer);
   } catch (err) {
     throw new Error('Ficheiro .docx inválido ou corrompido (zip ilegível).');
+  }
+
+  // Retrocompatibilidade: converte {{name}} em {name} para todos os campos
+  // conhecidos (templates antigos onde foram usados duplos-chavetas).
+  try {
+    const FIELD_NAMES = KNOWN_FIELD_NAMES.map(f => f.name);
+    const filePattern = /^word\/(document|header\d*|footer\d*)\.xml$/;
+    Object.keys(zip.files)
+      .filter(p => filePattern.test(p))
+      .forEach(p => {
+        let xml = zip.files[p].asText();
+        let changed = false;
+        FIELD_NAMES.forEach(name => {
+          const re = new RegExp(`\\{\\{${name}\\}\\}`, 'g');
+          if (re.test(xml)) {
+            xml = xml.replace(re, `{${name}}`);
+            changed = true;
+          }
+        });
+        if (changed) zip.file(p, xml);
+      });
+  } catch (err) {
+    console.warn('Pre-process tag delimiters falhou (a continuar):', err);
   }
 
   const modules = [];

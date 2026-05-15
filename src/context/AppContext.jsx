@@ -66,7 +66,7 @@ export const AppProvider = ({ children }) => {
     }
   });
   const setStampStyle = (style) => {
-    const v = style === 'classic' ? 'classic' : style === 'corporate' ? 'corporate' : 'tech';
+    const v = style === 'classic' ? 'classic' : style === 'corporate' ? 'corporate' : style === 'mirror' ? 'mirror' : 'tech';
     try { localStorage.setItem('magnetic_stamp_style', v); } catch { /* ignore */ }
     setStampStyleState(v);
   };

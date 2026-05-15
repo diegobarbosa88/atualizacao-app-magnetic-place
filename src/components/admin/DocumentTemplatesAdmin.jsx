@@ -225,7 +225,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
               Seleciona os trabalhadores que vão receber este documento. Será enviado um email se o trabalhador tiver email definido.
             </p>
             <div>
-              <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-1">Cliente (para tags <code className="font-mono text-[10px]">{'{{client_*}}'}</code>)</label>
+              <label className="block text-xs font-bold text-slate-600 uppercase tracking-widest mb-1">Cliente (para tags <code className="font-mono text-[10px]">{'{client_*}'}</code>)</label>
               <select
                 value={selectedClientId}
                 onChange={(e) => setSelectedClientId(e.target.value)}
@@ -666,7 +666,7 @@ function TemplateEditorModal({ template, supabase, onClose, onSave, saving }) {
             </summary>
             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1 max-h-60 overflow-y-auto">
               {KNOWN_FIELD_NAMES.map(f => {
-                const tag = `{{${f.name}}}`;
+                const tag = `{${f.name}}`;
                 const copy = async () => {
                   try {
                     await navigator.clipboard.writeText(tag);

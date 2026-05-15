@@ -6,6 +6,7 @@ import ClientTimesheetReport from '../../components/common/ClientTimesheetReport
 import CompanyValidationStamp from '../../components/common/CompanyValidationStamp';
 import CompanyClassicStamp from '../../components/common/CompanyClassicStamp';
 import CompanyCorporateStamp from '../../components/common/CompanyCorporateStamp';
+import ValidationStampAdmin from '../../components/common/ValidationStampAdmin';
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
@@ -1125,14 +1126,14 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             Estilo do carimbo aplicado aos documentos
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => setStampStyle('tech')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'tech' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+              onClick={() => setStampStyle('mirror')}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'mirror' ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-300'}`}
             >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Tech Data-Grid</div>
-              <div className="text-[10px] text-slate-500 mt-1">Auditoria técnica + token (sem assinatura desenhada)</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Espelho · Estilo Trabalhador</div>
+              <div className="text-[10px] text-slate-500 mt-1">Mesmo layout do trabalhador, paleta azul, com assinatura e cargo</div>
             </button>
             <button
               type="button"
@@ -1150,12 +1151,29 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
               <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Corporate · Multinacional</div>
               <div className="text-[10px] text-slate-500 mt-1">Marinho + dourado, selo CERTIFIED ORIGINAL, logo proeminente</div>
             </button>
+            <button
+              type="button"
+              onClick={() => setStampStyle('tech')}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'tech' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Tech Data-Grid</div>
+              <div className="text-[10px] text-slate-500 mt-1">Auditoria técnica + token (sem assinatura desenhada)</div>
+            </button>
           </div>
 
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2">
             Pré-visualização
           </p>
-          {stampStyle === 'classic' ? (
+          {stampStyle === 'mirror' ? (
+            <ValidationStampAdmin
+              responsibleName={name || 'Nome do Responsável'}
+              responsibleRole={role}
+              signedAt={new Date().toISOString()}
+              ip="192.168.x.x"
+              signatureDataUrl={sigDataUrl}
+              companyLogoUrl="/icon-512x512.png"
+            />
+          ) : stampStyle === 'classic' ? (
             <CompanyClassicStamp
               responsibleName={name || 'Nome do Responsável'}
               responsibleRole={role}

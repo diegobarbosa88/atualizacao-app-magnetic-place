@@ -833,14 +833,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
                         <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
                       </div>
                     )}
-                    <a
-                      href={selectedDoc.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="absolute top-2 right-2 bg-white/90 backdrop-blur text-indigo-600 text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:bg-white"
-                    >
-                      Abrir noutra aba
-                    </a>
                   </>
                 ) : selectedDoc.generated_html ? (
                   <iframe srcDoc={injectSignaturePlaceholder(selectedDoc.generated_html)} sandbox="allow-scripts" className="w-full h-full rounded-xl" title="Document Preview" />

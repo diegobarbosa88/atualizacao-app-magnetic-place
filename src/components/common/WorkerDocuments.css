@@ -293,10 +293,8 @@ body {
   padding: 0 !important;
 }
 
-/* Override do .a4-paper no worker: padding lateral standard A4, top compacto para o header colar mais ao topo */
-.a4-paper {
-  padding: 24px 56px 40px 56px !important;
-}
+/* Padding do .a4-paper é injetado dinamicamente em runtime a partir das margens
+   do DOCX original (<w:pgMar>). Ver WorkerDocuments.jsx handleSign. */
 
 /* Forçar elementos dentro do .a4-paper a não fazer overflow horizontal */
 .a4-paper * {
