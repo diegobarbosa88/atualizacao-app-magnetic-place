@@ -45,6 +45,20 @@ const KIND_LABEL = {
 
 const fmtTime = (t) => (t && t !== '--:--' ? t : '—');
 
+const itemDelta = (item) => {
+  const beforeH = Number(item.before?.hours || 0);
+  const finalH = item.item_status === 'rejected' ? beforeH : Number((item.final || item.proposed)?.hours || 0);
+  return Number((finalH - beforeH).toFixed(2));
+};
+
+const fmtDelta = (n) => {
+  if (!n) return '0h';
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${Number(n.toFixed(2))}h`;
+};
+
+const deltaClass = (n) => (n > 0 ? 'bg-emerald-100 text-emerald-700' : n < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500');
+
 const TimesCell = ({ shape, placeholder }) => {
   if (!shape || isEmptyTimes(shape)) {
     return <p className="text-xs text-slate-400 italic leading-tight">{placeholder || '—'}</p>;
@@ -111,7 +125,10 @@ const ItemRow = ({ item, supabase, disabled, setCorrectionItems }) => {
     <div className={`border rounded-2xl p-4 bg-white ${kind === 'remove' ? 'border-rose-100' : kind === 'new' ? 'border-emerald-100' : 'border-slate-100'}`}>
       <div className="flex items-start gap-4 flex-wrap">
         <div className="min-w-[140px]">
-          <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-md border ${K.cls} mb-2`}>{K.label}</span>
+          <div className="flex gap-1 flex-wrap mb-2">
+            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-md border ${K.cls}`}>{K.label}</span>
+            <span className={`inline-block text-[10px] font-black px-2 py-1 rounded-md ${deltaClass(itemDelta(item))}`}>Δ {fmtDelta(itemDelta(item))}</span>
+          </div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</p>
           <p className="font-bold text-slate-800">{item.worker_name || item.worker_id}</p>
           <p className="text-xs text-slate-500 font-mono mt-1">{item.date}</p>
@@ -233,6 +250,10 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
     return c;
   }, [items]);
 
+  const monthDelta = useMemo(() => {
+    return Number(items.reduce((acc, it) => acc + itemDelta(it), 0).toFixed(2));
+  }, [items]);
+
   const onApply = async () => {
     if (!canApply) return;
     if (!confirm(`Aplicar ${resolved} alteração(ões) ao relatório de ${clientName}?`)) return;
@@ -297,13 +318,19 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
             <p className="text-sm text-slate-500 font-medium mt-1">Mês {correction.month} • Tipo {correction.type}</p>
             <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-md ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
           </div>
-          <div className="text-right">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resolução</p>
-            <p className="text-3xl font-black text-slate-800">{resolved}/{total}</p>
-            <div className="flex gap-2 mt-2 justify-end text-[10px] font-black">
-              {kindCounts.edit > 0 && <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">{kindCounts.edit} ajuste(s)</span>}
-              {kindCounts.new > 0 && <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{kindCounts.new} novo(s)</span>}
-              {kindCounts.remove > 0 && <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700">{kindCounts.remove} remover</span>}
+          <div className="text-right flex gap-6">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resolução</p>
+              <p className="text-3xl font-black text-slate-800">{resolved}/{total}</p>
+              <div className="flex gap-2 mt-2 justify-end text-[10px] font-black flex-wrap">
+                {kindCounts.edit > 0 && <span className="px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700">{kindCounts.edit} ajuste(s)</span>}
+                {kindCounts.new > 0 && <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">{kindCounts.new} novo(s)</span>}
+                {kindCounts.remove > 0 && <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700">{kindCounts.remove} remover</span>}
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Diferença mês</p>
+              <p className={`text-3xl font-black ${monthDelta > 0 ? 'text-emerald-600' : monthDelta < 0 ? 'text-rose-600' : 'text-slate-400'}`}>{fmtDelta(monthDelta)}</p>
             </div>
           </div>
         </div>

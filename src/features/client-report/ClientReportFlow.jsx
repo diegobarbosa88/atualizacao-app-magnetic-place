@@ -201,6 +201,27 @@ const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
     return n;
   }, [entries]);
 
+  const monthDelta = useMemo(() => {
+    let delta = 0;
+    workersWithDays.forEach((w) => {
+      const dayEntries = entries[w.id] || {};
+      Object.entries(dayEntries).forEach(([date, entry]) => {
+        const existing = w.logs.find((l) => l.date === date);
+        const orig = Number(existing?.hours || 0);
+        if (entry.kind === 'new') delta += hoursFor(entry.values);
+        else if (entry.kind === 'remove') delta -= orig;
+        else if (entry.kind === 'edit') delta += hoursFor(entry.changes) - orig;
+      });
+    });
+    return Number(delta.toFixed(2));
+  }, [entries, workersWithDays]);
+
+  const fmtDelta = (n) => {
+    if (!n) return '0h';
+    const sign = n > 0 ? '+' : '';
+    return `${sign}${Number(n.toFixed(2))}h`;
+  };
+
   const buildItems = () => {
     const out = [];
     workersWithDays.forEach((w) => {
@@ -263,9 +284,15 @@ const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
           <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Ajuste de Precisão</h2>
           <p className="text-sm text-slate-500">Edite, remova ou adicione dias. Cada alteração é submetida individualmente ao admin.</p>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alterações pendentes</p>
-          <p className="text-3xl font-black text-amber-500">{itemsCount}</p>
+        <div className="text-right flex gap-6">
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alterações</p>
+            <p className="text-3xl font-black text-amber-500">{itemsCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Diferença mês</p>
+            <p className={`text-3xl font-black ${monthDelta > 0 ? 'text-emerald-600' : monthDelta < 0 ? 'text-rose-600' : 'text-slate-400'}`}>{fmtDelta(monthDelta)}</p>
+          </div>
         </div>
       </header>
 
@@ -386,7 +413,7 @@ const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] font-black text-emerald-700 mt-2">Novo: {hoursFor(values)}h</p>
+                  <p className="text-[10px] font-black text-emerald-700 mt-2">Novo dia: {hoursFor(values)}h (Δ {fmtDelta(hoursFor(values))})</p>
                 </div>
               ))}
 
@@ -444,13 +471,14 @@ const StepPrecision = ({ workers, logs, month, onSubmit, onBack, busy }) => {
                     )}
 
                     {editVals && (
-                      <div className="mt-2 text-[10px] font-bold flex flex-wrap gap-x-3 gap-y-1">
+                      <div className="mt-2 text-[10px] font-bold flex flex-wrap gap-x-3 gap-y-1 items-center">
                         <span className="text-slate-400">Era: <span className="font-mono text-slate-600">{l.startTime || '—'} → {l.endTime || '—'}</span> ({origHours}h)</span>
                         <span className="text-amber-700">Novo: <span className="font-mono">{displayVals.startTime || '—'} → {displayVals.endTime || '—'}</span> ({newHours}h)</span>
+                        <span className={`px-2 py-0.5 rounded-md font-black ${newHours - origHours > 0 ? 'bg-emerald-100 text-emerald-700' : newHours - origHours < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>Δ {fmtDelta(newHours - origHours)}</span>
                       </div>
                     )}
                     {isRemoved && (
-                      <p className="text-[10px] font-bold text-rose-700">Era: <span className="font-mono">{l.startTime || '—'} → {l.endTime || '—'}</span> ({origHours}h) • será marcado como não trabalhado.</p>
+                      <p className="text-[10px] font-bold text-rose-700">Era: <span className="font-mono">{l.startTime || '—'} → {l.endTime || '—'}</span> ({origHours}h) • marcado como não trabalhado (Δ {fmtDelta(-origHours)})</p>
                     )}
                   </div>
                 );
