@@ -310,6 +310,9 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           </div>
         )}
 
+        {reportUnits.length === 0 && isEmbedded && (
+          <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Sem registos para este período.</div>
+        )}
         {reportUnits.map((unit, idx) => (
           <div key={`${unit.id}-${idx}`} id={`report-unit-${idx}`} className="a4-paper">
             {/* Header Section */}

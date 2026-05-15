@@ -584,7 +584,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                 <td colSpan="3" className="p-0">
                                                     <div className="p-6">
                                                         <div id={`report-worker-${worker.id}`} className="overflow-hidden bg-white">
-                                                            {renderReport(worker.id, true)}
+                                                            {renderReport(worker.id, true, logs)}
                                                         </div>
                                                     </div>
                                                 </td>

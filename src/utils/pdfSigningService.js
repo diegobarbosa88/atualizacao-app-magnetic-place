@@ -517,7 +517,6 @@ export async function applyAdminStampToPage(pdfBlob, {
   stampWidthMm,
   stampHeightMm,
 } = {}) {
-  void companyName;
   // Defaults dependem do estilo
   const isClassic = stampStyle === 'classic';
   const isCorporate = stampStyle === 'corporate';
@@ -585,6 +584,7 @@ export async function applyAdminStampToPage(pdfBlob, {
     if (page === 'first') targetPages = [pages[0]];
     else if (page === 'last') targetPages = [pages[pages.length - 1]];
     else if (page === 'all') targetPages = pages;
+    if (targetPages.length === 0) targetPages = [pages[pages.length - 1]];
 
     for (const targetPage of targetPages) {
       if (isCorporate) {

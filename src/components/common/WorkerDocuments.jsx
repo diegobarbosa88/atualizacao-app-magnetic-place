@@ -379,7 +379,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         // Primeiro: guardar a posição original do placeholder do template
         const originalLeft = sigArea.style.left || '0px';
         const originalTop = sigArea.style.top || '0px';
-        console.log('DEBUG: Preserving signature placeholder position - left:', originalLeft, 'top:', originalTop);
 
         // Segundo: remover todo o conteúdo interno do placeholder
         while (sigArea.firstChild) {
@@ -401,22 +400,13 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
         qrCodeFixed.style.cssText = 'position:absolute;right:5mm;bottom:5mm;width:20mm;height:20mm;z-index:99999;';
         qrCodeFixed.innerHTML = `<img src="${qrCodeDataURL}" style="width:100%;height:100%;object-fit:contain;" />`;
         a4.appendChild(qrCodeFixed);
-        console.log('DEBUG: QR code fixo injetado com src:', qrCodeDataURL ? 'presente' : 'vazio');
-
-        // DEBUG: ver o que está dentro do sigArea após modificações
-        console.log('DEBUG: sigArea innerHTML após modificações:', sigArea.innerHTML.substring(0, 500));
 
         const cleanHtml = '<!DOCTYPE html>' + tmplDoc.documentElement.outerHTML;
-
-        // DEBUG
-        console.log('DEBUG: cleanHtml contains worker-signature-placeholder?', cleanHtml.includes('worker-signature-placeholder'));
-        console.log('DEBUG: cleanHtml contains magnetic-validation-stamp?', cleanHtml.includes('magnetic-validation-stamp'));
-        console.log('DEBUG: cleanHtml contains VALIDAÇÃO DIGITAL?', cleanHtml.includes('VALIDAÇÃO DIGITAL'));
 
         // 5. Criar iframe e escrever o HTML
         const iframe = document.createElement('iframe');
         iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:900px;height:1300px;border:none;';
-        iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+        iframe.setAttribute('sandbox', 'allow-scripts');
         document.body.appendChild(iframe);
 
         iframe.contentDocument.open();
@@ -425,25 +415,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
         // Aguardar Tailwind CDN carregar + paint
         await new Promise(r => setTimeout(r, 1000));
-
-        // DEBUG: verificar se placeholder e stamp existem no iframe
-        const sigInIframe = iframe.contentDocument.querySelector('#worker-signature-placeholder');
-        const stampInIframe = iframe.contentDocument.querySelector('.magnetic-validation-stamp');
-        const a4InIframe = iframe.contentDocument.querySelector('.a4-paper');
-        const qrInIframe = iframe.contentDocument.querySelector('#qr-code-fixed');
-        console.log('DEBUG: Placeholder no iframe?', !!sigInIframe);
-        console.log('DEBUG: Stamp no iframe?', !!stampInIframe);
-        console.log('DEBUG: QR code fixo no iframe?', !!qrInIframe);
-        console.log('DEBUG: A4 paper no iframe?', !!a4InIframe);
-        if (sigInIframe) {
-          console.log('DEBUG: Placeholder innerHTML:', sigInIframe.innerHTML.substring(0, 500));
-        }
-        if (qrInIframe) {
-          console.log('DEBUG: QR code src:', qrInIframe.innerHTML.substring(0, 100));
-        }
-        if (a4InIframe) {
-          console.log('DEBUG: A4 paper innerHTML (last 500 chars):', a4InIframe.innerHTML.slice(-500));
-        }
 
         // 6. Carregar html2pdf e gerar PDF
         await new Promise((resolve, reject) => {
@@ -475,14 +446,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
               logging: false,
               onclone: (clonedDoc) => {
                 stripOklch(clonedDoc);
-                const clonedStamp = clonedDoc.querySelector('.magnetic-validation-stamp');
-                const clonedA4 = clonedDoc.querySelector('.a4-paper');
-                console.log('DEBUG onclone: clonedStamp exists?', !!clonedStamp);
-                console.log('DEBUG onclone: clonedA4 exists?', !!clonedA4);
-                if (clonedA4) {
-                  console.log('DEBUG onclone: clonedA4 innerHTML length:', clonedA4.innerHTML.length);
-                  console.log('DEBUG onclone: clonedA4 contains stamp?', clonedA4.innerHTML.includes('magnetic-validation-stamp'));
-                }
               },
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -500,20 +463,9 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
             },
           };
 
-          console.log('DEBUG: target element tagName:', target.tagName);
-          console.log('DEBUG: target children count:', target.children.length);
-          console.log('DEBUG: target innerHTML length:', target.innerHTML.length);
-          console.log('DEBUG: target contains magnetic-validation-stamp?', target.innerHTML.includes('magnetic-validation-stamp'));
-
-          try {
-            pdfBlob = await ifW.html2pdf().set(opt).from(target).output('blob');
-            console.log('DEBUG: pdfBlob size:', pdfBlob.size, 'bytes');
-          } catch (pdfErr) {
-            console.error('DEBUG: pdf generation error:', pdfErr);
-            throw pdfErr;
-          }
+          pdfBlob = await ifW.html2pdf().set(opt).from(target).output('blob');
         } finally {
-          document.body.removeChild(iframe);
+          if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
         }
 
         const pdfPath = `${currentUser.id}/documentos_assinados/${selectedDoc.id}_signed_${Date.now()}.pdf`;
@@ -600,8 +552,13 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           if (!r.ok) throw new Error('Erro ao baixar PDF original');
           return r.arrayBuffer();
         });
-        const pdfDoc = await PDFDocument.load(originalPdfBytes);
-        const pngImage = await pdfDoc.embedPng(stampBase64);
+        const pdfDoc = await PDFDocument.load(originalPdfBytes, { ignoreEncryption: true });
+        let pngImage;
+        try {
+          pngImage = await pdfDoc.embedPng(stampBase64);
+        } catch {
+          pngImage = await pdfDoc.embedJpg(stampBase64);
+        }
         const pages = pdfDoc.getPages();
         const lastPage = pages[pages.length - 1];
         const { width: pageWidth } = lastPage.getSize();
@@ -870,7 +827,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
             onSigned={() => {
               setAcroformDoc(null);
               loadTemplateDocs();
-              try { alert('Documento assinado com sucesso!'); } catch (_) {}
+              alert('Documento assinado com sucesso!');
             }}
           />
         </div>

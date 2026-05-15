@@ -89,7 +89,7 @@ export const sendNotificationEmail = async (clientEmail, clientName, notifTitle,
       to_name: clientName,
       notification_title: translatedTitle,
       notification_message: translatedMessage,
-      link_unico: `${portalUrl}/?view=client_portal${clientParam}`
+      link_unico: `${portalUrl}${clientParam}`
     };
 
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, templateParams, EMAILJS_PUBLIC_KEY);

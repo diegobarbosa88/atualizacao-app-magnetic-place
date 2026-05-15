@@ -4,9 +4,8 @@ import { toISODateLocal, isSameMonth } from '../utils/dateUtils';
 
 const AppContext = createContext();
 
-// Supabase configuration - Fallback to hardcoded for now, but allow env override
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ccvxnrnlbipsojbbrzaw.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Ze9r5vColmrZGfhxMwDURg_i4EHktEJ';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let supabaseInstance = null;
 
@@ -323,6 +322,10 @@ export const AppProvider = ({ children }) => {
         breakEnd: data.breakEnd,
         hours: data.hours || data.totalHours
       };
+    } else if (tableName === 'clients') {
+      // Remover campos calculados em memória que não existem na BD
+      const { totalHoras, totalRevenue, topWorker, ...rest } = data;
+      payload = { ...rest, id };
     } else if (tableName === 'workers') {
       // morada: chave legacy de schema antigo — usar `address` em vez disso
       const { status, nis, is_active, morada, isAdminImpersonating, ...rest } = data;
@@ -343,17 +346,6 @@ export const AppProvider = ({ children }) => {
 
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
     if (error) console.error(`Erro ao gravar em ${tableName}:`, error);
-    
-    // Update local state for documents
-    if ((tableName === 'documents' || tableName === 'documentos') && !error) {
-      setDocuments(prev => {
-        const exists = prev.find(d => d.id === payload.id);
-        if (exists) {
-          return prev.map(d => d.id === payload.id ? { ...d, ...payload } : d);
-        }
-        return [...prev, payload];
-      });
-    }
   };
 
   const handleApproveMonth = async (workerId) => {
@@ -419,7 +411,7 @@ export const AppProvider = ({ children }) => {
   // --- ADMIN STATS ---
   const adminStats = useMemo(() => {
     const monthLogs = logs.filter(l => isSameMonth(l.date, currentMonth));
-    const totalHours = monthLogs.reduce((acc, curr) => acc + curr.hours, 0);
+    const totalHours = monthLogs.reduce((acc, curr) => acc + (Number(curr.hours) || 0), 0);
 
     let expectedRevenue = 0;
     let expectedCosts = 0;

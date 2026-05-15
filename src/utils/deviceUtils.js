@@ -18,15 +18,19 @@ export function parseDeviceLabel(ua = navigator.userAgent || '') {
   return `${browser}/${os}`;
 }
 
-// Fetch public IP (best-effort, returns 'N/D' on failure).
+// Fetch public IP (best-effort, returns 'N/D' on failure or timeout).
 export async function fetchPublicIp() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch('https://api.ipify.org?format=json');
+    const res = await fetch('https://api.ipify.org?format=json', { signal: controller.signal });
     if (!res.ok) return 'N/D';
     const data = await res.json();
     return data.ip || 'N/D';
   } catch {
     return 'N/D';
+  } finally {
+    clearTimeout(timer);
   }
 }
 

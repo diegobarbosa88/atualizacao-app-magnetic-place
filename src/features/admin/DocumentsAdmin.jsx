@@ -33,7 +33,7 @@ const SortableTh = ({ label, columnKey, sortKey, sortDir, onSort }) => {
   );
 };
 
-const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings, supabase }) => {
+const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings }) => {
   const { supabase: clientSupabase, companySignature, stampStyle } = useApp();
   const [activeSubTab, setActiveSubTab] = useState('documentos');
 
@@ -216,7 +216,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     if (!window.confirm('Apagar documento permanentemente?')) return;
 
     try {
-      const pathInStorage = raw.url?.includes('/documentos/') ? raw.url.split('/documentos/')[1] : null;
+      const match = raw.url?.match(/\/storage\/v1\/object\/public\/documentos\/(.+?)(\?|$)/);
+      const pathInStorage = match ? decodeURIComponent(match[1]) : null;
       if (pathInStorage) {
         await clientSupabase.storage.from('documentos').remove([pathInStorage]);
       }

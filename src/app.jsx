@@ -168,7 +168,7 @@ export default function App() {
     if (!clienteSelecionado) return;
     setIsSendingEmail(true);
     const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
-    const modalLinkUnico = clienteSelecionado.link_gerado || `${CLIENT_PORTAL_URL}/?view=client_portal&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
+    const modalLinkUnico = clienteSelecionado.link_gerado || `${CLIENT_PORTAL_URL}&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
     const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
     const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_PORTAL;
@@ -348,9 +348,9 @@ export default function App() {
           appNotifications={appNotifications}
           clientApprovals={clientApprovals}
           supabase={supabase}
-          renderReport={(workerId, isGlobal) => (
+          renderReport={(workerId, isGlobal, portalLogs) => (
             <ClientTimesheetReport
-              data={{ client: clients.find(c => c.id === urlClient), logs, workers, clients, month: urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
+              data={{ client: clients.find(c => c.id === urlClient), logs: portalLogs || logs, workers, clients, month: urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
               isEmbedded={true}
               hideActions={true}
               onBack={() => { }}
