@@ -78,6 +78,26 @@ const injectSignaturePlaceholder = (html) => {
   }
 };
 
+const renderPdfToSrcDoc = async (arrayBuffer) => {
+  const pdfjsLib = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const imgs = [];
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const viewport = page.getViewport({ scale: 1.8 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    imgs.push(canvas.toDataURL('image/jpeg', 0.88));
+  }
+  const imgTags = imgs.map(src =>
+    `<img src="${src}" style="width:100%;display:block;margin-bottom:8px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);" />`
+  ).join('');
+  return `<!DOCTYPE html><html><body style="margin:0;padding:8px;background:#f1f5f9;">${imgTags}</body></html>`;
+};
+
 const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const { supabase } = useApp();
   const [activeTab, setActiveTab] = useState(() => localStorage.getItem('magnetic_worker_doc_tab') || 'pendentes');
@@ -112,7 +132,9 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const [showSigner, setShowSigner] = useState(false);
   const [showSignPad, setShowSignPad] = useState(false);
   const [previewBlobUrl, setPreviewBlobUrl] = useState(null);
+  const [previewSrcDoc, setPreviewSrcDoc] = useState(null);
   const [previewError, setPreviewError] = useState('');
+  const [previewMime, setPreviewMime] = useState('application/pdf');
   const [acroformDoc, setAcroformDoc] = useState(null);
 
   const openDoc = useCallback((doc) => {
@@ -131,24 +153,53 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   const canvasRef = useRef(null);
   const isDrawing = useRef(false);
 
-  // Buscar o ficheiro como blob para garantir que renderiza em <iframe>
-  // independentemente do Content-Disposition do storage.
+  // Buscar o ficheiro como blob (via Supabase Storage API se possível) para
+  // garantir que renderiza em <iframe>/<img> independentemente do
+  // Content-Disposition / Content-Type do storage.
   useEffect(() => {
     let cancelled = false;
     let createdUrl = null;
     setPreviewBlobUrl(null);
+    setPreviewSrcDoc(null);
     setPreviewError('');
     const src = selectedDoc?.url;
     if (!showSigner || !src) return;
+
+    const name = (selectedDoc?.nomeFicheiro || src.split('?')[0]).toLowerCase();
+    let mimeType = 'application/octet-stream';
+    if (name.endsWith('.pdf')) mimeType = 'application/pdf';
+    else if (name.endsWith('.png')) mimeType = 'image/png';
+    else if (name.endsWith('.jpg') || name.endsWith('.jpeg')) mimeType = 'image/jpeg';
+    else if (name.endsWith('.webp')) mimeType = 'image/webp';
+
     (async () => {
       try {
-        const res = await fetch(src);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
+        let blob;
+        const m = src.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+        if (m && supabase) {
+          const { data, error } = await supabase.storage.from(m[1]).download(decodeURIComponent(m[2]));
+          if (error) throw error;
+          blob = data;
+        } else {
+          const res = await fetch(src);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          blob = await res.blob();
+        }
         if (cancelled) return;
-        createdUrl = URL.createObjectURL(blob);
-        setPreviewBlobUrl(createdUrl);
+        const buf = await blob.arrayBuffer();
+        if (mimeType === 'application/pdf') {
+          const srcDoc = await renderPdfToSrcDoc(buf);
+          if (!cancelled) setPreviewSrcDoc(srcDoc);
+        } else {
+          const typedBlob = new Blob([buf], { type: mimeType });
+          createdUrl = URL.createObjectURL(typedBlob);
+          if (!cancelled) {
+            setPreviewBlobUrl(createdUrl);
+            setPreviewMime(mimeType);
+          }
+        }
       } catch (err) {
+        console.warn('Falha a carregar preview:', err);
         if (!cancelled) setPreviewError(err.message || 'Falha a carregar o documento');
       }
     })();
@@ -156,7 +207,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       cancelled = true;
       if (createdUrl) URL.revokeObjectURL(createdUrl);
     };
-  }, [showSigner, selectedDoc?.url]);
+  }, [showSigner, selectedDoc?.url, selectedDoc?.nomeFicheiro, supabase]);
 
   useEffect(() => {
     if (showSigner && canvasRef.current) {
@@ -274,10 +325,26 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
 
         injectTailwindCDN(tmplDoc);
 
+        // Margens da página: lê <meta name="page-margins" content="t,r,b,l"> (em mm)
+        // gravada no momento da criação do generated_html; fallback 20mm em todos os lados.
+        const parseMargins = (raw) => {
+          if (!raw) return [20, 20, 20, 20];
+          const parts = String(raw).split(',').map(s => Number(s.trim()));
+          if (parts.length !== 4 || parts.some(n => !Number.isFinite(n) || n < 0)) return [20, 20, 20, 20];
+          return parts;
+        };
+        const metaMargins = tmplDoc.querySelector('meta[name="page-margins"]');
+        const [mTop, mRight, mBottom, mLeft] = parseMargins(metaMargins?.getAttribute('content'));
+
         // WorkerDocuments.css espelha 100% ClientTimesheetReport.css + overrides locais
         const workerCSStag = tmplDoc.createElement('style');
         workerCSStag.textContent = workerDocumentsCSS;
         (tmplDoc.head || tmplDoc.documentElement).appendChild(workerCSStag);
+
+        // Padding dinâmico do .a4-paper a partir das margens do DOCX
+        const marginsCSS = tmplDoc.createElement('style');
+        marginsCSS.textContent = `.a4-paper { padding: ${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm !important; }`;
+        (tmplDoc.head || tmplDoc.documentElement).appendChild(marginsCSS);
 
         // 3. Envolver o conteúdo do body num <div class="a4-paper"> (igual ao cliente)
         const a4 = tmplDoc.createElement('div');
@@ -398,8 +465,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           // OPÇÕES — arrays construídos com o Array do iframe para passar o instanceof check do html2pdf
           const ifW = iframe.contentWindow;
           const opt = {
-            // [top, left, bottom, right] mm — top em todas as páginas
-            margin: ifW.Array.of(14, 0, 0, 0),
+            // margens estão DENTRO do .a4-paper como padding (vindas do DOCX); html2pdf não adiciona nada
+            margin: ifW.Array.of(0, 0, 0, 0),
             filename: `${selectedDoc.id}_signed_${Date.now()}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
@@ -733,12 +800,27 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
               <div className="w-full flex-1 min-h-[60vh] sm:min-h-[70vh] border rounded-xl bg-slate-100 relative overflow-hidden">
                 {selectedDoc.url ? (
                   <>
-                    {previewBlobUrl ? (
+                    {previewSrcDoc ? (
                       <iframe
-                        src={`${previewBlobUrl}#toolbar=0&view=FitH`}
+                        srcDoc={previewSrcDoc}
+                        sandbox="allow-scripts"
                         className="w-full h-full rounded-xl"
                         title="Pré-visualização do documento"
                       />
+                    ) : previewBlobUrl ? (
+                      previewMime.startsWith('image/') ? (
+                        <img
+                          src={previewBlobUrl}
+                          alt="Pré-visualização"
+                          className="max-w-full max-h-full m-auto block rounded-xl"
+                        />
+                      ) : (
+                        <iframe
+                          src={`${previewBlobUrl}#toolbar=0&view=FitH`}
+                          className="w-full h-full rounded-xl"
+                          title="Pré-visualização do documento"
+                        />
+                      )
                     ) : previewError ? (
                       <div className="flex flex-col items-center justify-center h-full gap-3 p-4 text-center">
                         <p className="text-rose-600 text-sm font-bold">Erro a carregar: {previewError}</p>
