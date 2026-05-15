@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
+import ClientReportFlow from './features/client-report/ClientReportFlow';
 import ValidationStamp from './components/common/ValidationStampWithQR';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 
@@ -1485,7 +1486,22 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     )}
 
                     {currentView === 'inicio' && renderInicio()}
-                    {currentView === 'editar_relatorio' && renderEditarRelatorio()}
+                    {currentView === 'editar_relatorio' && (
+                        <ClientReportFlow
+                            clientId={initialClientId}
+                            month={initialMonth}
+                            workers={(() => {
+                                const ids = new Set(
+                                    logs
+                                        .filter(l => String(l.clientId) === String(initialClientId) && l.date && l.date.substring(0, 7) === initialMonth)
+                                        .map(l => String(l.workerId))
+                                );
+                                return workers.filter(w => ids.has(String(w.id)));
+                            })()}
+                            logs={logs}
+                            onClose={() => goToView('inicio')}
+                        />
+                    )}
                     {currentView === 'rever_alteracoes' && renderReverAlteracoes()}
                     {currentView === 'precision_review' && (
                         <PrecisionReportReview

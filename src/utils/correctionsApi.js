@@ -1,0 +1,197 @@
+// correctionsApi — helpers around the `corrections` + `correction_items` tables.
+// Single source of truth for the client→admin correction flow (v2).
+
+import { calculateDuration } from './formatUtils';
+
+const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+const normalizeTime = (t) => (!t || t === '--:--' ? null : t);
+
+const buildLogShape = ({ startTime, endTime, breakStart, breakEnd, hours }) => ({
+  startTime: normalizeTime(startTime),
+  endTime: normalizeTime(endTime),
+  breakStart: normalizeTime(breakStart),
+  breakEnd: normalizeTime(breakEnd),
+  hours: hours ?? calculateDuration(startTime, endTime, breakStart, breakEnd),
+});
+
+/**
+ * Client submits a correction.
+ *
+ * @param supabase Supabase client
+ * @param payload {
+ *   clientId, month, type ('quick'|'precision'), justification,
+ *   submittedBy, items: [{ workerId, workerName, date, before, proposed }]
+ * }
+ * @returns the created correction row
+ */
+export async function submitCorrection(supabase, payload) {
+  if (!supabase) throw new Error('Supabase indisponível');
+  const correctionId = newId('corr');
+  const now = new Date().toISOString();
+
+  const correction = {
+    id: correctionId,
+    client_id: String(payload.clientId),
+    month: payload.month,
+    type: payload.type || 'quick',
+    status: 'submitted',
+    submitted_at: now,
+    submitted_by: payload.submittedBy ? String(payload.submittedBy) : null,
+    justification: payload.justification || null,
+  };
+
+  const { error: e1 } = await supabase.from('corrections').insert(correction);
+  if (e1) throw e1;
+
+  const items = (payload.items || []).map((it) => ({
+    id: newId('citem'),
+    correction_id: correctionId,
+    worker_id: it.workerId ? String(it.workerId) : null,
+    worker_name: it.workerName || null,
+    date: it.date || null,
+    before: it.before ? buildLogShape(it.before) : null,
+    proposed: it.proposed ? buildLogShape(it.proposed) : null,
+    final: null,
+    item_status: 'pending',
+  }));
+
+  if (items.length > 0) {
+    const { error: e2 } = await supabase.from('correction_items').insert(items);
+    if (e2) throw e2;
+  }
+
+  // Thin notification pointer (no payload duplication)
+  await supabase.from('app_notifications').insert({
+    id: newId('notif'),
+    title: 'Pedido de Correção',
+    message: payload.justification || 'Nova correção submetida.',
+    type: 'warning',
+    target_type: 'admin',
+    target_client_id: String(payload.clientId),
+    payload: { correction_id: correctionId, kind: 'submitted' },
+    is_active: true,
+    is_dismissible: true,
+    created_at: now,
+  });
+
+  return { ...correction, items };
+}
+
+export async function markUnderReview(supabase, correctionId, reviewer) {
+  const { error } = await supabase
+    .from('corrections')
+    .update({ status: 'under_review', reviewed_by: reviewer ? String(reviewer) : null })
+    .eq('id', correctionId)
+    .eq('status', 'submitted');
+  if (error) throw error;
+}
+
+export async function setItemResolution(supabase, itemId, { itemStatus, finalValues, adminNote }) {
+  const patch = { item_status: itemStatus };
+  if (itemStatus === 'accepted' || itemStatus === 'edited') {
+    patch.final = finalValues ? buildLogShape(finalValues) : null;
+  } else if (itemStatus === 'rejected') {
+    patch.final = null;
+  }
+  if (adminNote !== undefined) patch.admin_note = adminNote;
+  const { error } = await supabase.from('correction_items').update(patch).eq('id', itemId);
+  if (error) throw error;
+}
+
+/**
+ * Apply a correction: write resolved items into `logs`, mark correction applied,
+ * notify the client. Items still `pending` block the apply.
+ */
+export async function applyCorrection(supabase, { correction, items, logs, reviewer, clientName }) {
+  if (!supabase) throw new Error('Supabase indisponível');
+
+  const unresolved = items.filter((it) => it.item_status === 'pending');
+  if (unresolved.length > 0) {
+    throw new Error(`Há ${unresolved.length} item(ns) por resolver. Aceite, edite ou rejeite cada um.`);
+  }
+
+  const resolvedItems = items.filter((it) => it.item_status === 'accepted' || it.item_status === 'edited');
+
+  for (const it of resolvedItems) {
+    const final = it.final || it.proposed;
+    if (!final) continue;
+    const existing = logs.find(
+      (l) => String(l.workerId) === String(it.worker_id) && l.date === it.date
+    );
+    if (existing) {
+      const { error } = await supabase.from('logs').upsert({
+        ...existing,
+        startTime: normalizeTime(final.startTime),
+        endTime: normalizeTime(final.endTime),
+        breakStart: normalizeTime(final.breakStart),
+        breakEnd: normalizeTime(final.breakEnd),
+        hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
+      }, { onConflict: 'id' });
+      if (error) throw error;
+    } else if (final.startTime && final.endTime && it.date) {
+      const logId = newId('l');
+      const { error } = await supabase.from('logs').insert({
+        id: logId,
+        workerId: String(it.worker_id),
+        clientId: String(correction.client_id),
+        date: it.date,
+        startTime: normalizeTime(final.startTime),
+        endTime: normalizeTime(final.endTime),
+        breakStart: normalizeTime(final.breakStart),
+        breakEnd: normalizeTime(final.breakEnd),
+        hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
+      });
+      if (error) throw error;
+    }
+  }
+
+  const { error: e2 } = await supabase
+    .from('corrections')
+    .update({
+      status: 'applied',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewer ? String(reviewer) : null,
+    })
+    .eq('id', correction.id);
+  if (e2) throw e2;
+
+  await supabase.from('app_notifications').insert({
+    id: newId('notif'),
+    title: `Correção Aplicada: ${clientName || ''}`.trim(),
+    message: `A sua correção para ${correction.month} foi aplicada.`,
+    type: 'success',
+    target_type: 'client',
+    target_client_id: String(correction.client_id),
+    payload: { correction_id: correction.id, kind: 'applied' },
+    is_active: true,
+    is_dismissible: true,
+    created_at: new Date().toISOString(),
+  });
+}
+
+export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName }) {
+  const { error } = await supabase
+    .from('corrections')
+    .update({
+      status: 'rejected',
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: reviewer ? String(reviewer) : null,
+      justification: reason || null,
+    })
+    .eq('id', correctionId);
+  if (error) throw error;
+
+  await supabase.from('app_notifications').insert({
+    id: newId('notif'),
+    title: `Correção Rejeitada: ${clientName || ''}`.trim(),
+    message: reason ? `Motivo: ${reason}` : `A sua correção para ${month} foi rejeitada.`,
+    type: 'error',
+    target_type: 'client',
+    target_client_id: String(clientId),
+    payload: { correction_id: correctionId, kind: 'rejected' },
+    is_active: true,
+    is_dismissible: true,
+    created_at: new Date().toISOString(),
+  });
+}

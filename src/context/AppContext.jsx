@@ -58,6 +58,19 @@ export const AppProvider = ({ children }) => {
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  const [stampStyle, setStampStyleState] = useState(() => {
+    try {
+      return localStorage.getItem('magnetic_stamp_style') || 'tech';
+    } catch {
+      return 'tech';
+    }
+  });
+  const setStampStyle = (style) => {
+    const v = style === 'classic' ? 'classic' : 'tech';
+    try { localStorage.setItem('magnetic_stamp_style', v); } catch { /* ignore */ }
+    setStampStyleState(v);
+  };
+
   // --- DATA STATES ---
   const [clients, setClients] = useState([]);
   const [workers, setWorkers] = useState([]);
@@ -66,6 +79,9 @@ export const AppProvider = ({ children }) => {
   const [logs, setLogs] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [correcoesCorrections, setCorrecoesCorrections] = useState([]);
+  // v2 corrections (single source of truth) — see supabase/migrations/20260515_corrections_v2.sql
+  const [corrections, setCorrections] = useState([]);
+  const [correctionItems, setCorrectionItems] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [documents, setDocuments] = useState([]);
   const [clientApprovals, setClientApprovals] = useState([]);
@@ -149,7 +165,8 @@ export const AppProvider = ({ children }) => {
         fetchTable('client_approvals', setClientApprovals),
         fetchTable('documents', setDocuments),
         fetchTable('app_notifications', setAppNotifications),
-        fetchTable('correcoes', setCorrecoesCorrections),
+        fetchTable('corrections', setCorrections),
+        fetchTable('correction_items', setCorrectionItems),
         (async () => {
           const { data, error } = await supabaseInstance
             .from('system_settings')
@@ -205,12 +222,25 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
-    const channelCorrecoes = supabaseInstance
-      .channel('realtime-correcoes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'correcoes' }, (payload) => {
-        if (payload.eventType === 'INSERT') setCorrecoesCorrections(prev => [payload.new, ...prev]);
-        else if (payload.eventType === 'UPDATE') setCorrecoesCorrections(prev => prev.map(c => c.id === payload.new.id ? payload.new : c));
-        else if (payload.eventType === 'DELETE') setCorrecoesCorrections(prev => prev.filter(c => c.id !== payload.old.id));
+    const upsertById = (setter) => (row) => setter(prev => {
+      const exists = prev.some(x => x.id === row.id);
+      return exists ? prev.map(x => x.id === row.id ? row : x) : [row, ...prev];
+    });
+    const removeById = (setter) => (row) => setter(prev => prev.filter(x => x.id !== row.id));
+
+    const channelCorrections = supabaseInstance
+      .channel('realtime-corrections')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'corrections' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setCorrections)(payload.old);
+        else upsertById(setCorrections)(payload.new);
+      })
+      .subscribe();
+
+    const channelCorrectionItems = supabaseInstance
+      .channel('realtime-correction-items')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'correction_items' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setCorrectionItems)(payload.old);
+        else upsertById(setCorrectionItems)(payload.new);
       })
       .subscribe();
 
@@ -244,7 +274,8 @@ export const AppProvider = ({ children }) => {
 
     return () => {
       supabaseInstance.removeChannel(channelNotif);
-      supabaseInstance.removeChannel(channelCorrecoes);
+      supabaseInstance.removeChannel(channelCorrections);
+      supabaseInstance.removeChannel(channelCorrectionItems);
       supabaseInstance.removeChannel(channelApprovals);
       supabaseInstance.removeChannel(channelLogs);
     };
@@ -445,6 +476,7 @@ export const AppProvider = ({ children }) => {
   const value = {
     systemSettings, setSystemSettings,
     companySignature, saveCompanySignature,
+    stampStyle, setStampStyle,
     view, setView,
     currentUser, setCurrentUser,
     currentMonth, setCurrentMonth,
@@ -456,6 +488,8 @@ export const AppProvider = ({ children }) => {
     logs, setLogs,
     expenses, setExpenses,
     correcoesCorrections, setCorrecoesCorrections,
+    corrections, setCorrections,
+    correctionItems, setCorrectionItems,
     approvals, setApprovals,
     documents, setDocuments,
     clientApprovals, setClientApprovals,
