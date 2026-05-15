@@ -510,23 +510,43 @@ function drawWorkerStamp(page, {
 export async function applyAdminStampToPage(pdfBlob, {
   companyName, responsibleName, responsibleRole, signedAt, signatureDataUrl,
   companyLogoBytes,
+  ip = 'N/D',
+  device = 'Browser/OS',
+  stampStyle = 'tech',
   xMm = 20, yMm = 30, page = 'last',
-  stampWidthMm = 70,
-  stampHeightMm = 25,
+  stampWidthMm,
+  stampHeightMm,
 } = {}) {
+  void companyName;
+  // Defaults dependem do estilo
+  const isClassic = stampStyle === 'classic';
+  const isCorporate = stampStyle === 'corporate';
+  const finalW = stampWidthMm ?? (isClassic || isCorporate ? 95 : 70);
+  const finalH = stampHeightMm ?? (isCorporate ? 38 : isClassic ? 30 : 25);
+
   try {
     const arrayBuffer = await (pdfBlob.arrayBuffer ? pdfBlob.arrayBuffer() : pdfBlob);
     const pdfDoc = await PDFDocument.load(arrayBuffer);
 
     const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const courier = await pdfDoc.embedFont(StandardFonts.Courier);
+    const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
+    // Embed recursos opcionais
     let sigImage = null;
-    if (signatureDataUrl) {
+    let logoImage = null;
+    if (companyLogoBytes) {
+      try {
+        logoImage = await pdfDoc.embedPng(companyLogoBytes);
+      } catch (e) {
+        console.warn('Falha ao embeber logo admin:', e);
+      }
+    }
+    if ((isClassic || isCorporate) && signatureDataUrl) {
       try {
         let finalDataUrl = signatureDataUrl;
-
-        // Converter a assinatura para Azul (estilo caneta BIC) no ambiente de browser
+        const inkColor = isCorporate ? '#0b1d3a' : '#0f3f87';
         if (typeof document !== 'undefined') {
           const img = new Image();
           await new Promise((resolve, reject) => {
@@ -534,20 +554,16 @@ export async function applyAdminStampToPage(pdfBlob, {
             img.onerror = reject;
             img.src = signatureDataUrl;
           });
-
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
           const ctx = canvas.getContext('2d');
-          
           ctx.drawImage(img, 0, 0);
           ctx.globalCompositeOperation = 'source-in';
-          ctx.fillStyle = '#0f3f87'; // Azul tinta autêntico
+          ctx.fillStyle = inkColor;
           ctx.fillRect(0, 0, canvas.width, canvas.height);
-          
           finalDataUrl = canvas.toDataURL('image/png');
         }
-
         const base64Data = finalDataUrl.split(',')[1];
         if (base64Data) {
           const uint8Array = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
@@ -558,19 +574,10 @@ export async function applyAdminStampToPage(pdfBlob, {
       }
     }
 
-    let logoImage = null;
-    if (companyLogoBytes) {
-      try {
-        logoImage = await pdfDoc.embedPng(companyLogoBytes);
-      } catch (e) {
-        console.warn('Falha ao embeber logo admin:', e);
-      }
-    }
-
     const x = xMm * MM_TO_PT;
     const y = yMm * MM_TO_PT;
-    const w = stampWidthMm * MM_TO_PT;
-    const h = stampHeightMm * MM_TO_PT;
+    const w = finalW * MM_TO_PT;
+    const h = finalH * MM_TO_PT;
 
     const pages = pdfDoc.getPages();
     let targetPages = [];
@@ -579,12 +586,28 @@ export async function applyAdminStampToPage(pdfBlob, {
     else if (page === 'all') targetPages = pages;
 
     for (const targetPage of targetPages) {
-      drawAdminStamp(targetPage, {
-        x, y, w, h,
-        companyName, responsibleName, responsibleRole, signedAt, signatureImage: sigImage,
-        companyLogoImage: logoImage,
-        helv, helvBold,
-      });
+      if (isCorporate) {
+        drawAdminStampCorporate(targetPage, {
+          x, y, w, h,
+          companyName, responsibleName, responsibleRole, signedAt,
+          signatureImage: sigImage, logoImage,
+          helv, helvBold, courier,
+        });
+      } else if (isClassic) {
+        drawAdminStampClassic(targetPage, {
+          x, y, w, h,
+          responsibleName, responsibleRole, signedAt,
+          signatureImage: sigImage, logoImage,
+          helv, helvBold, courier,
+        });
+      } else {
+        drawAdminStamp(targetPage, {
+          x, y, w, h,
+          responsibleName, signedAt, ip, device,
+          logoImage,
+          helvBold, courier, courierBold,
+        });
+      }
     }
 
     return await pdfDoc.save();
@@ -596,103 +619,409 @@ export async function applyAdminStampToPage(pdfBlob, {
 
 function drawAdminStamp(page, {
   x, y, w, h,
-  companyName, responsibleName, responsibleRole, signedAt, signatureImage,
-  companyLogoImage,
-  helv, helvBold,
+  responsibleName, signedAt, ip, device,
+  logoImage,
+  helvBold, courier, courierBold,
 }) {
-  const BLACK = rgb(0.1, 0.1, 0.12);
-  const THEME_ACCENT = rgb(0.12, 0.28, 0.58);
-  const GRAY_LIGHT = rgb(0.7, 0.75, 0.8);
-  const GRAY_DARK = rgb(0.4, 0.45, 0.5);
+  // Paleta — espelha o componente React CompanyValidationStamp
+  const SKY_500 = rgb(0.055, 0.647, 0.914);  // #0ea5e9
+  const SKY_600 = rgb(0.011, 0.518, 0.780);  // #0284c7
+  const SLATE_50 = rgb(0.973, 0.980, 0.988); // #f8fafc
+  const SLATE_300 = rgb(0.796, 0.835, 0.882); // #cbd5e1
+  const SLATE_400 = rgb(0.580, 0.639, 0.722); // #94a3b8
+  const SLATE_500 = rgb(0.392, 0.455, 0.545); // #64748b
+  const SLATE_600 = rgb(0.278, 0.337, 0.412); // #475569
+  const SLATE_900 = rgb(0.059, 0.090, 0.165); // #0f172a
+  const EMERALD = rgb(0.063, 0.725, 0.506);   // #10b981
+  const WHITE = rgb(1, 1, 1);
 
-  // Sem fundo, completamente transparente
+  const leftW = w / 3;
+  const rightX = x + leftW;
+  const rightW = w - leftW;
+  const PAD = 6;
+  const ACCENT_W = 4;
 
-  // 1. Linha vertical esquerda fina (delimita o bloco visual)
-  page.drawLine({
-    start: { x: x + 2, y: y },
-    end: { x: x + 2, y: y + h },
-    thickness: 1.5, color: THEME_ACCENT,
-  });
+  // Fundo geral branco (coluna direita)
+  page.drawRectangle({ x, y, width: w, height: h, color: WHITE });
+  // Coluna esquerda — slate-50
+  page.drawRectangle({ x, y, width: leftW, height: h, color: SLATE_50 });
+  // Acento sky à esquerda
+  page.drawRectangle({ x, y, width: ACCENT_W, height: h, color: SKY_500 });
 
-  const contentX = x + 10;
-  
-  // 2. Logo e Cabeçalho
-  let currentY = y + h - 14;
-  if (companyLogoImage) {
-    const lgH = 14;
-    const lgW = (companyLogoImage.width / companyLogoImage.height) * lgH;
-    page.drawImage(companyLogoImage, {
-      x: contentX, y: currentY, width: lgW, height: lgH,
-    });
-    
-    page.drawText('ASSINATURA QUALIFICADA', {
-      x: contentX + lgW + 6, y: currentY + 4,
-      size: 5, font: helvBold, color: GRAY_DARK,
-    });
-  } else {
-    page.drawText('ASSINATURA QUALIFICADA', {
-      x: contentX, y: currentY + 4,
-      size: 5, font: helvBold, color: GRAY_DARK,
+  // Marca d'água — logo na coluna direita, esmaecida
+  if (logoImage) {
+    const wmH = h * 0.85;
+    const wmW = (logoImage.width / logoImage.height) * wmH;
+    page.drawImage(logoImage, {
+      x: x + w - wmW + 4,
+      y: y + (h - wmH) / 2,
+      width: wmW,
+      height: wmH,
+      opacity: 0.08,
     });
   }
 
-  // Linha separadora do cabeçalho preenche quase a largura total
-  page.drawLine({
-    start: { x: contentX, y: currentY - 4 },
-    end: { x: x + w - 4, y: currentY - 4 },
-    thickness: 0.5, color: GRAY_LIGHT,
+  // ── Coluna Esquerda — Verified Device Audit ────────────────────────────
+  const leftContentX = x + ACCENT_W + PAD;
+  let curY = y + h - PAD - 4;
+
+  page.drawText('VERIFIED DEVICE AUDIT', {
+    x: leftContentX, y: curY, size: 4, font: helvBold, color: SKY_600,
+  });
+  curY -= 10;
+
+  // Device
+  page.drawText('DEVICE', { x: leftContentX, y: curY, size: 3.8, font: helvBold, color: SLATE_400 });
+  curY -= 5;
+  page.drawText(String(device || 'Browser/OS'), {
+    x: leftContentX, y: curY, size: 5.5, font: courier, color: SLATE_600,
+  });
+  curY -= 9;
+
+  // Network
+  page.drawText('NETWORK', { x: leftContentX, y: curY, size: 3.8, font: helvBold, color: SLATE_400 });
+  curY -= 5;
+  page.drawText(String(ip || 'N/D'), {
+    x: leftContentX, y: curY, size: 5.5, font: courier, color: SLATE_600,
   });
 
-  currentY -= 14;
+  // ── Coluna Direita — Signatory Details ─────────────────────────────────
+  const rightContentX = rightX + PAD;
 
-  // 3. Informações (Sem cortar o texto, deixamos fluir)
-  const labelCol = contentX;
-  const valCol = contentX + 26;
-  const rowSpace = 8;
+  // Indicador de status (dois dots no canto sup. direito)
+  const dotR = 1.8;
+  const dotY = y + h - PAD - dotR;
+  const dotX1 = x + w - PAD - dotR;
+  const dotX2 = dotX1 - 6;
+  page.drawCircle({ x: dotX1, y: dotY, size: dotR, color: SLATE_300 });
+  page.drawCircle({ x: dotX2, y: dotY, size: dotR, color: EMERALD });
 
-  page.drawText('Autor:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
-  page.drawText(responsibleName || 'Responsável Legal', { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
-  
-  currentY -= rowSpace;
+  // Nome
+  let rY = y + h - PAD - 8;
+  page.drawText(String(responsibleName || 'Responsável Legal'), {
+    x: rightContentX, y: rY, size: 10, font: helvBold, color: SLATE_900,
+  });
 
-  page.drawText('Entidade:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
-  page.drawText(companyName || 'Empresa', { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
+  // Subtítulo
+  rY -= 8;
+  page.drawText('ASSINATURA ELETRONICA CERTIFICADA', {
+    x: rightContentX, y: rY, size: 4.2, font: helvBold, color: SKY_600,
+  });
 
-  currentY -= rowSpace;
+  // Rodapé — caixa interna com token + data
+  const footerH = 9;
+  const footerY = y + PAD - 2;
+  const footerX = rightContentX;
+  const footerW = rightW - PAD * 2;
+  page.drawRectangle({
+    x: footerX, y: footerY, width: footerW, height: footerH, color: SLATE_50,
+  });
 
-  page.drawText('Data/Hora:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
-  let dateStr = signedAt ? new Date(signedAt).toLocaleString('pt-PT', {hour:'2-digit', minute:'2-digit'}) : '—';
-  page.drawText(dateStr, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: BLACK });
+  const finalToken = signedAt
+    ? new Date(signedAt).getTime().toString(16).toUpperCase().slice(-11).padStart(11, '0')
+    : '00000000000';
+  page.drawText(finalToken, {
+    x: footerX + 4, y: footerY + 2.5, size: 5, font: courierBold, color: SLATE_500,
+  });
 
-  currentY -= rowSpace;
+  let dateStr = '';
+  if (signedAt) {
+    const d = new Date(signedAt);
+    const pad = (n) => String(n).padStart(2, '0');
+    dateStr = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} // ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  const dateW = helvBold.widthOfTextAtSize(dateStr, 5.5);
+  page.drawText(dateStr, {
+    x: footerX + footerW - 4 - dateW, y: footerY + 2.5, size: 5.5, font: helvBold, color: SLATE_900,
+  });
+}
 
-  const hashVal = signedAt ? `MGN-${new Date(signedAt).getTime().toString(16).toUpperCase()}` : 'MGN-VERIFIED';
-  page.drawText('Token ID:', { x: labelCol, y: currentY, size: 4.5, font: helv, color: GRAY_DARK });
-  page.drawText(hashVal, { x: valCol, y: currentY, size: 4.5, font: helvBold, color: THEME_ACCENT });
+function drawAdminStampClassic(page, {
+  x, y, w, h,
+  responsibleName, responsibleRole, signedAt,
+  signatureImage, logoImage,
+  helv, helvBold, courier,
+}) {
+  const INK_BLUE = rgb(0.059, 0.247, 0.529);  // #0f3f87
+  const SLATE_200 = rgb(0.886, 0.910, 0.941); // #e2e8f0
+  const SLATE_500 = rgb(0.392, 0.455, 0.545);
+  const SLATE_600 = rgb(0.278, 0.337, 0.412);
+  const SLATE_900 = rgb(0.059, 0.090, 0.165);
+  const SLATE_50 = rgb(0.973, 0.980, 0.988);
+  const WHITE = rgb(1, 1, 1);
 
-  // 4. Assinatura Natural Gigante a Sobrepor os Dados
-  const sigX = contentX + 15; // Começa a sobrepor o conteúdo ligeiramente para a direita
-  const sigW = w - 20; // Ocupa a grande maioria do espaço da caixa
-  const sigH = h - 6;
-  
+  // Fundo branco + borda
+  page.drawRectangle({ x, y, width: w, height: h, color: WHITE, borderColor: SLATE_200, borderWidth: 0.5 });
+  // Barra superior azul tinta
+  const TOP_BAR_H = 2;
+  page.drawRectangle({ x, y: y + h - TOP_BAR_H, width: w, height: TOP_BAR_H, color: INK_BLUE });
+
+  const PAD = 6;
+  const headerY = y + h - TOP_BAR_H - 8;
+
+  // Logo à esquerda
+  if (logoImage) {
+    const logoH = 10;
+    const logoW = (logoImage.width / logoImage.height) * logoH;
+    page.drawImage(logoImage, { x: x + PAD, y: headerY - 3, width: logoW, height: logoH });
+  }
+
+  // Label "ASSINATURA QUALIFICADA" à direita do header
+  const labelText = 'ASSINATURA QUALIFICADA';
+  const labelW = helvBold.widthOfTextAtSize(labelText, 4.5);
+  page.drawText(labelText, {
+    x: x + w - PAD - labelW, y: headerY + 1, size: 4.5, font: helvBold, color: SLATE_500,
+  });
+
+  // Linha divisória horizontal abaixo do header
+  const divY = headerY - 6;
+  page.drawLine({
+    start: { x: x + PAD, y: divY },
+    end: { x: x + w - PAD, y: divY },
+    thickness: 0.3, color: SLATE_200,
+  });
+
+  // Marca d'água — logo grande e esmaecida no centro
+  if (logoImage) {
+    const wmH = h * 0.7;
+    const wmW = (logoImage.width / logoImage.height) * wmH;
+    page.drawImage(logoImage, {
+      x: x + (w - wmW) / 2,
+      y: y + (h - wmH) / 2,
+      width: wmW,
+      height: wmH,
+      opacity: 0.06,
+    });
+  }
+
+  // Assinatura desenhada (centro grande)
   if (signatureImage) {
+    const sigAreaH = divY - (y + 14);
+    const sigAreaW = w - PAD * 2;
     const aspect = signatureImage.width / signatureImage.height;
     let drawW, drawH;
-    if (aspect > sigW / sigH) {
-      drawW = sigW;
+    if (aspect > sigAreaW / sigAreaH) {
+      drawW = sigAreaW;
       drawH = drawW / aspect;
     } else {
-      drawH = sigH;
+      drawH = sigAreaH;
       drawW = drawH * aspect;
     }
-    
     page.drawImage(signatureImage, {
-      x: sigX + (sigW - drawW) / 2,
-      y: y + (sigH - drawH) / 2,
+      x: x + (w - drawW) / 2,
+      y: y + 14 + (sigAreaH - drawH) / 2,
       width: drawW,
       height: drawH,
     });
   }
+
+  // Faixa inferior cinza com nome + data
+  const footerH = 11;
+  page.drawRectangle({ x, y, width: w, height: footerH, color: SLATE_50 });
+
+  // Nome
+  page.drawText(String(responsibleName || 'Responsável Legal'), {
+    x: x + PAD, y: y + 5, size: 7, font: helvBold, color: SLATE_900,
+  });
+  // Cargo (italic emulado com Helvetica regular)
+  if (responsibleRole) {
+    const roleStr = String(responsibleRole);
+    const nameW = helvBold.widthOfTextAtSize(String(responsibleName || ''), 7);
+    page.drawText(`— ${roleStr}`, {
+      x: x + PAD + nameW + 4, y: y + 5, size: 5, font: helv, color: SLATE_600,
+    });
+  }
+
+  // Data à direita em mono
+  let dateStr = '';
+  if (signedAt) {
+    const d = new Date(signedAt);
+    const pad = (n) => String(n).padStart(2, '0');
+    dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  const dateW = courier.widthOfTextAtSize(dateStr, 5.5);
+  page.drawText(dateStr, {
+    x: x + w - PAD - dateW, y: y + 5, size: 5.5, font: courier, color: SLATE_600,
+  });
+}
+
+function drawAdminStampCorporate(page, {
+  x, y, w, h,
+  companyName, responsibleName, responsibleRole, signedAt,
+  signatureImage, logoImage,
+  helv, helvBold, courier,
+}) {
+  // Palette
+  const NAVY = rgb(0.043, 0.114, 0.227);     // #0b1d3a
+  const NAVY_SOFT = rgb(0.078, 0.165, 0.322); // #142a52
+  const GOLD = rgb(0.788, 0.635, 0.294);      // #c9a24b
+  const GOLD_DEEP = rgb(0.627, 0.494, 0.173); // #a07e2c
+  const PAPER = rgb(0.980, 0.980, 0.969);     // #fafaf7
+  const SLATE = rgb(0.278, 0.337, 0.412);
+  const SLATE_SOFT = rgb(0.580, 0.639, 0.722);
+  const INK = rgb(0.059, 0.090, 0.165);
+  const WHITE = rgb(1, 1, 1);
+
+  // Fundo paper + borda marinho
+  page.drawRectangle({ x, y, width: w, height: h, color: PAPER, borderColor: NAVY_SOFT, borderWidth: 0.5 });
+
+  // Cabeçalho marinho (top band)
+  const HEADER_H = 12;
+  const headerY = y + h - HEADER_H;
+  page.drawRectangle({ x, y: headerY, width: w, height: HEADER_H, color: NAVY });
+
+  // Linha dourada de separação
+  page.drawRectangle({ x, y: headerY - 0.8, width: w, height: 0.8, color: GOLD });
+
+  const PAD = 5;
+
+  // Logo (caixa branca à esquerda do header)
+  const logoBoxH = HEADER_H - 3;
+  const logoBoxW = logoBoxH;
+  if (logoImage) {
+    page.drawRectangle({ x: x + PAD, y: headerY + 1.5, width: logoBoxW, height: logoBoxH, color: WHITE });
+    const inset = 1;
+    const innerW = logoBoxW - inset * 2;
+    const innerH = logoBoxH - inset * 2;
+    const aspect = logoImage.width / logoImage.height;
+    let lw = innerW, lh = innerH;
+    if (aspect > innerW / innerH) lh = lw / aspect;
+    else lw = lh * aspect;
+    page.drawImage(logoImage, {
+      x: x + PAD + inset + (innerW - lw) / 2,
+      y: headerY + 1.5 + inset + (innerH - lh) / 2,
+      width: lw,
+      height: lh,
+    });
+  }
+
+  // Nome da empresa
+  const titleX = x + PAD + logoBoxW + 4;
+  const titleStr = String(companyName || 'MAGNETIC PLACE').toUpperCase();
+  page.drawText(titleStr, {
+    x: titleX, y: headerY + 6, size: 8, font: helvBold, color: WHITE,
+  });
+  page.drawText('GLOBAL WORKFORCE SOLUTIONS', {
+    x: titleX, y: headerY + 1.5, size: 3.5, font: helvBold, color: GOLD,
+  });
+
+  // Selo circular CERTIFIED (canto direito do header)
+  const sealR = (HEADER_H - 2) / 2;
+  const sealCx = x + w - PAD - sealR;
+  const sealCy = headerY + HEADER_H / 2;
+  page.drawCircle({ x: sealCx, y: sealCy, size: sealR, borderColor: GOLD, borderWidth: 0.5 });
+  const certStr = 'CERTIFIED';
+  const certW = helvBold.widthOfTextAtSize(certStr, 2.5);
+  page.drawText(certStr, {
+    x: sealCx - certW / 2, y: sealCy + 0.5, size: 2.5, font: helvBold, color: GOLD,
+  });
+  const origStr = 'ORIGINAL';
+  const origW = helvBold.widthOfTextAtSize(origStr, 2.2);
+  page.drawText(origStr, {
+    x: sealCx - origW / 2, y: sealCy - 2.5, size: 2.2, font: helvBold, color: GOLD,
+  });
+
+  // Watermark logo grande no corpo
+  if (logoImage) {
+    const bodyH = h - HEADER_H - 11; // 11 = footer
+    const wmH = bodyH * 0.95;
+    const wmW = (logoImage.width / logoImage.height) * wmH;
+    page.drawImage(logoImage, {
+      x: x + w - wmW - 2,
+      y: y + 11 + (bodyH - wmH) / 2,
+      width: wmW,
+      height: wmH,
+      opacity: 0.05,
+    });
+  }
+
+  // Brasão monogram (círculo) à esquerda do corpo
+  const bodyMidY = y + 11 + (h - HEADER_H - 11) / 2;
+  if (logoImage) {
+    const mr = 6;
+    page.drawCircle({ x: x + PAD + mr, y: bodyMidY, size: mr, color: WHITE, borderColor: NAVY_SOFT, borderWidth: 0.4 });
+    const mInner = mr * 1.3;
+    const aspect = logoImage.width / logoImage.height;
+    let mw = mInner, mh = mInner;
+    if (aspect > 1) mh = mw / aspect;
+    else mw = mh * aspect;
+    page.drawImage(logoImage, {
+      x: x + PAD + mr - mw / 2,
+      y: bodyMidY - mh / 2,
+      width: mw,
+      height: mh,
+      opacity: 0.85,
+    });
+  }
+
+  // Assinatura
+  if (signatureImage) {
+    const sigAreaX = x + PAD + 16;
+    const sigAreaY = y + 12;
+    const sigAreaW = w - PAD * 2 - 18;
+    const sigAreaH = h - HEADER_H - 14;
+    const aspect = signatureImage.width / signatureImage.height;
+    let drawW, drawH;
+    if (aspect > sigAreaW / sigAreaH) {
+      drawW = sigAreaW;
+      drawH = drawW / aspect;
+    } else {
+      drawH = sigAreaH;
+      drawW = drawH * aspect;
+    }
+    page.drawImage(signatureImage, {
+      x: sigAreaX + (sigAreaW - drawW) / 2,
+      y: sigAreaY + (sigAreaH - drawH) / 2,
+      width: drawW,
+      height: drawH,
+    });
+  }
+
+  // Rodapé (linha + texto)
+  const footerH = 10;
+  page.drawLine({
+    start: { x: x + PAD, y: y + footerH + 0.5 },
+    end: { x: x + w - PAD, y: y + footerH + 0.5 },
+    thickness: 0.3, color: NAVY_SOFT,
+  });
+
+  // Nome (serif emulado com bold)
+  const nameStr = String(responsibleName || 'Responsável Legal');
+  page.drawText(nameStr, {
+    x: x + PAD, y: y + 5, size: 6.5, font: helvBold, color: INK,
+  });
+  if (responsibleRole) {
+    const nameW = helvBold.widthOfTextAtSize(nameStr, 6.5);
+    page.drawText(`· ${String(responsibleRole).toUpperCase()}`, {
+      x: x + PAD + nameW + 3, y: y + 5, size: 4, font: helvBold, color: SLATE,
+    });
+  }
+  page.drawText('Lisboa · Porto · Madrid', {
+    x: x + PAD, y: y + 1.5, size: 3.2, font: helv, color: SLATE_SOFT,
+  });
+
+  // Direita: AUTHENTICATED + data + serial
+  const authStr = 'AUTHENTICATED';
+  const authW = helvBold.widthOfTextAtSize(authStr, 3.2);
+  page.drawText(authStr, {
+    x: x + w - PAD - authW, y: y + 7, size: 3.2, font: helvBold, color: GOLD_DEEP,
+  });
+  let dateStr = '';
+  if (signedAt) {
+    const d = new Date(signedAt);
+    const pad = (n) => String(n).padStart(2, '0');
+    dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  const dateW = courier.widthOfTextAtSize(dateStr, 4.5);
+  page.drawText(dateStr, {
+    x: x + w - PAD - dateW, y: y + 3, size: 4.5, font: courier, color: SLATE,
+  });
+  const serial = (signedAt || '').replace(/[^0-9]/g, '').slice(0, 14);
+  const serialStr = `SN · ${serial}`;
+  const serialW = courier.widthOfTextAtSize(serialStr, 3);
+  page.drawText(serialStr, {
+    x: x + w - PAD - serialW, y: y + 0.5, size: 3, font: courier, color: SLATE_SOFT,
+  });
 }
 
 export function formatSerialLabel(serial, prefix = 'MGN') {

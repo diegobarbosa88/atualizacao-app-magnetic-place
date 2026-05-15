@@ -5,6 +5,7 @@ import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import CompanyValidationStamp from '../../components/common/CompanyValidationStamp';
 import CompanyClassicStamp from '../../components/common/CompanyClassicStamp';
+import CompanyCorporateStamp from '../../components/common/CompanyCorporateStamp';
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
@@ -1005,6 +1006,7 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
   const { stampStyle, setStampStyle } = useApp();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
+  const [email, setEmail] = useState('');
   const [sigDataUrl, setSigDataUrl] = useState('');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -1015,8 +1017,9 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
   useEffect(() => {
     setName(companySignature?.responsibleName || '');
     setRole(companySignature?.responsibleRole || '');
+    setEmail(companySignature?.responsibleEmail || '');
     setSigDataUrl(companySignature?.signatureDataUrl || '');
-  }, [companySignature?.responsibleName, companySignature?.responsibleRole, companySignature?.signatureDataUrl]);
+  }, [companySignature?.responsibleName, companySignature?.responsibleRole, companySignature?.responsibleEmail, companySignature?.signatureDataUrl]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -1026,6 +1029,7 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
       await saveCompanySignature({
         responsibleName: name.trim(),
         responsibleRole: role.trim(),
+        responsibleEmail: email.trim(),
         signatureDataUrl: sigDataUrl,
       });
       setMessage('Assinatura da empresa guardada com sucesso.');
@@ -1066,6 +1070,17 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
             placeholder="Ex: Diretor, Gestor de RH"
             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
           />
+        </div>
+        <div>
+          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Email do Responsável</p>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="admin@magneticplace.pt"
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+          />
+          <p className="text-[10px] text-slate-400 mt-1">Recebe notificações de validação (correções, assinaturas mensais).</p>
         </div>
         <div>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Imagem da Assinatura</p>
@@ -1110,7 +1125,7 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
             Estilo do carimbo aplicado aos documentos
           </p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <button
               type="button"
               onClick={() => setStampStyle('tech')}
@@ -1127,6 +1142,14 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
               <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Logo + Assinatura</div>
               <div className="text-[10px] text-slate-500 mt-1">Logo da empresa + assinatura desenhada azul</div>
             </button>
+            <button
+              type="button"
+              onClick={() => setStampStyle('corporate')}
+              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'corporate' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
+            >
+              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Corporate · Multinacional</div>
+              <div className="text-[10px] text-slate-500 mt-1">Marinho + dourado, selo CERTIFIED ORIGINAL, logo proeminente</div>
+            </button>
           </div>
 
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2">
@@ -1134,6 +1157,13 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
           </p>
           {stampStyle === 'classic' ? (
             <CompanyClassicStamp
+              responsibleName={name || 'Nome do Responsável'}
+              responsibleRole={role}
+              signedAt={new Date().toISOString()}
+              signatureDataUrl={sigDataUrl}
+            />
+          ) : stampStyle === 'corporate' ? (
+            <CompanyCorporateStamp
               responsibleName={name || 'Nome do Responsável'}
               responsibleRole={role}
               signedAt={new Date().toISOString()}

@@ -229,6 +229,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
   const { supabase, clients, workers, logs, currentUser, setCorrections, setCorrectionItems } = useApp();
   const client = clients.find((c) => String(c.id) === String(correction.client_id));
   const clientName = client?.name || 'Cliente';
+  const clientEmail = client?.email || null;
   const [busy, setBusy] = useState(false);
 
   const clientWorkers = useMemo(() => {
@@ -271,7 +272,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
     if (!confirm(`Aplicar ${resolved} alteração(ões) ao relatório de ${clientName}?`)) return;
     setBusy(true);
     try {
-      await applyCorrection(supabase, { correction, items, logs, reviewer: currentUser?.id, clientName });
+      await applyCorrection(supabase, { correction, items, logs, reviewer: currentUser?.id, clientName, clientEmail });
       setCorrections((prev) =>
         prev.map((c) =>
           c.id === correction.id
@@ -296,7 +297,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
     if (!confirm(`Aplicar ${draftItems.length} alteração(ões) ao relatório de ${clientName}?`)) return;
     setBusy(true);
     try {
-      await applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer: currentUser?.id, clientName });
+      await applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer: currentUser?.id, clientName, clientEmail });
       setCorrections((prev) =>
         prev.map((c) =>
           c.id === correction.id
@@ -325,6 +326,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         note,
         reviewer: currentUser?.id,
         clientName,
+        clientEmail,
       });
       setCorrections((prev) =>
         prev.map((c) =>
@@ -354,6 +356,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         reason,
         reviewer: currentUser?.id,
         clientName,
+        clientEmail,
       });
       setCorrections((prev) =>
         prev.map((c) =>

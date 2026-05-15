@@ -66,7 +66,7 @@ export const AppProvider = ({ children }) => {
     }
   });
   const setStampStyle = (style) => {
-    const v = style === 'classic' ? 'classic' : 'tech';
+    const v = style === 'classic' ? 'classic' : style === 'corporate' ? 'corporate' : 'tech';
     try { localStorage.setItem('magnetic_stamp_style', v); } catch { /* ignore */ }
     setStampStyleState(v);
   };
@@ -92,6 +92,7 @@ export const AppProvider = ({ children }) => {
   const [companySignature, setCompanySignatureState] = useState({
     responsibleName: '',
     responsibleRole: '',
+    responsibleEmail: '',
     signatureDataUrl: '',
   });
 
@@ -170,7 +171,7 @@ export const AppProvider = ({ children }) => {
         (async () => {
           const { data, error } = await supabaseInstance
             .from('system_settings')
-            .select('responsible_name, responsible_role, company_signature_data_url')
+            .select('responsible_name, responsible_role, responsible_email, company_signature_data_url')
             .eq('id', 1)
             .maybeSingle();
           if (error) {
@@ -181,6 +182,7 @@ export const AppProvider = ({ children }) => {
             setCompanySignatureState({
               responsibleName: data.responsible_name || '',
               responsibleRole: data.responsible_role || '',
+              responsibleEmail: data.responsible_email || '',
               signatureDataUrl: data.company_signature_data_url || '',
             });
           }
@@ -452,12 +454,13 @@ export const AppProvider = ({ children }) => {
 
   const currentMonthStr = toISODateLocal(currentMonth).substring(0, 7);
 
-  const saveCompanySignature = async ({ responsibleName, responsibleRole, signatureDataUrl }) => {
+  const saveCompanySignature = async ({ responsibleName, responsibleRole, responsibleEmail, signatureDataUrl }) => {
     if (!supabaseInstance) throw new Error('Supabase ainda não está disponível.');
     const payload = {
       id: 1,
       responsible_name: responsibleName ?? '',
       responsible_role: responsibleRole ?? '',
+      responsible_email: responsibleEmail ?? '',
       company_signature_data_url: signatureDataUrl ?? '',
       updated_at: new Date().toISOString(),
     };
@@ -468,6 +471,7 @@ export const AppProvider = ({ children }) => {
     setCompanySignatureState({
       responsibleName: payload.responsible_name,
       responsibleRole: payload.responsible_role,
+      responsibleEmail: payload.responsible_email,
       signatureDataUrl: payload.company_signature_data_url,
     });
   };

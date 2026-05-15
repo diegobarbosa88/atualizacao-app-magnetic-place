@@ -101,6 +101,33 @@ export const sendNotificationEmail = async (clientEmail, clientName, notifTitle,
 };
 
 /**
+ * Email genérico para qualquer ator (admin/cliente) usado nos fluxos de validação
+ * (correções submetidas/aplicadas/rejeitadas/resolvidas, validação mensal).
+ * Falha em silêncio (warn no console) e nunca atira — não deve bloquear o fluxo.
+ */
+export const sendValidationEmail = async ({ to, name, title, message, link }) => {
+  if (!to) return false;
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID_NOTIF || !EMAILJS_PUBLIC_KEY) {
+    console.warn('[emailUtils] EmailJS não configurado — email não enviado.');
+    return false;
+  }
+  try {
+    const templateParams = {
+      to_email: to,
+      to_name: name || '',
+      notification_title: title || 'Notificação',
+      notification_message: message || '',
+      link_unico: link || (typeof window !== 'undefined' ? window.location.origin : ''),
+    };
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, templateParams, EMAILJS_PUBLIC_KEY);
+    return true;
+  } catch (error) {
+    console.warn('Falha no envio de email de validação:', error);
+    return false;
+  }
+};
+
+/**
  * Envia uma notificação a um trabalhador sobre um novo documento gerado.
  * Link aponta para o portal do trabalhador (?view=worker[&doc=<id>]).
  * @returns {Promise<boolean>}

@@ -7,6 +7,7 @@ import {
 import { useApp } from '../../context/AppContext';
 import { useValidationPortal } from './contexts/ValidationPortalContext';
 import { formatHours, calculateDuration } from '../../utils/formatUtils';
+import { sendValidationEmail } from '../../utils/emailUtils';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 
 const ValidationPortal = ({ 
@@ -155,7 +156,7 @@ const ValidationPortal = ({
                         <div className="flex justify-end gap-2">
                           {c.status === 'validado' ? (
                             <>
-                              <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); } catch (err) { alert('Erro ao anular validação: ' + (err?.message || err)); } }} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Anular Validação"><RotateCcw size={18} /></button>
+                              <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `${window.location.origin}/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => {}); } } catch (err) { alert('Erro ao anular validação: ' + (err?.message || err)); } }} className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all" title="Anular Validação"><RotateCcw size={18} /></button>
                               <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-3 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all" title="Baixar Relatório"><Download size={18} /></button>
                             </>
                           ) : (

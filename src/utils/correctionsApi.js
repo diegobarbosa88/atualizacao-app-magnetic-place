@@ -2,6 +2,18 @@
 // Single source of truth for the client→admin correction flow (v2).
 
 import { calculateDuration } from './formatUtils';
+import { sendValidationEmail } from './emailUtils';
+
+const safeEmail = (args) => sendValidationEmail(args).catch((e) => console.warn('email error', e));
+
+const buildClientLink = (clientId, month, base) => {
+  const origin = base || (typeof window !== 'undefined' ? window.location.origin : '');
+  return `${origin}/?view=client_portal&client=${encodeURIComponent(clientId)}&month=${encodeURIComponent(month)}`;
+};
+const buildAdminLink = (base) => {
+  const origin = base || (typeof window !== 'undefined' ? window.location.origin : '');
+  return `${origin}/?view=admin`;
+};
 
 const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -80,6 +92,16 @@ export async function submitCorrection(supabase, payload) {
     created_at: now,
   });
 
+  if (payload.adminEmail) {
+    safeEmail({
+      to: payload.adminEmail,
+      name: 'Admin',
+      title: `Pedido de Correção · ${payload.month} · ${typeLabel}`,
+      message: `Cliente ${payload.clientName || payload.clientId} submeteu uma correção.\n\n${msg}`,
+      link: buildAdminLink(payload.portalBase),
+    });
+  }
+
   return { ...correction, items };
 }
 
@@ -108,7 +130,7 @@ export async function setItemResolution(supabase, itemId, { itemStatus, finalVal
  * Apply a correction: write resolved items into `logs`, mark correction applied,
  * notify the client. Items still `pending` block the apply.
  */
-export async function applyCorrection(supabase, { correction, items, logs, reviewer, clientName }) {
+export async function applyCorrection(supabase, { correction, items, logs, reviewer, clientName, clientEmail, portalBase }) {
   if (!supabase) throw new Error('Supabase indisponível');
 
   const unresolved = items.filter((it) => it.item_status === 'pending');
@@ -173,6 +195,16 @@ export async function applyCorrection(supabase, { correction, items, logs, revie
     is_dismissible: true,
     created_at: new Date().toISOString(),
   });
+
+  if (clientEmail) {
+    safeEmail({
+      to: clientEmail,
+      name: clientName,
+      title: `Correção Aplicada · ${correction.month}`,
+      message: `A sua correção para ${correction.month} foi aplicada. Pode consultar o relatório actualizado no portal.`,
+      link: buildClientLink(correction.client_id, correction.month, portalBase),
+    });
+  }
 }
 
 /**
@@ -180,7 +212,7 @@ export async function applyCorrection(supabase, { correction, items, logs, revie
  * straight away. Each draft item is inserted as `accepted` with `final = proposed`,
  * then standard apply runs.
  */
-export async function applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer, clientName }) {
+export async function applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer, clientName, clientEmail, portalBase }) {
   if (!supabase) throw new Error('Supabase indisponível');
   if (!draftItems || draftItems.length === 0) throw new Error('Nenhuma alteração para aplicar.');
 
@@ -202,14 +234,14 @@ export async function applyAdminDraftToQuick(supabase, { correction, draftItems,
   const { error: e1 } = await supabase.from('correction_items').insert(rows);
   if (e1) throw e1;
 
-  await applyCorrection(supabase, { correction, items: rows, logs, reviewer, clientName });
+  await applyCorrection(supabase, { correction, items: rows, logs, reviewer, clientName, clientEmail, portalBase });
 }
 
 /**
  * Close a correction as applied without writing to logs (admin handled it elsewhere
  * or the message did not require a change).
  */
-export async function markResolved(supabase, { correctionId, clientId, month, note, reviewer, clientName }) {
+export async function markResolved(supabase, { correctionId, clientId, month, note, reviewer, clientName, clientEmail, portalBase }) {
   const { error } = await supabase
     .from('corrections')
     .update({
@@ -220,12 +252,13 @@ export async function markResolved(supabase, { correctionId, clientId, month, no
     .eq('id', correctionId);
   if (error) throw error;
 
+  const resolvedMsg = note
+    ? `O administrador analisou o seu pedido (${month}).\n\n${note}`
+    : `O administrador analisou o seu pedido para ${month}.`;
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
     title: `Correção Resolvida: ${clientName || ''}`.trim(),
-    message: note
-      ? `O administrador analisou o seu pedido (${month}).\n\n${note}`
-      : `O administrador analisou o seu pedido para ${month}.`,
+    message: resolvedMsg,
     type: 'success',
     target_type: 'client',
     target_client_id: String(clientId),
@@ -234,9 +267,19 @@ export async function markResolved(supabase, { correctionId, clientId, month, no
     is_dismissible: true,
     created_at: new Date().toISOString(),
   });
+
+  if (clientEmail) {
+    safeEmail({
+      to: clientEmail,
+      name: clientName,
+      title: `Correção Resolvida · ${month}`,
+      message: resolvedMsg,
+      link: buildClientLink(clientId, month, portalBase),
+    });
+  }
 }
 
-export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName }) {
+export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName, clientEmail, portalBase }) {
   const { error } = await supabase
     .from('corrections')
     .update({
@@ -248,10 +291,11 @@ export async function rejectCorrection(supabase, { correctionId, clientId, month
     .eq('id', correctionId);
   if (error) throw error;
 
+  const rejectMsg = reason ? `Motivo: ${reason}` : `A sua correção para ${month} foi rejeitada.`;
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
     title: `Correção Rejeitada: ${clientName || ''}`.trim(),
-    message: reason ? `Motivo: ${reason}` : `A sua correção para ${month} foi rejeitada.`,
+    message: rejectMsg,
     type: 'error',
     target_type: 'client',
     target_client_id: String(clientId),
@@ -260,4 +304,14 @@ export async function rejectCorrection(supabase, { correctionId, clientId, month
     is_dismissible: true,
     created_at: new Date().toISOString(),
   });
+
+  if (clientEmail) {
+    safeEmail({
+      to: clientEmail,
+      name: clientName,
+      title: `Correção Rejeitada · ${month}`,
+      message: rejectMsg,
+      link: buildClientLink(clientId, month, portalBase),
+    });
+  }
 }

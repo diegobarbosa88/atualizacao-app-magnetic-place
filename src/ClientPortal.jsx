@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
+import { useApp } from './context/AppContext';
+import { sendValidationEmail } from './utils/emailUtils';
 import ValidationStamp from './components/common/ValidationStampWithQR';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 
@@ -24,6 +26,7 @@ const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
 };
 
 export default function ClientPortal({ clients, workers, logs: initialLogs, saveToDb, initialClientId, initialMonth, renderReport, systemSettings, appNotifications, clientApprovals, supabase }) {
+    const { companySignature } = useApp();
     const [logs, setLogs] = useState(initialLogs || []);
     const [currentView, setCurrentView] = useState('inicio');
     const [expandedWorkers, setExpandedWorkers] = useState([]);
@@ -630,13 +633,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             </div>
 
                             <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center gap-3">
-                                <ValidationStamp
-                                    signature={approvalData?.signature_base64}
-                                    datetime={approvalData?.created_at}
-                                    ip={approvalData?.client_ip}
-                                    id={approvalData?.id}
-                                />
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-4">A possibilidade de edição foi desativada após a aprovação.</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">A possibilidade de edição foi desativada após a aprovação.</p>
                             </div>
                         </div>
                     ) : (
@@ -691,6 +688,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             return saveToDb('app_notifications', notifId, newNotif);
                                         })
                                         .then(() => {
+                                            if (companySignature?.responsibleEmail) {
+                                                sendValidationEmail({
+                                                    to: companySignature.responsibleEmail,
+                                                    name: companySignature.responsibleName || 'Admin',
+                                                    title: `Cliente validou o relatório: ${clientData.name}`,
+                                                    message: `${clientData.name} aprovou e assinou o relatório de ${originalTotal}h referente a ${clientData.period}.`,
+                                                    link: `${window.location.origin}/?view=admin`,
+                                                }).catch(() => {});
+                                            }
                                             goToView('sucesso_assinatura');
                                         })
                                         .catch(err => {

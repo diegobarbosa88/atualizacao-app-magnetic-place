@@ -529,9 +529,10 @@ export const StepPrecision = ({
 // ---------------------------------------------------------------------------
 
 const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
-  const { supabase, corrections, correctionItems } = useApp();
+  const { supabase, corrections, correctionItems, companySignature, clients } = useApp();
   const [step, setStep] = useState('home'); // home | mode | quick | precision | success
   const [busy, setBusy] = useState(false);
+  const clientObj = clients?.find((c) => String(c.id) === String(clientId));
 
   const myCorrections = useMemo(
     () => (corrections || [])
@@ -551,6 +552,8 @@ const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
         type,
         justification,
         items,
+        adminEmail: companySignature?.responsibleEmail,
+        clientName: clientObj?.name,
       });
       setStep('success');
     } catch (e) {
