@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Download, Loader2, Printer, Settings2 } from 'lucide-react';
+import { Download, Loader2, Printer, Settings2, ZoomIn, ZoomOut } from 'lucide-react';
 import CompanyLogo from './CompanyLogo';
 import ValidationStamp from './ValidationStampWithQR';
 import './ClientTimesheetReport.css';
@@ -22,6 +22,27 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
   const [isZipping, setIsZipping] = useState(false);
   const reportContainerRef = useRef(null);
+
+  // Zoom / scale for embedded mode
+  const scaleWrapperRef = useRef(null);
+  const scaleContentRef = useRef(null);
+  const [autoScale, setAutoScale] = useState(1);
+  const [manualZoom, setManualZoom] = useState(null);
+  const scale = manualZoom ?? autoScale;
+
+  useEffect(() => {
+    if (!isEmbedded) return;
+    const update = () => {
+      if (scaleWrapperRef.current) {
+        const w = scaleWrapperRef.current.offsetWidth;
+        setAutoScale(Math.min(1, w / 794));
+      }
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    if (scaleWrapperRef.current) ro.observe(scaleWrapperRef.current);
+    return () => ro.disconnect();
+  }, [isEmbedded]);
 
   const columns = [
     { id: 'day', label: 'Dia', width: '30px' },
@@ -265,7 +286,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
 
   return (
-    <div className={`bg-white min-h-screen font-sans text-slate-900 ${isEmbedded ? 'relative w-full' : 'absolute inset-0 z-[500]'} overflow-y-auto print:bg-white print:static print:overflow-visible print:inset-auto print:z-0 print:min-h-0 print:shadow-none print:border-none`}>
+    <div ref={scaleWrapperRef} className={`bg-white min-h-screen font-sans text-slate-900 ${isEmbedded ? 'relative w-full' : 'absolute inset-0 z-[500]'} overflow-y-auto print:bg-white print:static print:overflow-visible print:inset-auto print:z-0 print:min-h-0 print:shadow-none print:border-none`}>
 
       <div ref={reportContainerRef} className={isEmbedded ? 'w-full pdf-export-mode' : 'max-w-5xl mx-auto p-4 sm:p-12 report-container pdf-export-mode'}>
         {!hideActions && (
@@ -310,9 +331,31 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           </div>
         )}
 
+        {isEmbedded && (
+          <div className="no-print flex items-center justify-end gap-2 px-2 pb-2">
+            <button
+              onClick={() => setManualZoom(Math.max(0.2, (manualZoom ?? autoScale) - 0.1))}
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
+              title="Diminuir zoom"
+            ><ZoomOut size={14} /></button>
+            <span className="text-[10px] font-black text-slate-400 uppercase w-10 text-center">{Math.round(scale * 100)}%</span>
+            <button
+              onClick={() => setManualZoom(Math.min(1, (manualZoom ?? autoScale) + 0.1))}
+              className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
+              title="Aumentar zoom"
+            ><ZoomIn size={14} /></button>
+          </div>
+        )}
+
         {reportUnits.length === 0 && isEmbedded && (
           <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Sem registos para este período.</div>
         )}
+
+        <div style={isEmbedded ? { display: 'flex', justifyContent: 'center' } : undefined}>
+        <div
+          ref={isEmbedded ? scaleContentRef : null}
+          style={isEmbedded ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
+        >
         {reportUnits.map((unit, idx) => (
           <div key={`${unit.id}-${idx}`} id={`report-unit-${idx}`} className="a4-paper">
             {/* Header Section */}
@@ -481,6 +524,8 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
             </div>
           </div>
         ))}
+        </div>
+        </div>
       </div>
 
     </div>

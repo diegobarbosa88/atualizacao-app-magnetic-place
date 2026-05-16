@@ -331,3 +331,14 @@ body {
   max-width: 100%;
   padding: 0;
 }
+
+/* Mobile: scroll horizontal no modal */
+@media (max-width: 860px) {
+  .embedded-mode {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .embedded-mode .a4-paper {
+    min-width: 600px;
+  }
+}
