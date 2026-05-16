@@ -124,69 +124,51 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50">
-          <h3 className="font-bold text-slate-700">Templates Disponíveis</h3>
-        </div>
+      <div className="overflow-x-auto -mx-2">
         {loading ? (
-          <div className="p-8 text-center text-slate-400">
+          <div className="py-16 text-center text-slate-300">
             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
           </div>
         ) : templates.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 text-sm">
-            Nenhum template ainda. Faz upload de um PDF preenchível para começar.
+          <div className="py-20 text-center">
+            <div className="flex flex-col items-center gap-2 opacity-30">
+              <FileText size={40} />
+              <p className="text-xs font-black uppercase tracking-widest">Sem templates</p>
+            </div>
           </div>
         ) : (
-          <ul className="divide-y divide-slate-100">
-            {templates.map(t => (
-              <li key={t.id} className="p-4 flex items-start gap-4 hover:bg-slate-50">
-                <FileText className="w-10 h-10 text-indigo-500 flex-shrink-0 mt-1" />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline gap-2">
-                    <h4 className="font-bold text-slate-800 truncate">{t.name}</h4>
-                    <span className="text-xs text-slate-400">{(t.template_fields || []).length} campos</span>
-                  </div>
-                  {t.description && <p className="text-xs text-slate-500 mt-1">{t.description}</p>}
-                  {(t.template_fields || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
-                      {(t.template_fields || []).map(name => (
-                        <FieldBadge key={name} name={name} />
-                      ))}
+          <table className="w-full text-left border-separate border-spacing-y-2">
+            <thead>
+              <tr className="text-slate-400">
+                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Nome</th>
+                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Descrição</th>
+                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {templates.map(t => (
+                <tr key={t.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
+                  <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-indigo-400 shrink-0" />
+                      <span className="text-sm font-black text-slate-800 truncate">{t.name}</span>
                     </div>
-                  )}
-                </div>
-                <div className="flex gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => openTemplatePreview(t)}
-                    className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200"
-                    title="Pré-visualizar template (sem dados)"
-                  >
-                    <Eye className="w-3 h-3" />
-                  </button>
-                  <button
-                    onClick={() => openEditModal(t)}
-                    className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-purple-700 bg-purple-50 rounded-lg hover:bg-purple-100"
-                    title="Editar template e posição do carimbo"
-                  >
-                    <Edit3 className="w-3 h-3" /> Editar
-                  </button>
-                  <button
-                    onClick={() => openGenerateModal(t)}
-                    className="flex items-center gap-1 px-3 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100"
-                  >
-                    <Send className="w-3 h-3" /> Gerar
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTemplate(t)}
-                    className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg"
-                    title="Apagar template"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </td>
+                  <td className="px-4 py-3 border-y border-slate-100 text-xs text-slate-500 max-w-[200px] truncate">
+                    {t.description || <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-right">
+                    <div className="flex justify-end items-center gap-1">
+                      <button onClick={() => openTemplatePreview(t)} className="p-2 bg-white text-slate-500 rounded-xl border border-slate-100 hover:bg-slate-600 hover:text-white transition-all shadow-sm" title="Pré-visualizar"><Eye className="w-3 h-3" /></button>
+                      <button onClick={() => openEditModal(t)} className="p-1.5 bg-white text-purple-600 rounded-lg border border-purple-100 hover:bg-purple-600 hover:text-white transition-all shadow-sm" title="Editar"><Edit3 className="w-3 h-3" /></button>
+                      <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Gerar"><Send className="w-3 h-3" /></button>
+                      <button onClick={() => handleDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Apagar"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
