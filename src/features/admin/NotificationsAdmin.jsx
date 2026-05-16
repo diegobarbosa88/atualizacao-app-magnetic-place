@@ -150,8 +150,8 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
             !n.title?.includes('Pedido de Correção') &&
             !n.title?.includes('Contra-proposta')
           ).map(notif => (
-            <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
-              <div className="flex items-center gap-4">
+            <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={`p-3 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' :
                   notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
                     notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
@@ -192,7 +192,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => toggleStatus(notif)}
                   className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${notif.is_active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'
