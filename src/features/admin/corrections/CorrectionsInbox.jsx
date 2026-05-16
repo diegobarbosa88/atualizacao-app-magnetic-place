@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle, LayoutList } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import {
   markUnderReview,
@@ -542,19 +542,23 @@ const CorrectionsInbox = () => {
         </div>
       </header>
 
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
         {[
-          ['open', `Abertas (${counts.open})`],
-          ['applied', `Aplicadas (${counts.applied})`],
-          ['rejected', `Rejeitadas (${counts.rejected})`],
-          ['all', 'Todas'],
-        ].map(([k, label]) => (
+          ['open', AlertCircle, 'text-amber-500', counts.open],
+          ['applied', CheckCircle, 'text-emerald-500', counts.applied],
+          ['rejected', XCircle, 'text-rose-500', counts.rejected],
+          ['all', LayoutList, 'text-slate-500', null],
+        ].map(([k, Icon, iconColor, count]) => (
           <button
             key={k}
             onClick={() => setFilter(k)}
-            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${filter === k ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 border border-slate-100'}`}
+            className={`relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}
           >
-            {label}
+            <Icon size={13} className={filter === k ? iconColor : 'text-slate-400'} />
+            <span className={`text-[9px] font-black uppercase whitespace-nowrap ${filter === k ? iconColor : 'text-slate-400'}`}>
+              {k === 'open' ? 'Abertas' : k === 'applied' ? 'Aplicadas' : k === 'rejected' ? 'Rejeitadas' : 'Todas'}
+              {count !== null && count > 0 ? ` (${count})` : ''}
+            </span>
           </button>
         ))}
       </div>
