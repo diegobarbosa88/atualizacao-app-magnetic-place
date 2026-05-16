@@ -18,9 +18,10 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
     .filter(d => isSigned(d.status))
     .sort((a, b) => (b.signed_at || b.dataAssinatura || '').localeCompare(a.signed_at || a.dataAssinatura || ''));
   const { supabase } = useApp();
-  const [editing, setEditing] = useState(null); // field key being edited
+  const [editing, setEditing] = useState(null);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successField, setSuccessField] = useState(null);
 
   const pendingFor = (key) => changeRequests.find(r => r.field === key && r.status === 'pending');
 
@@ -59,6 +60,8 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
       setLoading(false);
       setEditing(null);
       setDraft('');
+      setSuccessField(field);
+      setTimeout(() => setSuccessField(null), 3000);
     }
   };
 
@@ -69,6 +72,11 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {successField && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs font-black uppercase tracking-widest px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300">
+          <CheckCircle size={14} /> Solicitação enviada com sucesso
+        </div>
+      )}
       {/* Campos editáveis */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-5 pb-3 border-b border-slate-50">

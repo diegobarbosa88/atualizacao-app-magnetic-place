@@ -12,3 +12,5 @@ CREATE TABLE IF NOT EXISTS worker_change_requests (
   reviewed_at timestamptz,
   reviewed_by text
 );
+
+ALTER TABLE worker_change_requests DISABLE ROW LEVEL SECURITY;

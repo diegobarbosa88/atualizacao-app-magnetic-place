@@ -292,6 +292,20 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
+    const channelWorkers = supabaseInstance
+      .channel('realtime-workers')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workers' }, (payload) => {
+        const updated = payload.new;
+        setWorkers(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
+        setCurrentUser(prev => {
+          if (!prev || prev.id !== updated.id) return prev;
+          const merged = { ...prev, ...updated };
+          localStorage.setItem('magnetic_user', JSON.stringify(merged));
+          return merged;
+        });
+      })
+      .subscribe();
+
     return () => {
       supabaseInstance.removeChannel(channelNotif);
       supabaseInstance.removeChannel(channelCorrections);
@@ -299,6 +313,7 @@ export const AppProvider = ({ children }) => {
       supabaseInstance.removeChannel(channelApprovals);
       supabaseInstance.removeChannel(channelLogs);
       supabaseInstance.removeChannel(channelChangeReqs);
+      supabaseInstance.removeChannel(channelWorkers);
     };
   }, [isDbReady]);
 
