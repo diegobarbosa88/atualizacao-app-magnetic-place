@@ -398,14 +398,14 @@ const ScheduleManagerContent = () => {
                   </td>
                   <td className="text-sm font-bold text-orange-500 truncate">{s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'} — ${s.breakEnd || '--:--'}`}</td>
                   <td className="text-right">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-1">
                       <button onClick={() => {
                         const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                         setScheduleForm({ ...s, assignedWorkers: assigned });
                         setIsAddingInTab(true);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }} className="p-2 text-slate-400 hover:text-amber-600"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDeleteSchedule(s.id)} className="p-2 text-slate-400 hover:text-red-600"><Trash2 size={16} /></button>
+                      }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
+                      <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>
@@ -414,30 +414,38 @@ const ScheduleManagerContent = () => {
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedSchedules.map(s => (
-            <div key={s.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-100 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><Timer size={20} /></div>
-                <div className="flex gap-2">
+            <div key={s.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 text-indigo-600 border-indigo-200 bg-indigo-50">
+                  <Timer size={10} /> Turno
+                </div>
+                <div className="flex items-center gap-1">
                   <button onClick={() => {
                     const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                     setScheduleForm({ ...s, assignedWorkers: assigned });
                     setIsAddingInTab(true);
                     window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }} className="p-2 text-slate-400 hover:text-amber-500"><Edit2 size={14} /></button>
-                  <button onClick={() => handleDeleteSchedule(s.id)} className="p-2 text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
+                  }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
+                  <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
                 </div>
               </div>
-              <h4 className="font-black text-slate-800 text-lg uppercase">{s.name}</h4>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{s.isAdvanced ? 'Múltiplos (por dia)' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</p>
-              <div className="flex flex-wrap gap-1 mt-3 mb-2">
-                {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                  const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                  return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase">{d.l}</span> : null;
-                })}
+              {/* Name */}
+              <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{s.name}</h4>
+              <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{s.isAdvanced ? 'Múltiplos (por dia)' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</p>
+              {/* Info */}
+              <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
+                <div className="flex flex-wrap gap-1">
+                  {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
+                    const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
+                    return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
+                  })}
+                </div>
+                <div className="flex items-center gap-1.5"><Coffee size={10} /> {s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'}-${s.breakEnd || '--:--'}`}</div>
+                <div className="flex items-center gap-1.5"><Users size={10} /> {(s.assignedWorkers || []).length} colaboradores</div>
               </div>
-              <div className="flex items-center gap-1 text-[10px] text-orange-500 font-bold mt-2"><Coffee size={12} /> Pausa: {s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'}-${s.breakEnd || '--:--'}`}</div>
             </div>
           ))}
         </div>
