@@ -98,9 +98,9 @@ const renderPdfToSrcDoc = async (arrayBuffer) => {
   return `<!DOCTYPE html><html><body style="margin:0;padding:8px;background:#f1f5f9;">${imgTags}</body></html>`;
 };
 
-const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
+const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false }) => {
   const { supabase } = useApp();
-  const [activeTab, setActiveTab] = useState(() => localStorage.getItem('magnetic_worker_doc_tab') || 'pendentes');
+  const [activeTab, setActiveTab] = useState(() => pendingOnly ? 'pendentes' : (localStorage.getItem('magnetic_worker_doc_tab') || 'pendentes'));
   const [filterType, setFilterType] = useState('all');
   const [sortBy, setSortBy] = useState('date_desc');
   const [showFilters, setShowFilters] = useState(false);
@@ -611,7 +611,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
   };
 
   const docList = useMemo(() => {
-    let list = activeTab === 'pendentes' ? pendentes : historico;
+    let list = (pendingOnly || activeTab === 'pendentes') ? pendentes : historico;
+    if (pendingOnly) return list.slice(0, 5);
 
     if (activeTab === 'historico') {
       if (filterType !== 'all') {
@@ -644,10 +645,12 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
     <div className="bg-white rounded-3xl p-6 shadow-xl border border-indigo-50/50 mt-8">
       <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
         <FileText size={20} className="text-indigo-600" />
-        <h3 className="font-black text-lg uppercase tracking-tight text-slate-800">Os Meus Documentos</h3>
+        <h3 className="font-black text-lg uppercase tracking-tight text-slate-800">
+          {pendingOnly ? 'Documentos Por Assinar' : 'Os Meus Documentos'}
+        </h3>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-4">
+      {!pendingOnly && <div className="flex flex-wrap gap-2 mb-4">
         <button onClick={() => setActiveTab('pendentes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'pendentes' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
           Pendentes ({pendentes.length})
         </button>
@@ -663,9 +666,9 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
             <Filter size={16} />
           </button>
         )}
-      </div>
+      </div>}
 
-      {activeTab === 'historico' && showFilters && (
+      {!pendingOnly && activeTab === 'historico' && showFilters && (
         <div className="bg-slate-50 rounded-xl p-4 mb-4 flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <label className="text-xs font-bold text-slate-500 uppercase">Tipo:</label>
@@ -700,7 +703,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
       )}
 
       {docList.length === 0 ? (
-        <p className="text-slate-400 text-center py-8">Nenhum documento.</p>
+        <p className="text-slate-400 text-center py-8">{pendingOnly ? 'Nenhum documento por assinar.' : 'Nenhum documento.'}</p>
       ) : (
         <div className="space-y-3">
           {docList.map(doc => (

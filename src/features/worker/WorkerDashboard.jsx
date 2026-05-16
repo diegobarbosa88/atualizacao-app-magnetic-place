@@ -141,18 +141,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-          <button
-            onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
-            className={`p-2 rounded-xl text-xs font-black transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}
-            title="Meu Perfil"
-          >
-            <UserCircle size={18} />
-            {(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length > 0 && (
-              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
-                {(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length}
-              </span>
-            )}
-          </button>
           <button onClick={() => setShowSchedulesModal(true)} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black shadow-sm">
             {activeWorkerSchedule && (
               <span className="text-[9px] sm:text-xs opacity-70 border-r border-indigo-200 pr-2 mr-1 inline-block leading-tight text-right uppercase">
@@ -165,6 +153,18 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             <Timer size={16} className="shrink-0" />
             <span className="hidden sm:inline">Meus Horários</span>
           </button>
+          <button
+            onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
+            className={`p-2 rounded-xl transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}
+            title="Meu Perfil"
+          >
+            <UserCircle size={18} />
+            {(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length > 0 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                {(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length}
+              </span>
+            )}
+          </button>
           <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-600 transition-all"><LogOut size={18} /></button>
         </div>
       </nav>
@@ -173,6 +173,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <WorkerProfile
             worker={currentUser}
             changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
+            documents={(documents || []).filter(d => d.workerId === currentUser?.id || d.worker_id === currentUser?.id)}
           />
         )}
         {workerTab === 'home' && (<>
@@ -468,7 +469,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
         </div>
 
         <div id="secao-documentos">
-          <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} />
+          <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={true} />
         </div>
         </>)}
       </main>

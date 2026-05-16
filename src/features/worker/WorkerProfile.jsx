@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
-import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download } from 'lucide-react';
+import { isSigned } from '../../constants/documentStatus';
 
 const FIELDS = [
   { key: 'tel',     label: 'Telefone',            icon: Phone,     type: 'tel' },
@@ -12,7 +13,10 @@ const FIELDS = [
   { key: 'iban',    label: 'IBAN',                 icon: Landmark,  type: 'text' },
 ];
 
-const WorkerProfile = ({ worker, changeRequests }) => {
+const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
+  const signedDocs = [...documents]
+    .filter(d => isSigned(d.status))
+    .sort((a, b) => (b.signed_at || b.dataAssinatura || '').localeCompare(a.signed_at || a.dataAssinatura || ''));
   const { supabase } = useApp();
   const [editing, setEditing] = useState(null); // field key being edited
   const [draft, setDraft] = useState('');
@@ -65,22 +69,11 @@ const WorkerProfile = ({ worker, changeRequests }) => {
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="bg-slate-900 rounded-3xl p-6 text-white flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center font-black text-2xl uppercase shrink-0">
-          {worker.name?.[0] || '?'}
-        </div>
-        <div>
-          <p className="font-black text-lg uppercase tracking-tight leading-none">{worker.name}</p>
-          <p className="text-slate-400 text-xs font-bold uppercase mt-1">{worker.profissao || 'Colaborador'}</p>
-        </div>
-      </div>
-
       {/* Campos editáveis */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="px-5 pt-5 pb-3 border-b border-slate-50">
-          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Dados Pessoais</p>
-          <p className="text-[10px] text-slate-400 mt-0.5">Para alterar um campo, clique no lápis e submeta uma solicitação.</p>
+          <h2 className="text-sm font-black uppercase tracking-widest text-slate-700 text-center">Dados Pessoais</h2>
+          <p className="text-[10px] text-slate-400 mt-1 text-center">Para alterar um campo, clique no lápis e submeta uma solicitação.</p>
         </div>
 
         {FIELDS.map((f, i) => {
@@ -157,6 +150,38 @@ const WorkerProfile = ({ worker, changeRequests }) => {
           );
         })}
       </div>
+
+      {/* Documentos Assinados */}
+      {signedDocs.length > 0 && (
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-5 pt-5 pb-3 border-b border-slate-50">
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Documentos Assinados</p>
+          </div>
+          {signedDocs.map(doc => (
+            <div key={doc.id} className="px-5 py-3 border-b border-slate-50 last:border-b-0 flex items-center gap-3">
+              <FileCheck size={14} className="text-emerald-500 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-700 truncate">{doc.tipo || doc.title || doc.nome || doc.name}</p>
+                {(doc.signed_at || doc.dataAssinatura) && (
+                  <p className="text-[10px] text-slate-400">
+                    {new Date(doc.signed_at || doc.dataAssinatura).toLocaleDateString('pt-PT')}
+                  </p>
+                )}
+              </div>
+              {(doc.signed_pdf_url || doc.pdfAssinadoUrl) && (
+                <a
+                  href={doc.signed_pdf_url || doc.pdfAssinadoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                >
+                  <Download size={13} />
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Histórico de solicitações resolvidas */}
       {changeRequests.filter(r => r.status !== 'pending').length > 0 && (
