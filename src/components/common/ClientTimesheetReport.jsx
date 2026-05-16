@@ -29,14 +29,14 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
   const [autoScale, setAutoScale] = useState(1);
   const [manualZoom, setManualZoom] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
-  const scale = manualZoom ?? autoScale;
+  const scale = isExporting ? 1 : (manualZoom ?? autoScale);
 
   useEffect(() => {
     if (!isEmbedded) return;
     const update = () => {
       if (scaleWrapperRef.current) {
         const w = scaleWrapperRef.current.offsetWidth;
-        setAutoScale(Math.min(1, w / 794));
+        setAutoScale(Math.min(2, w / 794));
       }
     };
     update();
@@ -198,18 +198,22 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
   const handlePrint = () => {
     const prev = manualZoom;
+    setManualZoom(null);
     setIsExporting(true);
     setTimeout(() => {
       window.print();
-      setIsExporting(false);
-      setManualZoom(prev);
-    }, 50);
+      setTimeout(() => {
+        setIsExporting(false);
+        setManualZoom(prev);
+      }, 100);
+    }, 100);
   };
 
   const handleGenerateZip = async () => {
     const prev = manualZoom;
+    setManualZoom(null);
     setIsExporting(true);
-    await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 100));
     setIsZipping(true);
     try {
       const JSZipLib = (await import('jszip')).default;
@@ -354,9 +358,13 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
               className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
               title="Diminuir zoom"
             ><ZoomOut size={14} /></button>
-            <span className="text-[10px] font-black text-slate-400 uppercase w-10 text-center">{Math.round(scale * 100)}%</span>
             <button
-              onClick={() => setManualZoom(Math.min(1, (manualZoom ?? autoScale) + 0.1))}
+              onClick={() => setManualZoom(null)}
+              className="text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase w-10 text-center"
+              title="100%"
+            >{Math.round(scale * 100)}%</button>
+            <button
+              onClick={() => setManualZoom(Math.min(2, (manualZoom ?? autoScale) + 0.1))}
               className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
               title="Aumentar zoom"
             ><ZoomIn size={14} /></button>

@@ -410,7 +410,7 @@ const TeamManagerContent = ({ onLogin }) => {
                         const updated = { ...w, status: e.target.value };
                         saveToDb('workers', w.id, updated);
                       }}
-                      className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full border outline-none cursor-pointer ${w.status === 'inativo' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}
+                      className={`text-[9px] font-bold uppercase px-2 py-1 rounded-full border outline-none cursor-pointer ${w.status === 'inativo' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}
                     >
                       <option value="ativo">Ativo</option>
                       <option value="inativo">Inativo</option>
