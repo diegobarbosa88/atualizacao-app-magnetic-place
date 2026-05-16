@@ -75,6 +75,24 @@ export const TeamProvider = ({ children }) => {
       const existingWorker = workers.find(w => w.id === workerForm.id);
       if (existingWorker && existingWorker.valorHora !== workerForm.valorHora) {
         await saveWorkerValorHoraHistory(workers, saveToDb, workerForm.id, workerForm.valorHora, workerForm.dataAlteracao);
+      } else if (workerForm.dataAlteracao) {
+        // Valor não mudou mas a data pode ter sido corrigida → atualizar último registo
+        const supabase = window.supabaseInstance;
+        if (supabase) {
+          const { data: last } = await supabase
+            .from('worker_valorhora_history')
+            .select('id')
+            .eq('worker_id', workerForm.id)
+            .order('data_alteracao', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (last) {
+            await supabase
+              .from('worker_valorhora_history')
+              .update({ data_alteracao: new Date(workerForm.dataAlteracao).toISOString() })
+              .eq('id', last.id);
+          }
+        }
       }
     }
     // 11-05: Salvar histórico de emprego

@@ -7,7 +7,7 @@ import {
   Users, LayoutGrid, List, UserCircle, Search, Edit2,
   Trash2, Timer, Briefcase, CheckCircle, Unlock,
   User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro,
-  MapPin, Fingerprint, Mail
+  MapPin, Fingerprint, Mail, Check
 } from 'lucide-react';
 
 const TeamManagerContent = ({ onLogin }) => {
@@ -30,13 +30,19 @@ const TeamManagerContent = ({ onLogin }) => {
   } = useTeam();
 
   const [showInactive, setShowInactive] = useState(false);
-  
+
   // D-06: Estado para histórico de valor hora
   const [showWorkerHistory, setShowWorkerHistory] = useState({ show: false, workerId: null, workerName: '' });
   const [workerValorHoraHistory, setWorkerValorHoraHistory] = useState([]);
+  const [editingVHId, setEditingVHId] = useState(null);
+  const [editingVHDraft, setEditingVHDraft] = useState({});
+  const [confirmDeleteVHId, setConfirmDeleteVHId] = useState(null);
 
   // 11-05: Estado para histórico de emprego
   const [showEmploymentHistory, setShowEmploymentHistory] = useState({ show: false, workerId: null, workerName: '', periods: [] });
+  const [editingEmpId, setEditingEmpId] = useState(null);
+  const [editingEmpDraft, setEditingEmpDraft] = useState({});
+  const [confirmDeleteEmpId, setConfirmDeleteEmpId] = useState(null);
 
   // D-06: Função para carregar histórico
   const loadWorkerValorHoraHistory = async (workerId, workerName) => {
@@ -47,7 +53,28 @@ const TeamManagerContent = ({ onLogin }) => {
       .eq('worker_id', workerId)
       .order('data_alteracao', { ascending: false });
     setWorkerValorHoraHistory(data || []);
-    setShowWorkerHistory({ show: true, workerId, workerName });
+    setShowWorkerHistory(prev => ({ ...prev, show: true, workerId, workerName }));
+  };
+
+  const handleSaveVHEntry = async (h) => {
+    if (!supabase) return;
+    await supabase.from('worker_valorhora_history').update({
+      valor_anterior: editingVHDraft.valor_anterior,
+      valor_novo: editingVHDraft.valor_novo,
+      data_alteracao: editingVHDraft.data_alteracao,
+    }).eq('id', h.id);
+    setEditingVHId(null);
+    await loadWorkerValorHoraHistory(showWorkerHistory.workerId, showWorkerHistory.workerName);
+  };
+
+  const handleDeleteVHEntry = async (id) => {
+    if (!supabase) return;
+    console.log('[VH delete] id a apagar:', id);
+    const { error, data } = await supabase.from('worker_valorhora_history').delete().eq('id', id).select();
+    console.log('[VH delete] resultado:', { error, data });
+    if (error) { alert('Erro ao apagar: ' + error.message); return; }
+    setConfirmDeleteVHId(null);
+    await loadWorkerValorHoraHistory(showWorkerHistory.workerId, showWorkerHistory.workerName);
   };
 
   // 11-05: Função para carregar histórico de emprego
@@ -60,6 +87,43 @@ const TeamManagerContent = ({ onLogin }) => {
       .order('created_at', { ascending: false });
     setShowEmploymentHistory({ show: true, workerId, workerName, periods: data || [] });
   };
+
+  const handleSaveEmpEntry = async (p) => {
+    if (!supabase) return;
+    await supabase.from('worker_employment_history').update({
+      data_inicio: editingEmpDraft.data_inicio,
+      data_fim: editingEmpDraft.data_fim || null,
+    }).eq('id', p.id);
+    setEditingEmpId(null);
+    await loadEmploymentHistory(showEmploymentHistory.workerId, showEmploymentHistory.workerName);
+  };
+
+  const handleDeleteEmpEntry = async (id) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('worker_employment_history').delete().eq('id', id);
+    if (error) { alert('Erro ao apagar: ' + error.message); return; }
+    setConfirmDeleteEmpId(null);
+    await loadEmploymentHistory(showEmploymentHistory.workerId, showEmploymentHistory.workerName);
+  };
+
+  const openEditWorker = async (w) => {
+    let dataAlteracao = new Date().toISOString().split('T')[0];
+    if (supabase) {
+      const { data } = await supabase
+        .from('worker_valorhora_history')
+        .select('data_alteracao')
+        .eq('worker_id', w.id)
+        .order('data_alteracao', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data?.data_alteracao) dataAlteracao = data.data_alteracao.split('T')[0];
+    }
+    setWorkerForm({ ...w, dataAlteracao });
+    setIsAddingInTab(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
 
   // Contador de inativos
   const inactiveCount = workers.filter(w => w.status === 'inativo').length;
@@ -366,8 +430,15 @@ const TeamManagerContent = ({ onLogin }) => {
                         📊
                       </button>
                       <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={16} /></button>
-                      <button onClick={() => { setWorkerForm({ ...w, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
-                      <button onClick={() => handleDeleteWorker(w.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
+                      <button onClick={() => { openEditWorker(w); }} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
+                      {confirmDeleteWorkerId === w.id ? (
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => { handleDeleteWorker(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                          <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -385,8 +456,15 @@ const TeamManagerContent = ({ onLogin }) => {
                   <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Períodos de emprego">📅</button>
                   <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Histórico de valor">📊</button>
                   <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={14} /></button>
-                  <button onClick={() => { setWorkerForm({ ...w, dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
-                  <button onClick={() => handleDeleteWorker(w.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
+                  <button onClick={() => { openEditWorker(w); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
+                  {confirmDeleteWorkerId === w.id ? (
+                    <>
+                      <button onClick={() => { handleDeleteWorker(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                      <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                    </>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
+                  )}
                 </div>
               </div>
               <h4 className="text-xl font-black text-indigo-700 mb-1">{w.name}</h4>
@@ -416,25 +494,50 @@ const TeamManagerContent = ({ onLogin }) => {
 
       {/* D-06: Modal de Histórico de Valor Hora */}
       {showWorkerHistory.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowWorkerHistory({ show: false, workerId: null, workerName: '' })}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowWorkerHistory({ show: false, workerId: null, workerName: '' }); setEditingVHId(null); }}>
           <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-black text-indigo-700">Histórico de Valor Hora</h3>
-              <button onClick={() => setShowWorkerHistory({ show: false, workerId: null, workerName: '' })} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+              <button onClick={() => { setShowWorkerHistory({ show: false, workerId: null, workerName: '' }); setEditingVHId(null); }} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
             </div>
             <p className="text-sm font-bold text-slate-500 mb-4">{showWorkerHistory.workerName}</p>
             {workerValorHoraHistory.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">Sem histórico disponível</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-3 max-h-80 overflow-y-auto">
                 {workerValorHoraHistory.map(h => (
-                  <div key={h.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
-                      <span className="text-slate-400">→</span>
-                      <span className="text-sm font-bold text-indigo-600">{h.valor_novo}€</span>
-                    </div>
-                    <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
+                  <div key={h.id}>
+                    {editingVHId === h.id ? (
+                      <div className="flex flex-wrap items-center gap-2 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+                        <input type="number" step="0.01" value={editingVHDraft.valor_anterior || ''} onChange={e => setEditingVHDraft(d => ({ ...d, valor_anterior: e.target.value }))} className="w-16 border border-slate-300 rounded-lg p-1 text-xs font-bold" placeholder="Ant." />
+                        <span className="text-slate-400 text-xs">→</span>
+                        <input type="number" step="0.01" value={editingVHDraft.valor_novo || ''} onChange={e => setEditingVHDraft(d => ({ ...d, valor_novo: e.target.value }))} className="w-16 border border-slate-300 rounded-lg p-1 text-xs font-bold" placeholder="Novo" />
+                        <input type="date" value={editingVHDraft.data_alteracao ? editingVHDraft.data_alteracao.split('T')[0] : ''} onChange={e => setEditingVHDraft(d => ({ ...d, data_alteracao: e.target.value }))} className="border border-slate-300 rounded-lg p-1 text-xs font-bold flex-1 min-w-0" />
+                        <button onClick={() => handleSaveVHEntry(h)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg"><Check size={14} /></button>
+                        <button onClick={() => setEditingVHId(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg"><X size={14} /></button>
+                      </div>
+                    ) : confirmDeleteVHId === h.id ? (
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
+                        <span className="text-xs font-bold text-red-600">Apagar este registo?</span>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleDeleteVHEntry(h.id)} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                          <button onClick={() => setConfirmDeleteVHId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
+                          <span className="text-slate-400">→</span>
+                          <span className="text-sm font-bold text-indigo-600">{h.valor_novo}€</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>
+                          <button onClick={() => { setEditingVHId(h.id); setEditingVHDraft(h); }} className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Edit2 size={12} /></button>
+                          <button onClick={() => setConfirmDeleteVHId(h.id)} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -445,24 +548,48 @@ const TeamManagerContent = ({ onLogin }) => {
 
       {/* 11-05: Modal de Histórico de Emprego */}
       {showEmploymentHistory.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setShowEmploymentHistory({ show: false, workerId: null, workerName: '', periods: [] })}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowEmploymentHistory({ show: false, workerId: null, workerName: '', periods: [] }); setEditingEmpId(null); }}>
           <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-black text-indigo-700">Períodos de Emprego</h3>
-              <button onClick={() => setShowEmploymentHistory({ show: false, workerId: null, workerName: '', periods: [] })} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
+              <button onClick={() => { setShowEmploymentHistory({ show: false, workerId: null, workerName: '', periods: [] }); setEditingEmpId(null); }} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
             </div>
             <p className="text-sm font-bold text-slate-500 mb-4">{showEmploymentHistory.workerName}</p>
             {showEmploymentHistory.periods.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">Sem períodos registados</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {showEmploymentHistory.periods.map((p, i) => (
-                  <div key={p.id} className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-600">{p.data_inicio}</span>
-                      <span className="text-slate-400">→</span>
-                      <span className="text-sm font-bold text-indigo-600">{p.data_fim || 'Atual'}</span>
-                    </div>
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {showEmploymentHistory.periods.map((p) => (
+                  <div key={p.id}>
+                    {editingEmpId === p.id ? (
+                      <div className="flex flex-wrap items-center gap-2 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+                        <input type="date" value={editingEmpDraft.data_inicio || ''} onChange={e => setEditingEmpDraft(d => ({ ...d, data_inicio: e.target.value }))} className="border border-slate-300 rounded-lg p-1 text-xs font-bold flex-1 min-w-0" />
+                        <span className="text-slate-400 text-xs">→</span>
+                        <input type="date" value={editingEmpDraft.data_fim || ''} onChange={e => setEditingEmpDraft(d => ({ ...d, data_fim: e.target.value }))} className="border border-slate-300 rounded-lg p-1 text-xs font-bold flex-1 min-w-0" placeholder="Em aberto" />
+                        <button onClick={() => handleSaveEmpEntry(p)} className="p-1 text-green-600 hover:bg-green-50 rounded-lg"><Check size={14} /></button>
+                        <button onClick={() => setEditingEmpId(null)} className="p-1 text-slate-400 hover:bg-slate-100 rounded-lg"><X size={14} /></button>
+                      </div>
+                    ) : confirmDeleteEmpId === p.id ? (
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-xl border border-red-200">
+                        <span className="text-xs font-bold text-red-600">Apagar este período?</span>
+                        <div className="flex gap-2">
+                          <button onClick={() => handleDeleteEmpEntry(p.id)} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                          <button onClick={() => setConfirmDeleteEmpId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-slate-600">{p.data_inicio}</span>
+                          <span className="text-slate-400">→</span>
+                          <span className="text-sm font-bold text-indigo-600">{p.data_fim || 'Atual'}</span>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => { setEditingEmpId(p.id); setEditingEmpDraft(p); }} className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg"><Edit2 size={12} /></button>
+                          <button onClick={() => setConfirmDeleteEmpId(p.id)} className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

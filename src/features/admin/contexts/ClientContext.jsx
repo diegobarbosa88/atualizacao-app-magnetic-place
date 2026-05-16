@@ -36,6 +36,24 @@ export const ClientProvider = ({ children }) => {
       const existingClient = clients.find(c => c.id === clientForm.id);
       if (existingClient && existingClient.valorHora !== clientForm.valorHora) {
         await saveClientValorHoraHistory(clients, saveToDb, clientForm.id, clientForm.valorHora, clientForm.dataAlteracao);
+      } else if (clientForm.dataAlteracao) {
+        // Valor não mudou mas a data pode ter sido corrigida → atualizar último registo
+        const supabase = window.supabaseInstance;
+        if (supabase) {
+          const { data: last } = await supabase
+            .from('client_valorhora_history')
+            .select('id')
+            .eq('client_id', clientForm.id)
+            .order('data_alteracao', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (last) {
+            await supabase
+              .from('client_valorhora_history')
+              .update({ data_alteracao: new Date(clientForm.dataAlteracao).toISOString() })
+              .eq('id', last.id);
+          }
+        }
       }
     }
     const { dataAlteracao, ...restForm } = clientForm;
