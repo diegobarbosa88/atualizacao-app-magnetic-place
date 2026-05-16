@@ -11,3 +11,9 @@ createRoot(document.getElementById('root')).render(
     </AppProvider>
   </StrictMode>,
 )
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
+  });
+}
