@@ -132,7 +132,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
       return data;
     } catch (err) {
       if (uploadedPath) {
-        try { await deleteTemplateFile(supabase, uploadedPath); } catch (_) { /* best-effort */ }
+        try { await deleteTemplateFile(supabase, uploadedPath); } catch (cleanupErr) { console.warn('[useDocumentTemplates] Falha na limpeza de ficheiro (best-effort):', cleanupErr); }
       }
       throw err;
     } finally {
@@ -189,7 +189,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
 
       // Se foi feito upload de novo ficheiro e havia um antigo, apagar o antigo
       if (uploadedPath && oldDocxPath) {
-        try { await deleteTemplateFile(supabase, oldDocxPath); } catch (_) { /* best-effort */ }
+        try { await deleteTemplateFile(supabase, oldDocxPath); } catch (cleanupErr) { console.warn('[useDocumentTemplates] Falha na limpeza de ficheiro (best-effort):', cleanupErr); }
       }
 
       await loadTemplates();
@@ -197,7 +197,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     } catch (err) {
       // Se falhou e já tinha feito upload, limpar
       if (uploadedPath) {
-        try { await deleteTemplateFile(supabase, uploadedPath); } catch (_) { /* best-effort */ }
+        try { await deleteTemplateFile(supabase, uploadedPath); } catch (cleanupErr) { console.warn('[useDocumentTemplates] Falha na limpeza de ficheiro (best-effort):', cleanupErr); }
       }
       throw err;
     } finally {
