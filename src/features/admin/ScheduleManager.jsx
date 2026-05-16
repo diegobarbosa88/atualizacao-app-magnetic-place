@@ -386,10 +386,10 @@ const ScheduleManagerContent = () => {
                   </td>
                   <td className="px-4 py-3 text-sm font-bold text-indigo-600 truncate hidden sm:table-cell">{s.isAdvanced ? 'Múltiplos' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-nowrap gap-1 overflow-x-auto">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                         const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                        return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[10px] font-black uppercase">{d.l}</span> : null;
+                        return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap">{d.l}</span> : null;
                       })}
                     </div>
                   </td>
