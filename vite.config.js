@@ -3,24 +3,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import fs from 'fs'
-import path from 'path'
-
-const buildVersion = Date.now().toString();
 
 const versionPlugin = {
   name: 'version-plugin',
   buildStart() {
-    fs.writeFileSync(
-      path.resolve('public/version.json'),
-      JSON.stringify({ version: buildVersion })
-    );
+    fs.writeFileSync('public/version.json', JSON.stringify({ version: Date.now().toString() }));
   }
 };
 
 export default defineConfig({
-  define: {
-    __APP_VERSION__: JSON.stringify(buildVersion),
-  },
   plugins: [
     versionPlugin,
     react(),

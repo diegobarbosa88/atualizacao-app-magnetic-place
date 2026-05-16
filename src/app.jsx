@@ -64,12 +64,16 @@ export default function App() {
 
   const [updateAvailable, setUpdateAvailable] = useState(false);
   useEffect(() => {
-    const currentVersion = __APP_VERSION__;
+    let baseVersion = null;
     const check = async () => {
       try {
         const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
         const { version } = await res.json();
-        if (version !== currentVersion) setUpdateAvailable(true);
+        if (baseVersion === null) {
+          baseVersion = version;
+        } else if (version !== baseVersion) {
+          setUpdateAvailable(true);
+        }
       } catch {}
     };
     check();
