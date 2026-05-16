@@ -119,14 +119,14 @@ export default function App() {
 
   useEffect(() => {
     if (!currentUser || !myNotifications.length) return;
-    myNotifications.forEach(async (notif) => {
+    Promise.all(myNotifications.map(async (notif) => {
       const viewedIds = notif.viewed_by_ids || [];
       if (!viewedIds.includes(currentUser.id)) {
         if (supabase) {
           await supabase.from('app_notifications').update({ viewed_by_ids: [...viewedIds, currentUser.id] }).eq('id', notif.id);
         }
       }
-    });
+    })).catch(err => console.warn('[notifications] Falha ao marcar como vistas:', err));
   }, [currentUser?.id, myNotifications, supabase]);
 
   useEffect(() => {
