@@ -23,6 +23,7 @@ import {
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import WorkerDocuments from '../../components/common/WorkerDocuments';
+import WorkerProfile from './WorkerProfile';
 
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
@@ -64,7 +65,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     handleApproveMonth
   } = useWorker();
 
-  const { setCurrentUser } = useApp();
+  const { setCurrentUser, workerChangeRequests } = useApp();
+  const [workerTab, setWorkerTab] = useState('home');
 
   const [expandedSchedules, setExpandedSchedules] = useState(() =>
     currentUser?.defaultScheduleId ? new Set([currentUser.defaultScheduleId]) : new Set()
@@ -139,6 +141,18 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
+          <button
+            onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
+            className={`p-2 rounded-xl text-xs font-black transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}
+            title="Meu Perfil"
+          >
+            <UserCircle size={18} />
+            {(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length > 0 && (
+              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                {(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length}
+              </span>
+            )}
+          </button>
           <button onClick={() => setShowSchedulesModal(true)} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black shadow-sm">
             {activeWorkerSchedule && (
               <span className="text-[9px] sm:text-xs opacity-70 border-r border-indigo-200 pr-2 mr-1 inline-block leading-tight text-right uppercase">
@@ -155,6 +169,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-4 mt-6 md:mt-8">
+        {workerTab === 'perfil' && (
+          <WorkerProfile
+            worker={currentUser}
+            changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
+          />
+        )}
+        {workerTab === 'home' && (<>
         {filteredPendingApprovals.map((pending, idx) => {
           const isViewingThisMonth = pending.monthStr === currentMonthStr;
           return (
@@ -449,6 +470,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
         <div id="secao-documentos">
           <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} />
         </div>
+        </>)}
       </main>
 
       {showSchedulesModal && (

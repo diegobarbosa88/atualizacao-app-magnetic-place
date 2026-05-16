@@ -85,6 +85,7 @@ export const AppProvider = ({ children }) => {
   const [documents, setDocuments] = useState([]);
   const [clientApprovals, setClientApprovals] = useState([]);
   const [appNotifications, setAppNotifications] = useState([]);
+  const [workerChangeRequests, setWorkerChangeRequests] = useState([]);
   const [isDbReady, setIsDbReady] = useState(false);
 
   // Company-wide settings persisted on Supabase (admin/responsible signature)
@@ -167,6 +168,7 @@ export const AppProvider = ({ children }) => {
         fetchTable('app_notifications', setAppNotifications),
         fetchTable('corrections', setCorrections),
         fetchTable('correction_items', setCorrectionItems),
+        fetchTable('worker_change_requests', setWorkerChangeRequests),
         (async () => {
           const { data, error } = await supabaseInstance
             .from('system_settings')
@@ -282,12 +284,21 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
+    const channelChangeReqs = supabaseInstance
+      .channel('realtime-change-requests')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'worker_change_requests' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setWorkerChangeRequests)(payload.old);
+        else upsertById(setWorkerChangeRequests)(payload.new);
+      })
+      .subscribe();
+
     return () => {
       supabaseInstance.removeChannel(channelNotif);
       supabaseInstance.removeChannel(channelCorrections);
       supabaseInstance.removeChannel(channelCorrectionItems);
       supabaseInstance.removeChannel(channelApprovals);
       supabaseInstance.removeChannel(channelLogs);
+      supabaseInstance.removeChannel(channelChangeReqs);
     };
   }, [isDbReady]);
 
@@ -519,6 +530,7 @@ export const AppProvider = ({ children }) => {
     documents, setDocuments,
     clientApprovals, setClientApprovals,
     appNotifications, setAppNotifications,
+    workerChangeRequests, setWorkerChangeRequests,
     isDbReady,
     adminStats,
     saveToDb,
