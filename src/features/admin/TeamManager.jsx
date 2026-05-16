@@ -7,7 +7,7 @@ import {
   Users, LayoutGrid, List, UserCircle, Search, Edit2,
   Trash2, Timer, Briefcase, CheckCircle, Unlock,
   User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro,
-  MapPin, Fingerprint, Mail, Check, ArrowRight, ShieldCheck, XCircle
+  MapPin, Fingerprint, Mail, Check, ArrowRight, ShieldCheck, ShieldOff, XCircle
 } from 'lucide-react';
 
 const TeamManagerContent = ({ onLogin }) => {
@@ -516,17 +516,13 @@ const TeamManagerContent = ({ onLogin }) => {
                   <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
                   <td className="px-4 py-3 text-sm font-bold text-slate-500">{w.valorHora ? `${w.valorHora}€` : 'N/A'}</td>
                   <td className="px-4 py-3">
-                    <select
-                      value={w.status || 'ativo'}
-                      onChange={e => {
-                        const updated = { ...w, status: e.target.value };
-                        saveToDb('workers', w.id, updated);
-                      }}
-                      className={`text-[9px] font-bold uppercase px-2 py-1 rounded-full border outline-none cursor-pointer ${w.status === 'inativo' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}
+                    <button
+                      onClick={() => saveToDb('workers', w.id, { ...w, status: w.status === 'inativo' ? 'ativo' : 'inativo' })}
+                      title={w.status === 'inativo' ? 'Inativo — clique para ativar' : 'Ativo — clique para desativar'}
+                      className={`p-1.5 rounded-lg transition-all ${w.status === 'inativo' ? 'text-rose-400 hover:bg-rose-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
                     >
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                    </select>
+                      {w.status === 'inativo' ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
+                    </button>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
