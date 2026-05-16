@@ -421,7 +421,6 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb }) => {
           const h2pScript = iframe.contentDocument.createElement('script');
           h2pScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
           h2pScript.onload = () => {
-            console.log('DEBUG: html2pdf loaded');
             setTimeout(resolve, 500);
           };
           h2pScript.onerror = () => reject(new Error('Falha ao carregar html2pdf no iframe'));

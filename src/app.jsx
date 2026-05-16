@@ -133,14 +133,12 @@ export default function App() {
     if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
       const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
       if (toDismiss.length > 0) {
-        console.log('Auto-descartando notificações de correção pois a sub-aba correcoes está ativa');
         toDismiss.forEach(n => handleDismissNotif(n.id));
       }
     }
   }, [activeTab, portalSubTab, myNotifications, currentUser?.role]);
 
   const handleBannerClick = (notif) => {
-    console.log('Banner clicado:', notif.title);
     handleDismissNotif(notif.id);
     if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
       setActiveTab('portal_validacao');

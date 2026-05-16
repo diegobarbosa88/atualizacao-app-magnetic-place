@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: 01-autenticacao\login.spec.js >> Autenticação >> Login worker com conta inativa
-- Location: tests\e2e\01-autenticacao\login.spec.js:87:3
+- Name: 01-autenticacao\login.spec.js >> Autenticação >> Login admin com credenciais inválidas
+- Location: tests\e2e\01-autenticacao\login.spec.js:33:3
 
 # Error details
 
@@ -62,7 +62,8 @@ Call log:
   35  | 
   36  |     await page.goto('/');
   37  |     await page.waitForLoadState('domcontentloaded');
-  38  |     await page.locator('input').first().fill('admin');
+> 38  |     await page.locator('input').first().fill('admin');
+      |                                         ^ Error: locator.fill: Test timeout of 30000ms exceeded.
   39  |     await page.locator('input[type="password"]').fill('wrongpassword');
   40  |     await page.click('button[type="submit"]');
   41  |     await page.waitForTimeout(1000);
@@ -122,8 +123,7 @@ Call log:
   95  | 
   96  |     await page.goto('/');
   97  |     await page.waitForLoadState('domcontentloaded');
-> 98  |     await page.locator('input').first().fill('joãosilva');
-      |                                         ^ Error: locator.fill: Test timeout of 30000ms exceeded.
+  98  |     await page.locator('input').first().fill('joãosilva');
   99  |     await page.locator('input[type="password"]').fill('987654321');
   100 |     await page.click('button[type="submit"]');
   101 |     await page.waitForTimeout(1000);

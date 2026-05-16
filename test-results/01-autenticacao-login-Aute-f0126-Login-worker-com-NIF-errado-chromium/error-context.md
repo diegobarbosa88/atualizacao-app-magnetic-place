@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: 01-autenticacao\login.spec.js >> Autenticação >> Login worker com conta inativa
-- Location: tests\e2e\01-autenticacao\login.spec.js:87:3
+- Name: 01-autenticacao\login.spec.js >> Autenticação >> Login worker com NIF errado
+- Location: tests\e2e\01-autenticacao\login.spec.js:67:3
 
 # Error details
 
@@ -102,7 +102,8 @@ Call log:
   75  | 
   76  |     await page.goto('/');
   77  |     await page.waitForLoadState('domcontentloaded');
-  78  |     await page.locator('input').first().fill('joaosilva');
+> 78  |     await page.locator('input').first().fill('joaosilva');
+      |                                         ^ Error: locator.fill: Test timeout of 30000ms exceeded.
   79  |     await page.locator('input[type="password"]').fill('wrongnif');
   80  |     await page.click('button[type="submit"]');
   81  |     await page.waitForTimeout(1000);
@@ -122,8 +123,7 @@ Call log:
   95  | 
   96  |     await page.goto('/');
   97  |     await page.waitForLoadState('domcontentloaded');
-> 98  |     await page.locator('input').first().fill('joãosilva');
-      |                                         ^ Error: locator.fill: Test timeout of 30000ms exceeded.
+  98  |     await page.locator('input').first().fill('joãosilva');
   99  |     await page.locator('input[type="password"]').fill('987654321');
   100 |     await page.click('button[type="submit"]');
   101 |     await page.waitForTimeout(1000);

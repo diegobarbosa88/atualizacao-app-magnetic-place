@@ -6,19 +6,22 @@
 
 # Test info
 
-- Name: 01-autenticacao\login.spec.js >> Autenticação >> Login worker com conta inativa
-- Location: tests\e2e\01-autenticacao\login.spec.js:87:3
+- Name: 01-autenticacao\login.spec.js >> Autenticação >> Deve mostrar página de login
+- Location: tests\e2e\01-autenticacao\login.spec.js:9:3
 
 # Error details
 
 ```
-Test timeout of 30000ms exceeded.
-```
+Error: expect(locator).toBeVisible() failed
 
-```
-Error: locator.fill: Test timeout of 30000ms exceeded.
+Locator: locator('h1')
+Expected: visible
+Timeout: 5000ms
+Error: element(s) not found
+
 Call log:
-  - waiting for locator('input').first()
+  - Expect "toBeVisible" with timeout 5000ms
+  - waiting for locator('h1')
 
 ```
 
@@ -37,7 +40,8 @@ Call log:
   10  |     await page.goto('/');
   11  |     await page.waitForLoadState('domcontentloaded');
   12  | 
-  13  |     await expect(page.locator('h1')).toBeVisible();
+> 13  |     await expect(page.locator('h1')).toBeVisible();
+      |                                      ^ Error: expect(locator).toBeVisible() failed
   14  |     await expect(page.locator('input[placeholder*="joaosilva"]')).toBeVisible();
   15  |     await expect(page.locator('input[type="password"]')).toBeVisible();
   16  |   });
@@ -122,8 +126,7 @@ Call log:
   95  | 
   96  |     await page.goto('/');
   97  |     await page.waitForLoadState('domcontentloaded');
-> 98  |     await page.locator('input').first().fill('joãosilva');
-      |                                         ^ Error: locator.fill: Test timeout of 30000ms exceeded.
+  98  |     await page.locator('input').first().fill('joãosilva');
   99  |     await page.locator('input[type="password"]').fill('987654321');
   100 |     await page.click('button[type="submit"]');
   101 |     await page.waitForTimeout(1000);
