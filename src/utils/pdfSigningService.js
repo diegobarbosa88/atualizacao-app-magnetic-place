@@ -52,7 +52,7 @@ async function tryEmbedImage(pdfDoc, bytes) {
   if (!bytes) return null;
   try {
     return await pdfDoc.embedPng(bytes);
-  } catch (_) { }
+  } catch (_) { /* not PNG — trying JPG */ }
   try {
     return await pdfDoc.embedJpg(bytes);
   } catch (err) {
