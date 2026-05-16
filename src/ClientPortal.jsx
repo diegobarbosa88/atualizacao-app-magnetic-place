@@ -887,7 +887,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     draftTotal={draftTotal}
                                     reportJustification={reportJustification}
                                     readOnly={false}
-                                    showAllDays={true}
+                                    showAllDays={false}
                                     selectedWorkerId={editingWorkerId}
                                     title={clientData.period}
                                     subtitle="Ajustando registos diários"

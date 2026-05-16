@@ -12,7 +12,7 @@ import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
   Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users, Download,
   X, ChevronLeft, ChevronRight, LogOut, Zap, Plus, Trash2, Unlock,
-  Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2, PenTool
+  Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2, PenTool, UserPlus, ShieldCheck, ShieldOff
 } from 'lucide-react';
 import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
@@ -65,10 +65,50 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+  const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
 
   const notificacoesDeCorrecao = correctionNotifications;
 
+
+  const [adminFormMode, setAdminFormMode] = useState(null); // null | 'new' | 'existing' | 'edit'
+  const [adminForm, setAdminForm] = useState({ id: null, name: '', nif: '', selectedWorkerId: '' });
+
+  const nonAdminWorkers = workers.filter(w => !w.isAdmin);
+
+  const handleOpenAddAdmin = () => {
+    setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' });
+    setAdminFormMode('new');
+  };
+
+  const handleSelectExistingWorker = (workerId) => {
+    const w = workers.find(x => x.id === workerId);
+    if (!w) return;
+    setAdminForm({ id: w.id, name: w.name, nif: w.nif || '', selectedWorkerId: workerId });
+    setAdminFormMode('existing');
+  };
+
+  const handleEditAdmin = (worker) => {
+    setAdminForm({ id: worker.id, name: worker.name, nif: worker.nif || '', selectedWorkerId: worker.id });
+    setAdminFormMode('edit');
+  };
+
+  const handleSaveAdmin = async () => {
+    if (!adminForm.name.trim() || !adminForm.nif.trim()) return alert('Nome e senha são obrigatórios.');
+    if (adminFormMode === 'edit' || adminFormMode === 'existing') {
+      const existing = workers.find(w => w.id === adminForm.id);
+      await saveToDb('workers', adminForm.id, { ...existing, name: adminForm.name.trim(), nif: adminForm.nif.trim(), isAdmin: true });
+    } else {
+      const id = `worker_${Date.now()}`;
+      await saveToDb('workers', id, { id, name: adminForm.name.trim(), nif: adminForm.nif.trim(), isAdmin: true, status: 'ativo', assignedClients: [], assignedSchedules: [] });
+    }
+    setAdminFormMode(null);
+    setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' });
+  };
+
+  const handleRevokeAdmin = async (worker) => {
+    await saveToDb('workers', worker.id, { ...worker, isAdmin: false });
+  };
 
   const [workerAISummary, setWorkerAISummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -848,6 +888,80 @@ function AdminDashboard(props) {
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+                {/* Administradores */}
+                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><ShieldCheck size={20} /></div>
+                      <h3 className="font-black text-lg text-slate-800">Administradores</h3>
+                    </div>
+                    <button onClick={handleOpenAddAdmin} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-indigo-700 transition-all">
+                      <UserPlus size={14} /> Adicionar
+                    </button>
+                  </div>
+
+                  {/* Lista de admins */}
+                  <div className="space-y-2 mb-4">
+                    {workers.filter(w => w.isAdmin).length === 0 && !adminFormMode && (
+                      <p className="text-xs text-slate-400 font-bold text-center py-4">Nenhum administrador configurado.</p>
+                    )}
+                    {workers.filter(w => w.isAdmin).map(w => {
+                      const parts = (w.name || '').trim().split(/\s+/);
+                      const username = parts.length > 1 ? (parts[0] + parts[parts.length - 1]).toLowerCase() : parts[0].toLowerCase();
+                      const isEditing = adminFormMode === 'edit' && adminForm.id === w.id;
+                      return (
+                        <div key={w.id} className={`p-3 bg-slate-50 rounded-2xl border transition-all ${isEditing ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100'}`}>
+                          {isEditing ? (
+                            <div className="space-y-2">
+                              <input type="text" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                              <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                              <div className="flex gap-2 pt-1">
+                                <button onClick={handleSaveAdmin} className="flex-1 bg-indigo-600 text-white py-2 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all">Guardar</button>
+                                <button onClick={() => setAdminFormMode(null)} className="px-4 py-2 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm font-black text-slate-800">{w.name}</p>
+                                <p className="text-[10px] text-slate-400 font-mono">{username}</p>
+                              </div>
+                              <div className="flex gap-1">
+                                <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold text-indigo-500 hover:bg-indigo-50 px-3 py-1.5 rounded-xl transition-all">Editar</button>
+                                <button onClick={() => handleRevokeAdmin(w)} className="flex items-center gap-1 text-xs font-bold text-rose-500 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-all"><ShieldOff size={12} /> Revogar</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Form adicionar admin */}
+                  {(adminFormMode === 'new' || adminFormMode === 'existing') && (
+                    <div className="border-t border-slate-100 pt-5 space-y-3">
+                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Novo Administrador</p>
+                      {nonAdminWorkers.length > 0 && (
+                        <select
+                          value={adminForm.selectedWorkerId}
+                          onChange={e => handleSelectExistingWorker(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                          <option value="">— Selecionar trabalhador existente —</option>
+                          {nonAdminWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+                        </select>
+                      )}
+                      <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <div className="flex gap-2">
+                        <button onClick={handleSaveAdmin} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all">Criar</button>
+                        <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {/* Conta e Segurança */}
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
@@ -869,7 +983,7 @@ function AdminDashboard(props) {
                           if (!passEl) return;
                           const newPass = passEl.value;
                           if (!newPass) return;
-                          setSystemSettings(prev => ({ ...prev, adminPassword: newPass }));
+                          updateSetting('adminPassword', newPass);
                           alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.');
                           passEl.value = '';
                         }}
@@ -893,7 +1007,7 @@ function AdminDashboard(props) {
                           onClick={() => {
                             const keyEl = document.getElementById('gemini-api-key');
                             const key = keyEl ? keyEl.value.trim() : '';
-                            setSystemSettings(prev => ({ ...prev, geminiApiKey: key }));
+                            updateSetting('geminiApiKey', key);
                             alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.');
                           }}
                           className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700 transition-all whitespace-nowrap"
@@ -922,6 +1036,7 @@ function AdminDashboard(props) {
                       type="text"
                       value={systemSettings.companyName}
                       onChange={(e) => setSystemSettings(prev => ({ ...prev, companyName: e.target.value }))}
+                      onBlur={(e) => updateSetting('companyName', e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                     />
                     <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Morada</p>
@@ -929,6 +1044,7 @@ function AdminDashboard(props) {
                       type="text"
                       value={systemSettings.companyAddress || ''}
                       onChange={(e) => setSystemSettings(prev => ({ ...prev, companyAddress: e.target.value }))}
+                      onBlur={(e) => updateSetting('companyAddress', e.target.value)}
                       placeholder="Rua, nº, código postal, localidade"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                     />
@@ -937,6 +1053,7 @@ function AdminDashboard(props) {
                       type="text"
                       value={systemSettings.companyNif || ''}
                       onChange={(e) => setSystemSettings(prev => ({ ...prev, companyNif: e.target.value }))}
+                      onBlur={(e) => updateSetting('companyNif', e.target.value)}
                       placeholder="Nº de Identificação Fiscal"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                     />
@@ -968,6 +1085,8 @@ function AdminDashboard(props) {
                         step="20"
                         value={systemSettings.appWidth}
                         onChange={(e) => setSystemSettings(prev => ({ ...prev, appWidth: e.target.value }))}
+                        onMouseUp={(e) => updateSetting('appWidth', e.target.value)}
+                        onTouchEnd={(e) => updateSetting('appWidth', e.target.value)}
                         className="w-32 accent-indigo-600"
                       />
                     </div>
@@ -977,7 +1096,7 @@ function AdminDashboard(props) {
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Ajuste de luminosidade</p>
                       </div>
                       <button
-                        onClick={() => setSystemSettings(prev => ({ ...prev, darkMode: !prev.darkMode }))}
+                        onClick={() => updateSetting('darkMode', !systemSettings.darkMode)}
                         className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${systemSettings.darkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}
                       >
                         <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-all ${systemSettings.darkMode ? 'translate-x-6' : 'translate-x-0'}`} />

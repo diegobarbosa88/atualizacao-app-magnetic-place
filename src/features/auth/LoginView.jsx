@@ -7,10 +7,10 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
+  const [pendingAdminWorker, setPendingAdminWorker] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIosInstructions, setShowIosInstructions] = useState(false);
 
-  // Detecção de iOS e se já está instalado
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
@@ -28,25 +28,16 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
       const newState = !showIosInstructions;
       setShowIosInstructions(newState);
       if (newState) {
-        // Pequeno atraso para garantir que o elemento foi renderizado no DOM após o estado mudar
         setTimeout(() => {
-          const el = document.getElementById('ios-instructions');
-          if (el) {
-            el.scrollIntoView({
-              behavior: 'smooth',
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
+          document.getElementById('ios-instructions')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 300);
       }
       return;
     }
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setDeferredPrompt(null);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') setDeferredPrompt(null);
     }
   };
 
@@ -54,7 +45,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (user === 'admin' && pass === systemSettings.adminPassword) {
+    if (user.trim().toLowerCase() === 'admin' && pass.trim() === systemSettings.adminPassword) {
       onLogin('admin');
       return;
     }
@@ -76,7 +67,11 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
           setError('A sua conta está inativa. Contacte a administração.');
           return;
         }
-        onLogin('worker', found);
+        if (found.isAdmin) {
+          setPendingAdminWorker(found);
+        } else {
+          onLogin('worker', found);
+        }
       } else {
         setError('Senha incorreta (utilize o seu NIF)');
       }
@@ -85,7 +80,33 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
     }
   };
 
-  const showInstallButton = (deferredPrompt || (isIOS && !isStandalone));
+  const showInstallButton = !isStandalone && (deferredPrompt || isIOS);
+
+  if (pendingAdminWorker) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans text-slate-900">
+        <div className="max-w-md w-full bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl p-8 sm:p-12 border border-slate-200 text-center">
+          <div className="flex justify-center mb-6">
+            <CompanyLogo className="h-20 w-20 object-contain drop-shadow-xl" />
+          </div>
+          <p className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Bem-vindo</p>
+          <h2 className="text-xl font-black text-slate-900 mb-8">{pendingAdminWorker.name}</h2>
+          <p className="text-sm font-bold text-slate-500 mb-5">Como quer entrar?</p>
+          <div className="flex flex-col gap-3">
+            <button onClick={() => onLogin('admin', { ...pendingAdminWorker, role: 'admin' })} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:bg-slate-700 active:scale-95 transition-all">
+              Painel Admin
+            </button>
+            <button onClick={() => onLogin('worker', pendingAdminWorker)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 active:scale-95 transition-all">
+              Meu Painel
+            </button>
+            <button onClick={() => setPendingAdminWorker(null)} className="text-xs text-slate-400 hover:text-slate-600 mt-2 transition-colors">
+              Voltar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans text-slate-900">
@@ -106,7 +127,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Senha</label>
-            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" inputMode="numeric" required /></div>
+            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" required /></div>
           </div>
           {error && <div className="p-4 bg-red-50 text-red-500 text-xs font-bold rounded-2xl flex items-center gap-3 animate-pulse"><AlertCircle size={16} /> {error}</div>}
           <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-slate-800 active:scale-95 transition-all">Entrar</button>
@@ -155,6 +176,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
                 </div>
               </div>
             )}
+
           </div>
         </form>
       </div>

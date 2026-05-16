@@ -218,12 +218,21 @@ const TeamManagerContent = ({ onLogin }) => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Mail size={10} /> Email</label>
                     <input type="email" value={workerForm.email || ''} onChange={e => setWorkerForm({ ...workerForm, email: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="exemplo@dominio.pt" />
                   </div>
-                  <div className="space-y-1 md:col-span-2">
+                  <div className="space-y-1">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><UserCircle size={10} /> Estado da Conta</label>
                     <select value={workerForm.status || 'ativo'} onChange={e => setWorkerForm({ ...workerForm, status: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm outline-none shadow-sm font-bold focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all">
                       <option value="ativo">Ativo (Acesso Permitido)</option>
                       <option value="inativo">Inativo (Acesso Bloqueado)</option>
                     </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Permissões</label>
+                    <button type="button" onClick={() => setWorkerForm({ ...workerForm, isAdmin: !workerForm.isAdmin })} className={`w-full flex items-center justify-between p-4 rounded-xl border font-bold text-sm transition-all ${workerForm.isAdmin ? 'bg-indigo-50 border-indigo-300 text-indigo-700' : 'bg-white border-slate-200 text-slate-500'}`}>
+                      <span>Acesso de Administrador</span>
+                      <div className={`w-10 h-5 rounded-full transition-all relative ${workerForm.isAdmin ? 'bg-indigo-500' : 'bg-slate-200'}`}>
+                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${workerForm.isAdmin ? 'left-5' : 'left-0.5'}`} />
+                      </div>
+                    </button>
                   </div>
                 </div>
 

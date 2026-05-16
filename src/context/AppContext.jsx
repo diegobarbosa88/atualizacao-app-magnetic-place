@@ -170,7 +170,7 @@ export const AppProvider = ({ children }) => {
         (async () => {
           const { data, error } = await supabaseInstance
             .from('system_settings')
-            .select('responsible_name, responsible_role, responsible_email, company_signature_data_url')
+            .select('*')
             .eq('id', 1)
             .maybeSingle();
           if (error) {
@@ -184,6 +184,16 @@ export const AppProvider = ({ children }) => {
               responsibleEmail: data.responsible_email || '',
               signatureDataUrl: data.company_signature_data_url || '',
             });
+            setSystemSettings(prev => ({
+              ...prev,
+              ...(data.admin_password !== undefined && { adminPassword: data.admin_password }),
+              ...(data.company_name && { companyName: data.company_name }),
+              ...(data.company_address !== undefined && { companyAddress: data.company_address }),
+              ...(data.company_nif !== undefined && { companyNif: data.company_nif }),
+              ...(data.dark_mode !== undefined && { darkMode: data.dark_mode }),
+              ...(data.app_width && { appWidth: data.app_width }),
+              ...(data.gemini_api_key !== undefined && { geminiApiKey: data.gemini_api_key }),
+            }));
           }
         })(),
       ]);
@@ -468,8 +478,28 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const saveSystemSettings = async (newSettings) => {
+    setSystemSettings(newSettings);
+    if (!supabaseInstance) return;
+    const payload = {
+      id: 1,
+      admin_password: newSettings.adminPassword ?? '',
+      company_name: newSettings.companyName ?? '',
+      company_address: newSettings.companyAddress ?? '',
+      company_nif: newSettings.companyNif ?? '',
+      dark_mode: newSettings.darkMode ?? false,
+      app_width: newSettings.appWidth ?? '1920',
+      gemini_api_key: newSettings.geminiApiKey ?? '',
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabaseInstance
+      .from('system_settings')
+      .upsert(payload, { onConflict: 'id' });
+    if (error) console.error('Erro ao gravar system_settings:', error);
+  };
+
   const value = {
-    systemSettings, setSystemSettings,
+    systemSettings, setSystemSettings, saveSystemSettings,
     companySignature, saveCompanySignature,
     stampStyle, setStampStyle,
     view, setView,

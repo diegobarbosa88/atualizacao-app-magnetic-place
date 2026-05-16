@@ -54,7 +54,7 @@ const INITIAL_WORKER_FORM = {
   id: null, name: '', assignedClients: [], assignedSchedules: [],
   defaultClientId: '', defaultScheduleId: '', tel: '', email: '', valorHora: '',
   profissao: '', nis: '', nif: '', iban: '', status: 'ativo',
-  address: '', dni: '',
+  address: '', dni: '', isAdmin: false,
   dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0]
 };
 
