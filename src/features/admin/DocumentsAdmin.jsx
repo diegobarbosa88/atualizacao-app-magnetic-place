@@ -285,21 +285,21 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const renderStateBadge = (state) => {
     if (state === 'signed') {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-emerald-100 text-emerald-700">
-          <CheckCircle size={11} /> Assinado
+        <span title="Assinado" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600">
+          <CheckCircle size={14} />
         </span>
       );
     }
     if (state === 'awaiting_admin') {
       return (
-        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-indigo-100 text-indigo-700">
-          <FileSignature size={11} /> Aguarda Aprovação
+        <span title="Aguarda Aprovação" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600">
+          <FileSignature size={14} />
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter bg-amber-100 text-amber-700">
-        <Clock size={11} /> Pendente
+      <span title="Pendente" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-500">
+        <Clock size={14} />
       </span>
     );
   };
