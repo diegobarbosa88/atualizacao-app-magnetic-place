@@ -80,12 +80,11 @@ const ValidationPortal = ({
 
       {/* Sub-tabs + view toggle */}
       <div className="flex items-center gap-2 mb-4">
-        <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-2xl flex-1">
+        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl flex-1 max-w-md mx-auto">
         {[
           { id: 'envios', label: 'Envios', icon: Mail },
           { id: 'colaboradores', label: 'Equipa', icon: UserCheck },
-          { id: 'correcoes', label: 'Correções', icon: AlertTriangle, count: pendingCorrectionsCount },
-          { id: 'links', label: 'Links', icon: Link }
+          { id: 'correcoes', label: 'Correções', icon: AlertTriangle, count: pendingCorrectionsCount }
         ].map(tab => (
           <button
             key={tab.id}
@@ -108,13 +107,14 @@ const ValidationPortal = ({
 
       {/* Envios Clientes Tab */}
       {portalSubTab === 'envios' && portalView === 'list' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <table className="w-full text-sm min-w-[600px]">
             <thead><tr className="border-b border-slate-100 bg-slate-50">
               <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
               <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Email</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas</th>
               <th className="text-center px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Estado</th>
+              <th className="text-center px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Link</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
             </tr></thead>
             <tbody>
@@ -132,6 +132,12 @@ const ValidationPortal = ({
                     {c.status === 'validado' && <CheckCircle size={16} className="text-emerald-500 mx-auto" />}
                     {c.status === 'enviado' && <Mail size={16} className="text-blue-500 mx-auto" />}
                     {c.status === 'pendente' && <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />}
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <button onClick={() => {
+                      const link = `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}`;
+                      navigator.clipboard.writeText(link);
+                    }} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Copiar Link"><Link size={13} /></button>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -168,7 +174,7 @@ const ValidationPortal = ({
             }
             return valSortConfig.direction === 'asc' ? res : -res;
           })).map(c => {
-            const linkUnico = c.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${String(c.id)}&month=${portalMonthStr}`;
+            const linkUnico = `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}`;
             return (
               <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
                 {/* Header */}
@@ -192,7 +198,7 @@ const ValidationPortal = ({
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
-                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `${window.location.origin}/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
+                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
                       <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100"><Download size={12} /> Relatório</button>
                     </>
                   ) : (
@@ -207,8 +213,8 @@ const ValidationPortal = ({
 
       {/* Validação Equipa Tab */}
       {portalSubTab === 'colaboradores' && portalView === 'list' && (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <table className="w-full text-sm">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <table className="w-full text-sm min-w-[400px]">
             <thead><tr className="border-b border-slate-100 bg-slate-50">
               <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Horas</th>
@@ -290,42 +296,7 @@ const ValidationPortal = ({
         </div>
       )}
 
-      {/* Links Clientes Tab */}
-      {portalSubTab === 'links' && (
-        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-              <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold appearance-none cursor-pointer" value={clientPortalLinkFilter.clientId} onChange={e => setClientPortalLinkFilter({ ...clientPortalLinkFilter, clientId: e.target.value })}>
-                <option value="">-- Escolher Cliente --</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês de Referência</label>
-              <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={clientPortalLinkFilter.month} onChange={e => setClientPortalLinkFilter({ ...clientPortalLinkFilter, month: e.target.value })} />
-            </div>
-          </div>
-          {clientPortalLinkFilter.clientId && clientPortalLinkFilter.month && (
-            <div className="p-4 sm:p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100">
-              <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3">Link Gerado:</p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1 bg-white border border-slate-200 rounded-xl p-3 text-xs font-mono text-indigo-600 truncate shadow-inner">
-                  {`${window.location.origin}${window.location.pathname}?view=client_portal&client=${clientPortalLinkFilter.clientId}&month=${clientPortalLinkFilter.month}`}
-                </div>
-                <button
-                  onClick={() => navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?view=client_portal&client=${clientPortalLinkFilter.clientId}&month=${clientPortalLinkFilter.month}`)}
-                  className="px-5 py-3 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2"
-                >
-                  <Link size={14} /> Copiar
-                </button>
-              </div>
-              <p className="text-[10px] text-slate-400 mt-3 italic">Envie este link ao cliente para validar as horas.</p>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+      </div>
   );
 };
 
