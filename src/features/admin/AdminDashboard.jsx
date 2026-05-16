@@ -329,12 +329,12 @@ function AdminDashboard(props) {
   return (
     <div className="min-h-screen bg-slate-50 pb-12 font-sans text-slate-900">
       <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
-        <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-6" style={{ maxWidth: `var(--app-max-width)` }}>
+        <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-6" style={{ maxWidth: `var(--app-max-width)` }}>
           {/* Lado Esquerdo: Logo */}
           <div className="flex items-center justify-between w-full md:w-auto">
             <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase shrink-0">
               <CompanyLogo className="h-8 w-8" />
-              <span className="inline">{systemSettings.companyName}</span>
+              <span className="hidden md:inline">{systemSettings.companyName}</span>
             </div>
             {/* Mobile Actions */}
             <div className="flex md:hidden items-center gap-2">
@@ -345,9 +345,9 @@ function AdminDashboard(props) {
 
           {/* Centro: Menu de Navegação */}
           <div className="flex-1 flex justify-center w-full md:w-auto">
-            <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
+            <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
               {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'reports', 'costs', 'documentos', 'notificacoes', 'settings'].map(t => (
-                <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`whitespace-nowrap px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && unviewedCorrectionsCount > 0 ? 'animate-pulse' : ''}`}>
+                <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && unviewedCorrectionsCount > 0 ? 'animate-pulse' : ''}`}>
                   {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
                     <span className="flex items-center gap-1">Portal Validação {unviewedCorrectionsCount > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unviewedCorrectionsCount}</span>}</span>
                   ) : t === 'schedules' ? 'Horários' : t === 'reports' ? 'Relatórios' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : t === 'notificacoes' ? 'Notificações' : <Settings size={14} />}
@@ -364,16 +364,16 @@ function AdminDashboard(props) {
         </div>
       </nav>
 
-      <main className="w-full mt-12 pb-12">
-        <div className="mx-auto px-4 sm:px-10 lg:px-16" style={{ maxWidth: `var(--app-max-width)` }}>
+      <main className="w-full mt-4 pb-12">
+        <div className="mx-auto px-3 sm:px-6 md:px-10 lg:px-16" style={{ maxWidth: `var(--app-max-width)` }}>
 
 
           {auditWorkerId && (() => {
             const currentApproval = approvals.find(a => a.workerId === auditWorkerId && a.month === currentMonthStr);
             return (
-              <div className="mb-10 bg-white rounded-[3rem] p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
-                <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-                  <div className="flex items-center gap-6"><div className="bg-slate-900 p-5 rounded-3xl text-white shadow-xl"><Settings2 size={40} /></div><div><h2 className="text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
+              <div className="mb-6 bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-8 lg:p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-10 gap-3 md:gap-6">
+                  <div className="flex items-center gap-3 sm:gap-6"><div className="bg-slate-900 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
                   <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-[2.5rem] border border-slate-200">
                     {currentApproval && (
                       <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-[2rem] shadow-sm flex items-center gap-4 border border-emerald-200">
@@ -399,7 +399,7 @@ function AdminDashboard(props) {
                   <p className="text-sm text-slate-600 italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
                 </div>
                 <div className="overflow-x-auto rounded-[3rem] border border-slate-100 bg-white shadow-inner"><table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest w-32">Dia</th><th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
+                  <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest w-16 sm:w-32">Dia</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
                   <tbody className="divide-y divide-slate-50">
                     {daysInMonthList.map(ds => {
                       const dayLogs = logs.filter(l => l.workerId === auditWorkerId && l.date === ds);
@@ -407,11 +407,11 @@ function AdminDashboard(props) {
                       return (
                         <React.Fragment key={ds}>
                           <tr className="group">
-                            <td className="px-10 py-8 align-top"><p className="text-3xl font-black">{new Date(ds).getDate()}</p></td>
-                            <td className="px-10 py-8">
-                              <div className="space-y-4">
+                            <td className="px-4 sm:px-10 py-4 sm:py-8 align-top"><p className="text-2xl sm:text-3xl font-black">{new Date(ds).getDate()}</p></td>
+                            <td className="px-4 sm:px-10 py-4 sm:py-8">
+                              <div className="space-y-3">
                                 {dayLogs.map(log => (
-                                  <div key={log.id} className="bg-white p-6 rounded-3xl border border-indigo-100/50 flex items-center justify-between shadow-sm">
+                                  <div key={log.id} className="bg-white p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-100/50 flex items-center justify-between shadow-sm gap-2">
                                     <div className="flex items-center gap-4">
                                       <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl uppercase border border-indigo-100">{clients.find(c => c.id === log.clientId)?.name}</span>
                                       <div className="text-sm font-bold font-mono">{log.startTime}-{log.endTime} {log.breakStart ? `(P: ${log.breakStart})` : ''}</div>
@@ -424,7 +424,7 @@ function AdminDashboard(props) {
                                 ))}
                               </div>
                             </td>
-                            <td className="px-10 py-8 text-right align-top">
+                            <td className="px-4 sm:px-10 py-4 sm:py-8 text-right align-top">
                               <div className="flex justify-end gap-2">
                                 <button onClick={() => handleQuickRegister(ds)} title="Registo Rápido" className="p-3 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-2xl transition-all"><Zap size={20} /></button>
                                 <button onClick={() => handleOpenInlineForm(ds)} className="p-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all"><Plus size={20} /></button>
@@ -432,7 +432,7 @@ function AdminDashboard(props) {
                             </td>
                           </tr>
                           {isCurrentInline && (
-                            <tr><td colSpan="3" className="px-10 py-4 bg-indigo-50/30">
+                            <tr><td colSpan="3" className="px-4 sm:px-10 py-4 bg-indigo-50/30">
                               <EntryForm isInline data={inlineFormData} clients={clients} assignedClients={auditedWorker?.assignedClients} onChange={setInlineFormData} onSave={() => { handleSaveEntry(inlineFormData, false, ds); setInlineEditingDate(null); }} onCancel={() => setInlineEditingDate(null)} />
                             </td></tr>
                           )}
@@ -446,9 +446,9 @@ function AdminDashboard(props) {
           })()}
 
           {!auditWorkerId && activeTab === 'overview' && (
-            <div className="animate-in fade-in duration-500 space-y-8">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3"><LayoutGrid size={32} className="text-indigo-600" /> Dashboard Geral</h2>
+            <div className="animate-in fade-in duration-500 space-y-4 sm:space-y-6 lg:space-y-8">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 flex items-center gap-2 sm:gap-3"><LayoutGrid size={24} className="text-indigo-600 sm:hidden" /><LayoutGrid size={28} className="text-indigo-600 hidden sm:block" /> Dashboard Geral</h2>
                 <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
                   <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronLeft size={16} /></button>
                   <span className="font-bold text-sm uppercase tracking-widest text-indigo-600 min-w-[120px] text-center">
@@ -459,9 +459,9 @@ function AdminDashboard(props) {
               </div>
 
               {/* KPI Cards Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 {/* Horas Totais */}
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
                   <div className="flex justify-between items-start">
                     <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl"><Clock size={24} /></div>
                     {aggregatedTrend.percent != 0 && (
@@ -471,38 +471,38 @@ function AdminDashboard(props) {
                     )}
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-slate-800">{formatHours(adminStats.totalHours)}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-800">{formatHours(adminStats.totalHours)}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{formatHours(aggregatedTrend.expected)} Esperadas</p>
                   </div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Horas Totais</p>
                 </div>
 
                 {/* Faturação */}
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
                   <div className="flex justify-between items-start">
                     <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl"><TrendingUp size={24} /></div>
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedRevenue)}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedRevenue)}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimada</p>
                   </div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faturação</p>
                 </div>
 
                 {/* Custos */}
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
+                <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
                   <div className="flex justify-between items-start">
                     <div className="bg-rose-50 text-rose-600 p-3 rounded-2xl"><TrendingDown size={24} /></div>
                   </div>
                   <div>
-                    <p className="text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedCosts + adminStats.monthlyExpenses)}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedCosts + adminStats.monthlyExpenses)}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operacionais + Fixos</p>
                   </div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Custos Globais</p>
                 </div>
 
                 {/* Resultado Líquido */}
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-[2.5rem] shadow-xl flex flex-col gap-3 text-white">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-xl flex flex-col gap-2 sm:gap-3 text-white">
                   <div className="flex justify-between items-start">
                     <div className="bg-white/20 p-3 rounded-2xl"><Wallet size={24} /></div>
                     {aggregatedTrend.percent != 0 && (
@@ -512,7 +512,7 @@ function AdminDashboard(props) {
                     )}
                   </div>
                   <div>
-                    <p className="text-3xl font-black">{formatCurrency(adminStats.netProfit)}</p>
+                    <p className="text-xl sm:text-3xl font-black">{formatCurrency(adminStats.netProfit)}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Líquido</p>
                   </div>
                   <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Resultado</p>
@@ -520,9 +520,9 @@ function AdminDashboard(props) {
               </div>
 
               {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 {/* Area Chart - 2/3 */}
-                <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="lg:col-span-2 bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><TrendingUp size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Fluxo de Faturamento Diário</h3>
@@ -554,7 +554,7 @@ function AdminDashboard(props) {
                 </div>
 
                 {/* Pie Chart - 1/3 */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-rose-50 p-2 rounded-xl text-rose-600"><TrendingDown size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Composição de Gastos</h3>
@@ -594,7 +594,7 @@ function AdminDashboard(props) {
               </div>
 
               {/* Worker Comparison */}
-              <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+              <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Activity size={20} /></div>
                   <h3 className="font-black text-lg text-slate-800">Comparativo por Trabalhador</h3>
@@ -627,9 +627,9 @@ function AdminDashboard(props) {
               </div>
 
               {/* Bottom Row: Top Units + Activity */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
                 {/* Top Units */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Trophy size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Top Unidades (Horas)</h3>
@@ -652,7 +652,7 @@ function AdminDashboard(props) {
                 </div>
 
                 {/* Activity Recente */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><History size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Atividade Recente</h3>
@@ -686,33 +686,33 @@ function AdminDashboard(props) {
           )}
 
 {!auditWorkerId && activeTab === 'reports' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-black text-slate-800 flex items-center gap-3"><FileText size={32} className="text-indigo-600" /> Folhas de Horas para Clientes</h2>
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 flex items-center gap-2"><FileText size={22} className="text-indigo-600" /> Folhas de Horas para Clientes</h2>
               </div>
 
               {/* KPI Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
-                  <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl w-fit"><Users size={24} /></div>
+              <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
+                  <div className="bg-indigo-50 text-indigo-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
                   <div>
-                    <p className="text-3xl font-black text-slate-800">{activeWorkersCount}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-800">{activeWorkersCount}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaboradores com Registos</p>
                   </div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
                 </div>
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
-                  <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl w-fit"><Building2 size={24} /></div>
+                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
+                  <div className="bg-emerald-50 text-emerald-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
                   <div>
-                    <p className="text-3xl font-black text-slate-800">{activeClientsCount}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-800">{activeClientsCount}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes Activos</p>
                   </div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
                 </div>
-                <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-3">
-                  <div className="bg-amber-50 text-amber-600 p-3 rounded-2xl w-fit"><Activity size={24} /></div>
+                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
+                  <div className="bg-amber-50 text-amber-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
                   <div>
-                    <p className="text-3xl font-black text-slate-800">{activeReportsCount}</p>
+                    <p className="text-xl sm:text-3xl font-black text-slate-800">{activeReportsCount}</p>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registos</p>
                   </div>
                   <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
@@ -720,8 +720,8 @@ function AdminDashboard(props) {
               </div>
 
               {/* Filtros */}
-              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
                     <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
@@ -744,8 +744,8 @@ function AdminDashboard(props) {
               </div>
 
               {/* Botões de ação */}
-              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
-                <div className="flex flex-col md:flex-row gap-4">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="flex flex-col md:flex-row gap-3 md:gap-4">
                   <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
                     <FileText size={18} /> Gerar Selecção
                   </button>
@@ -775,7 +775,7 @@ function AdminDashboard(props) {
                   className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto print:bg-transparent print:backdrop-blur-none print:p-0 print:static print:overflow-visible"
                   onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}
                 >
-                  <div className="w-full max-w-5xl my-8 bg-white rounded-[3rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
+                  <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-indigo-100 overflow-hidden animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
                     <div className="no-print flex items-center justify-between p-6 border-b border-slate-100">
                       <div className="flex items-center gap-3">
                         <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><FileText size={20} /></div>
@@ -794,7 +794,7 @@ function AdminDashboard(props) {
               )}
 
               {/* Histórico Recente */}
-              <div className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><History size={20} /></div>
                   <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
@@ -883,14 +883,14 @@ function AdminDashboard(props) {
           {/* Módulo Configurações */}
           {!auditWorkerId && activeTab === 'settings' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-black flex items-center gap-3"><Settings size={32} className="text-indigo-600" /> Configurações do Sistema</h2>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6 sm:mb-8">
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2"><Settings size={22} className="text-indigo-600" /> Configurações do Sistema</h2>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
 
                 {/* Administradores */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
                   <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                       <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><ShieldCheck size={20} /></div>
@@ -963,7 +963,7 @@ function AdminDashboard(props) {
                 </div>
 
                 {/* Conta e Segurança */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Lock size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Segurança da Conta</h3>
@@ -1025,7 +1025,7 @@ function AdminDashboard(props) {
                 </div>
 
                 {/* Identidade Visual */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Building2 size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Identidade da Empresa</h3>
@@ -1067,7 +1067,7 @@ function AdminDashboard(props) {
                 />
 
                 {/* Personalização Visual */}
-                <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600"><Palette size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Visual e Tema</h3>
@@ -1106,7 +1106,7 @@ function AdminDashboard(props) {
                 </div>
 
                 {/* Destaque Informativo */}
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden flex flex-col justify-center">
+                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl text-white relative overflow-hidden flex flex-col justify-center">
                   <div className="absolute top-0 right-0 p-6 opacity-10"><Sparkles size={80} /></div>
                   <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Magnetic Place Pro</h3>
                   <p className="text-sm font-medium opacity-80 leading-relaxed mb-6">Utilize o painel de configurações para moldar a experiência do dashboard conforme as necessidades da sua empresa.</p>
@@ -1164,7 +1164,7 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
   };
 
   return (
-    <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
       <div className="flex items-center gap-3 mb-6">
         <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileSignature size={20} /></div>
         <h3 className="font-black text-lg text-slate-800">Assinatura da Empresa</h3>

@@ -44,15 +44,15 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
   };
 
   return (
-    <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3 mb-8 border-b border-slate-50 pb-6">
+    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex items-center gap-3 mb-5 border-b border-slate-50 pb-4">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600">
           <Megaphone size={20} />
         </div>
-        <h3 className="font-black text-xl text-slate-800 uppercase tracking-tight">Gestão de Banners de Aviso</h3>
+        <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Banners de Aviso</h3>
       </div>
 
-      <div className="bg-slate-50/50 rounded-[2rem] p-6 mb-8 border border-slate-100">
+      <div className="bg-slate-50/50 rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 mb-5 border border-slate-100">
         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-4 ml-1">Criar Novo Aviso</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="space-y-1">

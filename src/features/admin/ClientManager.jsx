@@ -85,22 +85,22 @@ const ClientManagerContent = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-black flex items-center gap-3"><Briefcase size={32} className="text-indigo-600" /> Gestão Comercial</h2>
-        <div className="flex items-center gap-4">
+      <div className="flex justify-between items-center gap-3 mb-5">
+        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Briefcase size={22} className="text-indigo-600" /> Gestão Comercial</h2>
+        <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
             <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Voltar' : 'Registar Cliente'}</button>
+          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Voltar' : 'Novo'}</button>
         </div>
       </div>
 
       {isAddingInTab && (
-        <div className="mb-10 bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-          <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-6">
-            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-              <Building2 className="text-indigo-600" size={28} />
+        <div className="mb-6 bg-white p-4 sm:p-6 lg:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+            <h3 className="text-lg sm:text-2xl font-black text-slate-800 flex items-center gap-2">
+              <Building2 className="text-indigo-600" size={22} />
               {clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}
             </h3>
             <button onClick={() => setIsAddingInTab(false)} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-wider bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-xl">

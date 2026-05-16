@@ -316,25 +316,25 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 border-b border-slate-50 pb-6">
+    <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-slate-50 pb-4">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
             <FileText size={20} />
           </div>
-          <h3 className="font-black text-xl text-slate-800 uppercase tracking-tight">Centro de Documentos</h3>
+          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Centro de Documentos</h3>
         </div>
 
-        <div className="flex bg-slate-50 p-1 rounded-2xl border border-slate-100 self-start md:self-auto">
+        <div className="flex bg-slate-50 p-1 rounded-xl border border-slate-100 self-start sm:self-auto">
           <button
             onClick={() => setActiveSubTab('documentos')}
-            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'documentos' ? 'bg-white text-indigo-600 shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`px-3 sm:px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'documentos' ? 'bg-white text-indigo-600 shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}`}
           >
             Documentos
           </button>
           <button
             onClick={() => setActiveSubTab('templates')}
-            className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`px-3 sm:px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === 'templates' ? 'bg-white text-indigo-600 shadow-sm scale-105' : 'text-slate-400 hover:text-slate-600'}`}
           >
             Templates
           </button>

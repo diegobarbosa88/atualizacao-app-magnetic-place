@@ -74,9 +74,9 @@ const ScheduleManagerContent = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-black flex items-center gap-3"><Timer size={32} className="text-indigo-600" /> Turnos Magnetic</h2>
-        <div className="flex items-center gap-4">
+      <div className="flex justify-between items-center gap-3 mb-5">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2"><Timer size={22} className="text-indigo-600" /> Turnos Magnetic</h2>
+        <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
             <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setSchedulesView('list')} className={`p-2 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
@@ -86,7 +86,7 @@ const ScheduleManagerContent = () => {
       </div>
 
       {isAddingInTab && (
-        <div className="mb-10 bg-white p-6 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
+        <div className="mb-6 bg-white p-4 sm:p-6 lg:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-100 pb-6 gap-4">
             <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
               <Timer className="text-indigo-600" size={28} />
@@ -100,7 +100,7 @@ const ScheduleManagerContent = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {/* COLUNA 1: Configuração do Horário */}
             <div className="lg:col-span-1 space-y-6">
               <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 space-y-6">

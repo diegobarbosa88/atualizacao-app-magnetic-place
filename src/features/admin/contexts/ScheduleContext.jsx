@@ -13,7 +13,7 @@ export const ScheduleProvider = ({ children }) => {
   const { schedules, workers, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
-  const [schedulesView, setSchedulesView] = useState('list');
+  const [schedulesView, setSchedulesView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
   const [schedulesSort, setSchedulesSort] = useState({ key: 'name', direction: 'asc' });
   const [scheduleForm, setScheduleForm] = useState(INITIAL_SCHEDULE_FORM);
 

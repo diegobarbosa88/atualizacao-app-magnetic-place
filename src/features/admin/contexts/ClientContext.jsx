@@ -24,7 +24,7 @@ export const ClientProvider = ({ children }) => {
   const { clients, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
-  const [clientsView, setClientsView] = useState('list');
+  const [clientsView, setClientsView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
   const [clientsSort, setClientsSort] = useState({ key: 'name', direction: 'asc' });
   const [clientForm, setClientForm] = useState(INITIAL_CLIENT_FORM);
 

@@ -156,9 +156,9 @@ const TeamManagerContent = ({ onLogin }) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-black flex items-center gap-3"><Users size={32} className="text-indigo-600" /> Gestão de Colaboradores</h2>
-        <div className="flex items-center gap-4">
+      <div className="flex justify-between items-center gap-3 mb-5">
+        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Users size={22} className="text-indigo-600" /> Gestão de Colaboradores</h2>
+        <div className="flex items-center gap-2">
           {inactiveCount > 0 && (
             <label className="flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer">
               <input
@@ -174,15 +174,15 @@ const TeamManagerContent = ({ onLogin }) => {
             <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Fechar Form' : 'Novo Trabalhador'}</button>
+          <button onClick={() => { setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Fechar' : 'Novo'}</button>
         </div>
       </div>
 
       {isAddingInTab && (
-        <div className="mb-10 bg-white p-8 md:p-10 rounded-[2.5rem] shadow-xl border border-slate-100">
-          <div className="flex justify-between items-center mb-8 border-b border-slate-100 pb-6">
-            <h3 className="text-2xl font-black text-slate-800 flex items-center gap-3">
-              <UserCircle className="text-indigo-600" size={28} />
+        <div className="mb-6 bg-white p-4 sm:p-6 lg:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
+          <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+            <h3 className="text-lg sm:text-2xl font-black text-slate-800 flex items-center gap-2">
+              <UserCircle className="text-indigo-600" size={22} />
               {workerForm.id ? 'Editar Colaborador' : 'Novo Colaborador'}
             </h3>
             <button onClick={() => setIsAddingInTab(false)} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-wider bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-xl">

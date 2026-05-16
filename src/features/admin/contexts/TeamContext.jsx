@@ -62,7 +62,7 @@ export const TeamProvider = ({ children }) => {
   const { workers, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
-  const [workersView, setWorkersView] = useState('list');
+  const [workersView, setWorkersView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
   const [workersSort, setWorkersSort] = useState({ key: 'name', direction: 'asc' });
   const [workerForm, setWorkerForm] = useState(INITIAL_WORKER_FORM);
 
