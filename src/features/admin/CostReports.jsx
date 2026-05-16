@@ -516,10 +516,9 @@ const CostReports = () => {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2">
-            <FileText size={20} className="text-indigo-600" /> {getTitle()}
-          </h2>
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileText size={20} /></div>
+          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">{getTitle()}</h3>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {activeTab === 'expenses' && (

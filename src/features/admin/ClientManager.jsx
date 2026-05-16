@@ -86,7 +86,10 @@ const ClientManagerContent = () => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center gap-3 mb-5">
-        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Briefcase size={22} className="text-indigo-600" /> Gestão Comercial</h2>
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Briefcase size={20} /></div>
+          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão Comercial</h3>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
             <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
@@ -237,31 +240,35 @@ const ClientManagerContent = () => {
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedClients.map(c => (
-            <div key={c.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-md hover:shadow-lg hover:border-indigo-200 hover:-translate-y-1 transition-all duration-300">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl text-indigo-600">
-                  <Briefcase size={24} />
+            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+              {/* Header */}
+              <div className="flex justify-between items-start mb-3">
+                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 text-indigo-600 border-indigo-200 bg-indigo-50">
+                  <Briefcase size={10} /> Cliente
                 </div>
-                <div className="flex gap-2">
-                  <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Ver histórico">📊</button>
-                  <button onClick={() => { openEditClient(c); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
-                  {confirmDeleteClientId === c.id ? (
-                    <>
-                      <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                      <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
-                    </>
-                  ) : (
-                    <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
-                  )}
-                </div>
+                <span className="text-[9px] font-black text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full">{c.valorHora ? `${c.valorHora}€/h` : 'N/A'}</span>
               </div>
-              <h4 className="text-xl font-black text-indigo-700 mb-1">{c.name}</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-4 mb-4">{c.nif || 'Sem NIF'}</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><MapPin size={12} /> {c.morada || 'Sem morada'}</div>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Euro size={12} /> Valor/h: <span className="text-indigo-600">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</span></div>
+              {/* Name */}
+              <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{c.name}</h4>
+              <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.nif || 'Sem NIF'}</p>
+              {/* Info */}
+              <div className="text-[10px] text-slate-400 font-bold space-y-1 mb-3 border-t border-slate-50 pt-2">
+                <div className="flex items-center gap-1.5"><MapPin size={10} /> {c.morada || 'Sem morada'}</div>
+              </div>
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100">📊 Histórico</button>
+                <button onClick={() => { openEditClient(c); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-amber-600 hover:bg-amber-50 rounded-xl text-[10px] font-black uppercase transition-all border border-amber-100"><Edit2 size={12} /> Editar</button>
+                {confirmDeleteClientId === c.id ? (
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                    <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-slate-100"><Trash2 size={12} /></button>
+                )}
               </div>
             </div>
           ))}

@@ -64,9 +64,9 @@ const ValidationPortal = ({
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2"><ShieldCheck size={22} className="text-indigo-600" /> Portal de Validação</h2>
-          <p className="text-slate-400 text-xs mt-1">Aprovações, correções e links externos.</p>
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><ShieldCheck size={20} /></div>
+          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Portal de Validação</h3>
         </div>
         <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-slate-100">
           <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all text-slate-400"><ChevronLeft size={15} /></button>

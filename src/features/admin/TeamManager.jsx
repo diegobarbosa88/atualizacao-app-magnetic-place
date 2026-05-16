@@ -157,7 +157,10 @@ const TeamManagerContent = ({ onLogin }) => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center gap-3 mb-5">
-        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2"><Users size={22} className="text-indigo-600" /> Gestão de Colaboradores</h2>
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Users size={20} /></div>
+          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Colaboradores</h3>
+        </div>
         <div className="flex items-center gap-2">
           {inactiveCount > 0 && (
             <label className="flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer">
@@ -423,30 +426,18 @@ const TeamManagerContent = ({ onLogin }) => {
                     </div>
                   </td>
                   <td className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => loadEmploymentHistory(w.id, w.name)}
-                        className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        title="Períodos de emprego"
-                      >
-                        📅
-                      </button>
-                      <button 
-                        onClick={() => loadWorkerValorHoraHistory(w.id, w.name)}
-                        className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        title="Histórico de valor"
-                      >
-                        📊
-                      </button>
-                      <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={16} /></button>
-                      <button onClick={() => { openEditWorker(w); }} className="p-2.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={16} /></button>
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all text-xs" title="Períodos de emprego">📅</button>
+                      <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all text-xs" title="Histórico de valor">📊</button>
+                      <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal"><Search size={13} /></button>
+                      <button onClick={() => { openEditWorker(w); }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
                       {confirmDeleteWorkerId === w.id ? (
                         <div className="flex items-center gap-1">
                           <button onClick={() => { handleDeleteWorker(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
                           <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
                         </div>
                       ) : (
-                        <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={16} /></button>
+                        <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                       )}
                     </div>
                   </td>
@@ -456,48 +447,46 @@ const TeamManagerContent = ({ onLogin }) => {
           </table>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedWorkers.map(w => (
-            <div key={w.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:border-indigo-200 transition-all">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600"><UserCircle size={24} /></div>
-                <div className="flex gap-2">
-                  <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Períodos de emprego">📅</button>
-                  <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-2 text-slate-400 hover:text-indigo-600 transition-all" title="Histórico de valor">📊</button>
-                  <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal do Trabalhador"><Search size={14} /></button>
-                  <button onClick={() => { openEditWorker(w); }} className="p-2 text-slate-400 hover:text-amber-500 transition-all" title="Editar"><Edit2 size={14} /></button>
-                  {confirmDeleteWorkerId === w.id ? (
-                    <>
-                      <button onClick={() => { handleDeleteWorker(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                      <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
-                    </>
-                  ) : (
-                    <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-2 text-slate-400 hover:text-red-500 transition-all" title="Apagar"><Trash2 size={14} /></button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {sortedWorkers.map(w => {
+            const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
+            return (
+              <div key={w.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+                {/* Header */}
+                <div className="flex justify-between items-start mb-3">
+                  <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
+                    {w.status !== 'inativo' && <CheckCircle size={10} />}
+                    {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-indigo-100" title="Ver Portal"><Search size={12} /></button>
+                    <button onClick={() => { openEditWorker(w); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
+                    <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
+                    <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
+                    {confirmDeleteWorkerId === w.id ? (
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => { handleDeleteWorker(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                        <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
+                    )}
+                  </div>
+                </div>
+                {/* Name */}
+                <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{w.name}</h4>
+                <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{w.profissao || 'Staff'}</p>
+                {/* Info */}
+                <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
+                  <div className="flex items-center gap-1.5"><Timer size={10} /> {schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</div>
+                  <div className="flex items-center gap-1.5"><Briefcase size={10} /> {clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</div>
+                  {workerApproval && (
+                    <div className="flex items-center gap-1 pt-1"><CheckCircle size={10} className="text-emerald-500" /><span className="text-emerald-600">Aprovado</span></div>
                   )}
                 </div>
               </div>
-              <h4 className="text-xl font-black text-indigo-700 mb-1">{w.name}</h4>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b pb-4 mb-4">{w.profissao || 'Staff'}</p>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Timer size={12} /> Horário: <span className="text-indigo-600">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</span></div>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500"><Briefcase size={12} /> Unidade: <span className="text-indigo-600">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</span></div>
-                <div className="flex items-center gap-2 text-xs font-bold text-slate-500 mt-2 border-t border-slate-100 pt-2">
-                  <CheckCircle size={12} /> Mês ({currentMonthStr}):
-                  {(() => {
-                    const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
-                    return workerApproval ? (
-                      <span className="flex items-center gap-2 text-emerald-500 font-black bg-emerald-50 px-2 py-0.5 rounded">
-                        Aprovado ({new Date(workerApproval.timestamp).toLocaleDateString('pt-PT')})
-                        <button onClick={() => handleDelete('approvals', workerApproval.id)} className="text-rose-400 hover:text-rose-600 bg-white rounded-full p-1 shadow-sm ml-1" title="Desbloquear Mês"><Unlock size={10} /></button>
-                      </span>
-                    ) : (
-                      <span className="text-amber-500 font-black bg-amber-50 px-2 py-0.5 rounded">Pendente</span>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

@@ -448,7 +448,10 @@ function AdminDashboard(props) {
           {!auditWorkerId && activeTab === 'overview' && (
             <div className="animate-in fade-in duration-500 space-y-4 sm:space-y-6 lg:space-y-8">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-8">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 flex items-center gap-2 sm:gap-3"><LayoutGrid size={24} className="text-indigo-600 sm:hidden" /><LayoutGrid size={28} className="text-indigo-600 hidden sm:block" /> Dashboard Geral</h2>
+                <div className="flex items-center gap-3">
+                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><LayoutGrid size={20} /></div>
+                  <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Dashboard Geral</h3>
+                </div>
                 <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
                   <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronLeft size={16} /></button>
                   <span className="font-bold text-sm uppercase tracking-widest text-indigo-600 min-w-[120px] text-center">
@@ -688,7 +691,10 @@ function AdminDashboard(props) {
 {!auditWorkerId && activeTab === 'reports' && (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 sm:space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-800 flex items-center gap-2"><FileText size={22} className="text-indigo-600" /> Folhas de Horas para Clientes</h2>
+                <div className="flex items-center gap-3">
+                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileText size={20} /></div>
+                  <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Folhas de Horas para Clientes</h3>
+                </div>
               </div>
 
               {/* KPI Cards */}

@@ -532,14 +532,9 @@ const CorrectionsInbox = () => {
 
   return (
     <div className="p-6 md:p-8 bg-slate-50 min-h-screen">
-      <header className="mb-8 flex items-center gap-4">
-        <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center">
-          <AlertCircle size={24} />
-        </div>
-        <div>
-          <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Inbox de Correções</h2>
-          <p className="text-sm font-medium text-slate-400">{counts.open} aberta{counts.open !== 1 ? 's' : ''} • {counts.applied} aplicada{counts.applied !== 1 ? 's' : ''} • {counts.rejected} rejeitada{counts.rejected !== 1 ? 's' : ''}</p>
-        </div>
+      <header className="mb-8 flex items-center gap-3">
+        <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><AlertCircle size={20} /></div>
+        <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Inbox de Correções</h3>
       </header>
 
       <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">

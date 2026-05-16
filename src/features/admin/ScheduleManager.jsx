@@ -75,7 +75,10 @@ const ScheduleManagerContent = () => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center gap-3 mb-5">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2"><Timer size={22} className="text-indigo-600" /> Turnos Magnetic</h2>
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Timer size={20} /></div>
+          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Turnos Magnetic</h3>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
             <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
