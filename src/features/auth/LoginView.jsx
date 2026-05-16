@@ -94,17 +94,19 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
           <div className="flex justify-center mb-6">
             <CompanyLogo className="h-32 w-32 object-contain drop-shadow-xl" />
           </div>
-          <h1 className="text-2xl font-black tracking-tighter uppercase">{systemSettings.companyName}</h1>
+          <div className="flex justify-center">
+            <h1 className="text-[11px] font-black tracking-[0.2em] uppercase whitespace-nowrap text-slate-800">MAGNETIC PLACE</h1>
+          </div>
           <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">Acesso ao Sistema</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Utilizador</label>
-            <div className="relative"><UserCircle className="absolute left-4 top-4 text-slate-300" size={20} /><input type="text" value={user} onChange={e => setUser(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="ex: joaosilva" required /></div>
+            <div className="relative"><UserCircle className="absolute left-4 top-4 text-slate-300" size={20} /><input type="text" value={user} onChange={e => setUser(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="ex: joaosilva" autoCapitalize="none" autoCorrect="off" required /></div>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Senha</label>
-            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" required /></div>
+            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" inputMode="numeric" required /></div>
           </div>
           {error && <div className="p-4 bg-red-50 text-red-500 text-xs font-bold rounded-2xl flex items-center gap-3 animate-pulse"><AlertCircle size={16} /> {error}</div>}
           <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-slate-800 active:scale-95 transition-all">Entrar</button>
@@ -157,6 +159,11 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
         </form>
       </div>
 
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        .animate-bounce-subtle { animation: bounce-subtle 3s infinite ease-in-out; }
+      `}} />
     </div>
   );
 };
