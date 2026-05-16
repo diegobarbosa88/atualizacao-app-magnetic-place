@@ -132,54 +132,40 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
         try {
             // 1. Aplicar as alterações nos LOGS originais e atualizar estado local
+            // Fase 1: recolher operações e gerar IDs únicos antes de paralelizar
+            const updates = [];
+            const inserts = [];
             for (const w of changes) {
                 for (const d of w.dailyRecords) {
-                    // Procurar o log original
-                    // Usar workerId e clientId normalizados como string para comparação
                     const targetWorkerId = String(w.id);
                     const targetClientId = String(initialClientId);
                     const targetDate = d.date || d.dateLabel || d.rawDate;
-
                     const originalLog = logs.find(l =>
                         String(l.workerId || l.worker_id) === targetWorkerId &&
                         l.date === targetDate &&
                         String(l.clientId || l.client_id) === targetClientId
                     );
-
+                    const entry = (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry);
+                    const exit  = (d.adminExit  || d.editedExit  || d.newExit)  === '--:--' ? null : (d.adminExit  || d.editedExit  || d.newExit);
                     if (originalLog) {
-                        const updatedLog = {
-                            ...originalLog,
-                            startTime: (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry),
-                            endTime: (d.adminExit || d.editedExit || d.newExit) === '--:--' ? null : (d.adminExit || d.editedExit || d.newExit),
-                            breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart,
-                            breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd,
-                            hours: d.adminHours || d.editedHours || d.newHours
-                        };
-                        await saveToDb('logs', originalLog.id, updatedLog);
-
-                        setLogs(prev => prev.map(l =>
-                            l.id === originalLog.id ? { ...l, ...updatedLog } : l
-                        ));
+                        updates.push({ id: originalLog.id, data: { ...originalLog, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours } });
                     } else {
-                        // Se o log não existia, criar um novo
-                        const newId = `log_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-                        const newLog = {
-                            id: newId,
-                            date: targetDate,
-                            workerId: targetWorkerId,
-                            clientId: targetClientId,
-                            startTime: (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry),
-                            endTime: (d.adminExit || d.editedExit || d.newExit) === '--:--' ? null : (d.adminExit || d.editedExit || d.newExit),
-                            breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart,
-                            breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd,
-                            hours: d.adminHours || d.editedHours || d.newHours,
-                            created_at: new Date().toISOString()
-                        };
-                        await saveToDb('logs', newId, newLog);
-                        setLogs(prev => [...prev, newLog]);
+                        const newLogId = `log_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+                        inserts.push({ id: newLogId, data: { id: newLogId, date: targetDate, workerId: targetWorkerId, clientId: targetClientId, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours, created_at: new Date().toISOString() } });
                     }
                 }
             }
+            // Fase 2: persistir em paralelo
+            await Promise.all([
+                ...updates.map(u => saveToDb('logs', u.id, u.data)),
+                ...inserts.map(i => saveToDb('logs', i.id, i.data)),
+            ]);
+            // Fase 3: um único setLogs consolidado para evitar batching incorrecto
+            setLogs(prev => {
+                const updateMap = new Map(updates.map(u => [u.id, u.data]));
+                const updated = prev.map(l => updateMap.has(l.id) ? { ...l, ...updateMap.get(l.id) } : l);
+                return [...updated, ...inserts.map(i => i.data)];
+            });
 
             // 2. Notificar o administrador que o cliente aceitou e os dados foram aplicados
             const timestamp = Date.now();

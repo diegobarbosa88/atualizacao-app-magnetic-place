@@ -140,37 +140,45 @@ export async function applyCorrection(supabase, { correction, items, logs, revie
 
   const resolvedItems = items.filter((it) => it.item_status === 'accepted' || it.item_status === 'edited');
 
-  for (const it of resolvedItems) {
-    const final = it.final || it.proposed;
-    if (!final) continue;
-    const existing = logs.find(
-      (l) => String(l.workerId) === String(it.worker_id) && l.date === it.date
-    );
-    if (existing) {
-      const { error } = await supabase.from('logs').upsert({
-        ...existing,
-        startTime: normalizeTime(final.startTime),
-        endTime: normalizeTime(final.endTime),
-        breakStart: normalizeTime(final.breakStart),
-        breakEnd: normalizeTime(final.breakEnd),
-        hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
-      }, { onConflict: 'id' });
-      if (error) throw error;
-    } else if (final.startTime && final.endTime && it.date) {
-      const logId = newId('l');
-      const { error } = await supabase.from('logs').insert({
-        id: logId,
-        workerId: String(it.worker_id),
-        clientId: String(correction.client_id),
-        date: it.date,
-        startTime: normalizeTime(final.startTime),
-        endTime: normalizeTime(final.endTime),
-        breakStart: normalizeTime(final.breakStart),
-        breakEnd: normalizeTime(final.breakEnd),
-        hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
-      });
-      if (error) throw error;
-    }
+  const results = await Promise.allSettled(
+    resolvedItems.map(async (it) => {
+      const final = it.final || it.proposed;
+      if (!final) return;
+      const existing = logs.find(
+        (l) => String(l.workerId) === String(it.worker_id) && l.date === it.date
+      );
+      if (existing) {
+        const { error } = await supabase.from('logs').upsert({
+          ...existing,
+          startTime: normalizeTime(final.startTime),
+          endTime: normalizeTime(final.endTime),
+          breakStart: normalizeTime(final.breakStart),
+          breakEnd: normalizeTime(final.breakEnd),
+          hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
+        }, { onConflict: 'id' });
+        if (error) throw error;
+      } else if (final.startTime && final.endTime && it.date) {
+        const logId = newId('l');
+        const { error } = await supabase.from('logs').insert({
+          id: logId,
+          workerId: String(it.worker_id),
+          clientId: String(correction.client_id),
+          date: it.date,
+          startTime: normalizeTime(final.startTime),
+          endTime: normalizeTime(final.endTime),
+          breakStart: normalizeTime(final.breakStart),
+          breakEnd: normalizeTime(final.breakEnd),
+          hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
+        });
+        if (error) throw error;
+      }
+    })
+  );
+
+  const failed = results.filter((r) => r.status === 'rejected');
+  if (failed.length > 0) {
+    const reasons = failed.map((r) => r.reason?.message || String(r.reason)).join('; ');
+    throw new Error(`Falha ao aplicar ${failed.length} item(ns): ${reasons}`);
   }
 
   const { error: e2 } = await supabase
