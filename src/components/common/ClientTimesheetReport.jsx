@@ -28,6 +28,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
   const scaleContentRef = useRef(null);
   const [autoScale, setAutoScale] = useState(1);
   const [manualZoom, setManualZoom] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
   const scale = manualZoom ?? autoScale;
 
   useEffect(() => {
@@ -195,7 +196,20 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
     };
 }, [reportUnits, daysInMonthList, month]);
 
+  const handlePrint = () => {
+    const prev = manualZoom;
+    setIsExporting(true);
+    setTimeout(() => {
+      window.print();
+      setIsExporting(false);
+      setManualZoom(prev);
+    }, 50);
+  };
+
   const handleGenerateZip = async () => {
+    const prev = manualZoom;
+    setIsExporting(true);
+    await new Promise(r => setTimeout(r, 50));
     setIsZipping(true);
     try {
       const JSZipLib = (await import('jszip')).default;
@@ -281,6 +295,8 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
       alert('Ocorreu um erro ao processar os PDFs. Tente novamente.');
     } finally {
       setIsZipping(false);
+      setIsExporting(false);
+      setManualZoom(prev);
     }
   };
 
@@ -299,7 +315,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
                 <button id="magnetic-zip-btn" onClick={handleGenerateZip} disabled={isZipping} className="px-5 py-2.5 bg-emerald-600 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50">
                   {isZipping ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />} ZIP
                 </button>
-                <button onClick={() => window.print()} className="px-5 py-2.5 bg-slate-900 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-all"><Printer size={16} /> PDF/Imprimir</button>
+                <button onClick={handlePrint} className="px-5 py-2.5 bg-slate-900 text-white font-black text-xs uppercase rounded-xl shadow-lg flex items-center gap-2 hover:bg-slate-800 transition-all"><Printer size={16} /> PDF/Imprimir</button>
               </div>
             </div>
 
@@ -351,10 +367,10 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Sem registos para este período.</div>
         )}
 
-        <div style={isEmbedded ? { display: 'flex', justifyContent: 'center' } : undefined}>
+        <div style={(isEmbedded && !isExporting) ? { display: 'flex', justifyContent: 'center' } : undefined}>
         <div
           ref={isEmbedded ? scaleContentRef : null}
-          style={isEmbedded ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
+          style={(isEmbedded && !isExporting) ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
         >
         {reportUnits.map((unit, idx) => (
           <div key={`${unit.id}-${idx}`} id={`report-unit-${idx}`} className="a4-paper">
