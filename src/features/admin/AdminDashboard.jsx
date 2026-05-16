@@ -865,11 +865,13 @@ function AdminDashboard(props) {
                       />
                       <button
                         onClick={() => {
-                          const newPass = document.getElementById('new-admin-pass').value;
+                          const passEl = document.getElementById('new-admin-pass');
+                          if (!passEl) return;
+                          const newPass = passEl.value;
                           if (!newPass) return;
                           setSystemSettings(prev => ({ ...prev, adminPassword: newPass }));
                           alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.');
-                          document.getElementById('new-admin-pass').value = '';
+                          passEl.value = '';
                         }}
                         className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-slate-800 transition-all"
                       >
@@ -889,7 +891,8 @@ function AdminDashboard(props) {
                         />
                         <button
                           onClick={() => {
-                            const key = document.getElementById('gemini-api-key').value.trim();
+                            const keyEl = document.getElementById('gemini-api-key');
+                            const key = keyEl ? keyEl.value.trim() : '';
                             setSystemSettings(prev => ({ ...prev, geminiApiKey: key }));
                             alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.');
                           }}
