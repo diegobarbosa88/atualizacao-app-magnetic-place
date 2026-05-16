@@ -62,6 +62,21 @@ export default function App() {
     link.href = 'MAGNETIC (3).png';
   }, []);
 
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  useEffect(() => {
+    const currentVersion = __APP_VERSION__;
+    const check = async () => {
+      try {
+        const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
+        const { version } = await res.json();
+        if (version !== currentVersion) setUpdateAvailable(true);
+      } catch {}
+    };
+    check();
+    const interval = setInterval(check, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [activeTab, setActiveTab] = useState('overview');
   const [portalMonth, setPortalMonth] = useState(new Date());
   const [portalSubTab, setPortalSubTab] = useState('envios');
@@ -273,6 +288,17 @@ export default function App() {
 
   return (
     <div className="text-slate-900 bg-slate-50 min-h-screen font-sans">
+      {updateAvailable && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-indigo-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+          <p className="text-sm font-bold">Nova versão disponível</p>
+          <button
+            onClick={() => window.location.reload(true)}
+            className="px-4 py-1.5 bg-white text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all shrink-0"
+          >
+            Atualizar
+          </button>
+        </div>
+      )}
       {(view === 'admin' || view === 'worker') && currentUser && myNotifications.length > 0 && (
         <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
           {myNotifications.map(notif => (

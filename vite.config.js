@@ -2,9 +2,27 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import fs from 'fs'
+import path from 'path'
+
+const buildVersion = Date.now().toString();
+
+const versionPlugin = {
+  name: 'version-plugin',
+  buildStart() {
+    fs.writeFileSync(
+      path.resolve('public/version.json'),
+      JSON.stringify({ version: buildVersion })
+    );
+  }
+};
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(buildVersion),
+  },
   plugins: [
+    versionPlugin,
     react(),
     tailwindcss(),
     VitePWA({
@@ -38,6 +56,7 @@ export default defineConfig({
       },
       workbox: {
         clientsClaim: true,
+        globIgnores: ['version.json'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
