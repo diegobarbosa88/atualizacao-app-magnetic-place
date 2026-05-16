@@ -13,15 +13,21 @@ createRoot(document.getElementById('root')).render(
 )
 
 if ('serviceWorker' in navigator) {
-  let reloading = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
-    reloading = true;
-    window.location.reload();
-  });
-
-  // Verificar novo SW a cada 30 segundos (para sessões longas / PWA instalada)
   navigator.serviceWorker.ready.then(registration => {
-    setInterval(() => registration.update(), 30 * 1000);
+    const checkUpdate = () => registration.update();
+
+    // Verificar update a cada 30s e quando a janela volta ao foco
+    setInterval(checkUpdate, 30 * 1000);
+    window.addEventListener('focus', checkUpdate);
+
+    registration.addEventListener('updatefound', () => {
+      const newSW = registration.installing;
+      if (!newSW) return;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'activated') {
+          window.location.reload();
+        }
+      });
+    });
   });
 }
