@@ -194,7 +194,7 @@ const ClientManagerContent = () => {
           <table className="w-full text-sm">
             <thead><tr className="border-b border-slate-100 bg-slate-50">
               <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Morada</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Morada</th>
               <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
             </tr></thead>
@@ -205,7 +205,7 @@ const ClientManagerContent = () => {
                     <p className="font-black text-slate-800 text-sm uppercase truncate">{c.name}</p>
                     <p className="text-xs text-slate-400">NIF: {c.nif || 'N/A'}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate hidden sm:table-cell">{c.morada || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
                   <td className="px-4 py-3 text-right text-sm font-bold text-indigo-600">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">

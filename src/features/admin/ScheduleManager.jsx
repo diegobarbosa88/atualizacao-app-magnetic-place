@@ -372,9 +372,9 @@ const ScheduleManagerContent = () => {
           <table className="w-full text-sm">
             <thead><tr className="border-b border-slate-100 bg-slate-50">
               <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Horário</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Horário</th>
               <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dias</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">Pausa</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Pausa</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
             </tr></thead>
             <tbody>
@@ -384,7 +384,7 @@ const ScheduleManagerContent = () => {
                     <p className="font-black text-slate-800 text-sm uppercase truncate">{s.name}</p>
                     <p className="text-xs text-slate-400">{(s.assignedWorkers || []).length} Colaboradores</p>
                   </td>
-                  <td className="px-4 py-3 text-sm font-bold text-indigo-600 truncate hidden sm:table-cell">{s.isAdvanced ? 'Múltiplos' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{s.isAdvanced ? 'Múltiplos' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-nowrap gap-1 overflow-x-auto">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
@@ -393,7 +393,7 @@ const ScheduleManagerContent = () => {
                       })}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-sm font-bold text-orange-500 truncate hidden md:table-cell">{s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'} — ${s.breakEnd || '--:--'}`}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'} — ${s.breakEnd || '--:--'}`}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => {

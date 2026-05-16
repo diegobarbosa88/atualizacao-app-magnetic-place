@@ -387,9 +387,9 @@ const TeamManagerContent = ({ onLogin }) => {
           <table className="w-full text-sm">
             <thead><tr className="border-b border-slate-100 bg-slate-50">
               <th onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors hidden sm:table-cell">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors hidden md:table-cell">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:table-cell">Valor/H</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor/H</th>
               <th onClick={() => setWorkersSort(prev => ({ key: 'status', direction: prev.key === 'status' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Acesso {workersSort.key === 'status' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
             </tr></thead>
@@ -400,9 +400,9 @@ const TeamManagerContent = ({ onLogin }) => {
                     <p className="font-black text-slate-800 text-sm uppercase truncate">{w.name}</p>
                     <p className="text-xs text-slate-400">{w.profissao || 'Staff'}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate hidden sm:table-cell">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate hidden md:table-cell">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
-                  <td className="px-4 py-3 text-sm font-bold text-indigo-600 hidden lg:table-cell">{w.valorHora ? `${w.valorHora}€` : 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500">{w.valorHora ? `${w.valorHora}€` : 'N/A'}</td>
                   <td className="px-4 py-3">
                     <select
                       value={w.status || 'ativo'}
