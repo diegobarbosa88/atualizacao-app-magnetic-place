@@ -190,39 +190,34 @@ const ClientManagerContent = () => {
       )}
 
       {clientsView === 'list' ? (
-        <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Morada</th>
-                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Valor Hora {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                <th className="text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-100 bg-slate-50">
+              <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Morada</th>
+              <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+            </tr></thead>
             <tbody>
               {sortedClients.map(c => (
-                <tr key={c.id} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-all even:bg-slate-50/50 last:border-b-0 group">
-                  <td className="relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <p className="font-black text-slate-900 text-sm uppercase truncate">{c.name}</p>
-                    <p className="text-xs text-slate-400 truncate">NIF: {c.nif || 'N/A'}</p>
+                <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-black text-slate-800 text-sm uppercase truncate">{c.name}</p>
+                    <p className="text-xs text-slate-400">NIF: {c.nif || 'N/A'}</p>
                   </td>
-                  <td className="text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
-                  <td className="text-sm text-indigo-600 font-black">
-                    <span>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</span>
-                  </td>
-                  <td className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all text-xs" title="Histórico">📊</button>
-                      <button onClick={() => { openEditClient(c); }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate hidden sm:table-cell">{c.morada || 'N/A'}</td>
+                  <td className="px-4 py-3 text-right text-sm font-bold text-indigo-600">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Histórico">📊</button>
+                      <button onClick={() => { openEditClient(c); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
                       {confirmDeleteClientId === c.id ? (
                         <div className="flex items-center gap-1">
                           <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
                           <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
                         </div>
                       ) : (
-                        <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
+                        <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                       )}
                     </div>
                   </td>

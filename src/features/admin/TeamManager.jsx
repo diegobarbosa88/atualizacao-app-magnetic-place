@@ -383,61 +383,52 @@ const TeamManagerContent = ({ onLogin }) => {
       )}
 
       {workersView === 'list' ? (
-        <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Valor/H</th>
-                <th onClick={() => setWorkersSort(prev => ({ key: 'status', direction: prev.key === 'status' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider cursor-pointer hover:text-indigo-600 transition-colors">Acesso {workersSort.key === 'status' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-                <th className="text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-100 bg-slate-50">
+              <th onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors hidden sm:table-cell">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors hidden md:table-cell">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden lg:table-cell">Valor/H</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'status', direction: prev.key === 'status' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Acesso {workersSort.key === 'status' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+            </tr></thead>
             <tbody>
               {sortedWorkers.map(w => (
-                <tr key={w.id} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-all even:bg-slate-50/50 last:border-b-0 group">
-                  <td className="relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <p className="font-black text-slate-900 text-sm uppercase truncate">{w.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
+                <tr key={w.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-black text-slate-800 text-sm uppercase truncate">{w.name}</p>
+                    <p className="text-xs text-slate-400">{w.profissao || 'Staff'}</p>
                   </td>
-                  <td className="text-sm font-bold text-indigo-600 truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
-                  <td className="text-sm font-bold text-indigo-600 truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
-                  <td className="text-sm font-bold text-indigo-600">
-                    <div className="flex items-center gap-1">
-                      <span>{w.valorHora ? `${w.valorHora}€` : 'N/A'}</span>
-                    </div>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate hidden sm:table-cell">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate hidden md:table-cell">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
+                  <td className="px-4 py-3 text-sm font-bold text-indigo-600 hidden lg:table-cell">{w.valorHora ? `${w.valorHora}€` : 'N/A'}</td>
+                  <td className="px-4 py-3">
+                    <select
+                      value={w.status || 'ativo'}
+                      onChange={e => {
+                        const updated = { ...w, status: e.target.value };
+                        saveToDb('workers', w.id, updated);
+                      }}
+                      className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full border outline-none cursor-pointer ${w.status === 'inativo' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}
+                    >
+                      <option value="ativo">Ativo</option>
+                      <option value="inativo">Inativo</option>
+                    </select>
                   </td>
-                  <td className="">
-                    <div className="flex items-center">
-                      <select
-                        value={w.status || 'ativo'}
-                        onChange={e => {
-                          const updated = { ...w, status: e.target.value };
-                          saveToDb('workers', w.id, updated);
-                        }}
-                        className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full border outline-none transition-all cursor-pointer ${w.status === 'inativo' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-emerald-50 border-emerald-200 text-emerald-600'}`}
-                      >
-                        <option value="ativo">Ativo</option>
-                        <option value="inativo">Inativo</option>
-                      </select>
-                    </div>
-                  </td>
-                  <td className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all text-xs" title="Períodos de emprego">📅</button>
-                      <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all text-xs" title="Histórico de valor">📊</button>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button onClick={() => loadEmploymentHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Períodos de emprego">📅</button>
+                      <button onClick={() => loadWorkerValorHoraHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Histórico de valor">📊</button>
                       <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal"><Search size={13} /></button>
-                      <button onClick={() => { openEditWorker(w); }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
+                      <button onClick={() => { openEditWorker(w); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
                       {confirmDeleteWorkerId === w.id ? (
                         <div className="flex items-center gap-1">
                           <button onClick={() => { handleDeleteWorker(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
                           <button onClick={() => setConfirmDeleteWorkerId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
                         </div>
                       ) : (
-                        <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
+                        <button onClick={() => setConfirmDeleteWorkerId(w.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                       )}
                     </div>
                   </td>

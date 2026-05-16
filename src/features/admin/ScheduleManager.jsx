@@ -368,44 +368,41 @@ const ScheduleManagerContent = () => {
       )}
 
       {schedulesView === 'list' ? (
-        <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Nome</th>
-                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Horário</th>
-                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Dias</th>
-                <th className="text-left text-xs font-bold text-slate-400 uppercase tracking-wider">Pausa</th>
-                <th className="text-right text-xs font-bold text-slate-400 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-slate-100 bg-slate-50">
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Nome</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Horário</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Dias</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">Pausa</th>
+              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+            </tr></thead>
             <tbody>
               {sortedSchedules.map(s => (
-                <tr key={s.id} className="border-b border-slate-100 hover:bg-indigo-50/40 transition-all even:bg-slate-50/50 last:border-b-0 group">
-                  <td className="relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <p className="font-black text-slate-900 text-sm uppercase truncate">{s.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{(s.assignedWorkers || []).length} Colaboradores</p>
+                <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3">
+                    <p className="font-black text-slate-800 text-sm uppercase truncate">{s.name}</p>
+                    <p className="text-xs text-slate-400">{(s.assignedWorkers || []).length} Colaboradores</p>
                   </td>
-                  <td className="text-sm font-bold text-indigo-600 truncate">{s.isAdvanced ? 'Múltiplos' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</td>
-                  <td>
+                  <td className="px-4 py-3 text-sm font-bold text-indigo-600 truncate hidden sm:table-cell">{s.isAdvanced ? 'Múltiplos' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</td>
+                  <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                         const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                        return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-md text-[9px] font-black uppercase">{d.l}</span> : null;
+                        return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[10px] font-black uppercase">{d.l}</span> : null;
                       })}
                     </div>
                   </td>
-                  <td className="text-sm font-bold text-orange-500 truncate">{s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'} — ${s.breakEnd || '--:--'}`}</td>
-                  <td className="text-right">
-                    <div className="flex justify-end gap-1">
+                  <td className="px-4 py-3 text-sm font-bold text-orange-500 truncate hidden md:table-cell">{s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'} — ${s.breakEnd || '--:--'}`}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
                       <button onClick={() => {
                         const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                         setScheduleForm({ ...s, assignedWorkers: assigned });
                         setIsAddingInTab(true);
                         window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
-                      <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
+                      }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
+                      <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                     </div>
                   </td>
                 </tr>
