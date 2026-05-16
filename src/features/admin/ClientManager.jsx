@@ -210,27 +210,19 @@ const ClientManagerContent = () => {
                   </td>
                   <td className="text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
                   <td className="text-sm text-indigo-600 font-black">
-                    <div className="flex items-center gap-1">
-                      <span className="truncate">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</span>
-                      <button 
-                        onClick={() => loadClientValorHoraHistory(c.id, c.name)}
-                        className="ml-1 text-xs text-slate-400 hover:text-indigo-600 p-1 rounded hover:bg-indigo-50"
-                        title="Ver histórico"
-                      >
-                        📊
-                      </button>
-                    </div>
+                    <span>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</span>
                   </td>
                   <td className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <button onClick={() => { openEditClient(c); }} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg transition-all focus:ring-2 focus:ring-amber-200 outline-none" title="Editar"><Edit2 size={16} /></button>
+                    <div className="flex justify-end gap-1">
+                      <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all text-xs" title="Histórico">📊</button>
+                      <button onClick={() => { openEditClient(c); }} className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
                       {confirmDeleteClientId === c.id ? (
                         <div className="flex items-center gap-1">
                           <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
                           <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
                         </div>
                       ) : (
-                        <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all focus:ring-2 focus:ring-red-200 outline-none" title="Apagar"><Trash2 size={16} /></button>
+                        <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                       )}
                     </div>
                   </td>
@@ -248,27 +240,26 @@ const ClientManagerContent = () => {
                 <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 text-indigo-600 border-indigo-200 bg-indigo-50">
                   <Briefcase size={10} /> Cliente
                 </div>
-                <span className="text-[9px] font-black text-slate-400 bg-slate-50 border border-slate-200 px-2 py-1 rounded-full">{c.valorHora ? `${c.valorHora}€/h` : 'N/A'}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico">📊</button>
+                  <button onClick={() => { openEditClient(c); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
+                  {confirmDeleteClientId === c.id ? (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                      <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
+                  )}
+                </div>
               </div>
               {/* Name */}
               <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{c.name}</h4>
               <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.nif || 'Sem NIF'}</p>
               {/* Info */}
-              <div className="text-[10px] text-slate-400 font-bold space-y-1 mb-3 border-t border-slate-50 pt-2">
+              <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
                 <div className="flex items-center gap-1.5"><MapPin size={10} /> {c.morada || 'Sem morada'}</div>
-              </div>
-              {/* Actions */}
-              <div className="flex gap-2">
-                <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100">📊 Histórico</button>
-                <button onClick={() => { openEditClient(c); }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-amber-600 hover:bg-amber-50 rounded-xl text-[10px] font-black uppercase transition-all border border-amber-100"><Edit2 size={12} /> Editar</button>
-                {confirmDeleteClientId === c.id ? (
-                  <div className="flex items-center gap-1">
-                    <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                    <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
-                  </div>
-                ) : (
-                  <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all border border-slate-100"><Trash2 size={12} /></button>
-                )}
+                <div className="flex items-center gap-1.5"><Euro size={10} /> {c.valorHora ? `${c.valorHora}€/h` : 'N/A'}</div>
               </div>
             </div>
           ))}
