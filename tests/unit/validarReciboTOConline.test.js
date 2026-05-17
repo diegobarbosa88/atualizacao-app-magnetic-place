@@ -75,7 +75,36 @@ describe('parseReciboTOConline', () => {
     expect(res.valido).toBe(true);
   });
 
-  it('valido=false quando há divergência maior que 0,02€', () => {
+  it('valido=true para divergência ≤ 0,77€', () => {
+    // 3249 - 136.99 - 0 = 3112.01; líquido no PDF = 3112.50 → divergência=0.49 → válido
+    const text = [
+      'Emitido por TOConline',
+      'Segurança Social (11%)   136,99€',
+      'Total Abonos  Total Descontos  Total a Receber',
+      '3.249,00€  136,99€  3.112,50€',
+    ].join('\n');
+    const res = parseReciboTOConline(text, 3249.00);
+    expect(res.sucesso).toBe(true);
+    expect(res.valido).toBe(true);
+    expect(res.aviso).toBe(false);
+  });
+
+  it('aviso=true para divergência entre 0,77€ e 10€', () => {
+    // 3249 - 136.99 - 0 = 3112.01; líquido no PDF = 3106 → divergência=6.01
+    const text = [
+      'Emitido por TOConline',
+      'Segurança Social (11%)   136,99€',
+      'Total Abonos  Total Descontos  Total a Receber',
+      '3.249,00€  136,99€  3.106,00€',
+    ].join('\n');
+    const res = parseReciboTOConline(text, 3249.00);
+    expect(res.sucesso).toBe(true);
+    expect(res.valido).toBe(false);
+    expect(res.aviso).toBe(true);
+    expect(res.mensagem).toMatch(/Aviso/);
+  });
+
+  it('valido=false e aviso=false quando divergência > 10€', () => {
     const text = [
       'Emitido por TOConline',
       'Segurança Social (11%)   136,99€',
@@ -85,20 +114,8 @@ describe('parseReciboTOConline', () => {
     const res = parseReciboTOConline(text, 3249.00);
     expect(res.sucesso).toBe(true);
     expect(res.valido).toBe(false);
-    expect(res.divergencia).toBeGreaterThan(0.02);
-  });
-
-  it('aceita divergência dentro da margem de 0,02€', () => {
-    // 3249 - 136.99 - 0 = 3112.01; líquido no PDF = 3112.02 → divergência=0.01 → válido
-    const text = [
-      'Emitido por TOConline',
-      'Segurança Social (11%)   136,99€',
-      'Total Abonos  Total Descontos  Total a Receber',
-      '3.249,00€  136,99€  3.112,02€',
-    ].join('\n');
-    const res = parseReciboTOConline(text, 3249.00);
-    expect(res.sucesso).toBe(true);
-    expect(res.valido).toBe(true);
+    expect(res.aviso).toBe(false);
+    expect(res.divergencia).toBeGreaterThan(10);
   });
 
   it('rejeita PDF sem marca TOConline', () => {
@@ -113,7 +130,7 @@ describe('parseReciboTOConline', () => {
     expect(res.mensagem).toMatch(/extrair os totais/i);
   });
 
-  it('mensagem de divergência inclui o valor calculado', () => {
+  it('mensagem de inválido inclui o valor calculado (divergência > 10€)', () => {
     const text = [
       'Emitido por TOConline',
       'Segurança Social (11%)   136,99€',

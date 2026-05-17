@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, Loader2, ReceiptText, Files } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown } from 'lucide-react';
 import {
   validarReciboTOConline,
   extrairPaginasPdf,
@@ -26,6 +26,49 @@ function encontrarWorker(nomeExtraido, workers) {
     ?? workers.find(w => normalizarNome(w.name).includes(n) || n.includes(normalizarNome(w.name)));
 }
 
+// ─── Helpers de estado ────────────────────────────────────────────────────────
+function IconEstado({ r, size = 16 }) {
+  if (!r.sucesso) return <AlertCircle size={size} className="text-amber-500" />;
+  if (r.valido)   return <CheckCircle  size={size} className="text-emerald-500" />;
+  if (r.aviso)    return <AlertTriangle size={size} className="text-yellow-500" />;
+  return                 <XCircle      size={size} className="text-red-500" />;
+}
+
+function estadoBg(r) {
+  if (!r.sucesso) return 'bg-amber-50 border-amber-200';
+  if (r.valido)   return 'bg-emerald-50 border-emerald-200';
+  if (r.aviso)    return 'bg-yellow-50 border-yellow-200';
+  return               'bg-red-50 border-red-200';
+}
+
+function estadoLabel(r) {
+  if (!r.sucesso) return 'Erro';
+  if (r.valido)   return 'Válido';
+  if (r.aviso)    return 'Aviso';
+  return               'Inválido';
+}
+
+// ─── Guardar no Supabase ───────────────────────────────────────────────────────
+async function guardarValidacao(r, extra = {}) {
+  const db = window.supabaseInstance;
+  if (!db) throw new Error('Supabase não disponível');
+  const { error } = await db.from('receipt_validations').insert({
+    worker_id:        extra.worker?.id   ?? r.worker?.id   ?? null,
+    worker_name:      extra.worker?.name ?? r.worker?.name ?? r.nomeExtraido ?? null,
+    mes:              extra.mes  ?? r.mes  ?? null,
+    bruto_plataforma: extra.bruto ?? r.bruto ?? null,
+    abonos_extraidos: r.abonosExtraidos ?? null,
+    ss_extraido:      r.ssExtraido      ?? null,
+    irs_extraido:     r.irsExtraido     ?? null,
+    liquido_extraido: r.liquidoExtraido ?? null,
+    divergencia:      r.divergencia     ?? null,
+    estado:           estadoLabel(r).toLowerCase(),
+    mensagem:         r.mensagem ?? null,
+    origem:           r.origem ?? extra.origem ?? null,
+  });
+  if (error) throw error;
+}
+
 // ─── Modo Individual ──────────────────────────────────────────────────────────
 const ModoIndividual = ({ workers, logs }) => {
   const [workerId, setWorkerId] = useState('');
@@ -35,11 +78,12 @@ const ModoIndividual = ({ workers, logs }) => {
   const [loading, setLoading] = useState(false);
   const [resultado, setResultado] = useState(null);
 
+  const worker = workers.find(w => w.id === workerId) ?? null;
+
   useEffect(() => {
     if (!workerId) { setBruto(''); return; }
     const logsDoMes = logs.filter(l => l.workerId === workerId && l.date?.startsWith(mes));
     const totalHoras = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
-    const worker = workers.find(w => w.id === workerId);
     const custo = totalHoras * (worker?.valorHora || 0);
     setBruto(custo > 0 ? custo.toFixed(2) : '');
     setResultado(null);
@@ -103,7 +147,14 @@ const ModoIndividual = ({ workers, logs }) => {
         {loading ? 'A validar...' : 'Validar Recibo'}
       </button>
 
-      {resultado && <ResultadoCard resultado={resultado} />}
+      {resultado && (
+        <ResultadoCard
+          resultado={resultado}
+          worker={worker}
+          mes={mes}
+          bruto={parseFloat(bruto.replace(',', '.')) || 0}
+        />
+      )}
     </div>
   );
 };
@@ -113,11 +164,17 @@ const ModoLote = ({ workers, logs }) => {
   const [files, setFiles] = useState([]);
   const [resultados, setResultados] = useState([]);
   const [processando, setProcessando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [guardados, setGuardados] = useState(false);
+  const [erroGuardar, setErroGuardar] = useState(null);
+  const [expandido, setExpandido] = useState(null);
 
   const handleFiles = (e) => {
     const fs = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
     setFiles(fs);
     setResultados([]);
+    setGuardados(false);
+    setErroGuardar(null);
   };
 
   const processarPagina = async (text, origem) => {
@@ -137,31 +194,104 @@ const ModoLote = ({ workers, logs }) => {
     if (!files.length) return;
     setProcessando(true);
     setResultados([]);
+    setGuardados(false);
+    setErroGuardar(null);
     const res = [];
     for (const file of files) {
       try {
         const paginas = await extrairPaginasPdf(file);
-        // Cada página com "Emitido por TOConline" é um recibo independente
         const paginasRecibo = paginas.filter(p => p.includes('Emitido por TOConline'));
         if (paginasRecibo.length === 0) {
-          res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, mensagem: 'Documento não reconhecido como recibo TOConline.' });
+          res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, aviso: false, mensagem: 'Documento não reconhecido como recibo TOConline.' });
         } else {
           for (const texto of paginasRecibo) {
             res.push(await processarPagina(texto, file.name));
           }
         }
       } catch (err) {
-        res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, mensagem: `Erro: ${err.message}` });
+        res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, aviso: false, mensagem: `Erro: ${err.message}` });
       }
     }
     setResultados(res);
     setProcessando(false);
   };
 
-  const [expandido, setExpandido] = useState(null);
+  const handleGuardarTodos = async () => {
+    setGuardando(true);
+    setErroGuardar(null);
+    try {
+      await Promise.all(resultados.map(r => guardarValidacao(r)));
+      setGuardados(true);
+    } catch (e) {
+      setErroGuardar(e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleExportarPDF = async () => {
+    const { jsPDF } = await import('jspdf');
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    pdf.setFontSize(15);
+    pdf.setFont(undefined, 'bold');
+    pdf.text('Relatório de Validação de Recibos', 14, 18);
+
+    pdf.setFontSize(8);
+    pdf.setFont(undefined, 'normal');
+    pdf.text(`Gerado em ${new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}`, 14, 25);
+
+    const nValidos   = resultados.filter(r => r.sucesso && r.valido).length;
+    const nAvisos    = resultados.filter(r => r.sucesso && !r.valido && r.aviso).length;
+    const nInvalidos = resultados.filter(r => r.sucesso && !r.valido && !r.aviso).length;
+    const nErros     = resultados.filter(r => !r.sucesso).length;
+    pdf.text(`Total: ${resultados.length}  |  Válidos: ${nValidos}  |  Avisos: ${nAvisos}  |  Inválidos: ${nInvalidos}  |  Erros: ${nErros}`, 14, 32);
+
+    const cols = [
+      { label: 'Trabalhador',   w: 50 },
+      { label: 'Mês',           w: 22 },
+      { label: 'Bruto €',       w: 22 },
+      { label: 'SS €',          w: 18 },
+      { label: 'IRS €',         w: 18 },
+      { label: 'Líquido PDF €', w: 28 },
+      { label: 'Diverg. €',     w: 22 },
+      { label: 'Estado',        w: 20 },
+    ];
+
+    let y = 40;
+    pdf.setFontSize(7);
+    pdf.setFont(undefined, 'bold');
+    let x = 14;
+    cols.forEach(col => { pdf.text(col.label, x, y); x += col.w; });
+    y += 2;
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(14, y, 14 + cols.reduce((a, c) => a + c.w, 0), y);
+    y += 4;
+    pdf.setFont(undefined, 'normal');
+
+    resultados.forEach(r => {
+      const row = [
+        (r.worker?.name ?? r.nomeExtraido ?? '—').slice(0, 30),
+        r.mes !== '—' ? formatarMes(r.mes) : '—',
+        r.bruto > 0 ? r.bruto.toFixed(2) : '—',
+        r.ssExtraido      != null ? r.ssExtraido.toFixed(2)      : '—',
+        r.irsExtraido     != null ? r.irsExtraido.toFixed(2)     : '—',
+        r.liquidoExtraido != null ? r.liquidoExtraido.toFixed(2) : '—',
+        r.divergencia     != null ? r.divergencia.toFixed(2)     : '—',
+        estadoLabel(r),
+      ];
+      x = 14;
+      row.forEach((cell, i) => { pdf.text(String(cell), x, y); x += cols[i].w; });
+      y += 5;
+      if (y > 190) { pdf.addPage(); y = 20; }
+    });
+
+    pdf.save(`validacao-recibos-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
 
   const validos   = resultados.filter(r => r.sucesso && r.valido).length;
-  const invalidos = resultados.filter(r => r.sucesso && !r.valido).length;
+  const avisos    = resultados.filter(r => r.sucesso && !r.valido && r.aviso).length;
+  const invalidos = resultados.filter(r => r.sucesso && !r.valido && !r.aviso).length;
   const erros     = resultados.filter(r => !r.sucesso).length;
 
   return (
@@ -184,10 +314,14 @@ const ModoLote = ({ workers, logs }) => {
 
       {/* Sumário */}
       {resultados.length > 0 && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
             <p className="text-lg font-black text-emerald-600">{validos}</p>
             <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Válidos</p>
+          </div>
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
+            <p className="text-lg font-black text-yellow-600">{avisos}</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-yellow-500">Avisos</p>
           </div>
           <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
             <p className="text-lg font-black text-red-500">{invalidos}</p>
@@ -228,24 +362,14 @@ const ModoLote = ({ workers, logs }) => {
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3 text-center">
-                      {!r.sucesso ? (
-                        <AlertCircle size={16} className="text-amber-500 inline" />
-                      ) : r.valido ? (
-                        <CheckCircle size={16} className="text-emerald-500 inline" />
-                      ) : (
-                        <XCircle size={16} className="text-red-500 inline" />
-                      )}
+                      <IconEstado r={r} />
                     </td>
                   </tr>
 
                   {expandido === i && (
                     <tr className="bg-slate-50">
                       <td colSpan={5} className="px-4 py-4">
-                        <div className={`rounded-xl border p-4 space-y-3 ${
-                          !r.sucesso ? 'bg-amber-50 border-amber-200'
-                          : r.valido  ? 'bg-emerald-50 border-emerald-200'
-                          : 'bg-red-50 border-red-200'
-                        }`}>
+                        <div className={`rounded-xl border p-4 space-y-3 ${estadoBg(r)}`}>
                           <p className="text-xs font-bold text-slate-700">{r.mensagem}</p>
 
                           {r.sucesso && (
@@ -260,9 +384,9 @@ const ModoLote = ({ workers, logs }) => {
                           )}
 
                           {r.sucesso && !r.valido && (
-                            <div className="bg-white rounded-xl px-4 py-2.5 flex items-center justify-between border border-red-100">
+                            <div className={`bg-white rounded-xl px-4 py-2.5 flex items-center justify-between border ${r.aviso ? 'border-yellow-100' : 'border-red-100'}`}>
                               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Divergência</span>
-                              <span className="text-sm font-black text-red-600">{r.divergencia?.toFixed(2)}€</span>
+                              <span className={`text-sm font-black ${r.aviso ? 'text-yellow-600' : 'text-red-600'}`}>{r.divergencia?.toFixed(2)}€</span>
                             </div>
                           )}
 
@@ -282,6 +406,25 @@ const ModoLote = ({ workers, logs }) => {
           </table>
         </div>
       )}
+
+      {/* Ações pós-processamento */}
+      {resultados.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <div className="flex gap-3 justify-end">
+            <button onClick={handleGuardarTodos} disabled={guardando || guardados}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {guardando ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+              {guardados ? 'Guardado' : 'Guardar Todos'}
+            </button>
+            <button onClick={handleExportarPDF}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200">
+              <FileDown size={13} />
+              Exportar PDF
+            </button>
+          </div>
+          {erroGuardar && <p className="text-[10px] text-red-500 text-right">{erroGuardar}</p>}
+        </div>
+      )}
     </div>
   );
 };
@@ -294,42 +437,69 @@ function formatarMes(mesStr) {
 }
 
 // ─── Card de resultado (modo individual) ─────────────────────────────────────
-const ResultadoCard = ({ resultado }) => (
-  <div className={`rounded-2xl border p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
-    !resultado.sucesso ? 'bg-amber-50 border-amber-200'
-    : resultado.valido ? 'bg-emerald-50 border-emerald-200'
-    : 'bg-red-50 border-red-200'
-  }`}>
-    <div className="flex items-center gap-2">
-      {!resultado.sucesso ? <AlertCircle size={20} className="text-amber-500 shrink-0" />
-       : resultado.valido ? <CheckCircle size={20} className="text-emerald-600 shrink-0" />
-       : <XCircle size={20} className="text-red-500 shrink-0" />}
-      <p className="text-sm font-bold text-slate-800">{resultado.mensagem}</p>
+const ResultadoCard = ({ resultado, worker, mes, bruto }) => {
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
+  const [erroGuardar, setErroGuardar] = useState(null);
+
+  const handleGuardar = async () => {
+    setGuardando(true);
+    setErroGuardar(null);
+    try {
+      await guardarValidacao(resultado, { worker, mes, bruto });
+      setGuardado(true);
+    } catch (e) {
+      setErroGuardar(e.message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <div className={`rounded-2xl border p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 ${estadoBg(resultado)}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <IconEstado r={resultado} size={20} />
+          <p className="text-sm font-bold text-slate-800">{resultado.mensagem}</p>
+        </div>
+        {resultado.sucesso && (
+          <button onClick={handleGuardar} disabled={guardado || guardando}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40">
+            {guardando ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+            {guardado ? 'Guardado' : 'Guardar'}
+          </button>
+        )}
+      </div>
+
+      {resultado.sucesso && (
+        <div className="grid grid-cols-3 gap-3">
+          {[['Seg. Social', resultado.ssExtraido], ['IRS', resultado.irsExtraido], ['Líquido', resultado.liquidoExtraido]].map(([label, val]) => (
+            <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+              <p className="text-sm font-black text-slate-800">{val?.toFixed(2)}€</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {resultado.sucesso && !resultado.valido && (
+        <div className={`bg-white rounded-xl p-3 flex items-center justify-between border ${resultado.aviso ? 'border-yellow-100' : 'border-red-100'}`}>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Divergência</span>
+          <span className={`text-sm font-black ${resultado.aviso ? 'text-yellow-600' : 'text-red-600'}`}>{resultado.divergencia?.toFixed(2)}€</span>
+        </div>
+      )}
+
+      {!resultado.sucesso && resultado._textoExtraido && (
+        <details className="mt-2">
+          <summary className="text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none">Texto extraído do PDF (debug)</summary>
+          <pre className="mt-2 text-[10px] text-slate-600 bg-white border border-slate-200 rounded-xl p-3 overflow-auto max-h-60 whitespace-pre-wrap break-all">{resultado._textoExtraido}</pre>
+        </details>
+      )}
+
+      {erroGuardar && <p className="text-[10px] text-red-500">{erroGuardar}</p>}
     </div>
-    {resultado.sucesso && (
-      <div className="grid grid-cols-3 gap-3">
-        {[['Seg. Social', resultado.ssExtraido], ['IRS', resultado.irsExtraido], ['Líquido', resultado.liquidoExtraido]].map(([label, val]) => (
-          <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
-            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-            <p className="text-sm font-black text-slate-800">{val?.toFixed(2)}€</p>
-          </div>
-        ))}
-      </div>
-    )}
-    {resultado.sucesso && !resultado.valido && (
-      <div className="bg-white rounded-xl p-3 flex items-center justify-between border border-red-100">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Divergência</span>
-        <span className="text-sm font-black text-red-600">{resultado.divergencia?.toFixed(2)}€</span>
-      </div>
-    )}
-    {!resultado.sucesso && resultado._textoExtraido && (
-      <details className="mt-2">
-        <summary className="text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none">Texto extraído do PDF (debug)</summary>
-        <pre className="mt-2 text-[10px] text-slate-600 bg-white border border-slate-200 rounded-xl p-3 overflow-auto max-h-60 whitespace-pre-wrap break-all">{resultado._textoExtraido}</pre>
-      </details>
-    )}
-  </div>
-);
+  );
+};
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 const ValidarReciboAdmin = ({ workers = [] }) => {
@@ -338,7 +508,6 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
 
   return (
     <div className="space-y-5">
-      {/* Toggle Individual / Lote */}
       <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl max-w-xs mx-auto">
         {[
           { id: 'individual', icon: ReceiptText, label: 'Individual' },

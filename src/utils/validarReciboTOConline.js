@@ -130,19 +130,26 @@ export function parseReciboTOConline(text, brutoPlataforma) {
   // Validação: apenas SS e IRS entram no cálculo; outros descontos são ignorados
   const liquidoCalculado = brutoPlataforma - ssExtraido - irsExtraido;
   const divergencia      = Math.abs(liquidoCalculado - liquidoExtraido);
-  const valido           = divergencia <= 0.02;
+  const valido           = divergencia <= 0.77;
+  const aviso            = !valido && divergencia <= 10;
+
+  const divStr = divergencia.toFixed(2);
+  const calcStr = liquidoCalculado.toFixed(2);
 
   return {
     sucesso: true,
     valido,
+    aviso,
     abonosExtraidos,
     ssExtraido,
     irsExtraido,
     liquidoExtraido,
-    divergencia: valido ? 0 : parseFloat(divergencia.toFixed(2)),
+    divergencia: valido ? 0 : parseFloat(divStr),
     mensagem: valido
       ? `Recibo válido. ${brutoPlataforma}€ - SS ${ssExtraido}€ - IRS ${irsExtraido}€ = ${liquidoExtraido}€.`
-      : `Divergência de ${divergencia.toFixed(2)}€. Esperado ${liquidoCalculado.toFixed(2)}€, recibo tem ${liquidoExtraido}€.`,
+      : aviso
+        ? `Aviso: divergência de ${divStr}€ (margem tolerada). Esperado ${calcStr}€, recibo tem ${liquidoExtraido}€.`
+        : `Divergência de ${divStr}€. Esperado ${calcStr}€, recibo tem ${liquidoExtraido}€.`,
   };
 }
 
