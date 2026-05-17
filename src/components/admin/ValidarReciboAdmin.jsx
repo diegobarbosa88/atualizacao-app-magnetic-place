@@ -632,10 +632,15 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
       >
         <td className="px-4 py-3">
           <div className="flex items-center gap-2">
-            <ChevronRight size={14} className={`text-slate-400 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
-            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">
-              {formatarDataHora(sessao[0].created_at)}
-            </span>
+            <ChevronRight size={16} className={`text-slate-400 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
+            <div className="flex flex-col">
+              <span className="text-sm font-black text-slate-800 whitespace-nowrap leading-tight">
+                {[...new Set(sessao.map(r => r.mes).filter(Boolean))].map(formatarMes).join(', ') || '—'}
+              </span>
+              <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                Processado a {formatarDataHora(sessao[0].created_at)}
+              </span>
+            </div>
           </div>
         </td>
         <td className="px-4 py-3">
@@ -645,13 +650,13 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
         </td>
         <td className="px-4 py-3">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {nValidos   > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600"><CheckCircle size={11} />{nValidos}</span>}
-              {nAvisos    > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-yellow-600"><AlertTriangle size={11} />{nAvisos}</span>}
-              {nInvalidos > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-red-500"><XCircle size={11} />{nInvalidos}</span>}
-              {nErros     > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-amber-500"><AlertCircle size={11} />{nErros}</span>}
+            <div className="flex items-center gap-3">
+              {nValidos   > 0 && <span className="flex items-center gap-1 text-xs font-black text-emerald-600"><CheckCircle size={15} />{nValidos}</span>}
+              {nAvisos    > 0 && <span className="flex items-center gap-1 text-xs font-black text-yellow-600"><AlertTriangle size={15} />{nAvisos}</span>}
+              {nInvalidos > 0 && <span className="flex items-center gap-1 text-xs font-black text-red-500"><XCircle size={15} />{nInvalidos}</span>}
+              {nErros     > 0 && <span className="flex items-center gap-1 text-xs font-black text-amber-500"><AlertCircle size={15} />{nErros}</span>}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
               <button
                 onClick={async e => {
                   e.stopPropagation();
@@ -660,9 +665,9 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                 }}
                 disabled={adicionandoCustos || adicionadoCustos}
                 title="Adicionar SS e IRS a Custos"
-                className="p-1 rounded text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors disabled:opacity-40"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors disabled:opacity-40"
               >
-                {adicionandoCustos ? <Loader2 size={12} className="animate-spin" /> : <Coins size={12} className={adicionadoCustos ? 'text-emerald-600' : ''} />}
+                {adicionandoCustos ? <Loader2 size={18} className="animate-spin" /> : <Coins size={18} className={adicionadoCustos ? 'text-emerald-600' : ''} />}
               </button>
               <button
                 onClick={async e => {
@@ -673,9 +678,9 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                 }}
                 disabled={apagandoSessao}
                 title="Apagar processamento"
-                className="p-1 rounded text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
               >
-                {apagandoSessao ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                {apagandoSessao ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
               </button>
             </div>
           </div>
