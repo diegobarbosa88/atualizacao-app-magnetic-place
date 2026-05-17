@@ -62,13 +62,21 @@ export async function extrairPaginasPdf(file) {
 
 // Extrai nome do trabalhador e mês a partir do texto do PDF TOConline
 export function extrairMetadadosTOConline(text) {
+  // Mês: "De 1 de Abril 2026"
   const mesMatch = text.match(/De \d+ de (\w+) (\d{4})/i);
   const mes = mesMatch
     ? `${mesMatch[2]}-${MESES_MAP[mesMatch[1].toLowerCase()] ?? '??'}`
     : null;
 
-  const nomeMatch = text.match(/\d{9,}\s+([A-ZÁÀÂÃÉÊÍÓÔÕÚÇÜÑ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇÜÑ\s]+?)\s+[\d.,]+€/);
-  const nome = nomeMatch ? nomeMatch[1].trim() : null;
+  // Nome: campo "Nome: NOME COMPLETO" — o PDF tem ORIGINAL+DUPLICADO na mesma linha,
+  // por isso capturamos tudo entre o primeiro "Nome:" e o segundo "Nome:" (ou fim da linha)
+  let nome = null;
+  const nomeLineMatch = text.match(/Nome:\s*([^\n]+)/);
+  if (nomeLineMatch) {
+    // Remove o duplicado ("NOME Nome: NOME") e descarta o "Nome:" repetido
+    const raw = nomeLineMatch[1].split(/Nome:/)[0].trim();
+    if (raw) nome = raw;
+  }
 
   return { nome, mes };
 }

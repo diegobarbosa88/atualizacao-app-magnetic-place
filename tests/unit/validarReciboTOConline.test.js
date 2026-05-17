@@ -5,7 +5,7 @@ vi.mock('pdfjs-dist', () => ({
   getDocument: vi.fn(),
 }));
 
-import { parseReciboTOConline } from '../../src/utils/validarReciboTOConline.js';
+import { parseReciboTOConline, extrairMetadadosTOConline } from '../../src/utils/validarReciboTOConline.js';
 
 // Formato real do TOConline: labels numa linha, valores na linha seguinte.
 // ORIGINAL + DUPLICADO fundem-se na mesma linha (pdfjs lê por coordenada Y).
@@ -123,5 +123,30 @@ describe('parseReciboTOConline', () => {
     const res = parseReciboTOConline(text, 3249.00);
     expect(res.mensagem).toMatch(/Divergência/);
     expect(res.divergencia).toBeCloseTo(112.01, 1);
+  });
+});
+
+describe('extrairMetadadosTOConline', () => {
+  // Simula texto real: ORIGINAL + DUPLICADO fundidos na mesma linha por coordenada Y
+  const TEXT_REAL = [
+    'De 1 de Abril 2026 De 1 de Abril 2026',
+    'Nome: ANDRE MARCOS SILVA Nome: ANDRE MARCOS SILVA',
+    'Nº Contribuinte: 329434110 Nº Mecanográfico 35',
+  ].join('\n');
+
+  it('extrai nome do campo "Nome:" ignorando o duplicado', () => {
+    const { nome } = extrairMetadadosTOConline(TEXT_REAL);
+    expect(nome).toBe('ANDRE MARCOS SILVA');
+  });
+
+  it('extrai mês e ano no formato YYYY-MM', () => {
+    const { mes } = extrairMetadadosTOConline(TEXT_REAL);
+    expect(mes).toBe('2026-04');
+  });
+
+  it('devolve null quando os campos não existem', () => {
+    const { nome, mes } = extrairMetadadosTOConline('Texto sem campos relevantes');
+    expect(nome).toBeNull();
+    expect(mes).toBeNull();
   });
 });
