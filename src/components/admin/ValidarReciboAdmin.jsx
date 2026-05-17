@@ -1464,7 +1464,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
                     <input type="checkbox" checked={todosSelected} onChange={() => toggleTodos(nifsTodos)}
                       className="rounded accent-indigo-600 cursor-pointer" />
                   </th>
-                  {['Trabalhador','Mês','Bruto','SS','IRS','Líquido','Estado',''].map(h => (
+                  {['Trabalhador','Mês',''].map(h => (
                     <th key={h} className="px-3 py-2.5 text-left font-black text-slate-400 tracking-widest">{h}</th>
                   ))}
                 </tr>
@@ -1486,23 +1486,6 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
                           : <span className="text-red-400 font-black">{r.nomeExtraido ?? r.nome ?? '—'}</span>}
                       </td>
                       <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
-                      <td className="px-3 py-2.5 text-slate-500 text-right">{r.bruto ? r.bruto.toFixed(2) : '—'}</td>
-                      <td className="px-3 py-2.5 text-slate-600 text-right">{r.ssExtraido != null ? r.ssExtraido.toFixed(2) : '—'}</td>
-                      <td className="px-3 py-2.5 text-slate-600 text-right">{r.irsExtraido != null ? r.irsExtraido.toFixed(2) : '—'}</td>
-                      <td className="px-3 py-2.5 text-slate-700 font-black text-right">{r.liquidoExtraido != null ? r.liquidoExtraido.toFixed(2) : '—'}</td>
-                      <td className="px-3 py-2.5">
-                        {!r.sucesso
-                          ? <span className="flex items-center gap-1 text-amber-500 font-black"><AlertCircle size={11} /> Erro</span>
-                          : r.valido
-                            ? <span className="flex items-center gap-1 text-emerald-500 font-black"><CheckCircle size={11} /> Válido</span>
-                            : r.aviso
-                              ? <span className="flex items-center gap-1 text-yellow-500 font-black"><AlertTriangle size={11} /> Aviso</span>
-                              : <span className="flex items-center gap-1 text-red-500 font-black"><XCircle size={11} /> Inválido</span>
-                        }
-                        {r.divergenciaSinal != null && r.divergenciaSinal !== 0 && (
-                          <DivergenciaBadge sinal={r.divergenciaSinal} className="text-[9px] font-black block" />
-                        )}
-                      </td>
                       <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                         <button onClick={() => downloadPdf(r)} title="Guardar PDF"
                           className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">

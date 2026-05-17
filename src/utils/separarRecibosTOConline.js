@@ -1,11 +1,13 @@
 import { PDFDocument } from 'pdf-lib';
 import { extrairPaginasPdf, extrairMetadadosTOConline } from './validarReciboTOConline';
 
-// Apanha 9 dígitos consecutivos após "Contribuinte" + separadores
-const NIF_REGEX = /Contribuinte[^0-9]*(\d{9})/;
+// Prioridade 1: NIF do funcionário (secção "Identificação do funcionário")
+// Prioridade 2: primeiro "Contribuinte" na página (TOConline — sem NIF de empresa)
+const NIF_FUNCIONARIO_REGEX = /Identifica[cç][aã]o do funcion[aá]rio[\s\S]{0,400}?Contribuinte[^0-9]*(\d{9})/i;
+const NIF_REGEX              = /Contribuinte[^0-9]*(\d{9})/;
 
 function extrairNif(texto) {
-  return texto.match(NIF_REGEX)?.[1] ?? null;
+  return texto.match(NIF_FUNCIONARIO_REGEX)?.[1] ?? texto.match(NIF_REGEX)?.[1] ?? null;
 }
 
 function yieldToMain() {
@@ -30,12 +32,14 @@ export async function separarRecibosTOConline(file, onProgresso) {
   const grupos   = new Map(); // nif → { nome, mes, paginas[] }
   const orfaos   = [];
 
+  let ultimoNif = null;
+
   for (let i = 0; i < numPages; i++) {
     await yieldToMain();
     onProgresso?.(i + 1, numPages);
 
     const texto = paginas[i];
-    const nif   = extrairNif(texto);
+    const nif   = extrairNif(texto) ?? ultimoNif;
 
     if (!nif) {
       orfaos.push({ pageIndex: i, texto: texto.slice(0, 200) });
@@ -48,6 +52,7 @@ export async function separarRecibosTOConline(file, onProgresso) {
     }
     grupos.get(nif).paginas.push(i);
     grupos.get(nif).textos.push(texto);
+    ultimoNif = nif;
   }
 
   const resultados = [];
