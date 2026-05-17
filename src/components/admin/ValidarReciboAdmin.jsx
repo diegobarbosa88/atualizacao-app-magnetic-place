@@ -240,6 +240,8 @@ const ModoLote = ({ workers, logs }) => {
     y += 4;
     pdf.setFont(undefined, 'normal');
 
+    const larguraTotal = cols.reduce((a, c) => a + c.w, 0);
+
     resultados.forEach(r => {
       const row = [
         (r.worker?.name ?? r.nomeExtraido ?? '—').slice(0, 30),
@@ -253,11 +255,23 @@ const ModoLote = ({ workers, logs }) => {
           : '—',
         estadoLabel(r),
       ];
+
+      const invalido = r.sucesso && !r.valido && !r.aviso;
+      if (invalido) {
+        pdf.setFillColor(254, 226, 226); // red-100
+        pdf.rect(14, y - 4, larguraTotal, 5, 'F');
+        pdf.setTextColor(185, 28, 28);   // red-700
+      } else {
+        pdf.setTextColor(30, 41, 59);    // slate-800
+      }
+
       x = 14;
       row.forEach((cell, i) => { pdf.text(String(cell), x, y); x += cols[i].w; });
       y += 5;
       if (y > 190) { pdf.addPage(); y = 20; }
     });
+
+    pdf.setTextColor(0, 0, 0);
 
     pdf.save(`validacao-recibos-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
