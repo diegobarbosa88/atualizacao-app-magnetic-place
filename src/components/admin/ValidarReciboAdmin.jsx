@@ -402,8 +402,13 @@ const ModoLote = ({ workers, logs }) => {
                     <td className="px-4 py-3 text-slate-600 font-medium">{r.mes !== '—' ? formatarMes(r.mes) : '—'}</td>
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
-                    <td className="px-4 py-3 text-center">
-                      <IconEstado r={r} />
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-2">
+                        <IconEstado r={r} />
+                        {r.sucesso && r.divergenciaSinal != null && (
+                          <DivergenciaBadge sinal={r.divergenciaSinal} className="text-xs font-bold" />
+                        )}
+                      </div>
                     </td>
                   </tr>
 
@@ -620,7 +625,6 @@ function SessaoRow({ sessao }) {
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">SS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">IRS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Diverg.</th>
                     <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
                   </tr>
                 </thead>
@@ -633,18 +637,18 @@ function SessaoRow({ sessao }) {
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
-                      <td className="px-3 py-2.5 text-right">
-                        {r.liquido_extraido != null && r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null
-                          ? <DivergenciaBadge
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center justify-center gap-2">
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
+                            {ESTADO_PT[r.estado] ?? r.estado}
+                          </span>
+                          {r.liquido_extraido != null && r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null && (
+                            <DivergenciaBadge
                               sinal={parseFloat((Number(r.liquido_extraido) - (Number(r.bruto_plataforma) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
                               className="text-xs font-bold"
                             />
-                          : <span className="text-slate-400">—</span>}
-                      </td>
-                      <td className="px-3 py-2.5 text-center">
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
-                          {ESTADO_PT[r.estado] ?? r.estado}
-                        </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
