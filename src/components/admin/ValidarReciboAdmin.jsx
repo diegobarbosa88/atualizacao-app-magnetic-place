@@ -1,10 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2, Scissors, Upload, TriangleAlert } from 'lucide-react';
 import {
   extrairPaginasPdf,
   extrairMetadadosTOConline,
   parseReciboTOConline,
 } from '../../utils/validarReciboTOConline';
+import {
+  separarRecibosTOConline,
+  associarDocumentoAoTrabalhador,
+} from '../../utils/separarRecibosTOConline';
 import { useApp } from '../../context/AppContext';
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -174,6 +178,10 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   const [adicionado, setAdicionado] = useState(false);
   const [erroAdicionar, setErroAdicionar] = useState(null);
   const [configAberto, setConfigAberto] = useState(false);
+  const [enviandoRecibos, setEnviandoRecibos] = useState(false);
+  const [erroBurst, setErroBurst] = useState(null);
+  const [burstResultados, setBurstResultados] = useState(null);
+  const [selecionadosEnvio, setSelecionadosEnvio] = useState(new Set());
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
   const [tolAvisoLocal,  setTolAvisoLocal]  = useState(String(systemSettings?.toleranciaAviso  ?? 10));
 
@@ -197,6 +205,9 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
     setErroGuardar(null);
     setAdicionado(false);
     setErroAdicionar(null);
+    setErroBurst(null);
+    setBurstResultados(null);
+    setSelecionadosEnvio(new Set());
   };
 
   const processarPagina = async (text, origem) => {
@@ -218,6 +229,9 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
     setResultados([]);
     setGuardados(false);
     setErroGuardar(null);
+    setErroBurst(null);
+
+    // Fase 1: Validação
     const res = [];
     for (const file of files) {
       try {
@@ -234,8 +248,6 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
         res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, aviso: false, mensagem: `Erro: ${err.message}` });
       }
     }
-    // Remove cópias duplicadas (ORIGINAL/DUPLICADO/TRIPLICADO em páginas separadas):
-    // mesmo trabalhador + mesmo mês = mesmo recibo impresso várias vezes
     const seen = new Set();
     const deduplicados = res.filter(r => {
       const key = `${r.worker?.id ?? normalizarNome(r.nomeExtraido ?? '')}|${r.mes}`;
@@ -243,7 +255,6 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
       seen.add(key);
       return true;
     });
-
     setResultados(deduplicados);
     setProcessando(false);
   };
@@ -251,9 +262,10 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   // Agrupa SS + IRS por mês — usado pelo botão "Adicionar a Custos"
   const totaisPorMes = resultados.reduce((acc, r) => {
     if (!r.sucesso || r.mes === '—' || !r.mes) return acc;
-    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0 };
-    acc[r.mes].ss  += r.ssExtraido  ?? 0;
-    acc[r.mes].irs += r.irsExtraido ?? 0;
+    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
+    acc[r.mes].ss        += r.ssExtraido  ?? 0;
+    acc[r.mes].irs       += r.irsExtraido ?? 0;
+    acc[r.mes].ssEmpresa += (r.ssExtraido ?? 0) * (23.75 / 11);
     return acc;
   }, {});
 
@@ -281,6 +293,14 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
             type: 'variável', date: dataMes,
           });
         }
+        if (totais.ssEmpresa > 0) {
+          const id = `e${Date.now()}_sse_${mes}`;
+          await saveToDb('expenses', id, {
+            id, name: `Seg. Social Empresa - ${mesNome}`,
+            amount: parseFloat(totais.ssEmpresa.toFixed(2)),
+            type: 'variável', date: dataMes,
+          });
+        }
       }
       setAdicionado(true);
     } catch (e) {
@@ -303,6 +323,96 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
       setGuardando(false);
     }
   };
+
+
+  const handleIniciarEnvio = async () => {
+    setEnviandoRecibos(true);
+    setErroBurst(null);
+    setBurstResultados(null);
+    try {
+      const supabase = window.supabaseInstance;
+      const workerIdsLista = [...new Set(resultados.map(r => r.worker?.id).filter(Boolean))];
+
+      // Verificar quais já foram enviados na BD
+      const jaEnviados = new Set();
+      if (supabase && workerIdsLista.length) {
+        const { data: docs } = await supabase
+          .from('documents')
+          .select('workerId, nomeFicheiro')
+          .eq('tipo', 'Recibo de Vencimento')
+          .in('workerId', workerIdsLista);
+        (docs ?? []).forEach(d => {
+          const m = d.nomeFicheiro?.match(/recibo_(\d{4}-\d{2})/);
+          if (m) jaEnviados.add(`${d.workerId}|${m[1]}`);
+        });
+      }
+
+      // Burst de todos os ficheiros
+      const todosBurst = [];
+      for (const file of files) {
+        const burst = await separarRecibosTOConline(file);
+        todosBurst.push(...burst.resultados);
+      }
+
+      // Associar cada resultado do burst ao worker validado
+      const filtrados = [];
+      for (const br of todosBurst) {
+        const worker = br.nome ? encontrarWorker(br.nome, workers) : null;
+        if (!worker || !workerIdsLista.includes(worker.id)) continue;
+        if (filtrados.find(f => f.worker?.id === worker.id)) continue;
+        const resValidado = resultados.find(rv => rv.worker?.id === worker.id);
+        const mes = resValidado?.mes ?? br.mes;
+        filtrados.push({
+          ...br, worker, mes,
+          jaEnviado: jaEnviados.has(`${worker.id}|${mes}`),
+        });
+      }
+      if (!filtrados.length) throw new Error('Nenhum trabalhador encontrado no PDF.');
+      setBurstResultados(filtrados);
+      // Pré-selecionar apenas os que ainda não foram enviados
+      setSelecionadosEnvio(new Set(filtrados.filter(r => !r.jaEnviado).map(r => r.nif)));
+    } catch (err) {
+      setErroBurst(err.message);
+    } finally {
+      setEnviandoRecibos(false);
+    }
+  };
+
+  const handleConfirmarEnvio = async () => {
+    const supabase = window.supabaseInstance;
+    if (!supabase || !burstResultados) return;
+    setEnviandoRecibos(true);
+    setErroBurst(null);
+    const selecionados = burstResultados.filter(r => selecionadosEnvio.has(r.nif));
+    const envioMap = new Map();
+    for (const r of selecionados) {
+      try {
+        await associarDocumentoAoTrabalhador({ ...r, supabase });
+        envioMap.set(r.worker.id, { status: 'enviado' });
+      } catch (e) {
+        envioMap.set(r.worker.id, { status: 'erro_envio', error: e.message });
+      }
+    }
+    // Marcar os que já tinham sido enviados anteriormente
+    burstResultados.filter(r => !selecionadosEnvio.has(r.nif) && r.jaEnviado).forEach(r => {
+      envioMap.set(r.worker.id, { status: 'ja_enviado' });
+    });
+    setBurstResultados(null);
+    setEnviandoRecibos(false);
+    setResultados(prev => prev.map(r => ({
+      ...r,
+      envioStatus: envioMap.get(r.worker?.id)?.status ?? r.envioStatus ?? null,
+      erroEnvio:   envioMap.get(r.worker?.id)?.error  ?? null,
+    })));
+    const erros = [...envioMap.values()].filter(v => v.status === 'erro_envio').map(v => v.error);
+    if (erros.length) setErroBurst(erros.join(' | '));
+  };
+
+  const toggleEnvio = (nif) => setSelecionadosEnvio(prev => {
+    const next = new Set(prev);
+    next.has(nif) ? next.delete(nif) : next.add(nif);
+    return next;
+  });
 
   const handleExportarPDF = async () => {
     const { jsPDF } = await import('jspdf');
@@ -471,6 +581,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                 <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
                 <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido PDF</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Envio</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -501,11 +612,21 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                         )}
                       </div>
                     </td>
+                    <td className="px-4 py-3 text-center">
+                      {enviandoRecibos && !r.envioStatus
+                        ? <Loader2 size={13} className="animate-spin text-indigo-400 mx-auto" />
+                        : r.envioStatus === 'enviado'    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase"><CheckCircle size={10} />Enviado</span>
+                        : r.envioStatus === 'ja_enviado' ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>
+                        : r.envioStatus === 'erro_envio' ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase" title={r.erroEnvio}><XCircle size={10} />Erro</span>
+                        : r.envioStatus === 'sem_pdf'    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-black uppercase"><AlertCircle size={10} />Sem PDF</span>
+                        : <span className="text-slate-300">—</span>
+                      }
+                    </td>
                   </tr>
 
                   {expandido === i && (
                     <tr className="bg-slate-50">
-                      <td colSpan={5} className="px-4 py-4">
+                      <td colSpan={6} className="px-4 py-4">
                         <div className={`rounded-xl border p-4 space-y-3 ${estadoBg(r)}`}>
                           <p className="text-xs font-bold text-slate-700">{r.mensagem}</p>
 
@@ -547,7 +668,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
       {/* Ações pós-processamento */}
       {resultados.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="flex gap-3 justify-end">
+          <div className="flex gap-3 justify-end flex-wrap">
             <button onClick={handleAdicionarACustos} disabled={adicionando || adicionado || Object.keys(totaisPorMes).length === 0}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {adicionando ? <Loader2 size={13} className="animate-spin" /> : <Coins size={13} />}
@@ -559,11 +680,54 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
               {guardados ? 'Guardado' : 'Guardar Todos'}
             </button>
             <button onClick={handleExportarPDF}
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200">
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all">
               <FileDown size={13} />
               Exportar PDF
             </button>
+            <button
+              onClick={burstResultados ? handleConfirmarEnvio : handleIniciarEnvio}
+              disabled={enviandoRecibos || (burstResultados && selecionadosEnvio.size === 0)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed">
+              {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+              {burstResultados ? `Confirmar Envio (${selecionadosEnvio.size})` : 'Enviar Recibos'}
+            </button>
           </div>
+
+          {burstResultados && (
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                  Selecionar trabalhadores para envio
+                </span>
+                <div className="flex items-center gap-1">
+                  <button onClick={() => setSelecionadosEnvio(new Set(burstResultados.filter(r => !r.jaEnviado).map(r => r.nif)))}
+                    className="text-[9px] font-bold uppercase text-indigo-500 hover:text-indigo-700 px-1.5 py-0.5 rounded">Todos</button>
+                  <span className="text-indigo-200">|</span>
+                  <button onClick={() => setSelecionadosEnvio(new Set())}
+                    className="text-[9px] font-bold uppercase text-indigo-500 hover:text-indigo-700 px-1.5 py-0.5 rounded">Nenhum</button>
+                  <span className="text-indigo-200">|</span>
+                  <button onClick={() => setBurstResultados(null)}
+                    className="text-[9px] font-bold uppercase text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded">Cancelar</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                {burstResultados.map(r => (
+                  <label key={r.nif} className={`flex items-center gap-1.5 cursor-pointer ${r.jaEnviado ? 'opacity-50' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={selecionadosEnvio.has(r.nif)}
+                      onChange={() => !r.jaEnviado && toggleEnvio(r.nif)}
+                      disabled={r.jaEnviado}
+                      className="accent-indigo-600 w-3.5 h-3.5"
+                    />
+                    <span className="text-xs font-bold text-slate-700">{r.worker?.name ?? r.nome ?? r.nif}</span>
+                    {r.jaEnviado && <span className="text-[9px] text-slate-400">(já enviado)</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           {Object.keys(totaisPorMes).length > 0 && (
             <p className="text-[10px] text-slate-400 text-right">
               {Object.entries(totaisPorMes).map(([mes, t]) =>
@@ -573,6 +737,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
           )}
           {erroGuardar   && <p className="text-[10px] text-red-500 text-right">{erroGuardar}</p>}
           {erroAdicionar && <p className="text-[10px] text-red-500 text-right">{erroAdicionar}</p>}
+          {erroBurst     && <p className="text-[10px] text-red-500 text-right">{erroBurst}</p>}
         </div>
       )}
     </div>
@@ -613,11 +778,74 @@ function formatarDataHora(isoStr) {
     + ' · ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, onAdicionarACustos }) {
+function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, onAdicionarACustos, onEnviarRecibos }) {
   const [aberto, setAberto] = useState(false);
   const [apagandoSessao, setApagandoSessao] = useState(false);
   const [adicionandoCustos, setAdicionandoCustos] = useState(false);
   const [adicionadoCustos, setAdicionadoCustos] = useState(false);
+  const [burstResultados, setBurstResultados] = useState(null); // resultados filtrados após burst
+  const [selecionadosEnvio, setSelecionadosEnvio] = useState(new Set());
+  const [bursting,      setBursting]      = useState(false);
+  const [enviandoRecibos, setEnviandoRecibos] = useState(false);
+  const [enviadosNifs, setEnviadosNifs]   = useState(new Set());
+  const [erroEnvio, setErroEnvio]         = useState(null);
+  const fileInputRef = useRef(null);
+
+  // Passo 1 — burst + filtrar pelos workers da sessão → abrir painel de seleção
+  const handleFileEnvio = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file || file.type !== 'application/pdf') return;
+    setBursting(true);
+    setErroEnvio(null);
+    setBurstResultados(null);
+    try {
+      const res = await separarRecibosTOConline(file);
+      // Mapeia nome do PDF → sessão para filtrar apenas trabalhadores desta sessão
+      const nomesWorker = new Set(sessao.map(r => r.worker_name?.toUpperCase()).filter(Boolean));
+      const filtrados = res.resultados.filter(r => {
+        const nomeUp = r.nome?.toUpperCase() ?? '';
+        return nomeUp && nomesWorker.has(nomeUp);
+      }).map(r => {
+        const sessaoRecord = sessao.find(s => s.worker_name?.toUpperCase() === r.nome?.toUpperCase());
+        return { ...r, mes: sessaoRecord?.mes ?? r.mes, worker_id: sessaoRecord?.worker_id };
+      });
+      if (!filtrados.length) throw new Error('Nenhum trabalhador desta sessão encontrado no PDF.');
+      setBurstResultados(filtrados);
+      setSelecionadosEnvio(new Set(filtrados.map(r => r.nif)));
+    } catch (err) {
+      setErroEnvio(err.message);
+    } finally {
+      setBursting(false);
+    }
+  };
+
+  // Passo 2 — enviar só os selecionados
+  const handleConfirmarEnvio = async () => {
+    if (!burstResultados) return;
+    setEnviandoRecibos(true);
+    setErroEnvio(null);
+    const selecionados = burstResultados.filter(r => selecionadosEnvio.has(r.nif));
+    try {
+      const sessaoRecord = (nif) => sessao.find(s => s.worker_id === selecionados.find(r => r.nif === nif)?.worker?.id);
+      await onEnviarRecibos(selecionados.map(r => ({
+        ...r,
+        mes: sessaoRecord(r.nif)?.mes ?? r.mes,
+      })));
+      setEnviadosNifs(prev => new Set([...prev, ...selecionados.map(r => r.nif)]));
+      setBurstResultados(null);
+    } catch (err) {
+      setErroEnvio(err.message);
+    } finally {
+      setEnviandoRecibos(false);
+    }
+  };
+
+  const toggleEnvio = (nif) => setSelecionadosEnvio(prev => {
+    const next = new Set(prev);
+    next.has(nif) ? next.delete(nif) : next.add(nif);
+    return next;
+  });
   const nValidos   = sessao.filter(r => r.estado === 'valido').length;
   const nAvisos    = sessao.filter(r => r.estado === 'aviso').length;
   const nInvalidos = sessao.filter(r => r.estado === 'invalido').length;
@@ -657,6 +885,21 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
               {nErros     > 0 && <span className="flex items-center gap-1 text-xs font-black text-amber-500"><AlertCircle size={15} />{nErros}</span>}
             </div>
             <div className="flex items-center gap-2">
+              {/* Input oculto para upload do PDF de envio */}
+              <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileEnvio} />
+              {enviadosNifs.size > 0 && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest">
+                  <CheckCircle size={11} /> Enviado {enviadosNifs.size}
+                </span>
+              )}
+              <button
+                onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                disabled={bursting || enviandoRecibos}
+                title={enviadosNifs.size > 0 ? 'Reenviar recibos' : 'Enviar recibos aos trabalhadores'}
+                className="p-1.5 rounded-lg text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-colors disabled:opacity-40"
+              >
+                {bursting ? <Loader2 size={18} className="animate-spin" /> : <Upload size={18} className={enviadosNifs.size > 0 ? 'text-indigo-600' : ''} />}
+              </button>
               <button
                 onClick={async e => {
                   e.stopPropagation();
@@ -683,9 +926,67 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                 {apagandoSessao ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
               </button>
             </div>
+            {erroEnvio && (
+              <p className="text-[9px] text-red-500 font-medium mt-1 max-w-xs truncate" title={erroEnvio}>{erroEnvio}</p>
+            )}
           </div>
         </td>
       </tr>
+
+      {/* Painel de seleção de trabalhadores para envio */}
+      {burstResultados && (
+        <tr>
+          <td colSpan={3} className="px-4 pb-2 pt-0">
+            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                  Selecionar trabalhadores para envio
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setSelecionadosEnvio(new Set(burstResultados.map(r => r.nif)))}
+                    className="text-[9px] font-bold uppercase text-indigo-500 hover:text-indigo-700 px-1.5 py-0.5 rounded"
+                  >Todos</button>
+                  <span className="text-indigo-200">|</span>
+                  <button
+                    onClick={() => setSelecionadosEnvio(new Set())}
+                    className="text-[9px] font-bold uppercase text-indigo-500 hover:text-indigo-700 px-1.5 py-0.5 rounded"
+                  >Nenhum</button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {burstResultados.map(r => (
+                  <label key={r.nif} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selecionadosEnvio.has(r.nif)}
+                      onChange={() => toggleEnvio(r.nif)}
+                      className="accent-indigo-600 w-3.5 h-3.5"
+                    />
+                    <span className="text-xs font-bold text-slate-700">
+                      {r.worker?.name ?? r.nome ?? r.nif}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={e => { e.stopPropagation(); handleConfirmarEnvio(); }}
+                  disabled={enviandoRecibos || selecionadosEnvio.size === 0}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold disabled:opacity-40 hover:bg-indigo-700 transition-colors"
+                >
+                  {enviandoRecibos ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                  Enviar {selecionadosEnvio.size > 0 ? selecionadosEnvio.size : ''}
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setBurstResultados(null); }}
+                  className="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100 transition-colors"
+                >Cancelar</button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
 
       {/* Sub-tabela expandida */}
       {aberto && (
@@ -794,9 +1095,10 @@ const ModoHistorico = ({ workers, saveToDb }) => {
     const totaisPorMes = sessao.reduce((acc, r) => {
       if (r.estado !== 'valido' && r.estado !== 'aviso') return acc;
       if (!r.mes) return acc;
-      if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0 };
-      acc[r.mes].ss  += Number(r.ss_extraido)  || 0;
-      acc[r.mes].irs += Number(r.irs_extraido) || 0;
+      if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
+      acc[r.mes].ss        += Number(r.ss_extraido)  || 0;
+      acc[r.mes].irs       += Number(r.irs_extraido) || 0;
+      acc[r.mes].ssEmpresa += (Number(r.ss_extraido) || 0) * (23.75 / 11);
       return acc;
     }, {});
     for (const [mes, totais] of Object.entries(totaisPorMes)) {
@@ -818,7 +1120,31 @@ const ModoHistorico = ({ workers, saveToDb }) => {
           type: 'variável', date: dataMes,
         });
       }
+      if (totais.ssEmpresa > 0) {
+        const id = `e${Date.now()}_sse_${mes}`;
+        await saveToDb('expenses', id, {
+          id, name: `Seg. Social Empresa - ${mesNome}`,
+          amount: parseFloat(totais.ssEmpresa.toFixed(2)),
+          type: 'variável', date: dataMes,
+        });
+      }
     }
+  };
+
+  const enviarRecibosSessao = async (resultadosFiltrados) => {
+    const supabase = window.supabaseInstance;
+    if (!supabase) throw new Error('Sem ligação à base de dados.');
+    const erros = [];
+    for (const r of resultadosFiltrados) {
+      const worker = r.nome ? encontrarWorker(r.nome, workers) : null;
+      if (!worker) { erros.push(`${r.nif}: trabalhador não encontrado`); continue; }
+      try {
+        await associarDocumentoAoTrabalhador({ ...r, worker, supabase });
+      } catch (e) {
+        erros.push(`${worker.name}: ${e.message}`);
+      }
+    }
+    if (erros.length) throw new Error(erros.join(' | '));
   };
 
   const apagarSessao = async (sessao) => {
@@ -889,10 +1215,346 @@ const ModoHistorico = ({ workers, saveToDb }) => {
                   onApagarRegisto={apagarRegisto}
                   onApagarSessao={apagarSessao}
                   onAdicionarACustos={adicionarACustosSessao}
+                  onEnviarRecibos={enviarRecibosSessao}
                 />
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Modo Bursting ────────────────────────────────────────────────────────────
+const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
+  const [ficheiro,    setFicheiro]    = useState(null);
+  const [resultado,   setResultado]   = useState(null);
+  const [processando, setProcessando] = useState(false);
+  const [progresso,   setProgresso]   = useState({ atual: 0, total: 0 });
+  const [enviando,     setEnviando]     = useState(false);
+  const [enviados,     setEnviados]     = useState(new Set());
+  const [selecionados, setSelecionados] = useState(new Set());
+  const [erros,        setErros]        = useState([]);
+  const [orfaosAberto, setOrfaosAberto] = useState(false);
+  const [guardando,     setGuardando]     = useState(false);
+  const [guardados,     setGuardados]     = useState(false);
+  const [erroGuardar,   setErroGuardar]   = useState(null);
+  const [adicionando,   setAdicionando]   = useState(false);
+  const [adicionado,    setAdicionado]    = useState(false);
+  const [erroAdicionar, setErroAdicionar] = useState(null);
+
+  const handleFicheiro = (e) => {
+    const f = e.target.files?.[0];
+    if (!f || f.type !== 'application/pdf') return;
+    setFicheiro(f);
+    setResultado(null);
+    setEnviados(new Set());
+    setSelecionados(new Set());
+    setErros([]);
+    setGuardados(false); setErroGuardar(null);
+    setAdicionado(false); setErroAdicionar(null);
+  };
+
+  const downloadPdf = (r) => {
+    const blob = new Blob([r.pdfBytes], { type: 'application/pdf' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `recibo_${r.mes ?? 'sem-mes'}_${r.nif}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const downloadTodos = () => {
+    resultado?.resultados.forEach(r => downloadPdf(r));
+  };
+
+  const toggleSelecionado = (nif) => {
+    setSelecionados(prev => {
+      const next = new Set(prev);
+      next.has(nif) ? next.delete(nif) : next.add(nif);
+      return next;
+    });
+  };
+
+  const toggleTodos = (nifs) => {
+    setSelecionados(prev => prev.size === nifs.length ? new Set() : new Set(nifs));
+  };
+
+  const tolerancias = {
+    valido: parseFloat(String(systemSettings?.toleranciaValido ?? 0.77).replace(',', '.')),
+    aviso:  parseFloat(String(systemSettings?.toleranciaAviso  ?? 10).replace(',', '.')),
+  };
+
+  const handleBurst = async () => {
+    if (!ficheiro) return;
+    setProcessando(true);
+    setResultado(null);
+    setProgresso({ atual: 0, total: 0 });
+    setErros([]);
+    setGuardados(false); setAdicionado(false);
+    try {
+      const res = await separarRecibosTOConline(ficheiro, (atual, total) =>
+        setProgresso({ atual, total })
+      );
+      const enriquecidos = res.resultados.map(r => {
+        const worker = r.nome ? encontrarWorker(r.nome, workers) : null;
+        let bruto = 0;
+        if (worker && r.mes) {
+          const logsDoMes = (logs ?? []).filter(l => l.workerId === worker.id && l.date?.startsWith(r.mes));
+          bruto = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0) * (worker.valorHora || 0);
+        }
+        const validacao = aplicarOverrideSempreValido(parseReciboTOConline(r.texto, bruto, tolerancias), worker);
+        return { ...r, worker, bruto, ...validacao };
+      });
+      setResultado({ resultados: enriquecidos, orfaos: res.orfaos });
+      setSelecionados(new Set(enriquecidos.map(r => r.nif)));
+    } catch (err) {
+      console.error('[Burst]', err);
+      setErros([{ nif: '—', msg: err.message }]);
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  const handleGuardarValidacoes = async () => {
+    if (!resultado) return;
+    setGuardando(true); setErroGuardar(null);
+    try {
+      const sessionId = crypto.randomUUID();
+      await Promise.all(resultado.resultados.map(r =>
+        guardarValidacao(r, { sessionId, origem: r.nif })
+      ));
+      setGuardados(true);
+    } catch (e) { setErroGuardar(e.message); }
+    finally { setGuardando(false); }
+  };
+
+  const totaisPorMesBurst = (resultado?.resultados ?? []).reduce((acc, r) => {
+    if (!r.sucesso || !r.mes || r.mes === '—') return acc;
+    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
+    acc[r.mes].ss        += r.ssExtraido  ?? 0;
+    acc[r.mes].irs       += r.irsExtraido ?? 0;
+    acc[r.mes].ssEmpresa += (r.ssExtraido ?? 0) * (23.75 / 11);
+    return acc;
+  }, {});
+
+  const handleAdicionarACustosBurst = async () => {
+    setAdicionando(true); setErroAdicionar(null);
+    try {
+      for (const [mes, totais] of Object.entries(totaisPorMesBurst)) {
+        const dataMes = `${mes}-01`;
+        const mesNome = formatarMes(mes);
+        if (totais.ss > 0) {
+          const id = `e${Date.now()}_ss_${mes}`;
+          await saveToDb('expenses', id, { id, name: `Segurança Social - ${mesNome}`, amount: parseFloat(totais.ss.toFixed(2)), type: 'variável', date: dataMes });
+        }
+        if (totais.irs > 0) {
+          const id = `e${Date.now()}_irs_${mes}`;
+          await saveToDb('expenses', id, { id, name: `IRS - ${mesNome}`, amount: parseFloat(totais.irs.toFixed(2)), type: 'variável', date: dataMes });
+        }
+        if (totais.ssEmpresa > 0) {
+          const id = `e${Date.now()}_sse_${mes}`;
+          await saveToDb('expenses', id, { id, name: `Seg. Social Empresa - ${mesNome}`, amount: parseFloat(totais.ssEmpresa.toFixed(2)), type: 'variável', date: dataMes });
+        }
+      }
+      setAdicionado(true);
+    } catch (e) { setErroAdicionar(e.message); }
+    finally { setAdicionando(false); }
+  };
+
+  const handleEnviarSelecionados = async () => {
+    if (!resultado || selecionados.size === 0) return;
+    const supabase = window.supabaseInstance;
+    if (!supabase) return;
+    setEnviando(true);
+    const novosErros = [];
+    for (const r of resultado.resultados) {
+      if (!selecionados.has(r.nif) || enviados.has(r.nif)) continue;
+      try {
+        await associarDocumentoAoTrabalhador({ ...r, supabase });
+        setEnviados(prev => new Set([...prev, r.nif]));
+      } catch (err) {
+        novosErros.push({ nif: r.nif, msg: err.message });
+      }
+    }
+    setErros(novosErros);
+    setEnviando(false);
+  };
+
+  const totalResultados  = resultado?.resultados.length ?? 0;
+  const totalOrfaos      = resultado?.orfaos.length ?? 0;
+  const nifsTodos        = resultado?.resultados.map(r => r.nif) ?? [];
+  const todosSelected    = nifsTodos.length > 0 && selecionados.size === nifsTodos.length;
+  const pct = progresso.total > 0 ? Math.round((progresso.atual / progresso.total) * 100) : 0;
+
+  return (
+    <div className="space-y-5">
+      {/* Upload */}
+      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-indigo-300 transition-colors">
+        <Scissors size={28} className="text-slate-300" />
+        <p className="text-[11px] font-black text-slate-400 tracking-widest">PDF AGREGADO TOCONLINE</p>
+        <label className="cursor-pointer">
+          <input type="file" accept="application/pdf" className="hidden" onChange={handleFicheiro} />
+          <span className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors">
+            <Upload size={12} /> Selecionar PDF
+          </span>
+        </label>
+        {ficheiro && (
+          <p className="text-[10px] text-slate-500 font-medium">{ficheiro.name}</p>
+        )}
+      </div>
+
+      {/* Botão Separar */}
+      {ficheiro && !resultado && (
+        <button onClick={handleBurst} disabled={processando}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50">
+          {processando
+            ? <><Loader2 size={13} className="animate-spin" /> A separar... {progresso.total > 0 ? `${progresso.atual}/${progresso.total} páginas` : ''}</>
+            : <><Scissors size={13} /> Separar Recibos</>
+          }
+        </button>
+      )}
+
+      {/* Barra de progresso */}
+      {processando && progresso.total > 0 && (
+        <div className="w-full bg-slate-100 rounded-full h-1.5">
+          <div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      )}
+
+      {/* Tabela de resultados */}
+      {resultado && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[10px] font-black text-slate-500 tracking-widest flex-1">
+              {totalResultados} RECIBO{totalResultados !== 1 ? 'S' : ''}
+              {totalOrfaos > 0 && ` · ${totalOrfaos} ÓRFÃO${totalOrfaos !== 1 ? 'S' : ''}`}
+              {selecionados.size > 0 && ` · ${selecionados.size} SEL.`}
+            </p>
+            <button onClick={handleGuardarValidacoes} disabled={guardando || guardados}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {guardando ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+              {guardados ? 'Guardado' : 'Guardar'}
+            </button>
+            <button onClick={handleAdicionarACustosBurst} disabled={adicionando || adicionado}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {adicionando ? <Loader2 size={11} className="animate-spin" /> : <Coins size={11} />}
+              {adicionado ? 'Adicionado' : 'A Custos'}
+            </button>
+            <button onClick={downloadTodos}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all">
+              <FileDown size={11} /> PDF
+            </button>
+            <button onClick={handleEnviarSelecionados} disabled={enviando || selecionados.size === 0}
+              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {enviando ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
+              {selecionados.size > 0 ? `Enviar ${selecionados.size}` : 'Enviar'}
+            </button>
+          </div>
+          {erroGuardar   && <p className="text-[10px] text-red-500 font-medium px-1">{erroGuardar}</p>}
+          {erroAdicionar && <p className="text-[10px] text-red-500 font-medium px-1">{erroAdicionar}</p>}
+
+          <div className="rounded-2xl border border-slate-100 overflow-hidden">
+            <table className="w-full text-[10px]">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2.5">
+                    <input type="checkbox" checked={todosSelected} onChange={() => toggleTodos(nifsTodos)}
+                      className="rounded accent-indigo-600 cursor-pointer" />
+                  </th>
+                  {['Trabalhador','Mês','Bruto','SS','IRS','Líquido','Estado',''].map(h => (
+                    <th key={h} className="px-3 py-2.5 text-left font-black text-slate-400 tracking-widest">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {resultado.resultados.map(r => {
+                  const enviado     = enviados.has(r.nif);
+                  const selecionado = selecionados.has(r.nif);
+                  return (
+                    <tr key={r.nif} onClick={() => !enviado && toggleSelecionado(r.nif)}
+                      className={`transition-colors cursor-pointer ${selecionado ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'} ${enviado ? 'opacity-50 cursor-default' : ''}`}>
+                      <td className="px-3 py-2.5">
+                        <input type="checkbox" checked={selecionado} readOnly disabled={enviado}
+                          className="rounded accent-indigo-600 pointer-events-none" />
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {r.worker
+                          ? <span className="text-slate-700 font-black">{r.worker.name}</span>
+                          : <span className="text-red-400 font-black">{r.nomeExtraido ?? r.nome ?? '—'}</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
+                      <td className="px-3 py-2.5 text-slate-500 text-right">{r.bruto ? r.bruto.toFixed(2) : '—'}</td>
+                      <td className="px-3 py-2.5 text-slate-600 text-right">{r.ssExtraido != null ? r.ssExtraido.toFixed(2) : '—'}</td>
+                      <td className="px-3 py-2.5 text-slate-600 text-right">{r.irsExtraido != null ? r.irsExtraido.toFixed(2) : '—'}</td>
+                      <td className="px-3 py-2.5 text-slate-700 font-black text-right">{r.liquidoExtraido != null ? r.liquidoExtraido.toFixed(2) : '—'}</td>
+                      <td className="px-3 py-2.5">
+                        {!r.sucesso
+                          ? <span className="flex items-center gap-1 text-amber-500 font-black"><AlertCircle size={11} /> Erro</span>
+                          : r.valido
+                            ? <span className="flex items-center gap-1 text-emerald-500 font-black"><CheckCircle size={11} /> Válido</span>
+                            : r.aviso
+                              ? <span className="flex items-center gap-1 text-yellow-500 font-black"><AlertTriangle size={11} /> Aviso</span>
+                              : <span className="flex items-center gap-1 text-red-500 font-black"><XCircle size={11} /> Inválido</span>
+                        }
+                        {r.divergenciaSinal != null && r.divergenciaSinal !== 0 && (
+                          <DivergenciaBadge sinal={r.divergenciaSinal} className="text-[9px] font-black block" />
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => downloadPdf(r)} title="Guardar PDF"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                          <FileDown size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Órfãos */}
+          {totalOrfaos > 0 && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 overflow-hidden">
+              <button onClick={() => setOrfaosAberto(o => !o)}
+                className="w-full flex items-center justify-between px-4 py-3 text-[10px] font-black text-amber-700 tracking-widest">
+                <span className="flex items-center gap-2"><TriangleAlert size={12} /> {totalOrfaos} PÁGINA{totalOrfaos !== 1 ? 'S' : ''} ÓRFÃ{totalOrfaos !== 1 ? 'S' : ''} (SEM NIF)</span>
+                <ChevronRight size={12} className={`transition-transform ${orfaosAberto ? 'rotate-90' : ''}`} />
+              </button>
+              {orfaosAberto && (
+                <div className="px-4 pb-3 space-y-1">
+                  {resultado.orfaos.map(o => (
+                    <div key={o.pageIndex} className="text-[9px] text-amber-700 bg-amber-100 rounded-lg px-3 py-1.5">
+                      <span className="font-black">Pág. {o.pageIndex + 1}:</span> {o.texto}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Erros de envio (por NIF) */}
+          {erros.filter(e => e.nif !== '—').length > 0 && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 space-y-1">
+              <p className="text-[10px] font-black text-red-600 tracking-widest mb-2">ERROS DE ENVIO</p>
+              {erros.filter(e => e.nif !== '—').map((e, i) => (
+                <p key={i} className="text-[9px] text-red-500">NIF {e.nif}: {e.msg}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Erro geral de processamento (fora do bloco resultado) */}
+      {erros.some(e => e.nif === '—') && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-[10px] font-black text-red-600 tracking-widest mb-1">ERRO AO SEPARAR PDF</p>
+          {erros.filter(e => e.nif === '—').map((e, i) => (
+            <p key={i} className="text-[9px] text-red-500">{e.msg}</p>
+          ))}
         </div>
       )}
     </div>
@@ -906,10 +1568,11 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl max-w-xs mx-auto">
+      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl max-w-sm mx-auto">
         {[
           { id: 'validar',   icon: ReceiptText, label: 'Validar' },
           { id: 'historico', icon: History,     label: 'Histórico' },
+          { id: 'burst',     icon: Scissors,    label: 'Burst' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
             className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modo === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
@@ -920,6 +1583,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
 
       {modo === 'validar'   && <ModoLote      workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
       {modo === 'historico' && <ModoHistorico workers={workers} saveToDb={saveToDb} />}
+      {modo === 'burst'     && <ModoBursting  workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} />}
     </div>
   );
 };
