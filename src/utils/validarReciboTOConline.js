@@ -81,7 +81,10 @@ export function extrairMetadadosTOConline(text) {
   return { nome, mes };
 }
 
-export function parseReciboTOConline(text, brutoPlataforma) {
+export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
+  const toleranciaValido = tolerancias.valido ?? 0.77;
+  const toleranciaAviso  = tolerancias.aviso  ?? 10;
+
   if (!text.includes('Emitido por TOConline')) {
     return {
       sucesso: false,
@@ -132,8 +135,8 @@ export function parseReciboTOConline(text, brutoPlataforma) {
   const divergenciaAbs   = Math.abs(liquidoCalculado - liquidoExtraido);
   // sinal positivo = PDF tem mais do que calculado; negativo = PDF tem menos
   const divergenciaSinal = parseFloat((liquidoExtraido - liquidoCalculado).toFixed(2));
-  const valido           = divergenciaAbs <= 0.77;
-  const aviso            = !valido && divergenciaAbs <= 10;
+  const valido           = divergenciaAbs <= toleranciaValido;
+  const aviso            = !valido && divergenciaAbs <= toleranciaAviso;
 
   const divStr  = divergenciaAbs.toFixed(2);
   const calcStr = liquidoCalculado.toFixed(2);

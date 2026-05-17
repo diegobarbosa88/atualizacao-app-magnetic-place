@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings } from 'lucide-react';
 import {
   extrairPaginasPdf,
   extrairMetadadosTOConline,
@@ -120,7 +120,7 @@ async function guardarValidacao(r, extra = {}) {
 }
 
 // ─── Modo Lote ────────────────────────────────────────────────────────────────
-const ModoLote = ({ workers, logs }) => {
+const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
   const [files, setFiles] = useState([]);
   const [resultados, setResultados] = useState([]);
   const [processando, setProcessando] = useState(false);
@@ -128,6 +128,21 @@ const ModoLote = ({ workers, logs }) => {
   const [guardados, setGuardados] = useState(false);
   const [erroGuardar, setErroGuardar] = useState(null);
   const [expandido, setExpandido] = useState(null);
+  const [configAberto, setConfigAberto] = useState(false);
+  const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
+  const [tolAvisoLocal,  setTolAvisoLocal]  = useState(String(systemSettings?.toleranciaAviso  ?? 10));
+
+  const tolerancias = {
+    valido: parseFloat(String(systemSettings?.toleranciaValido ?? 0.77).replace(',', '.')),
+    aviso:  parseFloat(String(systemSettings?.toleranciaAviso  ?? 10).replace(',', '.')),
+  };
+
+  const guardarTolerancias = () => {
+    const v = parseFloat(tolValidoLocal.replace(',', '.'));
+    const a = parseFloat(tolAvisoLocal.replace(',', '.'));
+    if (Number.isNaN(v) || Number.isNaN(a) || v < 0 || a <= v) return;
+    saveSystemSettings({ ...systemSettings, toleranciaValido: v, toleranciaAviso: a });
+  };
 
   const handleFiles = (e) => {
     const fs = Array.from(e.target.files).filter(f => f.type === 'application/pdf');
@@ -146,7 +161,7 @@ const ModoLote = ({ workers, logs }) => {
       const totalHoras = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
       bruto = totalHoras * (worker.valorHora || 0);
     }
-    const validacao = aplicarOverrideSempreValido(parseReciboTOConline(text, bruto), worker);
+    const validacao = aplicarOverrideSempreValido(parseReciboTOConline(text, bruto, tolerancias), worker);
     return { origem, nomeExtraido: nome ?? '—', worker: worker ?? null, mes: mes ?? '—', bruto, ...validacao };
   };
 
@@ -283,6 +298,41 @@ const ModoLote = ({ workers, logs }) => {
 
   return (
     <div className="space-y-5">
+      {/* Botão Configurar tolerâncias */}
+      <div className="flex justify-end">
+        <button onClick={() => setConfigAberto(o => !o)}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">
+          <Settings size={13} />
+          Tolerâncias
+          <ChevronRight size={12} className={`transition-transform ${configAberto ? 'rotate-90' : ''}`} />
+        </button>
+      </div>
+
+      {configAberto && (
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Limites de validação (€)</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] font-bold text-emerald-600 block mb-1">Válido até</label>
+              <input type="number" min="0" step="0.01" value={tolValidoLocal}
+                onChange={e => setTolValidoLocal(e.target.value)}
+                onBlur={guardarTolerancias}
+                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-yellow-600 block mb-1">Aviso até</label>
+              <input type="number" min="0" step="0.01" value={tolAvisoLocal}
+                onChange={e => setTolAvisoLocal(e.target.value)}
+                onBlur={guardarTolerancias}
+                className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:ring-2 focus:ring-yellow-500" />
+            </div>
+          </div>
+          <p className="text-[10px] text-slate-400">
+            Divergência ≤ {tolValidoLocal}€ → válido · ≤ {tolAvisoLocal}€ → aviso · acima → inválido
+          </p>
+        </div>
+      )}
+
       {/* Upload múltiplo */}
       <label className="flex flex-col items-center justify-center gap-2 p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
         <Files size={28} className="text-slate-300" />
@@ -628,7 +678,7 @@ const ModoHistorico = ({ workers }) => {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 const ValidarReciboAdmin = ({ workers = [] }) => {
-  const { logs = [] } = useApp();
+  const { logs = [], systemSettings, saveSystemSettings } = useApp();
   const [modo, setModo] = useState('validar');
 
   return (
@@ -645,7 +695,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
         ))}
       </div>
 
-      {modo === 'validar'   && <ModoLote      workers={workers} logs={logs} />}
+      {modo === 'validar'   && <ModoLote      workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} />}
       {modo === 'historico' && <ModoHistorico workers={workers} />}
     </div>
   );

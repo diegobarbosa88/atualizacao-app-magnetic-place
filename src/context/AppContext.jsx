@@ -19,7 +19,9 @@ export const AppProvider = ({ children }) => {
       companyNif: '',
       darkMode: false,
       appWidth: '1920',
-      geminiApiKey: ''
+      geminiApiKey: '',
+      toleranciaValido: 0.77,
+      toleranciaAviso: 10,
     };
     const saved = localStorage.getItem('magnetic_settings');
     if (saved) {
@@ -195,6 +197,8 @@ export const AppProvider = ({ children }) => {
               ...(data.dark_mode !== undefined && { darkMode: data.dark_mode }),
               ...(data.app_width && { appWidth: data.app_width }),
               ...(data.gemini_api_key !== undefined && { geminiApiKey: data.gemini_api_key }),
+              ...(data.tolerancia_valido != null && { toleranciaValido: Number(data.tolerancia_valido) }),
+              ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
             }));
           }
         })(),
@@ -516,6 +520,8 @@ export const AppProvider = ({ children }) => {
       dark_mode: newSettings.darkMode ?? false,
       app_width: newSettings.appWidth ?? '1920',
       gemini_api_key: newSettings.geminiApiKey ?? '',
+      tolerancia_valido: newSettings.toleranciaValido ?? 0.77,
+      tolerancia_aviso:  newSettings.toleranciaAviso  ?? 10,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabaseInstance
