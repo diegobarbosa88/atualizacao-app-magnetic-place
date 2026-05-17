@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins } from 'lucide-react';
 import {
   extrairPaginasPdf,
   extrairMetadadosTOConline,
@@ -120,7 +120,7 @@ async function guardarValidacao(r, extra = {}) {
 }
 
 // ─── Modo Lote ────────────────────────────────────────────────────────────────
-const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
+const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb }) => {
   const [files, setFiles] = useState([]);
   const [resultados, setResultados] = useState([]);
   const [processando, setProcessando] = useState(false);
@@ -128,6 +128,9 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
   const [guardados, setGuardados] = useState(false);
   const [erroGuardar, setErroGuardar] = useState(null);
   const [expandido, setExpandido] = useState(null);
+  const [adicionando, setAdicionando] = useState(false);
+  const [adicionado, setAdicionado] = useState(false);
+  const [erroAdicionar, setErroAdicionar] = useState(null);
   const [configAberto, setConfigAberto] = useState(false);
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
   const [tolAvisoLocal,  setTolAvisoLocal]  = useState(String(systemSettings?.toleranciaAviso  ?? 10));
@@ -150,6 +153,8 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
     setResultados([]);
     setGuardados(false);
     setErroGuardar(null);
+    setAdicionado(false);
+    setErroAdicionar(null);
   };
 
   const processarPagina = async (text, origem) => {
@@ -199,6 +204,48 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
 
     setResultados(deduplicados);
     setProcessando(false);
+  };
+
+  // Agrupa SS + IRS por mês — usado pelo botão "Adicionar a Custos"
+  const totaisPorMes = resultados.reduce((acc, r) => {
+    if (!r.sucesso || r.mes === '—' || !r.mes) return acc;
+    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0 };
+    acc[r.mes].ss  += r.ssExtraido  ?? 0;
+    acc[r.mes].irs += r.irsExtraido ?? 0;
+    return acc;
+  }, {});
+
+  const handleAdicionarACustos = async () => {
+    setAdicionando(true);
+    setErroAdicionar(null);
+    try {
+      const entradas = Object.entries(totaisPorMes);
+      for (const [mes, totais] of entradas) {
+        const dataMes = `${mes}-01`;
+        const mesNome = formatarMes(mes);
+        if (totais.ss > 0) {
+          const id = `e${Date.now()}_ss_${mes}`;
+          await saveToDb('expenses', id, {
+            id, name: `Segurança Social - ${mesNome}`,
+            amount: parseFloat(totais.ss.toFixed(2)),
+            type: 'variável', date: dataMes,
+          });
+        }
+        if (totais.irs > 0) {
+          const id = `e${Date.now()}_irs_${mes}`;
+          await saveToDb('expenses', id, {
+            id, name: `IRS - ${mesNome}`,
+            amount: parseFloat(totais.irs.toFixed(2)),
+            type: 'variável', date: dataMes,
+          });
+        }
+      }
+      setAdicionado(true);
+    } catch (e) {
+      setErroAdicionar(e.message);
+    } finally {
+      setAdicionando(false);
+    }
   };
 
   const handleGuardarTodos = async () => {
@@ -453,6 +500,11 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
       {resultados.length > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex gap-3 justify-end">
+            <button onClick={handleAdicionarACustos} disabled={adicionando || adicionado || Object.keys(totaisPorMes).length === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              {adicionando ? <Loader2 size={13} className="animate-spin" /> : <Coins size={13} />}
+              {adicionado ? 'Adicionado a Custos' : 'Adicionar a Custos'}
+            </button>
             <button onClick={handleGuardarTodos} disabled={guardando || guardados}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardando ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
@@ -464,7 +516,15 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings }) => {
               Exportar PDF
             </button>
           </div>
-          {erroGuardar && <p className="text-[10px] text-red-500 text-right">{erroGuardar}</p>}
+          {Object.keys(totaisPorMes).length > 0 && (
+            <p className="text-[10px] text-slate-400 text-right">
+              {Object.entries(totaisPorMes).map(([mes, t]) =>
+                `${formatarMes(mes)}: SS ${t.ss.toFixed(2)}€ + IRS ${t.irs.toFixed(2)}€`
+              ).join('  ·  ')}
+            </p>
+          )}
+          {erroGuardar   && <p className="text-[10px] text-red-500 text-right">{erroGuardar}</p>}
+          {erroAdicionar && <p className="text-[10px] text-red-500 text-right">{erroAdicionar}</p>}
         </div>
       )}
     </div>
@@ -678,7 +738,7 @@ const ModoHistorico = ({ workers }) => {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 const ValidarReciboAdmin = ({ workers = [] }) => {
-  const { logs = [], systemSettings, saveSystemSettings } = useApp();
+  const { logs = [], systemSettings, saveSystemSettings, saveToDb } = useApp();
   const [modo, setModo] = useState('validar');
 
   return (
@@ -695,7 +755,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
         ))}
       </div>
 
-      {modo === 'validar'   && <ModoLote      workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} />}
+      {modo === 'validar'   && <ModoLote      workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
       {modo === 'historico' && <ModoHistorico workers={workers} />}
     </div>
   );
