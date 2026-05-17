@@ -96,12 +96,15 @@ export default function App() {
   const [showFinReport, setShowFinReport] = useState(false);
   const [finFilter, setFinFilter] = useState({ start: toISODateLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), end: toISODateLocal(new Date()) });
 
-  const [dismissedNotifs, setDismissedNotifs] = useState(() => {
-    if (!currentUser) return [];
+  const [dismissedNotifs, setDismissedNotifs] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) return;
     try {
-      return JSON.parse(localStorage.getItem(`dismissed_notifs_${currentUser.id}`) || '[]');
-    } catch { return []; }
-  });
+      const stored = JSON.parse(localStorage.getItem(`dismissed_notifs_${currentUser.id}`) || '[]');
+      setDismissedNotifs(stored);
+    } catch { setDismissedNotifs([]); }
+  }, [currentUser?.id]);
 
   const myNotifications = useMemo(() => {
     if (!currentUser || !appNotifications) return [];
@@ -110,7 +113,8 @@ export default function App() {
       (n.target_type === 'all' ||
         (currentUser.role === 'admin' && n.target_type === 'admin') ||
         (n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
-      !dismissedNotifs.includes(n.id)
+      !dismissedNotifs.includes(n.id) &&
+      !(n.dismissed_by_ids || []).includes(currentUser.id)
     );
   }, [appNotifications, currentUser, dismissedNotifs]);
 
@@ -330,6 +334,7 @@ export default function App() {
         <AdminDashboard
           onLogout={handleLogout}
           onLogin={handleLogin}
+          currentUser={currentUser}
           currentMonth={currentMonth}
           setCurrentMonth={setCurrentMonth}
           activeTab={activeTab}

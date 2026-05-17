@@ -36,6 +36,7 @@ function AdminDashboard(props) {
   const {
     onLogout,
     onLogin,
+    currentUser,
     currentMonth,
     setCurrentMonth,
     activeTab,
@@ -359,6 +360,7 @@ function AdminDashboard(props) {
           {/* Lado Direito: Ações */}
           <div className="hidden md:flex items-center gap-4 shrink-0">
             <button onClick={() => setShowFinReport(true)} className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-black uppercase border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"><BarChart3 size={16} /> Financeiro</button>
+            {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-xs font-black uppercase border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Users size={16} /> Meu Painel</button>}
             <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={20} /></button>
           </div>
         </div>
