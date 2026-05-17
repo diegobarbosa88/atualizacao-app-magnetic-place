@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2, Pencil } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2 } from 'lucide-react';
 import {
   extrairPaginasPdf,
   extrairMetadadosTOConline,
@@ -613,9 +613,11 @@ function formatarDataHora(isoStr) {
     + ' · ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao }) {
+function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, onAdicionarACustos }) {
   const [aberto, setAberto] = useState(false);
   const [apagandoSessao, setApagandoSessao] = useState(false);
+  const [adicionandoCustos, setAdicionandoCustos] = useState(false);
+  const [adicionadoCustos, setAdicionadoCustos] = useState(false);
   const nValidos   = sessao.filter(r => r.estado === 'valido').length;
   const nAvisos    = sessao.filter(r => r.estado === 'aviso').length;
   const nInvalidos = sessao.filter(r => r.estado === 'invalido').length;
@@ -649,19 +651,33 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao })
               {nInvalidos > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-red-500"><XCircle size={11} />{nInvalidos}</span>}
               {nErros     > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-amber-500"><AlertCircle size={11} />{nErros}</span>}
             </div>
-            <button
-              onClick={async e => {
-                e.stopPropagation();
-                if (!window.confirm(`Apagar este processamento (${sessao.length} recibo${sessao.length !== 1 ? 's' : ''})?`)) return;
-                setApagandoSessao(true);
-                try { await onApagarSessao(sessao); } finally { setApagandoSessao(false); }
-              }}
-              disabled={apagandoSessao}
-              title="Apagar processamento"
-              className="p-1 rounded text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
-            >
-              {apagandoSessao ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={async e => {
+                  e.stopPropagation();
+                  setAdicionandoCustos(true);
+                  try { await onAdicionarACustos(sessao); setAdicionadoCustos(true); } finally { setAdicionandoCustos(false); }
+                }}
+                disabled={adicionandoCustos || adicionadoCustos}
+                title="Adicionar SS e IRS a Custos"
+                className="p-1 rounded text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-colors disabled:opacity-40"
+              >
+                {adicionandoCustos ? <Loader2 size={12} className="animate-spin" /> : <Coins size={12} className={adicionadoCustos ? 'text-emerald-600' : ''} />}
+              </button>
+              <button
+                onClick={async e => {
+                  e.stopPropagation();
+                  if (!window.confirm(`Apagar este processamento (${sessao.length} recibo${sessao.length !== 1 ? 's' : ''})?`)) return;
+                  setApagandoSessao(true);
+                  try { await onApagarSessao(sessao); } finally { setApagandoSessao(false); }
+                }}
+                disabled={apagandoSessao}
+                title="Apagar processamento"
+                className="p-1 rounded text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+              >
+                {apagandoSessao ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+              </button>
+            </div>
           </div>
         </td>
       </tr>
@@ -727,7 +743,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao })
   );
 }
 
-const ModoHistorico = ({ workers }) => {
+const ModoHistorico = ({ workers, saveToDb }) => {
   const [registos, setRegistos] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [filtroWorker, setFiltroWorker] = useState('');
@@ -767,6 +783,37 @@ const ModoHistorico = ({ workers }) => {
     const { error } = await db.from('receipt_validations').delete().eq('id', id);
     if (error) { console.error(error); return; }
     setRegistos(prev => prev.filter(r => r.id !== id));
+  };
+
+  const adicionarACustosSessao = async (sessao) => {
+    const totaisPorMes = sessao.reduce((acc, r) => {
+      if (r.estado !== 'valido' && r.estado !== 'aviso') return acc;
+      if (!r.mes) return acc;
+      if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0 };
+      acc[r.mes].ss  += Number(r.ss_extraido)  || 0;
+      acc[r.mes].irs += Number(r.irs_extraido) || 0;
+      return acc;
+    }, {});
+    for (const [mes, totais] of Object.entries(totaisPorMes)) {
+      const dataMes = `${mes}-01`;
+      const mesNome = formatarMes(mes);
+      if (totais.ss > 0) {
+        const id = `e${Date.now()}_ss_${mes}`;
+        await saveToDb('expenses', id, {
+          id, name: `Segurança Social - ${mesNome}`,
+          amount: parseFloat(totais.ss.toFixed(2)),
+          type: 'variável', date: dataMes,
+        });
+      }
+      if (totais.irs > 0) {
+        const id = `e${Date.now()}_irs_${mes}`;
+        await saveToDb('expenses', id, {
+          id, name: `IRS - ${mesNome}`,
+          amount: parseFloat(totais.irs.toFixed(2)),
+          type: 'variável', date: dataMes,
+        });
+      }
+    }
   };
 
   const apagarSessao = async (sessao) => {
@@ -836,6 +883,7 @@ const ModoHistorico = ({ workers }) => {
                   onAlterarEstado={alterarEstado}
                   onApagarRegisto={apagarRegisto}
                   onApagarSessao={apagarSessao}
+                  onAdicionarACustos={adicionarACustosSessao}
                 />
               ))}
             </tbody>
@@ -866,7 +914,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
       </div>
 
       {modo === 'validar'   && <ModoLote      workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
-      {modo === 'historico' && <ModoHistorico workers={workers} />}
+      {modo === 'historico' && <ModoHistorico workers={workers} saveToDb={saveToDb} />}
     </div>
   );
 };
