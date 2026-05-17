@@ -7,34 +7,40 @@ vi.mock('pdfjs-dist', () => ({
 
 import { parseReciboTOConline } from '../../src/utils/validarReciboTOConline.js';
 
-// Texto real extraído do TOConline: SS=136,99€, IRS=0%, bruto=3249, líquido=3112,01
-// fórmula: 3249 - 136,99 - 0 = 3112,01 ✓
+// Formato real do TOConline: labels numa linha, valores na linha seguinte.
+// ORIGINAL + DUPLICADO fundem-se na mesma linha (pdfjs lê por coordenada Y).
+//
+// Caso 1: SS=136,99€, IRS=0%, bruto=3249 → 3249 - 136,99 - 0 = 3112,01 ✓
 const TEXT_VALIDO = `
 Emitido por TOConline
-Segurança Social (11%)   136,99€
-IRS - Taxa efetiva (Subsídio de Férias): 0%.
-Total Descontos  136,99€  Total Abonos  3.249,00€   3.112,01€
+Segurança Social (11%)   136,99€   Segurança Social (11%)   136,99€
+IRS - Taxa efetiva (Subsídio de Férias): 0%.   IRS - Taxa efetiva (Subsídio de Férias): 0%.
+Total Abonos  Total Descontos  Total a Receber  Total Abonos  Total Descontos  Total a Receber
+3.249,00€  136,99€  3.112,01€  3.249,00€  136,99€  3.112,01€
 `;
 
-// SS=110€, IRS=150€, outros descontos ignorados — apenas SS+IRS entram no cálculo
+// Caso 2: SS=110€, IRS=150€ → 1000 - 110 - 150 = 740 ✓
 const TEXT_COM_IRS = `
 Emitido por TOConline
-Segurança Social (11%)   110,00€
-IRS   150,00€
-Total Descontos  260,00€  Total Abonos  1.000,00€   740,00€
+Segurança Social (11%)   110,00€   Segurança Social (11%)   110,00€
+IRS   150,00€   IRS   150,00€
+Total Abonos  Total Descontos  Total a Receber  Total Abonos  Total Descontos  Total a Receber
+1.000,00€  260,00€  740,00€  1.000,00€  260,00€  740,00€
 `;
 
-// Simula o formato real do pdfjs: Abono intercalado antes do Desconto na mesma linha.
-// "Segurança Social (11%)   1.000,00€   110,00€" → último € = 110 (desconto)
-// "IRS   1.000,00€   150,00€"                    → último € = 150 (desconto)
-// O campo "Total Descontos" tem 360€ (inclui 100€ de outro desconto ignorado).
-// O cálculo deve ser: 1000 - 110 - 150 = 740 ✓ (os 100€ extras não entram)
+// Caso 3: Formato real com Abono intercalado antes do Desconto (pdfjs: coluna ABONO → DESCONTO).
+// SS: linha termina em 110,00€ (desconto), tendo 1000€ de abono antes
+// IRS: linha termina em 76,00€ (desconto), tendo 1251,23€ de incidência e 99,67€ parcela na desc.
+// Outros descontos (Adiantamento 100€) são ignorados no cálculo.
+// bruto=1251,23, SS=110, IRS=76 → liquidoCalculado=1065,23; liquidoPDF=1065,23 ✓
 const TEXT_ABONO_INTERCALADO = `
 Emitido por TOConline
-Segurança Social (11%)   1.000,00€   110,00€
-IRS   1.000,00€   150,00€
-Adiantamento   100,00€
-Total Descontos  360,00€  Total Abonos  1.000,00€   640,00€
+Segurança Social (11%)   1.000,00€   110,00€   Segurança Social (11%)   1.000,00€   110,00€
+IRS ( Incidência 1251.23€ ; Taxa IRS 15.7% ; Parcela a 76,00€   IRS ( Incidência 1251.23€ ; Taxa IRS 15.7% ; Parcela a 76,00€
+abater 99.67€)   abater 99.67€)
+Adiantamento   100,00€   Adiantamento   100,00€
+Total Abonos  Total Descontos  Total a Receber  Total Abonos  Total Descontos  Total a Receber
+1.251,23€  286,00€  1.065,23€  1.251,23€  286,00€  1.065,23€
 `;
 
 describe('parseReciboTOConline', () => {
@@ -60,21 +66,22 @@ describe('parseReciboTOConline', () => {
   });
 
   it('extrai SS e IRS corretamente quando Abono está intercalado (formato real pdfjs)', () => {
-    // Só SS+IRS entram no cálculo; Adiantamento de 100€ é ignorado
-    // bruto=1000, líquido_pdf=640, liquidoCalculado=1000-110-150=740 → divergência=100 → inválido
-    // mas os valores extraídos de SS e IRS devem ser corretos
-    const res = parseReciboTOConline(TEXT_ABONO_INTERCALADO, 1000.00);
+    // SS=110, IRS=76, bruto=1251.23 → liquidoCalculado=1065.23 = liquidoPDF → válido
+    const res = parseReciboTOConline(TEXT_ABONO_INTERCALADO, 1251.23);
     expect(res.sucesso).toBe(true);
     expect(res.ssExtraido).toBe(110.00);
-    expect(res.irsExtraido).toBe(150.00);
-    // divergência existe porque o bruto real não cobre os 100€ de adiantamento
-    // (correto — a plataforma não sabe dos outros descontos)
-    expect(res.valido).toBe(false);
-    expect(res.divergencia).toBeCloseTo(100, 1);
+    expect(res.irsExtraido).toBe(76.00);
+    expect(res.liquidoExtraido).toBe(1065.23);
+    expect(res.valido).toBe(true);
   });
 
   it('valido=false quando há divergência maior que 0,02€', () => {
-    const text = `Emitido por TOConline\nSegurança Social (11%)   136,99€\nTotal Descontos  136,99€  Total Abonos  3.249,00€   3.000,00€`;
+    const text = [
+      'Emitido por TOConline',
+      'Segurança Social (11%)   136,99€',
+      'Total Abonos  Total Descontos  Total a Receber',
+      '3.249,00€  136,99€  3.000,00€',
+    ].join('\n');
     const res = parseReciboTOConline(text, 3249.00);
     expect(res.sucesso).toBe(true);
     expect(res.valido).toBe(false);
@@ -83,7 +90,12 @@ describe('parseReciboTOConline', () => {
 
   it('aceita divergência dentro da margem de 0,02€', () => {
     // 3249 - 136.99 - 0 = 3112.01; líquido no PDF = 3112.02 → divergência=0.01 → válido
-    const text = `Emitido por TOConline\nSegurança Social (11%)   136,99€\nTotal Descontos  136,99€  Total Abonos  3.249,00€   3.112,02€`;
+    const text = [
+      'Emitido por TOConline',
+      'Segurança Social (11%)   136,99€',
+      'Total Abonos  Total Descontos  Total a Receber',
+      '3.249,00€  136,99€  3.112,02€',
+    ].join('\n');
     const res = parseReciboTOConline(text, 3249.00);
     expect(res.sucesso).toBe(true);
     expect(res.valido).toBe(true);
@@ -102,7 +114,12 @@ describe('parseReciboTOConline', () => {
   });
 
   it('mensagem de divergência inclui o valor calculado', () => {
-    const text = `Emitido por TOConline\nSegurança Social (11%)   136,99€\nTotal Descontos  136,99€  Total Abonos  3.249,00€   3.000,00€`;
+    const text = [
+      'Emitido por TOConline',
+      'Segurança Social (11%)   136,99€',
+      'Total Abonos  Total Descontos  Total a Receber',
+      '3.249,00€  136,99€  3.000,00€',
+    ].join('\n');
     const res = parseReciboTOConline(text, 3249.00);
     expect(res.mensagem).toMatch(/Divergência/);
     expect(res.divergencia).toBeCloseTo(112.01, 1);

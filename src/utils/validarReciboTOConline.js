@@ -86,8 +86,10 @@ export function parseReciboTOConline(text, brutoPlataforma) {
     };
   }
 
-  // Totais: "Total Descontos  136,99€  Total Abonos  3.249,00€   3.112,01€"
-  const totaisMatch = text.match(/Total Descontos\s+([\d.,]+€)\s+Total Abonos\s+([\d.,]+€)\s+([\d.,]+€)/);
+  // Totais reais do TOConline: labels numa linha, valores na linha seguinte (ORIGINAL + DUPLICADO)
+  // "Total Abonos  Total Descontos  Total a Receber  Total Abonos  Total Descontos  Total a Receber"
+  // "3.708,00€  213,64€  3.494,36€  3.708,00€  213,64€  3.494,36€"
+  const totaisMatch = text.match(/Total Abonos.*?Total a Receber.*?([\d.,]+€).*?([\d.,]+€).*?([\d.,]+€)/s);
 
   if (!totaisMatch) {
     return {
@@ -103,8 +105,8 @@ export function parseReciboTOConline(text, brutoPlataforma) {
     };
   }
 
-  const abonosExtraidos = parseMoeda(totaisMatch[2]);
-  const liquidoExtraido = parseMoeda(totaisMatch[3]);
+  const abonosExtraidos = parseMoeda(totaisMatch[1]); // 1º valor = Total Abonos
+  const liquidoExtraido = parseMoeda(totaisMatch[3]); // 3º valor = Total a Receber
 
   // SS: encontra a linha com "Segurança Social" e extrai o último € (= coluna Desconto)
   const ssLinha = text.match(/^.*Segurança Social.*$/m)?.[0] ?? '';
