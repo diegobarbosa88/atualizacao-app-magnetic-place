@@ -62,7 +62,7 @@ async function guardarValidacao(r, extra = {}) {
     irs_extraido:     r.irsExtraido     ?? null,
     liquido_extraido: r.liquidoExtraido ?? null,
     divergencia:      r.divergencia     ?? null,
-    estado:           estadoLabel(r).toLowerCase(),
+    estado:           !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido',
     mensagem:         r.mensagem ?? null,
     origem:           r.origem ?? extra.origem ?? null,
   });
