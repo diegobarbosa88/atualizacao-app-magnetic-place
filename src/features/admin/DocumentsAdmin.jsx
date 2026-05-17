@@ -14,6 +14,7 @@ import {
 } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
+import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import { parseDeviceLabel, fetchPublicIp } from '../../utils/deviceUtils';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
@@ -325,10 +326,11 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Centro de Documentos</h3>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto">
+        <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto">
           {[
             { id: 'documentos', icon: FileText, label: 'Documentos' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
+            { id: 'validar-recibo', icon: CheckCircle, label: 'Validar Recibo' },
           ].map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -341,7 +343,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         </div>
       </div>
 
-      {activeSubTab === 'templates' ? (
+      {activeSubTab === 'validar-recibo' ? (
+        <ValidarReciboAdmin workers={workers} />
+      ) : activeSubTab === 'templates' ? (
         <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
       ) : (
         <>
