@@ -20,6 +20,29 @@ const mesesDisponiveis = Array.from({ length: 12 }, (_, i) => {
 function normalizarNome(str) {
   return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
+
+// Trabalhadores isentos de validação automática — recibo é sempre marcado como válido
+const TRABALHADORES_SEMPRE_VALIDOS = [
+  'diego rocha barbosa',
+  'nicole emanuele rosa da costa galtieri',
+].map(normalizarNome);
+
+function isWorkerSempreValido(worker) {
+  if (!worker?.name) return false;
+  return TRABALHADORES_SEMPRE_VALIDOS.includes(normalizarNome(worker.name));
+}
+
+function aplicarOverrideSempreValido(resultado, worker) {
+  if (!resultado?.sucesso || !isWorkerSempreValido(worker)) return resultado;
+  return {
+    ...resultado,
+    valido: true,
+    aviso: false,
+    divergencia: 0,
+    divergenciaSinal: 0,
+    mensagem: 'Recibo marcado como válido (trabalhador isento de validação automática).',
+  };
+}
 function encontrarWorker(nomeExtraido, workers) {
   if (!nomeExtraido) return null;
   const n = normalizarNome(nomeExtraido);
@@ -127,7 +150,7 @@ const ModoIndividual = ({ workers, logs }) => {
     setLoading(true);
     setResultado(null);
     const res = await validarReciboTOConline(file, parseFloat(bruto.replace(',', '.')));
-    setResultado(res);
+    setResultado(aplicarOverrideSempreValido(res, worker));
     setLoading(false);
   };
 
@@ -214,7 +237,7 @@ const ModoLote = ({ workers, logs }) => {
       const totalHoras = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
       bruto = totalHoras * (worker.valorHora || 0);
     }
-    const validacao = parseReciboTOConline(text, bruto);
+    const validacao = aplicarOverrideSempreValido(parseReciboTOConline(text, bruto), worker);
     return { origem, nomeExtraido: nome ?? '—', worker: worker ?? null, mes: mes ?? '—', bruto, ...validacao };
   };
 
