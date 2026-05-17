@@ -565,8 +565,9 @@ function formatarDataHora(isoStr) {
     + ' · ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function SessaoRow({ sessao }) {
+function SessaoRow({ sessao, onMarcarValido }) {
   const [aberto, setAberto] = useState(false);
+  const [marcando, setMarcando] = useState(null); // id em curso
   const nValidos   = sessao.filter(r => r.estado === 'valido').length;
   const nAvisos    = sessao.filter(r => r.estado === 'aviso').length;
   const nInvalidos = sessao.filter(r => r.estado === 'invalido').length;
@@ -639,6 +640,19 @@ function SessaoRow({ sessao }) {
                               className="text-xs font-bold"
                             />
                           )}
+                          {r.estado !== 'valido' && (
+                            <button
+                              onClick={async () => {
+                                setMarcando(r.id);
+                                try { await onMarcarValido(r.id); } finally { setMarcando(null); }
+                              }}
+                              disabled={marcando === r.id}
+                              title="Marcar como válido"
+                              className="ml-1 p-1 rounded-full text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 transition-colors disabled:opacity-40"
+                            >
+                              {marcando === r.id ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} />}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -673,6 +687,23 @@ const ModoHistorico = ({ workers }) => {
   }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  const marcarValido = async (id) => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    const { error } = await db
+      .from('receipt_validations')
+      .update({
+        estado: 'valido',
+        divergencia: 0,
+        mensagem: 'Recibo marcado como válido manualmente pelo administrador.',
+      })
+      .eq('id', id);
+    if (error) { console.error(error); return; }
+    setRegistos(prev => prev.map(r => r.id === id
+      ? { ...r, estado: 'valido', divergencia: 0, mensagem: 'Recibo marcado como válido manualmente pelo administrador.' }
+      : r));
+  };
 
   // Filtrar registos individualmente e depois agrupar por sessão
   const registosFiltrados = registos.filter(r => {
@@ -726,7 +757,7 @@ const ModoHistorico = ({ workers }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sessoes.map(sessao => (
-                <SessaoRow key={sessao[0].session_id ?? sessao[0].id} sessao={sessao} />
+                <SessaoRow key={sessao[0].session_id ?? sessao[0].id} sessao={sessao} onMarcarValido={marcarValido} />
               ))}
             </tbody>
           </table>
