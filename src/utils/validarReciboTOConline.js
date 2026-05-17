@@ -15,12 +15,22 @@ function parseMoeda(str) {
   return parseFloat(str.replace(/\./g, '').replace(',', '.').replace('€', '').trim());
 }
 
+// Extrai o último valor em € de uma linha — em pdfjs, a coluna Abono aparece
+// antes da coluna Desconto, por isso o último € é sempre o desconto real.
+function ultimoEuroDaLinha(linha) {
+  const matches = [...linha.matchAll(/([\d.,]+)€/g)];
+  return matches.length > 0 ? parseMoeda(matches[matches.length - 1][1]) : 0;
+}
+
 export async function extrairTextoPdf(file) {
   const paginas = await extrairPaginasPdf(file);
   return paginas.join('\n');
 }
 
-// Retorna array de strings, uma por página — permite processar PDFs com múltiplos recibos
+// Retorna array de strings, uma por página.
+// Cada página: uma linha por linha visual do PDF (agrupamento por coordenada Y).
+// Isso preserva a ordem Abono→Desconto dentro de cada linha, necessária para
+// extrair corretamente os descontos de SS e IRS.
 export async function extrairPaginasPdf(file) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
@@ -28,21 +38,35 @@ export async function extrairPaginasPdf(file) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    paginas.push(content.items.map(item => item.str).join(' '));
+
+    const items = content.items
+      .filter(item => item.str?.trim())
+      .map(item => ({ str: item.str, x: item.transform[4], y: item.transform[5] }))
+      .sort((a, b) => b.y - a.y || a.x - b.x); // topo→fundo, esquerda→direita
+
+    // Agrupa items com Y próximo (≤5px) na mesma linha
+    const rows = [];
+    for (const item of items) {
+      const last = rows[rows.length - 1];
+      if (last && Math.abs(item.y - last.y) < 5) {
+        last.items.push(item);
+      } else {
+        rows.push({ y: item.y, items: [item] });
+      }
+    }
+
+    paginas.push(rows.map(row => row.items.map(i => i.str).join(' ')).join('\n'));
   }
   return paginas;
 }
 
 // Extrai nome do trabalhador e mês a partir do texto do PDF TOConline
 export function extrairMetadadosTOConline(text) {
-  // Mês: "De 1 de Abril 2026"
   const mesMatch = text.match(/De \d+ de (\w+) (\d{4})/i);
   const mes = mesMatch
     ? `${mesMatch[2]}-${MESES_MAP[mesMatch[1].toLowerCase()] ?? '??'}`
     : null;
 
-  // Nome: entre número de 9+ dígitos (NIS/NIF) e valor monetário
-  // Texto real: "317734083 EDILSON SOUSA DO NASCIMENTO 1.000,00€"
   const nomeMatch = text.match(/\d{9,}\s+([A-ZÁÀÂÃÉÊÍÓÔÕÚÇÜÑ][A-ZÁÀÂÃÉÊÍÓÔÕÚÇÜÑ\s]+?)\s+[\d.,]+€/);
   const nome = nomeMatch ? nomeMatch[1].trim() : null;
 
@@ -79,18 +103,21 @@ export function parseReciboTOConline(text, brutoPlataforma) {
     };
   }
 
-  const totalDescontosExtraido = parseMoeda(totaisMatch[1]);
-  const abonosExtraidos        = parseMoeda(totaisMatch[2]);
-  const liquidoExtraido        = parseMoeda(totaisMatch[3]);
+  const abonosExtraidos = parseMoeda(totaisMatch[2]);
+  const liquidoExtraido = parseMoeda(totaisMatch[3]);
 
-  // Segurança Social: "Segurança Social (11%)   136,99€"
-  // Lazy [^€\n]*? para não consumir o número antes de €
-  const ssMatch    = text.match(/Segurança Social[^€\n]*?([\d.,]+)€/);
-  const ssExtraido = ssMatch ? parseMoeda(ssMatch[1]) : 0;
+  // SS: encontra a linha com "Segurança Social" e extrai o último € (= coluna Desconto)
+  const ssLinha = text.match(/^.*Segurança Social.*$/m)?.[0] ?? '';
+  const ssExtraido = ultimoEuroDaLinha(ssLinha);
 
-  // IRS = Total Descontos - SS (evita ambiguidade do texto extraído pelo pdfjs)
-  const irsExtraido = parseFloat(Math.max(0, totalDescontosExtraido - ssExtraido).toFixed(2));
+  // IRS: encontra a linha com "IRS" e extrai o último € (= coluna Desconto)
+  // Quando taxa=0%, a linha não contém €, logo irsExtraido fica 0.
+  // O pdfjs coloca o valor da coluna Abono antes do Desconto, por isso
+  // o último € é sempre o desconto de IRS e não a base tributável.
+  const irsLinha = text.match(/^.*\bIRS\b.*$/m)?.[0] ?? '';
+  const irsExtraido = ultimoEuroDaLinha(irsLinha);
 
+  // Validação: apenas SS e IRS entram no cálculo; outros descontos são ignorados
   const liquidoCalculado = brutoPlataforma - ssExtraido - irsExtraido;
   const divergencia      = Math.abs(liquidoCalculado - liquidoExtraido);
   const valido           = divergencia <= 0.02;

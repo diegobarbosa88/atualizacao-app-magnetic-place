@@ -16,11 +16,25 @@ IRS - Taxa efetiva (Subsídio de Férias): 0%.
 Total Descontos  136,99€  Total Abonos  3.249,00€   3.112,01€
 `;
 
+// SS=110€, IRS=150€, outros descontos ignorados — apenas SS+IRS entram no cálculo
 const TEXT_COM_IRS = `
 Emitido por TOConline
 Segurança Social (11%)   110,00€
 IRS   150,00€
 Total Descontos  260,00€  Total Abonos  1.000,00€   740,00€
+`;
+
+// Simula o formato real do pdfjs: Abono intercalado antes do Desconto na mesma linha.
+// "Segurança Social (11%)   1.000,00€   110,00€" → último € = 110 (desconto)
+// "IRS   1.000,00€   150,00€"                    → último € = 150 (desconto)
+// O campo "Total Descontos" tem 360€ (inclui 100€ de outro desconto ignorado).
+// O cálculo deve ser: 1000 - 110 - 150 = 740 ✓ (os 100€ extras não entram)
+const TEXT_ABONO_INTERCALADO = `
+Emitido por TOConline
+Segurança Social (11%)   1.000,00€   110,00€
+IRS   1.000,00€   150,00€
+Adiantamento   100,00€
+Total Descontos  360,00€  Total Abonos  1.000,00€   640,00€
 `;
 
 describe('parseReciboTOConline', () => {
@@ -43,6 +57,20 @@ describe('parseReciboTOConline', () => {
     expect(res.irsExtraido).toBe(150.00);
     expect(res.liquidoExtraido).toBe(740.00);
     expect(res.divergencia).toBe(0);
+  });
+
+  it('extrai SS e IRS corretamente quando Abono está intercalado (formato real pdfjs)', () => {
+    // Só SS+IRS entram no cálculo; Adiantamento de 100€ é ignorado
+    // bruto=1000, líquido_pdf=640, liquidoCalculado=1000-110-150=740 → divergência=100 → inválido
+    // mas os valores extraídos de SS e IRS devem ser corretos
+    const res = parseReciboTOConline(TEXT_ABONO_INTERCALADO, 1000.00);
+    expect(res.sucesso).toBe(true);
+    expect(res.ssExtraido).toBe(110.00);
+    expect(res.irsExtraido).toBe(150.00);
+    // divergência existe porque o bruto real não cobre os 100€ de adiantamento
+    // (correto — a plataforma não sabe dos outros descontos)
+    expect(res.valido).toBe(false);
+    expect(res.divergencia).toBeCloseTo(100, 1);
   });
 
   it('valido=false quando há divergência maior que 0,02€', () => {
