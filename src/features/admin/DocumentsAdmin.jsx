@@ -78,7 +78,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const [uploading, setUploading] = useState(false);
 
   const unifiedDocs = useMemo(() => {
-    const manuais = (documents || []).map(d => {
+    const manuais = (documents || []).filter(d => d.status !== 'Rascunho').map(d => {
       const state = d.status === 'Assinado' ? 'signed' : 'pending';
       return {
         id: `manual:${d.id}`,

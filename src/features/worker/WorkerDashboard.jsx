@@ -173,7 +173,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <WorkerProfile
             worker={currentUser}
             changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
-            documents={(documents || []).filter(d => d.workerId === currentUser?.id || d.worker_id === currentUser?.id)}
+            documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
           />
         )}
         {workerTab === 'home' && (<>
@@ -221,7 +221,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           );
         })}
 
-        {(documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id).length > 0 && (
+        {(documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id && d.status !== 'Rascunho').length > 0 && (
           <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
             <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-1 shadow-lg">
               <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">

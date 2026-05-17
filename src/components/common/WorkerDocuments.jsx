@@ -239,7 +239,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
   }, [showSigner]);
 
   const docs = useMemo(
-    () => documents?.filter(d => d.workerId === currentUser?.id) || [],
+    () => documents?.filter(d => d.workerId === currentUser?.id && d.status !== 'Rascunho') || [],
     [documents, currentUser?.id]
   );
   const pendentes = useMemo(() => {
