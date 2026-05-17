@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight } from 'lucide-react';
 import {
   validarReciboTOConline,
   extrairPaginasPdf,
@@ -92,6 +92,7 @@ async function guardarValidacao(r, extra = {}) {
     estado:           !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido',
     mensagem:         r.mensagem ?? null,
     origem:           r.origem ?? extra.origem ?? null,
+    session_id:       extra.sessionId ?? null,
   });
   if (error) throw error;
 }
@@ -257,7 +258,8 @@ const ModoLote = ({ workers, logs }) => {
     setGuardando(true);
     setErroGuardar(null);
     try {
-      await Promise.all(resultados.map(r => guardarValidacao(r)));
+      const sessionId = crypto.randomUUID();
+      await Promise.all(resultados.map(r => guardarValidacao(r, { sessionId })));
       setGuardados(true);
     } catch (e) {
       setErroGuardar(e.message);
@@ -485,7 +487,7 @@ const ResultadoCard = ({ resultado, worker, mes, bruto }) => {
     setGuardando(true);
     setErroGuardar(null);
     try {
-      await guardarValidacao(resultado, { worker, mes, bruto });
+      await guardarValidacao(resultado, { worker, mes, bruto, sessionId: crypto.randomUUID() });
       setGuardado(true);
     } catch (e) {
       setErroGuardar(e.message);
@@ -549,6 +551,113 @@ const ESTADO_BADGE = {
 };
 const ESTADO_PT = { valido: 'Válido', aviso: 'Aviso', invalido: 'Inválido', erro: 'Erro' };
 
+function agruparPorSessao(registos) {
+  const mapa = new Map();
+  for (const r of registos) {
+    const key = r.session_id ?? r.id;
+    if (!mapa.has(key)) mapa.set(key, []);
+    mapa.get(key).push(r);
+  }
+  return [...mapa.values()].sort((a, b) =>
+    new Date(b[0].created_at) - new Date(a[0].created_at)
+  );
+}
+
+function formatarDataHora(isoStr) {
+  const d = new Date(isoStr);
+  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'short', year: 'numeric' })
+    + ' · ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function SessaoRow({ sessao }) {
+  const [aberto, setAberto] = useState(false);
+  const nValidos   = sessao.filter(r => r.estado === 'valido').length;
+  const nAvisos    = sessao.filter(r => r.estado === 'aviso').length;
+  const nInvalidos = sessao.filter(r => r.estado === 'invalido').length;
+  const nErros     = sessao.filter(r => r.estado === 'erro').length;
+
+  return (
+    <>
+      {/* Linha de sessão */}
+      <tr
+        onClick={() => setAberto(o => !o)}
+        className="cursor-pointer hover:bg-slate-50 transition-colors select-none"
+      >
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            <ChevronRight size={14} className={`text-slate-400 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
+            <span className="text-xs font-bold text-slate-700 whitespace-nowrap">
+              {formatarDataHora(sessao[0].created_at)}
+            </span>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <span className="text-xs text-slate-500 font-medium">
+            {sessao.length} recibo{sessao.length !== 1 ? 's' : ''}
+          </span>
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2">
+            {nValidos   > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600"><CheckCircle size={11} />{nValidos}</span>}
+            {nAvisos    > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-yellow-600"><AlertTriangle size={11} />{nAvisos}</span>}
+            {nInvalidos > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-red-500"><XCircle size={11} />{nInvalidos}</span>}
+            {nErros     > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-amber-500"><AlertCircle size={11} />{nErros}</span>}
+          </div>
+        </td>
+      </tr>
+
+      {/* Sub-tabela expandida */}
+      {aberto && (
+        <tr>
+          <td colSpan={3} className="px-0 py-0">
+            <div className="mx-4 mb-3 rounded-xl border border-slate-100 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
+                    <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">SS</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">IRS</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Diverg.</th>
+                    <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {sessao.map(r => (
+                    <tr key={r.id} className="hover:bg-slate-50 transition-colors" title={r.mensagem}>
+                      <td className="px-3 py-2.5 font-bold text-slate-800 max-w-[140px] truncate">{r.worker_name ?? '—'}</td>
+                      <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right text-slate-500">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right text-slate-500">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        {r.liquido_extraido != null && r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null
+                          ? <DivergenciaBadge
+                              sinal={parseFloat((Number(r.liquido_extraido) - (Number(r.bruto_plataforma) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
+                              className="text-xs font-bold"
+                            />
+                          : <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="px-3 py-2.5 text-center">
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
+                          {ESTADO_PT[r.estado] ?? r.estado}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 const ModoHistorico = ({ workers }) => {
   const [registos, setRegistos] = useState([]);
   const [carregando, setCarregando] = useState(false);
@@ -559,19 +668,24 @@ const ModoHistorico = ({ workers }) => {
     const db = window.supabaseInstance;
     if (!db) return;
     setCarregando(true);
-    let q = db
+    const { data } = await db
       .from('receipt_validations')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(200);
-    if (filtroWorker) q = q.eq('worker_id', filtroWorker);
-    if (filtroMes)    q = q.eq('mes', filtroMes);
-    const { data } = await q;
+      .limit(500);
     setRegistos(data ?? []);
     setCarregando(false);
-  }, [filtroWorker, filtroMes]);
+  }, []);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Filtrar registos individualmente e depois agrupar por sessão
+  const registosFiltrados = registos.filter(r => {
+    if (filtroWorker && r.worker_id !== filtroWorker) return false;
+    if (filtroMes    && r.mes       !== filtroMes)    return false;
+    return true;
+  });
+  const sessoes = agruparPorSessao(registosFiltrados);
 
   return (
     <div className="space-y-4">
@@ -601,52 +715,23 @@ const ModoHistorico = ({ workers }) => {
         </div>
       )}
 
-      {!carregando && registos.length === 0 && (
+      {!carregando && sessoes.length === 0 && (
         <p className="text-center text-sm text-slate-400 py-10">Nenhuma validação guardada.</p>
       )}
 
-      {!carregando && registos.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+      {!carregando && sessoes.length > 0 && (
+        <div className="rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">SS</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">IRS</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Diverg.</th>
-                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Processamento</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Recibos</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Resumo</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {registos.map(r => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors" title={r.mensagem}>
-                  <td className="px-4 py-3 text-slate-400 font-medium whitespace-nowrap">
-                    {new Date(r.created_at).toLocaleDateString('pt-PT')}
-                  </td>
-                  <td className="px-4 py-3 font-bold text-slate-800 max-w-[160px] truncate">{r.worker_name ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
-                  <td className="px-4 py-3 text-right font-bold text-slate-700">{r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
-                  <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    {r.liquido_extraido != null && r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null
-                      ? <DivergenciaBadge
-                          sinal={parseFloat((Number(r.liquido_extraido) - (Number(r.bruto_plataforma) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
-                          className="text-xs font-bold"
-                        />
-                      : <span className="text-slate-400">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
-                      {ESTADO_PT[r.estado] ?? r.estado}
-                    </span>
-                  </td>
-                </tr>
+            <tbody className="divide-y divide-slate-100">
+              {sessoes.map(sessao => (
+                <SessaoRow key={sessao[0].session_id ?? sessao[0].id} sessao={sessao} />
               ))}
             </tbody>
           </table>
