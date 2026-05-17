@@ -123,11 +123,11 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Utilizador</label>
-            <div className="relative"><UserCircle className="absolute left-4 top-4 text-slate-300" size={20} /><input type="text" value={user} onChange={e => setUser(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="ex: joaosilva" autoCapitalize="none" autoCorrect="off" required /></div>
+            <div className="relative"><UserCircle className="absolute left-4 top-4 text-slate-300" size={20} /><input type="text" value={user} onChange={e => setUser(e.target.value.toLowerCase().replace(/\s/g, ''))} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900 lowercase" placeholder="ex: joaosilva" autoCapitalize="none" autoCorrect="off" required /></div>
           </div>
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Senha</label>
-            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => setPass(e.target.value)} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" required /></div>
+            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => setPass(e.target.value.replace(/\s/g, ''))} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" required /></div>
           </div>
           {error && <div className="p-4 bg-red-50 text-red-500 text-xs font-bold rounded-2xl flex items-center gap-3 animate-pulse"><AlertCircle size={16} /> {error}</div>}
           <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-slate-800 active:scale-95 transition-all">Entrar</button>

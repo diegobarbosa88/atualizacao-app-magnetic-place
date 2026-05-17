@@ -2,6 +2,10 @@
   --app-max-width: 1920px;
 }
 
+* { text-transform: uppercase !important; }
+
+input.lowercase { text-transform: lowercase !important; }
+
 /* Custom Scrollbar for Menu */
 .menu-scroll {
   overflow-x: auto;
