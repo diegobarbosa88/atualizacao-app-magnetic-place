@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2, Pencil } from 'lucide-react';
 import {
   extrairPaginasPdf,
   extrairMetadadosTOConline,
@@ -76,13 +76,6 @@ function DivergenciaBadge({ sinal, className = 'text-sm font-black' }) {
 }
 
 // ─── Helpers de estado ────────────────────────────────────────────────────────
-function IconEstado({ r, size = 16 }) {
-  if (!r.sucesso) return <AlertCircle size={size} className="text-amber-500" />;
-  if (r.valido)   return <CheckCircle  size={size} className="text-emerald-500" />;
-  if (r.aviso)    return <AlertTriangle size={size} className="text-yellow-500" />;
-  return                 <XCircle      size={size} className="text-red-500" />;
-}
-
 function estadoBg(r) {
   if (!r.sucesso) return 'bg-amber-50 border-amber-200';
   if (r.valido)   return 'bg-emerald-50 border-emerald-200';
@@ -95,6 +88,55 @@ function estadoLabel(r) {
   if (r.valido)   return 'Válido';
   if (r.aviso)    return 'Aviso';
   return               'Inválido';
+}
+
+// ─── Picker de estado (clicável) ──────────────────────────────────────────────
+const ESTADOS_OPTIONS = [
+  { id: 'valido',   label: 'Válido',   Icon: CheckCircle,   color: 'text-emerald-500' },
+  { id: 'aviso',    label: 'Aviso',    Icon: AlertTriangle, color: 'text-yellow-500' },
+  { id: 'invalido', label: 'Inválido', Icon: XCircle,       color: 'text-red-500' },
+  { id: 'erro',     label: 'Erro',     Icon: AlertCircle,   color: 'text-amber-500' },
+];
+
+function EstadoPicker({ atual, onChange, size = 16 }) {
+  const [aberto, setAberto] = useState(false);
+  const opt = ESTADOS_OPTIONS.find(o => o.id === atual) ?? ESTADOS_OPTIONS[2];
+  const { Icon, color } = opt;
+
+  return (
+    <div className="relative inline-flex" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => setAberto(o => !o)}
+        title="Alterar estado"
+        className="p-0.5 rounded hover:bg-slate-100 transition-colors"
+      >
+        <Icon size={size} className={color} />
+      </button>
+      {aberto && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setAberto(false)} />
+          <div className="absolute top-full left-0 mt-1 z-20 bg-white border border-slate-200 rounded-xl shadow-lg p-1 flex flex-col min-w-[110px]">
+            {ESTADOS_OPTIONS.map(o => (
+              <button key={o.id}
+                onClick={() => { setAberto(false); if (o.id !== atual) onChange(o.id); }}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 ${o.id === atual ? 'bg-slate-50' : ''}`}
+              >
+                <o.Icon size={12} className={o.color} /> {o.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Deriva o objeto "r" (com sucesso/valido/aviso) a partir do estado string
+function estadoStringToFlags(estado) {
+  if (estado === 'valido')   return { sucesso: true,  valido: true,  aviso: false };
+  if (estado === 'aviso')    return { sucesso: true,  valido: false, aviso: true  };
+  if (estado === 'invalido') return { sucesso: true,  valido: false, aviso: false };
+  return                            { sucesso: false, valido: false, aviso: false }; // erro
 }
 
 // ─── Guardar no Supabase ───────────────────────────────────────────────────────
@@ -447,7 +489,13 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        <IconEstado r={r} />
+                        <EstadoPicker
+                          atual={!r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido'}
+                          onChange={(novo) => {
+                            const flags = estadoStringToFlags(novo);
+                            setResultados(prev => prev.map((x, idx) => idx === i ? { ...x, ...flags } : x));
+                          }}
+                        />
                         {r.sucesso && r.divergenciaSinal != null && (
                           <DivergenciaBadge sinal={r.divergenciaSinal} className="text-xs font-bold" />
                         )}
@@ -565,9 +613,9 @@ function formatarDataHora(isoStr) {
     + ' · ' + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function SessaoRow({ sessao, onMarcarValido }) {
+function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao }) {
   const [aberto, setAberto] = useState(false);
-  const [marcando, setMarcando] = useState(null); // id em curso
+  const [apagandoSessao, setApagandoSessao] = useState(false);
   const nValidos   = sessao.filter(r => r.estado === 'valido').length;
   const nAvisos    = sessao.filter(r => r.estado === 'aviso').length;
   const nInvalidos = sessao.filter(r => r.estado === 'invalido').length;
@@ -594,11 +642,26 @@ function SessaoRow({ sessao, onMarcarValido }) {
           </span>
         </td>
         <td className="px-4 py-3">
-          <div className="flex items-center gap-2">
-            {nValidos   > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600"><CheckCircle size={11} />{nValidos}</span>}
-            {nAvisos    > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-yellow-600"><AlertTriangle size={11} />{nAvisos}</span>}
-            {nInvalidos > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-red-500"><XCircle size={11} />{nInvalidos}</span>}
-            {nErros     > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-amber-500"><AlertCircle size={11} />{nErros}</span>}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {nValidos   > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-emerald-600"><CheckCircle size={11} />{nValidos}</span>}
+              {nAvisos    > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-yellow-600"><AlertTriangle size={11} />{nAvisos}</span>}
+              {nInvalidos > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-red-500"><XCircle size={11} />{nInvalidos}</span>}
+              {nErros     > 0 && <span className="flex items-center gap-1 text-[10px] font-black text-amber-500"><AlertCircle size={11} />{nErros}</span>}
+            </div>
+            <button
+              onClick={async e => {
+                e.stopPropagation();
+                if (!window.confirm(`Apagar este processamento (${sessao.length} recibo${sessao.length !== 1 ? 's' : ''})?`)) return;
+                setApagandoSessao(true);
+                try { await onApagarSessao(sessao); } finally { setApagandoSessao(false); }
+              }}
+              disabled={apagandoSessao}
+              title="Apagar processamento"
+              className="p-1 rounded text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+            >
+              {apagandoSessao ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+            </button>
           </div>
         </td>
       </tr>
@@ -631,6 +694,7 @@ function SessaoRow({ sessao, onMarcarValido }) {
                       <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-2">
+                          <EstadoPicker atual={r.estado} onChange={(novo) => onAlterarEstado(r.id, novo)} size={14} />
                           <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
                             {ESTADO_PT[r.estado] ?? r.estado}
                           </span>
@@ -640,19 +704,15 @@ function SessaoRow({ sessao, onMarcarValido }) {
                               className="text-xs font-bold"
                             />
                           )}
-                          {r.estado !== 'valido' && (
-                            <button
-                              onClick={async () => {
-                                setMarcando(r.id);
-                                try { await onMarcarValido(r.id); } finally { setMarcando(null); }
-                              }}
-                              disabled={marcando === r.id}
-                              title="Marcar como válido"
-                              className="ml-1 p-1 rounded-full text-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 transition-colors disabled:opacity-40"
-                            >
-                              {marcando === r.id ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} />}
-                            </button>
-                          )}
+                          <button
+                            onClick={() => {
+                              if (window.confirm('Apagar este registo?')) onApagarRegisto(r.id);
+                            }}
+                            title="Apagar registo"
+                            className="ml-1 p-1 rounded text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          >
+                            <Trash2 size={11} />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -688,21 +748,34 @@ const ModoHistorico = ({ workers }) => {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  const marcarValido = async (id) => {
+  const alterarEstado = async (id, novoEstado) => {
     const db = window.supabaseInstance;
     if (!db) return;
-    const { error } = await db
-      .from('receipt_validations')
-      .update({
-        estado: 'valido',
-        divergencia: 0,
-        mensagem: 'Recibo marcado como válido manualmente pelo administrador.',
-      })
-      .eq('id', id);
+    const patch = {
+      estado: novoEstado,
+      mensagem: `Estado alterado manualmente para "${ESTADO_PT[novoEstado] ?? novoEstado}" pelo administrador.`,
+      ...(novoEstado === 'valido' ? { divergencia: 0 } : {}),
+    };
+    const { error } = await db.from('receipt_validations').update(patch).eq('id', id);
     if (error) { console.error(error); return; }
-    setRegistos(prev => prev.map(r => r.id === id
-      ? { ...r, estado: 'valido', divergencia: 0, mensagem: 'Recibo marcado como válido manualmente pelo administrador.' }
-      : r));
+    setRegistos(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
+  };
+
+  const apagarRegisto = async (id) => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    const { error } = await db.from('receipt_validations').delete().eq('id', id);
+    if (error) { console.error(error); return; }
+    setRegistos(prev => prev.filter(r => r.id !== id));
+  };
+
+  const apagarSessao = async (sessao) => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    const ids = sessao.map(r => r.id);
+    const { error } = await db.from('receipt_validations').delete().in('id', ids);
+    if (error) { console.error(error); return; }
+    setRegistos(prev => prev.filter(r => !ids.includes(r.id)));
   };
 
   // Filtrar registos individualmente e depois agrupar por sessão
@@ -757,7 +830,13 @@ const ModoHistorico = ({ workers }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {sessoes.map(sessao => (
-                <SessaoRow key={sessao[0].session_id ?? sessao[0].id} sessao={sessao} onMarcarValido={marcarValido} />
+                <SessaoRow
+                  key={sessao[0].session_id ?? sessao[0].id}
+                  sessao={sessao}
+                  onAlterarEstado={alterarEstado}
+                  onApagarRegisto={apagarRegisto}
+                  onApagarSessao={apagarSessao}
+                />
               ))}
             </tbody>
           </table>
