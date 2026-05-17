@@ -250,7 +250,7 @@ const ModoLote = ({ workers, logs }) => {
 
                           {r.sucesso && (
                             <div className="grid grid-cols-3 gap-2">
-                              {[['Abonos', r.abonosExtraidos], ['Descontos', r.descontosExtraidos], ['Líquido', r.liquidoExtraido]].map(([label, val]) => (
+                              {[['Seg. Social', r.ssExtraido], ['IRS', r.irsExtraido], ['Líquido', r.liquidoExtraido]].map(([label, val]) => (
                                 <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
                                   <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
                                   <p className="text-sm font-black text-slate-800">{val?.toFixed(2)}€</p>
@@ -308,7 +308,7 @@ const ResultadoCard = ({ resultado }) => (
     </div>
     {resultado.sucesso && (
       <div className="grid grid-cols-3 gap-3">
-        {[['Abonos', resultado.abonosExtraidos], ['Descontos', resultado.descontosExtraidos], ['Líquido', resultado.liquidoExtraido]].map(([label, val]) => (
+        {[['Seg. Social', resultado.ssExtraido], ['IRS', resultado.irsExtraido], ['Líquido', resultado.liquidoExtraido]].map(([label, val]) => (
           <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
             <p className="text-sm font-black text-slate-800">{val?.toFixed(2)}€</p>

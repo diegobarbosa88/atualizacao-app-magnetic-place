@@ -62,16 +62,16 @@ export function parseReciboTOConline(text, brutoPlataforma) {
     };
   }
 
-  // Padrão real TOConline: "Total Descontos  136,99€  Total Abonos  3.249,00€   3.112,01€"
-  const regex = /Total Descontos\s+([\d.,]+€)\s+Total Abonos\s+([\d.,]+€)\s+([\d.,]+€)/;
-  const match = text.match(regex);
+  // Totais: "Total Descontos  136,99€  Total Abonos  3.249,00€   3.112,01€"
+  const totaisMatch = text.match(/Total Descontos\s+([\d.,]+€)\s+Total Abonos\s+([\d.,]+€)\s+([\d.,]+€)/);
 
-  if (!match) {
+  if (!totaisMatch) {
     return {
       sucesso: false,
       valido: false,
       abonosExtraidos: null,
-      descontosExtraidos: null,
+      ssExtraido: null,
+      irsExtraido: null,
       liquidoExtraido: null,
       divergencia: null,
       mensagem: 'Não foi possível extrair os totais do recibo. Verifique o formato do PDF.',
@@ -79,11 +79,19 @@ export function parseReciboTOConline(text, brutoPlataforma) {
     };
   }
 
-  const descontosExtraidos = parseMoeda(match[1]);
-  const abonosExtraidos    = parseMoeda(match[2]);
-  const liquidoExtraido    = parseMoeda(match[3]);
+  const totalDescontosExtraido = parseMoeda(totaisMatch[1]);
+  const abonosExtraidos        = parseMoeda(totaisMatch[2]);
+  const liquidoExtraido        = parseMoeda(totaisMatch[3]);
 
-  const liquidoCalculado = brutoPlataforma - descontosExtraidos;
+  // Segurança Social: "Segurança Social (11%)   136,99€"
+  // Lazy [^€\n]*? para não consumir o número antes de €
+  const ssMatch    = text.match(/Segurança Social[^€\n]*?([\d.,]+)€/);
+  const ssExtraido = ssMatch ? parseMoeda(ssMatch[1]) : 0;
+
+  // IRS = Total Descontos - SS (evita ambiguidade do texto extraído pelo pdfjs)
+  const irsExtraido = parseFloat(Math.max(0, totalDescontosExtraido - ssExtraido).toFixed(2));
+
+  const liquidoCalculado = brutoPlataforma - ssExtraido - irsExtraido;
   const divergencia      = Math.abs(liquidoCalculado - liquidoExtraido);
   const valido           = divergencia <= 0.02;
 
@@ -91,12 +99,13 @@ export function parseReciboTOConline(text, brutoPlataforma) {
     sucesso: true,
     valido,
     abonosExtraidos,
-    descontosExtraidos,
+    ssExtraido,
+    irsExtraido,
     liquidoExtraido,
     divergencia: valido ? 0 : parseFloat(divergencia.toFixed(2)),
     mensagem: valido
-      ? `Recibo válido. Bruto ${brutoPlataforma}€ - Descontos ${descontosExtraidos}€ = Líquido ${liquidoExtraido}€.`
-      : `Divergência de ${divergencia.toFixed(2)}€. Esperado líquido ${liquidoCalculado.toFixed(2)}€, recibo tem ${liquidoExtraido}€.`,
+      ? `Recibo válido. ${brutoPlataforma}€ - SS ${ssExtraido}€ - IRS ${irsExtraido}€ = ${liquidoExtraido}€.`
+      : `Divergência de ${divergencia.toFixed(2)}€. Esperado ${liquidoCalculado.toFixed(2)}€, recibo tem ${liquidoExtraido}€.`,
   };
 }
 
