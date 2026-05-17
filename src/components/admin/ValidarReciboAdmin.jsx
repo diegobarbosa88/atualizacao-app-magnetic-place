@@ -26,6 +26,17 @@ function encontrarWorker(nomeExtraido, workers) {
     ?? workers.find(w => normalizarNome(w.name).includes(n) || n.includes(normalizarNome(w.name)));
 }
 
+// ─── Divergência com sinal ────────────────────────────────────────────────────
+function DivergenciaBadge({ sinal, className = 'text-sm font-black' }) {
+  if (sinal == null || sinal === 0) return <span className={`${className} text-slate-400`}>0,00€</span>;
+  const pos = sinal > 0;
+  return (
+    <span className={`${className} ${pos ? 'text-emerald-600' : 'text-red-600'}`}>
+      {pos ? '+' : ''}{sinal.toFixed(2).replace('.', ',')}€
+    </span>
+  );
+}
+
 // ─── Helpers de estado ────────────────────────────────────────────────────────
 function IconEstado({ r, size = 16 }) {
   if (!r.sucesso) return <AlertCircle size={size} className="text-amber-500" />;
@@ -277,7 +288,9 @@ const ModoLote = ({ workers, logs }) => {
         r.ssExtraido      != null ? r.ssExtraido.toFixed(2)      : '—',
         r.irsExtraido     != null ? r.irsExtraido.toFixed(2)     : '—',
         r.liquidoExtraido != null ? r.liquidoExtraido.toFixed(2) : '—',
-        r.divergencia     != null ? r.divergencia.toFixed(2)     : '—',
+        r.divergenciaSinal != null
+          ? (r.divergenciaSinal > 0 ? '+' : '') + r.divergenciaSinal.toFixed(2) + '€'
+          : '—',
         estadoLabel(r),
       ];
       x = 14;
@@ -386,7 +399,7 @@ const ModoLote = ({ workers, logs }) => {
                           {r.sucesso && !r.valido && (
                             <div className={`bg-white rounded-xl px-4 py-2.5 flex items-center justify-between border ${r.aviso ? 'border-yellow-100' : 'border-red-100'}`}>
                               <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Divergência</span>
-                              <span className={`text-sm font-black ${r.aviso ? 'text-yellow-600' : 'text-red-600'}`}>{r.divergencia?.toFixed(2)}€</span>
+                              <DivergenciaBadge sinal={r.divergenciaSinal} />
                             </div>
                           )}
 
@@ -485,7 +498,7 @@ const ResultadoCard = ({ resultado, worker, mes, bruto }) => {
       {resultado.sucesso && !resultado.valido && (
         <div className={`bg-white rounded-xl p-3 flex items-center justify-between border ${resultado.aviso ? 'border-yellow-100' : 'border-red-100'}`}>
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Divergência</span>
-          <span className={`text-sm font-black ${resultado.aviso ? 'text-yellow-600' : 'text-red-600'}`}>{resultado.divergencia?.toFixed(2)}€</span>
+          <DivergenciaBadge sinal={resultado.divergenciaSinal} />
         </div>
       )}
 
@@ -594,7 +607,14 @@ const ModoHistorico = ({ workers }) => {
                   <td className="px-4 py-3 text-right text-slate-600">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
                   <td className="px-4 py-3 text-right text-slate-600">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
                   <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-500">{r.divergencia != null ? `${Number(r.divergencia).toFixed(2)}€` : '—'}</td>
+                  <td className="px-4 py-3 text-right">
+                    {r.liquido_extraido != null && r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null
+                      ? <DivergenciaBadge
+                          sinal={parseFloat((Number(r.liquido_extraido) - (Number(r.bruto_plataforma) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
+                          className="text-xs font-bold"
+                        />
+                      : <span className="text-slate-400">—</span>}
+                  </td>
                   <td className="px-4 py-3 text-center">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
                       {ESTADO_PT[r.estado] ?? r.estado}
