@@ -21,9 +21,25 @@ function normalizarNome(str) {
   return str.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
 }
 function encontrarWorker(nomeExtraido, workers) {
+  if (!nomeExtraido) return null;
   const n = normalizarNome(nomeExtraido);
-  return workers.find(w => normalizarNome(w.name) === n)
-    ?? workers.find(w => normalizarNome(w.name).includes(n) || n.includes(normalizarNome(w.name)));
+
+  // 1. correspondência exata
+  let found = workers.find(w => normalizarNome(w.name) === n);
+  if (found) return found;
+
+  // 2. um nome contém o outro (substring)
+  found = workers.find(w => { const wn = normalizarNome(w.name); return wn.includes(n) || n.includes(wn); });
+  if (found) return found;
+
+  // 3. palavras significativas em comum (≥3 chars) — apanha "da/de" intercalados
+  const nWords = n.split(/\s+/).filter(w => w.length >= 3);
+  found = workers.find(w => {
+    const wWords = normalizarNome(w.name).split(/\s+/).filter(w => w.length >= 3);
+    const comuns = nWords.filter(nw => wWords.includes(nw));
+    return comuns.length >= 2 && comuns.length / Math.max(nWords.length, wWords.length) >= 0.6;
+  });
+  return found ?? null;
 }
 
 // ─── Divergência com sinal ────────────────────────────────────────────────────
@@ -223,7 +239,17 @@ const ModoLote = ({ workers, logs }) => {
         res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, aviso: false, mensagem: `Erro: ${err.message}` });
       }
     }
-    setResultados(res);
+    // Remove cópias duplicadas (ORIGINAL/DUPLICADO/TRIPLICADO em páginas separadas):
+    // mesmo trabalhador + mesmo mês = mesmo recibo impresso várias vezes
+    const seen = new Set();
+    const deduplicados = res.filter(r => {
+      const key = `${r.worker?.id ?? normalizarNome(r.nomeExtraido ?? '')}|${r.mes}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    setResultados(deduplicados);
     setProcessando(false);
   };
 
