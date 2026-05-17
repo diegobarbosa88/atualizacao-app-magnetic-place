@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Upload, CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw } from 'lucide-react';
 import {
   validarReciboTOConline,
   extrairPaginasPdf,
@@ -501,6 +501,115 @@ const ResultadoCard = ({ resultado, worker, mes, bruto }) => {
   );
 };
 
+// ─── Modo Histórico ───────────────────────────────────────────────────────────
+const ESTADO_BADGE = {
+  valido:   'bg-emerald-100 text-emerald-700',
+  aviso:    'bg-yellow-100 text-yellow-700',
+  invalido: 'bg-red-100 text-red-600',
+  erro:     'bg-amber-100 text-amber-700',
+};
+const ESTADO_PT = { valido: 'Válido', aviso: 'Aviso', invalido: 'Inválido', erro: 'Erro' };
+
+const ModoHistorico = ({ workers }) => {
+  const [registos, setRegistos] = useState([]);
+  const [carregando, setCarregando] = useState(false);
+  const [filtroWorker, setFiltroWorker] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+
+  const carregar = useCallback(async () => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    setCarregando(true);
+    let q = db
+      .from('receipt_validations')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (filtroWorker) q = q.eq('worker_id', filtroWorker);
+    if (filtroMes)    q = q.eq('mes', filtroMes);
+    const { data } = await q;
+    setRegistos(data ?? []);
+    setCarregando(false);
+  }, [filtroWorker, filtroMes]);
+
+  useEffect(() => { carregar(); }, [carregar]);
+
+  return (
+    <div className="space-y-4">
+      {/* Filtros */}
+      <div className="flex gap-2 flex-wrap">
+        <select value={filtroWorker} onChange={e => setFiltroWorker(e.target.value)}
+          className="flex-1 min-w-[180px] p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Todos os trabalhadores</option>
+          {workers.filter(w => !w.isAdmin).sort((a,b) => a.name.localeCompare(b.name)).map(w => (
+            <option key={w.id} value={w.id}>{w.name}</option>
+          ))}
+        </select>
+        <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
+          className="flex-1 min-w-[160px] p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+          <option value="">Todos os meses</option>
+          {mesesDisponiveis.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+        <button onClick={carregar} disabled={carregando}
+          className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all disabled:opacity-40">
+          <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
+        </button>
+      </div>
+
+      {carregando && (
+        <div className="flex justify-center py-10">
+          <Loader2 size={22} className="animate-spin text-indigo-400" />
+        </div>
+      )}
+
+      {!carregando && registos.length === 0 && (
+        <p className="text-center text-sm text-slate-400 py-10">Nenhuma validação guardada.</p>
+      )}
+
+      {!carregando && registos.length > 0 && (
+        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">SS</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">IRS</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Diverg.</th>
+                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {registos.map(r => (
+                <tr key={r.id} className="hover:bg-slate-50 transition-colors" title={r.mensagem}>
+                  <td className="px-4 py-3 text-slate-400 font-medium whitespace-nowrap">
+                    {new Date(r.created_at).toLocaleDateString('pt-PT')}
+                  </td>
+                  <td className="px-4 py-3 font-bold text-slate-800 max-w-[160px] truncate">{r.worker_name ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
+                  <td className="px-4 py-3 text-right font-bold text-slate-700">{r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-600">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
+                  <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
+                  <td className="px-4 py-3 text-right text-slate-500">{r.divergencia != null ? `${Number(r.divergencia).toFixed(2)}€` : '—'}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
+                      {ESTADO_PT[r.estado] ?? r.estado}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 const ValidarReciboAdmin = ({ workers = [] }) => {
   const { logs = [] } = useApp();
@@ -508,21 +617,22 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-2xl max-w-xs mx-auto">
+      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl max-w-sm mx-auto">
         {[
           { id: 'individual', icon: ReceiptText, label: 'Individual' },
           { id: 'lote',       icon: Files,       label: 'Lote' },
+          { id: 'historico',  icon: History,     label: 'Histórico' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
-            className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modo === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modo === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
             <Icon size={13} /> {label}
           </button>
         ))}
       </div>
 
-      {modo === 'individual'
-        ? <ModoIndividual workers={workers} logs={logs} />
-        : <ModoLote workers={workers} logs={logs} />}
+      {modo === 'individual' && <ModoIndividual workers={workers} logs={logs} />}
+      {modo === 'lote'       && <ModoLote       workers={workers} logs={logs} />}
+      {modo === 'historico'  && <ModoHistorico  workers={workers} />}
     </div>
   );
 };
