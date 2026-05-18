@@ -16,6 +16,7 @@ import {
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
+import FaturasAdmin from './FaturasAdmin';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import { parseDeviceLabel, fetchPublicIp } from '../../utils/deviceUtils';
 
@@ -360,9 +361,10 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Centro de Documentos</h3>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
           {[
             { id: 'documentos', icon: FileText, label: 'Documentos' },
+            { id: 'faturas', icon: FileText, label: 'Faturas' },
             { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
             { id: 'validar-recibo', icon: CheckCircle, label: 'Validar' },
@@ -376,7 +378,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
                   setActiveSubTab(id);
                 }
               }}
-              className={`flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <Icon size={13} /> {label}
             </button>
@@ -390,6 +392,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
       ) : activeSubTab === 'relatorios' ? (
         <ReportsEmbedded {...props} />
+      ) : activeSubTab === 'faturas' ? (
+        <FaturasAdmin />
       ) : (
         <>
           {/* Pills de contagem por estado */}

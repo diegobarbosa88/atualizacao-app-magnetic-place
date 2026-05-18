@@ -5,8 +5,34 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
-const DEFAULT_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
 const STORAGE_KEY = 'faturas_gmail_query';
+
+const DEFAULT_CONFIG = {
+  lidos: true,
+  naoLidos: true,
+  temAnexo: true,
+  assuntos: ['fatura', 'invoice', 'FT'],
+  remetente: '',
+  palavras: '',
+};
+
+function configParaQuery(cfg) {
+  const parts = [];
+  if (cfg.naoLidos && !cfg.lidos) parts.push('is:unread');
+  if (cfg.lidos && !cfg.naoLidos) parts.push('is:read');
+  if (cfg.temAnexo) parts.push('has:attachment');
+  if (cfg.assuntos.length) {
+    const s = cfg.assuntos.map(a => `subject:${a}`).join(' ');
+    parts.push(cfg.assuntos.length > 1 ? `{${s}}` : s);
+  }
+  if (cfg.remetente.trim()) parts.push(`from:${cfg.remetente.trim()}`);
+  if (cfg.palavras.trim()) parts.push(cfg.palavras.trim());
+  return parts.join(' ') || 'has:attachment';
+}
+
+function querySalva() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
+}
 
 export default function FaturasAdmin() {
   const { supabase } = useApp();
@@ -16,10 +42,11 @@ export default function FaturasAdmin() {
   const [apagando, setApagando] = useState(false);
   const [selecionados, setSelecionados] = useState(new Set());
 
-  const [query, setQuery] = useState(() => localStorage.getItem(STORAGE_KEY) || DEFAULT_QUERY);
-  const [queryEditando, setQueryEditando] = useState(query);
+  const [cfg, setCfg] = useState(() => querySalva() || DEFAULT_CONFIG);
+  const [assuntoInput, setAssuntoInput] = useState('');
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [importando, setImportando] = useState(false);
+  const query = configParaQuery(cfg);
   const [importResult, setImportResult] = useState(null);
   const [extraindo, setExtraindo] = useState(false);
   const [extraindoErros, setExtraindoErros] = useState([]);
@@ -39,12 +66,21 @@ export default function FaturasAdmin() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [ordem, setOrdem] = useState({ campo: 'importado_em', dir: 'desc' });
 
-  const guardarQuery = () => {
-    const q = queryEditando.trim() || DEFAULT_QUERY;
-    setQuery(q); setQueryEditando(q);
-    localStorage.setItem(STORAGE_KEY, q);
+  const guardarConfig = (novaCfg) => {
+    setCfg(novaCfg);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(novaCfg));
     setMostrarConfig(false);
   };
+
+  const setCfgField = (field, val) => setCfg(prev => ({ ...prev, [field]: val }));
+
+  const addAssunto = () => {
+    const a = assuntoInput.trim();
+    if (a && !cfg.assuntos.includes(a)) setCfg(prev => ({ ...prev, assuntos: [...prev.assuntos, a] }));
+    setAssuntoInput('');
+  };
+
+  const removeAssunto = (a) => setCfg(prev => ({ ...prev, assuntos: prev.assuntos.filter(x => x !== a) }));
 
   const carregar = async () => {
     setLoading(true); setErro(null);
@@ -294,33 +330,88 @@ export default function FaturasAdmin() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">Pesquisa Gmail activa</p>
-            <p className="text-sm font-mono text-slate-600 break-all">{query}</p>
+            <p className="text-xs font-mono text-slate-500 break-all">{query}</p>
           </div>
-          <button onClick={() => { setMostrarConfig(v => !v); setQueryEditando(query); }}
+          <button onClick={() => setMostrarConfig(v => !v)}
             className="flex items-center gap-1 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors shrink-0">
-            {mostrarConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Editar
+            {mostrarConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />} Configurar
           </button>
         </div>
+
         {mostrarConfig && (
-          <div className="border-t border-slate-100 pt-4 space-y-3">
-            <p className="text-xs text-slate-400 font-semibold">
-              Sintaxe de pesquisa do Gmail. Ex: <span className="font-mono">subject:fatura</span>, <span className="font-mono">from:empresa@pt</span>, <span className="font-mono">is:unread</span>.
-            </p>
-            <textarea value={queryEditando} onChange={e => setQueryEditando(e.target.value)} rows={3}
-              className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none"
-              placeholder="is:unread has:attachment {subject:fatura subject:invoice}" />
-            <div className="flex items-center gap-2 justify-end">
-              <button onClick={() => setQueryEditando(DEFAULT_QUERY)}
+          <div className="border-t border-slate-100 pt-4 space-y-4">
+
+            {/* Estado dos emails */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Estado dos emails</p>
+              <div className="flex gap-3 flex-wrap">
+                {[{ key: 'naoLidos', label: 'Sem ler' }, { key: 'lidos', label: 'Lidos' }].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
+                    <input type="checkbox" checked={cfg[key]} onChange={e => setCfgField(key, e.target.checked)}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-300 cursor-pointer" />
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-600">{label}</span>
+                  </label>
+                ))}
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input type="checkbox" checked={cfg.temAnexo} onChange={e => setCfgField('temAnexo', e.target.checked)}
+                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-300 cursor-pointer" />
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-600">Tem anexo</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Assuntos */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Palavras no assunto</p>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {cfg.assuntos.map(a => (
+                  <span key={a} className="flex items-center gap-1 px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-semibold">
+                    {a}
+                    <button onClick={() => removeAssunto(a)} className="text-indigo-400 hover:text-indigo-700"><X size={11} /></button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={assuntoInput} onChange={e => setAssuntoInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addAssunto(); } }}
+                  placeholder="ex: recibo, nota de crédito..."
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                <button onClick={addAssunto}
+                  className="px-3 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black hover:bg-indigo-100 transition-colors">
+                  Adicionar
+                </button>
+              </div>
+            </div>
+
+            {/* Remetente */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Remetente (from:)</p>
+              <input value={cfg.remetente} onChange={e => setCfgField('remetente', e.target.value)}
+                placeholder="ex: fornecedor@empresa.pt"
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+
+            {/* Palavras extra */}
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Outros filtros (sintaxe Gmail)</p>
+              <input value={cfg.palavras} onChange={e => setCfgField('palavras', e.target.value)}
+                placeholder='ex: larger:1M after:2024/01/01'
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            </div>
+
+            <div className="flex items-center gap-2 justify-end pt-1">
+              <button onClick={() => { setCfg(DEFAULT_CONFIG); setAssuntoInput(''); }}
                 className="px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">
                 Repor padrão
               </button>
-              <button onClick={guardarQuery}
+              <button onClick={() => guardarConfig(cfg)}
                 className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
                 <Save size={13} /> Guardar
               </button>
             </div>
           </div>
         )}
+
         <div className="border-t border-slate-100 pt-4 flex items-center gap-3 flex-wrap">
           <button onClick={handleImportar} disabled={importando}
             className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100 disabled:opacity-60">
