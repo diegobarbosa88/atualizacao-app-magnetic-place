@@ -50,11 +50,16 @@ export default async function handler(req, res) {
   let ficheiros = 0;
   const erros = [];
 
+  // Accept custom query from request body, fallback to default
+  let body = {};
+  try { body = req.body || {}; } catch {}
+  const query = (body.query && body.query.trim()) ? body.query.trim() : GMAIL_QUERY;
+
   let listRes;
   try {
     listRes = await gmail.users.messages.list({
       userId,
-      q: GMAIL_QUERY,
+      q: query,
       maxResults: MAX_RESULTS,
     });
   } catch (e) {
