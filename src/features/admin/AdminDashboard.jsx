@@ -339,6 +339,11 @@ function AdminDashboard(props) {
             </div>
             {/* Mobile Actions */}
             <div className="flex md:hidden items-center gap-2">
+              <button onClick={() => setActiveTab('notificacoes')} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative">
+                <Bell size={18} />
+                {appNotifications.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{appNotifications.length}</span>}
+              </button>
+              {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"><Users size={18} /></button>}
               <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"><BarChart3 size={18} /></button>
               <button onClick={onLogout} className="p-2 text-slate-400"><LogOut size={18} /></button>
             </div>

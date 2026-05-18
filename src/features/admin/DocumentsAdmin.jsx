@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   FileText, Eye, Trash2, Search, Upload, Loader2, Plus, X,
   Clock, FileSignature, CheckCircle, ChevronUp, ChevronDown, LayoutList, BarChart3,
-  Users, Building2, Activity, History, Zap, Download
+  Users, Building2, Activity, History, Zap
 } from 'lucide-react';
 import { formatDocDate } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
@@ -72,27 +72,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     } else {
       setSortKey(key);
       setSortDir(key === 'createdAt' ? 'desc' : 'asc');
-    }
-  };
-
-  // Gmail invoice import
-  const [importando, setImportando] = useState(false);
-  const [importResult, setImportResult] = useState(null);
-
-  const handleImportarGmail = async () => {
-    setImportando(true);
-    setImportResult(null);
-    try {
-      const res = await fetch('/api/gmail/import-faturas', {
-        method: 'POST',
-        headers: { 'x-import-secret': import.meta.env.VITE_GMAIL_IMPORT_SECRET || '' },
-      });
-      const data = await res.json();
-      setImportResult(data);
-    } catch (e) {
-      setImportResult({ error: e.message });
-    } finally {
-      setImportando(false);
     }
   };
 
@@ -457,24 +436,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             >
               <Plus size={16} />
             </button>
-            <button
-              onClick={handleImportarGmail}
-              disabled={importando}
-              className="flex items-center gap-1.5 px-3 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-200 shrink-0 disabled:opacity-60"
-              title="Importar faturas do Gmail"
-            >
-              {importando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              Gmail
-            </button>
           </div>
-          {importResult && (
-            <div className={`mt-2 px-3 py-2 rounded-xl text-xs font-semibold ${importResult.error ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
-              {importResult.error
-                ? `Erro: ${importResult.error}`
-                : `${importResult.processados} email(s) processados · ${importResult.ficheiros} ficheiro(s) guardados${importResult.erros?.length ? ` · ${importResult.erros.length} erro(s)` : ''}`
-              }
-            </div>
-          )}
 
           {/* Lista unificada */}
           <div className="overflow-x-auto -mx-2">
