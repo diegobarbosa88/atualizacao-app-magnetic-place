@@ -1,4 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+config({ path: resolve(process.cwd(), '.env.playwright'), override: false });
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -6,6 +10,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: 0,
   workers: 1,
+  timeout: 30000,
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['list'],
@@ -15,6 +20,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    actionTimeout: 10000,
   },
   projects: [
     {
