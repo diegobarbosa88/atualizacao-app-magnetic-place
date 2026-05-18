@@ -1,7 +1,8 @@
 {
   "functions": {
     "api/gmail/import-faturas.js": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "includeFiles": "node_modules/pdf-parse/**"
     }
   },
   "headers": [
