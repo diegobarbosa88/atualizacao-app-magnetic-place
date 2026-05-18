@@ -1,8 +1,10 @@
 {
   "functions": {
     "api/gmail/import-faturas.js": {
-      "maxDuration": 60,
-      "includeFiles": "node_modules/pdf-parse/**"
+      "maxDuration": 60
+    },
+    "api/parse-fatura.js": {
+      "maxDuration": 30
     }
   },
   "headers": [
@@ -27,7 +29,7 @@
   ],
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]
