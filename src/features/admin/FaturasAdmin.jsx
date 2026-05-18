@@ -314,33 +314,39 @@ export default function FaturasAdmin() {
       const rowH = 7;
       let y = M;
 
-      // ── Header bar ──
+      // ── Header ──
       const headerH = 14;
-      pdf.setFillColor(79, 70, 229); // indigo-600
-      pdf.rect(M, y, cW, headerH, 'F');
 
       // Logo
       if (logoDataUrl) {
         try {
-          pdf.addImage(logoDataUrl, M + 2, y + 1, 12, 12);
+          pdf.addImage(logoDataUrl, M, y + 1, 12, 12);
         } catch { /* ignora se formato não suportado */ }
       }
 
-      const textX = logoDataUrl ? M + 16 : M + 3;
-      pdf.setTextColor(255, 255, 255);
+      const textX = logoDataUrl ? M + 14 : M;
+      pdf.setTextColor(30, 41, 59); // slate-800
       pdf.setFont('helvetica', 'bold');
-      pdf.setFontSize(11);
-      pdf.text(empresa.toUpperCase(), textX, y + 6.5);
+      pdf.setFontSize(12);
+      pdf.text(empresa.toUpperCase(), textX, y + 7);
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7.5);
-      pdf.text('Relatório de Faturas', textX, y + 11.5);
+      pdf.setTextColor(100, 116, 139); // slate-500
+      pdf.text('Relatório de Faturas', textX, y + 12);
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(7);
-      pdf.text(`Emitido em ${hoje}`, pW - M - 3, y + 6, { align: 'right' });
+      pdf.setTextColor(30, 41, 59);
+      pdf.text(`Emitido em ${hoje}`, pW - M, y + 7, { align: 'right' });
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`${lista.length} fatura(s)`, pW - M - 3, y + 11, { align: 'right' });
-      y += headerH + 4;
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`${lista.length} fatura(s)`, pW - M, y + 12, { align: 'right' });
+
+      y += headerH + 2;
+      // Linha separadora
+      pdf.setDrawColor(226, 232, 240);
+      pdf.line(M, y, M + cW, y);
+      y += 4;
 
       // ── Column headers ──
       pdf.setFillColor(241, 245, 249);
