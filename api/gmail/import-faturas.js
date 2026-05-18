@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'application/xml', 'text/xml'];
 const GMAIL_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
@@ -147,6 +146,7 @@ export default async function handler(req, res) {
           let dados = null;
           if (part.mimeType === 'application/pdf') {
             try {
+              const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
               const parsed = await pdfParse(buffer);
               dados = extrairDadosFatura(parsed.text);
             } catch {
