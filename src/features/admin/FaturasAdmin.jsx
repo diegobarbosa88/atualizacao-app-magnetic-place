@@ -22,7 +22,7 @@ export default function FaturasAdmin() {
   const [importando, setImportando] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [extraindo, setExtraindo] = useState(false);
-  const [extraindoErro, setExtraindoErro] = useState(null);
+  const [extraindoErros, setExtraindoErros] = useState([]);
 
   // Edição inline
   const [celEdit, setCelEdit] = useState(null); // { id, campo }
@@ -58,19 +58,6 @@ export default function FaturasAdmin() {
     finally { setLoading(false); }
   };
 
-  const extrairTextoPDF = async (url) => {
-    const resp = await fetch(url);
-    const buffer = await resp.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-    let texto = '';
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      texto += content.items.map(it => it.str).join(' ') + '\n';
-    }
-    return texto;
-  };
-
   const parsearComGemini = async (texto) => {
     const res = await fetch('/api/parse-fatura', {
       method: 'POST',
@@ -89,20 +76,34 @@ export default function FaturasAdmin() {
       : lista.filter(f => !f.dados && f.mime_type === 'application/pdf');
     if (!alvo.length) return;
     setExtraindo(true);
-    setExtraindoErro(null);
+    setExtraindoErros([]);
+    const erros = [];
     for (const f of alvo) {
       try {
-        const texto = await extrairTextoPDF(f.url);
+        const resp = await fetch(f.url);
+        if (!resp.ok) {
+          erros.push({ filename: f.filename, msg: `Ficheiro não encontrado no Storage (${resp.status})` });
+          continue;
+        }
+        const buffer = await resp.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+        let texto = '';
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          texto += content.items.map(it => it.str).join(' ') + '\n';
+        }
         const dados = await parsearComGemini(texto);
         if (dados) {
           const { error: updateError } = await supabase.from('faturas').update({ dados }).eq('id', f.id);
-          if (updateError) throw new Error(`DB update (${f.filename}): ${updateError.message}`);
+          if (updateError) throw new Error(`DB update: ${updateError.message}`);
           setFaturas(prev => prev.map(x => x.id === f.id ? { ...x, dados } : x));
         }
       } catch (e) {
-        setExtraindoErro(e.message);
+        erros.push({ filename: f.filename, msg: e.message });
       }
     }
+    setExtraindoErros(erros);
     setExtraindo(false);
   };
 
@@ -471,7 +472,7 @@ export default function FaturasAdmin() {
           <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50 flex items-center gap-2 flex-wrap">
             {extraindo
               ? <><Loader2 size={12} className="animate-spin text-indigo-400" /><span className="text-indigo-500">A extrair dados com IA...</span></>
-              : extraindoErro ? <span className="text-red-500">Erro: {extraindoErro}</span>
+              : extraindoErros.length > 0 ? <span className="text-amber-600">{extraindoErros.length} ficheiro(s) não processado(s): {extraindoErros.map(e => e.filename).join(', ')}</span>
               : <>{faturasFiltradas.length !== faturas.length ? <>{faturasFiltradas.length} de {faturas.length} fatura(s)</> : <>{faturas.length} fatura(s)</>}{selecionados.size > 0 ? <> · {selecionados.size} selecionada(s)</> : <> · duplo clique para editar</>}</>
             }
           </div>
