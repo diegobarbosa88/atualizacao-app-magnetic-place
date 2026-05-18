@@ -1,11 +1,18 @@
 export default async function handler(req, res) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+
+  // GET /api/parse-fatura → lista modelos disponíveis (diagnóstico)
+  if (req.method === 'GET') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+    const d = await r.json();
+    return res.status(r.status).json(d);
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { texto } = req.body || {};
   if (!texto) return res.status(400).json({ error: 'Missing texto' });
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
 
   const prompt = `Analisa este texto extraído de uma fatura e devolve APENAS um JSON válido com os campos:
 numero_fatura, data_fatura (formato YYYY-MM-DD ou null), nif_fornecedor (9 dígitos PT ou null), fornecedor (nome da empresa emitente), valor_total (número decimal ou null), iva (valor monetário do IVA ou null).
