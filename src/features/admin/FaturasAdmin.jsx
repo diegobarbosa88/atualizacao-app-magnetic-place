@@ -22,6 +22,7 @@ export default function FaturasAdmin() {
   const [importando, setImportando] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [extraindo, setExtraindo] = useState(false);
+  const [extraindoErro, setExtraindoErro] = useState(null);
 
   // Filtros
   const [pesquisa, setPesquisa] = useState('');
@@ -80,15 +81,19 @@ export default function FaturasAdmin() {
     const semDados = lista.filter(f => !f.dados && f.mime_type === 'application/pdf');
     if (!semDados.length) return;
     setExtraindo(true);
+    setExtraindoErro(null);
     for (const f of semDados) {
       try {
         const texto = await extrairTextoPDF(f.url);
         const dados = await parsearComGemini(texto);
         if (dados) {
-          await supabase.from('faturas').update({ dados }).eq('id', f.id);
+          const { error: updateError } = await supabase.from('faturas').update({ dados }).eq('id', f.id);
+          if (updateError) throw new Error(`DB update (${f.filename}): ${updateError.message}`);
           setFaturas(prev => prev.map(x => x.id === f.id ? { ...x, dados } : x));
         }
-      } catch { /* falhou silenciosamente */ }
+      } catch (e) {
+        setExtraindoErro(e.message);
+      }
     }
     setExtraindo(false);
   };
@@ -447,9 +452,11 @@ export default function FaturasAdmin() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50 flex items-center gap-2">
+          <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50 flex items-center gap-2 flex-wrap">
             {extraindo
               ? <><Loader2 size={12} className="animate-spin text-indigo-400" /><span className="text-indigo-500">A extrair dados das faturas com IA...</span></>
+              : extraindoErro
+              ? <span className="text-red-500">Erro na extracção: {extraindoErro}</span>
               : <>
                   {faturasFiltradas.length !== faturas.length
                     ? <>{faturasFiltradas.length} de {faturas.length} fatura(s)</>
