@@ -1,5 +1,13 @@
 import React from 'react';
 
+const STAMP_WIDTH  = 380;
+const STAMP_HEIGHT = 100;
+const SIG_BOX_W    = 140;
+const SIG_BOX_H    = 70;
+const LOGO_SIZE    = 32;
+const FOOTER_H     = 14;
+const BODY_H       = STAMP_HEIGHT - FOOTER_H;
+
 const INTER = "'Inter', system-ui, -apple-system, sans-serif";
 const MONO  = "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 const INK_FILTER = 'brightness(0.3) sepia(1) hue-rotate(190deg) saturate(4)';
@@ -16,46 +24,47 @@ const CompanyValidationStamp = ({
 
   return (
     <div style={{
+      width: `${STAMP_WIDTH}px`,
+      height: `${STAMP_HEIGHT}px`,
       background: '#fff',
       border: '1px solid #e2e8f0',
-      borderRadius: '8px',
+      borderRadius: '16px',
       fontFamily: INTER,
-      width: '100%',
-      maxWidth: '420px',
       overflow: 'hidden',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+      boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
     }}>
-      {/* Header */}
+      {/* Corpo */}
       <div style={{
+        height: `${BODY_H}px`,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '7px 12px',
-        borderBottom: '1px solid #f1f5f9',
+        padding: '0 14px',
+        gap: '12px',
+        flexShrink: 0,
       }}>
-        <img src={companyLogoUrl} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
-        <span style={{
-          fontSize: '7px', fontWeight: 800, color: '#94a3b8',
-          textTransform: 'uppercase', letterSpacing: '0.2em',
-        }}>
-          Assinatura Eletrónica
-        </span>
-      </div>
+        {/* Logo */}
+        <img
+          src={companyLogoUrl}
+          alt="Logo"
+          style={{ width: `${LOGO_SIZE}px`, height: `${LOGO_SIZE}px`, objectFit: 'contain', flexShrink: 0 }}
+        />
 
-      {/* Corpo: caixa de assinatura + dados */}
-      <div style={{ display: 'flex', alignItems: 'stretch', padding: '10px 12px', gap: '12px' }}>
         {/* Caixa da assinatura */}
         <div style={{
-          flex: '0 0 auto',
-          width: '120px',
-          height: '60px',
+          width: `${SIG_BOX_W}px`,
+          height: `${SIG_BOX_H}px`,
+          flexShrink: 0,
           border: '1px solid #e2e8f0',
-          borderRadius: '4px',
+          borderRadius: '8px',
+          background: '#fafafa',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#fafafa',
           overflow: 'hidden',
+          padding: '4px',
+          boxSizing: 'border-box',
         }}>
           {signatureDataUrl ? (
             <img
@@ -77,7 +86,7 @@ const CompanyValidationStamp = ({
             {responsibleName}
           </div>
           {responsibleRole && (
-            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#64748b' }}>{responsibleRole}</div>
+            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#64748b', marginTop: '1px' }}>{responsibleRole}</div>
           )}
           <div style={{ marginTop: '5px', borderTop: '1px solid #f1f5f9', paddingTop: '4px' }}>
             <div style={{ fontFamily: MONO, fontSize: '8px', color: '#475569' }}>{dateStr}</div>
@@ -88,12 +97,14 @@ const CompanyValidationStamp = ({
 
       {/* Footer */}
       <div style={{
-        padding: '5px 12px',
+        height: `${FOOTER_H}px`,
         borderTop: '1px solid #f1f5f9',
         background: '#fafafa',
         display: 'flex',
         alignItems: 'center',
+        padding: '0 14px',
         gap: '5px',
+        flexShrink: 0,
       }}>
         <span style={{
           display: 'inline-block', width: '6px', height: '6px',
