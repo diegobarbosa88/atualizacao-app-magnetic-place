@@ -388,12 +388,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                     <div className="flex items-center justify-between gap-2 md:grid md:grid-cols-[120px_1fr_220px]">
                       <div className="flex md:flex-col items-baseline md:items-start gap-2 md:gap-0">
                         <span className="text-2xl font-black text-slate-800">{dObj.getDate()}</span>
-                        <span className="text-[10px] uppercase font-bold text-slate-400">{dObj.toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
+                        <span className="text-[10px] uppercase font-bold text-slate-400">{['DOM','SEG','TER','QUA','QUI','SEX','SÁB'][dObj.getDay()]}</span>
                       </div>
                       <div className="flex-1 flex items-center justify-between md:justify-start gap-4">
                         {dayTotalTotal > 0 ? (
                           <div className="flex items-center gap-2">
-                            <span className="text-sm font-black text-indigo-600">{formatHours(dayTotalTotal)} registradas</span>
+                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
                             {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">• Detalhes</span>}
                           </div>
                         ) : (
