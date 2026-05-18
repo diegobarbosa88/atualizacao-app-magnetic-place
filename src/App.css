@@ -2,6 +2,10 @@
   --app-max-width: 1920px;
 }
 
+* { text-transform: uppercase !important; }
+
+input.lowercase { text-transform: lowercase !important; }
+
 /* Custom Scrollbar for Menu */
 .menu-scroll {
   overflow-x: auto;
@@ -17,25 +21,37 @@
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  table-layout: fixed; /* Enforce column widths and truncation */
+  table-layout: auto;
 }
 
-.admin-table th, 
+.admin-table th,
 .admin-table td {
   padding: 0.6rem 1rem !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  text-transform: uppercase !important; /* All words in uppercase */
+  text-transform: uppercase !important;
 }
 
-/* Default widths for common columns */
-.admin-table th:first-child, .admin-table td:first-child { width: 25%; }
-.admin-table th:last-child, .admin-table td:last-child { 
-  width: 160px !important; 
+.admin-table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+}
+
+.admin-table th:first-child,
+.admin-table td:first-child { min-width: 150px; width: 20%; }
+.admin-table th:last-child,
+.admin-table td:last-child {
+  min-width: 120px;
+  width: 10%;
+}
+
+.admin-table th,
+.admin-table td {
   overflow: visible !important;
   text-overflow: clip !important;
 }
+
+.admin-table { overflow-x: auto; display: block; }
 
 .admin-table th {
   background-color: #f8fafc;
