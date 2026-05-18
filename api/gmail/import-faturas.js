@@ -110,7 +110,6 @@ export default async function handler(req, res) {
             url: publicUrl,
             mime_type: part.mimeType,
             tamanho: buffer.length,
-            dados,
           });
 
           if (dbError && !dbError.message.includes('duplicate')) {
