@@ -4,7 +4,6 @@ import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas-pro';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const DEFAULT_CONFIG = {
@@ -270,100 +269,132 @@ export default function FaturasAdmin() {
 
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-  const gerarPDF = async () => {
+  const gerarPDF = () => {
     const lista = selecionados.size > 0
       ? faturasFiltradas.filter(f => selecionados.has(f.id))
       : faturasFiltradas;
     if (!lista.length) return;
     setGerandoPdf(true);
     try {
-      const totalValor = lista.reduce((s, f) => s + (f.dados?.valor_total ?? 0), 0);
-      const totalIva = lista.reduce((s, f) => s + (f.dados?.iva ?? 0), 0);
       const hoje = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
       const empresa = systemSettings?.companyName || 'Magnetic Place';
+      const totalValor = lista.reduce((s, f) => s + (f.dados?.valor_total ?? 0), 0);
+      const totalIva = lista.reduce((s, f) => s + (f.dados?.iva ?? 0), 0);
 
-      const rows = lista.map(f => {
-        const d = f.dados || {};
-        return `<tr>
-          <td>${d.numero_fatura || '—'}</td>
-          <td>${d.fornecedor || '—'}</td>
-          <td>${d.data_fatura || '—'}</td>
-          <td style="text-align:right">${d.valor_total != null ? Number(d.valor_total).toFixed(2) + ' €' : '—'}</td>
-          <td style="text-align:right">${d.iva != null ? Number(d.iva).toFixed(2) + ' €' : '—'}</td>
-        </tr>`;
-      }).join('');
-
-      const html = `
-        <div style="font-family:Arial,sans-serif;padding:32px;background:#fff;width:794px;color:#1e293b">
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
-            <div>
-              <p style="font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;color:#6366f1;margin:0 0 4px">${empresa}</p>
-              <h1 style="font-size:22px;font-weight:900;margin:0;text-transform:uppercase;letter-spacing:-0.02em">Relatório de Faturas</h1>
-            </div>
-            <div style="text-align:right">
-              <p style="font-size:10px;color:#94a3b8;margin:0">Emitido em ${hoje}</p>
-              <p style="font-size:10px;color:#94a3b8;margin:2px 0 0">${lista.length} fatura(s)</p>
-            </div>
-          </div>
-          <table style="width:100%;border-collapse:collapse;font-size:11px">
-            <thead>
-              <tr style="background:#f1f5f9">
-                <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Nº Fatura</th>
-                <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Fornecedor</th>
-                <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Data</th>
-                <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Total</th>
-                <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">IVA</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${lista.map((f, i) => {
-                const d = f.dados || {};
-                return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
-                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-family:monospace;font-size:10px">${d.numero_fatura || '—'}</td>
-                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-weight:600">${d.fornecedor || '—'}</td>
-                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#64748b">${d.data_fatura || '—'}</td>
-                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700">${d.valor_total != null ? Number(d.valor_total).toFixed(2) + ' €' : '—'}</td>
-                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;color:#64748b">${d.iva != null ? Number(d.iva).toFixed(2) + ' €' : '—'}</td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-            <tfoot>
-              <tr style="background:#f1f5f9">
-                <td colspan="3" style="padding:10px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#1e293b">Total</td>
-                <td style="padding:10px 10px;text-align:right;font-weight:900;font-size:13px;color:#4f46e5">${totalValor.toFixed(2)} €</td>
-                <td style="padding:10px 10px;text-align:right;font-weight:700;color:#64748b">${totalIva.toFixed(2)} €</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>`;
-
-      const wrapper = document.createElement('div');
-      wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff;z-index:-1;';
-      wrapper.innerHTML = html;
-      document.body.appendChild(wrapper);
-      await new Promise(r => setTimeout(r, 80));
-
-      const canvas = await html2canvas(wrapper.firstChild, {
-        scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 794,
-      });
-      document.body.removeChild(wrapper);
-
-      const imgData = canvas.toDataURL('image/jpeg', 0.97);
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-      const pW = pdf.internal.pageSize.getWidth();
-      const pH = pdf.internal.pageSize.getHeight();
-      const ratio = pW / canvas.width;
-      const imgH = canvas.height * ratio;
+      const M = 14; // margin
+      const pW = 210;
+      const pH = 297;
+      const cW = pW - M * 2; // content width = 182mm
 
-      let pos = 0, rem = imgH;
-      while (rem > 2) {
-        pdf.addImage(imgData, 'JPEG', 0, -pos, pW, imgH);
-        rem -= pH;
-        if (rem > 2) { pdf.addPage(); pos += pH; }
+      // Column definitions [label, width, align]
+      const cols = [
+        ['Nº Fatura',  38, 'left'],
+        ['Fornecedor', 72, 'left'],
+        ['Data',       24, 'center'],
+        ['Total (€)',  24, 'right'],
+        ['IVA (€)',    24, 'right'],
+      ];
+
+      const rowH = 7;
+      let y = M;
+
+      // ── Header bar ──
+      pdf.setFillColor(79, 70, 229); // indigo-600
+      pdf.rect(M, y, cW, 11, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(11);
+      pdf.text(empresa.toUpperCase(), M + 3, y + 7.5);
+      pdf.setFontSize(8);
+      pdf.text('RELATÓRIO DE FATURAS', pW - M - 3, y + 4, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7);
+      pdf.text(`Emitido em ${hoje} · ${lista.length} fatura(s)`, pW - M - 3, y + 9, { align: 'right' });
+      y += 15;
+
+      // ── Column headers ──
+      pdf.setFillColor(241, 245, 249);
+      pdf.rect(M, y, cW, rowH, 'F');
+      pdf.setDrawColor(203, 213, 225);
+      pdf.line(M, y + rowH, M + cW, y + rowH);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(6.5);
+      pdf.setTextColor(100, 116, 139);
+
+      let cx = M;
+      for (const [label, w, align] of cols) {
+        if (align === 'right') pdf.text(label, cx + w - 2, y + rowH - 2, { align: 'right' });
+        else if (align === 'center') pdf.text(label, cx + w / 2, y + rowH - 2, { align: 'center' });
+        else pdf.text(label, cx + 2, y + rowH - 2);
+        cx += w;
+      }
+      y += rowH;
+
+      // ── Data rows ──
+      const truncate = (text, maxW, pdf) => {
+        let t = String(text ?? '—');
+        while (t.length > 1 && pdf.getTextWidth(t) > maxW) t = t.slice(0, -1);
+        return t.length < String(text ?? '—').length ? t.slice(0, -1) + '…' : t;
+      };
+
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+
+      for (let i = 0; i < lista.length; i++) {
+        if (y + rowH > pH - M - 10) {
+          pdf.addPage();
+          y = M;
+        }
+
+        const d = lista[i].dados || {};
+
+        if (i % 2 === 1) {
+          pdf.setFillColor(248, 250, 252);
+          pdf.rect(M, y, cW, rowH, 'F');
+        }
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(M, y + rowH, M + cW, y + rowH);
+
+        const values = [
+          d.numero_fatura,
+          d.fornecedor,
+          d.data_fatura,
+          d.valor_total != null ? Number(d.valor_total).toFixed(2) + ' €' : '—',
+          d.iva != null ? Number(d.iva).toFixed(2) + ' €' : '—',
+        ];
+
+        cx = M;
+        pdf.setTextColor(30, 41, 59);
+        for (let c = 0; c < cols.length; c++) {
+          const [, w, align] = cols[c];
+          const cell = truncate(values[c], w - 4, pdf);
+          const ty = y + rowH - 2;
+          if (align === 'right') pdf.text(cell, cx + w - 2, ty, { align: 'right' });
+          else if (align === 'center') pdf.text(cell, cx + w / 2, ty, { align: 'center' });
+          else pdf.text(cell, cx + 2, ty);
+          cx += w;
+        }
+        y += rowH;
       }
 
-      const filename = `faturas_${hoje.replace(/\//g, '-')}.pdf`;
-      pdf.save(filename);
+      // ── Totals footer ──
+      y += 1;
+      pdf.setFillColor(79, 70, 229);
+      pdf.rect(M, y, cW, rowH + 1, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.text('TOTAL', M + 3, y + rowH - 1);
+
+      cx = M;
+      for (const [, w, align] of cols.slice(0, 3)) { cx += w; }
+      pdf.text(totalValor.toFixed(2) + ' €', cx + cols[3][1] - 2, y + rowH - 1, { align: 'right' });
+      cx += cols[3][1];
+      pdf.setTextColor(199, 210, 254);
+      pdf.text(totalIva.toFixed(2) + ' €', cx + cols[4][1] - 2, y + rowH - 1, { align: 'right' });
+
+      pdf.save(`faturas_${hoje.replace(/\//g, '-')}.pdf`);
     } catch (e) {
       alert('Erro ao gerar PDF: ' + e.message);
     } finally {
