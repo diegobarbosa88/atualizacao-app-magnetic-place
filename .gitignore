@@ -29,3 +29,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Google Service Account credentials — never commit
+credentials.json
+service-account*.json

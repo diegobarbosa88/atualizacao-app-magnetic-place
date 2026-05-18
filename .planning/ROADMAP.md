@@ -332,5 +332,29 @@ Plans:
 
 **UI hint:** yes
 
-*Last updated: 2026-05-12*
+---
 
+## Phase 17: Importação Automática de Faturas via Gmail
+
+**Goal:** Criar um módulo que conecta à Gmail API, identifica emails não lidos com faturas em anexo, faz o download dos anexos (PDF/XML), passa-os para o pipeline de processamento e marca os emails como lidos.
+
+**Requirements:** GMAIL-01, GMAIL-02, GMAIL-03, GMAIL-04, GMAIL-05
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Safety scaffold: gitignore, faturas DB migration, vercel.json timeout, install googleapis
+- [ ] 17-02-PLAN.md — Vercel API route: Gmail auth, attachment download, Supabase Storage upload, DB insert, mark-as-read
+- [ ] 17-03-PLAN.md — Admin UI: import button + loading state + result banners in DocumentsAdmin.jsx; .env.example
+
+**Success Criteria:**
+1. Autenticação server-to-server via Google Cloud Service Account
+2. Query configurável para identificar emails de faturas (`is:unread has:attachment {subject:fatura subject:invoice subject:FT}`)
+3. Download de anexos PDF e XML com conversão Base64Url → Buffer
+4. Integração com pipeline de processamento existente ou armazenamento temporário
+5. Marcação dos emails como lidos após download bem-sucedido
+6. `credentials.json` no `.gitignore`, try/catch robusto por anexo
+
+**UI hint:** yes
+
+*Last updated: 2026-05-18*
