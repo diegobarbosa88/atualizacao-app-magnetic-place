@@ -57,25 +57,17 @@ export default function FaturasAdmin() {
     return texto;
   };
 
-  // --- Parsing com Gemini ---
+  // --- Parsing com Gemini (via endpoint server-side) ---
   const parsearComGemini = async (texto) => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return null;
-    const prompt = `Analisa este texto extraído de uma fatura e devolve APENAS um JSON válido com os campos:
-numero_fatura, data_fatura (formato YYYY-MM-DD ou null), nif_fornecedor (9 dígitos PT ou null), fornecedor (nome da empresa emitente), valor_total (número decimal ou null), iva (valor monetário do IVA ou null).
-Se não encontrares um campo, usa null. Responde APENAS com o JSON, sem explicações.
-
-Texto:
-${texto.slice(0, 3000)}`;
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch('/api/gemini/parse-fatura', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+      body: JSON.stringify({ texto }),
     });
+    if (!res.ok) return null;
     const data = await res.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const jsonStr = raw.replace(/```json|```/g, '').trim();
-    return JSON.parse(jsonStr);
+    if (data.raw) return null;
+    return data;
   };
 
   // --- Processar faturas sem dados ---
