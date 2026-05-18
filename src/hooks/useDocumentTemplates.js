@@ -342,7 +342,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
    * 3. Upload do PDF final
    * 4. Atualiza worker_documents: status='signed', admin_signed_at=now
    */
-  const handleApproveDocument = useCallback(async (doc, { companyName, companySignature, adminIp, adminDevice, stampStyle } = {}) => {
+  const handleApproveDocument = useCallback(async (doc, { companyName, companySignature, adminIp, stampStyle } = {}) => {
     if (!supabase) throw new Error('Supabase não configurado');
     if (!doc?.id) throw new Error('Documento inválido');
     if (!doc.signed_pdf_url) throw new Error('Documento ainda não foi assinado pelo trabalhador');
@@ -382,7 +382,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         companyLogoBytes,
         signedAt: adminSignedAt,
         ip: adminIp,
-        device: adminDevice,
+        id: doc.id,
         stampStyle,
         xMm: tmpl?.stamp_admin_x ?? 20,
         yMm: tmpl?.stamp_admin_y ?? 30,

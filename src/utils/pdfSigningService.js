@@ -511,6 +511,7 @@ export async function applyAdminStampToPage(pdfBlob, {
   companyName, responsibleName, responsibleRole, signedAt, signatureDataUrl,
   companyLogoBytes,
   ip = 'N/D',
+  id,
   stampStyle = 'tech',
   xMm = 20, yMm = 30, page = 'last',
   stampWidthMm,
@@ -609,7 +610,7 @@ export async function applyAdminStampToPage(pdfBlob, {
       } else {
         drawAdminStamp(targetPage, {
           x, y, w, h,
-          responsibleName, responsibleRole, signedAt, ip,
+          responsibleName, responsibleRole, signedAt, ip, id,
           signatureImage: sigImage, logoImage,
           helvBold, courier,
         });
@@ -625,61 +626,56 @@ export async function applyAdminStampToPage(pdfBlob, {
 
 function drawAdminStamp(page, {
   x, y, w, h,
-  responsibleName, responsibleRole, signedAt, ip,
+  responsibleName, responsibleRole, signedAt, ip, id,
   signatureImage, logoImage,
   helvBold, courier,
 }) {
-  // Paleta — espelha o componente React CompanyValidationStamp (design minimalista)
-  const SLATE_50  = rgb(0.973, 0.980, 0.988); // #f8fafc
-  const SLATE_100 = rgb(0.945, 0.953, 0.965); // #f1f5f9
-  const SLATE_400 = rgb(0.580, 0.639, 0.722); // #94a3b8
-  const SLATE_600 = rgb(0.278, 0.337, 0.412); // #475569
-  const SLATE_900 = rgb(0.059, 0.090, 0.165); // #0f172a
-  const EMERALD   = rgb(0.063, 0.725, 0.506); // #10b981
+  // Layout espelha CompanyValidationStamp.jsx: [logo | caixa-sig | dados] + footer
+  const SLATE_50  = rgb(0.973, 0.980, 0.988);
+  const SLATE_100 = rgb(0.945, 0.953, 0.965);
+  const SLATE_400 = rgb(0.580, 0.639, 0.722);
+  const SLATE_600 = rgb(0.278, 0.337, 0.412);
+  const SLATE_900 = rgb(0.059, 0.090, 0.165);
+  const INDIGO    = rgb(0.388, 0.400, 0.945); // #6366f1
+  const EMERALD   = rgb(0.063, 0.725, 0.506);
   const WHITE     = rgb(1, 1, 1);
 
-  const PAD        = 5;
-  const HEADER_H   = 10;
-  const FOOTER_H   = 8;
-  const BODY_H     = h - HEADER_H - FOOTER_H;
-  const SIG_W      = w * 0.38;
+  const FOOTER_H = h * 0.15;
+  const BODY_H   = h - FOOTER_H;
+  const PAD_H    = w * 0.037;  // ~14px/380px
+  const PAD_V    = BODY_H * 0.06;
+  const GAP      = w * 0.032;  // ~12px/380px
 
-  // ── Fundo branco com borda ───────────────────────────────────────────────
+  // ── Fundo branco ─────────────────────────────────────────────────────────
   page.drawRectangle({ x, y, width: w, height: h, color: WHITE });
-
-  // ── Header ───────────────────────────────────────────────────────────────
-  const headerY = y + h - HEADER_H;
-  page.drawRectangle({ x, y: headerY, width: w, height: HEADER_H, color: WHITE });
-  page.drawLine({ start: { x, y: headerY }, end: { x: x + w, y: headerY }, thickness: 0.5, color: SLATE_100 });
-
-  // Logo no header (esquerda)
-  if (logoImage) {
-    const lh = HEADER_H - 4;
-    const lw = (logoImage.width / logoImage.height) * lh;
-    page.drawImage(logoImage, { x: x + PAD, y: headerY + 2, width: lw, height: lh });
-  }
-  // Label no header (direita)
-  const label = 'ASSINATURA ELETRONICA';
-  const labelW = helvBold.widthOfTextAtSize(label, 4);
-  page.drawText(label, { x: x + w - PAD - labelW, y: headerY + 3, size: 4, font: helvBold, color: SLATE_400 });
 
   // ── Footer ────────────────────────────────────────────────────────────────
   page.drawRectangle({ x, y, width: w, height: FOOTER_H, color: SLATE_50 });
-  page.drawLine({ start: { x, y: FOOTER_H + y }, end: { x: x + w, y: FOOTER_H + y }, thickness: 0.5, color: SLATE_100 });
-  // Ponto verde
-  page.drawCircle({ x: x + PAD + 2, y: y + FOOTER_H / 2, size: 2, color: EMERALD });
+  page.drawLine({ start: { x, y: y + FOOTER_H }, end: { x: x + w, y: y + FOOTER_H }, thickness: 0.4, color: SLATE_100 });
+  page.drawCircle({ x: x + PAD_H + 2, y: y + FOOTER_H / 2, size: 1.5, color: EMERALD });
   page.drawText('DOCUMENTO AUTENTICADO ELETRONICAMENTE', {
-    x: x + PAD + 7, y: y + 2.5, size: 3.5, font: helvBold, color: EMERALD,
+    x: x + PAD_H + 6, y: y + FOOTER_H * 0.25, size: 3, font: helvBold, color: EMERALD,
   });
 
   // ── Corpo ─────────────────────────────────────────────────────────────────
   const bodyY = y + FOOTER_H;
 
-  // Caixa da assinatura (esquerda)
-  const sigBoxX = x + PAD;
-  const sigBoxY = bodyY + (BODY_H - (BODY_H - PAD * 2)) / 2;
-  const sigBoxW = SIG_W - PAD;
-  const sigBoxH = BODY_H - PAD * 2;
+  // Logo (esquerda, centrado verticalmente no corpo)
+  const logoSize = Math.min(BODY_H * 0.48, w * 0.1);
+  const logoX = x + PAD_H;
+  const logoY = bodyY + (BODY_H - logoSize) / 2;
+  if (logoImage) {
+    const aspect = logoImage.width / logoImage.height;
+    const lw = logoSize * aspect;
+    const lh = logoSize;
+    page.drawImage(logoImage, { x: logoX, y: logoY, width: lw, height: lh });
+  }
+
+  // Caixa da assinatura (a seguir ao logo)
+  const sigBoxX = x + PAD_H + logoSize + GAP;
+  const sigBoxW = w * 0.368; // ~140/380
+  const sigBoxH = BODY_H * 0.82; // ~70/85
+  const sigBoxY = bodyY + (BODY_H - sigBoxH) / 2;
   page.drawRectangle({ x: sigBoxX, y: sigBoxY, width: sigBoxW, height: sigBoxH, color: SLATE_50 });
   page.drawLine({ start: { x: sigBoxX, y: sigBoxY }, end: { x: sigBoxX + sigBoxW, y: sigBoxY }, thickness: 0.4, color: SLATE_100 });
   page.drawLine({ start: { x: sigBoxX, y: sigBoxY + sigBoxH }, end: { x: sigBoxX + sigBoxW, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
@@ -693,46 +689,51 @@ function drawAdminStamp(page, {
     page.drawImage(signatureImage, {
       x: sigBoxX + (sigBoxW - imgW) / 2,
       y: sigBoxY + (sigBoxH - imgH) / 2,
-      width: imgW,
-      height: imgH,
-      opacity: 0.85,
+      width: imgW, height: imgH, opacity: 0.85,
     });
   }
 
   // Dados do signatário (direita)
-  const detailX = x + SIG_W + PAD;
-  let dY = bodyY + BODY_H - PAD - 1;
+  const detailX = sigBoxX + sigBoxW + GAP;
+  let dY = bodyY + BODY_H - PAD_V;
 
   // Nome
+  const nameSize = Math.min(7, (w - detailX + x - PAD_H) / ((responsibleName || '').length * 0.55 + 1));
   page.drawText(String(responsibleName || 'Responsável Legal'), {
-    x: detailX, y: dY - 7, size: 8, font: helvBold, color: SLATE_900,
+    x: detailX, y: dY - nameSize, size: Math.min(nameSize, 7), font: helvBold, color: SLATE_900,
   });
-  dY -= 9;
+  dY -= nameSize + 2;
 
   // Cargo
   if (responsibleRole) {
     page.drawText(String(responsibleRole), {
-      x: detailX, y: dY - 5, size: 5.5, font: courier, color: SLATE_600,
+      x: detailX, y: dY - 4, size: 4.5, font: courier, color: SLATE_600,
     });
-    dY -= 7;
+    dY -= 6;
   }
 
   // Divisor
-  dY -= 3;
-  page.drawLine({ start: { x: detailX, y: dY }, end: { x: x + w - PAD, y: dY }, thickness: 0.4, color: SLATE_100 });
-  dY -= 5;
+  dY -= 2;
+  page.drawLine({ start: { x: detailX, y: dY }, end: { x: x + w - PAD_H, y: dY }, thickness: 0.3, color: SLATE_100 });
+  dY -= 4;
 
   // Data
   if (signedAt) {
     const d = new Date(signedAt);
-    const pad = (n) => String(n).padStart(2, '0');
-    const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    page.drawText(dateStr, { x: detailX, y: dY, size: 5.5, font: courier, color: SLATE_600 });
-    dY -= 6;
+    const p = (n) => String(n).padStart(2, '0');
+    const dateStr = `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    page.drawText(dateStr, { x: detailX, y: dY, size: 4.5, font: courier, color: SLATE_600 });
+    dY -= 5;
   }
 
   // IP
-  page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 5, font: courier, color: SLATE_400 });
+  page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 4, font: courier, color: SLATE_400 });
+  dY -= 5;
+
+  // ID
+  if (id) {
+    page.drawText(`ID: ${String(id)}`, { x: detailX, y: dY, size: 3.5, font: courier, color: INDIGO });
+  }
 }
 
 function drawAdminStampMirror(page, {

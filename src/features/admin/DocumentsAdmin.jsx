@@ -18,7 +18,7 @@ import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmi
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import FaturasAdmin from './FaturasAdmin';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
-import { parseDeviceLabel, fetchPublicIp } from '../../utils/deviceUtils';
+import { fetchPublicIp } from '../../utils/deviceUtils';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
@@ -254,13 +254,11 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     }
     setApprovingId(raw.id);
     try {
-      const adminDevice = parseDeviceLabel();
       const adminIp = await fetchPublicIp();
       await handleApproveDocument(raw, {
         companyName: systemSettings?.companyName,
         companySignature,
         adminIp,
-        adminDevice,
         stampStyle,
       });
     } catch (err) {
