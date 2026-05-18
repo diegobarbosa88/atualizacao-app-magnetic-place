@@ -6,7 +6,7 @@ const STAMP_HEIGHT = 100;
 const SIG_BOX_W    = 140;
 const SIG_BOX_H    = 70;
 const LOGO_SIZE    = 32;
-const FOOTER_H     = 14;
+const FOOTER_H     = 15;
 const BODY_H       = STAMP_HEIGHT - FOOTER_H;
 
 const INTER = "'Inter', system-ui, -apple-system, sans-serif";
