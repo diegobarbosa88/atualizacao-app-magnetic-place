@@ -511,7 +511,6 @@ export async function applyAdminStampToPage(pdfBlob, {
   companyName, responsibleName, responsibleRole, signedAt, signatureDataUrl,
   companyLogoBytes,
   ip = 'N/D',
-  device = 'Browser/OS',
   stampStyle = 'tech',
   xMm = 20, yMm = 30, page = 'last',
   stampWidthMm,
@@ -531,7 +530,6 @@ export async function applyAdminStampToPage(pdfBlob, {
     const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const courier = await pdfDoc.embedFont(StandardFonts.Courier);
-    const courierBold = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
     // Embed recursos opcionais
     let sigImage = null;
@@ -611,9 +609,9 @@ export async function applyAdminStampToPage(pdfBlob, {
       } else {
         drawAdminStamp(targetPage, {
           x, y, w, h,
-          responsibleName, signedAt, ip, device,
-          logoImage,
-          helvBold, courier, courierBold,
+          responsibleName, responsibleRole, signedAt, ip,
+          signatureImage: sigImage, logoImage,
+          helvBold, courier,
         });
       }
     }
@@ -627,121 +625,114 @@ export async function applyAdminStampToPage(pdfBlob, {
 
 function drawAdminStamp(page, {
   x, y, w, h,
-  responsibleName, signedAt, ip, device,
-  logoImage,
-  helvBold, courier, courierBold,
+  responsibleName, responsibleRole, signedAt, ip,
+  signatureImage, logoImage,
+  helvBold, courier,
 }) {
-  // Paleta — espelha o componente React CompanyValidationStamp
-  const SKY_500 = rgb(0.055, 0.647, 0.914);  // #0ea5e9
-  const SKY_600 = rgb(0.011, 0.518, 0.780);  // #0284c7
-  const SLATE_50 = rgb(0.973, 0.980, 0.988); // #f8fafc
-  const SLATE_300 = rgb(0.796, 0.835, 0.882); // #cbd5e1
+  // Paleta — espelha o componente React CompanyValidationStamp (design minimalista)
+  const SLATE_50  = rgb(0.973, 0.980, 0.988); // #f8fafc
+  const SLATE_100 = rgb(0.945, 0.953, 0.965); // #f1f5f9
   const SLATE_400 = rgb(0.580, 0.639, 0.722); // #94a3b8
-  const SLATE_500 = rgb(0.392, 0.455, 0.545); // #64748b
   const SLATE_600 = rgb(0.278, 0.337, 0.412); // #475569
   const SLATE_900 = rgb(0.059, 0.090, 0.165); // #0f172a
-  const EMERALD = rgb(0.063, 0.725, 0.506);   // #10b981
-  const WHITE = rgb(1, 1, 1);
+  const EMERALD   = rgb(0.063, 0.725, 0.506); // #10b981
+  const WHITE     = rgb(1, 1, 1);
 
-  const leftW = w / 3;
-  const rightX = x + leftW;
-  const rightW = w - leftW;
-  const PAD = 6;
-  const ACCENT_W = 4;
+  const PAD        = 5;
+  const HEADER_H   = 10;
+  const FOOTER_H   = 8;
+  const BODY_H     = h - HEADER_H - FOOTER_H;
+  const SIG_W      = w * 0.38;
 
-  // Fundo geral branco (coluna direita)
+  // ── Fundo branco com borda ───────────────────────────────────────────────
   page.drawRectangle({ x, y, width: w, height: h, color: WHITE });
-  // Coluna esquerda — slate-50
-  page.drawRectangle({ x, y, width: leftW, height: h, color: SLATE_50 });
-  // Acento sky à esquerda
-  page.drawRectangle({ x, y, width: ACCENT_W, height: h, color: SKY_500 });
 
-  // Marca d'água — logo na coluna direita, esmaecida
+  // ── Header ───────────────────────────────────────────────────────────────
+  const headerY = y + h - HEADER_H;
+  page.drawRectangle({ x, y: headerY, width: w, height: HEADER_H, color: WHITE });
+  page.drawLine({ start: { x, y: headerY }, end: { x: x + w, y: headerY }, thickness: 0.5, color: SLATE_100 });
+
+  // Logo no header (esquerda)
   if (logoImage) {
-    const wmH = h * 0.85;
-    const wmW = (logoImage.width / logoImage.height) * wmH;
-    page.drawImage(logoImage, {
-      x: x + w - wmW + 4,
-      y: y + (h - wmH) / 2,
-      width: wmW,
-      height: wmH,
-      opacity: 0.08,
+    const lh = HEADER_H - 4;
+    const lw = (logoImage.width / logoImage.height) * lh;
+    page.drawImage(logoImage, { x: x + PAD, y: headerY + 2, width: lw, height: lh });
+  }
+  // Label no header (direita)
+  const label = 'ASSINATURA ELETRONICA';
+  const labelW = helvBold.widthOfTextAtSize(label, 4);
+  page.drawText(label, { x: x + w - PAD - labelW, y: headerY + 3, size: 4, font: helvBold, color: SLATE_400 });
+
+  // ── Footer ────────────────────────────────────────────────────────────────
+  page.drawRectangle({ x, y, width: w, height: FOOTER_H, color: SLATE_50 });
+  page.drawLine({ start: { x, y: FOOTER_H + y }, end: { x: x + w, y: FOOTER_H + y }, thickness: 0.5, color: SLATE_100 });
+  // Ponto verde
+  page.drawCircle({ x: x + PAD + 2, y: y + FOOTER_H / 2, size: 2, color: EMERALD });
+  page.drawText('DOCUMENTO AUTENTICADO ELETRONICAMENTE', {
+    x: x + PAD + 7, y: y + 2.5, size: 3.5, font: helvBold, color: EMERALD,
+  });
+
+  // ── Corpo ─────────────────────────────────────────────────────────────────
+  const bodyY = y + FOOTER_H;
+
+  // Caixa da assinatura (esquerda)
+  const sigBoxX = x + PAD;
+  const sigBoxY = bodyY + (BODY_H - (BODY_H - PAD * 2)) / 2;
+  const sigBoxW = SIG_W - PAD;
+  const sigBoxH = BODY_H - PAD * 2;
+  page.drawRectangle({ x: sigBoxX, y: sigBoxY, width: sigBoxW, height: sigBoxH, color: SLATE_50 });
+  page.drawLine({ start: { x: sigBoxX, y: sigBoxY }, end: { x: sigBoxX + sigBoxW, y: sigBoxY }, thickness: 0.4, color: SLATE_100 });
+  page.drawLine({ start: { x: sigBoxX, y: sigBoxY + sigBoxH }, end: { x: sigBoxX + sigBoxW, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
+  page.drawLine({ start: { x: sigBoxX, y: sigBoxY }, end: { x: sigBoxX, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
+  page.drawLine({ start: { x: sigBoxX + sigBoxW, y: sigBoxY }, end: { x: sigBoxX + sigBoxW, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
+
+  if (signatureImage) {
+    const aspect = signatureImage.width / signatureImage.height;
+    const imgH = sigBoxH - 4;
+    const imgW = Math.min(sigBoxW - 4, imgH * aspect);
+    page.drawImage(signatureImage, {
+      x: sigBoxX + (sigBoxW - imgW) / 2,
+      y: sigBoxY + (sigBoxH - imgH) / 2,
+      width: imgW,
+      height: imgH,
+      opacity: 0.85,
     });
   }
 
-  // ── Coluna Esquerda — Verified Device Audit ────────────────────────────
-  const leftContentX = x + ACCENT_W + PAD;
-  let curY = y + h - PAD - 4;
-
-  page.drawText('VERIFIED DEVICE AUDIT', {
-    x: leftContentX, y: curY, size: 4, font: helvBold, color: SKY_600,
-  });
-  curY -= 10;
-
-  // Device
-  page.drawText('DEVICE', { x: leftContentX, y: curY, size: 3.8, font: helvBold, color: SLATE_400 });
-  curY -= 5;
-  page.drawText(String(device || 'Browser/OS'), {
-    x: leftContentX, y: curY, size: 5.5, font: courier, color: SLATE_600,
-  });
-  curY -= 9;
-
-  // Network
-  page.drawText('NETWORK', { x: leftContentX, y: curY, size: 3.8, font: helvBold, color: SLATE_400 });
-  curY -= 5;
-  page.drawText(String(ip || 'N/D'), {
-    x: leftContentX, y: curY, size: 5.5, font: courier, color: SLATE_600,
-  });
-
-  // ── Coluna Direita — Signatory Details ─────────────────────────────────
-  const rightContentX = rightX + PAD;
-
-  // Indicador de status (dois dots no canto sup. direito)
-  const dotR = 1.8;
-  const dotY = y + h - PAD - dotR;
-  const dotX1 = x + w - PAD - dotR;
-  const dotX2 = dotX1 - 6;
-  page.drawCircle({ x: dotX1, y: dotY, size: dotR, color: SLATE_300 });
-  page.drawCircle({ x: dotX2, y: dotY, size: dotR, color: EMERALD });
+  // Dados do signatário (direita)
+  const detailX = x + SIG_W + PAD;
+  let dY = bodyY + BODY_H - PAD - 1;
 
   // Nome
-  let rY = y + h - PAD - 8;
   page.drawText(String(responsibleName || 'Responsável Legal'), {
-    x: rightContentX, y: rY, size: 10, font: helvBold, color: SLATE_900,
+    x: detailX, y: dY - 7, size: 8, font: helvBold, color: SLATE_900,
   });
+  dY -= 9;
 
-  // Subtítulo
-  rY -= 8;
-  page.drawText('ASSINATURA ELETRONICA CERTIFICADA', {
-    x: rightContentX, y: rY, size: 4.2, font: helvBold, color: SKY_600,
-  });
+  // Cargo
+  if (responsibleRole) {
+    page.drawText(String(responsibleRole), {
+      x: detailX, y: dY - 5, size: 5.5, font: courier, color: SLATE_600,
+    });
+    dY -= 7;
+  }
 
-  // Rodapé — caixa interna com token + data
-  const footerH = 9;
-  const footerY = y + PAD - 2;
-  const footerX = rightContentX;
-  const footerW = rightW - PAD * 2;
-  page.drawRectangle({
-    x: footerX, y: footerY, width: footerW, height: footerH, color: SLATE_50,
-  });
+  // Divisor
+  dY -= 3;
+  page.drawLine({ start: { x: detailX, y: dY }, end: { x: x + w - PAD, y: dY }, thickness: 0.4, color: SLATE_100 });
+  dY -= 5;
 
-  const finalToken = signedAt
-    ? new Date(signedAt).getTime().toString(16).toUpperCase().slice(-11).padStart(11, '0')
-    : '00000000000';
-  page.drawText(finalToken, {
-    x: footerX + 4, y: footerY + 2.5, size: 5, font: courierBold, color: SLATE_500,
-  });
-
-  let dateStr = '';
+  // Data
   if (signedAt) {
     const d = new Date(signedAt);
     const pad = (n) => String(n).padStart(2, '0');
-    dateStr = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} // ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const dateStr = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    page.drawText(dateStr, { x: detailX, y: dY, size: 5.5, font: courier, color: SLATE_600 });
+    dY -= 6;
   }
-  const dateW = helvBold.widthOfTextAtSize(dateStr, 5.5);
-  page.drawText(dateStr, {
-    x: footerX + footerW - 4 - dateW, y: footerY + 2.5, size: 5.5, font: helvBold, color: SLATE_900,
-  });
+
+  // IP
+  page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 5, font: courier, color: SLATE_400 });
 }
 
 function drawAdminStampMirror(page, {

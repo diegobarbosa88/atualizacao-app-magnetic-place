@@ -1,139 +1,110 @@
 import React from 'react';
-import { tokenIdFromDate, formatStampDateTime } from '../../utils/deviceUtils';
 
-const MONO = "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 const INTER = "'Inter', system-ui, -apple-system, sans-serif";
+const MONO  = "'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+const INK_FILTER = 'brightness(0.3) sepia(1) hue-rotate(190deg) saturate(4)';
 
 const CompanyValidationStamp = ({
   responsibleName = 'Responsável Legal',
+  responsibleRole = '',
   signedAt,
-  tokenId,
-  device = 'Browser/OS',
-  ip = '0.0.0.0',
-  verified = true,
+  ip = 'N/D',
+  signatureDataUrl,
   companyLogoUrl = '/icon-512x512.png',
 }) => {
-  const finalToken = tokenId || tokenIdFromDate(signedAt);
-  const dateLabel = formatStampDateTime(signedAt || new Date().toISOString());
+  const dateStr = signedAt ? new Date(signedAt).toLocaleString('pt-PT') : '';
 
   return (
-    <div
-      style={{
-        position: 'relative',
-        display: 'grid',
-        gridTemplateColumns: '1fr 2fr',
-        borderRadius: '4px',
-        borderLeft: '6px solid #0ea5e9',
-        overflow: 'hidden',
-        boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
-        fontFamily: INTER,
-        background: '#fff',
-        width: '100%',
-        maxWidth: '400px',
-      }}
-    >
-      {/* Coluna esquerda — Verified Device Audit */}
-      <div style={{ background: '#f8fafc', padding: '1rem' }}>
-        <div
-          style={{
-            fontSize: '7px',
-            fontWeight: 900,
-            textTransform: 'uppercase',
-            letterSpacing: '0.1em',
-            color: '#0284c7',
-            marginBottom: '10px',
-          }}
-        >
-          Verified Device Audit
+    <div style={{
+      background: '#fff',
+      border: '1px solid #e2e8f0',
+      borderRadius: '8px',
+      fontFamily: INTER,
+      width: '100%',
+      maxWidth: '420px',
+      overflow: 'hidden',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '7px 12px',
+        borderBottom: '1px solid #f1f5f9',
+      }}>
+        <img src={companyLogoUrl} alt="Logo" style={{ width: '22px', height: '22px', objectFit: 'contain' }} />
+        <span style={{
+          fontSize: '7px', fontWeight: 800, color: '#94a3b8',
+          textTransform: 'uppercase', letterSpacing: '0.2em',
+        }}>
+          Assinatura Eletrónica
+        </span>
+      </div>
+
+      {/* Corpo: caixa de assinatura + dados */}
+      <div style={{ display: 'flex', alignItems: 'stretch', padding: '10px 12px', gap: '12px' }}>
+        {/* Caixa da assinatura */}
+        <div style={{
+          flex: '0 0 auto',
+          width: '120px',
+          height: '60px',
+          border: '1px solid #e2e8f0',
+          borderRadius: '4px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#fafafa',
+          overflow: 'hidden',
+        }}>
+          {signatureDataUrl ? (
+            <img
+              src={signatureDataUrl}
+              alt="Assinatura"
+              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: INK_FILTER }}
+            />
+          ) : (
+            <span style={{ fontSize: '8px', color: '#cbd5e1', fontStyle: 'italic' }}>Assinatura</span>
+          )}
         </div>
 
-        <div style={{ marginBottom: '8px' }}>
-          <div style={{ fontSize: '7px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>
-            Device
+        {/* Dados do signatário */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px', minWidth: 0 }}>
+          <div style={{
+            fontSize: '12px', fontWeight: 700, color: '#0f172a', lineHeight: 1.1,
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>
+            {responsibleName}
           </div>
-          <div style={{ fontFamily: MONO, fontSize: '9px', color: '#475569', fontWeight: 500 }}>
-            {device}
-          </div>
-        </div>
-
-        <div>
-          <div style={{ fontSize: '7px', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>
-            Network
-          </div>
-          <div style={{ fontFamily: MONO, fontSize: '9px', color: '#475569', fontWeight: 500 }}>
-            {ip}
+          {responsibleRole && (
+            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#64748b' }}>{responsibleRole}</div>
+          )}
+          <div style={{ marginTop: '5px', borderTop: '1px solid #f1f5f9', paddingTop: '4px' }}>
+            <div style={{ fontFamily: MONO, fontSize: '8px', color: '#475569' }}>{dateStr}</div>
+            <div style={{ fontFamily: MONO, fontSize: '8px', color: '#94a3b8', marginTop: '2px' }}>IP {ip}</div>
           </div>
         </div>
       </div>
 
-      {/* Coluna direita — Signatory Details */}
-      <div style={{ background: '#fff', padding: '1rem', position: 'relative', overflow: 'hidden' }}>
-        {/* Marca d'água — logo da empresa */}
-        <img
-          src={companyLogoUrl}
-          alt=""
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            right: '-12px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            height: '95%',
-            width: 'auto',
-            opacity: 0.07,
-            pointerEvents: 'none',
-            userSelect: 'none',
-            zIndex: 0,
-          }}
-        />
-        {/* Indicador de status */}
-        <div style={{ position: 'absolute', top: '10px', right: '12px', display: 'flex', gap: '5px' }}>
-          <span
-            style={{
-              width: '7px',
-              height: '7px',
-              borderRadius: '50%',
-              background: verified ? '#10b981' : '#cbd5e1',
-              boxShadow: verified ? '0 0 5px rgba(16,185,129,0.6)' : 'none',
-            }}
-          />
-          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#cbd5e1' }} />
-        </div>
-
-        {/* Centro: nome + subtítulo */}
-        <div style={{ marginBottom: '10px' }}>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', lineHeight: 1.1 }}>
-            {responsibleName}
-          </div>
-          <div
-            style={{
-              marginTop: '3px',
-              fontSize: '9px',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-              letterSpacing: '0.1em',
-              color: '#0284c7',
-            }}
-          >
-            Assinatura Eletrónica Certificada
-          </div>
-        </div>
-
-        {/* Rodapé: token + data */}
-        <div
-          style={{
-            background: '#f8fafc',
-            borderRadius: '6px',
-            padding: '6px 10px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: '10px',
-          }}
-        >
-          <span style={{ fontFamily: MONO, fontSize: '9px', color: '#64748b' }}>{finalToken}</span>
-          <span style={{ fontFamily: INTER, fontWeight: 700, fontSize: '10px', color: '#0f172a' }}>{dateLabel}</span>
-        </div>
+      {/* Footer */}
+      <div style={{
+        padding: '5px 12px',
+        borderTop: '1px solid #f1f5f9',
+        background: '#fafafa',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+      }}>
+        <span style={{
+          display: 'inline-block', width: '6px', height: '6px',
+          borderRadius: '50%', background: '#10b981', flexShrink: 0,
+        }} />
+        <span style={{
+          fontSize: '6px', fontWeight: 700, color: '#10b981',
+          textTransform: 'uppercase', letterSpacing: '0.15em',
+        }}>
+          Documento autenticado eletronicamente
+        </span>
       </div>
     </div>
   );

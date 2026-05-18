@@ -1329,9 +1329,10 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
           ) : (
             <CompanyValidationStamp
               responsibleName={name || 'Nome do Responsável'}
+              responsibleRole={role}
               signedAt={new Date().toISOString()}
-              device={parseDeviceLabel()}
               ip="192.168.x.x"
+              signatureDataUrl={sigDataUrl}
             />
           )}
         </div>
