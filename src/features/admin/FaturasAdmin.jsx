@@ -269,7 +269,7 @@ export default function FaturasAdmin() {
 
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-  const gerarPDF = () => {
+  const gerarPDF = async () => {
     const lista = selecionados.size > 0
       ? faturasFiltradas.filter(f => selecionados.has(f.id))
       : faturasFiltradas;
@@ -280,6 +280,21 @@ export default function FaturasAdmin() {
       const empresa = systemSettings?.companyName || 'Magnetic Place';
       const totalValor = lista.reduce((s, f) => s + (f.dados?.valor_total ?? 0), 0);
       const totalIva = lista.reduce((s, f) => s + (f.dados?.iva ?? 0), 0);
+
+      // Fetch logo as base64
+      let logoDataUrl = null;
+      try {
+        const logoSrc = systemSettings?.companyLogo || '/MAGNETIC (3).png';
+        const res = await fetch(logoSrc);
+        if (res.ok) {
+          const blob = await res.blob();
+          logoDataUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch { /* logo opcional */ }
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const M = 14; // margin
@@ -300,18 +315,32 @@ export default function FaturasAdmin() {
       let y = M;
 
       // ── Header bar ──
+      const headerH = 14;
       pdf.setFillColor(79, 70, 229); // indigo-600
-      pdf.rect(M, y, cW, 11, 'F');
+      pdf.rect(M, y, cW, headerH, 'F');
+
+      // Logo
+      if (logoDataUrl) {
+        try {
+          pdf.addImage(logoDataUrl, M + 2, y + 1, 12, 12);
+        } catch { /* ignora se formato não suportado */ }
+      }
+
+      const textX = logoDataUrl ? M + 16 : M + 3;
       pdf.setTextColor(255, 255, 255);
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(11);
-      pdf.text(empresa.toUpperCase(), M + 3, y + 7.5);
-      pdf.setFontSize(8);
-      pdf.text('RELATÓRIO DE FATURAS', pW - M - 3, y + 4, { align: 'right' });
+      pdf.text(empresa.toUpperCase(), textX, y + 6.5);
       pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(7.5);
+      pdf.text('Relatório de Faturas', textX, y + 11.5);
+
+      pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(7);
-      pdf.text(`Emitido em ${hoje} · ${lista.length} fatura(s)`, pW - M - 3, y + 9, { align: 'right' });
-      y += 15;
+      pdf.text(`Emitido em ${hoje}`, pW - M - 3, y + 6, { align: 'right' });
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`${lista.length} fatura(s)`, pW - M - 3, y + 11, { align: 'right' });
+      y += headerH + 4;
 
       // ── Column headers ──
       pdf.setFillColor(241, 245, 249);
