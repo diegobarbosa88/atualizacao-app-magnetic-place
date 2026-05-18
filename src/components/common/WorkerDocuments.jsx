@@ -751,7 +751,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
       {showSigner && selectedDoc && (
         <>
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-stretch sm:items-center justify-center p-2 sm:p-4">
-            <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 max-w-5xl w-full max-h-[95vh] h-full sm:h-auto overflow-y-auto flex flex-col gap-3 sm:gap-4">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-6 max-w-5xl w-full h-full sm:h-[92vh] overflow-y-auto flex flex-col gap-3 sm:gap-4">
               <div className="flex justify-between items-center">
                 <h4 className="font-black text-base sm:text-lg truncate pr-2">{selectedDoc.tipo || selectedDoc.title}</h4>
                 <button onClick={() => { setShowSigner(false); setShowSignPad(false); clearCanvas(); }} className="p-2 hover:bg-slate-100 rounded-xl shrink-0"><X size={20} /></button>

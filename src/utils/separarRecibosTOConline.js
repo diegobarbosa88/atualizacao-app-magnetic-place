@@ -72,12 +72,19 @@ export async function separarRecibosTOConline(file, onProgresso) {
 /**
  * Faz upload do PDF individual para o Supabase Storage e regista em `documents`.
  */
-export async function associarDocumentoAoTrabalhador({ nif, nome, mes, tipo, worker, pdfBytes, supabase, status = 'Pendente' }) {
+export async function associarDocumentoAoTrabalhador({ nif, nome, mes, tipo, worker, pdfBytes, supabase, status = 'Pendente', nomeFicheiro }) {
   if (!worker) throw new Error(`Trabalhador não encontrado para NIF ${nif}`);
 
-  const tipoDoc     = tipo ?? 'Recibo de Vencimento';
-  const fileName    = `${tipoDoc.toLowerCase().replace(/\s+/g, '-')}_${mes ?? 'sem-mes'}_${nif}.pdf`;
-  const storagePath = `${worker.id}/documentos/${fileName}`;
+  const slugify = (str) => str
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // remove acentos
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9._-]/g, '');
+
+  const tipoDoc      = tipo ?? 'Recibo de Vencimento';
+  const displayName  = nomeFicheiro ?? `${tipoDoc}_${mes ?? 'sem-mes'}_${nif}`;
+  const fileName     = `${slugify(displayName)}.pdf`;
+  const storagePath  = `${worker.id}/documentos/${fileName}`;
   const blob        = new Blob([pdfBytes], { type: 'application/pdf' });
 
   const { error: uploadErr } = await supabase.storage
@@ -92,7 +99,7 @@ export async function associarDocumentoAoTrabalhador({ nif, nome, mes, tipo, wor
     id:           docId,
     workerId:     worker.id,
     tipo:         tipoDoc,
-    nomeFicheiro: fileName,
+    nomeFicheiro: `${displayName}.pdf`,
     url:          urlData.publicUrl,
     status,
     dataEmissao:  new Date().toISOString(),
