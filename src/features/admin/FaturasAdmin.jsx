@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, Save, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, Check, Pencil } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, Save, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, Check, Pencil, Printer } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -29,7 +29,7 @@ function configParaQuery(cfg) {
 }
 
 export default function FaturasAdmin() {
-  const { supabase, gmailQueryConfig, saveGmailQueryConfig } = useApp();
+  const { supabase, gmailQueryConfig, saveGmailQueryConfig, systemSettings } = useApp();
   const [faturas, setFaturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
@@ -266,6 +266,112 @@ export default function FaturasAdmin() {
   const handleApagarUm = (f) => { if (!confirm(`Apagar "${f.filename}"?`)) return; apagarFaturas([f.id]); };
   const handleApagarSelecionados = () => { if (!selecionados.size || !confirm(`Apagar ${selecionados.size} fatura(s)?`)) return; apagarFaturas([...selecionados]); };
 
+  const [gerandoPdf, setGerandoPdf] = useState(false);
+
+  const gerarPDF = async () => {
+    const lista = selecionados.size > 0
+      ? faturasFiltradas.filter(f => selecionados.has(f.id))
+      : faturasFiltradas;
+    if (!lista.length) return;
+    setGerandoPdf(true);
+    try {
+      const html2canvas = (await import('html2canvas-pro')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const totalValor = lista.reduce((s, f) => s + (f.dados?.valor_total ?? 0), 0);
+      const totalIva = lista.reduce((s, f) => s + (f.dados?.iva ?? 0), 0);
+      const hoje = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+      const empresa = systemSettings?.companyName || 'Magnetic Place';
+
+      const rows = lista.map(f => {
+        const d = f.dados || {};
+        return `<tr>
+          <td>${d.numero_fatura || '—'}</td>
+          <td>${d.fornecedor || '—'}</td>
+          <td>${d.data_fatura || '—'}</td>
+          <td style="text-align:right">${d.valor_total != null ? Number(d.valor_total).toFixed(2) + ' €' : '—'}</td>
+          <td style="text-align:right">${d.iva != null ? Number(d.iva).toFixed(2) + ' €' : '—'}</td>
+        </tr>`;
+      }).join('');
+
+      const html = `
+        <div style="font-family:Arial,sans-serif;padding:32px;background:#fff;width:794px;color:#1e293b">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+            <div>
+              <p style="font-size:10px;font-weight:900;letter-spacing:0.15em;text-transform:uppercase;color:#6366f1;margin:0 0 4px">${empresa}</p>
+              <h1 style="font-size:22px;font-weight:900;margin:0;text-transform:uppercase;letter-spacing:-0.02em">Relatório de Faturas</h1>
+            </div>
+            <div style="text-align:right">
+              <p style="font-size:10px;color:#94a3b8;margin:0">Emitido em ${hoje}</p>
+              <p style="font-size:10px;color:#94a3b8;margin:2px 0 0">${lista.length} fatura(s)</p>
+            </div>
+          </div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <thead>
+              <tr style="background:#f1f5f9">
+                <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Nº Fatura</th>
+                <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Fornecedor</th>
+                <th style="padding:8px 10px;text-align:left;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Data</th>
+                <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">Total</th>
+                <th style="padding:8px 10px;text-align:right;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#64748b;border-bottom:2px solid #e2e8f0">IVA</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${lista.map((f, i) => {
+                const d = f.dados || {};
+                return `<tr style="background:${i % 2 === 0 ? '#fff' : '#f8fafc'}">
+                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-family:monospace;font-size:10px">${d.numero_fatura || '—'}</td>
+                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;font-weight:600">${d.fornecedor || '—'}</td>
+                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;color:#64748b">${d.data_fatura || '—'}</td>
+                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;font-weight:700">${d.valor_total != null ? Number(d.valor_total).toFixed(2) + ' €' : '—'}</td>
+                  <td style="padding:8px 10px;border-bottom:1px solid #f1f5f9;text-align:right;color:#64748b">${d.iva != null ? Number(d.iva).toFixed(2) + ' €' : '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+            <tfoot>
+              <tr style="background:#f1f5f9">
+                <td colspan="3" style="padding:10px 10px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#1e293b">Total</td>
+                <td style="padding:10px 10px;text-align:right;font-weight:900;font-size:13px;color:#4f46e5">${totalValor.toFixed(2)} €</td>
+                <td style="padding:10px 10px;text-align:right;font-weight:700;color:#64748b">${totalIva.toFixed(2)} €</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>`;
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;background:#fff;z-index:-1;';
+      wrapper.innerHTML = html;
+      document.body.appendChild(wrapper);
+      await new Promise(r => setTimeout(r, 80));
+
+      const canvas = await html2canvas(wrapper.firstChild, {
+        scale: 2, useCORS: true, logging: false, backgroundColor: '#ffffff', windowWidth: 794,
+      });
+      document.body.removeChild(wrapper);
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.97);
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pW = pdf.internal.pageSize.getWidth();
+      const pH = pdf.internal.pageSize.getHeight();
+      const ratio = pW / canvas.width;
+      const imgH = canvas.height * ratio;
+
+      let pos = 0, rem = imgH;
+      while (rem > 2) {
+        pdf.addImage(imgData, 'JPEG', 0, -pos, pW, imgH);
+        rem -= pH;
+        if (rem > 2) { pdf.addPage(); pos += pH; }
+      }
+
+      const filename = `faturas_${hoje.replace(/\//g, '-')}.pdf`;
+      pdf.save(filename);
+    } catch (e) {
+      alert('Erro ao gerar PDF: ' + e.message);
+    } finally {
+      setGerandoPdf(false);
+    }
+  };
+
   const formatDate = (iso) => !iso ? '—' : new Date(iso).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
   const todosSelec = faturasFiltradas.length > 0 && faturasFiltradas.every(f => selecionados.has(f.id));
@@ -316,11 +422,18 @@ export default function FaturasAdmin() {
           <FileText size={22} className="text-emerald-600" />
           Faturas Importadas
         </h2>
-        <button onClick={carregar} disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50">
-          {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={gerarPDF} disabled={gerandoPdf || faturasFiltradas.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-sm">
+            {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
+            <span className="hidden sm:inline">{selecionados.size > 0 ? `PDF (${selecionados.size})` : 'PDF'}</span>
+          </button>
+          <button onClick={carregar} disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50">
+            {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            <span className="hidden sm:inline">Atualizar</span>
+          </button>
+        </div>
       </div>
 
       {/* Painel importação + config Gmail */}
@@ -473,10 +586,15 @@ export default function FaturasAdmin() {
       {selecionados.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl flex-wrap">
           <span className="text-xs font-black text-slate-600 uppercase tracking-widest">{selecionados.size} selecionada(s)</span>
+          <button onClick={gerarPDF} disabled={gerandoPdf}
+            className="flex items-center gap-1.5 px-4 py-2 bg-slate-700 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-50">
+            {gerandoPdf ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />}
+            PDF
+          </button>
           <button onClick={handleReextrairSelecionados} disabled={extraindo}
             className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50">
             {extraindo ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-            Reextrair dados com IA
+            Reextrair com IA
           </button>
           <button onClick={handleApagarSelecionados} disabled={apagando}
             className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50">
