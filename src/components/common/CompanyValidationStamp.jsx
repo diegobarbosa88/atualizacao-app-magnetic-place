@@ -23,7 +23,6 @@ const CompanyValidationStamp = ({
 }) => {
   const dateStr = signedAt ? new Date(signedAt).toLocaleString('pt-PT') : '';
   const idStr = id || '';
-  const idStr = id || '';
 
   return (
     <div style={{
