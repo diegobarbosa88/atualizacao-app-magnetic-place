@@ -5,7 +5,7 @@ const STAMP_HEIGHT = 100;
 const SIG_BOX_WIDTH = 140;
 const SIG_BOX_HEIGHT = 70;
 
-const ValidationStamp = ({ signature, datetime, ip, id, qrCode, hideQrCode = false }) => {
+const ValidationStamp = ({ signature, datetime, ip, id, qrCode, hideQrCode = false, workerName }) => {
   const dateStr = datetime ? new Date(datetime).toLocaleString('pt-PT') : '';
   const idStr = id || '';
   const ipStr = ip || 'N/D';
@@ -60,6 +60,12 @@ const ValidationStamp = ({ signature, datetime, ip, id, qrCode, hideQrCode = fal
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+          {workerName && (
+            <div style={{ fontSize: '8px', fontWeight: 800, color: '#0f172a', display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '1px' }}>
+              <span style={{ color: '#64748b', fontWeight: 700 }}>Colaborador:</span>
+              <span style={{ fontWeight: 900, color: '#0f172a' }}>{workerName}</span>
+            </div>
+          )}
           <div style={{ fontSize: '8px', fontWeight: 700, color: '#64748b', display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
             <span>Data/Hora:</span>
             <span style={{ fontWeight: 800, fontFamily: 'monospace', color: '#0f172a' }}>{dateStr}</span>

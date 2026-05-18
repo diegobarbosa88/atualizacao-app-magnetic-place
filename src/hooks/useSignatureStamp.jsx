@@ -32,10 +32,10 @@ export const generateQRCodeDataURL = async (id) => {
   }
 };
 
-export const getStampHTML = async ({ signatureDataURL, datetime, ip, id }) => {
+export const getStampHTML = async ({ signatureDataURL, datetime, ip, id, workerName }) => {
   const qrCodeDataURL = await generateQRCodeDataURL(id);
   const stampMarkup = renderToString(
-    <ValidationStamp signature={signatureDataURL} datetime={datetime} ip={ip} id={id} hideQrCode={true} />
+    <ValidationStamp signature={signatureDataURL} datetime={datetime} ip={ip} id={id} hideQrCode={true} workerName={workerName} />
   );
   const scopeCSS = `
     .magnetic-validation-stamp,

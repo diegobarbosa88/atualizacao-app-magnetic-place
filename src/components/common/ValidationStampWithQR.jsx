@@ -4,7 +4,7 @@ import { generateQRCodeDataURL } from '../../hooks/useSignatureStamp';
 
 // Wrapper que carrega o QR code async e renderiza o ValidationStamp com ele já preenchido.
 // Usado em sítios onde o stamp é renderizado como JSX vivo (cliente).
-const ValidationStampWithQR = ({ signature, datetime, ip, id }) => {
+const ValidationStampWithQR = ({ signature, datetime, ip, id, workerName }) => {
   const [qrCode, setQrCode] = useState('');
 
   useEffect(() => {
@@ -26,6 +26,7 @@ const ValidationStampWithQR = ({ signature, datetime, ip, id }) => {
       ip={ip}
       id={id}
       qrCode={qrCode}
+      workerName={workerName}
     />
   );
 };

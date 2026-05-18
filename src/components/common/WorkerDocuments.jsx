@@ -317,6 +317,7 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
           datetime: signerOpenedAt,
           ip: userIP,
           id: docId,
+          workerName: currentUser?.name || currentUser?.nome || null,
         });
 
         // 2. Parse template e injetar Tailwind CDN + CSS
@@ -495,7 +496,8 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
           signatureDataURL,
           datetime: signerOpenedAt,
           ip: userIP,
-          id: docId
+          id: docId,
+          workerName: currentUser?.name || currentUser?.nome || null,
         });
         const stampDocHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${workerDocumentsCSS}</style><style>
           html, body { margin:0; padding:0; background:#fff; }
