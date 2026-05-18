@@ -36,7 +36,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
     const update = () => {
       if (scaleWrapperRef.current) {
         const w = scaleWrapperRef.current.offsetWidth;
-        setAutoScale(Math.min(2, w / 794));
+        setAutoScale(Math.min(1, w / 794));
       }
     };
     update();
@@ -364,7 +364,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
               title="100%"
             >{Math.round(scale * 100)}%</button>
             <button
-              onClick={() => setManualZoom(Math.min(2, (manualZoom ?? autoScale) + 0.1))}
+              onClick={() => setManualZoom(Math.min(1, (manualZoom ?? autoScale) + 0.1))}
               className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-500 transition-all"
               title="Aumentar zoom"
             ><ZoomIn size={14} /></button>

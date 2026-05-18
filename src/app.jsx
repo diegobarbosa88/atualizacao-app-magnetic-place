@@ -266,7 +266,7 @@ export default function App() {
     if (!formData.clientId || !formData.startTime || !formData.endTime) return;
     const hours = calculateDuration(formData.startTime, formData.endTime, formData.breakStart, formData.breakEnd);
     const dateToSave = isMain ? formData.date : inlineDate;
-    const wId = (currentUser.role === 'admin' ? auditWorkerId : currentUser.id);
+    const wId = (view === 'admin' && auditWorkerId) ? auditWorkerId : currentUser.id;
     const logId = formData.id || `l${Date.now()}`;
     const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m); };
     const newStart = toMins(formData.startTime);
@@ -278,7 +278,7 @@ export default function App() {
       if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
     }
     saveToDb('logs', logId, { ...formData, date: dateToSave, hours, workerId: wId, id: logId });
-    if (isMain) { const resetClientId = currentUser?.role === 'worker' ? (currentUser.defaultClientId || '') : ''; setMainFormData(prev => ({ ...prev, description: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', clientId: resetClientId })); }
+    if (isMain) { const resetClientId = view === 'worker' ? (currentUser.defaultClientId || '') : ''; setMainFormData(prev => ({ ...prev, description: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', clientId: resetClientId })); }
   };
 
   const handleApproveMonth = (workerId) => { const monthStr = toISODateLocal(currentMonth).substring(0, 7); const id = "appr_" + workerId + "_" + monthStr; saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() }); };

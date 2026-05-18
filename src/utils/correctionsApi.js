@@ -130,7 +130,7 @@ export async function setItemResolution(supabase, itemId, { itemStatus, finalVal
  * Apply a correction: write resolved items into `logs`, mark correction applied,
  * notify the client. Items still `pending` block the apply.
  */
-export async function applyCorrection(supabase, { correction, items, logs, reviewer, clientName, clientEmail, portalBase }) {
+export async function applyCorrection(supabase, { correction, items, logs, clientName, clientEmail, portalBase }) {
   if (!supabase) throw new Error('Supabase indisponível');
 
   const unresolved = items.filter((it) => it.item_status === 'pending');
@@ -182,14 +182,16 @@ export async function applyCorrection(supabase, { correction, items, logs, revie
   }
 
   const { error: e2 } = await supabase
-    .from('corrections')
-    .update({
-      status: 'applied',
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: reviewer ? String(reviewer) : null,
-    })
-    .eq('id', correction.id);
+    .from('correction_items')
+    .delete()
+    .eq('correction_id', correction.id);
   if (e2) throw e2;
+
+  const { error: e3 } = await supabase
+    .from('corrections')
+    .delete()
+    .eq('id', correction.id);
+  if (e3) throw e3;
 
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
