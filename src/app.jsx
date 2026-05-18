@@ -80,6 +80,11 @@ export default function App() {
     const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    if (!updateAvailable) return;
+    const t = setTimeout(() => setUpdateAvailable(false), 7000);
+    return () => clearTimeout(t);
+  }, [updateAvailable]);
 
   const [activeTab, setActiveTab] = useState('overview');
   const [portalMonth, setPortalMonth] = useState(new Date());

@@ -3,7 +3,7 @@ import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
   Clock, ChevronLeft, ChevronRight, Calendar, CheckCircle,
-  LogOut, Timer, TrendingUp, Edit2, Save, X, Plus, Users,
+  LogOut, Timer, TrendingUp, Edit2, Save, Plus, Users,
   AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Sparkles, Download, LayoutGrid
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -42,7 +42,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     successMsg, setSuccessMsg,
     inlineFormData, setInlineFormData,
     mainFormData, setMainFormData,
-    showSchedulesModal, setShowSchedulesModal,
     showProgress, setShowProgress,
     expandedDays, setExpandedDays,
     monthLogs,
@@ -131,7 +130,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         </div>
       )}
       <nav className="bg-white border-b border-slate-200 h-16 flex items-center px-4 md:px-6 justify-between sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-3">
+        <button onClick={() => { setWorkerTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="flex items-center gap-3 hover:opacity-75 transition-opacity">
           <CompanyLogo className="h-10 w-10 object-contain" />
           <div className="flex flex-col">
             <p className="text-sm sm:text-base font-black leading-none text-slate-800 uppercase tracking-tight">{formatShortName(currentUser?.name)}</p>
@@ -139,9 +138,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               {currentUser?.profissao || 'Colaborador'}
             </p>
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-2 sm:gap-4">
-          <button onClick={() => setShowSchedulesModal(true)} className="flex items-center gap-2 p-2 sm:px-4 sm:py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black shadow-sm">
+          <button onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')} className={`flex items-center gap-2 p-2 sm:px-4 sm:py-2 rounded-xl text-xs font-black shadow-sm ${workerTab === 'horarios' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
             {activeWorkerSchedule && (
               <span className="hidden sm:inline-block text-[9px] sm:text-xs opacity-70 border-r border-indigo-200 pr-2 mr-1 leading-tight text-right uppercase">
                 <span className="block">{formatTimeCompact(activeWorkerSchedule.startTime)} - {formatTimeCompact(activeWorkerSchedule.endTime)}</span>
@@ -176,6 +175,68 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
             documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
           />
+        )}
+        {workerTab === 'horarios' && (
+          <div className="animate-in slide-in-from-top-4 duration-300">
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-6 max-w-2xl">
+              <h3 className="text-base sm:text-lg font-black flex items-center gap-2 mb-5 border-b pb-3"><Timer className="text-indigo-600" size={18} /> Meus Horários</h3>
+              <div className="space-y-3">
+                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pela Empresa</h4>
+                <div className="space-y-1.5">
+                  {assigned.length > 0 ? assigned.map(s => {
+                    const isExpanded = expandedSchedules.has(s.id);
+                    return (
+                      <div key={s.id} onClick={() => toggleScheduleExpand(s.id)} className={`p-3 rounded-xl border cursor-pointer hover:shadow-sm transition-all flex flex-col gap-2 ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                        <div className="flex justify-between items-center gap-2">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <p className="text-xs font-black truncate">{s.name}</p>
+                            {isExpanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-300 flex-shrink-0" />}
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); setDefaultSchedule(s.id); }} title="Definir como Padrão" className={`p-2 rounded-xl transition-all flex-shrink-0 ${currentUser?.defaultScheduleId === s.id ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}>
+                            <Star fill={currentUser?.defaultScheduleId === s.id ? 'currentColor' : 'none'} size={16} />
+                          </button>
+                        </div>
+                        {isExpanded && (
+                          <div>
+                            {s.isAdvanced ? (
+                              <div className="space-y-1">
+                                {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
+                                  const config = s.dailyConfigs && s.dailyConfigs[d.v];
+                                  if (!config || !config.isActive) return null;
+                                  return (
+                                    <div key={d.v} className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                                      <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded flex-shrink-0 w-6 text-center uppercase">{d.l}</span>
+                                      <span>{config.startTime}-{config.endTime}</span>
+                                      {config.breakStart && <span className="text-orange-500 flex items-center ml-1"><Coffee size={10} className="mr-0.5" /> {config.breakStart}-{config.breakEnd}</span>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-sm sm:text-base font-black text-slate-900 mb-1 leading-none">{s.startTime || '--:--'} - {s.endTime || '--:--'}</p>
+                                {s.breakStart && (
+                                  <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 uppercase">
+                                    <Coffee size={10} /> Pausa: {s.breakStart} - {s.breakEnd || '--:--'}
+                                  </div>
+                                )}
+                                <div className="flex gap-0.5 mt-1">
+                                  {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
+                                    const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
+                                    return isActive ? <span key={d.v} className="bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         {workerTab === 'home' && (<>
         {filteredPendingApprovals.map((pending, idx) => {
@@ -475,73 +536,6 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
         </>)}
       </main>
 
-      {showSchedulesModal && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-2xl rounded-3xl sm:rounded-[2rem] p-4 sm:p-6 shadow-2xl animate-in zoom-in-95 my-3 sm:my-6 max-h-[calc(100vh-2rem)] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4 sm:mb-5 border-b pb-2 sm:pb-3">
-              <h3 className="text-base sm:text-xl font-black flex items-center gap-2"><Timer className="text-indigo-600" size={18} /> Meus Horários</h3>
-              <button onClick={() => setShowSchedulesModal(false)} className="p-1.5 text-slate-300 hover:text-red-500"><X size={20} /></button>
-            </div>
-            <div>
-              <div className="space-y-3">
-                <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pela Empresa</h4>
-                <div className="space-y-1.5">
-                  {assigned.length > 0 ? assigned.map(s => {
-                    const isExpanded = expandedSchedules.has(s.id);
-                    return (
-                    <div key={s.id} onClick={() => toggleScheduleExpand(s.id)} className={`p-3 rounded-xl border cursor-pointer hover:shadow-sm transition-all flex flex-col gap-2 ${currentUser?.defaultScheduleId === s.id ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
-                      <div className="flex justify-between items-center gap-2">
-                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                          <p className="text-xs font-black truncate">{s.name}</p>
-                          {isExpanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-300 flex-shrink-0" />}
-                        </div>
-                        <button onClick={(e) => { e.stopPropagation(); setDefaultSchedule(s.id); }} title="Definir como Padrão" className={`p-2 rounded-xl transition-all flex-shrink-0 ${currentUser?.defaultScheduleId === s.id ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}>
-                          <Star fill={currentUser?.defaultScheduleId === s.id ? 'currentColor' : 'none'} size={16} />
-                        </button>
-                      </div>
-                      {isExpanded && (
-                        <div>
-                          {s.isAdvanced ? (
-                            <div className="space-y-1">
-                              {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                                const config = s.dailyConfigs && s.dailyConfigs[d.v];
-                                if (!config || !config.isActive) return null;
-                                return (
-                                  <div key={d.v} className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-600">
-                                    <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded flex-shrink-0 w-6 text-center uppercase">{d.l}</span>
-                                    <span>{config.startTime}-{config.endTime}</span>
-                                    {config.breakStart && <span className="text-orange-500 flex items-center ml-1"><Coffee size={10} className="mr-0.5" /> {config.breakStart}-{config.breakEnd}</span>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <>
-                              <p className="text-sm sm:text-base font-black text-slate-900 mb-1 leading-none">{s.startTime || '--:--'} - {s.endTime || '--:--'}</p>
-                              {s.breakStart && (
-                                <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 uppercase">
-                                  <Coffee size={10} /> Pausa: {s.breakStart} - {s.breakEnd || '--:--'}
-                                </div>
-                              )}
-                              <div className="flex gap-0.5 mt-1">
-                                {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
-                                  const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                                  return isActive ? <span key={d.v} className="bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
-                                })}
-                              </div>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                  }) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

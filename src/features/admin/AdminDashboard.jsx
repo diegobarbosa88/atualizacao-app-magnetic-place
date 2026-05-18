@@ -66,7 +66,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, appNotifications, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+  const { adminStats, clients, workers, schedules, appNotifications, workerChangeRequests, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
   const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
 
   const notificacoesDeCorrecao = correctionNotifications;
@@ -109,6 +109,46 @@ function AdminDashboard(props) {
 
   const handleRevokeAdmin = async (worker) => {
     await saveToDb('workers', worker.id, { ...worker, isAdmin: false });
+  };
+
+  const [readNotifIds, setReadNotifIds] = useState(() => {
+    if (!currentUser?.id) return [];
+    try { return JSON.parse(localStorage.getItem(`admin_read_notifs_${currentUser.id}`) || '[]'); }
+    catch { return []; }
+  });
+  const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
+  const pendingChangeRequestsCount = pendingChangeRequests.length;
+  const unreadCount = appNotifications.filter(n => !readNotifIds.includes(n.id)).length + pendingChangeRequestsCount;
+  useEffect(() => {
+    if (activeTab !== 'notificacoes' || !currentUser?.id || !appNotifications.length) return;
+    const allIds = appNotifications.map(n => n.id);
+    setReadNotifIds(prev => {
+      const merged = [...new Set([...prev, ...allIds])];
+      localStorage.setItem(`admin_read_notifs_${currentUser.id}`, JSON.stringify(merged));
+      return merged;
+    });
+  }, [activeTab, currentUser?.id, appNotifications]);
+
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const notifDropdownRef = useRef(null);
+  useEffect(() => {
+    if (!showNotifDropdown) return;
+    const handler = (e) => {
+      if (e.target.closest('[data-notif-bell]')) return;
+      if (notifDropdownRef.current && !notifDropdownRef.current.contains(e.target)) {
+        setShowNotifDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showNotifDropdown]);
+
+  const markNotifRead = (id) => {
+    setReadNotifIds(prev => {
+      const merged = [...new Set([...prev, id])];
+      if (currentUser?.id) localStorage.setItem(`admin_read_notifs_${currentUser.id}`, JSON.stringify(merged));
+      return merged;
+    });
   };
 
   const [workerAISummary, setWorkerAISummary] = useState("");
@@ -339,9 +379,9 @@ function AdminDashboard(props) {
             </div>
             {/* Mobile Actions */}
             <div className="flex md:hidden items-center gap-2">
-              <button onClick={() => setActiveTab('notificacoes')} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative">
+              <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative">
                 <Bell size={18} />
-                {appNotifications.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{appNotifications.length}</span>}
+                {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
               </button>
               {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"><Users size={18} /></button>}
               <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"><BarChart3 size={18} /></button>
@@ -364,13 +404,59 @@ function AdminDashboard(props) {
 
           {/* Lado Direito: Ações */}
           <div className="hidden md:flex items-center gap-4 shrink-0">
-            <button onClick={() => setActiveTab('notificacoes')} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm relative"><Bell size={18} /> {appNotifications.length > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{appNotifications.length}</span>}</button>
+            <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm relative"><Bell size={18} /> {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}</button>
             <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"><BarChart3 size={18} /></button>
             {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Users size={18} /></button>}
             <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={20} /></button>
           </div>
         </div>
       </nav>
+
+      {showNotifDropdown && (
+        <div ref={notifDropdownRef} className="fixed top-[4.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notificações</h3>
+            <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
+            {pendingChangeRequests.map(req => {
+              const worker = workers.find(w => w.id === req.worker_id);
+              return (
+                <button key={req.id} onClick={() => { setActiveTab('team'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-amber-50 transition-colors flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-50 text-amber-600 shrink-0 mt-0.5"><Users size={14} /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black text-slate-800 truncate">{worker?.name || 'Trabalhador'}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Pedido de alteração: <span className="font-bold">{req.field_label}</span></p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{new Date(req.created_at).toLocaleString('pt-PT')}</p>
+                  </div>
+                </button>
+              );
+            })}
+            {appNotifications.filter(n => !readNotifIds.includes(n.id)).map(notif => (
+              <button key={notif.id} onClick={() => { markNotifRead(notif.id); setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors flex items-start gap-3">
+                <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' : notif.type === 'warning' ? 'bg-amber-50 text-amber-600' : notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                  <Bell size={14} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black text-slate-800 truncate">{notif.title}</p>
+                  <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
+                </div>
+              </button>
+            ))}
+            {unreadCount === 0 && (
+              <div className="px-4 py-8 text-center">
+                <Bell size={24} className="text-slate-200 mx-auto mb-2" />
+                <p className="text-xs text-slate-400">Sem notificações por ler</p>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-slate-100 p-2">
+            <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest py-1.5 hover:bg-indigo-50 rounded-xl transition-colors">
+              Ver todas as notificações →
+            </button>
+          </div>
+        </div>
+      )}
 
       <main className="w-full mt-4 pb-12">
         <div className="mx-auto px-3 sm:px-6 md:px-10 lg:px-16" style={{ maxWidth: `var(--app-max-width)` }}>
