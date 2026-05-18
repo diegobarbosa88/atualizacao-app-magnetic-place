@@ -1,11 +1,9 @@
 import React from 'react';
-// v2
+// v3
 
 const STAMP_WIDTH  = 380;
 const STAMP_HEIGHT = 100;
-const SIG_BOX_W    = 140;
-const SIG_BOX_H    = 70;
-const LOGO_SIZE    = 32;
+const OVERLAY_W    = 150;
 const FOOTER_H     = 15;
 const BODY_H       = STAMP_HEIGHT - FOOTER_H;
 
@@ -44,58 +42,62 @@ const CompanyValidationStamp = ({
         display: 'flex',
         alignItems: 'center',
         padding: '0 14px',
-        gap: '12px',
+        gap: '14px',
         flexShrink: 0,
       }}>
-        {/* Logo */}
-        <img
-          src={companyLogoUrl}
-          alt="Logo"
-          style={{ width: `${LOGO_SIZE}px`, height: `${LOGO_SIZE}px`, objectFit: 'contain', flexShrink: 0 }}
-        />
-
-        {/* Caixa da assinatura */}
+        {/* Logo (fundo) + Assinatura (por cima) sobrepostos */}
         <div style={{
-          width: `${SIG_BOX_W}px`,
-          height: `${SIG_BOX_H}px`,
+          position: 'relative',
+          width: `${OVERLAY_W}px`,
+          height: `${BODY_H - 10}px`,
           flexShrink: 0,
-          border: '1px solid #e2e8f0',
-          borderRadius: '8px',
-          background: '#fafafa',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          padding: '4px',
-          boxSizing: 'border-box',
         }}>
-          {signatureDataUrl ? (
+          {/* Logo com transparência */}
+          <img
+            src={companyLogoUrl}
+            alt="Logo"
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+              opacity: 0.18,
+            }}
+          />
+          {/* Assinatura por cima */}
+          {signatureDataUrl && (
             <img
               src={signatureDataUrl}
               alt="Assinatura"
-              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', filter: INK_FILTER }}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                filter: INK_FILTER,
+              }}
             />
-          ) : (
-            <span style={{ fontSize: '8px', color: '#cbd5e1', fontStyle: 'italic' }}>Assinatura</span>
           )}
         </div>
 
         {/* Dados do signatário */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '2px', minWidth: 0 }}>
           <div style={{
-            fontSize: '12px', fontWeight: 700, color: '#0f172a', lineHeight: 1.1,
+            fontSize: '13px', fontWeight: 800, color: '#0f172a', lineHeight: 1.1,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           }}>
             {responsibleName}
           </div>
           {responsibleRole && (
-            <div style={{ fontSize: '9px', fontStyle: 'italic', color: '#64748b', marginTop: '1px' }}>{responsibleRole}</div>
+            <div style={{ fontSize: '10px', fontWeight: 600, color: '#334155', marginTop: '1px' }}>{responsibleRole}</div>
           )}
-          <div style={{ marginTop: '5px', borderTop: '1px solid #f1f5f9', paddingTop: '4px' }}>
-            <div style={{ fontFamily: MONO, fontSize: '8px', color: '#475569' }}>{dateStr}</div>
-            <div style={{ fontFamily: MONO, fontSize: '8px', color: '#94a3b8', marginTop: '2px' }}>IP {ip}</div>
+          <div style={{ marginTop: '5px', borderTop: '1px solid #e2e8f0', paddingTop: '4px' }}>
+            <div style={{ fontFamily: MONO, fontSize: '9px', color: '#334155', fontWeight: 600 }}>{dateStr}</div>
+            <div style={{ fontFamily: MONO, fontSize: '8px', color: '#64748b', marginTop: '2px' }}>IP {ip}</div>
             {idStr && (
-              <div style={{ fontFamily: MONO, fontSize: '7px', color: '#6366f1', marginTop: '2px' }}>ID: {idStr}</div>
+              <div style={{ fontFamily: MONO, fontSize: '8px', color: '#4f46e5', marginTop: '2px', fontWeight: 700 }}>ID: {idStr}</div>
             )}
           </div>
         </div>

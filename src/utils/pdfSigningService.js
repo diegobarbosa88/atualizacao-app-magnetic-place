@@ -630,21 +630,21 @@ function drawAdminStamp(page, {
   signatureImage, logoImage,
   helvBold, courier,
 }) {
-  // Layout espelha CompanyValidationStamp.jsx: [logo | caixa-sig | dados] + footer
-  const SLATE_50  = rgb(0.973, 0.980, 0.988);
+  // Layout: [logo(transparente)+assinatura sobrepostos | dados texto] + footer
   const SLATE_100 = rgb(0.945, 0.953, 0.965);
-  const SLATE_400 = rgb(0.580, 0.639, 0.722);
-  const SLATE_600 = rgb(0.278, 0.337, 0.412);
-  const SLATE_900 = rgb(0.059, 0.090, 0.165);
-  const INDIGO    = rgb(0.388, 0.400, 0.945); // #6366f1
-  const EMERALD   = rgb(0.063, 0.725, 0.506);
+  const SLATE_700 = rgb(0.200, 0.251, 0.333); // #334155
+  const SLATE_500 = rgb(0.392, 0.455, 0.545); // #64748b
+  const SLATE_900 = rgb(0.059, 0.090, 0.165); // #0f172a
+  const INDIGO    = rgb(0.310, 0.275, 0.898); // #4f46e5
+  const EMERALD   = rgb(0.063, 0.725, 0.506); // #10b981
   const WHITE     = rgb(1, 1, 1);
+  const SLATE_50  = rgb(0.973, 0.980, 0.988);
 
-  const FOOTER_H = h * 0.15;
-  const BODY_H   = h - FOOTER_H;
-  const PAD_H    = w * 0.037;  // ~14px/380px
-  const PAD_V    = BODY_H * 0.06;
-  const GAP      = w * 0.032;  // ~12px/380px
+  const FOOTER_H   = h * 0.15;
+  const BODY_H     = h - FOOTER_H;
+  const PAD_H      = w * 0.037;
+  const GAP        = w * 0.037;
+  const OVERLAY_W  = w * 0.395; // ~150/380
 
   // ── Fundo branco ─────────────────────────────────────────────────────────
   page.drawRectangle({ x, y, width: w, height: h, color: WHITE });
@@ -659,80 +659,75 @@ function drawAdminStamp(page, {
 
   // ── Corpo ─────────────────────────────────────────────────────────────────
   const bodyY = y + FOOTER_H;
+  const overlayX = x + PAD_H;
+  const overlayH = BODY_H - 6;
+  const overlayY = bodyY + (BODY_H - overlayH) / 2;
 
-  // Logo (esquerda, centrado verticalmente no corpo)
-  const logoSize = Math.min(BODY_H * 0.48, w * 0.1);
-  const logoX = x + PAD_H;
-  const logoY = bodyY + (BODY_H - logoSize) / 2;
+  // Logo com opacidade baixa (fundo)
   if (logoImage) {
     const aspect = logoImage.width / logoImage.height;
-    const lw = logoSize * aspect;
-    const lh = logoSize;
-    page.drawImage(logoImage, { x: logoX, y: logoY, width: lw, height: lh });
+    const lh = overlayH;
+    const lw = Math.min(OVERLAY_W, lh * aspect);
+    page.drawImage(logoImage, {
+      x: overlayX + (OVERLAY_W - lw) / 2,
+      y: overlayY,
+      width: lw, height: lh,
+      opacity: 0.18,
+    });
   }
 
-  // Caixa da assinatura (a seguir ao logo)
-  const sigBoxX = x + PAD_H + logoSize + GAP;
-  const sigBoxW = w * 0.368; // ~140/380
-  const sigBoxH = BODY_H * 0.82; // ~70/85
-  const sigBoxY = bodyY + (BODY_H - sigBoxH) / 2;
-  page.drawRectangle({ x: sigBoxX, y: sigBoxY, width: sigBoxW, height: sigBoxH, color: SLATE_50 });
-  page.drawLine({ start: { x: sigBoxX, y: sigBoxY }, end: { x: sigBoxX + sigBoxW, y: sigBoxY }, thickness: 0.4, color: SLATE_100 });
-  page.drawLine({ start: { x: sigBoxX, y: sigBoxY + sigBoxH }, end: { x: sigBoxX + sigBoxW, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
-  page.drawLine({ start: { x: sigBoxX, y: sigBoxY }, end: { x: sigBoxX, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
-  page.drawLine({ start: { x: sigBoxX + sigBoxW, y: sigBoxY }, end: { x: sigBoxX + sigBoxW, y: sigBoxY + sigBoxH }, thickness: 0.4, color: SLATE_100 });
-
+  // Assinatura por cima da logo
   if (signatureImage) {
     const aspect = signatureImage.width / signatureImage.height;
-    const imgH = sigBoxH - 4;
-    const imgW = Math.min(sigBoxW - 4, imgH * aspect);
+    const imgH = overlayH;
+    const imgW = Math.min(OVERLAY_W, imgH * aspect);
     page.drawImage(signatureImage, {
-      x: sigBoxX + (sigBoxW - imgW) / 2,
-      y: sigBoxY + (sigBoxH - imgH) / 2,
-      width: imgW, height: imgH, opacity: 0.85,
+      x: overlayX + (OVERLAY_W - imgW) / 2,
+      y: overlayY,
+      width: imgW, height: imgH,
+      opacity: 0.88,
     });
   }
 
   // Dados do signatário (direita)
-  const detailX = sigBoxX + sigBoxW + GAP;
-  let dY = bodyY + BODY_H - PAD_V;
+  const detailX = overlayX + OVERLAY_W + GAP;
+  let dY = bodyY + BODY_H - 3;
 
   // Nome
-  const nameSize = Math.min(7, (w - detailX + x - PAD_H) / ((responsibleName || '').length * 0.55 + 1));
   page.drawText(String(responsibleName || 'Responsável Legal'), {
-    x: detailX, y: dY - nameSize, size: Math.min(nameSize, 7), font: helvBold, color: SLATE_900,
+    x: detailX, y: dY - 8, size: 8, font: helvBold, color: SLATE_900,
   });
-  dY -= nameSize + 2;
+  dY -= 10;
 
   // Cargo
   if (responsibleRole) {
     page.drawText(String(responsibleRole), {
-      x: detailX, y: dY - 4, size: 4.5, font: courier, color: SLATE_600,
+      x: detailX, y: dY - 5, size: 6, font: helvBold, color: SLATE_700,
     });
-    dY -= 6;
+    dY -= 7;
   }
 
   // Divisor
   dY -= 2;
   page.drawLine({ start: { x: detailX, y: dY }, end: { x: x + w - PAD_H, y: dY }, thickness: 0.3, color: SLATE_100 });
-  dY -= 4;
+  dY -= 5;
 
   // Data
   if (signedAt) {
     const d = new Date(signedAt);
     const p = (n) => String(n).padStart(2, '0');
     const dateStr = `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
-    page.drawText(dateStr, { x: detailX, y: dY, size: 4.5, font: courier, color: SLATE_600 });
-    dY -= 5;
+    page.drawText(dateStr, { x: detailX, y: dY, size: 6, font: helvBold, color: SLATE_700 });
+    dY -= 6;
   }
 
   // IP
-  page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 4, font: courier, color: SLATE_400 });
-  dY -= 5;
+  page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 5.5, font: courier, color: SLATE_500 });
+  dY -= 6;
 
   // ID
   if (id) {
-    page.drawText(`ID: ${String(id)}`, { x: detailX, y: dY, size: 3.5, font: courier, color: INDIGO });
+    page.drawText(`ID: ${String(id)}`, { x: detailX, y: dY, size: 5, font: helvBold, color: INDIGO });
   }
 }
 
