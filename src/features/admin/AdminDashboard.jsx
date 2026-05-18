@@ -116,9 +116,19 @@ function AdminDashboard(props) {
     try { return JSON.parse(localStorage.getItem(`admin_read_notifs_${currentUser.id}`) || '[]'); }
     catch { return []; }
   });
+  const [viewedCorrections, setViewedCorrections] = useState(() => {
+    const saved = localStorage.getItem('magnetic_viewed_corrections');
+    return saved ? JSON.parse(saved) : [];
+  });
+  useEffect(() => {
+    localStorage.setItem('magnetic_viewed_corrections', JSON.stringify(viewedCorrections));
+  }, [viewedCorrections]);
+
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
-  const unreadCount = appNotifications.filter(n => !readNotifIds.includes(n.id)).length + pendingChangeRequestsCount;
+  const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n => !viewedCorrections.includes(n.id)).length;
+  const unreadCount = appNotifications.filter(n => !readNotifIds.includes(n.id)).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
+
   useEffect(() => {
     if (activeTab !== 'notificacoes' || !currentUser?.id || !appNotifications.length) return;
     const allIds = appNotifications.map(n => n.id);
@@ -128,6 +138,16 @@ function AdminDashboard(props) {
       return merged;
     });
   }, [activeTab, currentUser?.id, appNotifications]);
+
+  useEffect(() => {
+    if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && notificacoesDeCorrecao.length > 0) {
+      setViewedCorrections(prev => {
+        const newIds = notificacoesDeCorrecao.map(n => n.id).filter(id => !prev.includes(id));
+        if (newIds.length === 0) return prev;
+        return [...prev, ...newIds];
+      });
+    }
+  }, [activeTab, portalSubTab, notificacoesDeCorrecao]);
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifDropdownRef = useRef(null);
@@ -150,6 +170,12 @@ function AdminDashboard(props) {
       return merged;
     });
   };
+  const markCorrectionsViewed = () => {
+    setViewedCorrections(prev => {
+      const allIds = notificacoesDeCorrecao.map(n => n.id);
+      return [...new Set([...prev, ...allIds])];
+    });
+  };
 
   const [workerAISummary, setWorkerAISummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -170,31 +196,6 @@ function AdminDashboard(props) {
       return approval || hasEmail;
     });
   }, [clients, clientApprovals, portalMonthStr]);
-
-  const [viewedCorrections, setViewedCorrections] = useState(() => {
-    const saved = localStorage.getItem('magnetic_viewed_corrections');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  useEffect(() => {
-    localStorage.setItem('magnetic_viewed_corrections', JSON.stringify(viewedCorrections));
-  }, [viewedCorrections]);
-
-
-  useEffect(() => {
-    // Agora a aba correções é uma sub-tab do portal_validacao
-    if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && notificacoesDeCorrecao.length > 0) {
-      setViewedCorrections(prev => {
-        const newIds = notificacoesDeCorrecao.map(n => n.id).filter(id => !prev.includes(id));
-        if (newIds.length === 0) return prev;
-        return [...prev, ...newIds];
-      });
-    }
-  }, [activeTab, portalSubTab, notificacoesDeCorrecao]);
-
-  const unviewedCorrectionsCount = useMemo(() => {
-    return notificacoesDeCorrecao.filter(n => !viewedCorrections.includes(n.id)).length;
-  }, [notificacoesDeCorrecao, viewedCorrections]);
 
   const [showAllActivity, setShowAllActivity] = useState(false);
 
@@ -419,30 +420,58 @@ function AdminDashboard(props) {
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
           </div>
           <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
+            {/* Correções de clientes — laranja */}
+            {notificacoesDeCorrecao.filter(n => !viewedCorrections.includes(n.id)).map(corr => {
+              const client = clients.find(c => String(c.id) === String(corr.client_id));
+              return (
+                <button key={corr.id} onClick={() => { markCorrectionsViewed(); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
+                    <p className="text-xs font-black text-slate-800 truncate">{client?.name || 'Cliente'}</p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>
+                    {corr.submitted_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(corr.submitted_at).toLocaleString('pt-PT')}</p>}
+                  </div>
+                </button>
+              );
+            })}
+            {/* Pedidos de alteração de dados — âmbar */}
             {pendingChangeRequests.map(req => {
               const worker = workers.find(w => w.id === req.worker_id);
               return (
                 <button key={req.id} onClick={() => { setActiveTab('team'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-amber-50 transition-colors flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-50 text-amber-600 shrink-0 mt-0.5"><Users size={14} /></div>
+                  <div className="p-2 rounded-xl bg-amber-100 text-amber-600 shrink-0 mt-0.5"><Users size={14} /></div>
                   <div className="min-w-0 flex-1">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-amber-500 block">Alteração de Dados</span>
                     <p className="text-xs font-black text-slate-800 truncate">{worker?.name || 'Trabalhador'}</p>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Pedido de alteração: <span className="font-bold">{req.field_label}</span></p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Campo: <span className="font-bold">{req.field_label}</span></p>
                     <p className="text-[9px] text-slate-400 mt-0.5">{new Date(req.created_at).toLocaleString('pt-PT')}</p>
                   </div>
                 </button>
               );
             })}
-            {appNotifications.filter(n => !readNotifIds.includes(n.id)).map(notif => (
-              <button key={notif.id} onClick={() => { markNotifRead(notif.id); setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-indigo-50 transition-colors flex items-start gap-3">
-                <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' : notif.type === 'warning' ? 'bg-amber-50 text-amber-600' : notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
-                  <Bell size={14} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-black text-slate-800 truncate">{notif.title}</p>
-                  <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
-                </div>
-              </button>
-            ))}
+            {/* Notificações gerais — cor por tipo */}
+            {appNotifications.filter(n => !readNotifIds.includes(n.id)).map(notif => {
+              const styles = notif.type === 'urgent'
+                ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Urgente' }
+                : notif.type === 'warning'
+                ? { hover: 'hover:bg-yellow-50', icon: 'bg-yellow-100 text-yellow-600', label: 'text-yellow-500', tag: 'Aviso' }
+                : notif.type === 'success'
+                ? { hover: 'hover:bg-emerald-50', icon: 'bg-emerald-100 text-emerald-600', label: 'text-emerald-500', tag: 'Sucesso' }
+                : { hover: 'hover:bg-indigo-50', icon: 'bg-indigo-100 text-indigo-600', label: 'text-indigo-500', tag: 'Informação' };
+              return (
+                <button key={notif.id} onClick={() => { markNotifRead(notif.id); setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3`}>
+                  <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${styles.icon}`}>
+                    <Bell size={14} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <span className={`text-[8px] font-black uppercase tracking-widest ${styles.label} block`}>{styles.tag}</span>
+                    <p className="text-xs font-black text-slate-800 truncate">{notif.title}</p>
+                    <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
+                  </div>
+                </button>
+              );
+            })}
             {unreadCount === 0 && (
               <div className="px-4 py-8 text-center">
                 <Bell size={24} className="text-slate-200 mx-auto mb-2" />
@@ -961,7 +990,7 @@ function AdminDashboard(props) {
           )}
 
           {!auditWorkerId && activeTab === 'portal_validacao' && (
-            <ValidationPortalProvider>
+            <ValidationPortalProvider portalSubTab={portalSubTab} setPortalSubTab={setPortalSubTab} portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
               <ValidationPortal
                 onLogin={onLogin}
                 setClienteSelecionado={setClienteSelecionado}

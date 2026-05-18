@@ -3,15 +3,13 @@ import { toISODateLocal } from '../../../utils/dateUtils';
 
 const ValidationPortalContext = createContext();
 
-export const ValidationPortalProvider = ({ children }) => {
-  const [portalSubTab, setPortalSubTab] = useState('envios');
+export const ValidationPortalProvider = ({ children, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth }) => {
   const [portalWorkersSort, setPortalWorkersSort] = useState({ key: 'name', direction: 'asc' });
   const [valSortConfig, setValSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [clientPortalLinkFilter, setClientPortalLinkFilter] = useState({
     clientId: '',
     month: toISODateLocal(new Date()).substring(0, 7)
   });
-  const [portalMonth, setPortalMonth] = useState(new Date());
 
   const portalMonthStr = toISODateLocal(portalMonth).substring(0, 7);
 
