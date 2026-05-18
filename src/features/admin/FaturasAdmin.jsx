@@ -59,7 +59,7 @@ export default function FaturasAdmin() {
 
   // --- Parsing com Gemini (via endpoint server-side) ---
   const parsearComGemini = async (texto) => {
-    const res = await fetch('/api/gemini/parse-fatura', {
+    const res = await fetch('/api/parse-fatura', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ texto }),
