@@ -1,4 +1,5 @@
 import React from 'react';
+// v2
 
 const STAMP_WIDTH  = 380;
 const STAMP_HEIGHT = 100;
