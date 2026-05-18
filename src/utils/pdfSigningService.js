@@ -541,10 +541,10 @@ export async function applyAdminStampToPage(pdfBlob, {
         console.warn('Falha ao embeber logo admin:', e);
       }
     }
-    if ((isClassic || isCorporate || isMirror) && signatureDataUrl) {
+    if (signatureDataUrl) {
       try {
         let finalDataUrl = signatureDataUrl;
-        const inkColor = isCorporate ? '#0b1d3a' : '#0f3f87';
+        const inkColor = isCorporate ? '#0b1d3a' : isMirror ? '#0f172a' : '#0f3f87';
         if (typeof document !== 'undefined') {
           const img = new Image();
           await new Promise((resolve, reject) => {
