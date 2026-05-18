@@ -718,12 +718,12 @@ function drawAdminStamp(page, {
     const p = (n) => String(n).padStart(2, '0');
     const dateStr = `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
     page.drawText(dateStr, { x: detailX, y: dY, size: 6, font: helvBold, color: SLATE_700 });
-    dY -= 6;
+    dY -= 8;
   }
 
   // IP
   page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 5.5, font: courier, color: SLATE_500 });
-  dY -= 6;
+  dY -= 8;
 
   // ID
   if (id) {
