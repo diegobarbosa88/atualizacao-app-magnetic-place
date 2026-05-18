@@ -96,7 +96,12 @@ export default function App() {
   const [showFinReport, setShowFinReport] = useState(false);
   const [finFilter, setFinFilter] = useState({ start: toISODateLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), end: toISODateLocal(new Date()) });
 
-  const [dismissedNotifs, setDismissedNotifs] = useState([]);
+  const [dismissedNotifs, setDismissedNotifs] = useState(() => {
+    const uid = currentUser?.id;
+    if (!uid) return [];
+    try { return JSON.parse(localStorage.getItem(`dismissed_notifs_${uid}`) || '[]'); }
+    catch { return []; }
+  });
 
   useEffect(() => {
     if (!currentUser?.id) return;
@@ -113,8 +118,7 @@ export default function App() {
       (n.target_type === 'all' ||
         (currentUser.role === 'admin' && n.target_type === 'admin') ||
         (n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
-      !dismissedNotifs.includes(n.id) &&
-      !(n.dismissed_by_ids || []).includes(currentUser.id)
+      !dismissedNotifs.includes(n.id)
     );
   }, [appNotifications, currentUser, dismissedNotifs]);
 

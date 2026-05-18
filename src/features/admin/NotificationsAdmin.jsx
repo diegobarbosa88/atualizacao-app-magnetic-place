@@ -1,7 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Megaphone, Bell, Loader2, Plus, Trash2, X } from 'lucide-react';
 
-const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete }) => {
+const SYSTEM_PATTERNS = [
+  'Pedido de Correção',
+  'Contra-proposta',
+  'Correção Aplicada',
+  'Correção Resolvida',
+  'Correção Rejeitada',
+  'Alteração de Dados',
+  'Solicitação de Alteração',
+  'Reporte de Divergência',
+];
+
+const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete, supabase }) => {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState('info');
@@ -11,6 +22,21 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
   const [loading, setLoading] = useState(false);
   const [showViewDetails, setShowViewDetails] = useState(null); // ID do aviso para ver detalhes
   const [viewDetailsTab, setViewDetailsTab] = useState('viewed'); // 'viewed' | 'dismissed'
+
+  useEffect(() => {
+    if (!supabase) return;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    supabase
+      .from('app_notifications')
+      .delete()
+      .lt('created_at', cutoff.toISOString())
+      .then(({ error }) => { if (error) console.warn('Cleanup notifs:', error); });
+  }, [supabase]);
+
+  const manualNotifications = appNotifications.filter(n =>
+    !SYSTEM_PATTERNS.some(p => n.title?.includes(p))
+  );
 
   const handleAdd = async () => {
     if (!title || !message) return alert('Preencha o título e a mensagem!');
@@ -143,13 +169,10 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete 
 
       <div className="space-y-3">
         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest ml-1">Avisos Existentes</p>
-        {appNotifications.length === 0 ? (
+        {manualNotifications.length === 0 ? (
           <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhum aviso criado.</p>
         ) : (
-          appNotifications.filter(n =>
-            !n.title?.includes('Pedido de Correção') &&
-            !n.title?.includes('Contra-proposta')
-          ).map(notif => (
+          manualNotifications.map(notif => (
             <div key={notif.id} className={`p-4 rounded-3xl border flex items-center justify-between gap-3 shadow-sm hover:shadow-md transition-all ${notif.is_active ? 'bg-white border-slate-100' : 'bg-slate-50 border-slate-200 opacity-60'}`}>
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div className={`p-3 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' :

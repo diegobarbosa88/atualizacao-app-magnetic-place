@@ -891,7 +891,7 @@ function AdminDashboard(props) {
             <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} handleGenerateClientReport={handleGenerateClientReport} logs={logs} clientApprovals={clientApprovals} />
           )}
           {!auditWorkerId && activeTab === 'notificacoes' && (
-            <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} />
+            <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
           )}
 
           {/* Módulo Configurações */}
@@ -1332,6 +1332,7 @@ function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
               responsibleRole={role}
               signedAt={new Date().toISOString()}
               ip="192.168.x.x"
+              id={`prev_${Date.now().toString(16).slice(-8)}`}
               signatureDataUrl={sigDataUrl}
             />
           )}
