@@ -147,6 +147,14 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
       const existing = logs.find(
         (l) => String(l.workerId) === String(it.worker_id) && l.date === it.date
       );
+      const isRemove = !final.startTime && !final.endTime && !final.breakStart && !final.breakEnd;
+      if (isRemove) {
+        if (existing) {
+          const { error } = await supabase.from('logs').delete().eq('id', existing.id);
+          if (error) throw error;
+        }
+        return;
+      }
       if (existing) {
         const { error } = await supabase.from('logs').upsert({
           ...existing,
