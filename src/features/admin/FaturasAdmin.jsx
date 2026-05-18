@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, Save, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, Save, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import * as pdfjsLib from 'pdfjs-dist';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 const DEFAULT_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
 const STORAGE_KEY = 'faturas_gmail_query';
@@ -18,6 +20,8 @@ export default function FaturasAdmin() {
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [importando, setImportando] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [extraindo, setExtraindo] = useState(false);
+  const [extraindoId, setExtraindoId] = useState(null);
 
   const guardarQuery = () => {
     const q = queryEditando.trim() || DEFAULT_QUERY;
@@ -38,6 +42,61 @@ export default function FaturasAdmin() {
     finally { setLoading(false); }
   };
 
+  // --- Extracção de texto do PDF com pdfjs ---
+  const extrairTextoPDF = async (url) => {
+    const resp = await fetch(url);
+    const buffer = await resp.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    let texto = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      texto += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    return texto;
+  };
+
+  // --- Parsing com Gemini ---
+  const parsearComGemini = async (texto) => {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) return null;
+    const prompt = `Analisa este texto extraído de uma fatura e devolve APENAS um JSON válido com os campos:
+numero_fatura, data_fatura (formato YYYY-MM-DD ou null), nif_fornecedor (9 dígitos PT ou null), fornecedor (nome da empresa emitente), valor_total (número decimal ou null), iva (valor monetário do IVA ou null).
+Se não encontrares um campo, usa null. Responde APENAS com o JSON, sem explicações.
+
+Texto:
+${texto.slice(0, 3000)}`;
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    const data = await res.json();
+    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const jsonStr = raw.replace(/```json|```/g, '').trim();
+    return JSON.parse(jsonStr);
+  };
+
+  // --- Processar faturas sem dados ---
+  const processarSemDados = async (lista) => {
+    const semDados = lista.filter(f => !f.dados && f.mime_type === 'application/pdf');
+    if (!semDados.length) return;
+    setExtraindo(true);
+    for (const f of semDados) {
+      setExtraindoId(f.id);
+      try {
+        const texto = await extrairTextoPDF(f.url);
+        const dados = await parsearComGemini(texto);
+        if (dados) {
+          await supabase.from('faturas').update({ dados }).eq('id', f.id);
+          setFaturas(prev => prev.map(x => x.id === f.id ? { ...x, dados } : x));
+        }
+      } catch { /* falhou silenciosamente */ }
+    }
+    setExtraindo(false);
+    setExtraindoId(null);
+  };
+
   const handleImportar = async () => {
     setImportando(true); setImportResult(null);
     try {
@@ -48,7 +107,12 @@ export default function FaturasAdmin() {
       });
       const data = await res.json();
       setImportResult(data);
-      if (!data.error) carregar();
+      if (!data.error) {
+        const { data: novas } = await supabase.from('faturas').select('*').order('importado_em', { ascending: false });
+        setFaturas(novas || []);
+        setSelecionados(new Set());
+        await processarSemDados(novas || []);
+      }
     } catch (e) { setImportResult({ error: e.message }); }
     finally { setImportando(false); }
   };
@@ -266,8 +330,11 @@ export default function FaturasAdmin() {
               </tbody>
             </table>
           </div>
-          <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50">
-            {faturas.length} fatura(s) · {selecionados.size > 0 ? `${selecionados.size} selecionada(s)` : 'clica numa linha para selecionar'}
+          <div className="px-4 py-3 text-xs text-slate-400 font-semibold border-t border-slate-50 flex items-center gap-2">
+            {extraindo
+              ? <><Loader2 size={12} className="animate-spin text-indigo-400" /><span className="text-indigo-500">A extrair dados das faturas com IA...</span></>
+              : <>{faturas.length} fatura(s) · {selecionados.size > 0 ? `${selecionados.size} selecionada(s)` : 'clica numa linha para selecionar'}</>
+            }
           </div>
         </div>
       )}

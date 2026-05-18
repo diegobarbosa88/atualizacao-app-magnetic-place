@@ -1,6 +1,5 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
-import pdfParse from 'pdf-parse/lib/pdf-parse.js';
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'application/xml', 'text/xml'];
 const GMAIL_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
@@ -19,47 +18,6 @@ function findAttachmentParts(parts = []) {
   return found;
 }
 
-function extrairDadosFatura(texto) {
-  const t = texto || '';
-
-  // Número de fatura: FT, FR, FS, RC, NC, ND seguido de série/número
-  const numMatch = t.match(/\b(FT|FR|FS|RC|RG|ND|NC|VD)\s*[\s\/]?\s*([\w\d]+\/\d+)/i);
-  const numero_fatura = numMatch ? `${numMatch[1]} ${numMatch[2]}`.trim() : null;
-
-  // Data no formato DD/MM/YYYY ou DD-MM-YYYY
-  const dataMatch = t.match(/\b(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})\b/);
-  let data_fatura = null;
-  if (dataMatch) {
-    const [, d, m, y] = dataMatch;
-    data_fatura = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  }
-
-  // NIF: 9 dígitos começando por 1-9 (PT) — evita matches em datas/valores
-  const nifMatches = [...t.matchAll(/\b([1-9]\d{8})\b/g)].map(m => m[1]);
-  // Remove NIFs que parecem datas ou números de fatura
-  const nif_fornecedor = nifMatches.find(n => !t.includes(`/${n}`) && !t.includes(`${n}/`)) || null;
-
-  // Valor total — procura "Total" seguido de valor
-  const totalMatch = t.match(/total\s*(?:a\s*pagar|com\s*iva|geral|fatura)?\s*[:\s]*(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*(?:€|eur)?/i)
-    || t.match(/(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*€/i);
-  let valor_total = null;
-  if (totalMatch) {
-    valor_total = parseFloat(totalMatch[1].replace(/\./g, '').replace(',', '.')) || null;
-  }
-
-  // IVA — valor monetário de IVA
-  const ivaMatch = t.match(/iva\s*(?:\d+\s*%\s*)?[:\s]*(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})\s*(?:€|eur)?/i);
-  let iva = null;
-  if (ivaMatch) {
-    iva = parseFloat(ivaMatch[1].replace(/\./g, '').replace(',', '.')) || null;
-  }
-
-  // Fornecedor — primeira linha não vazia do texto (geralmente o nome da empresa)
-  const linhas = t.split('\n').map(l => l.trim()).filter(l => l.length > 3 && !/^\d+$/.test(l));
-  const fornecedor = linhas[0] || null;
-
-  return { numero_fatura, data_fatura, nif_fornecedor, valor_total, iva, fornecedor };
-}
 
 export default async function handler(req, res) {
   try {
@@ -143,19 +101,7 @@ export default async function handler(req, res) {
             .from('faturas')
             .getPublicUrl(storagePath);
 
-          // Extrair dados do PDF
-          let dados = null;
-          let _debugTexto = null;
-          if (part.mimeType === 'application/pdf') {
-            try {
-              const parsed = await pdfParse(buffer);
-              _debugTexto = parsed.text?.slice(0, 1000);
-              dados = extrairDadosFatura(parsed.text);
-            } catch (e) {
-              _debugTexto = `ERRO pdf-parse: ${e.message}`;
-            }
-          }
-          if (_debugTexto) erros.push({ debug: true, filename, texto: _debugTexto });
+          // Extracção de dados feita no cliente após import
 
           const { error: dbError } = await supabase.from('faturas').insert({
             gmail_message_id: msg.id,
