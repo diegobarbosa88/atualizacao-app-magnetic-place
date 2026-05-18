@@ -370,7 +370,8 @@ export const AppProvider = ({ children }) => {
       payload = { ...rest, id };
     } else if (tableName === 'workers') {
       // morada: chave legacy de schema antigo — usar `address` em vez disso
-      const { status, nis, is_active, morada, isAdminImpersonating, ...rest } = data;
+      // role é campo transient de sessão (atribuído no login) — nunca persistir
+      const { status, nis, is_active, morada, isAdminImpersonating, role, ...rest } = data;
       const currentStatus = status || (is_active === false ? 'inativo' : 'ativo');
       payload = { ...rest, is_active: currentStatus === 'ativo', id };
       if (nis) payload.nis = nis;
