@@ -88,7 +88,8 @@ export default async function handler(req, res) {
           });
 
           const buffer = Buffer.from(attRes.data.data, 'base64url');
-          const filename = part.filename || `attachment_${Date.now()}.pdf`;
+          const rawName = part.filename || `attachment_${Date.now()}.pdf`;
+          const filename = rawName.trim().replace(/[_\s]+$/, '').replace(/[^a-zA-Z0-9.\-_()]/g, '_') || `attachment_${Date.now()}.pdf`;
           const storagePath = `faturas/${msg.id}/${filename}`;
 
           const { error: uploadError } = await supabase.storage
