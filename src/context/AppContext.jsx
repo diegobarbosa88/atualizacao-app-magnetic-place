@@ -89,6 +89,7 @@ export const AppProvider = ({ children }) => {
   const [appNotifications, setAppNotifications] = useState([]);
   const [workerChangeRequests, setWorkerChangeRequests] = useState([]);
   const [isDbReady, setIsDbReady] = useState(false);
+  const [gmailQueryConfig, setGmailQueryConfig] = useState(null);
 
   // Company-wide settings persisted on Supabase (admin/responsible signature)
   const [companySignature, setCompanySignatureState] = useState({
@@ -200,6 +201,7 @@ export const AppProvider = ({ children }) => {
               ...(data.tolerancia_valido != null && { toleranciaValido: Number(data.tolerancia_valido) }),
               ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
             }));
+            if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
           }
         })(),
       ]);
@@ -508,6 +510,15 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const saveGmailQueryConfig = async (config) => {
+    setGmailQueryConfig(config);
+    if (!supabaseInstance) return;
+    const { error } = await supabaseInstance
+      .from('system_settings')
+      .upsert({ id: 1, gmail_query_config: config, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) console.error('Erro ao gravar gmail_query_config:', error);
+  };
+
   const saveSystemSettings = async (newSettings) => {
     setSystemSettings(newSettings);
     if (!supabaseInstance) return;
@@ -532,6 +543,7 @@ export const AppProvider = ({ children }) => {
 
   const value = {
     systemSettings, setSystemSettings, saveSystemSettings,
+    gmailQueryConfig, saveGmailQueryConfig,
     companySignature, saveCompanySignature,
     stampStyle, setStampStyle,
     view, setView,

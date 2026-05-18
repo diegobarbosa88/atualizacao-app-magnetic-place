@@ -5,8 +5,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
-const STORAGE_KEY = 'faturas_gmail_query';
-
 const DEFAULT_CONFIG = {
   lidos: true,
   naoLidos: true,
@@ -30,19 +28,15 @@ function configParaQuery(cfg) {
   return parts.join(' ') || 'has:attachment';
 }
 
-function querySalva() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
-}
-
 export default function FaturasAdmin() {
-  const { supabase } = useApp();
+  const { supabase, gmailQueryConfig, saveGmailQueryConfig } = useApp();
   const [faturas, setFaturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
   const [apagando, setApagando] = useState(false);
   const [selecionados, setSelecionados] = useState(new Set());
 
-  const [cfg, setCfg] = useState(() => querySalva() || DEFAULT_CONFIG);
+  const [cfg, setCfg] = useState(() => gmailQueryConfig || DEFAULT_CONFIG);
   const [assuntoInput, setAssuntoInput] = useState('');
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [importando, setImportando] = useState(false);
@@ -66,9 +60,13 @@ export default function FaturasAdmin() {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [ordem, setOrdem] = useState({ campo: 'importado_em', dir: 'desc' });
 
+  // Sincronizar quando o context carregar a config do Supabase
+  useEffect(() => {
+    if (gmailQueryConfig) setCfg(gmailQueryConfig);
+  }, [gmailQueryConfig]);
+
   const guardarConfig = (novaCfg) => {
-    setCfg(novaCfg);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(novaCfg));
+    saveGmailQueryConfig(novaCfg);
     setMostrarConfig(false);
   };
 
