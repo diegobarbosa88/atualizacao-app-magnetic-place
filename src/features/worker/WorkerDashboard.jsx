@@ -141,9 +141,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
-          <button onClick={() => setShowSchedulesModal(true)} className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black shadow-sm">
+          <button onClick={() => setShowSchedulesModal(true)} className="flex items-center gap-2 p-2 sm:px-4 sm:py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-black shadow-sm">
             {activeWorkerSchedule && (
-              <span className="text-[9px] sm:text-xs opacity-70 border-r border-indigo-200 pr-2 mr-1 inline-block leading-tight text-right uppercase">
+              <span className="hidden sm:inline-block text-[9px] sm:text-xs opacity-70 border-r border-indigo-200 pr-2 mr-1 leading-tight text-right uppercase">
                 <span className="block">{formatTimeCompact(activeWorkerSchedule.startTime)} - {formatTimeCompact(activeWorkerSchedule.endTime)}</span>
                 {activeWorkerSchedule.breakStart && (
                   <span className="block text-[8px] sm:text-[9px] font-bold text-indigo-400/80">P: {formatTimeCompact(activeWorkerSchedule.breakStart)}-{formatTimeCompact(activeWorkerSchedule.breakEnd)}</span>
