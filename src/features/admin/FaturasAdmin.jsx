@@ -3,6 +3,8 @@ import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, S
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas-pro';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const DEFAULT_CONFIG = {
@@ -275,9 +277,6 @@ export default function FaturasAdmin() {
     if (!lista.length) return;
     setGerandoPdf(true);
     try {
-      const html2canvas = (await import('html2canvas-pro')).default;
-      const { jsPDF } = await import('jspdf');
-
       const totalValor = lista.reduce((s, f) => s + (f.dados?.valor_total ?? 0), 0);
       const totalIva = lista.reduce((s, f) => s + (f.dados?.iva ?? 0), 0);
       const hoje = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
