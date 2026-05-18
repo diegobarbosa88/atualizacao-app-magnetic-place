@@ -207,23 +207,30 @@ export default function FaturasAdmin() {
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ficheiro</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Tamanho</th>
-                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Importado em</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nº Fatura</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Fornecedor</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">NIF</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Total</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">IVA</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
                 </tr>
               </thead>
               <tbody>
-                {faturas.map((f, i) => (
+                {faturas.map((f, i) => {
+                  const d = f.dados || {};
+                  return (
                   <tr key={f.id} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${i % 2 === 0 ? '' : 'bg-slate-50/40'}`}>
-                    <td className="px-4 py-3 text-sm font-semibold text-slate-700 max-w-xs truncate">{f.filename}</td>
-                    <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${f.mime_type === 'application/pdf' ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'}`}>
-                        {f.mime_type === 'application/pdf' ? 'PDF' : 'XML'}
-                      </span>
+                    <td className="px-4 py-3 max-w-[160px]">
+                      <p className="text-xs font-semibold text-slate-700 truncate" title={f.filename}>{f.filename}</p>
+                      <p className="text-[10px] text-slate-400">{formatDate(f.importado_em)}</p>
                     </td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{formatBytes(f.tamanho)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-500">{formatDate(f.importado_em)}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-slate-600">{d.numero_fatura || <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600 max-w-[140px] truncate" title={d.fornecedor}>{d.fornecedor || <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-3 text-xs font-mono text-slate-500">{d.nif_fornecedor || <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{d.data_fatura ? new Date(d.data_fatura).toLocaleDateString('pt-PT') : <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-3 text-xs font-semibold text-slate-700">{d.valor_total != null ? `${d.valor_total.toFixed(2)} €` : <span className="text-slate-300">—</span>}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">{d.iva != null ? `${d.iva.toFixed(2)} €` : <span className="text-slate-300">—</span>}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <a href={f.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Abrir">
@@ -238,7 +245,8 @@ export default function FaturasAdmin() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
