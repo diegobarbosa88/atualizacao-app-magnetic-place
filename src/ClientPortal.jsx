@@ -1525,6 +1525,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             <style dangerouslySetInnerHTML={{
                 __html: `
+        @page { size: A4 portrait; margin: 0; }
         @media print {
           body {
              margin: 0;
@@ -1539,7 +1540,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
           }
           .a4-paper {
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 30px !important;
             box-shadow: none !important;
             border: none !important;
             width: 100% !important;
