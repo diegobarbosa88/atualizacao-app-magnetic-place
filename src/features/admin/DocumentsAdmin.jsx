@@ -399,43 +399,47 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           </div>
 
           {/* Toolbar */}
-          <div className="flex gap-2 mb-5 items-center">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-              <input
-                type="text"
-                placeholder="Pesquisar..."
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+          <div className="flex flex-col gap-2 mb-5">
+            <div className="flex gap-2 items-center">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                <input
+                  type="text"
+                  placeholder="Pesquisar..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="p-2.5 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 shrink-0"
+                title="Upload Manual"
+              >
+                <Plus size={16} />
+              </button>
             </div>
-            <select
-              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none shrink-0"
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value)}
-            >
-              <option value="all">Todas</option>
-              <option value="manual">Manual</option>
-              <option value="template">Template</option>
-            </select>
-            <select
-              className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none shrink-0"
-              value={tipoFilter}
-              onChange={(e) => setTipoFilter(e.target.value)}
-            >
-              <option value="all">Todos os Tipos</option>
-              {tipoOptions.map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowUploadModal(true)}
-              className="p-2.5 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 shrink-0"
-              title="Upload Manual"
-            >
-              <Plus size={16} />
-            </button>
+            <div className="flex gap-2">
+              <select
+                className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+              >
+                <option value="all">Todas as fontes</option>
+                <option value="manual">Manual</option>
+                <option value="template">Template</option>
+              </select>
+              <select
+                className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
+                value={tipoFilter}
+                onChange={(e) => setTipoFilter(e.target.value)}
+              >
+                <option value="all">Todos os Tipos</option>
+                {tipoOptions.map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Lista unificada */}
