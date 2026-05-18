@@ -708,9 +708,9 @@ function drawAdminStamp(page, {
   }
 
   // Divisor
-  dY -= 2;
+  dY -= 6;
   page.drawLine({ start: { x: detailX, y: dY }, end: { x: x + w - PAD_H, y: dY }, thickness: 0.3, color: SLATE_100 });
-  dY -= 5;
+  dY -= 6;
 
   // Data
   if (signedAt) {

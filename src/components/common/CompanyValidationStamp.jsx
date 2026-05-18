@@ -93,7 +93,7 @@ const CompanyValidationStamp = ({
           {responsibleRole && (
             <div style={{ fontSize: '10px', fontWeight: 600, color: '#334155', marginTop: '1px' }}>{responsibleRole}</div>
           )}
-          <div style={{ marginTop: '5px', borderTop: '1px solid #e2e8f0', paddingTop: '5px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '5px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ fontFamily: MONO, fontSize: '9px', color: '#334155', fontWeight: 600 }}>{dateStr}</div>
             <div style={{ fontFamily: MONO, fontSize: '8px', color: '#64748b' }}>IP {ip}</div>
             {idStr && (
