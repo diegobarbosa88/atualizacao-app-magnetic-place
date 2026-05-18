@@ -17,10 +17,13 @@ const CompanyValidationStamp = ({
   responsibleRole = '',
   signedAt,
   ip = 'N/D',
+  id,
   signatureDataUrl,
   companyLogoUrl = '/icon-512x512.png',
 }) => {
   const dateStr = signedAt ? new Date(signedAt).toLocaleString('pt-PT') : '';
+  const idStr = id || '';
+  const idStr = id || '';
 
   return (
     <div style={{
@@ -91,6 +94,9 @@ const CompanyValidationStamp = ({
           <div style={{ marginTop: '5px', borderTop: '1px solid #f1f5f9', paddingTop: '4px' }}>
             <div style={{ fontFamily: MONO, fontSize: '8px', color: '#475569' }}>{dateStr}</div>
             <div style={{ fontFamily: MONO, fontSize: '8px', color: '#94a3b8', marginTop: '2px' }}>IP {ip}</div>
+            {idStr && (
+              <div style={{ fontFamily: MONO, fontSize: '7px', color: '#6366f1', marginTop: '2px' }}>ID: {idStr}</div>
+            )}
           </div>
         </div>
       </div>
