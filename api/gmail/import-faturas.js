@@ -19,6 +19,7 @@ function findAttachmentParts(parts = []) {
 }
 
 export default async function handler(req, res) {
+  try {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -129,4 +130,7 @@ export default async function handler(req, res) {
   }
 
   return res.status(200).json({ processados, ficheiros, erros });
+  } catch (e) {
+    return res.status(500).json({ error: e.message, stack: e.stack });
+  }
 }
