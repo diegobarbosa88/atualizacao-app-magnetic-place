@@ -144,15 +144,18 @@ export default async function handler(req, res) {
 
           // Extrair dados do PDF
           let dados = null;
+          let _debugTexto = null;
           if (part.mimeType === 'application/pdf') {
             try {
               const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js');
               const parsed = await pdfParse(buffer);
+              _debugTexto = parsed.text?.slice(0, 1000);
               dados = extrairDadosFatura(parsed.text);
-            } catch {
-              // extracção falhou mas continuamos — dados fica null
+            } catch (e) {
+              _debugTexto = `ERRO pdf-parse: ${e.message}`;
             }
           }
+          if (_debugTexto) erros.push({ debug: true, filename, texto: _debugTexto });
 
           const { error: dbError } = await supabase.from('faturas').insert({
             gmail_message_id: msg.id,
