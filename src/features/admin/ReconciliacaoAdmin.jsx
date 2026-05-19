@@ -215,13 +215,60 @@ export default function ReconciliacaoAdmin() {
   const confirmarBulkMatched = async () => {
     if (!selMatched.size) return;
     setBulkConfirmando(true);
-    const currentMatched = (runSelecionado ? runSelecionado.results_json : resultado)?.matched || [];
-    const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
-    for (const item of items) {
-      await confirmarPagamento(item.fatura.id, item.fatura.fonte);
+    try {
+      const currentMatched = (runSelecionado ? runSelecionado.results_json : resultado)?.matched || [];
+      const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
+      if (!items.length) return;
+
+      const allIds = items.map(m => m.fatura.id);
+      setConfirmando(new Set(allIds));
+
+      // Todos os updates em paralelo
+      await Promise.all(items.map(item =>
+        item.fatura.fonte === 'recibo'
+          ? supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id)
+          : supabase.from('faturas').update({ status: 'PAGO' }).eq('id', item.fatura.id)
+      ));
+
+      // Actualizar estado local uma única vez com todos os IDs
+      const idSet = new Set(allIds);
+      const updateAllMatched = matched => matched.map(m =>
+        idSet.has(m.fatura.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
+      );
+
+      const runId = runSelecionado?.id ?? resultado?.run_id;
+      let newMatched;
+      if (runSelecionado) {
+        newMatched = updateAllMatched(runSelecionado.results_json.matched || []);
+        setRunSelecionado(prev => ({
+          ...prev,
+          results_json: { ...prev.results_json, matched: newMatched },
+        }));
+      } else {
+        newMatched = updateAllMatched(resultado?.matched || []);
+        setResultado(prev => ({ ...prev, matched: newMatched }));
+      }
+
+      // Persistir no run
+      if (runId) {
+        const baseResults = runSelecionado?.results_json ?? {
+          matched: resultado?.matched || [],
+          orphan_bank: resultado?.orphan_bank || [],
+          orphan_system: resultado?.orphan_system || [],
+        };
+        await supabase
+          .from('reconciliation_runs')
+          .update({ results_json: { ...baseResults, matched: newMatched } })
+          .eq('id', runId);
+      }
+
+      setSelMatched(new Set());
+      setConfirmando(new Set());
+    } catch (err) {
+      alert(`Erro ao confirmar pagamentos: ${err.message}`);
+    } finally {
+      setBulkConfirmando(false);
     }
-    setSelMatched(new Set());
-    setBulkConfirmando(false);
   };
 
   // ── Confirmar movimento em Órfãos Banco — abre modal para observação ────────
