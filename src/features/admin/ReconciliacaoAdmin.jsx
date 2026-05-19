@@ -261,12 +261,8 @@ export default function ReconciliacaoAdmin() {
   const validarESelecionarFicheiro = (f) => {
     setErro(null);
     const ext = f.name.split('.').pop().toLowerCase();
-    if (ext === 'pdf') {
-      setErro('Ficheiros PDF não são suportados. Carregue um ficheiro CSV ou OFX.');
-      return;
-    }
-    if (!['csv', 'ofx', 'qfx'].includes(ext)) {
-      setErro(`Formato .${ext} não suportado. Formatos aceites: CSV, OFX, QFX.`);
+    if (!['csv', 'ofx', 'qfx', 'pdf'].includes(ext)) {
+      setErro(`Formato .${ext} não suportado. Formatos aceites: CSV, OFX, QFX, PDF.`);
       return;
     }
     setFicheiro(f);
@@ -732,7 +728,7 @@ export default function ReconciliacaoAdmin() {
             dragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
           }`}
         >
-          <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx" className="hidden" onChange={handleFileChange} />
+          <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" className="hidden" onChange={handleFileChange} />
           <Upload size={32} className={`mx-auto mb-3 ${dragging ? 'text-indigo-500' : 'text-slate-300'}`} />
           {ficheiro ? (
             <div className="flex items-center justify-center gap-2">
@@ -745,7 +741,7 @@ export default function ReconciliacaoAdmin() {
             </div>
           ) : (
             <>
-              <p className="text-slate-500 font-medium">Arraste um ficheiro CSV ou OFX aqui</p>
+              <p className="text-slate-500 font-medium">Arraste um ficheiro CSV, OFX ou PDF aqui</p>
               <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">ou clique para escolher</p>
             </>
           )}
