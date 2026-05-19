@@ -193,17 +193,18 @@ export default async function handler(req, res) {
 
     if (fatError) throw new Error(`Supabase query failed: ${fatError.message}`);
 
-    // Normalizar valor de uma fatura: suporta número, string PT ("1.500,00") e string EN ("1500.00")
+    // Normalizar valor de uma fatura para number
+    // Supabase NUMERIC → string EN "1500.00"; Gemini → PT "1.500,00" ou "1500,00"
     const parseValorFatura = (v) => {
       if (v == null) return null;
       if (typeof v === 'number') return isNaN(v) ? null : v;
       const s = String(v).trim().replace(/\s/g, '');
-      // Formato PT: "1.500,00" → remover ponto milhar, trocar vírgula por ponto
-      const pt = parseFloat(s.replace(/\./g, '').replace(',', '.'));
-      if (!isNaN(pt)) return pt;
-      // Formato EN: "1500.00"
-      const en = parseFloat(s.replace(',', ''));
-      return isNaN(en) ? null : en;
+      // Só aplicar lógica PT (remover ponto milhar) quando há vírgula decimal
+      const normalized = s.includes(',')
+        ? s.replace(/\./g, '').replace(',', '.')  // "1.500,00" → "1500.00"
+        : s;                                       // "1500.00" → "1500.00" (Supabase)
+      const r = parseFloat(normalized);
+      return isNaN(r) ? null : r;
     };
 
     // Normalizar: faturas Gmail guardam valor em dados.valor_total
