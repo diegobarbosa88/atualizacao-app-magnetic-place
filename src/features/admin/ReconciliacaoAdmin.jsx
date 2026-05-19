@@ -1,9 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
-  AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight
+  AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight,
+  ArrowDownLeft, ArrowUpRight
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+
+function TipoBadge({ tipo }) {
+  if (tipo === 'credito') return (
+    <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+      <ArrowDownLeft size={10} /> Entrada
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-0.5 text-[9px] font-black uppercase tracking-widest bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+      <ArrowUpRight size={10} /> Saída
+    </span>
+  );
+}
 
 export default function ReconciliacaoAdmin() {
   const { supabase } = useApp();
@@ -331,16 +345,18 @@ export default function ReconciliacaoAdmin() {
                 <div key={i} className="flex items-center justify-between bg-emerald-50 rounded-2xl p-4 gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <TipoBadge tipo={item.transacao.tipo} />
+                      <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
+                      <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                         {item.fatura.fonte === 'recibo' ? 'Recibo' : item.fatura.tipo || 'Fatura'}
                       </span>
-                      <span className="text-sm font-bold text-slate-700">€{Number(item.fatura.valor).toFixed(2)}</span>
-                      <span className="text-[10px] text-slate-400">{item.fatura.entidade}</span>
+                      <span className="text-[10px] text-slate-500">{item.fatura.entidade}</span>
                       {item.rule === 'description_match' && (
                         <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-500 mt-1 truncate">{item.transacao.descricao}</p>
+                    <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao.descricao}</p>
                   </div>
                   {!runSelecionado && (
                     item.fatura.status === 'PAGO' ? (
@@ -374,13 +390,14 @@ export default function ReconciliacaoAdmin() {
               {(displayData.orphan_bank || []).map((item, i) => (
                 <div key={i} className={`rounded-2xl p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <TipoBadge tipo={item.transacao.tipo} />
                     <span className={`text-[10px] font-black uppercase tracking-widest ${item.reason === 'ambiguous' ? 'text-amber-700' : 'text-rose-700'}`}>
                       {item.reason === 'ambiguous' ? 'Ambíguo' : 'Sem correspondência'}
                     </span>
                     <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
                     <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
                   </div>
-                  <p className="text-xs text-slate-600 truncate">{item.transacao.descricao}</p>
+                  <p className="text-xs text-slate-700 font-medium truncate">{item.transacao.descricao}</p>
                   {item.reason === 'ambiguous' && item.candidates && (
                     <p className="text-[10px] text-amber-600 mt-1">
                       Candidatos: {item.candidates.map(c => c.entidade).filter(Boolean).join(', ')}
