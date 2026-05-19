@@ -819,6 +819,9 @@ export default function ReconciliacaoAdmin() {
                         {item.rule === 'description_match' && (
                           <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>
                         )}
+                        {item.rule === 'date_proximity' && (
+                          <span className="text-[9px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full uppercase tracking-widest">data</span>
+                        )}
                         {faturaIdCount[item.fatura?.id] > 1 && item.rule !== 'manual_split' && (
                           <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">2 movimentos</span>
                         )}

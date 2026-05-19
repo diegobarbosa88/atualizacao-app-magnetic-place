@@ -9,18 +9,28 @@
  *   { id, tipo, valor, data_documento, descricao, entidade, status, fonte }
  * @returns {{ matched, orphan_bank, orphan_system }}
  *
- * Regra 1: valor numérico exato (fatura.valor === transacao.valor)
+ * Regra 1: valor numérico exato (±1 cêntimo)
  * Regra 2: fatura.entidade substring na transacao.descricao (case-insensitive)
+ * Regra 3: data_documento mais próxima da data da transação (janela de 60 dias)
  *
  * Transação pode ser:
- *   - matched      → 1 fatura encontrada (Regra 1 ou 1+2)
- *   - ambiguous    → múltiplos candidatos, Regra 2 não resolveu → orphan_bank
+ *   - matched      → 1 fatura encontrada
+ *   - ambiguous    → múltiplos candidatos, nenhuma regra resolveu → orphan_bank
  *   - orphan_bank  → nenhuma fatura encontrada
  *
  * Fatura pode ser:
  *   - matched       → consumida por uma transação
  *   - orphan_system → sem transação correspondente
  */
+
+function dateDiffDays(dateA, dateB) {
+  if (!dateA || !dateB) return Infinity;
+  const a = new Date(dateA);
+  const b = new Date(dateB);
+  if (isNaN(a) || isNaN(b)) return Infinity;
+  return Math.abs((a - b) / 86400000);
+}
+
 export function runMatchingEngine(transacoes, faturas) {
   const matched = [];
   const orphan_bank = [];
@@ -59,11 +69,26 @@ export function runMatchingEngine(transacoes, faturas) {
       continue;
     }
 
-    // Ambiguous — múltiplos candidatos, Regra 2 não resolveu
+    // Regra 3: data mais próxima da transação (pool = porDescricao se >0, senão todos os candidatos)
+    const pool = porDescricao.length > 0 ? porDescricao : candidatos;
+    const comData = pool.filter(f => f.data_documento);
+    if (comData.length > 0) {
+      comData.sort((a, b) => dateDiffDays(a.data_documento, transacao.data) - dateDiffDays(b.data_documento, transacao.data));
+      const melhor = comData[0];
+      const segundo = comData[1];
+      // Só aceita se o melhor for claramente mais próximo (diferença > 3 dias face ao segundo)
+      if (!segundo || dateDiffDays(melhor.data_documento, transacao.data) + 3 < dateDiffDays(segundo.data_documento, transacao.data)) {
+        matched.push({ transacao, fatura: melhor, rule: 'date_proximity' });
+        usedFaturaIds.add(melhor.id);
+        continue;
+      }
+    }
+
+    // Ambiguous — múltiplos candidatos, nenhuma regra resolveu
     orphan_bank.push({
       transacao,
       reason: 'ambiguous',
-      candidates: candidatos.map(f => ({ id: f.id, entidade: f.entidade, valor: f.valor })),
+      candidates: candidatos.map(f => ({ id: f.id, entidade: f.entidade, valor: f.valor, data_documento: f.data_documento })),
     });
   }
 
