@@ -193,15 +193,29 @@ export default async function handler(req, res) {
 
     if (fatError) throw new Error(`Supabase query failed: ${fatError.message}`);
 
+    // Normalizar valor de uma fatura: suporta número, string PT ("1.500,00") e string EN ("1500.00")
+    const parseValorFatura = (v) => {
+      if (v == null) return null;
+      if (typeof v === 'number') return isNaN(v) ? null : v;
+      const s = String(v).trim().replace(/\s/g, '');
+      // Formato PT: "1.500,00" → remover ponto milhar, trocar vírgula por ponto
+      const pt = parseFloat(s.replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(pt)) return pt;
+      // Formato EN: "1500.00"
+      const en = parseFloat(s.replace(',', ''));
+      return isNaN(en) ? null : en;
+    };
+
     // Normalizar: faturas Gmail guardam valor em dados.valor_total
     const faturasNorm = (faturas || []).map(f => ({
       ...f,
-      valor: f.valor ?? f.dados?.valor_total ?? null,
+      valor: parseValorFatura(f.valor) ?? parseValorFatura(f.dados?.valor_total) ?? null,
       entidade: f.entidade || f.dados?.fornecedor || '',
       descricao: f.descricao || f.dados?.numero_fatura || f.filename || '',
       data_documento: f.data_documento || f.dados?.data_fatura || null,
       fonte: f.fonte || 'fatura',
-    })).filter(f => f.valor != null);
+    }));
+    // Não filtrar faturas sem valor — continuam no motor e aparecem em Órfãos Sistema
 
     // Buscar recibos validados (tabela receipt_validations)
     const { data: recibos, error: recError } = await supabase

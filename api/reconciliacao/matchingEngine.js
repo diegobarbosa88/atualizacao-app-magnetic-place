@@ -27,9 +27,10 @@ export function runMatchingEngine(transacoes, faturas) {
   const usedFaturaIds = new Set();
 
   for (const transacao of transacoes) {
-    // Regra 1: candidatos por valor exato
+    // Regra 1: candidatos por valor exato (ignora faturas sem valor extraído)
     const candidatos = faturas.filter(f =>
       !usedFaturaIds.has(f.id) &&
+      f.valor != null &&
       Number(f.valor) === transacao.valor
     );
 
