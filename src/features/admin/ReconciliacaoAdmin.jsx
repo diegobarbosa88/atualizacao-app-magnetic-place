@@ -36,6 +36,9 @@ export default function ReconciliacaoAdmin() {
   const [selMatched, setSelMatched] = useState(new Set());    // índices seleccionados em Reconciliados
   const [selOrphan, setSelOrphan] = useState(new Set());      // índices seleccionados em Órfãos Banco
   const [confirmedOrphans, setConfirmedOrphans] = useState(new Set()); // índices confirmados órfãos
+  const [orphanObservacoes, setOrphanObservacoes] = useState({}); // { [index]: string }
+  const [pendingOrphanConfirm, setPendingOrphanConfirm] = useState(null); // { indices: number[] }
+  const [orphanObs, setOrphanObs] = useState('');
   const [bulkConfirmando, setBulkConfirmando] = useState(false);
 
   // ── Histórico ─────────────────────────────────────────────────────────────
@@ -72,7 +75,24 @@ export default function ReconciliacaoAdmin() {
 
   const apagarRun = async (e, runId) => {
     e.stopPropagation();
-    if (!window.confirm('Apagar esta importação do histórico?')) return;
+    if (!window.confirm('Apagar esta importação? As faturas confirmadas voltarão a PENDENTE.')) return;
+    const { data: runData } = await supabase
+      .from('reconciliation_runs')
+      .select('results_json')
+      .eq('id', runId)
+      .single();
+    if (runData?.results_json?.matched?.length) {
+      const faturaIds = runData.results_json.matched
+        .filter(m => m.fatura?.fonte !== 'recibo')
+        .map(m => m.fatura?.id)
+        .filter(Boolean);
+      const reciboIds = runData.results_json.matched
+        .filter(m => m.fatura?.fonte === 'recibo')
+        .map(m => m.fatura?.id)
+        .filter(Boolean);
+      if (faturaIds.length) await supabase.from('faturas').update({ status: 'PENDENTE' }).in('id', faturaIds);
+      if (reciboIds.length) await supabase.from('receipt_validations').update({ estado: 'valido' }).in('id', reciboIds);
+    }
     const { error, count } = await supabase.from('reconciliation_runs').delete({ count: 'exact' }).eq('id', runId);
     if (error) { alert(`Erro ao apagar: ${error.message}`); return; }
     if (count === 0) { alert('Sem permissão para apagar. Aplique a política RLS de DELETE na tabela reconciliation_runs.'); return; }
@@ -154,14 +174,17 @@ export default function ReconciliacaoAdmin() {
           .eq('id', faturaId);
         if (error) throw error;
       }
-      setResultado(prev => ({
-        ...prev,
-        matched: prev.matched.map(m =>
-          m.fatura.id === faturaId
-            ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } }
-            : m
-        ),
-      }));
+      const updateMatched = matched => matched.map(m =>
+        m.fatura.id === faturaId ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
+      );
+      if (runSelecionado) {
+        setRunSelecionado(prev => ({
+          ...prev,
+          results_json: { ...prev.results_json, matched: updateMatched(prev.results_json.matched || []) },
+        }));
+      } else {
+        setResultado(prev => ({ ...prev, matched: updateMatched(prev.matched || []) }));
+      }
     } catch (err) {
       alert(`Erro ao confirmar pagamento: ${err.message}`);
     } finally {
@@ -173,7 +196,8 @@ export default function ReconciliacaoAdmin() {
   const confirmarBulkMatched = async () => {
     if (!selMatched.size) return;
     setBulkConfirmando(true);
-    const items = (resultado?.matched || []).filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
+    const currentMatched = (runSelecionado ? runSelecionado.results_json : resultado)?.matched || [];
+    const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
     for (const item of items) {
       await confirmarPagamento(item.fatura.id, item.fatura.fonte);
     }
@@ -181,13 +205,29 @@ export default function ReconciliacaoAdmin() {
     setBulkConfirmando(false);
   };
 
-  // ── Confirmar movimento em Órfãos Banco (sem documento associado) ─────────
-  const confirmarMovimento = (indices) => {
+  // ── Confirmar movimento em Órfãos Banco — abre modal para observação ────────
+  const pedirObservacaoOrphan = (indices) => {
+    setPendingOrphanConfirm({ indices });
+    setOrphanObs('');
+  };
+
+  const confirmarMovimento = () => {
+    if (!pendingOrphanConfirm) return;
+    const { indices } = pendingOrphanConfirm;
     setConfirmedOrphans(prev => {
       const next = new Set(prev);
       indices.forEach(i => next.add(i));
       return next;
     });
+    if (orphanObs.trim()) {
+      setOrphanObservacoes(prev => {
+        const next = { ...prev };
+        indices.forEach(i => { next[i] = orphanObs.trim(); });
+        return next;
+      });
+    }
+    setPendingOrphanConfirm(null);
+    setOrphanObs('');
     setSelOrphan(new Set());
   };
 
@@ -380,7 +420,7 @@ export default function ReconciliacaoAdmin() {
             return (
               <div className="space-y-3">
                 {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>}
-                {!runSelecionado && items.length > 0 && (
+                {items.length > 0 && (
                   <div className="flex items-center justify-between mb-1">
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
                       <input type="checkbox"
@@ -400,7 +440,7 @@ export default function ReconciliacaoAdmin() {
                 )}
                 {items.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-4">
-                    {!runSelecionado && item.fatura.status !== 'PAGO' && (
+                    {item.fatura.status !== 'PAGO' && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                         className="accent-emerald-600 w-4 h-4 flex-shrink-0" />
@@ -420,19 +460,17 @@ export default function ReconciliacaoAdmin() {
                       </div>
                       <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao.descricao}</p>
                     </div>
-                    {!runSelecionado && (
-                      item.fatura.status === 'PAGO' ? (
-                        <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest flex-shrink-0">
-                          <CheckCircle size={14} /> Pago
-                        </span>
-                      ) : (
-                        <button onClick={() => confirmarPagamento(item.fatura.id, item.fatura.fonte)}
-                          disabled={confirmando.has(item.fatura.id)}
-                          className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
-                          {confirmando.has(item.fatura.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
-                          Confirmar
-                        </button>
-                      )
+                    {item.fatura.status === 'PAGO' ? (
+                      <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest flex-shrink-0">
+                        <CheckCircle size={14} /> Pago
+                      </span>
+                    ) : (
+                      <button onClick={() => confirmarPagamento(item.fatura.id, item.fatura.fonte)}
+                        disabled={confirmando.has(item.fatura.id)}
+                        className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
+                        {confirmando.has(item.fatura.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                        Confirmar
+                      </button>
                     )}
                   </div>
                 ))}
@@ -447,7 +485,7 @@ export default function ReconciliacaoAdmin() {
             return (
               <div className="space-y-3">
                 {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Sem transações sem correspondência.</p>}
-                {!runSelecionado && items.length > 0 && (
+                {items.length > 0 && (
                   <div className="flex items-center justify-between mb-1">
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
                       <input type="checkbox"
@@ -457,7 +495,7 @@ export default function ReconciliacaoAdmin() {
                       Seleccionar todos
                     </label>
                     {selOrphan.size > 0 && (
-                      <button onClick={() => confirmarMovimento([...selOrphan])}
+                      <button onClick={() => pedirObservacaoOrphan([...selOrphan])}
                         className="flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
                         <CheckCircle size={12} /> Confirmar Selecionados ({selOrphan.size})
                       </button>
@@ -465,15 +503,36 @@ export default function ReconciliacaoAdmin() {
                   </div>
                 )}
                 {(displayData.orphan_bank || []).map((item, i) => {
-                  if (confirmedOrphans.has(i)) return null;
+                  const isConfirmed = confirmedOrphans.has(i);
+                  if (isConfirmed) {
+                    return (
+                      <div key={i} className="rounded-2xl p-4 bg-slate-50 border border-slate-100 opacity-70">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle size={16} className="text-indigo-400 mt-0.5 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <TipoBadge tipo={item.transacao.tipo} />
+                              <span className="text-sm font-bold text-slate-500">€{Number(item.transacao.valor).toFixed(2)}</span>
+                              <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
+                              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Confirmado</span>
+                            </div>
+                            {orphanObservacoes[i] && (
+                              <p className="text-xs text-slate-500 mt-1 italic">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 not-italic">Obs: </span>
+                                {orphanObservacoes[i]}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
                   return (
                     <div key={i} className={`rounded-2xl p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
                       <div className="flex items-start gap-3">
-                        {!runSelecionado && (
-                          <input type="checkbox" checked={selOrphan.has(i)}
-                            onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                            className="accent-indigo-600 w-4 h-4 mt-1 flex-shrink-0" />
-                        )}
+                        <input type="checkbox" checked={selOrphan.has(i)}
+                          onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
+                          className="accent-indigo-600 w-4 h-4 mt-1 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-2">
                             <TipoBadge tipo={item.transacao.tipo} />
@@ -498,12 +557,10 @@ export default function ReconciliacaoAdmin() {
                             </p>
                           )}
                         </div>
-                        {!runSelecionado && (
-                          <button onClick={() => confirmarMovimento([i])}
-                            className="flex-shrink-0 flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
-                            <CheckCircle size={12} /> Confirmar
-                          </button>
-                        )}
+                        <button onClick={() => pedirObservacaoOrphan([i])}
+                          className="flex-shrink-0 flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                          <CheckCircle size={12} /> Confirmar
+                        </button>
                       </div>
                     </div>
                   );
@@ -592,6 +649,42 @@ export default function ReconciliacaoAdmin() {
           </div>
         )}
       </div>
+
+      {/* Modal — Observação Órfão Banco */}
+      {pendingOrphanConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Confirmar Movimento
+              {pendingOrphanConfirm.indices.length > 1 && ` (${pendingOrphanConfirm.indices.length} movimentos)`}
+            </h3>
+            <p className="text-sm text-slate-600">Adicione uma observação para justificar este movimento sem documento associado.</p>
+            <textarea
+              autoFocus
+              value={orphanObs}
+              onChange={e => setOrphanObs(e.target.value)}
+              placeholder="Ex: Pagamento de fornecedor por transferência direta, fatura pendente de envio..."
+              rows={3}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={confirmarMovimento}
+                disabled={!orphanObs.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <CheckCircle size={12} /> Confirmar
+              </button>
+              <button
+                onClick={() => { setPendingOrphanConfirm(null); setOrphanObs(''); }}
+                className="px-4 py-2 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
