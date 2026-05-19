@@ -33,6 +33,10 @@ export default function ReconciliacaoAdmin() {
   const [resultado, setResultado] = useState(null);      // resposta da API
   const [activeSubTab, setActiveSubTab] = useState('matched'); // matched | orphan_bank | orphan_system
   const [confirmando, setConfirmando] = useState(new Set()); // IDs em processo
+  const [selMatched, setSelMatched] = useState(new Set());    // índices seleccionados em Reconciliados
+  const [selOrphan, setSelOrphan] = useState(new Set());      // índices seleccionados em Órfãos Banco
+  const [confirmedOrphans, setConfirmedOrphans] = useState(new Set()); // índices confirmados órfãos
+  const [bulkConfirmando, setBulkConfirmando] = useState(false);
 
   // ── Histórico ─────────────────────────────────────────────────────────────
   const [historico, setHistorico] = useState([]);
@@ -163,6 +167,28 @@ export default function ReconciliacaoAdmin() {
     } finally {
       setConfirmando(prev => { const s = new Set(prev); s.delete(faturaId); return s; });
     }
+  };
+
+  // ── Bulk: confirmar pagamento para seleccionados em Reconciliados ─────────
+  const confirmarBulkMatched = async () => {
+    if (!selMatched.size) return;
+    setBulkConfirmando(true);
+    const items = (resultado?.matched || []).filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
+    for (const item of items) {
+      await confirmarPagamento(item.fatura.id, item.fatura.fonte);
+    }
+    setSelMatched(new Set());
+    setBulkConfirmando(false);
+  };
+
+  // ── Confirmar movimento em Órfãos Banco (sem documento associado) ─────────
+  const confirmarMovimento = (indices) => {
+    setConfirmedOrphans(prev => {
+      const next = new Set(prev);
+      indices.forEach(i => next.add(i));
+      return next;
+    });
+    setSelOrphan(new Set());
   };
 
   // ── Guardar fatura manual ─────────────────────────────────────────────────
@@ -336,7 +362,7 @@ export default function ReconciliacaoAdmin() {
               { key: 'orphan_bank', label: 'Órfãos Banco', count: displayData.orphan_bank?.length ?? 0, color: 'amber' },
               { key: 'orphan_system', label: 'Órfãos Sistema', count: displayData.orphan_system?.length ?? 0, color: 'rose' },
             ].map(tab => (
-              <button key={tab.key} onClick={() => setActiveSubTab(tab.key)}
+              <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
                 className={`flex-1 flex-shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                   activeSubTab === tab.key ? 'bg-white shadow-md' : 'text-slate-400 hover:text-slate-600'
                 }`}>
@@ -346,85 +372,145 @@ export default function ReconciliacaoAdmin() {
           </div>
 
           {/* Sub-tab: Reconciliados */}
-          {activeSubTab === 'matched' && (
-            <div className="space-y-3">
-              {(displayData.matched || []).length === 0 && (
-                <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>
-              )}
-              {(displayData.matched || []).map((item, i) => (
-                <div key={i} className="flex items-center justify-between bg-emerald-50 rounded-2xl p-4 gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <TipoBadge tipo={item.transacao.tipo} />
-                      <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
-                      <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
-                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                        {item.fatura.fonte === 'recibo' ? 'Recibo' : item.fatura.tipo || 'Fatura'}
-                      </span>
-                      <span className="text-[10px] text-slate-500">{item.fatura.entidade}</span>
-                      {item.rule === 'description_match' && (
-                        <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao.descricao}</p>
-                  </div>
-                  {!runSelecionado && (
-                    item.fatura.status === 'PAGO' ? (
-                      <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest flex-shrink-0">
-                        <CheckCircle size={14} /> Pago
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => confirmarPagamento(item.fatura.id, item.fatura.fonte)}
-                        disabled={confirmando.has(item.fatura.id)}
-                        className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50"
-                      >
-                        {confirmando.has(item.fatura.id)
-                          ? <Loader2 size={12} className="animate-spin" />
-                          : <CheckCircle size={12} />}
-                        Confirmar Pagamento
+          {activeSubTab === 'matched' && (() => {
+            const items = displayData.matched || [];
+            const pendentes = items.filter((_, i) => !selMatched.has(i) || items[i].fatura.status !== 'PAGO');
+            const selPendentes = items.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
+            const allPendentes = items.filter(m => m.fatura.status !== 'PAGO');
+            return (
+              <div className="space-y-3">
+                {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>}
+                {!runSelecionado && items.length > 0 && (
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
+                      <input type="checkbox"
+                        checked={allPendentes.length > 0 && selMatched.size === allPendentes.length}
+                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => items[i].fatura.status !== 'PAGO')) : new Set())}
+                        className="accent-emerald-600 w-4 h-4" />
+                      Seleccionar todos
+                    </label>
+                    {selMatched.size > 0 && (
+                      <button onClick={confirmarBulkMatched} disabled={bulkConfirmando}
+                        className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
+                        {bulkConfirmando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                        Confirmar Selecionados ({selMatched.size})
                       </button>
-                    )
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                    )}
+                  </div>
+                )}
+                {items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-4">
+                    {!runSelecionado && item.fatura.status !== 'PAGO' && (
+                      <input type="checkbox" checked={selMatched.has(i)}
+                        onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
+                        className="accent-emerald-600 w-4 h-4 flex-shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <TipoBadge tipo={item.transacao.tipo} />
+                        <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
+                        <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                          {item.fatura.fonte === 'recibo' ? 'Recibo' : item.fatura.tipo || 'Fatura'}
+                        </span>
+                        <span className="text-[10px] text-slate-500">{item.fatura.entidade}</span>
+                        {item.rule === 'description_match' && (
+                          <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao.descricao}</p>
+                    </div>
+                    {!runSelecionado && (
+                      item.fatura.status === 'PAGO' ? (
+                        <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest flex-shrink-0">
+                          <CheckCircle size={14} /> Pago
+                        </span>
+                      ) : (
+                        <button onClick={() => confirmarPagamento(item.fatura.id, item.fatura.fonte)}
+                          disabled={confirmando.has(item.fatura.id)}
+                          className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
+                          {confirmando.has(item.fatura.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                          Confirmar
+                        </button>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {/* Sub-tab: Órfãos Banco */}
-          {activeSubTab === 'orphan_bank' && (
-            <div className="space-y-3">
-              {(displayData.orphan_bank || []).length === 0 && (
-                <p className="text-center text-slate-400 py-8 text-sm">Sem transações sem correspondência.</p>
-              )}
-              {(displayData.orphan_bank || []).map((item, i) => (
-                <div key={i} className={`rounded-2xl p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <TipoBadge tipo={item.transacao.tipo} />
-                    <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
-                    <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${item.reason === 'ambiguous' ? 'text-amber-700' : 'text-rose-700'}`}>
-                      {item.reason === 'ambiguous' ? 'Ambíguo' : 'Sem correspondência'}
-                    </span>
+          {activeSubTab === 'orphan_bank' && (() => {
+            const items = (displayData.orphan_bank || []).filter((_, i) => !confirmedOrphans.has(i));
+            const allIndices = (displayData.orphan_bank || []).map((_, i) => i).filter(i => !confirmedOrphans.has(i));
+            return (
+              <div className="space-y-3">
+                {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Sem transações sem correspondência.</p>}
+                {!runSelecionado && items.length > 0 && (
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
+                      <input type="checkbox"
+                        checked={allIndices.length > 0 && selOrphan.size === allIndices.length}
+                        onChange={e => setSelOrphan(e.target.checked ? new Set(allIndices) : new Set())}
+                        className="accent-indigo-600 w-4 h-4" />
+                      Seleccionar todos
+                    </label>
+                    {selOrphan.size > 0 && (
+                      <button onClick={() => confirmarMovimento([...selOrphan])}
+                        className="flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-4 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                        <CheckCircle size={12} /> Confirmar Selecionados ({selOrphan.size})
+                      </button>
+                    )}
                   </div>
-                  {item.transacao.tipoMovimento && (
-                    <p className="text-[10px] text-slate-500 mb-1">
-                      <span className="font-black uppercase tracking-widest">Tipo Movimento:</span> {item.transacao.tipoMovimento}
-                    </p>
-                  )}
-                  <p className="text-xs text-slate-700 font-medium">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descrição: </span>
-                    {item.transacao.descricao || '—'}
-                  </p>
-                  {item.reason === 'ambiguous' && item.candidates && (
-                    <p className="text-[10px] text-amber-600 mt-1">
-                      Candidatos: {item.candidates.map(c => c.entidade).filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+                {(displayData.orphan_bank || []).map((item, i) => {
+                  if (confirmedOrphans.has(i)) return null;
+                  return (
+                    <div key={i} className={`rounded-2xl p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
+                      <div className="flex items-start gap-3">
+                        {!runSelecionado && (
+                          <input type="checkbox" checked={selOrphan.has(i)}
+                            onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
+                            className="accent-indigo-600 w-4 h-4 mt-1 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            <TipoBadge tipo={item.transacao.tipo} />
+                            <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
+                            <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest ${item.reason === 'ambiguous' ? 'text-amber-700' : 'text-rose-700'}`}>
+                              {item.reason === 'ambiguous' ? 'Ambíguo' : 'Sem correspondência'}
+                            </span>
+                          </div>
+                          {item.transacao.tipoMovimento && (
+                            <p className="text-[10px] text-slate-500 mb-1">
+                              <span className="font-black uppercase tracking-widest">Tipo Movimento:</span> {item.transacao.tipoMovimento}
+                            </p>
+                          )}
+                          <p className="text-xs text-slate-700 font-medium">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descrição: </span>
+                            {item.transacao.descricao || '—'}
+                          </p>
+                          {item.reason === 'ambiguous' && item.candidates && (
+                            <p className="text-[10px] text-amber-600 mt-1">
+                              Candidatos: {item.candidates.map(c => c.entidade).filter(Boolean).join(', ')}
+                            </p>
+                          )}
+                        </div>
+                        {!runSelecionado && (
+                          <button onClick={() => confirmarMovimento([i])}
+                            className="flex-shrink-0 flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                            <CheckCircle size={12} /> Confirmar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
 
           {/* Sub-tab: Órfãos Sistema */}
           {activeSubTab === 'orphan_system' && (

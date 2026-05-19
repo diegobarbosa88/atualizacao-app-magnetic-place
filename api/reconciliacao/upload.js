@@ -22,10 +22,16 @@ function normalizeDate(dateStr) {
   return s;
 }
 
+// Normaliza string para comparação: minúsculas + sem diacríticos
+function normStr(s) {
+  return String(s).toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
 // Detecta coluna CSV por nome — devolve o nome real da coluna no CSV
 function detectColumn(headers, candidates) {
   for (const c of candidates) {
-    const found = headers.find(h => h.toLowerCase().trim() === c.toLowerCase());
+    const nc = normStr(c);
+    const found = headers.find(h => normStr(h) === nc);
     if (found) return found;
   }
   return undefined;
@@ -154,7 +160,10 @@ export default async function handler(req, res) {
       });
     }
 
-    const content = fs.readFileSync(file.filepath, 'utf-8');
+    // Detectar encoding: tentar UTF-8, cair em latin1 se houver chars de substituição
+    const rawBuf = fs.readFileSync(file.filepath);
+    const utfStr = rawBuf.toString('utf-8');
+    const content = utfStr.includes('�') ? rawBuf.toString('latin1') : utfStr;
     let transacoes;
 
     try {
