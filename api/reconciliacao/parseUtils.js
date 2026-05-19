@@ -112,6 +112,65 @@ export function parseCsv(content) {
   }).filter(t => t.valor > 0);
 }
 
+// Devolve colunas detectadas + prévia das primeiras linhas (para UI de mapeamento)
+export function parseCsvColumns(content) {
+  const cleaned = content.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const firstLine = cleaned.split('\n')[0];
+  const delimiter = detectDelimiter(firstLine);
+  const records = parse(cleaned, {
+    columns: true, skip_empty_lines: true, trim: true, delimiter,
+    relax_quotes: true, relax_column_count: true,
+  });
+  if (!records.length) return { columns: [], preview: [] };
+  const rows = records.map(row =>
+    Object.fromEntries(Object.entries(row).map(([k, v]) => [cleanCsvValue(k), cleanCsvValue(v)]))
+  );
+  return { columns: Object.keys(rows[0]), preview: rows.slice(0, 3) };
+}
+
+// Processa CSV com mapeamento explícito de colunas fornecido pelo utilizador
+export function parseCsvWithMapping(content, mapping) {
+  const { dataCol, valorCol, descricaoCol, debitoCol, creditoCol, tipoCol } = mapping;
+  const cleaned = content.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const firstLine = cleaned.split('\n')[0];
+  const delimiter = detectDelimiter(firstLine);
+  const records = parse(cleaned, {
+    columns: true, skip_empty_lines: true, trim: true, delimiter,
+    relax_quotes: true, relax_column_count: true,
+  });
+  if (!records.length) return [];
+  const rows = records.map(row =>
+    Object.fromEntries(Object.entries(row).map(([k, v]) => [cleanCsvValue(k), cleanCsvValue(v)]))
+  );
+  return rows.map(row => {
+    let valor, tipo;
+    if (valorCol) {
+      const raw = parseFloat(normalizeValorCsv(row[valorCol] || '0'));
+      valor = Math.abs(raw);
+      if (tipoCol) {
+        const t = normStr(String(row[tipoCol] || ''));
+        if (t === 'c' || t === 'e' || t.startsWith('cr') || t.startsWith('entr')) tipo = 'credito';
+        else if (t === 'd' || t === 's' || t.startsWith('deb') || t.startsWith('said')) tipo = 'debito';
+        else tipo = raw >= 0 ? 'credito' : 'debito';
+      } else {
+        tipo = raw >= 0 ? 'credito' : 'debito';
+      }
+    } else {
+      const debito = parseFloat(normalizeValorCsv(row[debitoCol] || '0')) || 0;
+      const credito = parseFloat(normalizeValorCsv(row[creditoCol] || '0')) || 0;
+      if (credito > 0) { valor = credito; tipo = 'credito'; }
+      else { valor = debito; tipo = 'debito'; }
+    }
+    return {
+      data: normalizeDate(row[dataCol]),
+      descricao: String(row[descricaoCol] || '').trim(),
+      tipoMovimento: tipoCol ? String(row[tipoCol] || '').trim() : null,
+      valor,
+      tipo,
+    };
+  }).filter(t => t.valor > 0);
+}
+
 export async function parseOfxContent(content) {
   const parsed = await parseOFX(content);
   const stmtTrn = parsed?.OFX?.BANKMSGSRSV1?.STMTTRNRS?.STMTRS?.BANKTRANLIST?.STMTTRN;

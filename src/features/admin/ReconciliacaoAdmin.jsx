@@ -60,6 +60,10 @@ export default function ReconciliacaoAdmin() {
   const [txSearch, setTxSearch] = useState('');
   const [txTipoFiltro, setTxTipoFiltro] = useState('todos'); // 'todos' | 'debito' | 'credito'
 
+  // ── Mapeamento de colunas CSV ─────────────────────────────────────────────
+  const [csvMapping, setCsvMapping] = useState(null); // { columns, preview } quando needs_mapping
+  const [colMap, setColMap] = useState({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+
   // ── Resultados ────────────────────────────────────────────────────────────
   const [resultado, setResultado] = useState(null);      // resposta da API
   const [activeSubTab, setActiveSubTab] = useState('matched'); // matched | orphan_bank | orphan_system
@@ -285,8 +289,39 @@ export default function ReconciliacaoAdmin() {
         setErro(msg);
         return;
       }
+      if (data.needs_mapping) {
+        setCsvMapping({ columns: data.columns, preview: data.preview });
+        setColMap({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+        setPreviewFilename(data.filename);
+        return;
+      }
       setPreviewTransacoes(data.transactions);
       setPreviewFilename(data.filename);
+      setSelTransacoes(new Set(data.transactions.map((_, i) => i)));
+      setTxSearch('');
+      setTxTipoFiltro('todos');
+    } catch (err) {
+      setErro(err.message || 'Erro de rede.');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  // ── Confirmar mapeamento de colunas e re-parsear ──────────────────────
+  const confirmarMapeamento = async () => {
+    if (!ficheiro) return;
+    const mapping = { ...colMap };
+    setPreviewing(true);
+    setErro(null);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('file', ficheiro);
+      formPayload.append('column_mapping', JSON.stringify(mapping));
+      const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
+      const data = await res.json();
+      if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); return; }
+      setCsvMapping(null);
+      setPreviewTransacoes(data.transactions);
       setSelTransacoes(new Set(data.transactions.map((_, i) => i)));
       setTxSearch('');
       setTxTipoFiltro('todos');
@@ -768,6 +803,103 @@ export default function ReconciliacaoAdmin() {
           </div>
         )}
       </div>
+
+      {/* Mapeamento de colunas CSV */}
+      {csvMapping && (() => {
+        const cols = csvMapping.columns;
+        const none = '— não usar —';
+        const opts = [none, ...cols];
+        const sel = (field) => (
+          <select
+            value={colMap[field] || ''}
+            onChange={e => setColMap(p => ({ ...p, [field]: e.target.value === none ? '' : e.target.value }))}
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+          >
+            {opts.map(o => <option key={o} value={o === none ? '' : o}>{o}</option>)}
+          </select>
+        );
+        const canConfirm = colMap.dataCol && (colMap.modo === 'valor' ? colMap.valorCol : (colMap.debitoCol || colMap.creditoCol));
+        return (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-amber-100 p-6 sm:p-8 space-y-5">
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600">Mapear Colunas do CSV</h3>
+              <p className="text-xs text-slate-400 mt-0.5">As colunas deste ficheiro não foram reconhecidas automaticamente. Indica qual coluna corresponde a cada campo.</p>
+            </div>
+
+            {/* Prévia da tabela */}
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="text-[11px] w-full">
+                <thead className="bg-slate-50">
+                  <tr>{cols.map(c => <th key={c} className="px-3 py-2 text-left text-slate-500 font-black uppercase tracking-widest whitespace-nowrap">{c}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {csvMapping.preview.map((row, i) => (
+                    <tr key={i} className="border-t border-slate-50">
+                      {cols.map(c => <td key={c} className="px-3 py-2 text-slate-600 truncate max-w-[160px]">{row[c]}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Seletor modo valor vs débito/crédito */}
+            <div className="flex gap-2">
+              {[{ k: 'valor', l: 'Coluna de valor único' }, { k: 'debcred', l: 'Colunas débito + crédito' }].map(({ k, l }) => (
+                <button key={k} onClick={() => setColMap(p => ({ ...p, modo: k }))}
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Data <span className="text-rose-400">*</span></label>
+                {sel('dataCol')}
+              </div>
+              {colMap.modo === 'valor' ? (
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Valor <span className="text-rose-400">*</span></label>
+                  {sel('valorCol')}
+                </div>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Débito (saída)</label>
+                    {sel('debitoCol')}
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Crédito (entrada)</label>
+                    {sel('creditoCol')}
+                  </div>
+                </>
+              )}
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Descrição</label>
+                {sel('descricaoCol')}
+              </div>
+              {colMap.modo === 'valor' && (
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo (C/D, Entrada/Saída)</label>
+                  {sel('tipoCol')}
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={confirmarMapeamento} disabled={!canConfirm || previewing}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+                {previewing ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
+                Aplicar e Pré-visualizar
+              </button>
+              <button onClick={() => { setCsvMapping(null); setFicheiro(null); setErro(null); }}
+                className="px-4 py-2 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Preview de movimentos — etapa de seleção */}
       {previewTransacoes && (() => {
