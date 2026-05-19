@@ -372,6 +372,15 @@ Plans:
 4. Resultados em 3 secções: Reconciliados / Órfãos Banco / Órfãos Sistema
 5. Campo `status: 'PENDENTE'|'PAGO'` nas faturas e recibos
 
+**Plans:** 5 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Migrações DB: colunas de reconciliação em faturas + tabela reconciliation_runs
+- [ ] 18-02-PLAN.md — Instalar dependências + API Route /api/reconciliacao/upload.js com parsers CSV e OFX
+- [ ] 18-03-PLAN.md — Matching engine (Regra 1 valor exato + Regra 2 descrição) + gravar reconciliation_run
+- [ ] 18-04-PLAN.md — ReconciliacaoAdmin.jsx: upload, sub-tabs de resultados, confirmação, fatura manual, histórico
+- [ ] 18-05-PLAN.md — Ligar tab Reconciliação ao AdminDashboard + verificação end-to-end
+
 **UI hint:** yes
 
 *Last updated: 2026-05-19*
