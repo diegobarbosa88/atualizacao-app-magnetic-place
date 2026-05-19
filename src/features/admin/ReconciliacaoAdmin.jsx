@@ -49,8 +49,15 @@ export default function ReconciliacaoAdmin() {
   const [ficheiro, setFicheiro] = useState(null);        // File object
   const [dragging, setDragging] = useState(false);
   const [processando, setProcessando] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
   const [erro, setErro] = useState(null);
   const inputRef = useRef(null);
+
+  // ── Preview / seleção de movimentos ───────────────────────────────────────
+  const [previewTransacoes, setPreviewTransacoes] = useState(null); // null = não em preview
+  const [previewFilename, setPreviewFilename] = useState('');
+  const [selTransacoes, setSelTransacoes] = useState(new Set());
+  const [txSearch, setTxSearch] = useState('');
 
   // ── Resultados ────────────────────────────────────────────────────────────
   const [resultado, setResultado] = useState(null);      // resposta da API
@@ -265,31 +272,56 @@ export default function ReconciliacaoAdmin() {
     setFicheiro(f);
   };
 
-  // ── Processar ficheiro ────────────────────────────────────────────────────
-  const processar = async () => {
+  // ── Etapa 1: pré-visualizar movimentos do extrato ────────────────────────
+  const previsar = async () => {
     if (!ficheiro) return;
+    setPreviewing(true);
+    setErro(null);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('file', ficheiro);
+      const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
+      const data = await res.json();
+      if (!res.ok) {
+        let msg = data.error || 'Erro ao ler ficheiro.';
+        if (data.detected) msg = `${data.error} Colunas: ${data.detected.join(', ')}`;
+        setErro(msg);
+        return;
+      }
+      setPreviewTransacoes(data.transactions);
+      setPreviewFilename(data.filename);
+      setSelTransacoes(new Set(data.transactions.map((_, i) => i)));
+      setTxSearch('');
+    } catch (err) {
+      setErro(err.message || 'Erro de rede.');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  // ── Etapa 2: processar movimentos seleccionados ────────────────────────
+  const processar = async () => {
+    if (!previewTransacoes) return;
+    const selected = previewTransacoes.filter((_, i) => selTransacoes.has(i));
+    if (!selected.length) { setErro('Seleccione pelo menos um movimento.'); return; }
     setProcessando(true);
     setErro(null);
     setResultado(null);
     try {
-      const formPayload = new FormData();
-      formPayload.append('file', ficheiro);
-      const res = await fetch('/api/reconciliacao/upload', {
+      const res = await fetch('/api/reconciliacao/process', {
         method: 'POST',
-        body: formPayload,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions_json: selected, filename: previewFilename }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        let mensagemErro = data.error || 'Erro ao processar ficheiro.';
-        if (data.detected) mensagemErro = `${data.error} Colunas detectadas: ${data.detected.join(', ')}`;
-        setErro(mensagemErro);
-        return;
-      }
+      if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
       setResultado(data);
       setActiveSubTab('matched');
-      carregarHistorico(); // refresh histórico
+      setPreviewTransacoes(null);
+      setFicheiro(null);
+      carregarHistorico();
     } catch (err) {
-      setErro(err.message || 'Erro de rede ao enviar ficheiro.');
+      setErro(err.message || 'Erro de rede.');
     } finally {
       setProcessando(false);
     }
@@ -726,18 +758,107 @@ export default function ReconciliacaoAdmin() {
           </div>
         )}
 
-        {ficheiro && !processando && (
-          <button onClick={processar}
+        {ficheiro && !previewing && !previewTransacoes && (
+          <button onClick={previsar}
             className="mt-4 w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-2xl py-3 hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest">
-            <ArrowLeftRight size={14} /> Processar Extrato
+            <ArrowLeftRight size={14} /> Pré-visualizar Movimentos
           </button>
         )}
-        {processando && (
+        {previewing && (
           <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600">
-            <Loader2 size={18} className="animate-spin" /> A processar...
+            <Loader2 size={18} className="animate-spin" /> A ler ficheiro...
           </div>
         )}
       </div>
+
+      {/* Preview de movimentos — etapa de seleção */}
+      {previewTransacoes && (() => {
+        const q = txSearch.trim().toLowerCase();
+        const visibleIndices = previewTransacoes
+          .map((tx, i) => ({ tx, i }))
+          .filter(({ tx }) => !q || tx.descricao.toLowerCase().includes(q) || String(tx.valor).includes(q));
+        const allVisible = visibleIndices.map(x => x.i);
+        const allVisibleSelected = allVisible.length > 0 && allVisible.every(i => selTransacoes.has(i));
+        return (
+          <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8 space-y-4">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  Seleccionar Movimentos
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {selTransacoes.size} de {previewTransacoes.length} seleccionados
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setPreviewTransacoes(null); setFicheiro(null); setErro(null); }}
+                  className="px-3 py-1.5 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
+                >
+                  <X size={11} className="inline mr-1" />Cancelar
+                </button>
+                <button
+                  onClick={processar}
+                  disabled={processando || selTransacoes.size === 0}
+                  className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
+                >
+                  {processando ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
+                  Processar {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}
+                </button>
+              </div>
+            </div>
+
+            <input
+              value={txSearch}
+              onChange={e => setTxSearch(e.target.value)}
+              placeholder="Filtrar por descrição ou valor..."
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+
+            <div className="flex items-center gap-3 px-1">
+              <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={e => {
+                    setSelTransacoes(prev => {
+                      const s = new Set(prev);
+                      allVisible.forEach(i => e.target.checked ? s.add(i) : s.delete(i));
+                      return s;
+                    });
+                  }}
+                  className="accent-indigo-600 w-4 h-4"
+                />
+                {allVisibleSelected ? 'Desseleccionar visíveis' : 'Seleccionar visíveis'}
+              </label>
+            </div>
+
+            <div className="space-y-1.5 max-h-96 overflow-y-auto pr-1">
+              {visibleIndices.length === 0 && (
+                <p className="text-center text-slate-400 py-6 text-sm">Nenhum movimento corresponde ao filtro.</p>
+              )}
+              {visibleIndices.map(({ tx, i }) => (
+                <label key={i} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${selTransacoes.has(i) ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-transparent hover:bg-slate-100'}`}>
+                  <input
+                    type="checkbox"
+                    checked={selTransacoes.has(i)}
+                    onChange={e => setSelTransacoes(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
+                    className="accent-indigo-600 w-4 h-4 flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-slate-700 font-medium truncate">{tx.descricao || '—'}</p>
+                    <p className="text-[10px] text-slate-400">{tx.data}</p>
+                  </div>
+                  <div className="text-right flex-shrink-0 flex items-center gap-2">
+                    <TipoBadge tipo={tx.tipo} />
+                    <span className="text-sm font-bold text-slate-700">€{Number(tx.valor).toFixed(2)}</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Sub-tabs de Resultados */}
       {displayData && (
