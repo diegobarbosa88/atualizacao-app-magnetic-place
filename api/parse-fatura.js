@@ -20,13 +20,14 @@ export default async function handler(req, res) {
 - data_fatura: data de emissão da fatura em formato YYYY-MM-DD. NÃO uses a data de vencimento.
 - nif_fornecedor: NIF/NIPC de quem EMITE a fatura (9 dígitos numéricos, sem espaços). NÃO uses o NIF do cliente/destinatário.
 - fornecedor: nome legal completo da empresa que EMITE a fatura (não o cliente).
-- valor_total: valor total a pagar com IVA incluído (número decimal, ex: 1234.56). É o maior valor monetário final da fatura.
+- valor_total: valor total da fatura com IVA incluído (número decimal, ex: 1234.56). É o subtotal dos bens/serviços mais o IVA. NÃO incluas encargos adicionais, imposto de selo, juros de mora, taxas de processamento nem outros acréscimos que apareçam depois do total da fatura.
 - iva: valor monetário total do IVA (não a taxa percentual, mas o montante em euros).
 
 Regras importantes:
 - Se um campo não existir claramente no texto, usa null.
 - Para valor_total e iva usa sempre número decimal (ex: 123.45), nunca string.
 - Para datas, converte formatos como "15/03/2024" ou "15 março 2024" para "2024-03-15".
+- valor_total deve corresponder à linha "Total", "Total com IVA" ou "Total Fatura" — se existir uma linha separada "Total a Pagar" ou "Total Líquido a Pagar" que inclua encargos, usa o valor anterior sem encargos.
 - Responde APENAS com JSON válido, sem texto antes ou depois, sem markdown.
 
 Texto da fatura:
