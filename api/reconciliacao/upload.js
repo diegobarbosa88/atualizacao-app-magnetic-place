@@ -256,6 +256,7 @@ export default async function handler(req, res) {
       data_documento: null,
       fonte: 'recibo',
       status: 'PENDENTE',
+      estado_original: r.estado,
     })).filter(r => r.valor != null && r.valor > 0);
 
     const { matched, orphan_bank, orphan_system } = runMatchingEngine(

@@ -176,12 +176,23 @@ export default function ReconciliacaoAdmin() {
         .filter(m => m.fatura?.fonte !== 'recibo')
         .map(m => m.fatura?.id)
         .filter(Boolean);
-      const reciboIds = runData.results_json.matched
-        .filter(m => m.fatura?.fonte === 'recibo')
-        .map(m => m.fatura?.id)
-        .filter(Boolean);
+      const reciboMatches = runData.results_json.matched
+        .filter(m => m.fatura?.fonte === 'recibo' && m.fatura?.id);
       if (faturaIds.length) await supabase.from('faturas').update({ status: 'PENDENTE' }).in('id', faturaIds);
-      if (reciboIds.length) await supabase.from('receipt_validations').update({ estado: 'valido' }).in('id', reciboIds);
+      // Reverter cada recibo para o seu estado original (valido ou aviso)
+      if (reciboMatches.length) {
+        const porEstado = {};
+        for (const m of reciboMatches) {
+          const est = m.fatura.estado_original || 'valido';
+          if (!porEstado[est]) porEstado[est] = [];
+          porEstado[est].push(m.fatura.id);
+        }
+        await Promise.all(
+          Object.entries(porEstado).map(([est, ids]) =>
+            supabase.from('receipt_validations').update({ estado: est }).in('id', ids)
+          )
+        );
+      }
     }
     const { error, count } = await supabase.from('reconciliation_runs').delete({ count: 'exact' }).eq('id', runId);
     if (error) { alert(`Erro ao apagar: ${error.message}`); return; }
