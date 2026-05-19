@@ -22,23 +22,59 @@ function normalizeDate(dateStr) {
   return s;
 }
 
-// Detecta coluna CSV por nome (case-insensitive, trim)
+// Detecta coluna CSV por nome — devolve o nome real da coluna no CSV
 function detectColumn(headers, candidates) {
-  return candidates.find(c =>
-    headers.some(h => h.toLowerCase().trim() === c.toLowerCase())
-  );
+  for (const c of candidates) {
+    const found = headers.find(h => h.toLowerCase().trim() === c.toLowerCase());
+    if (found) return found;
+  }
+  return undefined;
+}
+
+// Limpa valores com fórmulas Excel (=ASC(...), =...) e aspas Excel
+function cleanCsvValue(v) {
+  if (typeof v !== 'string') return v;
+  // Remove fórmulas Excel: =ASC("valor") → valor, ="valor" → valor, =valor → valor
+  const formulaMatch = v.match(/^=(?:ASC\(")?(.*?)(?:"\))?$/);
+  if (formulaMatch) return formulaMatch[1];
+  return v;
+}
+
+// Detecta delimitador: usa ';' se o header tiver mais ';' do que ','
+function detectDelimiter(firstLine) {
+  const semicolons = (firstLine.match(/;/g) || []).length;
+  const commas = (firstLine.match(/,/g) || []).length;
+  return semicolons > commas ? ';' : ',';
 }
 
 function parseCsv(content) {
-  const records = parse(content, { columns: true, skip_empty_lines: true, trim: true });
+  // Normaliza BOM e line endings
+  const cleaned = content.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const firstLine = cleaned.split('\n')[0];
+  const delimiter = detectDelimiter(firstLine);
+
+  const records = parse(cleaned, {
+    columns: true,
+    skip_empty_lines: true,
+    trim: true,
+    delimiter,
+    relax_quotes: true,
+    relax_column_count: true,
+  });
   if (!records.length) return [];
 
-  const headers = Object.keys(records[0]);
-  const dataCol = detectColumn(headers, ['data', 'data valor', 'date']);
+  // Limpar fórmulas Excel de todos os valores
+  const cleanedRecords = records.map(row =>
+    Object.fromEntries(Object.entries(row).map(([k, v]) => [k, cleanCsvValue(v)]))
+  );
+
+  const headers = Object.keys(cleanedRecords[0]).map(h => cleanCsvValue(h));
+  const dataCol = detectColumn(headers, ['data', 'datavalor', 'data valor', 'data operacao', 'data operação', 'date']);
   const valorCol = detectColumn(headers, ['valor', 'value', 'montante', 'amount']);
-  const descricaoCol = detectColumn(headers, ['descrição', 'descricao', 'description', 'movimento', 'memo']);
+  const descricaoCol = detectColumn(headers, ['descrição movimento', 'descricao movimento', 'descrição', 'descricao', 'description', 'movimento', 'memo']);
   const debitoCol = detectColumn(headers, ['débito', 'debito', 'debit']);
   const creditoCol = detectColumn(headers, ['crédito', 'credito', 'credit']);
+  const tipoCol = detectColumn(headers, ['tipo movimento', 'tipo', 'type']);
 
   // Colunas mínimas obrigatórias: data + valor (ou débito/crédito)
   if (!dataCol || (!valorCol && !debitoCol && !creditoCol)) {
@@ -47,12 +83,18 @@ function parseCsv(content) {
     throw err;
   }
 
-  return records.map(row => {
+  return cleanedRecords.map(row => {
     let valor, tipo;
     if (valorCol) {
       const raw = parseFloat(String(row[valorCol]).replace(',', '.').replace(/\s/g, ''));
       valor = Math.abs(raw);
-      tipo = raw >= 0 ? 'credito' : 'debito';
+      // Se tipoCol presente (ex: 'C'/'Crédito' = crédito, 'D'/'Débito' = débito)
+      if (tipoCol) {
+        const t = String(row[tipoCol] || '').trim().toLowerCase();
+        tipo = (t === 'c' || t.startsWith('cr')) ? 'credito' : 'debito';
+      } else {
+        tipo = raw >= 0 ? 'credito' : 'debito';
+      }
     } else {
       const debito = parseFloat(String(row[debitoCol] || '0').replace(',', '.').replace(/\s/g, '')) || 0;
       const credito = parseFloat(String(row[creditoCol] || '0').replace(',', '.').replace(/\s/g, '')) || 0;
