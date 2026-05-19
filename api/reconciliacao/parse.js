@@ -4,13 +4,11 @@ import { parseCsv, parseOfxContent } from './parseUtils.js';
 
 export const config = { api: { bodyParser: false } };
 
-async function parsePdfWithGemini(rawBuf) {
+async function parseWithGemini(content, mimeType, rawBuf) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY não configurado.');
 
-  const pdfBase64 = rawBuf.toString('base64');
-
-  const prompt = `Analisa este extrato bancário em PDF e extrai TODAS as transações/movimentos.
+  const prompt = `Analisa este extrato bancário e extrai TODAS as transações/movimentos.
 Devolve um array JSON com cada movimento no formato exacto:
 [
   { "data": "YYYY-MM-DD", "descricao": "descrição do movimento", "valor": 1234.56, "tipo": "debito" },
@@ -22,8 +20,16 @@ Regras:
 - valor: número decimal positivo (ex: 1234.56). NUNCA negativo.
 - tipo: "debito" para pagamentos/saídas/levantamentos, "credito" para depósitos/entradas/transferências recebidas.
 - descricao: texto do movimento tal como aparece no extrato.
-- Inclui TODOS os movimentos visíveis no documento, sem excepções.
+- Inclui TODOS os movimentos visíveis, sem excepções.
 - Responde APENAS com o array JSON válido, sem texto antes ou depois, sem markdown, sem bloco de código.`;
+
+  const parts = [{ text: prompt }];
+  if (mimeType === 'application/pdf' && rawBuf) {
+    parts.push({ inlineData: { mimeType: 'application/pdf', data: rawBuf.toString('base64') } });
+  } else {
+    // CSV/texto — envia como texto inline
+    parts.push({ text: `\n\nConteúdo do ficheiro:\n${content.slice(0, 30000)}` });
+  }
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -31,12 +37,7 @@ Regras:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: 'application/pdf', data: pdfBase64 } },
-          ],
-        }],
+        contents: [{ parts }],
         generationConfig: { temperature: 0 },
       }),
     }
@@ -93,7 +94,7 @@ export default async function handler(req, res) {
     let transactions;
 
     if (isPdf) {
-      transactions = await parsePdfWithGemini(rawBuf);
+      transactions = await parseWithGemini(null, 'application/pdf', rawBuf);
     } else {
       const utfStr = rawBuf.toString('utf-8');
       const content = utfStr.includes('�') ? rawBuf.toString('latin1') : utfStr;
@@ -101,12 +102,11 @@ export default async function handler(req, res) {
         transactions = ext === 'csv' ? parseCsv(content) : await parseOfxContent(content);
       } catch (parseErr) {
         if (parseErr.message === 'UNRECOGNIZED_COLUMNS') {
-          return res.status(400).json({
-            error: 'Colunas do CSV não reconhecidas. Esperado: Data, Valor (ou Débito/Crédito), Descrição.',
-            detected: parseErr.detected,
-          });
+          // Fallback: tentar interpretar com Gemini
+          transactions = await parseWithGemini(content, 'text/csv', null);
+        } else {
+          throw parseErr;
         }
-        throw parseErr;
       }
     }
 
