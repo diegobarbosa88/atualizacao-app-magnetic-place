@@ -2,8 +2,31 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
   AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight,
-  ArrowDownLeft, ArrowUpRight, Trash2
+  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag
 } from 'lucide-react';
+
+const COR_MAP = {
+  violet:  { bg: 'bg-violet-100',  text: 'text-violet-700',  ring: 'ring-violet-400',  dot: 'bg-violet-500'  },
+  emerald: { bg: 'bg-emerald-100', text: 'text-emerald-700', ring: 'ring-emerald-400', dot: 'bg-emerald-500' },
+  blue:    { bg: 'bg-blue-100',    text: 'text-blue-700',    ring: 'ring-blue-400',    dot: 'bg-blue-500'    },
+  orange:  { bg: 'bg-orange-100',  text: 'text-orange-700',  ring: 'ring-orange-400',  dot: 'bg-orange-500'  },
+  slate:   { bg: 'bg-slate-100',   text: 'text-slate-600',   ring: 'ring-slate-400',   dot: 'bg-slate-500'   },
+  rose:    { bg: 'bg-rose-100',    text: 'text-rose-700',    ring: 'ring-rose-400',    dot: 'bg-rose-500'    },
+  amber:   { bg: 'bg-amber-100',   text: 'text-amber-700',   ring: 'ring-amber-400',   dot: 'bg-amber-500'   },
+  indigo:  { bg: 'bg-indigo-100',  text: 'text-indigo-700',  ring: 'ring-indigo-400',  dot: 'bg-indigo-500'  },
+  cyan:    { bg: 'bg-cyan-100',    text: 'text-cyan-700',    ring: 'ring-cyan-400',    dot: 'bg-cyan-500'    },
+  gray:    { bg: 'bg-gray-100',    text: 'text-gray-600',    ring: 'ring-gray-400',    dot: 'bg-gray-400'    },
+};
+const CORES_DISPONIVEIS = ['indigo', 'violet', 'emerald', 'blue', 'cyan', 'orange', 'amber', 'rose', 'slate', 'gray'];
+
+function TagBadge({ nome, cor }) {
+  const c = COR_MAP[cor] || COR_MAP.gray;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${c.bg} ${c.text}`}>
+      <Tag size={9} /> {nome}
+    </span>
+  );
+}
 import { useApp } from '../../context/AppContext';
 
 function TipoBadge({ tipo }) {
@@ -41,11 +64,27 @@ export default function ReconciliacaoAdmin() {
   const [orphanObs, setOrphanObs] = useState('');
   const [bulkConfirmando, setBulkConfirmando] = useState(false);
 
+  // ── Classificação de Órfãos ───────────────────────────────────────────────
+  const [tags, setTags] = useState([]);
+  const [selectedTag, setSelectedTag] = useState(null);        // { id, nome, cor }
+  const [orphanClassificacoes, setOrphanClassificacoes] = useState({}); // { [index]: { nome, cor } }
+  const [showNovaTag, setShowNovaTag] = useState(false);
+  const [novaTagNome, setNovaTagNome] = useState('');
+  const [novaTagCor, setNovaTagCor] = useState('indigo');
+  const [savingTag, setSavingTag] = useState(false);
+
+  // ── Associação Manual ────────────────────────────────────────────────────
+  const [pendingAssociacao, setPendingAssociacao] = useState(null); // { index, transacao }
+  const [assocFaturas, setAssocFaturas] = useState([]);
+  const [loadingAssoc, setLoadingAssoc] = useState(false);
+  const [assocSearch, setAssocSearch] = useState('');
+
   // ── Histórico ─────────────────────────────────────────────────────────────
   const [historico, setHistorico] = useState([]);
   const [historicoAberto, setHistoricoAberto] = useState(false);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [runSelecionado, setRunSelecionado] = useState(null); // run do histórico a ver
+  const [reprocessando, setReprocessando] = useState(null); // id do run a reprocessar
 
   // ── Formulário inserção manual ─────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -54,10 +93,61 @@ export default function ReconciliacaoAdmin() {
   });
   const [savingFatura, setSavingFatura] = useState(false);
 
-  // Carregar histórico ao montar
+  // Carregar histórico e tags ao montar
   useEffect(() => {
     carregarHistorico();
+    carregarTags();
   }, []);
+
+  // Restaurar estado de confirmações ao mudar de run (histórico ou novo upload)
+  useEffect(() => {
+    const bank = runSelecionado
+      ? (runSelecionado.results_json?.orphan_bank || [])
+      : (resultado?.orphan_bank || []);
+    const confirmed = new Set();
+    const obs = {};
+    const classif = {};
+    bank.forEach((item, i) => {
+      if (item.confirmed) {
+        confirmed.add(i);
+        if (item.observacao) obs[i] = item.observacao;
+        if (item.classificacao) classif[i] = item.classificacao;
+      }
+    });
+    setConfirmedOrphans(confirmed);
+    setOrphanObservacoes(obs);
+    setOrphanClassificacoes(classif);
+  }, [runSelecionado?.id, resultado?.run_id]);
+
+  const carregarTags = async () => {
+    const { data } = await supabase
+      .from('reconciliation_classificacao_tags')
+      .select('id, nome, cor')
+      .order('created_at', { ascending: true });
+    if (data) setTags(data);
+  };
+
+  const criarTag = async () => {
+    if (!novaTagNome.trim()) return;
+    setSavingTag(true);
+    try {
+      const { data, error } = await supabase
+        .from('reconciliation_classificacao_tags')
+        .insert({ nome: novaTagNome.trim(), cor: novaTagCor })
+        .select('id, nome, cor')
+        .single();
+      if (error) throw error;
+      setTags(prev => [...prev, data]);
+      setSelectedTag(data);
+      setShowNovaTag(false);
+      setNovaTagNome('');
+      setNovaTagCor('indigo');
+    } catch (err) {
+      alert(`Erro ao criar tag: ${err.message}`);
+    } finally {
+      setSavingTag(false);
+    }
+  };
 
   const carregarHistorico = async () => {
     setLoadingHistorico(true);
@@ -98,6 +188,43 @@ export default function ReconciliacaoAdmin() {
     if (count === 0) { alert('Sem permissão para apagar. Aplique a política RLS de DELETE na tabela reconciliation_runs.'); return; }
     setHistorico(prev => prev.filter(r => r.id !== runId));
     if (runSelecionado?.id === runId) setRunSelecionado(null);
+  };
+
+  const reprocessarRun = async (e, runId) => {
+    e.stopPropagation();
+    setReprocessando(runId);
+    try {
+      const res = await fetch('/api/reconciliacao/reprocess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ runId }),
+      });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error || 'Erro ao reprocessar.'); return; }
+      // Actualizar contadores no histórico
+      setHistorico(prev => prev.map(r => r.id === runId
+        ? { ...r, matched_count: data.matched_count, orphan_bank_count: data.orphan_bank_count, orphan_system_count: data.orphan_system_count }
+        : r
+      ));
+      // Se este run estava seleccionado, actualizar resultados visíveis
+      if (runSelecionado?.id === runId) {
+        setRunSelecionado(prev => ({
+          ...prev,
+          matched_count: data.matched_count,
+          orphan_bank_count: data.orphan_bank_count,
+          orphan_system_count: data.orphan_system_count,
+          results_json: { matched: data.matched, orphan_bank: data.orphan_bank, orphan_system: data.orphan_system },
+        }));
+      }
+      // Se é o resultado activo corrente, actualizar também
+      if (resultado?.run_id === runId) {
+        setResultado(prev => ({ ...prev, ...data }));
+      }
+    } catch (err) {
+      alert(err.message || 'Erro de rede.');
+    } finally {
+      setReprocessando(null);
+    }
   };
 
   // ── Drag & Drop handlers ──────────────────────────────────────────────────
@@ -275,26 +402,152 @@ export default function ReconciliacaoAdmin() {
   const pedirObservacaoOrphan = (indices) => {
     setPendingOrphanConfirm({ indices });
     setOrphanObs('');
+    setSelectedTag(null);
+    setShowNovaTag(false);
+    setNovaTagNome('');
   };
 
-  const confirmarMovimento = () => {
+  const confirmarMovimento = async () => {
     if (!pendingOrphanConfirm) return;
     const { indices } = pendingOrphanConfirm;
-    setConfirmedOrphans(prev => {
-      const next = new Set(prev);
-      indices.forEach(i => next.add(i));
-      return next;
-    });
-    if (orphanObs.trim()) {
-      setOrphanObservacoes(prev => {
-        const next = { ...prev };
-        indices.forEach(i => { next[i] = orphanObs.trim(); });
-        return next;
-      });
-    }
+    const idxSet = new Set(indices);
+    const obsText = orphanObs.trim();
+    const tag = selectedTag ? { nome: selectedTag.nome, cor: selectedTag.cor } : null;
+
+    // Actualizar estado de display imediatamente
+    setConfirmedOrphans(prev => { const s = new Set(prev); indices.forEach(i => s.add(i)); return s; });
+    if (obsText) setOrphanObservacoes(prev => { const n = { ...prev }; indices.forEach(i => { n[i] = obsText; }); return n; });
+    if (tag) setOrphanClassificacoes(prev => { const n = { ...prev }; indices.forEach(i => { n[i] = tag; }); return n; });
+
+    // Fechar modal
     setPendingOrphanConfirm(null);
     setOrphanObs('');
+    setSelectedTag(null);
     setSelOrphan(new Set());
+
+    // Persistir no Supabase
+    const runId = runSelecionado?.id ?? resultado?.run_id;
+    if (!runId) return;
+
+    const sourceBank = runSelecionado
+      ? (runSelecionado.results_json?.orphan_bank || [])
+      : (resultado?.orphan_bank || []);
+
+    const newOrphanBank = sourceBank.map((item, i) =>
+      idxSet.has(i)
+        ? { ...item, confirmed: true, observacao: obsText || null, classificacao: tag }
+        : item
+    );
+
+    const baseResults = runSelecionado?.results_json ?? {
+      matched: resultado?.matched || [],
+      orphan_bank: resultado?.orphan_bank || [],
+      orphan_system: resultado?.orphan_system || [],
+    };
+    const newResults = { ...baseResults, orphan_bank: newOrphanBank };
+
+    const { error } = await supabase
+      .from('reconciliation_runs')
+      .update({ results_json: newResults })
+      .eq('id', runId);
+    if (error) { console.error('Erro ao persistir confirmação:', error.message); return; }
+
+    // Actualizar estado local para reflectir no retorno do histórico
+    if (runSelecionado) {
+      setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+    } else {
+      setResultado(prev => ({ ...prev, orphan_bank: newOrphanBank }));
+    }
+  };
+
+  // ── Associação Manual de Órfão Banco a Fatura ────────────────────────────
+  const abrirAssociarFatura = async (index, transacao) => {
+    setPendingAssociacao({ index, transacao });
+    setAssocSearch('');
+    setLoadingAssoc(true);
+    try {
+      const { data } = await supabase
+        .from('faturas')
+        .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename')
+        .not('status', 'eq', 'PAGO')
+        .order('data_documento', { ascending: false })
+        .limit(100);
+      setAssocFaturas(data || []);
+    } finally {
+      setLoadingAssoc(false);
+    }
+  };
+
+  const confirmarAssociacaoManual = async (fatura) => {
+    if (!pendingAssociacao) return;
+    const { index, transacao } = pendingAssociacao;
+
+    const novoMatch = { transacao, fatura: { ...fatura, valor: fatura.valor ?? fatura.dados?.valor_total }, rule: 'manual' };
+
+    const runId = runSelecionado?.id ?? resultado?.run_id;
+    if (!runId) { setPendingAssociacao(null); return; }
+
+    const sourceBank = runSelecionado
+      ? (runSelecionado.results_json?.orphan_bank || [])
+      : (resultado?.orphan_bank || []);
+    const sourceMatched = runSelecionado
+      ? (runSelecionado.results_json?.matched || [])
+      : (resultado?.matched || []);
+    const sourceSystem = runSelecionado
+      ? (runSelecionado.results_json?.orphan_system || [])
+      : (resultado?.orphan_system || []);
+
+    const newOrphanBank = sourceBank.filter((_, i) => i !== index);
+    const newMatched = [...sourceMatched, novoMatch];
+    const newOrphanSystem = sourceSystem.filter(s => s.fatura?.id !== fatura.id);
+
+    const baseResults = runSelecionado?.results_json ?? {
+      matched: resultado?.matched || [],
+      orphan_bank: resultado?.orphan_bank || [],
+      orphan_system: resultado?.orphan_system || [],
+    };
+    const newResults = {
+      ...baseResults,
+      matched: newMatched,
+      orphan_bank: newOrphanBank,
+      orphan_system: newOrphanSystem,
+    };
+
+    const { error } = await supabase
+      .from('reconciliation_runs')
+      .update({
+        results_json: newResults,
+        matched_count: newMatched.length,
+        orphan_bank_count: newOrphanBank.length,
+        orphan_system_count: newOrphanSystem.length,
+      })
+      .eq('id', runId);
+    if (error) { alert(`Erro ao guardar associação: ${error.message}`); return; }
+
+    if (runSelecionado) {
+      setRunSelecionado(prev => ({
+        ...prev,
+        matched_count: newMatched.length,
+        orphan_bank_count: newOrphanBank.length,
+        orphan_system_count: newOrphanSystem.length,
+        results_json: newResults,
+      }));
+    } else {
+      setResultado(prev => ({
+        ...prev,
+        matched: newMatched,
+        orphan_bank: newOrphanBank,
+        orphan_system: newOrphanSystem,
+        matched_count: newMatched.length,
+        orphan_bank_count: newOrphanBank.length,
+        orphan_system_count: newOrphanSystem.length,
+      }));
+    }
+    setHistorico(prev => prev.map(r => r.id === runId
+      ? { ...r, matched_count: newMatched.length, orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length }
+      : r
+    ));
+    setPendingAssociacao(null);
   };
 
   // ── Guardar fatura manual ─────────────────────────────────────────────────
@@ -480,9 +733,7 @@ export default function ReconciliacaoAdmin() {
           {/* Sub-tab: Reconciliados */}
           {activeSubTab === 'matched' && (() => {
             const items = displayData.matched || [];
-            const pendentes = items.filter((_, i) => !selMatched.has(i) || items[i].fatura.status !== 'PAGO');
-            const selPendentes = items.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
-            const allPendentes = items.filter(m => m.fatura.status !== 'PAGO');
+            const allPendentes = items.filter(m => m.fatura?.status !== 'PAGO');
             return (
               <div className="space-y-3">
                 {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>}
@@ -491,7 +742,7 @@ export default function ReconciliacaoAdmin() {
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
                       <input type="checkbox"
                         checked={allPendentes.length > 0 && selMatched.size === allPendentes.length}
-                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => items[i].fatura.status !== 'PAGO')) : new Set())}
+                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => items[i].fatura?.status !== 'PAGO')) : new Set())}
                         className="accent-emerald-600 w-4 h-4" />
                       Seleccionar todos
                     </label>
@@ -506,35 +757,41 @@ export default function ReconciliacaoAdmin() {
                 )}
                 {items.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-4">
-                    {item.fatura.status !== 'PAGO' && (
+                    {item.fatura?.status !== 'PAGO' && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                         className="accent-emerald-600 w-4 h-4 flex-shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <TipoBadge tipo={item.transacao.tipo} />
-                        <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
-                        <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
+                        <TipoBadge tipo={item.transacao?.tipo} />
+                        <span className="text-sm font-bold text-slate-700">€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
+                        <span className="text-[10px] text-slate-400">{item.transacao?.data}</span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                          {item.fatura.fonte === 'recibo' ? 'Recibo' : item.fatura.tipo || 'Fatura'}
+                          {item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                         </span>
-                        <span className="text-[10px] text-slate-500">{item.fatura.entidade}</span>
+                        <span className="text-[10px] text-slate-500">{item.fatura?.entidade}</span>
+                        {item.rule === 'manual' && (
+                          <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">manual</span>
+                        )}
                         {item.rule === 'description_match' && (
                           <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao.descricao}</p>
+                      <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao?.descricao}</p>
+                      {item.fatura?.descricao && (
+                        <p className="text-xs text-slate-500 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
+                      )}
                     </div>
-                    {item.fatura.status === 'PAGO' ? (
+                    {item.fatura?.status === 'PAGO' ? (
                       <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest flex-shrink-0">
                         <CheckCircle size={14} /> Pago
                       </span>
                     ) : (
-                      <button onClick={() => confirmarPagamento(item.fatura.id, item.fatura.fonte)}
-                        disabled={confirmando.has(item.fatura.id)}
+                      <button onClick={() => confirmarPagamento(item.fatura?.id, item.fatura?.fonte)}
+                        disabled={confirmando.has(item.fatura?.id)}
                         className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
-                        {confirmando.has(item.fatura.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                        {confirmando.has(item.fatura?.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                         Confirmar
                       </button>
                     )}
@@ -571,6 +828,7 @@ export default function ReconciliacaoAdmin() {
                 {(displayData.orphan_bank || []).map((item, i) => {
                   const isConfirmed = confirmedOrphans.has(i);
                   if (isConfirmed) {
+                    const classif = orphanClassificacoes[i];
                     return (
                       <div key={i} className="rounded-2xl p-4 bg-slate-50 border border-slate-100 opacity-70">
                         <div className="flex items-start gap-3">
@@ -581,6 +839,7 @@ export default function ReconciliacaoAdmin() {
                               <span className="text-sm font-bold text-slate-500">€{Number(item.transacao.valor).toFixed(2)}</span>
                               <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
                               <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Confirmado</span>
+                              {classif && <TagBadge nome={classif.nome} cor={classif.cor} />}
                             </div>
                             {orphanObservacoes[i] && (
                               <p className="text-xs text-slate-500 mt-1 italic">
@@ -623,10 +882,16 @@ export default function ReconciliacaoAdmin() {
                             </p>
                           )}
                         </div>
-                        <button onClick={() => pedirObservacaoOrphan([i])}
-                          className="flex-shrink-0 flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
-                          <CheckCircle size={12} /> Confirmar
-                        </button>
+                        <div className="flex-shrink-0 flex gap-2">
+                          <button onClick={() => abrirAssociarFatura(i, item.transacao)}
+                            className="flex items-center gap-1 border border-indigo-200 text-indigo-600 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all">
+                            <Tag size={12} /> Associar
+                          </button>
+                          <button onClick={() => pedirObservacaoOrphan([i])}
+                            className="flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                            <CheckCircle size={12} /> Confirmar
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -679,10 +944,9 @@ export default function ReconciliacaoAdmin() {
               <p className="text-center text-slate-400 py-4 text-sm">Nenhuma importação anterior.</p>
             )}
             {historico.map(run => (
-              <button
+              <div
                 key={run.id}
                 onClick={async () => {
-                  // Carregar detalhes completos do run seleccionado
                   const { data } = await supabase
                     .from('reconciliation_runs')
                     .select('*')
@@ -690,7 +954,7 @@ export default function ReconciliacaoAdmin() {
                     .single();
                   if (data) setRunSelecionado(data);
                 }}
-                className="w-full text-left flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
+                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
               >
                 <div>
                   <p className="text-sm font-semibold text-slate-700">{run.filename}</p>
@@ -703,46 +967,214 @@ export default function ReconciliacaoAdmin() {
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{run.orphan_bank_count} banco</span>
                   <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{run.orphan_system_count} sistema</span>
                   <button
+                    onClick={e => reprocessarRun(e, run.id)}
+                    disabled={reprocessando === run.id}
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                    title="Reprocessar extrato com faturas actuais"
+                  >
+                    {reprocessando === run.id
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : <RefreshCw size={13} />}
+                  </button>
+                  <button
                     onClick={e => apagarRun(e, run.id)}
-                    className="ml-1 p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
                     title="Apagar importação"
                   >
                     <Trash2 size={13} />
                   </button>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Modal — Observação Órfão Banco */}
+      {/* Modal — Associação Manual */}
+      {pendingAssociacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associar a Fatura</h3>
+              <p className="text-sm text-slate-700 mt-1 font-semibold">
+                €{Number(pendingAssociacao.transacao.valor).toFixed(2)} · {pendingAssociacao.transacao.data}
+              </p>
+              <p className="text-xs text-slate-500 truncate">{pendingAssociacao.transacao.descricao}</p>
+            </div>
+
+            <input
+              autoFocus
+              value={assocSearch}
+              onChange={e => setAssocSearch(e.target.value)}
+              placeholder="Filtrar por entidade, descrição ou valor..."
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            />
+
+            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+              {loadingAssoc && (
+                <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-400" /></div>
+              )}
+              {!loadingAssoc && (() => {
+                const q = assocSearch.toLowerCase();
+                const lista = assocFaturas.filter(f => {
+                  if (!q) return true;
+                  const v = String(f.valor ?? f.dados?.valor_total ?? '');
+                  const ent = (f.entidade || f.dados?.fornecedor || '').toLowerCase();
+                  const desc = (f.descricao || f.dados?.numero_fatura || f.filename || '').toLowerCase();
+                  return ent.includes(q) || desc.includes(q) || v.includes(q);
+                });
+                if (!lista.length) return <p className="text-center text-slate-400 py-6 text-sm">Nenhuma fatura encontrada.</p>;
+                return lista.map(f => {
+                  const valorF = f.valor ?? f.dados?.valor_total;
+                  const diff = Math.abs((valorF ?? 0) - pendingAssociacao.transacao.valor);
+                  const isClose = diff <= 0.01;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => confirmarAssociacaoManual(f)}
+                      className={`w-full text-left p-3 rounded-xl border transition-all hover:border-indigo-400 hover:bg-indigo-50 ${isClose ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200'}`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-700 truncate">
+                            {f.entidade || f.dados?.fornecedor || f.filename || '—'}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || '—'}
+                          </p>
+                          {f.data_documento && <p className="text-[10px] text-slate-400">{f.data_documento}</p>}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className={`text-sm font-bold ${isClose ? 'text-emerald-700' : 'text-slate-700'}`}>
+                            €{Number(valorF ?? 0).toFixed(2)}
+                          </p>
+                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{f.status || 'PENDENTE'}</span>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+
+            <button
+              onClick={() => setPendingAssociacao(null)}
+              className="w-full py-2 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal — Confirmar Órfão Banco */}
       {pendingOrphanConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-              Confirmar Movimento
-              {pendingOrphanConfirm.indices.length > 1 && ` (${pendingOrphanConfirm.indices.length} movimentos)`}
-            </h3>
-            <p className="text-sm text-slate-600">Adicione uma observação para justificar este movimento sem documento associado.</p>
-            <textarea
-              autoFocus
-              value={orphanObs}
-              onChange={e => setOrphanObs(e.target.value)}
-              placeholder="Ex: Pagamento de fornecedor por transferência direta, fatura pendente de envio..."
-              rows={3}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div>
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                Confirmar Movimento
+                {pendingOrphanConfirm.indices.length > 1 && ` (${pendingOrphanConfirm.indices.length} movimentos)`}
+              </h3>
+              <p className="text-sm text-slate-500 mt-1">Classifique e/ou adicione uma observação para este movimento.</p>
+            </div>
+
+            {/* Classificação */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
+                <Tag size={10} /> Classificação
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {tags.map(tag => {
+                  const c = COR_MAP[tag.cor] || COR_MAP.gray;
+                  const isSelected = selectedTag?.id === tag.id;
+                  return (
+                    <button
+                      key={tag.id}
+                      onClick={() => setSelectedTag(isSelected ? null : tag)}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ring-2 transition-all ${
+                        isSelected
+                          ? `${c.bg} ${c.text} ${c.ring}`
+                          : 'bg-slate-100 text-slate-500 ring-transparent hover:ring-slate-300 hover:bg-slate-200'
+                      }`}
+                    >
+                      {tag.nome}
+                    </button>
+                  );
+                })}
+
+                {/* Criar nova tag */}
+                {showNovaTag ? (
+                  <div className="flex items-center gap-2 w-full mt-1 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <input
+                      autoFocus
+                      value={novaTagNome}
+                      onChange={e => setNovaTagNome(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') criarTag(); if (e.key === 'Escape') { setShowNovaTag(false); setNovaTagNome(''); } }}
+                      placeholder="Nome da classificação..."
+                      className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    />
+                    <div className="flex items-center gap-1">
+                      {CORES_DISPONIVEIS.map(cor => (
+                        <button
+                          key={cor}
+                          onClick={() => setNovaTagCor(cor)}
+                          title={cor}
+                          className={`w-5 h-5 rounded-full ${COR_MAP[cor].dot} transition-all ${
+                            novaTagCor === cor ? 'ring-2 ring-offset-1 ring-slate-500 scale-110' : 'opacity-60 hover:opacity-100'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={criarTag}
+                      disabled={!novaTagNome.trim() || savingTag}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
+                    >
+                      {savingTag ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />} Criar
+                    </button>
+                    <button onClick={() => { setShowNovaTag(false); setNovaTagNome(''); }} className="text-slate-400 hover:text-slate-600">
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowNovaTag(true)}
+                    className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-dashed border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"
+                  >
+                    <Plus size={10} /> Nova
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Observação */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Observação {!selectedTag && <span className="text-rose-400">*</span>}
+              </label>
+              <textarea
+                value={orphanObs}
+                onChange={e => setOrphanObs(e.target.value)}
+                placeholder="Ex: Pagamento de fornecedor por transferência direta, fatura pendente de envio..."
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              />
+              {!selectedTag && !orphanObs.trim() && (
+                <p className="text-[10px] text-slate-400">Seleccione uma classificação ou escreva uma observação.</p>
+              )}
+            </div>
+
             <div className="flex gap-2 pt-1">
               <button
                 onClick={confirmarMovimento}
-                disabled={!orphanObs.trim()}
+                disabled={!selectedTag && !orphanObs.trim()}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <CheckCircle size={12} /> Confirmar
               </button>
               <button
-                onClick={() => { setPendingOrphanConfirm(null); setOrphanObs(''); }}
+                onClick={() => { setPendingOrphanConfirm(null); setOrphanObs(''); setSelectedTag(null); setShowNovaTag(false); setNovaTagNome(''); }}
                 className="px-4 py-2 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest"
               >
                 Cancelar

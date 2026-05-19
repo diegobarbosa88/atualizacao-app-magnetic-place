@@ -53,6 +53,14 @@ function detectDelimiter(firstLine) {
   return semicolons > commas ? ';' : ',';
 }
 
+// Normaliza valor monetário de CSV: "1.234,56" → "1234.56", "1234,56" → "1234.56", "1234.56" → "1234.56"
+function normalizeValorCsv(v) {
+  const s = String(v).trim().replace(/\s/g, '');
+  return s.includes(',')
+    ? s.replace(/\./g, '').replace(',', '.') // remove separador milhar, substitui decimal
+    : s;
+}
+
 function parseCsv(content) {
   // Normaliza BOM e line endings
   const cleaned = content.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -92,7 +100,7 @@ function parseCsv(content) {
   return rows.map(row => {
     let valor, tipo;
     if (valorCol) {
-      const raw = parseFloat(String(row[valorCol]).replace(',', '.').replace(/\s/g, ''));
+      const raw = parseFloat(normalizeValorCsv(row[valorCol]));
       valor = Math.abs(raw);
       if (tipoCol) {
         const t = normStr(String(row[tipoCol] || ''));
@@ -108,8 +116,8 @@ function parseCsv(content) {
         tipo = raw >= 0 ? 'credito' : 'debito';
       }
     } else {
-      const debito = parseFloat(String(row[debitoCol] || '0').replace(',', '.').replace(/\s/g, '')) || 0;
-      const credito = parseFloat(String(row[creditoCol] || '0').replace(',', '.').replace(/\s/g, '')) || 0;
+      const debito = parseFloat(normalizeValorCsv(row[debitoCol] || '0')) || 0;
+      const credito = parseFloat(normalizeValorCsv(row[creditoCol] || '0')) || 0;
       if (credito > 0) { valor = credito; tipo = 'credito'; }
       else { valor = debito; tipo = 'debito'; }
     }
@@ -217,14 +225,18 @@ export default async function handler(req, res) {
     };
 
     // Normalizar: faturas Gmail guardam valor em dados.valor_total (JSONB)
-    const faturasNorm = (faturas || []).map(f => ({
+    const faturasNorm = (faturas || []).map(f => {
+      const v1 = parseValorFatura(f.valor);
+      const v2 = parseValorFatura(f.dados?.valor_total);
+      return {
       ...f,
-      valor: parseValorFatura(f.valor) ?? parseValorFatura(f.dados?.valor_total) ?? null,
+      valor: (v1 != null && v1 > 0) ? v1 : (v2 != null && v2 > 0 ? v2 : null),
       entidade: f.entidade || f.dados?.fornecedor || '',
       descricao: f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || f.filename || '',
       data_documento: f.data_documento || f.dados?.data_fatura || null,
       fonte: f.fonte || 'fatura',
-    }));
+      };
+    });
     // Inclui faturas sem valor — aparecem em Órfãos Sistema mesmo sem matching possível
 
     // Buscar recibos validados (tabela receipt_validations)
@@ -238,7 +250,7 @@ export default async function handler(req, res) {
     const recibosNorm = (recibos || []).map(r => ({
       id: r.id,
       tipo: 'recibo',
-      valor: r.liquido_extraido ?? null,
+      valor: parseValorFatura(r.liquido_extraido),
       entidade: r.worker_name || '',
       descricao: `Recibo ${r.worker_name || ''} ${r.mes || ''}`.trim(),
       data_documento: null,

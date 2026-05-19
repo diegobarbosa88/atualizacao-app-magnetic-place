@@ -27,11 +27,13 @@ export function runMatchingEngine(transacoes, faturas) {
   const usedFaturaIds = new Set();
 
   for (const transacao of transacoes) {
-    // Regra 1: candidatos por valor exato (ignora faturas sem valor extraído)
+    // Regra 1: candidatos por valor (tolerância de 1 cêntimo para evitar erros de float)
+    const txCents = Math.round(transacao.valor * 100);
     const candidatos = faturas.filter(f =>
       !usedFaturaIds.has(f.id) &&
       f.valor != null &&
-      Number(f.valor) === transacao.valor
+      f.valor > 0 &&
+      Math.abs(Math.round(Number(f.valor) * 100) - txCents) <= 1
     );
 
     if (candidatos.length === 0) {
