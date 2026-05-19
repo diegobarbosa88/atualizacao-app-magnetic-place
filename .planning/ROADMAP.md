@@ -357,4 +357,21 @@ Plans:
 
 **UI hint:** yes
 
-*Last updated: 2026-05-18*
+---
+
+## Phase 18: Reconciliação Bancária Automática
+
+**Goal:** Importar um extrato bancário (CSV/OFX), cruzar as transações com as faturas e recibos pendentes na base de dados, e identificar o que está pago, que faturas faltam entregar e que pagamentos estão pendentes.
+
+**Requirements:** BANK-01, BANK-02, BANK-03, BANK-04, BANK-05
+
+**Success Criteria:**
+1. Upload drag & drop de ficheiro CSV ou OFX (PDF rejeitado)
+2. Parser padroniza transações: `{ data, descricao, valor, tipo: 'credito'|'debito' }`
+3. Matching engine — Regra 1: valor exato; Regra 2: desambiguação por descrição (nome/NIF)
+4. Resultados em 3 secções: Reconciliados / Órfãos Banco / Órfãos Sistema
+5. Campo `status: 'PENDENTE'|'PAGO'` nas faturas e recibos
+
+**UI hint:** yes
+
+*Last updated: 2026-05-19*

@@ -32,12 +32,18 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 - Variáveis dinâmicas com syntax `{{variavel}}`
 - Bloco signature com `unbreakable: true` para quebras de página perfeitas
 
+## Phase 18 — Reconciliação Bancária Automática
+
+**Context:** Gathered 2026-05-19 — ready for planning
+**Key decisions:** CSV/OFX upload, matching engine (exact + description), non-destructive workflow, new `faturas` table, Vercel API Route
+**Context file:** `.planning/phases/18-reconciliacao-bancaria/18-CONTEXT.md`
+
 ## Todos
 
-- [ ] Phase 14: Planear editor de blocos JSON — /gsd-plan-phase 14
+- [ ] Phase 18: Planear reconciliação bancária — /gsd-plan-phase 18
 
 ## Next Steps
 
-1. /gsd-plan-phase 14 — Criar PLAN.md para Phase 14 (Editor de Blocos JSON)
+1. /gsd-plan-phase 18 — Criar PLAN.md para Phase 18 (Reconciliação Bancária)
 
-*State updated: 2026-05-12*
+*State updated: 2026-05-19*
