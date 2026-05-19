@@ -58,6 +58,7 @@ export default function ReconciliacaoAdmin() {
   const [previewFilename, setPreviewFilename] = useState('');
   const [selTransacoes, setSelTransacoes] = useState(new Set());
   const [txSearch, setTxSearch] = useState('');
+  const [txTipoFiltro, setTxTipoFiltro] = useState('todos'); // 'todos' | 'debito' | 'credito'
 
   // ── Resultados ────────────────────────────────────────────────────────────
   const [resultado, setResultado] = useState(null);      // resposta da API
@@ -288,6 +289,7 @@ export default function ReconciliacaoAdmin() {
       setPreviewFilename(data.filename);
       setSelTransacoes(new Set(data.transactions.map((_, i) => i)));
       setTxSearch('');
+      setTxTipoFiltro('todos');
     } catch (err) {
       setErro(err.message || 'Erro de rede.');
     } finally {
@@ -772,7 +774,13 @@ export default function ReconciliacaoAdmin() {
         const q = txSearch.trim().toLowerCase();
         const visibleIndices = previewTransacoes
           .map((tx, i) => ({ tx, i }))
-          .filter(({ tx }) => !q || tx.descricao.toLowerCase().includes(q) || String(tx.valor).includes(q));
+          .filter(({ tx }) => {
+            if (txTipoFiltro !== 'todos' && tx.tipo !== txTipoFiltro) return false;
+            if (q && !tx.descricao.toLowerCase().includes(q) && !String(tx.valor).includes(q)) return false;
+            return true;
+          });
+        const nDebito = previewTransacoes.filter(t => t.tipo === 'debito').length;
+        const nCredito = previewTransacoes.filter(t => t.tipo === 'credito').length;
         const allVisible = visibleIndices.map(x => x.i);
         const allVisibleSelected = allVisible.length > 0 && allVisible.every(i => selTransacoes.has(i));
         return (
@@ -802,6 +810,29 @@ export default function ReconciliacaoAdmin() {
                   Processar {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}
                 </button>
               </div>
+            </div>
+
+            {/* Filtro por tipo */}
+            <div className="flex gap-2">
+              {[
+                { key: 'todos', label: `Todos (${previewTransacoes.length})` },
+                { key: 'debito', label: `Saídas (${nDebito})` },
+                { key: 'credito', label: `Entradas (${nCredito})` },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setTxTipoFiltro(key)}
+                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                    txTipoFiltro === key
+                      ? key === 'debito' ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300'
+                        : key === 'credito' ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300'
+                        : 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
+                      : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             <input
