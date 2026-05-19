@@ -95,8 +95,11 @@ function parseCsv(content) {
       const raw = parseFloat(String(row[valorCol]).replace(',', '.').replace(/\s/g, ''));
       valor = Math.abs(raw);
       if (tipoCol) {
-        const t = String(row[tipoCol] || '').trim().toLowerCase();
-        tipo = (t === 'c' || t.startsWith('cr')) ? 'credito' : 'debito';
+        const t = normStr(String(row[tipoCol] || ''));
+        // crédito: C, CR, Crédito, E, Entrada, credit, ...
+        // débito:  D, DB, Débito, S, Saída, debit, ...
+        tipo = (t === 'c' || t === 'e' || t.startsWith('cr') || t.startsWith('entr'))
+          ? 'credito' : 'debito';
       } else {
         tipo = raw >= 0 ? 'credito' : 'debito';
       }
