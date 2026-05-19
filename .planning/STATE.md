@@ -38,12 +38,18 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 **Key decisions:** CSV/OFX upload, matching engine (exact + description), non-destructive workflow, new `faturas` table, Vercel API Route
 **Context file:** `.planning/phases/18-reconciliacao-bancaria/18-CONTEXT.md`
 
+## Phase Status
+
+| Phase | Status | Plans |
+|-------|--------|-------|
+| 18 | Ready to execute | 5 |
+
 ## Todos
 
-- [ ] Phase 18: Planear reconciliação bancária — /gsd-plan-phase 18
+- [ ] Phase 18: Executar reconciliação bancária — /gsd-execute-phase 18
 
 ## Next Steps
 
-1. /gsd-plan-phase 18 — Criar PLAN.md para Phase 18 (Reconciliação Bancária)
+1. /gsd-execute-phase 18 — Executar Phase 18 (Reconciliação Bancária Automática)
 
 *State updated: 2026-05-19*
