@@ -96,10 +96,14 @@ function parseCsv(content) {
       valor = Math.abs(raw);
       if (tipoCol) {
         const t = normStr(String(row[tipoCol] || ''));
-        // crédito: C, CR, Crédito, E, Entrada, credit, ...
-        // débito:  D, DB, Débito, S, Saída, debit, ...
-        tipo = (t === 'c' || t === 'e' || t.startsWith('cr') || t.startsWith('entr'))
-          ? 'credito' : 'debito';
+        if (t === 'c' || t === 'e' || t.startsWith('cr') || t.startsWith('entr')) {
+          tipo = 'credito';
+        } else if (t === 'd' || t === 's' || t.startsWith('deb') || t.startsWith('said')) {
+          tipo = 'debito';
+        } else {
+          // Coluna tipo não reconhecida — usar sinal do valor
+          tipo = raw >= 0 ? 'credito' : 'debito';
+        }
       } else {
         tipo = raw >= 0 ? 'credito' : 'debito';
       }
