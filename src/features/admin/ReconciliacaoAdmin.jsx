@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
   AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight,
-  ArrowDownLeft, ArrowUpRight
+  ArrowDownLeft, ArrowUpRight, Trash2
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -63,6 +63,16 @@ export default function ReconciliacaoAdmin() {
       if (!error) setHistorico(data || []);
     } finally {
       setLoadingHistorico(false);
+    }
+  };
+
+  const apagarRun = async (e, runId) => {
+    e.stopPropagation();
+    if (!window.confirm('Apagar esta importação do histórico?')) return;
+    const { error } = await supabase.from('reconciliation_runs').delete().eq('id', runId);
+    if (!error) {
+      setHistorico(prev => prev.filter(r => r.id !== runId));
+      if (runSelecionado?.id === runId) setRunSelecionado(null);
     }
   };
 
@@ -479,10 +489,17 @@ export default function ReconciliacaoAdmin() {
                     {new Date(run.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <div className="flex gap-2 text-[10px] font-black">
+                <div className="flex items-center gap-2 text-[10px] font-black">
                   <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{run.matched_count} ok</span>
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{run.orphan_bank_count} banco</span>
                   <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{run.orphan_system_count} sistema</span>
+                  <button
+                    onClick={e => apagarRun(e, run.id)}
+                    className="ml-1 p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                    title="Apagar importação"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </button>
             ))}

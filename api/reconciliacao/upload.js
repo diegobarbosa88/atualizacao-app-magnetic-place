@@ -63,12 +63,13 @@ function parseCsv(content) {
   });
   if (!records.length) return [];
 
-  // Limpar fórmulas Excel de todos os valores
-  const cleanedRecords = records.map(row =>
-    Object.fromEntries(Object.entries(row).map(([k, v]) => [k, cleanCsvValue(v)]))
-  );
+  // Mapear: chave limpa → chave original na row (resolve fórmulas Excel nos cabeçalhos)
+  const originalKeys = Object.keys(records[0]);
+  const cleanedToOriginal = {};
+  originalKeys.forEach(k => { cleanedToOriginal[cleanCsvValue(k)] = k; });
+  const get = (row, cleanedCol) => cleanedCol ? row[cleanedToOriginal[cleanedCol]] : undefined;
 
-  const headers = Object.keys(cleanedRecords[0]).map(h => cleanCsvValue(h));
+  const headers = originalKeys.map(k => cleanCsvValue(k));
   const dataCol = detectColumn(headers, ['data', 'datavalor', 'data valor', 'data operacao', 'data operação', 'date']);
   const valorCol = detectColumn(headers, ['valor', 'value', 'montante', 'amount']);
   const descricaoCol = detectColumn(headers, ['descrição movimento', 'descricao movimento', 'descrição', 'descricao', 'description', 'movimento', 'memo']);
@@ -83,28 +84,28 @@ function parseCsv(content) {
     throw err;
   }
 
-  return cleanedRecords.map(row => {
+  return records.map(row => {
+    const clean = v => cleanCsvValue(v);
     let valor, tipo;
     if (valorCol) {
-      const raw = parseFloat(String(row[valorCol]).replace(',', '.').replace(/\s/g, ''));
+      const raw = parseFloat(String(clean(get(row, valorCol))).replace(',', '.').replace(/\s/g, ''));
       valor = Math.abs(raw);
-      // Se tipoCol presente (ex: 'C'/'Crédito' = crédito, 'D'/'Débito' = débito)
       if (tipoCol) {
-        const t = String(row[tipoCol] || '').trim().toLowerCase();
+        const t = String(clean(get(row, tipoCol)) || '').trim().toLowerCase();
         tipo = (t === 'c' || t.startsWith('cr')) ? 'credito' : 'debito';
       } else {
         tipo = raw >= 0 ? 'credito' : 'debito';
       }
     } else {
-      const debito = parseFloat(String(row[debitoCol] || '0').replace(',', '.').replace(/\s/g, '')) || 0;
-      const credito = parseFloat(String(row[creditoCol] || '0').replace(',', '.').replace(/\s/g, '')) || 0;
+      const debito = parseFloat(String(clean(get(row, debitoCol)) || '0').replace(',', '.').replace(/\s/g, '')) || 0;
+      const credito = parseFloat(String(clean(get(row, creditoCol)) || '0').replace(',', '.').replace(/\s/g, '')) || 0;
       if (credito > 0) { valor = credito; tipo = 'credito'; }
       else { valor = debito; tipo = 'debito'; }
     }
     return {
-      data: normalizeDate(row[dataCol]),
-      descricao: String(row[descricaoCol] || '').trim(),
-      tipoMovimento: tipoCol ? String(row[tipoCol] || '').trim() : null,
+      data: normalizeDate(clean(get(row, dataCol))),
+      descricao: String(clean(get(row, descricaoCol)) || '').trim(),
+      tipoMovimento: tipoCol ? String(clean(get(row, tipoCol)) || '').trim() : null,
       valor,
       tipo,
     };
