@@ -179,14 +179,23 @@ export default async function handler(req, res) {
 
     const { data: faturas, error: fatError } = await supabase
       .from('faturas')
-      .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte')
+      .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados')
       .eq('status', 'PENDENTE');
 
     if (fatError) throw new Error(`Supabase query failed: ${fatError.message}`);
 
+    // Normalizar: faturas Gmail guardam valor em dados.valor_total
+    const faturasNorm = (faturas || []).map(f => ({
+      ...f,
+      valor: f.valor ?? f.dados?.valor_total ?? null,
+      entidade: f.entidade || f.dados?.fornecedor || '',
+      descricao: f.descricao || f.dados?.numero_fatura || f.filename || '',
+      data_documento: f.data_documento || f.dados?.data_fatura || null,
+    })).filter(f => f.valor != null);
+
     const { matched, orphan_bank, orphan_system } = runMatchingEngine(
       transacoes,
-      faturas || []
+      faturasNorm
     );
 
     // Gravar run em reconciliation_runs

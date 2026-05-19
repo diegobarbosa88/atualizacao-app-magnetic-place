@@ -17,6 +17,7 @@ import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import FaturasAdmin from './FaturasAdmin';
+import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 
@@ -342,6 +343,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           {[
             { id: 'documentos', icon: FileText, label: 'Documentos' },
             { id: 'faturas', icon: FileText, label: 'Faturas' },
+            { id: 'reconciliacao', icon: Activity, label: 'Reconciliação' },
             { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
             { id: 'validar-recibo', icon: CheckCircle, label: 'Validar' },
@@ -371,6 +373,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         <ReportsEmbedded {...props} />
       ) : activeSubTab === 'faturas' ? (
         <FaturasAdmin />
+      ) : activeSubTab === 'reconciliacao' ? (
+        <ReconciliacaoAdmin />
       ) : (
         <>
           {/* Pills de contagem por estado */}

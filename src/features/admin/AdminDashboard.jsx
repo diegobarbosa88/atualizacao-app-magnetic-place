@@ -23,7 +23,6 @@ import { ValidationPortalProvider } from './contexts/ValidationPortalContext';
 import DocumentsAdmin from './DocumentsAdmin';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
-import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -394,11 +393,11 @@ function AdminDashboard(props) {
           {/* Centro: Menu de Navegação */}
           <div className="flex-1 flex justify-center w-full md:w-auto">
             <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
-              {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'documentos', 'costs', 'reconciliacao', 'settings'].map(t => (
+              {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'documentos', 'costs', 'settings'].map(t => (
                 <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && unviewedCorrectionsCount > 0 ? 'animate-pulse' : ''}`}>
                   {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
                     <span className="flex items-center gap-1">Portal Validação {unviewedCorrectionsCount > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unviewedCorrectionsCount}</span>}</span>
-                  ) : t === 'schedules' ? 'Horários' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : t === 'reconciliacao' ? 'Reconciliação' : <Settings size={14} />}
+                  ) : t === 'schedules' ? 'Horários' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : <Settings size={14} />}
                 </button>
               ))}
             </div>
@@ -1008,9 +1007,6 @@ function AdminDashboard(props) {
           )}
           {!auditWorkerId && activeTab === 'notificacoes' && (
             <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
-          )}
-          {!auditWorkerId && activeTab === 'reconciliacao' && (
-            <ReconciliacaoAdmin />
           )}
 
           {/* Módulo Configurações */}
