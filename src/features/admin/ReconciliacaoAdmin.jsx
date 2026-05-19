@@ -110,15 +110,22 @@ export default function ReconciliacaoAdmin() {
   };
 
   // ── Confirmar Pagamento (individual, não-bulk per D-10) ────────────────────
-  const confirmarPagamento = async (faturaId) => {
+  const confirmarPagamento = async (faturaId, fonte) => {
     setConfirmando(prev => new Set(prev).add(faturaId));
     try {
-      const { error } = await supabase
-        .from('faturas')
-        .update({ status: 'PAGO' })
-        .eq('id', faturaId);
-      if (error) throw error;
-      // Actualizar estado local — marcar como pago na lista de matched
+      if (fonte === 'recibo') {
+        const { error } = await supabase
+          .from('receipt_validations')
+          .update({ estado: 'pago' })
+          .eq('id', faturaId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('faturas')
+          .update({ status: 'PAGO' })
+          .eq('id', faturaId);
+        if (error) throw error;
+      }
       setResultado(prev => ({
         ...prev,
         matched: prev.matched.map(m =>
@@ -325,7 +332,7 @@ export default function ReconciliacaoAdmin() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                        {item.fatura.tipo || 'Fatura'}
+                        {item.fatura.fonte === 'recibo' ? 'Recibo' : item.fatura.tipo || 'Fatura'}
                       </span>
                       <span className="text-sm font-bold text-slate-700">€{Number(item.fatura.valor).toFixed(2)}</span>
                       <span className="text-[10px] text-slate-400">{item.fatura.entidade}</span>
@@ -342,7 +349,7 @@ export default function ReconciliacaoAdmin() {
                       </span>
                     ) : (
                       <button
-                        onClick={() => confirmarPagamento(item.fatura.id)}
+                        onClick={() => confirmarPagamento(item.fatura.id, item.fatura.fonte)}
                         disabled={confirmando.has(item.fatura.id)}
                         className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50"
                       >

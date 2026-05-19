@@ -191,11 +191,31 @@ export default async function handler(req, res) {
       entidade: f.entidade || f.dados?.fornecedor || '',
       descricao: f.descricao || f.dados?.numero_fatura || f.filename || '',
       data_documento: f.data_documento || f.dados?.data_fatura || null,
+      fonte: f.fonte || 'fatura',
     })).filter(f => f.valor != null);
+
+    // Buscar recibos validados (tabela receipt_validations)
+    const { data: recibos, error: recError } = await supabase
+      .from('receipt_validations')
+      .select('id, worker_name, liquido_extraido, mes, estado')
+      .eq('estado', 'valido');
+
+    if (recError) throw new Error(`Supabase query (recibos) failed: ${recError.message}`);
+
+    const recibosNorm = (recibos || []).map(r => ({
+      id: r.id,
+      tipo: 'recibo',
+      valor: r.liquido_extraido ?? null,
+      entidade: r.worker_name || '',
+      descricao: `Recibo ${r.worker_name || ''} ${r.mes || ''}`.trim(),
+      data_documento: null,
+      fonte: 'recibo',
+      status: 'PENDENTE',
+    })).filter(r => r.valor != null && r.valor > 0);
 
     const { matched, orphan_bank, orphan_system } = runMatchingEngine(
       transacoes,
-      faturasNorm
+      [...faturasNorm, ...recibosNorm]
     );
 
     // Gravar run em reconciliation_runs
