@@ -69,11 +69,11 @@ export default function ReconciliacaoAdmin() {
   const apagarRun = async (e, runId) => {
     e.stopPropagation();
     if (!window.confirm('Apagar esta importação do histórico?')) return;
-    const { error } = await supabase.from('reconciliation_runs').delete().eq('id', runId);
-    if (!error) {
-      setHistorico(prev => prev.filter(r => r.id !== runId));
-      if (runSelecionado?.id === runId) setRunSelecionado(null);
-    }
+    const { error, count } = await supabase.from('reconciliation_runs').delete({ count: 'exact' }).eq('id', runId);
+    if (error) { alert(`Erro ao apagar: ${error.message}`); return; }
+    if (count === 0) { alert('Sem permissão para apagar. Aplique a política RLS de DELETE na tabela reconciliation_runs.'); return; }
+    setHistorico(prev => prev.filter(r => r.id !== runId));
+    if (runSelecionado?.id === runId) setRunSelecionado(null);
   };
 
   // ── Drag & Drop handlers ──────────────────────────────────────────────────
