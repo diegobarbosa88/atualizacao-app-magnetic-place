@@ -358,11 +358,14 @@ export default function ReconciliacaoAdmin() {
       const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
       if (!items.length) return;
 
-      const allIds = items.map(m => m.fatura.id);
+      // Deduplicate por ID (splits não devem confirmar o mesmo recibo duas vezes)
+      const seenIds = new Set();
+      const uniqueItems = items.filter(m => { if (seenIds.has(m.fatura.id)) return false; seenIds.add(m.fatura.id); return true; });
+      const allIds = uniqueItems.map(m => m.fatura.id);
       setConfirmando(new Set(allIds));
 
-      // Todos os updates em paralelo
-      await Promise.all(items.map(item =>
+      // Todos os updates em paralelo (já deduplicados)
+      await Promise.all(uniqueItems.map(item =>
         item.fatura.fonte === 'recibo'
           ? supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id)
           : supabase.from('faturas').update({ status: 'PAGO' }).eq('id', item.fatura.id)
@@ -477,13 +480,33 @@ export default function ReconciliacaoAdmin() {
     setAssocSearch('');
     setLoadingAssoc(true);
     try {
-      const { data } = await supabase
-        .from('faturas')
-        .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename')
-        .not('status', 'eq', 'PAGO')
-        .order('data_documento', { ascending: false })
-        .limit(100);
-      setAssocFaturas(data || []);
+      const [{ data: faturas }, { data: recibos }] = await Promise.all([
+        supabase
+          .from('faturas')
+          .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename')
+          .not('status', 'eq', 'PAGO')
+          .order('data_documento', { ascending: false })
+          .limit(100),
+        supabase
+          .from('receipt_validations')
+          .select('id, worker_name, liquido_extraido, mes, estado')
+          .not('estado', 'eq', 'pago')
+          .limit(100),
+      ]);
+      const recibosNorm = (recibos || []).map(r => ({
+        id: r.id,
+        tipo: 'recibo',
+        fonte: 'recibo',
+        valor: r.liquido_extraido,
+        data_documento: null,
+        descricao: `Recibo ${r.worker_name || ''} ${r.mes || ''}`.trim(),
+        entidade: r.worker_name || '',
+        status: r.estado,
+        estado_original: r.estado,
+        dados: null,
+        filename: null,
+      }));
+      setAssocFaturas([...(faturas || []), ...recibosNorm]);
     } finally {
       setLoadingAssoc(false);
     }
@@ -493,7 +516,11 @@ export default function ReconciliacaoAdmin() {
     if (!pendingAssociacao) return;
     const { index, transacao } = pendingAssociacao;
 
-    const novoMatch = { transacao, fatura: { ...fatura, valor: fatura.valor ?? fatura.dados?.valor_total }, rule: 'manual' };
+    const sourceMatchedCheck = runSelecionado
+      ? (runSelecionado.results_json?.matched || [])
+      : (resultado?.matched || []);
+    const isSplit = sourceMatchedCheck.some(m => m.fatura?.id === fatura.id);
+    const novoMatch = { transacao, fatura: { ...fatura, valor: fatura.valor ?? fatura.dados?.valor_total }, rule: isSplit ? 'manual_split' : 'manual' };
 
     const runId = runSelecionado?.id ?? resultado?.run_id;
     if (!runId) { setPendingAssociacao(null); return; }
@@ -744,6 +771,7 @@ export default function ReconciliacaoAdmin() {
           {/* Sub-tab: Reconciliados */}
           {activeSubTab === 'matched' && (() => {
             const items = displayData.matched || [];
+            const faturaIdCount = items.reduce((acc, m) => { if (m.fatura?.id) acc[m.fatura.id] = (acc[m.fatura.id] || 0) + 1; return acc; }, {});
             const allPendentes = items.filter(m => m.fatura?.status !== 'PAGO');
             return (
               <div className="space-y-3">
@@ -785,8 +813,14 @@ export default function ReconciliacaoAdmin() {
                         {item.rule === 'manual' && (
                           <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">manual</span>
                         )}
+                        {item.rule === 'manual_split' && (
+                          <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">split</span>
+                        )}
                         {item.rule === 'description_match' && (
                           <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>
+                        )}
+                        {faturaIdCount[item.fatura?.id] > 1 && item.rule !== 'manual_split' && (
+                          <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">2 movimentos</span>
                         )}
                       </div>
                       <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao?.descricao}</p>

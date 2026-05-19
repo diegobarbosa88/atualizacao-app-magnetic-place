@@ -243,7 +243,7 @@ export default async function handler(req, res) {
     const { data: recibos, error: recError } = await supabase
       .from('receipt_validations')
       .select('id, worker_name, liquido_extraido, mes, estado')
-      .in('estado', ['valido', 'aviso']);
+      .not('estado', 'eq', 'pago');
 
     if (recError) throw new Error(`Supabase query (recibos) failed: ${recError.message}`);
 
