@@ -389,15 +389,23 @@ export default function ReconciliacaoAdmin() {
               )}
               {(displayData.orphan_bank || []).map((item, i) => (
                 <div key={i} className={`rounded-2xl p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
                     <TipoBadge tipo={item.transacao.tipo} />
+                    <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
+                    <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${item.reason === 'ambiguous' ? 'text-amber-700' : 'text-rose-700'}`}>
                       {item.reason === 'ambiguous' ? 'Ambíguo' : 'Sem correspondência'}
                     </span>
-                    <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
-                    <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
                   </div>
-                  <p className="text-xs text-slate-700 font-medium truncate">{item.transacao.descricao}</p>
+                  {item.transacao.tipoMovimento && (
+                    <p className="text-[10px] text-slate-500 mb-1">
+                      <span className="font-black uppercase tracking-widest">Tipo Movimento:</span> {item.transacao.tipoMovimento}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-700 font-medium">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descrição: </span>
+                    {item.transacao.descricao || '—'}
+                  </p>
                   {item.reason === 'ambiguous' && item.candidates && (
                     <p className="text-[10px] text-amber-600 mt-1">
                       Candidatos: {item.candidates.map(c => c.entidade).filter(Boolean).join(', ')}

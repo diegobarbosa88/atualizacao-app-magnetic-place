@@ -104,6 +104,7 @@ function parseCsv(content) {
     return {
       data: normalizeDate(row[dataCol]),
       descricao: String(row[descricaoCol] || '').trim(),
+      tipoMovimento: tipoCol ? String(row[tipoCol] || '').trim() : null,
       valor,
       tipo,
     };
