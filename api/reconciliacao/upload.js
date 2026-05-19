@@ -186,10 +186,12 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // Buscar todas as faturas excepto as já confirmadas (PAGO)
+    // Inclui PENDENTE, NULL e qualquer outro status não-PAGO
     const { data: faturas, error: fatError } = await supabase
       .from('faturas')
-      .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados')
-      .eq('status', 'PENDENTE');
+      .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename')
+      .not('status', 'eq', 'PAGO');
 
     if (fatError) throw new Error(`Supabase query failed: ${fatError.message}`);
 
@@ -207,16 +209,16 @@ export default async function handler(req, res) {
       return isNaN(r) ? null : r;
     };
 
-    // Normalizar: faturas Gmail guardam valor em dados.valor_total
+    // Normalizar: faturas Gmail guardam valor em dados.valor_total (JSONB)
     const faturasNorm = (faturas || []).map(f => ({
       ...f,
       valor: parseValorFatura(f.valor) ?? parseValorFatura(f.dados?.valor_total) ?? null,
       entidade: f.entidade || f.dados?.fornecedor || '',
-      descricao: f.descricao || f.dados?.numero_fatura || f.filename || '',
+      descricao: f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || f.filename || '',
       data_documento: f.data_documento || f.dados?.data_fatura || null,
       fonte: f.fonte || 'fatura',
     }));
-    // Não filtrar faturas sem valor — continuam no motor e aparecem em Órfãos Sistema
+    // Inclui faturas sem valor — aparecem em Órfãos Sistema mesmo sem matching possível
 
     // Buscar recibos validados (tabela receipt_validations)
     const { data: recibos, error: recError } = await supabase
@@ -270,6 +272,11 @@ export default async function handler(req, res) {
       matched,
       orphan_bank,
       orphan_system,
+      _debug: {
+        faturas_fetched: faturasNorm.length,
+        recibos_fetched: recibosNorm.length,
+        faturas_sample: faturasNorm.slice(0, 3).map(f => ({ id: f.id, valor: f.valor, status: f.status, fonte: f.fonte, dados_valor_total: f.dados?.valor_total })),
+      },
     });
 
   } catch (err) {
