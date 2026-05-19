@@ -66,7 +66,7 @@ export default async function handler(req, res) {
   const { data: recibos, error: recError } = await supabase
     .from('receipt_validations')
     .select('id, worker_name, liquido_extraido, mes, estado')
-    .eq('estado', 'valido');
+    .in('estado', ['valido', 'aviso']);
 
   if (recError) return res.status(500).json({ error: `Erro ao buscar recibos: ${recError.message}` });
 
@@ -109,5 +109,11 @@ export default async function handler(req, res) {
     matched,
     orphan_bank,
     orphan_system,
+    _debug: {
+      faturas_fetched: faturasNorm.length,
+      recibos_fetched: recibosNorm.length,
+      recibos_raw_count: (recibos || []).length,
+      recibos_sample: (recibos || []).slice(0, 5).map(r => ({ id: r.id, worker_name: r.worker_name, liquido_extraido: r.liquido_extraido, estado: r.estado, valor_parsed: parseValorFatura(r.liquido_extraido) })),
+    },
   });
 }

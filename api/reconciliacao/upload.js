@@ -243,7 +243,7 @@ export default async function handler(req, res) {
     const { data: recibos, error: recError } = await supabase
       .from('receipt_validations')
       .select('id, worker_name, liquido_extraido, mes, estado')
-      .eq('estado', 'valido');
+      .in('estado', ['valido', 'aviso']);
 
     if (recError) throw new Error(`Supabase query (recibos) failed: ${recError.message}`);
 
@@ -294,7 +294,9 @@ export default async function handler(req, res) {
       _debug: {
         faturas_fetched: faturasNorm.length,
         recibos_fetched: recibosNorm.length,
+        recibos_raw_count: (recibos || []).length,
         faturas_sample: faturasNorm.slice(0, 3).map(f => ({ id: f.id, valor: f.valor, status: f.status, fonte: f.fonte, dados_valor_total: f.dados?.valor_total })),
+        recibos_sample: (recibos || []).slice(0, 5).map(r => ({ id: r.id, worker_name: r.worker_name, liquido_extraido: r.liquido_extraido, estado: r.estado, valor_parsed: parseValorFatura(r.liquido_extraido) })),
       },
     });
 
