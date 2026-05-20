@@ -2127,6 +2127,7 @@ export default function ReconciliacaoAdmin() {
                   </div>
                 )}
                 {(displayData.orphan_bank || []).map((item, i) => {
+                  if (orphanBankAssocSet.has(i)) return null;
                   const isConfirmed = confirmedOrphans.has(i);
                   if (isConfirmed) {
                     const classif = orphanClassificacoes[i];
