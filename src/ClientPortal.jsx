@@ -781,7 +781,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 onClick={async () => {
                                     if (!reportJustification.trim()) { alert("Por favor, descreva o problema."); return; }
 
-                                    const notifId = "notif_" + Date.now();
+                                    const notifId = `notif_corr_${initialClientId}_${initialMonth}_quick`;
                                     const correcoesTexto = generateCorrectionMessage(true);
                                     // Envia TODOS os trabalhadores e TODOS os dias do mês no payload para que o admin possa editar qualquer dia
                                     const fullMonthSnapshot = draftData;
@@ -798,7 +798,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         is_active: true,
                                         created_at: new Date().toISOString()
                                     };
-                                    const correcaoId = "correcao_" + Date.now();
+                                    const correcaoId = `correcao_${initialClientId}_${initialMonth}_quick`;
                                     const correcaoRecord = {
                                         id: correcaoId,
                                         title: `Divergência Reportada: ${clientData.name}`,
@@ -990,7 +990,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             dailyRecords: w.dailyRecords.map(d => ({ ...d, date: d.rawDate || d.date }))
         }));
 
-        const notifId = "notif_" + Date.now();
+        const notifId = `notif_corr_${initialClientId}_${initialMonth}_precision`;
         const newNotif = {
             id: notifId,
             title: `Pedido de Correção: ${clientData.name}`,
@@ -1004,7 +1004,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             is_active: true,
             created_at: new Date().toISOString()
         };
-        const correcaoId = "correcao_" + Date.now();
+        const correcaoId = `correcao_${initialClientId}_${initialMonth}_precision`;
         const correcaoRecord = {
             id: correcaoId,
             title: `Pedido de Correção: ${clientData.name}`,

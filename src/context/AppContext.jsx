@@ -380,11 +380,11 @@ export const AppProvider = ({ children }) => {
       // isAdminImpersonating é campo transient de sessão — nunca persistir
     }
 
-    // Para app_notifications, forçar viewed_by_ids e dismissed_by_ids para null/array vazio
-    // Isto evita problemas com triggers ou defaults no Supabase
+    // Para app_notifications: só inicializar os campos de tracking se não vierem no payload
+    // Nunca sobrescrever — isso apagaria quem já viu/dispensou
     if (tableName === 'app_notifications') {
-      payload.viewed_by_ids = null;
-      payload.dismissed_by_ids = [];
+      if (!('viewed_by_ids' in payload)) payload.viewed_by_ids = null;
+      if (!('dismissed_by_ids' in payload)) payload.dismissed_by_ids = [];
     }
 
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });

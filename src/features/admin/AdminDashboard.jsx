@@ -111,43 +111,61 @@ function AdminDashboard(props) {
     await saveToDb('workers', worker.id, { ...worker, isAdmin: false });
   };
 
-  const [readNotifIds, setReadNotifIds] = useState(() => {
-    if (!currentUser?.id) return [];
-    try { return JSON.parse(localStorage.getItem(`admin_read_notifs_${currentUser.id}`) || '[]'); }
-    catch { return []; }
-  });
-  const [viewedCorrections, setViewedCorrections] = useState(() => {
-    const saved = localStorage.getItem('magnetic_viewed_corrections');
-    return saved ? JSON.parse(saved) : [];
-  });
-  useEffect(() => {
-    localStorage.setItem('magnetic_viewed_corrections', JSON.stringify(viewedCorrections));
-  }, [viewedCorrections]);
-
+  // Tracking de leitura derivado do Supabase (coluna read_by_admin_ids em app_notifications)
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
-  const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n => !viewedCorrections.includes(n.id)).length;
-  const unreadCount = appNotifications.filter(n => !readNotifIds.includes(n.id)).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
+  const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n =>
+    !(n.viewed_by_admin_ids || []).includes(currentUser?.id)
+  ).length;
+  const unreadCount = appNotifications.filter(n =>
+    !(n.read_by_admin_ids || []).includes(currentUser?.id)
+  ).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
 
-  useEffect(() => {
-    if (activeTab !== 'notificacoes' || !currentUser?.id || !appNotifications.length) return;
-    const allIds = appNotifications.map(n => n.id);
-    setReadNotifIds(prev => {
-      const merged = [...new Set([...prev, ...allIds])];
-      localStorage.setItem(`admin_read_notifs_${currentUser.id}`, JSON.stringify(merged));
-      return merged;
-    });
-  }, [activeTab, currentUser?.id, appNotifications]);
+  // Marcar notificação como lida no Supabase
+  const markNotifRead = async (id) => {
+    if (!currentUser?.id || !supabase) return;
+    const notif = appNotifications.find(n => n.id === id);
+    if (!notif) return;
+    const current = notif.read_by_admin_ids || [];
+    if (current.includes(currentUser.id)) return;
+    await supabase.from('app_notifications')
+      .update({ read_by_admin_ids: [...current, currentUser.id] })
+      .eq('id', id);
+  };
 
+  // Marcar correções como vistas no Supabase
+  const markCorrectionsViewed = async (specificIds) => {
+    if (!currentUser?.id || !supabase) return;
+    const toMark = specificIds
+      ? notificacoesDeCorrecao.filter(n => specificIds.includes(n.id))
+      : notificacoesDeCorrecao;
+    await Promise.all(toMark.map(async n => {
+      const current = n.viewed_by_admin_ids || [];
+      if (current.includes(currentUser.id)) return;
+      await supabase.from('corrections')
+        .update({ viewed_by_admin_ids: [...current, currentUser.id] })
+        .eq('id', n.id);
+    }));
+  };
+
+  // Auto-marcar lido ao abrir tab de notificações
   useEffect(() => {
-    if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && notificacoesDeCorrecao.length > 0) {
-      setViewedCorrections(prev => {
-        const newIds = notificacoesDeCorrecao.map(n => n.id).filter(id => !prev.includes(id));
-        if (newIds.length === 0) return prev;
-        return [...prev, ...newIds];
-      });
-    }
-  }, [activeTab, portalSubTab, notificacoesDeCorrecao]);
+    if (activeTab !== 'notificacoes' || !currentUser?.id || !supabase || !appNotifications.length) return;
+    const unread = appNotifications.filter(n => !(n.read_by_admin_ids || []).includes(currentUser.id));
+    if (!unread.length) return;
+    Promise.all(unread.map(n => {
+      const current = n.read_by_admin_ids || [];
+      return supabase.from('app_notifications')
+        .update({ read_by_admin_ids: [...current, currentUser.id] })
+        .eq('id', n.id);
+    }));
+  }, [activeTab, currentUser?.id, appNotifications, supabase]);
+
+  // Auto-marcar correções vistas ao abrir tab de correções
+  useEffect(() => {
+    if (activeTab !== 'portal_validacao' || portalSubTab !== 'correcoes' || !currentUser?.id || !supabase) return;
+    markCorrectionsViewed();
+  }, [activeTab, portalSubTab, currentUser?.id]);
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifDropdownRef = useRef(null);
@@ -163,19 +181,8 @@ function AdminDashboard(props) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showNotifDropdown]);
 
-  const markNotifRead = (id) => {
-    setReadNotifIds(prev => {
-      const merged = [...new Set([...prev, id])];
-      if (currentUser?.id) localStorage.setItem(`admin_read_notifs_${currentUser.id}`, JSON.stringify(merged));
-      return merged;
-    });
-  };
-  const markCorrectionsViewed = () => {
-    setViewedCorrections(prev => {
-      const allIds = notificacoesDeCorrecao.map(n => n.id);
-      return [...new Set([...prev, ...allIds])];
-    });
-  };
+  // State para navegar diretamente a uma correção específica
+  const [selectedCorrectionId, setSelectedCorrectionId] = useState(null);
 
   const [workerAISummary, setWorkerAISummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -522,7 +529,7 @@ function AdminDashboard(props) {
             {notificacoesDeCorrecao.filter(n => !viewedCorrections.includes(n.id)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
-                <button key={corr.id} onClick={() => { markCorrectionsViewed(); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); setSelectedCorrectionId(corr.id); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
@@ -1117,6 +1124,8 @@ function AdminDashboard(props) {
                 setClienteSelecionado={setClienteSelecionado}
                 setModalEmailAberto={setModalEmailAberto}
                 setPrintingReport={setPrintingReport}
+                initialCorrectionId={selectedCorrectionId}
+                onCorrectionNavigated={() => setSelectedCorrectionId(null)}
               />
             </ValidationPortalProvider>
           )}

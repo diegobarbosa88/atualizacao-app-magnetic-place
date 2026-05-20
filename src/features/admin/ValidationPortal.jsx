@@ -14,7 +14,9 @@ const ValidationPortal = ({
   onLogin,
   setClienteSelecionado,
   setModalEmailAberto,
-  setPrintingReport
+  setPrintingReport,
+  initialCorrectionId,
+  onCorrectionNavigated
 }) => {
   // From local context (ValidationPortal state)
   const {
@@ -292,7 +294,7 @@ const ValidationPortal = ({
       {/* Correções Tab */}
       {portalSubTab === 'correcoes' && (
         <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <CorrectionsInbox />
+          <CorrectionsInbox initialCorrectionId={initialCorrectionId} onCorrectionNavigated={onCorrectionNavigated} />
         </div>
       )}
 

@@ -240,7 +240,7 @@ export default function App() {
       if (monthIdx >= 0 && yearMatch) rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
     }
     const monthLabel = (rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || rawTargetMonth || '').trim();
-    const rejectNotifId = "reject_" + Date.now();
+    const rejectNotifId = `reject_${rejeitarNotif.target_client_id}_${rawTargetMonth || Date.now()}`;
     const fbNotifData = {
       id: rejectNotifId,
       title: `Reporte de Divergência Rejeitado: ${monthLabel || rawTargetMonth || ''}`,

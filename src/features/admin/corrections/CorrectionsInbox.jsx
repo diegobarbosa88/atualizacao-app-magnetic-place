@@ -481,10 +481,18 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
   );
 };
 
-const CorrectionsInbox = () => {
+const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
   const { corrections, correctionItems, clients } = useApp();
-  const [selectedId, setSelectedId] = useState(null);
+  const [selectedId, setSelectedId] = useState(initialCorrectionId || null);
   const [filter, setFilter] = useState('open');
+
+  // Consumir initialCorrectionId uma vez ao montar/mudar
+  React.useEffect(() => {
+    if (initialCorrectionId) {
+      setSelectedId(initialCorrectionId);
+      onCorrectionNavigated?.();
+    }
+  }, [initialCorrectionId]);
 
   const sorted = useMemo(() => {
     return [...(corrections || [])].sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
