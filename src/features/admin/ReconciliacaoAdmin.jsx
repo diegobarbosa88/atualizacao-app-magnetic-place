@@ -74,18 +74,19 @@ const COLS_ORPHAN_SYS = [
 ];
 
 function getMatchedCell(m, key) {
+  const isManual = m.rule === 'confirmed_manual';
   switch (key) {
     case 'data':          return m.transacao?.data ?? '';
     case 'descricao':     return m.transacao?.descricao ?? '';
     case 'valor':         return m.transacao?.valor ?? '';
     case 'tipo':          return m.transacao?.tipo ?? '';
-    case 'entidade':      return m.fatura?.entidade ?? '';
-    case 'descricaoSist': return m.fatura?.descricao ?? '';
-    case 'valorSist':     return m.fatura?.valor ?? '';
-    case 'dataSist':      return m.fatura?.data_documento ?? '';
-    case 'fonte':         return m.fatura?.fonte ?? '';
+    case 'entidade':      return isManual ? (m.classificacao?.nome || '') : (m.fatura?.entidade ?? '');
+    case 'descricaoSist': return isManual ? (m.observacao || m.transacao?.descricao || '') : (m.fatura?.descricao ?? '');
+    case 'valorSist':     return isManual ? (m.transacao?.valor ?? '') : (m.fatura?.valor ?? '');
+    case 'dataSist':      return isManual ? (m.transacao?.data ?? '') : (m.fatura?.data_documento ?? '');
+    case 'fonte':         return isManual ? 'manual' : (m.fatura?.fonte ?? '');
     case 'regra':         return m.rule ?? '';
-    case 'estado':        return m.fatura?.status ?? '';
+    case 'estado':        return isManual ? 'CONFIRMADO' : (m.fatura?.status === 'PAGO' ? 'PAGO' : 'RECONCILIADO');
     default:              return '';
   }
 }
@@ -116,6 +117,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
   const [colsM,  setColsM]  = useState(() => Object.fromEntries(COLS_MATCHED.map(c => [c.key, true])));
   const [colsOB, setColsOB] = useState(() => Object.fromEntries(COLS_ORPHAN_BANK.map(c => [c.key, true])));
   const [colsOS, setColsOS] = useState(() => Object.fromEntries(COLS_ORPHAN_SYS.map(c => [c.key, true])));
+  const [incluirTotalEntidade, setIncluirTotalEntidade] = useState(true);
 
   const isMulti = !!runs;
   const data = isMulti
@@ -205,7 +207,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
       ).join(';');
 
       const addEntityBlock = (items) => {
-        if (!getEntityFn || !items.length) return;
+        if (!incluirTotalEntidade || !getEntityFn || !items.length) return;
         const entRows = entityTotals(items, getValorFn, getEntityFn);
         lines.push([esc('Entidade'), esc('Movimentos'), esc('Total')].join(';'));
         entRows.forEach(([entity, { count, total }]) =>
@@ -225,7 +227,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
           lines.push('');
         }
         lines.push(totalRow('TOTAL GERAL', grand));
-        if (getEntityFn && allItems.length > 0) {
+        if (incluirTotalEntidade && getEntityFn && allItems.length > 0) {
           lines.push('');
           lines.push(esc('TOTAL GERAL POR ENTIDADE'));
           lines.push([esc('Entidade'), esc('Movimentos'), esc('Total')].join(';'));
@@ -236,7 +238,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
       } else {
         allItems.forEach(item => lines.push(activeCols.map(c => esc(getCellFn(item, c.key))).join(';')));
         if (valorIdx >= 0) lines.push(totalRow('TOTAL', sumValor(allItems, getValorFn)));
-        if (getEntityFn && allItems.length > 0) {
+        if (incluirTotalEntidade && getEntityFn && allItems.length > 0) {
           lines.push('');
           lines.push(esc('TOTAIS POR ENTIDADE'));
           for (const { label, items } of groupByMonth(allItems, getDateFn)) {
@@ -254,7 +256,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
       return lines.join('\n');
     };
 
-    if (secoes.matched)       parts.push(buildSection('RECONCILIADOS',  data.matched       || [], COLS_MATCHED.filter(c => colsM[c.key]),  getMatchedCell,    m => m.transacao?.data,        m => m.transacao?.valor, m => (m.fatura?.entidade || '').trim() || '(sem entidade)'), '');
+    if (secoes.matched)       parts.push(buildSection('RECONCILIADOS',  data.matched       || [], COLS_MATCHED.filter(c => colsM[c.key]),  getMatchedCell,    m => m.transacao?.data,        m => m.transacao?.valor, m => m.rule === 'confirmed_manual' ? (m.classificacao?.nome || 'Confirmado Manual') : (m.fatura?.entidade || '').trim() || '(sem entidade)'), '');
     if (secoes.orphan_bank)   parts.push(buildSection('ÓRFÃOS BANCO',   data.orphan_bank   || [], COLS_ORPHAN_BANK.filter(c => colsOB[c.key]), getOrphanBankCell, o => o.transacao?.data,        o => o.transacao?.valor, extractEntityBank), '');
     if (secoes.orphan_system) parts.push(buildSection('ÓRFÃOS SISTEMA', data.orphan_system || [], COLS_ORPHAN_SYS.filter(c => colsOS[c.key]),  getOrphanSysCell,  o => o.fatura?.data_documento, o => o.fatura?.valor,    o => (o.fatura?.entidade || '').trim() || '(sem entidade)'));
 
@@ -283,7 +285,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
       doc.setFontSize(8); doc.setTextColor(80); doc.text(title, 14, curY); curY += 3;
 
       const addEntityPdfBlock = (items) => {
-        if (!getEntityFn || !items.length) return;
+        if (!incluirTotalEntidade || !getEntityFn || !items.length) return;
         const entRows = entityTotals(items, getValorFn, getEntityFn);
         autoTable(doc, {
           startY: curY,
@@ -325,7 +327,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
           styles: { fontSize: 8, cellPadding: 2, fontStyle: 'bold', fillColor: [224, 231, 255], textColor: [30, 41, 59] },
         });
         curY = doc.lastAutoTable.finalY + 4;
-        if (getEntityFn && allItems.length > 0) {
+        if (incluirTotalEntidade && getEntityFn && allItems.length > 0) {
           doc.setFontSize(7); doc.setTextColor(60); doc.setFont(undefined, 'bold'); doc.text('Total Geral por Entidade', 14, curY); doc.setFont(undefined, 'normal'); curY += 3;
           addEntityPdfBlock(allItems);
         }
@@ -344,7 +346,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
           didParseCell: d => { if (d.section === 'body' && d.row.index === body.length - 1) { d.cell.styles.fillColor = [241, 245, 249]; d.cell.styles.fontStyle = 'bold'; } },
         });
         curY = doc.lastAutoTable.finalY + 4;
-        if (getEntityFn && allItems.length > 0) {
+        if (incluirTotalEntidade && getEntityFn && allItems.length > 0) {
           doc.setFontSize(7); doc.setTextColor(100); doc.text('Totais por Entidade', 14, curY); curY += 3;
           for (const { label, items } of groupByMonth(allItems, getDateFn)) {
             doc.setFontSize(6.5); doc.setTextColor(80); doc.text(label, 14, curY); curY += 2;
@@ -357,7 +359,7 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
       }
     };
 
-    if (secoes.matched)       addPdfSection('RECONCILIADOS',  data.matched       || [], COLS_MATCHED.filter(c => colsM[c.key]),  getMatchedCell,    m => m.transacao?.data,        m => m.transacao?.valor, [79, 70, 229],  m => (m.fatura?.entidade || '').trim() || '(sem entidade)');
+    if (secoes.matched)       addPdfSection('RECONCILIADOS',  data.matched       || [], COLS_MATCHED.filter(c => colsM[c.key]),  getMatchedCell,    m => m.transacao?.data,        m => m.transacao?.valor, [79, 70, 229],  m => m.rule === 'confirmed_manual' ? (m.classificacao?.nome || 'Confirmado Manual') : (m.fatura?.entidade || '').trim() || '(sem entidade)');
     if (secoes.orphan_bank)   addPdfSection('ÓRFÃOS BANCO',   data.orphan_bank   || [], COLS_ORPHAN_BANK.filter(c => colsOB[c.key]), getOrphanBankCell, o => o.transacao?.data,        o => o.transacao?.valor, [217, 119, 6],  extractEntityBank);
     if (secoes.orphan_system) addPdfSection('ÓRFÃOS SISTEMA', data.orphan_system || [], COLS_ORPHAN_SYS.filter(c => colsOS[c.key]),  getOrphanSysCell,  o => o.fatura?.data_documento, o => o.fatura?.valor,    [225, 29, 72],  o => (o.fatura?.entidade || '').trim() || '(sem entidade)');
 
@@ -428,6 +430,15 @@ function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Opções</p>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={incluirTotalEntidade} onChange={() => setIncluirTotalEntidade(p => !p)}
+              className="accent-indigo-600 w-4 h-4" />
+            <span className="text-xs text-slate-600 font-medium">Incluir total por entidade</span>
+          </label>
         </div>
 
         <div className="space-y-5">
