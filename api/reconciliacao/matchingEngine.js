@@ -100,8 +100,10 @@ export function runMatchingEngine(transacoes, faturas, aliases = []) {
       if (!entNorm) return false;
       // Match directo na descrição completa
       if (descFullNorm.includes(entNorm)) return true;
-      // Match na parte extraída (após "TRF IMEDIATA DE", etc.)
-      if (extractedNorm.includes(entNorm) || entNorm.includes(extractedNorm)) return true;
+      // Match na parte extraída (após "TRF IMEDIATA DE", etc.) — só se o nome tiver >=3 chars
+      if (extractedNorm.length >= 3 && entNorm.length >= 3) {
+        if (extractedNorm.includes(entNorm) || entNorm.includes(extractedNorm)) return true;
+      }
       // Match por alias guardado
       const hasAlias = aliases.some(a =>
         normalizeEntityName(a.bank_name) === extractedNorm &&

@@ -2352,24 +2352,58 @@ export default function ReconciliacaoAdmin() {
       {/* ── Gestão de Aliases ─────────────────────────────────────────── */}
       {showAliases && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 space-y-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-violet-600">Aliases de Entidade</h3>
               <button onClick={() => setShowAliases(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
             </div>
-            <p className="text-xs text-slate-500">Mapeamentos entre nomes bancários e entidades do sistema para match automático.</p>
-            {aliases.length === 0 && <p className="text-center text-slate-400 py-6 text-sm">Nenhum alias guardado.</p>}
-            {aliases.map(a => (
-              <div key={a.id} className="flex items-center gap-3 bg-violet-50 rounded-xl p-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-700 truncate">{a.bank_name}</p>
-                  <p className="text-[10px] text-violet-600 font-black uppercase tracking-widest truncate">→ {a.system_entity}</p>
-                </div>
-                <button onClick={() => apagarAlias(a.id)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors flex-shrink-0">
-                  <Trash2 size={14} />
-                </button>
+            <p className="text-xs text-slate-500">Liga o nome que aparece no banco ao nome da entidade no sistema. Usado para match automático em futuras importações.</p>
+
+            {/* Formulário de adição directa */}
+            <div className="bg-violet-50 rounded-2xl p-4 space-y-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-violet-500">Adicionar alias</p>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome no banco (ex: A&G Steel Building Sl)</label>
+                <input id="alias-bank" placeholder="Como aparece no extrato bancário"
+                  className="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
               </div>
-            ))}
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidade no sistema</label>
+                <input id="alias-system" placeholder="Nome exacto da entidade no sistema"
+                  className="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              </div>
+              <button onClick={async () => {
+                const bankName = document.getElementById('alias-bank')?.value?.trim();
+                const sysEntity = document.getElementById('alias-system')?.value?.trim();
+                if (!bankName || !sysEntity) return;
+                const { data: newAlias, error } = await supabase
+                  .from('reconciliacao_entity_aliases')
+                  .upsert({ bank_name: bankName, system_entity: sysEntity }, { onConflict: 'bank_name,system_entity' })
+                  .select().single();
+                if (!error && newAlias) {
+                  setAliases(prev => [newAlias, ...prev.filter(a => a.id !== newAlias.id)]);
+                  document.getElementById('alias-bank').value = '';
+                  document.getElementById('alias-system').value = '';
+                }
+              }} className="w-full py-2 bg-violet-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-violet-700 transition-all">
+                Guardar Alias
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {aliases.length === 0 && <p className="text-center text-slate-400 py-4 text-sm">Nenhum alias guardado.</p>}
+              {aliases.map(a => (
+                <div key={a.id} className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-700 truncate">{a.bank_name}</p>
+                    <p className="text-[10px] text-violet-600 font-black uppercase tracking-widest truncate">→ {a.system_entity}</p>
+                  </div>
+                  <button onClick={() => apagarAlias(a.id)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors flex-shrink-0">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
