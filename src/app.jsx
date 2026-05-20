@@ -405,31 +405,31 @@ export default function App() {
         const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
         const modalLinkUnico = clienteSelecionado.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${clienteSelecionado.id}&month=${monthStr}`;
         return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] shadow-2xl border border-indigo-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300">
-              <div className="flex justify-between items-center p-6 border-b border-slate-100">
-                <h3 className="font-black text-xl text-slate-800 flex items-center gap-3"><Mail size={24} className="text-indigo-600" /> Disparar E-mail para {clienteSelecionado.name}</h3>
-                <button onClick={() => setModalEmailAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X size={20} /></button>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-indigo-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">
+              <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-slate-100 shrink-0">
+                <h3 className="font-black text-sm sm:text-base text-slate-800 flex items-center gap-2"><Mail size={18} className="text-indigo-600 shrink-0" /> <span className="truncate">E-mail para {clienteSelecionado.name}</span></h3>
+                <button onClick={() => setModalEmailAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"><X size={18} /></button>
               </div>
-              <div className="p-6 bg-slate-50 space-y-4">
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">De:</span><span className="font-medium text-slate-700">nao-responder@magneticplace.pt</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Para:</span><span className="font-bold text-indigo-700">{clienteSelecionado.email || 'cliente@exemplo.pt'}</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Assunto:</span><span className="font-medium text-slate-700">Aprovação de Horas Magnetic Place - {currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</span></div>
+              <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3 overflow-y-auto flex-1 min-h-0">
+                <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">De:</span><span className="font-medium text-slate-700 text-xs truncate">nao-responder@magneticplace.pt</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Para:</span><span className="font-bold text-indigo-700 text-xs truncate">{clienteSelecionado.email || 'cliente@exemplo.pt'}</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Assunto:</span><span className="font-medium text-slate-700 text-xs leading-tight">Aprovação de Horas Magnetic Place - {currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</span></div>
                 </div>
-                <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
-                  <div className="flex justify-center mb-8 pb-6 border-b-2 border-slate-50"><img src="/MAGNETIC (3).png" alt="Logo" className="h-10 object-contain" /></div>
-                  <h4 className="font-black text-lg text-slate-800 mb-4">Olá {clienteSelecionado.name},</h4>
-                  <p className="text-slate-600 text-sm leading-relaxed mb-6">Os relatórios de serviço referentes ao período de <strong className="font-black text-indigo-700">{currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</strong> já estão disponíveis para a sua revisão e aprovação.</p>
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-6 mb-8"><p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Total Registado</p><p className="text-2xl font-black text-indigo-700">{formatHours(logs.filter(l => l.clientId === clienteSelecionado.id).reduce((acc, l) => acc + l.hours, 0))} <span className="text-base font-bold">horas</span></p></div>
-                  <p className="text-slate-500 text-xs leading-relaxed mb-8">Para rever em detalhe as datas, horas, e trabalhadores associados a este período, por favor utilize o botão abaixo:</p>
-                  <div className="text-center mb-10"><div className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200">Aceder ao Portal de Validação</div></div>
-                  <div className="pt-8 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Equipa Magnetic Place</p></div>
+                <div className="bg-white rounded-2xl p-4 sm:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+                  <div className="flex justify-center mb-4 sm:mb-8 pb-4 sm:pb-6 border-b-2 border-slate-50"><img src="/MAGNETIC (3).png" alt="Logo" className="h-8 sm:h-10 object-contain" /></div>
+                  <h4 className="font-black text-base sm:text-lg text-slate-800 mb-3">Olá {clienteSelecionado.name},</h4>
+                  <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4">Os relatórios de serviço referentes ao período de <strong className="font-black text-indigo-700">{currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</strong> já estão disponíveis para a sua revisão e aprovação.</p>
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-4"><p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Total Registado</p><p className="text-xl sm:text-2xl font-black text-indigo-700">{formatHours(logs.filter(l => l.clientId === clienteSelecionado.id).reduce((acc, l) => acc + l.hours, 0))} <span className="text-sm sm:text-base font-bold">horas</span></p></div>
+                  <p className="text-slate-500 text-xs leading-relaxed mb-4">Para rever em detalhe as datas, horas, e trabalhadores associados a este período, por favor utilize o botão abaixo:</p>
+                  <div className="text-center mb-4"><div className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200">Aceder ao Portal de Validação</div></div>
+                  <div className="pt-4 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Equipa Magnetic Place</p></div>
                 </div>
               </div>
-              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-white">
-                <button onClick={() => setModalEmailAberto(false)} disabled={isSendingEmail} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
-                <button onClick={handleDisparoEmail} disabled={isSendingEmail} className="px-6 py-3 rounded-xl font-black text-xs uppercase text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50">{isSendingEmail ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><Send size={16} /> Confirmar e Disparar</>}</button>
+              <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-white shrink-0 rounded-b-[2rem]">
+                <button onClick={() => setModalEmailAberto(false)} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
+                <button onClick={handleDisparoEmail} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50">{isSendingEmail ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><Send size={16} /> Confirmar e Disparar</>}</button>
               </div>
             </div>
           </div>
@@ -439,34 +439,34 @@ export default function App() {
         const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id));
         const monthLabel = (rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim();
         return (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-            <div className="bg-white rounded-[2rem] shadow-2xl border border-rose-100 w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-300">
-              <div className="flex justify-between items-center p-6 border-b border-rose-100">
-                <h3 className="font-black text-xl text-rose-600 flex items-center gap-3"><XCircle size={24} /> Rejeitar Correção</h3>
-                <button onClick={() => setModalRejeitarAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X size={20} /></button>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-rose-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">
+              <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-rose-100 shrink-0">
+                <h3 className="font-black text-sm sm:text-base text-rose-600 flex items-center gap-2"><XCircle size={18} className="shrink-0" /> Rejeitar Correção</h3>
+                <button onClick={() => setModalRejeitarAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"><X size={18} /></button>
               </div>
-              <div className="p-6 bg-slate-50 space-y-4">
-                <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm space-y-2">
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Para:</span><span className="font-bold text-rose-700">{targetClient?.name || 'Cliente'}</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">E-mail:</span><span className="font-medium text-slate-700">{targetClient?.email || 'Não definido'}</span></div>
-                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16">Período:</span><span className="font-medium text-slate-700">{monthLabel || rejeitarNotif.payload?.month || ''}</span></div>
+              <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3 overflow-y-auto flex-1 min-h-0">
+                <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm space-y-2">
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Para:</span><span className="font-bold text-rose-700 text-xs truncate">{targetClient?.name || 'Cliente'}</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">E-mail:</span><span className="font-medium text-slate-700 text-xs truncate">{targetClient?.email || 'Não definido'}</span></div>
+                  <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Período:</span><span className="font-medium text-slate-700 text-xs">{monthLabel || rejeitarNotif.payload?.month || ''}</span></div>
                 </div>
-                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Motivo da Rejeição *</label>
-                  <textarea value={rejeitarMotivo} onChange={e => setRejeitarMotivo(e.target.value)} placeholder="Descreva o motivo pelo qual esta correção está a ser rejeitada..." rows={4} className="w-full border border-slate-200 rounded-xl p-4 text-sm outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 resize-none" />
+                  <textarea value={rejeitarMotivo} onChange={e => setRejeitarMotivo(e.target.value)} placeholder="Descreva o motivo pelo qual esta correção está a ser rejeitada..." rows={4} className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 resize-none" />
                   <p className="text-[10px] text-slate-400 mt-2 text-right">{rejeitarMotivo.length} caracteres (mínimo 10)</p>
                 </div>
-                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4">
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-3">
                   <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest mb-2">Pré-visualização do E-mail</p>
-                  <div className="bg-white rounded-lg p-4 text-sm space-y-2">
-                    <p className="font-bold text-slate-800">Assunto: Reporte de Divergência Rejeitado: {monthLabel || ''}</p>
+                  <div className="bg-white rounded-lg p-3 text-sm space-y-2">
+                    <p className="font-bold text-slate-800 text-xs">Assunto: Reporte de Divergência Rejeitado: {monthLabel || ''}</p>
                     <p className="text-slate-600 text-xs leading-relaxed">{rejeitarMotivo.trim().length >= 10 ? <>O seu reporte de divergência referente ao período de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br /><br /><strong>Motivo:</strong> {rejeitarMotivo.trim()}</> : <span className="text-amber-500">Aguarde... Insira o motivo da rejeição.</span>}</p>
                   </div>
                 </div>
               </div>
-              <div className="p-6 border-t border-slate-100 flex justify-end gap-3 bg-white">
-                <button onClick={() => setModalRejeitarAberto(false)} className="px-6 py-3 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
-                <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-6 py-3 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar Rejeição</button>
+              <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-white shrink-0 rounded-b-[2rem]">
+                <button onClick={() => setModalRejeitarAberto(false)} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
+                <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar Rejeição</button>
               </div>
             </div>
           </div>
