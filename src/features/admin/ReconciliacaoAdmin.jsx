@@ -576,17 +576,42 @@ function previousMonth(dateStr) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+const LEGAL_SUFFIXES = /\b(lda|unipessoal|s\.?a\.?|ltd|lda\.|plc|inc|corp|sl|srl|bv)\b\.?/gi;
+
 function normStrClient(s) {
-  return String(s).toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  return String(s)
+    .toLowerCase().trim()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // remover diacríticos
+    .replace(/[.,\-_/\\()'"]/g, ' ')                    // pontuação → espaço
+    .replace(LEGAL_SUFFIXES, '')                         // sufixos legais
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Extrai tokens significativos (3+ chars) de um nome
+function sigTokens(name) {
+  return normStrClient(name).split(' ').filter(w => w.length >= 3);
 }
 
 function matchClientByDesc(descricao, clients) {
   const descNorm = normStrClient(descricao || '');
+  let bestMatch = null;
+  let bestScore = 0;
+
   for (const client of (clients || [])) {
-    const clientNorm = normStrClient(client.name || '');
-    if (clientNorm.length >= 3 && descNorm.includes(clientNorm)) return client;
+    const tokens = sigTokens(client.name || '');
+    if (tokens.length === 0) continue;
+
+    // Conta quantos tokens do nome do cliente aparecem na descrição
+    const hits = tokens.filter(t => descNorm.includes(t)).length;
+    const score = hits / tokens.length; // 0-1
+
+    // Exige pelo menos 75% dos tokens a corresponder (≥1 token sempre)
+    if (hits >= 1 && score >= 0.75 && score > bestScore) {
+      bestScore = score;
+      bestMatch = client;
+    }
   }
-  return null;
+  return bestMatch;
 }
 
 export default function ReconciliacaoAdmin() {
