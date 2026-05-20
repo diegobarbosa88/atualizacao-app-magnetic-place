@@ -267,6 +267,23 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
     return Number(items.reduce((acc, it) => acc + itemDelta(it), 0).toFixed(2));
   }, [items]);
 
+  const precisionInitialEntries = useMemo(() => {
+    if (correction.type !== 'precision') return {};
+    const result = {};
+    items.forEach((item) => {
+      const kind = detectKind(item);
+      if (!result[item.worker_id]) result[item.worker_id] = {};
+      if (kind === 'new') {
+        result[item.worker_id][item.date] = { kind: 'new', values: item.proposed };
+      } else if (kind === 'remove') {
+        result[item.worker_id][item.date] = { kind: 'remove' };
+      } else {
+        result[item.worker_id][item.date] = { kind: 'edit', changes: item.proposed };
+      }
+    });
+    return result;
+  }, [correction.type, items]);
+
   const onApply = async () => {
     if (!canApply) return;
     if (!confirm(`Aplicar ${resolved} alteração(ões) ao relatório de ${clientName}?`)) return;
@@ -448,34 +465,45 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         </>
       )}
 
-      {(correction.type !== 'quick' || isClosed) && (
-        <>
-          <div className="space-y-3">
-            {items.length === 0 && (
-              <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm text-slate-500">
-                {correction.type === 'quick'
-                  ? 'Correção rápida sem alterações aplicadas (apenas mensagem do cliente).'
-                  : 'Sem items detalhados.'}
-              </div>
-            )}
-            {items.map((it) => (
-              <ItemRow key={it.id} item={it} supabase={supabase} disabled={isClosed} setCorrectionItems={setCorrectionItems} />
-            ))}
+      {correction.type === 'precision' && !isClosed && (
+        <div className="bg-white rounded-3xl border border-slate-100 p-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Editor</p>
+              <p className="text-sm text-slate-600">As alterações do cliente estão pré-carregadas. Pode modificar antes de aplicar.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-slate-700 hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Marcar como Resolvido</button>
+              <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+            </div>
           </div>
+          <StepPrecision
+            workers={clientWorkers}
+            logs={logs}
+            month={correction.month}
+            busy={busy}
+            showBack={false}
+            showJustification={false}
+            submitLabel="Aplicar Alterações ao Relatório"
+            initialEntries={precisionInitialEntries}
+            onSubmit={onQuickApplyDraft}
+          />
+        </div>
+      )}
 
-          {!isClosed && correction.type !== 'quick' && (
-            <div className="sticky bottom-4 bg-white rounded-2xl border border-slate-100 p-4 shadow-lg flex items-center justify-between gap-3">
-              <div className="text-xs text-slate-500">
-                {total > 0 && !canApply && <>Resolva todos os {total} items antes de aplicar.</>}
-                {canApply && <>Pronto para aplicar.</>}
-              </div>
-              <div className="flex gap-2">
-                <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar Tudo</button>
-                <button onClick={onApply} disabled={busy || !canApply} className="px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aplicar</button>
-              </div>
+      {isClosed && (
+        <div className="space-y-3">
+          {items.length === 0 && (
+            <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm text-slate-500">
+              {correction.type === 'quick'
+                ? 'Correção rápida sem alterações aplicadas (apenas mensagem do cliente).'
+                : 'Sem items detalhados.'}
             </div>
           )}
-        </>
+          {items.map((it) => (
+            <ItemRow key={it.id} item={it} supabase={supabase} disabled={true} setCorrectionItems={setCorrectionItems} />
+          ))}
+        </div>
       )}
     </div>
   );
