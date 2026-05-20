@@ -41,8 +41,12 @@ test.describe('Smoke Test — App Magnetic', () => {
       /horários/i,
     ];
 
+    // Dismiss any notification banners that may block clicks
+    await page.locator('[class*="z-\\[9999\\]"] button').first().click({ force: true }).catch(() => {});
+    await page.waitForTimeout(500);
+
     for (const label of tabs) {
-      await page.getByRole('button', { name: label }).click();
+      await page.getByRole('button', { name: label }).click({ force: true });
       await page.waitForTimeout(800);
       await expect(page.locator('text=Something went wrong')).not.toBeVisible();
       await expect(page.locator('text=Cannot read')).not.toBeVisible();

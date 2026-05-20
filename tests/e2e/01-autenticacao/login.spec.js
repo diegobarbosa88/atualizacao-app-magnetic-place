@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { setMockData, createTestWorker } from '../support/test-setup.js';
+import { test, expect, setMockData, createTestWorker } from '../support/test-setup.js';
 
 test.describe('Autenticação', () => {
   test.beforeEach(async ({ page }) => {
@@ -89,7 +88,7 @@ test.describe('Autenticação', () => {
       id: 'w_worker_001',
       name: 'João Silva',
       nif: '987654321',
-      status: 'inativo',
+      is_active: false,
     });
     setMockData([worker], [], [], []);
 

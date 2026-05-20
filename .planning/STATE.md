@@ -1,3 +1,16 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: | 5 | Correção do Sistema de Reports | Complete |
+status: unknown
+last_updated: "2026-05-20T17:48:19.748Z"
+progress:
+  total_phases: 11
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+---
+
 # State: app-magnetic
 
 **Project:** app-magnetic
@@ -22,11 +35,13 @@ See: .planning/PROJECT.md (updated 2026-05-12)
 ## Milestone v3.0 — Automação de Documentos Contratuais
 
 ### Target Features
+
 - Editor de blocos JSON (Gestor/HR) — adicionar, remover, reordenar blocos com variáveis `{{variavel}}`
 - Viewer responsivo (Trabalhador) — renderizar HTML, substituir variáveis, botão "Assinar Digitalmente"
 - Motor PDF com pdfmake — mapeamento JSON→docDefinition, signature unbreakable, margens 50/60mm
 
 ### Key Decisions
+
 - pdfmake para geração de PDF (não html2canvas/jsPDF)
 - Editor de blocos JSON como formato de armazenamento do documento
 - Variáveis dinâmicas com syntax `{{variavel}}`

@@ -1,12 +1,24 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download } from 'lucide-react';
+import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download, Link2, Loader2, CheckCircle, Plus } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
 
 const CostReports = () => {
-  const { workers, clients, logs, expenses, saveToDb, handleDelete } = useApp();
-  
+  const { workers, clients, logs, expenses, saveToDb, handleDelete, supabase } = useApp();
+
   const [activeTab, setActiveTab] = useState('workers');
+
+  // ── Pagamentos bancários por cliente ─────────────────────────────────────
+  const [pagamentos, setPagamentos] = useState([]);           // faturacao_clientes_pagamentos para o período
+  const [pagamentosLoading, setPagamentosLoading] = useState(false);
+
+  // ── Modal de associação ───────────────────────────────────────────────────
+  const [linkModal, setLinkModal] = useState(null);           // { clientId, clientName, valorFaturado }
+  const [runsLista, setRunsLista] = useState([]);
+  const [runsLoading, setRunsLoading] = useState(false);
+  const [selectedRun, setSelectedRun] = useState(null);       // { id, filename, results_json }
+  const [runLoading, setRunLoading] = useState(false);
+  const [linkSaving, setLinkSaving] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(
     new Date().toISOString().substring(0, 7)
   );
@@ -14,6 +26,102 @@ const CostReports = () => {
   const [expenseForm, setExpenseForm] = useState({ 
     id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) 
   });
+
+  // Carregar pagamentos bancários para o mês seleccionado
+  const carregarPagamentos = useCallback(async () => {
+    if (!supabase) return;
+    setPagamentosLoading(true);
+    const { data } = await supabase
+      .from('faturacao_clientes_pagamentos')
+      .select('*')
+      .eq('period', selectedMonth);
+    setPagamentos(data || []);
+    setPagamentosLoading(false);
+  }, [supabase, selectedMonth]);
+
+  useEffect(() => { carregarPagamentos(); }, [carregarPagamentos]);
+
+  // Helpers de pagamento
+  const pagamentosDoCliente = (clientId) => pagamentos.filter(p => p.client_id === clientId);
+  const totalPagoCli = (clientId) => pagamentosDoCliente(clientId).reduce((s, p) => s + Number(p.valor_pago || 0), 0);
+  const estadoPagamento = (clientId, valorFaturado) => {
+    const total = totalPagoCli(clientId);
+    if (total <= 0) return 'PENDENTE';
+    if (total >= valorFaturado - 0.01) return 'PAGO';
+    return 'PARCIAL';
+  };
+
+  // Abrir modal de associação
+  const abrirLinkModal = async (clientId, clientName, valorFaturado) => {
+    setLinkModal({ clientId, clientName, valorFaturado });
+    setSelectedRun(null);
+    setRunsLoading(true);
+    const { data } = await supabase
+      .from('reconciliation_runs')
+      .select('id, filename, created_at, transaction_count')
+      .order('created_at', { ascending: false })
+      .limit(30);
+    setRunsLista(data || []);
+    setRunsLoading(false);
+  };
+
+  const selecionarRun = async (runId) => {
+    if (!runId) { setSelectedRun(null); return; }
+    setRunLoading(true);
+    const { data } = await supabase
+      .from('reconciliation_runs')
+      .select('id, filename, results_json')
+      .eq('id', runId)
+      .single();
+    setSelectedRun(data);
+    setRunLoading(false);
+  };
+
+  // Transações de crédito disponíveis no run seleccionado (ainda não associadas a este cliente/período)
+  const creditosDisponiveis = useMemo(() => {
+    if (!selectedRun?.results_json) return [];
+    const jaAssociados = new Set(
+      pagamentos
+        .filter(p => p.reconciliation_run_id === selectedRun.id)
+        .map(p => `${p.transaction_section}_${p.transaction_index}`)
+    );
+    const result = [];
+    const sections = [
+      { key: 'matched',     items: selectedRun.results_json.matched || [] },
+      { key: 'orphan_bank', items: selectedRun.results_json.orphan_bank || [] },
+    ];
+    for (const { key, items } of sections) {
+      items.forEach((item, idx) => {
+        const tx = item.transacao ?? item;
+        if (tx?.tipo === 'credito' && !jaAssociados.has(`${key}_${idx}`)) {
+          result.push({ section: key, index: idx, tx });
+        }
+      });
+    }
+    return result;
+  }, [selectedRun, pagamentos]);
+
+  const associarPagamento = async (section, index, tx) => {
+    if (!linkModal || !selectedRun) return;
+    setLinkSaving(true);
+    await supabase.from('faturacao_clientes_pagamentos').insert({
+      client_id: linkModal.clientId,
+      period: selectedMonth,
+      valor_faturado: linkModal.valorFaturado,
+      reconciliation_run_id: selectedRun.id,
+      transaction_section: section,
+      transaction_index: index,
+      transaction_data: tx,
+      valor_pago: Number(tx.valor),
+    });
+    await carregarPagamentos();
+    setLinkSaving(false);
+  };
+
+  const removerPagamento = async (pagId) => {
+    await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', pagId);
+    await carregarPagamentos();
+  };
 
   const monthOptions = useMemo(() => {
     const options = [];
@@ -362,23 +470,50 @@ const CostReports = () => {
                 <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Nome</th>
                 <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Total Horas</th>
                 <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Faturação (€)</th>
+                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Pago Banco</th>
+                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Estado</th>
               </tr>
             </thead>
             <tbody>
               {clientCosts.length === 0 ? (
-                <tr><td colSpan="3" className="py-16 text-center text-slate-400 text-sm font-medium">Sem dados para o período selecionado.</td></tr>
-              ) : clientCosts.map((item) => (
-                <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
-                  <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
-                  <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600">{item.totalHours.toFixed(1)}h</td>
-                  <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-sm font-black text-indigo-700">{formatCurrency(item.cost)}</td>
-                </tr>
-              ))}
+                <tr><td colSpan="5" className="py-16 text-center text-slate-400 text-sm font-medium">Sem dados para o período selecionado.</td></tr>
+              ) : clientCosts.map((item) => {
+                const estado = estadoPagamento(item.id, item.cost);
+                const totalPago = totalPagoCli(item.id);
+                return (
+                  <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
+                    <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
+                    <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600">{item.totalHours.toFixed(1)}h</td>
+                    <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-indigo-700">{formatCurrency(item.cost)}</td>
+                    <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-emerald-700">
+                      {totalPago > 0 ? formatCurrency(totalPago) : <span className="text-slate-300">—</span>}
+                    </td>
+                    <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${
+                          estado === 'PAGO'    ? 'bg-emerald-100 text-emerald-700' :
+                          estado === 'PARCIAL' ? 'bg-amber-100 text-amber-700' :
+                                                'bg-rose-100 text-rose-600'
+                        }`}>{estado}</span>
+                        <button
+                          onClick={() => abrirLinkModal(item.id, item.name, item.cost)}
+                          className="p-1 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all"
+                          title="Associar pagamento bancário"
+                        >
+                          <Link2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {clientCosts.length > 0 && (
                 <tr className="bg-slate-100/60">
                   <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
                   <td className="px-4 py-3 text-sm font-black text-slate-700">{clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
-                  <td className="px-4 py-3 rounded-r-2xl text-sm font-black text-indigo-700">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
+                  <td className="px-4 py-3 text-sm font-black text-indigo-700">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
+                  <td className="px-4 py-3 text-sm font-black text-emerald-700">{formatCurrency(pagamentos.reduce((s, p) => s + Number(p.valor_pago || 0), 0))}</td>
+                  <td className="px-4 py-3 rounded-r-2xl"></td>
                 </tr>
               )}
             </tbody>
@@ -562,6 +697,87 @@ const CostReports = () => {
 
         {renderTable()}
       </div>
+
+      {/* Modal: Associar Pagamento Bancário */}
+      {linkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Pagamentos Bancários</h3>
+                <p className="text-xs text-slate-400 mt-0.5">{linkModal.clientName} · {selectedMonth}</p>
+              </div>
+              <button onClick={() => setLinkModal(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all"><X size={16} /></button>
+            </div>
+
+            {/* Pagamentos já associados */}
+            {pagamentosDoCliente(linkModal.clientId).length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Associados</p>
+                {pagamentosDoCliente(linkModal.clientId).map(p => (
+                  <div key={p.id} className="flex items-center justify-between bg-emerald-50 rounded-2xl px-4 py-3">
+                    <div>
+                      <p className="text-sm font-bold text-emerald-800">{formatCurrency(p.valor_pago)}</p>
+                      <p className="text-[10px] text-slate-500">{p.transaction_data?.data} · {p.transaction_data?.descricao?.slice(0, 50)}</p>
+                    </div>
+                    <button onClick={() => removerPagamento(p.id)} className="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all"><X size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Seleccionar Run */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Adicionar pagamento de extrato</p>
+              {runsLoading ? (
+                <div className="flex items-center gap-2 text-slate-400 text-sm"><Loader2 size={14} className="animate-spin" /> A carregar extratos...</div>
+              ) : (
+                <select
+                  value={selectedRun?.id || ''}
+                  onChange={e => selecionarRun(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none"
+                >
+                  <option value="">Selecionar extrato bancário...</option>
+                  {runsLista.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.filename} · {new Date(r.created_at).toLocaleDateString('pt-PT')}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Transações de crédito do run */}
+            {runLoading && (
+              <div className="flex items-center gap-2 text-slate-400 text-sm"><Loader2 size={14} className="animate-spin" /> A carregar movimentos...</div>
+            )}
+            {selectedRun && !runLoading && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Entradas disponíveis ({creditosDisponiveis.length})
+                </p>
+                {creditosDisponiveis.length === 0 && (
+                  <p className="text-xs text-slate-400 italic">Sem transações de entrada disponíveis neste extrato.</p>
+                )}
+                {creditosDisponiveis.map(({ section, index, tx }) => (
+                  <button
+                    key={`${section}_${index}`}
+                    onClick={() => associarPagamento(section, index, tx)}
+                    disabled={linkSaving}
+                    className="w-full flex items-center justify-between bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
+                  >
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">{formatCurrency(Number(tx.valor))}</p>
+                      <p className="text-[10px] text-slate-500">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
+                    </div>
+                    {linkSaving ? <Loader2 size={13} className="animate-spin text-indigo-500" /> : <Plus size={14} className="text-indigo-400" />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

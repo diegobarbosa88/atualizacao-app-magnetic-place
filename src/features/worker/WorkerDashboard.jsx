@@ -395,14 +395,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 assignedClients={currentUser?.assignedClients}
                 onChange={setMainFormData}
                 onSave={() => {
-                  if (!mainFormData.clientId || !mainFormData.startTime || !mainFormData.endTime) {
-                    handleSaveEntry(mainFormData, true);
-                    return;
-                  }
                   handleSaveEntry(mainFormData, true);
-                  setSuccessMsg('Registo inserido com sucesso!');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                  setTimeout(() => setSuccessMsg(''), 6000);
+                  if (mainFormData.clientId && mainFormData.startTime && mainFormData.endTime) {
+                    setSuccessMsg('Registo inserido com sucesso!');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    setTimeout(() => setSuccessMsg(''), 6000);
+                  }
                 }}
                 onCancel={() => {
                   setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });

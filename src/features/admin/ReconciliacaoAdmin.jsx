@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
   AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight,
-  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag, Download, Unlink, Pencil
+  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag, Download, Unlink, Pencil, Link2
 } from 'lucide-react';
 
 const COR_MAP = {
@@ -565,7 +565,7 @@ function CsvMappingCard({ csvMapping, colMap, setColMap, previewing, confirmarMa
 }
 
 export default function ReconciliacaoAdmin() {
-  const { supabase } = useApp();
+  const { supabase, clients } = useApp();
 
   // ── Upload state ──────────────────────────────────────────────────────────
   const [ficheiros, setFicheiros] = useState([]);         // File[]
@@ -641,11 +641,77 @@ export default function ReconciliacaoAdmin() {
   });
   const [savingFatura, setSavingFatura] = useState(false);
 
+  // ── Associação a Cliente (Faturação) ──────────────────────────────────────
+  const [assocClienteModal, setAssocClienteModal] = useState(null); // { section, index, tx, runId }
+  const [assocClienteId, setAssocClienteId] = useState('');
+  const [assocPeriodo, setAssocPeriodo] = useState('');
+  const [assocSaving, setAssocSaving] = useState(false);
+  const [pagamentosLinks, setPagamentosLinks] = useState([]); // faturacao_clientes_pagamentos para o run actual
+
+  const carregarPagamentosLinks = async (runId) => {
+    if (!runId || !supabase) return;
+    const { data } = await supabase
+      .from('faturacao_clientes_pagamentos')
+      .select('*')
+      .eq('reconciliation_run_id', runId);
+    setPagamentosLinks(data || []);
+  };
+
+  const linkKey = (section, index) => `${section}_${index}`;
+  const txLinkInfo = (section, index) =>
+    pagamentosLinks.find(p => p.transaction_section === section && p.transaction_index === index);
+
+  const abrirAssociarCliente = (section, index, tx) => {
+    const runId = runSelecionado?.id ?? resultado?.run_id;
+    const txDate = tx?.data || '';
+    const defaultPeriod = txDate.length >= 7 ? txDate.substring(0, 7) : new Date().toISOString().substring(0, 7);
+    setAssocClienteModal({ section, index, tx, runId });
+    setAssocClienteId('');
+    setAssocPeriodo(defaultPeriod);
+  };
+
+  const salvarAssociacaoCliente = async () => {
+    if (!assocClienteModal || !assocClienteId || !assocPeriodo) return;
+    setAssocSaving(true);
+    const { section, index, tx, runId } = assocClienteModal;
+    const existente = txLinkInfo(section, index);
+    if (existente) {
+      await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
+    }
+    await supabase.from('faturacao_clientes_pagamentos').insert({
+      client_id: assocClienteId,
+      period: assocPeriodo,
+      reconciliation_run_id: runId,
+      transaction_section: section,
+      transaction_index: index,
+      transaction_data: tx,
+      valor_pago: Number(tx?.valor || 0),
+    });
+    await carregarPagamentosLinks(runId);
+    setAssocSaving(false);
+    setAssocClienteModal(null);
+  };
+
+  const removerAssociacaoCliente = async (section, index) => {
+    const existente = txLinkInfo(section, index);
+    if (!existente) return;
+    await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
+    const runId = runSelecionado?.id ?? resultado?.run_id;
+    await carregarPagamentosLinks(runId);
+  };
+
   // Carregar histórico e tags ao montar
   useEffect(() => {
     carregarHistorico();
     carregarTags();
   }, []);
+
+  // Carregar links de cliente quando muda o run activo
+  useEffect(() => {
+    const runId = runSelecionado?.id ?? resultado?.run_id;
+    if (runId) carregarPagamentosLinks(runId);
+    else setPagamentosLinks([]);
+  }, [runSelecionado?.id, resultado?.run_id]);
 
   // Restaurar estado de confirmações ao mudar de run (histórico ou novo upload)
   useEffect(() => {
@@ -1838,6 +1904,27 @@ export default function ReconciliacaoAdmin() {
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {item.transacao?.tipo === 'credito' && (() => {
+                        const link = txLinkInfo('matched', i);
+                        const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
+                        return link ? (
+                          <span
+                            title={`Associado a ${clientName} (${link.period})`}
+                            className="flex items-center gap-1 text-indigo-500 text-[9px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-full cursor-pointer hover:bg-rose-50 hover:text-rose-500"
+                            onClick={() => removerAssociacaoCliente('matched', i)}
+                          >
+                            <Link2 size={10} /> {clientName}
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => abrirAssociarCliente('matched', i, item.transacao)}
+                            title="Associar a cliente de faturação"
+                            className="p-1.5 rounded-xl text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"
+                          >
+                            <Link2 size={13} />
+                          </button>
+                        );
+                      })()}
                       {item.rule === 'confirmed_manual' ? (
                         <span className="flex items-center gap-1 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Confirmado
@@ -1978,6 +2065,27 @@ export default function ReconciliacaoAdmin() {
                           )}
                         </div>
                         <div className="flex-shrink-0 flex gap-2">
+                          {item.transacao?.tipo === 'credito' && (() => {
+                            const link = txLinkInfo('orphan_bank', i);
+                            const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
+                            return link ? (
+                              <span
+                                title={`Associado a ${clientName} (${link.period}) — clique para remover`}
+                                className="flex items-center gap-1 text-indigo-500 text-[9px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-full cursor-pointer hover:bg-rose-50 hover:text-rose-500"
+                                onClick={() => removerAssociacaoCliente('orphan_bank', i)}
+                              >
+                                <Link2 size={10} /> {clientName}
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => abrirAssociarCliente('orphan_bank', i, item.transacao)}
+                                title="Associar a cliente de faturação"
+                                className="flex items-center gap-1 border border-indigo-100 text-indigo-400 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                              >
+                                <Link2 size={12} /> Cliente
+                              </button>
+                            );
+                          })()}
                           <button onClick={() => abrirAssociarFatura(i, item.transacao)}
                             className="flex items-center gap-1 border border-indigo-200 text-indigo-600 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all">
                             <Tag size={12} /> Associar
@@ -2403,6 +2511,68 @@ export default function ReconciliacaoAdmin() {
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal — Associar Pagamento a Cliente de Faturação */}
+      {assocClienteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associar a Cliente</h3>
+                <p className="text-sm font-bold text-slate-800 mt-1">
+                  €{Number(assocClienteModal.tx?.valor || 0).toFixed(2)} · {assocClienteModal.tx?.data}
+                </p>
+                <p className="text-[10px] text-slate-400 truncate">{assocClienteModal.tx?.descricao}</p>
+              </div>
+              <button onClick={() => setAssocClienteModal(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</label>
+                <select
+                  value={assocClienteId}
+                  onChange={e => setAssocClienteId(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                  <option value="">Selecionar cliente...</option>
+                  {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período (AAAA-MM)</label>
+                <input
+                  type="month"
+                  value={assocPeriodo}
+                  onChange={e => setAssocPeriodo(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={salvarAssociacaoCliente}
+                disabled={!assocClienteId || !assocPeriodo || assocSaving}
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50"
+              >
+                {assocSaving ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
+                Associar
+              </button>
+              <button
+                onClick={() => setAssocClienteModal(null)}
+                className="px-4 py-2.5 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
+              >
+                Cancelar
+              </button>
             </div>
           </div>
         </div>
