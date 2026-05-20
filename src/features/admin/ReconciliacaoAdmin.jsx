@@ -564,6 +564,31 @@ function CsvMappingCard({ csvMapping, colMap, setColMap, previewing, confirmarMa
   );
 }
 
+// ── Utilitários de auto-associação ───────────────────────────────────────────
+function previousMonth(dateStr) {
+  if (!dateStr || dateStr.length < 7) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d.toISOString().substring(0, 7);
+  }
+  const [year, month] = dateStr.substring(0, 7).split('-').map(Number);
+  const d = new Date(year, month - 2);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function normStrClient(s) {
+  return String(s).toLowerCase().trim().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function matchClientByDesc(descricao, clients) {
+  const descNorm = normStrClient(descricao || '');
+  for (const client of (clients || [])) {
+    const clientNorm = normStrClient(client.name || '');
+    if (clientNorm.length >= 3 && descNorm.includes(clientNorm)) return client;
+  }
+  return null;
+}
+
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
 
@@ -641,6 +666,42 @@ export default function ReconciliacaoAdmin() {
   });
   const [savingFatura, setSavingFatura] = useState(false);
 
+  // ── Auto-associação de entradas a clientes ────────────────────────────────
+  const [autoAssociando, setAutoAssociando] = useState(false);
+
+  const autoAssociarEntradas = async (resultsJson, runId) => {
+    if (!supabase || !clients?.length || !runId) return 0;
+    const { data: existentes } = await supabase
+      .from('faturacao_clientes_pagamentos')
+      .select('transaction_section, transaction_index')
+      .eq('reconciliation_run_id', runId);
+    const jaAssociados = new Set((existentes || []).map(p => `${p.transaction_section}_${p.transaction_index}`));
+    const toInsert = [];
+    for (const { key, items } of [
+      { key: 'matched',     items: resultsJson.matched || [] },
+      { key: 'orphan_bank', items: resultsJson.orphan_bank || [] },
+    ]) {
+      items.forEach((item, idx) => {
+        const tx = item.transacao ?? item;
+        if (tx?.tipo !== 'credito') return;
+        if (jaAssociados.has(`${key}_${idx}`)) return;
+        const client = matchClientByDesc(tx.descricao, clients);
+        if (!client) return;
+        toInsert.push({
+          client_id: client.id,
+          period: previousMonth(tx.data),
+          reconciliation_run_id: runId,
+          transaction_section: key,
+          transaction_index: idx,
+          transaction_data: tx,
+          valor_pago: Number(tx.valor || 0),
+        });
+      });
+    }
+    if (toInsert.length > 0) await supabase.from('faturacao_clientes_pagamentos').insert(toInsert);
+    return toInsert.length;
+  };
+
   // ── Associação a Cliente (Faturação) ──────────────────────────────────────
   const [assocClienteModal, setAssocClienteModal] = useState(null); // { section, index, tx, runId }
   const [assocClienteId, setAssocClienteId] = useState('');
@@ -664,7 +725,7 @@ export default function ReconciliacaoAdmin() {
   const abrirAssociarCliente = (section, index, tx) => {
     const runId = runSelecionado?.id ?? resultado?.run_id;
     const txDate = tx?.data || '';
-    const defaultPeriod = txDate.length >= 7 ? txDate.substring(0, 7) : new Date().toISOString().substring(0, 7);
+    const defaultPeriod = previousMonth(txDate);
     setAssocClienteModal({ section, index, tx, runId });
     setAssocClienteId('');
     setAssocPeriodo(defaultPeriod);
@@ -989,6 +1050,10 @@ export default function ReconciliacaoAdmin() {
       setPreviewTransacoes(null);
       setFicheiros([]);
       carregarHistorico();
+      if (data.run_id) {
+        await autoAssociarEntradas(data, data.run_id);
+        await carregarPagamentosLinks(data.run_id);
+      }
     } catch (err) {
       setErro(err.message || 'Erro de rede.');
     } finally {
@@ -1795,6 +1860,24 @@ export default function ReconciliacaoAdmin() {
                 </button>
               ))}
             </div>
+            <button
+              onClick={async () => {
+                const runId = runSelecionado?.id ?? displayData?.run_id;
+                const rj = runSelecionado?.results_json ?? { matched: displayData?.matched || [], orphan_bank: displayData?.orphan_bank || [] };
+                if (!runId) return;
+                setAutoAssociando(true);
+                const n = await autoAssociarEntradas(rj, runId);
+                await carregarPagamentosLinks(runId);
+                setAutoAssociando(false);
+                if (n > 0) alert(`${n} entrada${n > 1 ? 's' : ''} associada${n > 1 ? 's' : ''} automaticamente.`);
+                else alert('Nenhuma nova entrada com cliente identificável.');
+              }}
+              disabled={autoAssociando}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
+              title="Associar automaticamente entradas bancárias a clientes (por nome na descrição)"
+            >
+              {autoAssociando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Auto
+            </button>
             <button onClick={() => setShowAliases(true)}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
               <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
@@ -2206,7 +2289,13 @@ export default function ReconciliacaoAdmin() {
                     .select('*')
                     .eq('id', run.id)
                     .single();
-                  if (data) setRunSelecionado(data);
+                  if (data) {
+                    setRunSelecionado(data);
+                    if (data.results_json) {
+                      await autoAssociarEntradas(data.results_json, data.id);
+                      await carregarPagamentosLinks(data.id);
+                    }
+                  }
                 }}
                 className={`w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer ${selHistorico.has(run.id) ? 'bg-indigo-50' : ''}`}
               >
