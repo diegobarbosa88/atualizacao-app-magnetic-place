@@ -776,6 +776,7 @@ export default function ReconciliacaoAdmin() {
     await carregarPagamentosLinks(runId);
     setAssocSaving(false);
     setAssocClienteModal(null);
+    if (section === 'orphan_bank') setActiveSubTab('matched');
   };
 
   const removerAssociacaoCliente = async (section, index) => {
@@ -1572,6 +1573,21 @@ export default function ReconciliacaoAdmin() {
     ? { ...runSelecionado.results_json, run_id: runSelecionado.id }
     : resultado;
 
+  const clientAssocMatched = pagamentosLinks
+    .filter(p => p.transaction_section === 'orphan_bank')
+    .map(p => ({
+      transacao: p.transaction_data,
+      fatura: null,
+      rule: 'client_association',
+      client_name: clients?.find(c => c.id === p.client_id)?.name || p.client_id,
+      period: p.period,
+      _orig_section: 'orphan_bank',
+      _orig_index: p.transaction_index,
+    }));
+  const orphanBankAssocSet = new Set(
+    pagamentosLinks.filter(p => p.transaction_section === 'orphan_bank').map(p => p.transaction_index)
+  );
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       {/* Header */}
@@ -1915,7 +1931,7 @@ export default function ReconciliacaoAdmin() {
 
           {/* Sub-tab: Reconciliados */}
           {activeSubTab === 'matched' && (() => {
-            const items = displayData.matched || [];
+            const items = [...(displayData.matched || []), ...clientAssocMatched];
             const faturaIdCount = items.reduce((acc, m) => { if (m.fatura?.id) acc[m.fatura.id] = (acc[m.fatura.id] || 0) + 1; return acc; }, {});
             const allPendentes = items.filter(m => m.fatura?.status !== 'PAGO');
             return (
@@ -1941,7 +1957,7 @@ export default function ReconciliacaoAdmin() {
                 )}
                 {items.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-4">
-                    {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && (
+                    {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && item.rule !== 'client_association' && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                         className="accent-emerald-600 w-4 h-4 flex-shrink-0" />
@@ -1952,9 +1968,14 @@ export default function ReconciliacaoAdmin() {
                         <span className="text-sm font-bold text-slate-700">€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
                         <span className="text-[10px] text-slate-400">{item.transacao?.data}</span>
                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                          {item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
+                          {item.rule === 'client_association' ? 'Banco' : item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                         </span>
-                        <span className="text-[10px] text-slate-500">{item.fatura?.entidade}</span>
+                        <span className="text-[10px] text-slate-500">
+                          {item.rule === 'client_association' ? item.client_name : item.fatura?.entidade}
+                        </span>
+                        {item.rule === 'client_association' && (
+                          <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">cliente · {item.period}</span>
+                        )}
                         {item.rule === 'confirmed_manual' && (
                           <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">confirmado</span>
                         )}
@@ -2013,6 +2034,17 @@ export default function ReconciliacaoAdmin() {
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                       {item.transacao?.tipo === 'credito' && (() => {
+                        if (item.rule === 'client_association') {
+                          return (
+                            <span
+                              title={`Associado a ${item.client_name} (${item.period}) — clique para remover`}
+                              className="flex items-center gap-1 text-indigo-500 text-[9px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-full cursor-pointer hover:bg-rose-50 hover:text-rose-500"
+                              onClick={() => removerAssociacaoCliente(item._orig_section, item._orig_index)}
+                            >
+                              <Link2 size={10} /> {item.client_name}
+                            </span>
+                          );
+                        }
                         const link = txLinkInfo('matched', i);
                         const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
                         return link ? (
@@ -2072,8 +2104,8 @@ export default function ReconciliacaoAdmin() {
 
           {/* Sub-tab: Órfãos Banco */}
           {activeSubTab === 'orphan_bank' && (() => {
-            const items = (displayData.orphan_bank || []).filter((_, i) => !confirmedOrphans.has(i));
-            const allIndices = (displayData.orphan_bank || []).map((_, i) => i).filter(i => !confirmedOrphans.has(i));
+            const items = (displayData.orphan_bank || []).filter((_, i) => !confirmedOrphans.has(i) && !orphanBankAssocSet.has(i));
+            const allIndices = (displayData.orphan_bank || []).map((_, i) => i).filter(i => !confirmedOrphans.has(i) && !orphanBankAssocSet.has(i));
             return (
               <div className="space-y-3">
                 {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Sem transações sem correspondência.</p>}
