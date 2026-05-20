@@ -526,7 +526,7 @@ function AdminDashboard(props) {
           </div>
           <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
             {/* Correções de clientes — laranja */}
-            {notificacoesDeCorrecao.filter(n => !viewedCorrections.includes(n.id)).map(corr => {
+            {notificacoesDeCorrecao.filter(n => !(n.viewed_by_admin_ids || []).includes(currentUser?.id)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
                 <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); setSelectedCorrectionId(corr.id); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
@@ -556,7 +556,7 @@ function AdminDashboard(props) {
               );
             })}
             {/* Notificações gerais — cor por tipo */}
-            {appNotifications.filter(n => !readNotifIds.includes(n.id)).map(notif => {
+            {appNotifications.filter(n => !(n.read_by_admin_ids || []).includes(currentUser?.id)).map(notif => {
               const styles = notif.type === 'urgent'
                 ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Urgente' }
                 : notif.type === 'warning'
