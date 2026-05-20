@@ -903,7 +903,7 @@ export default function ReconciliacaoAdmin() {
       setResultado(data);
       setActiveSubTab('matched');
       setPreviewTransacoes(null);
-      setFicheiro(null);
+      setFicheiros([]);
       carregarHistorico();
     } catch (err) {
       setErro(err.message || 'Erro de rede.');
@@ -1045,50 +1045,47 @@ export default function ReconciliacaoAdmin() {
     const obsText = orphanObs.trim();
     const tag = selectedTag ? { nome: selectedTag.nome, cor: selectedTag.cor } : null;
 
-    // Actualizar estado de display imediatamente
-    setConfirmedOrphans(prev => { const s = new Set(prev); indices.forEach(i => s.add(i)); return s; });
-    if (obsText) setOrphanObservacoes(prev => { const n = { ...prev }; indices.forEach(i => { n[i] = obsText; }); return n; });
-    if (tag) setOrphanClassificacoes(prev => { const n = { ...prev }; indices.forEach(i => { n[i] = tag; }); return n; });
-
-    // Fechar modal
     setPendingOrphanConfirm(null);
     setOrphanObs('');
     setSelectedTag(null);
     setSelOrphan(new Set());
 
-    // Persistir no Supabase
     const runId = runSelecionado?.id ?? resultado?.run_id;
     if (!runId) return;
-
-    const sourceBank = runSelecionado
-      ? (runSelecionado.results_json?.orphan_bank || [])
-      : (resultado?.orphan_bank || []);
-
-    const newOrphanBank = sourceBank.map((item, i) =>
-      idxSet.has(i)
-        ? { ...item, confirmed: true, observacao: obsText || null, classificacao: tag }
-        : item
-    );
 
     const baseResults = runSelecionado?.results_json ?? {
       matched: resultado?.matched || [],
       orphan_bank: resultado?.orphan_bank || [],
       orphan_system: resultado?.orphan_system || [],
     };
-    const newResults = { ...baseResults, orphan_bank: newOrphanBank };
+
+    const sourceBank = baseResults.orphan_bank;
+    const newOrphanBank = sourceBank.filter((_, i) => !idxSet.has(i));
+    const newManualMatches = sourceBank
+      .filter((_, i) => idxSet.has(i))
+      .map(item => ({
+        transacao: item.transacao,
+        fatura: null,
+        rule: 'confirmed_manual',
+        observacao: obsText || null,
+        classificacao: tag,
+      }));
+
+    const newMatched = [...(baseResults.matched || []), ...newManualMatches];
+    const newResults = { ...baseResults, matched: newMatched, orphan_bank: newOrphanBank };
+
+    // Actualizar estado imediatamente (optimistic)
+    if (runSelecionado) {
+      setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+    } else {
+      setResultado(prev => ({ ...prev, matched: newMatched, orphan_bank: newOrphanBank }));
+    }
 
     const { error } = await supabase
       .from('reconciliation_runs')
       .update({ results_json: newResults })
       .eq('id', runId);
-    if (error) { console.error('Erro ao persistir confirmação:', error.message); return; }
-
-    // Actualizar estado local para reflectir no retorno do histórico
-    if (runSelecionado) {
-      setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-    } else {
-      setResultado(prev => ({ ...prev, orphan_bank: newOrphanBank }));
-    }
+    if (error) console.error('Erro ao persistir confirmação:', error.message);
   };
 
   // ── Associação Manual de Órfão Banco a Fatura ────────────────────────────
@@ -1251,8 +1248,10 @@ export default function ReconciliacaoAdmin() {
       };
 
       const newMatched      = base.matched.filter((_, i) => i !== matchIndex);
-      const newOrphanBank   = [...base.orphan_bank,   { transacao: matchItem.transacao, reason: 'desvinculado' }];
-      const newOrphanSystem = [...base.orphan_system, { fatura:    matchItem.fatura,    reason: 'desvinculado' }];
+      const newOrphanBank   = [...base.orphan_bank, { transacao: matchItem.transacao, reason: 'desvinculado' }];
+      const newOrphanSystem = matchItem.fatura
+        ? [...base.orphan_system, { fatura: matchItem.fatura, reason: 'desvinculado' }]
+        : base.orphan_system;
       const newResults = { matched: newMatched, orphan_bank: newOrphanBank, orphan_system: newOrphanSystem };
 
       // Reverter status se estiver PAGO
@@ -1716,7 +1715,7 @@ export default function ReconciliacaoAdmin() {
                 )}
                 {items.map((item, i) => (
                   <div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-4">
-                    {item.fatura?.status !== 'PAGO' && (
+                    {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                         className="accent-emerald-600 w-4 h-4 flex-shrink-0" />
@@ -1730,6 +1729,9 @@ export default function ReconciliacaoAdmin() {
                           {item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                         </span>
                         <span className="text-[10px] text-slate-500">{item.fatura?.entidade}</span>
+                        {item.rule === 'confirmed_manual' && (
+                          <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">confirmado</span>
+                        )}
                         {item.rule === 'manual' && (
                           <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">manual</span>
                         )}
@@ -1773,9 +1775,19 @@ export default function ReconciliacaoAdmin() {
                       {item.fatura?.descricao && (
                         <p className="text-xs text-slate-500 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
                       )}
+                      {item.rule === 'confirmed_manual' && (item.observacao || item.classificacao) && (
+                        <p className="text-xs text-slate-500 mt-0.5 truncate">
+                          {item.classificacao && <TagBadge nome={item.classificacao.nome} cor={item.classificacao.cor} />}
+                          {item.observacao && <span className="italic ml-1">{item.observacao}</span>}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
-                      {item.fatura?.status === 'PAGO' ? (
+                      {item.rule === 'confirmed_manual' ? (
+                        <span className="flex items-center gap-1 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
+                          <CheckCircle size={14} /> Confirmado
+                        </span>
+                      ) : item.fatura?.status === 'PAGO' ? (
                         <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Pago
                         </span>

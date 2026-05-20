@@ -1,6 +1,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X, Loader2, CheckCircle } from 'lucide-react';
 
+const getTrimmedDataURL = (canvas) => {
+  const ctx = canvas.getContext('2d');
+  const { width, height } = canvas;
+  const data = ctx.getImageData(0, 0, width, height).data;
+
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (data[(y * width + x) * 4 + 3] > 0) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  if (minX > maxX || minY > maxY) return canvas.toDataURL('image/png');
+
+  const pad = Math.round(12 * (window.devicePixelRatio || 1));
+  const cx = Math.max(0, minX - pad);
+  const cy = Math.max(0, minY - pad);
+  const cw = Math.min(width, maxX + pad) - cx;
+  const ch = Math.min(height, maxY + pad) - cy;
+
+  const tmp = document.createElement('canvas');
+  tmp.width = cw;
+  tmp.height = ch;
+  tmp.getContext('2d').drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+  return tmp.toDataURL('image/png');
+};
+
 const SignDrawModal = ({ onClose, onSign, workerName, working }) => {
   const canvasRef = useRef(null);
   const drawing = useRef(false);
@@ -78,7 +110,7 @@ const SignDrawModal = ({ onClose, onSign, workerName, working }) => {
   const submit = () => {
     if (!hasInk) { setError('Por favor, assina antes de confirmar.'); return; }
     setError('');
-    onSign(canvasRef.current.toDataURL('image/png'));
+    onSign(getTrimmedDataURL(canvasRef.current));
   };
 
   return (
