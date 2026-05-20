@@ -111,18 +111,21 @@ function AdminDashboard(props) {
     await saveToDb('workers', worker.id, { ...worker, isAdmin: false });
   };
 
-  // Tracking de leitura derivado do Supabase (coluna read_by_admin_ids em app_notifications)
+  // Estado otimista local — atualiza badge imediatamente sem esperar Supabase
+  const [optimisticReadIds, setOptimisticReadIds] = useState(new Set());
+  const [optimisticViewedCorrIds, setOptimisticViewedCorrIds] = useState(new Set());
+
+  const isRead = (n) => (n.read_by_admin_ids || []).includes(currentUser?.id) || optimisticReadIds.has(n.id);
+  const isViewed = (n) => (n.viewed_by_admin_ids || []).includes(currentUser?.id) || optimisticViewedCorrIds.has(n.id);
+
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
-  const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n =>
-    !(n.viewed_by_admin_ids || []).includes(currentUser?.id)
-  ).length;
-  const unreadCount = appNotifications.filter(n =>
-    !(n.read_by_admin_ids || []).includes(currentUser?.id)
-  ).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
+  const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n => !isViewed(n)).length;
+  const unreadCount = appNotifications.filter(n => !isRead(n)).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
 
-  // Marcar notificação como lida no Supabase
+  // Marcar notificação como lida — otimista imediato + Supabase async
   const markNotifRead = async (id) => {
+    setOptimisticReadIds(prev => new Set([...prev, id]));
     if (!currentUser?.id || !supabase) return;
     const notif = appNotifications.find(n => n.id === id);
     if (!notif) return;
@@ -133,8 +136,10 @@ function AdminDashboard(props) {
       .eq('id', id);
   };
 
-  // Marcar correções como vistas no Supabase
+  // Marcar correções como vistas — otimista imediato + Supabase async
   const markCorrectionsViewed = async (specificIds) => {
+    const ids = specificIds ?? notificacoesDeCorrecao.map(n => n.id);
+    setOptimisticViewedCorrIds(prev => new Set([...prev, ...ids]));
     if (!currentUser?.id || !supabase) return;
     const toMark = specificIds
       ? notificacoesDeCorrecao.filter(n => specificIds.includes(n.id))
@@ -151,8 +156,9 @@ function AdminDashboard(props) {
   // Auto-marcar lido ao abrir tab de notificações
   useEffect(() => {
     if (activeTab !== 'notificacoes' || !currentUser?.id || !supabase || !appNotifications.length) return;
-    const unread = appNotifications.filter(n => !(n.read_by_admin_ids || []).includes(currentUser.id));
+    const unread = appNotifications.filter(n => !isRead(n));
     if (!unread.length) return;
+    setOptimisticReadIds(prev => new Set([...prev, ...unread.map(n => n.id)]));
     Promise.all(unread.map(n => {
       const current = n.read_by_admin_ids || [];
       return supabase.from('app_notifications')
@@ -526,7 +532,7 @@ function AdminDashboard(props) {
           </div>
           <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
             {/* Correções de clientes — laranja */}
-            {notificacoesDeCorrecao.filter(n => !(n.viewed_by_admin_ids || []).includes(currentUser?.id)).map(corr => {
+            {notificacoesDeCorrecao.filter(n => !isViewed(n)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
                 <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); setSelectedCorrectionId(corr.id); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
@@ -556,7 +562,7 @@ function AdminDashboard(props) {
               );
             })}
             {/* Notificações gerais — cor por tipo */}
-            {appNotifications.filter(n => !(n.read_by_admin_ids || []).includes(currentUser?.id)).map(notif => {
+            {appNotifications.filter(n => !isRead(n)).map(notif => {
               const styles = notif.type === 'urgent'
                 ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Urgente' }
                 : notif.type === 'warning'
