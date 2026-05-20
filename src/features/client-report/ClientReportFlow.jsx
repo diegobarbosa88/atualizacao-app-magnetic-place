@@ -228,6 +228,25 @@ export const StepPrecision = ({
     return Number(delta.toFixed(2));
   }, [entries, workersWithDays]);
 
+  const workerTotals = useMemo(() => {
+    const result = {};
+    workersWithDays.forEach((w) => {
+      const orig = w.logs.reduce((acc, l) => acc + Number(l.hours || 0), 0);
+      let delta = 0;
+      Object.entries(entries[w.id] || {}).forEach(([date, entry]) => {
+        const existing = w.logs.find((l) => l.date === date);
+        const o = Number(existing?.hours || 0);
+        if (entry.kind === 'new') delta += hoursFor(entry.values);
+        else if (entry.kind === 'remove') delta -= o;
+        else if (entry.kind === 'edit') delta += hoursFor(entry.changes) - o;
+      });
+      result[w.id] = { orig: Number(orig.toFixed(2)), delta: Number(delta.toFixed(2)), proposed: Number((orig + delta).toFixed(2)) };
+    });
+    return result;
+  }, [entries, workersWithDays]);
+
+  const fmtH = (n) => `${Number(n.toFixed(1))}h`;
+
   const fmtDelta = (n) => {
     if (!n) return '0h';
     const sign = n > 0 ? '+' : '';
@@ -310,16 +329,25 @@ export const StepPrecision = ({
       {/* Worker tabs */}
       <div className="flex flex-wrap gap-2 mb-4">
         {workersWithDays.map((w) => {
-          const editedDays = Object.keys(entries[w.id] || {}).length;
+          const wt = workerTotals[w.id] || { orig: 0, delta: 0, proposed: 0 };
+          const hasEdits = wt.delta !== 0;
           const isActive = w.id === activeWorker;
           return (
             <button
               key={w.id}
               onClick={() => { setActiveWorker(w.id); setAddingNewDay(false); resetNewDayDraft(); }}
-              className={`px-3 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300'}`}
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-2 ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300'}`}
             >
-              {w.name}
-              {editedDays > 0 && <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{editedDays}</span>}
+              <span>{w.name}</span>
+              {hasEdits ? (
+                <span className={`text-[9px] flex items-center gap-1 ${isActive ? 'text-white/80' : 'text-amber-700'}`}>
+                  <s className="opacity-60">{fmtH(wt.orig)}</s>
+                  <span>→</span>
+                  <span className={isActive ? 'text-white font-black' : wt.delta > 0 ? 'text-emerald-600 font-black' : 'text-rose-600 font-black'}>{fmtH(wt.proposed)}</span>
+                </span>
+              ) : (
+                <span className={`text-[9px] ${isActive ? 'text-white/70' : 'text-slate-400'}`}>{fmtH(wt.orig)}</span>
+              )}
             </button>
           );
         })}
@@ -331,6 +359,27 @@ export const StepPrecision = ({
           <p className="text-slate-400 font-bold text-sm">Selecione um colaborador acima para começar.</p>
         </div>
       ) : (
+        <>
+        {/* Resumo total trabalhador */}
+        {(() => {
+          const wt = workerTotals[active.id] || { orig: 0, delta: 0, proposed: 0 };
+          return (
+            <div className={`flex items-center justify-between px-4 py-3 rounded-2xl mb-2 ${wt.delta !== 0 ? 'bg-amber-50 border border-amber-100' : 'bg-slate-50 border border-slate-100'}`}>
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{active.name} — Total do mês</span>
+              {wt.delta !== 0 ? (
+                <div className="flex items-center gap-2 text-sm font-black">
+                  <span className="text-slate-400 line-through">{fmtH(wt.orig)}</span>
+                  <span className="text-slate-400">→</span>
+                  <span className={wt.delta > 0 ? 'text-emerald-600' : 'text-rose-600'}>{fmtH(wt.proposed)}</span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${wt.delta > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{fmtDelta(wt.delta)}</span>
+                </div>
+              ) : (
+                <span className="text-sm font-black text-slate-700">{fmtH(wt.orig)}</span>
+              )}
+            </div>
+          );
+        })()}
+
         <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50">
 
           {/* Form para novo dia */}
@@ -521,6 +570,7 @@ export const StepPrecision = ({
             </button>
           )}
         </div>
+      </>
       )}
 
       {/* Nota + submit */}
