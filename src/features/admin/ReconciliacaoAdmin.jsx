@@ -723,7 +723,7 @@ export default function ReconciliacaoAdmin() {
         });
       });
     }
-    if (toInsert.length > 0) await supabase.from('faturacao_clientes_pagamentos').insert(toInsert);
+    if (toInsert.length > 0) await supabase.from('faturacao_clientes_pagamentos').upsert(toInsert, { onConflict: 'reconciliation_run_id,transaction_section,transaction_index', ignoreDuplicates: true });
     return toInsert.length;
   };
 

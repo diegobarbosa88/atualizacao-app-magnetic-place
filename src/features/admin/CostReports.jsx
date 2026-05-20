@@ -104,16 +104,26 @@ const CostReports = () => {
   const associarPagamento = async (section, index, tx) => {
     if (!linkModal || !selectedRun) return;
     setLinkSaving(true);
-    await supabase.from('faturacao_clientes_pagamentos').insert({
-      client_id: linkModal.clientId,
-      period: selectedMonth,
-      valor_faturado: linkModal.valorFaturado,
-      reconciliation_run_id: selectedRun.id,
-      transaction_section: section,
-      transaction_index: index,
-      transaction_data: tx,
-      valor_pago: Number(tx.valor),
-    });
+    // Verificar se já existe para evitar duplicados
+    const { data: existente } = await supabase
+      .from('faturacao_clientes_pagamentos')
+      .select('id')
+      .eq('reconciliation_run_id', selectedRun.id)
+      .eq('transaction_section', section)
+      .eq('transaction_index', index)
+      .maybeSingle();
+    if (!existente) {
+      await supabase.from('faturacao_clientes_pagamentos').insert({
+        client_id: linkModal.clientId,
+        period: selectedMonth,
+        valor_faturado: linkModal.valorFaturado,
+        reconciliation_run_id: selectedRun.id,
+        transaction_section: section,
+        transaction_index: index,
+        transaction_data: tx,
+        valor_pago: Number(tx.valor),
+      });
+    }
     await carregarPagamentos();
     setLinkSaving(false);
   };
