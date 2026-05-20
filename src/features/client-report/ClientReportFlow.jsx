@@ -152,6 +152,7 @@ export const StepPrecision = ({
   const [activeWorker, setActiveWorker] = useState(null);
   const [addingNewDay, setAddingNewDay] = useState(false);
   const [newDayDraft, setNewDayDraft] = useState({ date: '', startTime: '', endTime: '', breakStart: '', breakEnd: '' });
+  const [pausaVisivel, setPausaVisivel] = useState({});
 
   const bounds = useMemo(() => monthBounds(month), [month]);
 
@@ -285,239 +286,261 @@ export const StepPrecision = ({
   const resetNewDayDraft = () => setNewDayDraft({ date: '', startTime: '', endTime: '', breakStart: '', breakEnd: '' });
 
   return (
-    <div className="animate-fade-in max-w-5xl mx-auto py-6">
+    <div className="animate-fade-in max-w-2xl mx-auto py-4">
       {showBack && (
         <button onClick={onBack} className="flex items-center gap-2 text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest mb-4">
-          <ChevronLeft size={14} /> Mudar método
+          <ChevronLeft size={14} /> Voltar
         </button>
       )}
 
-      <header className="bg-white rounded-3xl border border-slate-100 p-6 mb-6 flex items-center justify-between flex-wrap gap-4">
+      {/* Header compacto */}
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Ajuste de Precisão</h2>
-          <p className="text-sm text-slate-500">Edite, remova ou adicione dias. Cada alteração é submetida individualmente ao admin.</p>
+          <h2 className="text-xl font-black text-slate-800 uppercase tracking-tight">Ajuste de Precisão</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Edite ou remova dias de cada colaborador.</p>
         </div>
-        <div className="text-right flex gap-6">
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Alterações</p>
-            <p className="text-3xl font-black text-amber-500">{itemsCount}</p>
+        {itemsCount > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-black text-amber-600 bg-amber-50 px-3 py-1.5 rounded-xl">{itemsCount} alteração(ões)</span>
+            <span className={`text-xs font-black px-3 py-1.5 rounded-xl ${monthDelta > 0 ? 'bg-emerald-50 text-emerald-700' : monthDelta < 0 ? 'bg-rose-50 text-rose-700' : 'bg-slate-50 text-slate-500'}`}>{fmtDelta(monthDelta)}</span>
           </div>
-          <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Diferença mês</p>
-            <p className={`text-3xl font-black ${monthDelta > 0 ? 'text-emerald-600' : monthDelta < 0 ? 'text-rose-600' : 'text-slate-400'}`}>{fmtDelta(monthDelta)}</p>
-          </div>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-2 lg:max-h-[65vh] overflow-y-auto pr-1">
-          {workersWithDays.map((w) => {
-            const editedDays = Object.keys(entries[w.id] || {}).length;
-            const isActive = w.id === activeWorker;
-            return (
-              <button
-                key={w.id}
-                onClick={() => { setActiveWorker(w.id); setAddingNewDay(false); resetNewDayDraft(); }}
-                className={`w-full p-4 rounded-2xl border-2 text-left transition-all ${isActive ? 'border-indigo-600 bg-white shadow-md' : 'border-slate-100 bg-white hover:border-slate-300'}`}
-              >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="font-black text-slate-800 text-sm">{w.name}</p>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">{w.role || ''}</p>
-                  </div>
-                  {editedDays > 0 && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-md">{editedDays} dia(s)</span>}
-                </div>
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="lg:col-span-2">
-          {!active ? (
-            <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl h-[400px] flex items-center justify-center text-center p-8">
-              <p className="text-slate-400 font-bold text-sm">Selecione um colaborador à esquerda para começar.</p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl border border-slate-100 p-6 space-y-3">
-              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                <h3 className="font-black text-slate-800 text-lg">{active.name}</h3>
-                <button
-                  onClick={() => setAddingNewDay(true)}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
-                >
-                  <Plus size={14} /> Adicionar Dia
-                </button>
-              </div>
-
-              {addingNewDay && (
-                <div className="border-2 border-dashed border-emerald-300 bg-emerald-50/40 rounded-2xl p-4 space-y-3">
-                  <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Novo dia (não registado)</p>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-                    <div className="md:col-span-1">
-                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</label>
-                      <input
-                        type="date"
-                        min={bounds.min}
-                        max={bounds.max}
-                        value={newDayDraft.date}
-                        onChange={(e) => setNewDayDraft({ ...newDayDraft, date: e.target.value })}
-                        className="w-full border border-slate-200 rounded-md px-2 py-1 text-sm font-mono"
-                      />
-                    </div>
-                    {[
-                      ['startTime', 'Entrada'],
-                      ['endTime', 'Saída'],
-                      ['breakStart', 'Pausa Início'],
-                      ['breakEnd', 'Pausa Fim'],
-                    ].map(([k, label]) => (
-                      <div key={k}>
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
-                        <TimeTextInput
-                          value={newDayDraft[k]}
-                          onChange={(v) => setNewDayDraft({ ...newDayDraft, [k]: v })}
-                          className="w-full border border-slate-200 rounded-md px-2 py-1 text-sm font-mono"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button onClick={() => { setAddingNewDay(false); resetNewDayDraft(); }} className="px-3 py-1.5 text-slate-500 text-[10px] font-black uppercase tracking-widest">Cancelar</button>
-                    <button
-                      onClick={() => {
-                        if (!newDayDraft.date) return alert('Escolha uma data dentro do mês.');
-                        if (!newDayDraft.startTime || !newDayDraft.endTime) return alert('Indique pelo menos entrada e saída.');
-                        if (active.logs.some((l) => l.date === newDayDraft.date)) return alert('Já existe um registo nesse dia. Edite o registo existente.');
-                        addNewDay(active.id, newDayDraft);
-                        setAddingNewDay(false);
-                        resetNewDayDraft();
-                      }}
-                      className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest"
-                    >
-                      Adicionar
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* New days already added */}
-              {newDays.map(({ date, values }) => (
-                <div key={`new_${date}`} className="border border-emerald-200 bg-emerald-50/30 rounded-xl p-3">
-                  <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700">✚ Novo dia</span>
-                      <p className="text-xs font-black text-slate-700 font-mono">{date}</p>
-                    </div>
-                    <button onClick={() => revert(active.id, date)} className="text-[10px] font-black text-slate-400 hover:text-rose-600 flex items-center gap-1"><Trash2 size={12} /> Cancelar</button>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {[
-                      ['startTime', 'Entrada'],
-                      ['endTime', 'Saída'],
-                      ['breakStart', 'Pausa Início'],
-                      ['breakEnd', 'Pausa Fim'],
-                    ].map(([k, label]) => (
-                      <div key={k}>
-                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
-                        <TimeTextInput
-                          value={values[k] || ''}
-                          onChange={(v) => setEditField(active.id, date, k, v, null)}
-                          className="w-full border border-emerald-200 rounded-md px-2 py-1 text-sm font-mono"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] font-black text-emerald-700 mt-2">Novo dia: {hoursFor(values)}h (Δ {fmtDelta(hoursFor(values))})</p>
-                </div>
-              ))}
-
-              {active.logs.length === 0 && newDays.length === 0 && !addingNewDay && (
-                <p className="text-slate-400 text-sm">Sem registos para este mês. Use "Adicionar Dia" para criar um.</p>
-              )}
-
-              {/* Existing logs */}
-              {active.logs.map((l) => {
-                const entry = activeEntries[l.date];
-                const isRemoved = entry?.kind === 'remove';
-                const editVals = entry?.kind === 'edit' ? entry.changes : null;
-                const displayVals = editVals || { startTime: l.startTime, endTime: l.endTime, breakStart: l.breakStart, breakEnd: l.breakEnd };
-                const newHours = hoursFor(displayVals);
-                const origHours = Number(l.hours || 0);
-                return (
-                  <div
-                    key={l.id || l.date}
-                    className={`border rounded-xl p-3 ${isRemoved ? 'border-rose-200 bg-rose-50/40' : editVals ? 'border-amber-200 bg-amber-50/30' : 'border-slate-100'}`}
-                  >
-                    <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                      <div className="flex items-center gap-2">
-                        {isRemoved && <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">✖ Remover</span>}
-                        {editVals && <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">✎ Editado</span>}
-                        <p className={`text-xs font-black font-mono ${isRemoved ? 'text-rose-600 line-through' : 'text-slate-700'}`}>{l.date}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        {!isRemoved && (
-                          <button onClick={() => markRemove(active.id, l.date)} className="text-[10px] font-black text-rose-600 hover:text-rose-800 flex items-center gap-1"><Trash2 size={12} /> Marcar como não trabalhado</button>
-                        )}
-                        {entry && (
-                          <button onClick={() => revert(active.id, l.date)} className="text-[10px] font-black text-slate-500 hover:text-slate-800 flex items-center gap-1"><RotateCcw size={12} /> Reverter</button>
-                        )}
-                      </div>
-                    </div>
-
-                    {!isRemoved && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                        {[
-                          ['startTime', 'Entrada'],
-                          ['endTime', 'Saída'],
-                          ['breakStart', 'Pausa Início'],
-                          ['breakEnd', 'Pausa Fim'],
-                        ].map(([k, label]) => (
-                          <div key={k}>
-                            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{label}</label>
-                            <TimeTextInput
-                              value={displayVals[k] || ''}
-                              onChange={(v) => setEditField(active.id, l.date, k, v, l)}
-                              className={`w-full border rounded-md px-2 py-1 text-sm font-mono ${editVals ? 'border-amber-300' : 'border-slate-200'}`}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {editVals && (
-                      <div className="mt-2 text-[10px] font-bold flex flex-wrap gap-x-3 gap-y-1 items-center">
-                        <span className="text-slate-400">Era: <span className="font-mono text-slate-600">{l.startTime || '—'} → {l.endTime || '—'}</span> ({origHours}h)</span>
-                        <span className="text-amber-700">Novo: <span className="font-mono">{displayVals.startTime || '—'} → {displayVals.endTime || '—'}</span> ({newHours}h)</span>
-                        <span className={`px-2 py-0.5 rounded-md font-black ${newHours - origHours > 0 ? 'bg-emerald-100 text-emerald-700' : newHours - origHours < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>Δ {fmtDelta(newHours - origHours)}</span>
-                      </div>
-                    )}
-                    {isRemoved && (
-                      <p className="text-[10px] font-bold text-rose-700">Era: <span className="font-mono">{l.startTime || '—'} → {l.endTime || '—'}</span> ({origHours}h) • marcado como não trabalhado (Δ {fmtDelta(-origHours)})</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
-      <div className="mt-6 bg-white rounded-3xl border border-slate-100 p-6">
+      {/* Worker tabs */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {workersWithDays.map((w) => {
+          const editedDays = Object.keys(entries[w.id] || {}).length;
+          const isActive = w.id === activeWorker;
+          return (
+            <button
+              key={w.id}
+              onClick={() => { setActiveWorker(w.id); setAddingNewDay(false); resetNewDayDraft(); }}
+              className={`px-3 py-2 rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 ${isActive ? 'bg-indigo-600 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-600 hover:border-indigo-300'}`}
+            >
+              {w.name}
+              {editedDays > 0 && <span className={`text-[9px] px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700'}`}>{editedDays}</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Day editor */}
+      {!active ? (
+        <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl h-40 flex items-center justify-center text-center p-8">
+          <p className="text-slate-400 font-bold text-sm">Selecione um colaborador acima para começar.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50">
+
+          {/* Form para novo dia */}
+          {addingNewDay && (
+            <div className="p-4 bg-emerald-50/50">
+              <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-3">Novo dia</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Data</label>
+                  <input
+                    type="date"
+                    min={bounds.min}
+                    max={bounds.max}
+                    value={newDayDraft.date}
+                    onChange={(e) => setNewDayDraft({ ...newDayDraft, date: e.target.value })}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono mt-1"
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Entrada</label>
+                    <TimeTextInput value={newDayDraft.startTime} onChange={(v) => setNewDayDraft({ ...newDayDraft, startTime: v })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                  </div>
+                  <span className="text-slate-300 pb-2">→</span>
+                  <div className="flex-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saída</label>
+                    <TimeTextInput value={newDayDraft.endTime} onChange={(v) => setNewDayDraft({ ...newDayDraft, endTime: v })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                  </div>
+                </div>
+                {(newDayDraft.breakStart || newDayDraft.breakEnd || pausaVisivel['_new']) ? (
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa Início</label>
+                      <TimeTextInput value={newDayDraft.breakStart} onChange={(v) => setNewDayDraft({ ...newDayDraft, breakStart: v })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                    </div>
+                    <span className="text-slate-300 pb-2">→</span>
+                    <div className="flex-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa Fim</label>
+                      <TimeTextInput value={newDayDraft.breakEnd} onChange={(v) => setNewDayDraft({ ...newDayDraft, breakEnd: v })} className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setPausaVisivel(p => ({ ...p, _new: true }))} className="text-[10px] font-black text-slate-400 hover:text-indigo-600 flex items-center gap-1">
+                    <Plus size={11} /> Adicionar pausa
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2 justify-end mt-3">
+                <button onClick={() => { setAddingNewDay(false); resetNewDayDraft(); setPausaVisivel(p => { const n = { ...p }; delete n._new; return n; }); }} className="px-3 py-1.5 text-slate-500 text-[10px] font-black uppercase">Cancelar</button>
+                <button
+                  onClick={() => {
+                    if (!newDayDraft.date) return alert('Escolha uma data dentro do mês.');
+                    if (!newDayDraft.startTime || !newDayDraft.endTime) return alert('Indique pelo menos entrada e saída.');
+                    if (active.logs.some((l) => l.date === newDayDraft.date)) return alert('Já existe um registo nesse dia. Edite o registo existente.');
+                    addNewDay(active.id, newDayDraft);
+                    setAddingNewDay(false);
+                    resetNewDayDraft();
+                    setPausaVisivel(p => { const n = { ...p }; delete n._new; return n; });
+                  }}
+                  className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-[10px] font-black uppercase"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Dias novos já adicionados */}
+          {newDays.map(({ date, values }) => {
+            const pk = `${active.id}_n_${date}`;
+            const pausaOpen = pausaVisivel[pk] || !!(values.breakStart || values.breakEnd);
+            return (
+              <div key={`new_${date}`} className="p-4 bg-emerald-50/30">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700">✚ Novo</span>
+                    <span className="text-sm font-black text-slate-700 font-mono">{date}</span>
+                    <span className="text-[10px] text-emerald-600 font-bold">{hoursFor(values)}h</span>
+                  </div>
+                  <button onClick={() => revert(active.id, date)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg" title="Cancelar"><Trash2 size={14} /></button>
+                </div>
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Entrada</label>
+                    <TimeTextInput value={values.startTime || ''} onChange={(v) => setEditField(active.id, date, 'startTime', v, null)} className="w-full border border-emerald-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                  </div>
+                  <span className="text-slate-300 pb-2">→</span>
+                  <div className="flex-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saída</label>
+                    <TimeTextInput value={values.endTime || ''} onChange={(v) => setEditField(active.id, date, 'endTime', v, null)} className="w-full border border-emerald-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                  </div>
+                </div>
+                {pausaOpen ? (
+                  <div className="flex items-end gap-2 mt-2">
+                    <div className="flex-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa Início</label>
+                      <TimeTextInput value={values.breakStart || ''} onChange={(v) => setEditField(active.id, date, 'breakStart', v, null)} className="w-full border border-emerald-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                    </div>
+                    <span className="text-slate-300 pb-2">→</span>
+                    <div className="flex-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa Fim</label>
+                      <TimeTextInput value={values.breakEnd || ''} onChange={(v) => setEditField(active.id, date, 'breakEnd', v, null)} className="w-full border border-emerald-200 rounded-xl px-3 py-2 text-sm font-mono mt-1" />
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => setPausaVisivel(p => ({ ...p, [pk]: true }))} className="mt-2 text-[10px] font-black text-slate-400 hover:text-indigo-600 flex items-center gap-1">
+                    <Plus size={11} /> Adicionar pausa
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {active.logs.length === 0 && newDays.length === 0 && !addingNewDay && (
+            <div className="p-6 text-center text-slate-400 text-sm">Sem registos para este mês. Use "Adicionar Dia" abaixo.</div>
+          )}
+
+          {/* Dias existentes */}
+          {active.logs.map((l) => {
+            const entry = activeEntries[l.date];
+            const isRemoved = entry?.kind === 'remove';
+            const editVals = entry?.kind === 'edit' ? entry.changes : null;
+            const displayVals = editVals || { startTime: l.startTime, endTime: l.endTime, breakStart: l.breakStart, breakEnd: l.breakEnd };
+            const newHours = hoursFor(displayVals);
+            const origHours = Number(l.hours || 0);
+            const pk = `${active.id}_${l.date}`;
+            const pausaOpen = pausaVisivel[pk] || !!(displayVals.breakStart || displayVals.breakEnd);
+            return (
+              <div key={l.id || l.date} className={`p-4 ${isRemoved ? 'bg-rose-50/40' : editVals ? 'bg-amber-50/20' : ''}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {isRemoved && <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-rose-100 text-rose-700">Removido</span>}
+                    {editVals && <span className="text-[9px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">Editado</span>}
+                    <span className={`text-sm font-black font-mono ${isRemoved ? 'text-rose-500 line-through' : 'text-slate-700'}`}>{l.date}</span>
+                    {!isRemoved && <span className="text-[10px] font-bold text-slate-400">{editVals ? <><s>{origHours}h</s> → <span className="text-amber-700">{newHours}h</span></> : `${origHours}h`}</span>}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {entry && <button onClick={() => revert(active.id, l.date)} className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg" title="Reverter"><RotateCcw size={14} /></button>}
+                    {!isRemoved && <button onClick={() => markRemove(active.id, l.date)} className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg" title="Dia não trabalhado"><Trash2 size={14} /></button>}
+                  </div>
+                </div>
+                {!isRemoved && (
+                  <>
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Entrada</label>
+                        <TimeTextInput value={displayVals.startTime || ''} onChange={(v) => setEditField(active.id, l.date, 'startTime', v, l)} className={`w-full border rounded-xl px-3 py-2 text-sm font-mono mt-1 ${editVals ? 'border-amber-300' : 'border-slate-200'}`} />
+                      </div>
+                      <span className="text-slate-300 pb-2">→</span>
+                      <div className="flex-1">
+                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Saída</label>
+                        <TimeTextInput value={displayVals.endTime || ''} onChange={(v) => setEditField(active.id, l.date, 'endTime', v, l)} className={`w-full border rounded-xl px-3 py-2 text-sm font-mono mt-1 ${editVals ? 'border-amber-300' : 'border-slate-200'}`} />
+                      </div>
+                    </div>
+                    {pausaOpen ? (
+                      <div className="flex items-end gap-2 mt-2">
+                        <div className="flex-1">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa Início</label>
+                          <TimeTextInput value={displayVals.breakStart || ''} onChange={(v) => setEditField(active.id, l.date, 'breakStart', v, l)} className={`w-full border rounded-xl px-3 py-2 text-sm font-mono mt-1 ${editVals ? 'border-amber-300' : 'border-slate-200'}`} />
+                        </div>
+                        <span className="text-slate-300 pb-2">→</span>
+                        <div className="flex-1">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pausa Fim</label>
+                          <TimeTextInput value={displayVals.breakEnd || ''} onChange={(v) => setEditField(active.id, l.date, 'breakEnd', v, l)} className={`w-full border rounded-xl px-3 py-2 text-sm font-mono mt-1 ${editVals ? 'border-amber-300' : 'border-slate-200'}`} />
+                        </div>
+                      </div>
+                    ) : (
+                      <button onClick={() => setPausaVisivel(p => ({ ...p, [pk]: true }))} className="mt-2 text-[10px] font-black text-slate-400 hover:text-indigo-600 flex items-center gap-1">
+                        <Plus size={11} /> Adicionar pausa
+                      </button>
+                    )}
+                  </>
+                )}
+                {isRemoved && (
+                  <p className="text-[10px] font-bold text-rose-600">Era: {l.startTime || '—'} → {l.endTime || '—'} ({origHours}h)</p>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Botão adicionar dia */}
+          {!addingNewDay && (
+            <button
+              onClick={() => setAddingNewDay(true)}
+              className="w-full p-3 flex items-center justify-center gap-2 text-emerald-600 hover:bg-emerald-50 transition-all text-[10px] font-black uppercase tracking-widest"
+            >
+              <Plus size={14} /> Adicionar Dia
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* Nota + submit */}
+      <div className="mt-4 bg-white rounded-2xl border border-slate-100 p-4">
         {showJustification && (
           <>
-            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Justificação (opcional)</label>
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nota (opcional)</label>
             <textarea
-              rows="3"
+              rows="2"
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
-              className="w-full border-2 border-slate-100 rounded-2xl p-4 bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
-              placeholder="Contexto adicional..."
+              className="w-full border-2 border-slate-100 rounded-xl p-3 bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none resize-none"
+              placeholder="Contexto adicional para o admin..."
             />
           </>
         )}
         <button
           disabled={busy || itemsCount === 0}
           onClick={() => onSubmit({ justification, items: buildItems() })}
-          className={`${showJustification ? 'mt-4' : ''} w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase tracking-widest text-sm disabled:opacity-50`}
+          className={`${showJustification ? 'mt-3' : ''} w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black uppercase tracking-widest text-sm disabled:opacity-50`}
         >
           {busy ? 'A processar...' : (submitLabel || `Enviar ${itemsCount} alteração(ões) ao Admin`)}
         </button>
@@ -576,9 +599,8 @@ const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
     );
   }
 
-  if (step === 'quick') return <StepQuick onBack={() => setStep('mode')} busy={busy} onSubmit={(p) => handleSubmit(p, 'quick')} />;
-  if (step === 'precision') return <StepPrecision workers={workers} logs={logs} month={month} onBack={() => setStep('mode')} busy={busy} onSubmit={(p) => handleSubmit(p, 'precision')} />;
-  if (step === 'mode') return <StepMode onPick={(m) => setStep(m)} onCancel={() => setStep('home')} />;
+  if (step === 'quick') return <StepQuick onBack={() => setStep('home')} busy={busy} onSubmit={(p) => handleSubmit(p, 'quick')} />;
+  if (step === 'precision') return <StepPrecision workers={workers} logs={logs} month={month} onBack={() => setStep('home')} busy={busy} onSubmit={(p) => handleSubmit(p, 'precision')} />;
 
   // home: status + history + CTA
   return (
@@ -589,7 +611,7 @@ const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
           <div className="mt-2"><MonthStatusBadge corrections={thisMonthCorrections} /></div>
         </div>
         <button
-          onClick={() => setStep('mode')}
+          onClick={() => setStep('precision')}
           disabled={hasOpen}
           title={hasOpen ? 'Já existe uma correção em aberto para este mês' : ''}
           className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
