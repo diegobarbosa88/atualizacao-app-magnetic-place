@@ -5,6 +5,18 @@
     },
     "api/parse-fatura.js": {
       "maxDuration": 30
+    },
+    "api/reconciliacao/parse.js": {
+      "maxDuration": 60
+    },
+    "api/reconciliacao/upload.js": {
+      "maxDuration": 60
+    },
+    "api/reconciliacao/process.js": {
+      "maxDuration": 30
+    },
+    "api/reconciliacao/reprocess.js": {
+      "maxDuration": 30
     }
   },
   "headers": [

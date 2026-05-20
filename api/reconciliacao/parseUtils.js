@@ -125,7 +125,7 @@ export function parseCsvColumns(content) {
   const rows = records.map(row =>
     Object.fromEntries(Object.entries(row).map(([k, v]) => [cleanCsvValue(k), cleanCsvValue(v)]))
   );
-  return { columns: Object.keys(rows[0]), preview: rows.slice(0, 3) };
+  return { columns: Object.keys(rows[0]), preview: rows.slice(0, 10) };
 }
 
 // Processa CSV com mapeamento explícito de colunas fornecido pelo utilizador

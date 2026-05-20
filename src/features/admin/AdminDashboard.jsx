@@ -66,7 +66,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, appNotifications, workerChangeRequests, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+  const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
   const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
 
   const notificacoesDeCorrecao = correctionNotifications;
@@ -234,20 +234,83 @@ function AdminDashboard(props) {
     };
   }, [workers, schedules, currentMonth, adminStats.totalHours]);
 
+  // Dia de corte proporcional: dia de hoje no mês atual
+  const todayDay = new Date().getDate();
+
+  // Filtra logs do mês anterior até ao mesmo dia do mês de hoje
+  const filterPrevMonthProportional = (allLogs, prevMonth) =>
+    allLogs.filter(l => {
+      if (!isSameMonth(l.date, prevMonth)) return false;
+      const d = new Date(l.date.split('T')[0]);
+      return d.getDate() <= todayDay;
+    });
+
+  // Stats do mês anterior (proporcional ao dia atual)
+  const prevMonthStats = useMemo(() => {
+    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const prevLogs = filterPrevMonthProportional(logs, prevMonth);
+    const totalHours = prevLogs.reduce((acc, l) => acc + (Number(l.hours) || 0), 0);
+    let expectedRevenue = 0;
+    let expectedCosts = 0;
+    prevLogs.forEach(l => {
+      const client = clients.find(c => c.id === l.clientId);
+      const worker = workers.find(w => w.id === l.workerId);
+      if (client) expectedRevenue += l.hours * (Number(client.valorHora) || 0);
+      if (worker) expectedCosts += l.hours * (Number(worker.valorHora) || 0);
+    });
+    const prevMonth2 = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const monthlyExpenses = expenses
+      .filter(e => {
+        if (!isSameMonth(e.date, prevMonth2)) return false;
+        const d = new Date(e.date.split('T')[0]);
+        return d.getDate() <= todayDay;
+      })
+      .reduce((a, b) => a + Number(b.amount), 0);
+    return {
+      totalHours,
+      expectedRevenue,
+      expectedCosts,
+      monthlyExpenses,
+      netProfit: expectedRevenue - expectedCosts - monthlyExpenses
+    };
+  }, [logs, currentMonth, clients, workers, expenses]);
+
+  // Variações % vs mês anterior (proporcional)
+  const vsLastMonth = useMemo(() => {
+    const pct = (curr, prev) => {
+      if (prev === 0) return null;
+      return Number(((curr - prev) / Math.abs(prev) * 100).toFixed(1));
+    };
+    return {
+      hours: pct(adminStats.totalHours, prevMonthStats.totalHours),
+      revenue: pct(adminStats.expectedRevenue, prevMonthStats.expectedRevenue),
+      costs: pct(adminStats.expectedCosts + adminStats.monthlyExpenses, prevMonthStats.expectedCosts + prevMonthStats.monthlyExpenses),
+      profit: pct(adminStats.netProfit, prevMonthStats.netProfit)
+    };
+  }, [adminStats, prevMonthStats]);
+
   // Worker comparison data
   const workerComparisonData = useMemo(() => {
+    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
     return workers
       .map(w => {
         const workerLogs = logs.filter(l => l.workerId === w.id && isSameMonth(l.date, currentMonth));
+        const prevWorkerLogs = filterPrevMonthProportional(logs.filter(l => l.workerId === w.id), prevMonth);
         const registered = workerLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
+        const prevRegistered = prevWorkerLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
         const expected = getWorkerExpectedHours(w.id);
         const percent = expected > 0 ? (registered / expected * 100).toFixed(1) : 0;
+        const prevPct = prevRegistered > 0
+          ? Number(((registered - prevRegistered) / prevRegistered * 100).toFixed(1))
+          : null;
         return {
           id: w.id,
           name: w.name,
           registered,
+          prevRegistered,
           expected,
           percent,
+          prevPct,
           isOver: registered >= expected
         };
       })
@@ -281,6 +344,41 @@ function AdminDashboard(props) {
     { name: 'Operacionais', value: adminStats.expectedCosts, color: '#6366f1' },
     { name: 'Fixos', value: adminStats.monthlyExpenses, color: '#f43f5e' }
   ];
+
+  // Top clientes com comparação proporcional vs mês anterior
+  const topClientsWithPrev = useMemo(() => {
+    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const currHours = {};
+    const prevHours = {};
+    logs.forEach(l => {
+      if (!l.clientId || !l.hours) return;
+      if (isSameMonth(l.date, currentMonth)) {
+        currHours[l.clientId] = (currHours[l.clientId] || 0) + l.hours;
+      } else if (isSameMonth(l.date, prevMonth)) {
+        const d = new Date(l.date.split('T')[0]);
+        if (d.getDate() <= todayDay) {
+          prevHours[l.clientId] = (prevHours[l.clientId] || 0) + l.hours;
+        }
+      }
+    });
+    const totalCurr = Object.values(currHours).reduce((a, b) => a + b, 0);
+    return Object.keys(currHours)
+      .map(id => {
+        const curr = currHours[id];
+        const prev = prevHours[id] || 0;
+        const pct = prev > 0 ? Number(((curr - prev) / prev * 100).toFixed(1)) : null;
+        return {
+          id,
+          name: clients.find(c => c.id === id)?.name || 'Desconhecido',
+          hours: curr,
+          prevHours: prev,
+          pct,
+          totalCurr
+        };
+      })
+      .sort((a, b) => b.hours - a.hours)
+      .slice(0, 5);
+  }, [logs, currentMonth, clients, todayDay]);
 
   const parseLogDate = (d) => {
     if (!d) return 0;
@@ -590,9 +688,9 @@ function AdminDashboard(props) {
                 <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
                   <div className="flex justify-between items-start">
                     <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl"><Clock size={24} /></div>
-                    {aggregatedTrend.percent != 0 && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${Number(aggregatedTrend.percent) >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                        {Number(aggregatedTrend.percent) >= 0 ? '▲' : '▼'} {Math.abs(aggregatedTrend.percent)}%
+                    {vsLastMonth.hours !== null && vsLastMonth.hours !== 0 && (
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.hours >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        {vsLastMonth.hours >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.hours)}%
                       </span>
                     )}
                   </div>
@@ -607,6 +705,11 @@ function AdminDashboard(props) {
                 <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
                   <div className="flex justify-between items-start">
                     <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl"><TrendingUp size={24} /></div>
+                    {vsLastMonth.revenue !== null && vsLastMonth.revenue !== 0 && (
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.revenue >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        {vsLastMonth.revenue >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.revenue)}%
+                      </span>
+                    )}
                   </div>
                   <div>
                     <p className="text-xl sm:text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedRevenue)}</p>
@@ -619,6 +722,11 @@ function AdminDashboard(props) {
                 <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
                   <div className="flex justify-between items-start">
                     <div className="bg-rose-50 text-rose-600 p-3 rounded-2xl"><TrendingDown size={24} /></div>
+                    {vsLastMonth.costs !== null && vsLastMonth.costs !== 0 && (
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.costs <= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                        {vsLastMonth.costs >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.costs)}%
+                      </span>
+                    )}
                   </div>
                   <div>
                     <p className="text-xl sm:text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedCosts + adminStats.monthlyExpenses)}</p>
@@ -631,9 +739,9 @@ function AdminDashboard(props) {
                 <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-xl flex flex-col gap-2 sm:gap-3 text-white">
                   <div className="flex justify-between items-start">
                     <div className="bg-white/20 p-3 rounded-2xl"><Wallet size={24} /></div>
-                    {aggregatedTrend.percent != 0 && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${Number(aggregatedTrend.percent) >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                        {Number(aggregatedTrend.percent) >= 0 ? '▲' : '▼'} {Math.abs(aggregatedTrend.percent)}%
+                    {vsLastMonth.profit !== null && vsLastMonth.profit !== 0 && (
+                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
+                        {vsLastMonth.profit >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.profit)}%
                       </span>
                     )}
                   </div>
@@ -733,9 +841,15 @@ function AdminDashboard(props) {
                           <span className="text-sm font-bold text-slate-700 truncate">{w.name}</span>
                           <div className="flex items-center gap-3 shrink-0">
                             <span className="text-[10px] font-black text-slate-400">{formatHours(w.registered)} / {formatHours(w.expected)}</span>
-                            <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                              {w.isOver ? '▲' : '▼'} {Math.abs(w.percent)}%
-                            </span>
+                            {w.prevPct !== null ? (
+                              <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.prevPct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                {w.prevPct >= 0 ? '▲' : '▼'} {Math.abs(w.prevPct)}%
+                              </span>
+                            ) : (
+                              <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                {w.isOver ? '▲' : '▼'} {Math.abs(w.percent)}%
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-2">
@@ -761,15 +875,22 @@ function AdminDashboard(props) {
                     <h3 className="font-black text-lg text-slate-800">Top Unidades (Horas)</h3>
                   </div>
                   <div className="space-y-4">
-                    {adminStats.topClientsList.length > 0 ? adminStats.topClientsList.map((c, i) => (
-                      <div key={i} className="flex items-center justify-between group">
+                    {topClientsWithPrev.length > 0 ? topClientsWithPrev.map((c, i) => (
+                      <div key={c.id} className="flex items-center justify-between group">
                         <div className="flex-1">
-                          <div className="flex justify-between mb-1">
+                          <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-bold text-slate-700">{c.name}</span>
-                            <span className="text-xs font-black text-indigo-600">{formatHours(c.hours)}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              {c.pct !== null && c.pct !== 0 && (
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${c.pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                  {c.pct >= 0 ? '▲' : '▼'} {Math.abs(c.pct)}%
+                                </span>
+                              )}
+                              <span className="text-xs font-black text-indigo-600">{formatHours(c.hours)}</span>
+                            </div>
                           </div>
                           <div className="w-full bg-slate-50 rounded-full h-2">
-                            <div className="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / adminStats.totalHours) * 100)}%` }}></div>
+                            <div className="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%` }}></div>
                           </div>
                         </div>
                       </div>

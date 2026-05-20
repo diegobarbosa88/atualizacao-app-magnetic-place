@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
   AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight,
-  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag
+  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag, Download, Unlink, Pencil
 } from 'lucide-react';
 
 const COR_MAP = {
@@ -42,11 +44,521 @@ function TipoBadge({ tipo }) {
   );
 }
 
+// ─── Relatório Modal ──────────────────────────────────────────────────────────
+const COLS_MATCHED = [
+  { key: 'data',            label: 'Data Movimento' },
+  { key: 'descricao',       label: 'Descrição Movimento' },
+  { key: 'valor',           label: 'Valor Movimento' },
+  { key: 'tipo',            label: 'Tipo' },
+  { key: 'entidade',        label: 'Entidade Sistema' },
+  { key: 'descricaoSist',   label: 'Descrição Sistema' },
+  { key: 'valorSist',       label: 'Valor Sistema' },
+  { key: 'dataSist',        label: 'Data Documento' },
+  { key: 'fonte',           label: 'Fonte' },
+  { key: 'regra',           label: 'Regra' },
+  { key: 'estado',          label: 'Estado' },
+];
+const COLS_ORPHAN_BANK = [
+  { key: 'data',       label: 'Data' },
+  { key: 'descricao',  label: 'Descrição' },
+  { key: 'valor',      label: 'Valor' },
+  { key: 'tipo',       label: 'Tipo' },
+  { key: 'motivo',     label: 'Motivo' },
+];
+const COLS_ORPHAN_SYS = [
+  { key: 'entidade',      label: 'Entidade' },
+  { key: 'descricao',     label: 'Descrição' },
+  { key: 'valor',         label: 'Valor' },
+  { key: 'dataDocumento', label: 'Data Documento' },
+  { key: 'fonte',         label: 'Fonte' },
+];
+
+function getMatchedCell(m, key) {
+  switch (key) {
+    case 'data':          return m.transacao?.data ?? '';
+    case 'descricao':     return m.transacao?.descricao ?? '';
+    case 'valor':         return m.transacao?.valor ?? '';
+    case 'tipo':          return m.transacao?.tipo ?? '';
+    case 'entidade':      return m.fatura?.entidade ?? '';
+    case 'descricaoSist': return m.fatura?.descricao ?? '';
+    case 'valorSist':     return m.fatura?.valor ?? '';
+    case 'dataSist':      return m.fatura?.data_documento ?? '';
+    case 'fonte':         return m.fatura?.fonte ?? '';
+    case 'regra':         return m.rule ?? '';
+    case 'estado':        return m.fatura?.status ?? '';
+    default:              return '';
+  }
+}
+function getOrphanBankCell(o, key) {
+  switch (key) {
+    case 'data':      return o.transacao?.data ?? '';
+    case 'descricao': return o.transacao?.descricao ?? '';
+    case 'valor':     return o.transacao?.valor ?? '';
+    case 'tipo':      return o.transacao?.tipo ?? '';
+    case 'motivo':    return o.reason ?? '';
+    default:          return '';
+  }
+}
+function getOrphanSysCell(o, key) {
+  switch (key) {
+    case 'entidade':      return o.fatura?.entidade ?? '';
+    case 'descricao':     return o.fatura?.descricao ?? '';
+    case 'valor':         return o.fatura?.valor ?? '';
+    case 'dataDocumento': return o.fatura?.data_documento ?? '';
+    case 'fonte':         return o.fatura?.fonte ?? '';
+    default:              return '';
+  }
+}
+
+function RelatorioModal({ displayData, filename, dataRun, onClose, runs }) {
+  const [formato, setFormato] = useState('csv');
+  const [secoes, setSecoes] = useState({ matched: true, orphan_bank: true, orphan_system: true });
+  const [colsM,  setColsM]  = useState(() => Object.fromEntries(COLS_MATCHED.map(c => [c.key, true])));
+  const [colsOB, setColsOB] = useState(() => Object.fromEntries(COLS_ORPHAN_BANK.map(c => [c.key, true])));
+  const [colsOS, setColsOS] = useState(() => Object.fromEntries(COLS_ORPHAN_SYS.map(c => [c.key, true])));
+
+  const isMulti = !!runs;
+  const data = isMulti
+    ? {
+        matched:       runs.flatMap(r => r.results_json?.matched       || []),
+        orphan_bank:   runs.flatMap(r => r.results_json?.orphan_bank   || []),
+        orphan_system: runs.flatMap(r => r.results_json?.orphan_system || []),
+      }
+    : displayData;
+
+  const reportName = isMulti
+    ? `relatorio_${runs.length}_importacoes_${new Date().toLocaleDateString('pt-PT').replace(/\//g, '-')}`
+    : `reconciliacao_${(filename || '').replace(/[^a-z0-9]/gi, '_')}_${(dataRun || '').replace(/\//g, '-')}`;
+
+  const toggleAll = (setter, cols, val) =>
+    setter(Object.fromEntries(cols.map(c => [c.key, val])));
+
+  // ── Month grouping helpers ─────────────────────────────────────────────────
+  const monthKey   = d => d ? String(d).slice(0, 7) || '9999-99' : '9999-99';
+  const monthLabel = d => {
+    if (!d) return 'Sem data';
+    const dt = new Date(d + '-01');
+    return isNaN(dt) ? 'Sem data' : dt.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  };
+  const groupByMonth = (items, getDate) => {
+    const map = new Map();
+    for (const item of items) {
+      const key = monthKey(getDate(item));
+      if (!map.has(key)) map.set(key, { label: monthLabel(key), items: [] });
+      map.get(key).items.push(item);
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, g]) => g);
+  };
+  const sumValor = (items, getVal) => items.reduce((s, i) => s + (Number(getVal(i)) || 0), 0);
+  const entityTotals = (items, getValorFn, getEntityFn) => {
+    const map = new Map();
+    for (const item of items) {
+      const key = getEntityFn(item);
+      if (!map.has(key)) map.set(key, { count: 0, total: 0 });
+      const e = map.get(key);
+      e.count++;
+      e.total += Number(getValorFn(item)) || 0;
+    }
+    return [...map.entries()].sort(([, a], [, b]) => b.total - a.total);
+  };
+
+  // Extrai nome da entidade da descrição bancária:
+  // após "PARA", toma palavras consecutivas alfabéticas (nome próprio) e para no primeiro token com dígitos/símbolos
+  const extractEntityBank = (o) => {
+    const d = (o.transacao?.descricao || '').trim();
+    const m = d.match(/(?:\bPARA\b|P\/)[ \t]*/i);
+    if (m) {
+      const after = d.slice(m.index + m[0].length);
+      const nameWords = [];
+      for (const w of after.split(/\s+/)) {
+        if (/^[A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ'-]*$/.test(w)) {
+          nameWords.push(w);
+          if (nameWords.length >= 5) break;
+        } else {
+          break;
+        }
+      }
+      if (nameWords.length > 0) return nameWords.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+    }
+    const toTc = s => s.split(/\s+/).map(w => w ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w).join(' ');
+    return toTc(d.slice(0, 50)) || '(sem descrição)';
+  };
+
+  // ── CSV ────────────────────────────────────────────────────────────────────
+  const handleDownloadCsv = () => {
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const parts = [];
+
+    parts.push(esc('RELATÓRIO DE RECONCILIAÇÃO BANCÁRIA'));
+    if (isMulti) {
+      parts.push([esc('Importações'), esc(runs.length), esc('Ficheiros'), esc(runs.map(r => r.filename).join(', '))].join(';'));
+    } else {
+      parts.push([esc('Ficheiro'), esc(filename), esc('Data'), esc(dataRun)].join(';'));
+    }
+    parts.push('');
+
+    const buildSection = (title, allItems, activeCols, getCellFn, getDateFn, getValorFn, getEntityFn) => {
+      const lines = [esc(title), activeCols.map(c => esc(c.label)).join(';')];
+      const valorIdx = activeCols.findIndex(c => c.key === 'valor');
+      const totalRow = (label, total) => activeCols.map((_, i) =>
+        i === 0 ? esc(label) : i === valorIdx && valorIdx >= 0 ? esc(Number(total).toFixed(2)) : '""'
+      ).join(';');
+
+      const addEntityBlock = (items) => {
+        if (!getEntityFn || !items.length) return;
+        const entRows = entityTotals(items, getValorFn, getEntityFn);
+        lines.push([esc('Entidade'), esc('Movimentos'), esc('Total')].join(';'));
+        entRows.forEach(([entity, { count, total }]) =>
+          lines.push([esc(entity), esc(count), esc(total.toFixed(2))].join(';'))
+        );
+      };
+
+      if (isMulti) {
+        let grand = 0;
+        for (const { label, items } of groupByMonth(allItems, getDateFn)) {
+          lines.push(esc(`── ${label.toUpperCase()} ──`));
+          items.forEach(item => lines.push(activeCols.map(c => esc(getCellFn(item, c.key))).join(';')));
+          const t = sumValor(items, getValorFn);
+          grand += t;
+          lines.push(totalRow(`TOTAL ${label.toUpperCase()}`, t));
+          addEntityBlock(items);
+          lines.push('');
+        }
+        lines.push(totalRow('TOTAL GERAL', grand));
+        if (getEntityFn && allItems.length > 0) {
+          lines.push('');
+          lines.push(esc('TOTAL GERAL POR ENTIDADE'));
+          lines.push([esc('Entidade'), esc('Movimentos'), esc('Total')].join(';'));
+          entityTotals(allItems, getValorFn, getEntityFn).forEach(([entity, { count, total }]) =>
+            lines.push([esc(entity), esc(count), esc(total.toFixed(2))].join(';'))
+          );
+        }
+      } else {
+        allItems.forEach(item => lines.push(activeCols.map(c => esc(getCellFn(item, c.key))).join(';')));
+        if (valorIdx >= 0) lines.push(totalRow('TOTAL', sumValor(allItems, getValorFn)));
+        if (getEntityFn && allItems.length > 0) {
+          lines.push('');
+          lines.push(esc('TOTAIS POR ENTIDADE'));
+          for (const { label, items } of groupByMonth(allItems, getDateFn)) {
+            lines.push(esc(label.toUpperCase()));
+            addEntityBlock(items);
+            lines.push('');
+          }
+          lines.push(esc('TOTAL GERAL POR ENTIDADE'));
+          lines.push([esc('Entidade'), esc('Movimentos'), esc('Total')].join(';'));
+          entityTotals(allItems, getValorFn, getEntityFn).forEach(([entity, { count, total }]) =>
+            lines.push([esc(entity), esc(count), esc(total.toFixed(2))].join(';'))
+          );
+        }
+      }
+      return lines.join('\n');
+    };
+
+    if (secoes.matched)       parts.push(buildSection('RECONCILIADOS',  data.matched       || [], COLS_MATCHED.filter(c => colsM[c.key]),  getMatchedCell,    m => m.transacao?.data,        m => m.transacao?.valor, m => (m.fatura?.entidade || '').trim() || '(sem entidade)'), '');
+    if (secoes.orphan_bank)   parts.push(buildSection('ÓRFÃOS BANCO',   data.orphan_bank   || [], COLS_ORPHAN_BANK.filter(c => colsOB[c.key]), getOrphanBankCell, o => o.transacao?.data,        o => o.transacao?.valor, extractEntityBank), '');
+    if (secoes.orphan_system) parts.push(buildSection('ÓRFÃOS SISTEMA', data.orphan_system || [], COLS_ORPHAN_SYS.filter(c => colsOS[c.key]),  getOrphanSysCell,  o => o.fatura?.data_documento, o => o.fatura?.valor,    o => (o.fatura?.entidade || '').trim() || '(sem entidade)'));
+
+    const blob = new Blob(['﻿' + parts.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `${reportName}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ── PDF ────────────────────────────────────────────────────────────────────
+  const handleDownloadPdf = async () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+    doc.setFontSize(16); doc.setTextColor(30);
+    doc.text('Relatório de Reconciliação Bancária', 14, 18);
+    doc.setFontSize(8); doc.setTextColor(120);
+    const subtitle = isMulti
+      ? `${runs.length} importações   |   Reconciliados: ${data.matched?.length ?? 0}   |   Órfãos Banco: ${data.orphan_bank?.length ?? 0}   |   Órfãos Sistema: ${data.orphan_system?.length ?? 0}`
+      : `Ficheiro: ${filename}   |   Data: ${dataRun}   |   Reconciliados: ${data.matched?.length ?? 0}   |   Órfãos Banco: ${data.orphan_bank?.length ?? 0}   |   Órfãos Sistema: ${data.orphan_system?.length ?? 0}`;
+    doc.text(subtitle, 14, 25);
+
+    let curY = 32;
+
+    const addPdfSection = (title, allItems, activeCols, getCellFn, getDateFn, getValorFn, headColor, getEntityFn) => {
+      doc.setFontSize(8); doc.setTextColor(80); doc.text(title, 14, curY); curY += 3;
+
+      const addEntityPdfBlock = (items) => {
+        if (!getEntityFn || !items.length) return;
+        const entRows = entityTotals(items, getValorFn, getEntityFn);
+        autoTable(doc, {
+          startY: curY,
+          head: [['Entidade', 'Movimentos', 'Total']],
+          body: entRows.map(([entity, { count, total }]) => [entity, String(count), `€${total.toFixed(2)}`]),
+          styles: { fontSize: 6, cellPadding: 1.2 },
+          headStyles: { fillColor: [100, 116, 139], textColor: 255, fontStyle: 'bold', fontSize: 6 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          columnStyles: { 1: { halign: 'center' }, 2: { halign: 'right' } },
+          tableWidth: 120,
+        });
+        curY = doc.lastAutoTable.finalY + 3;
+      };
+
+      if (isMulti) {
+        let grand = 0;
+        for (const { label, items } of groupByMonth(allItems, getDateFn)) {
+          const monthTotal = sumValor(items, getValorFn);
+          grand += monthTotal;
+          const body = items.map(item => activeCols.map(c => String(getCellFn(item, c.key) ?? '')));
+          const subtotalRow = activeCols.map((c, i) =>
+            i === 0 ? `Total ${label}` : (c.key === 'valor' ? `€${monthTotal.toFixed(2)}` : '')
+          );
+          body.push(subtotalRow);
+          autoTable(doc, {
+            startY: curY,
+            head: [[{ content: label.toUpperCase(), colSpan: activeCols.length, styles: { fillColor: [226, 232, 240], textColor: 50, fontStyle: 'bold', fontSize: 7 } }], activeCols.map(c => c.label)],
+            body,
+            styles: { fontSize: 7, cellPadding: 1.5 },
+            headStyles: { fillColor: headColor, textColor: 255, fontStyle: 'bold' },
+            didParseCell: d => { if (d.section === 'body' && d.row.index === body.length - 1) { d.cell.styles.fillColor = [241, 245, 249]; d.cell.styles.fontStyle = 'bold'; } },
+          });
+          curY = doc.lastAutoTable.finalY + 2;
+          addEntityPdfBlock(items);
+        }
+        autoTable(doc, {
+          startY: curY,
+          body: [activeCols.map((c, i) => i === 0 ? 'TOTAL GERAL' : (c.key === 'valor' ? `€${grand.toFixed(2)}` : ''))],
+          styles: { fontSize: 8, cellPadding: 2, fontStyle: 'bold', fillColor: [224, 231, 255], textColor: [30, 41, 59] },
+        });
+        curY = doc.lastAutoTable.finalY + 4;
+        if (getEntityFn && allItems.length > 0) {
+          doc.setFontSize(7); doc.setTextColor(60); doc.setFont(undefined, 'bold'); doc.text('Total Geral por Entidade', 14, curY); doc.setFont(undefined, 'normal'); curY += 3;
+          addEntityPdfBlock(allItems);
+        }
+        curY += 4;
+      } else {
+        const body = allItems.map(item => activeCols.map(c => String(getCellFn(item, c.key) ?? '')));
+        const total = sumValor(allItems, getValorFn);
+        body.push(activeCols.map((c, i) => i === 0 ? 'TOTAL' : (c.key === 'valor' ? `€${total.toFixed(2)}` : '')));
+        autoTable(doc, {
+          startY: curY,
+          head: [activeCols.map(c => c.label)],
+          body,
+          styles: { fontSize: 7, cellPadding: 1.5 },
+          headStyles: { fillColor: headColor, textColor: 255, fontStyle: 'bold' },
+          alternateRowStyles: { fillColor: [245, 247, 255] },
+          didParseCell: d => { if (d.section === 'body' && d.row.index === body.length - 1) { d.cell.styles.fillColor = [241, 245, 249]; d.cell.styles.fontStyle = 'bold'; } },
+        });
+        curY = doc.lastAutoTable.finalY + 4;
+        if (getEntityFn && allItems.length > 0) {
+          doc.setFontSize(7); doc.setTextColor(100); doc.text('Totais por Entidade', 14, curY); curY += 3;
+          for (const { label, items } of groupByMonth(allItems, getDateFn)) {
+            doc.setFontSize(6.5); doc.setTextColor(80); doc.text(label, 14, curY); curY += 2;
+            addEntityPdfBlock(items);
+          }
+          doc.setFontSize(7); doc.setTextColor(60); doc.setFont(undefined, 'bold'); doc.text('Total Geral por Entidade', 14, curY); doc.setFont(undefined, 'normal'); curY += 3;
+          addEntityPdfBlock(allItems);
+        }
+        curY += 4;
+      }
+    };
+
+    if (secoes.matched)       addPdfSection('RECONCILIADOS',  data.matched       || [], COLS_MATCHED.filter(c => colsM[c.key]),  getMatchedCell,    m => m.transacao?.data,        m => m.transacao?.valor, [79, 70, 229],  m => (m.fatura?.entidade || '').trim() || '(sem entidade)');
+    if (secoes.orphan_bank)   addPdfSection('ÓRFÃOS BANCO',   data.orphan_bank   || [], COLS_ORPHAN_BANK.filter(c => colsOB[c.key]), getOrphanBankCell, o => o.transacao?.data,        o => o.transacao?.valor, [217, 119, 6],  extractEntityBank);
+    if (secoes.orphan_system) addPdfSection('ÓRFÃOS SISTEMA', data.orphan_system || [], COLS_ORPHAN_SYS.filter(c => colsOS[c.key]),  getOrphanSysCell,  o => o.fatura?.data_documento, o => o.fatura?.valor,    [225, 29, 72],  o => (o.fatura?.entidade || '').trim() || '(sem entidade)');
+
+    doc.save(`${reportName}.pdf`);
+  };
+
+  const ColChecks = ({ cols, state, setter, label }) => (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{label}</span>
+        <div className="flex gap-2">
+          <button onClick={() => toggleAll(setter, cols, true)}  className="text-[9px] text-indigo-500 hover:underline">Todos</button>
+          <button onClick={() => toggleAll(setter, cols, false)} className="text-[9px] text-slate-400 hover:underline">Nenhum</button>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+        {cols.map(c => (
+          <label key={c.key} className="flex items-center gap-1.5 cursor-pointer select-none">
+            <input type="checkbox" checked={!!state[c.key]} onChange={() => setter(p => ({ ...p, [c.key]: !p[c.key] }))}
+              className="accent-indigo-600 w-3.5 h-3.5" />
+            <span className="text-[11px] text-slate-600">{c.label}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Configurar Relatório</h3>
+            {isMulti && <p className="text-xs text-slate-400 mt-0.5">{runs.length} importações · agrupado por mês</p>}
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Formato</p>
+          <div className="flex gap-2">
+            {[{ k: 'csv', l: 'CSV (Excel)' }, { k: 'pdf', l: 'PDF' }].map(({ k, l }) => (
+              <button key={k} onClick={() => setFormato(k)}
+                className={`px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${formato === k ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Secções a incluir</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { k: 'matched',       l: `Reconciliados (${data.matched?.length ?? 0})`,       color: 'emerald' },
+              { k: 'orphan_bank',   l: `Órfãos Banco (${data.orphan_bank?.length ?? 0})`,    color: 'amber'   },
+              { k: 'orphan_system', l: `Órfãos Sistema (${data.orphan_system?.length ?? 0})`, color: 'rose'   },
+            ].map(({ k, l, color }) => (
+              <button key={k} onClick={() => setSecoes(p => ({ ...p, [k]: !p[k] }))}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
+                  secoes[k]
+                    ? color === 'emerald' ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                    : color === 'amber'   ? 'bg-amber-100 text-amber-700 border-amber-300'
+                    :                       'bg-rose-100 text-rose-700 border-rose-300'
+                    : 'bg-slate-50 text-slate-400 border-slate-200'
+                }`}>
+                {secoes[k] ? '✓ ' : ''}{l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          {secoes.matched       && <ColChecks cols={COLS_MATCHED}     state={colsM}  setter={setColsM}  label="Colunas — Reconciliados" />}
+          {secoes.orphan_bank   && <ColChecks cols={COLS_ORPHAN_BANK} state={colsOB} setter={setColsOB} label="Colunas — Órfãos Banco" />}
+          {secoes.orphan_system && <ColChecks cols={COLS_ORPHAN_SYS}  state={colsOS} setter={setColsOS} label="Colunas — Órfãos Sistema" />}
+        </div>
+
+        <button onClick={formato === 'csv' ? handleDownloadCsv : handleDownloadPdf}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">
+          <Download size={14} /> Download {formato.toUpperCase()}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CsvMappingCard({ csvMapping, colMap, setColMap, previewing, confirmarMapeamento, onCancel }) {
+  const cols = csvMapping.columns;
+  const canConfirm = colMap.dataCol && (colMap.modo === 'valor' ? colMap.valorCol : (colMap.debitoCol || colMap.creditoCol));
+
+  const colSamples = (col) =>
+    csvMapping.preview.slice(0, 3).map(r => r[col]).filter(v => v != null && v !== '').join(', ');
+
+  const mkSelect = (field) => (
+    <select
+      value={colMap[field]}
+      onChange={e => setColMap(p => ({ ...p, [field]: e.target.value }))}
+      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+    >
+      <option value="">— não usar —</option>
+      {cols.map(c => {
+        const samples = colSamples(c);
+        return <option key={c} value={c}>{c}{samples ? ` — ${samples}` : ''}</option>;
+      })}
+    </select>
+  );
+
+  return (
+    <div className="bg-white rounded-[2.5rem] shadow-sm border border-amber-100 p-6 sm:p-8 space-y-5">
+      <div>
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600">Mapear Colunas do CSV</h3>
+        <p className="text-xs text-slate-400 mt-0.5">As colunas deste ficheiro não foram reconhecidas automaticamente. Indica qual coluna corresponde a cada campo.</p>
+      </div>
+
+      {/* Layout: prévia à esquerda, dropdowns à direita */}
+      <div className="flex flex-col lg:flex-row gap-6">
+
+        {/* Prévia da tabela — sempre visível enquanto mapeia */}
+        <div className="lg:flex-1 overflow-auto max-h-80 rounded-xl border border-slate-100">
+          <table className="text-[11px] w-full">
+            <thead className="bg-slate-50 sticky top-0">
+              <tr>{cols.map(c => <th key={c} className="px-3 py-2 text-left text-slate-500 font-black uppercase tracking-widest whitespace-nowrap">{c}</th>)}</tr>
+            </thead>
+            <tbody>
+              {csvMapping.preview.map((row, i) => (
+                <tr key={i} className="border-t border-slate-50">
+                  {cols.map(c => <td key={c} className="px-3 py-2 text-slate-600 whitespace-nowrap">{row[c]}</td>)}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Dropdowns de mapeamento */}
+        <div className="lg:w-72 space-y-4">
+          {/* Seletor modo valor vs débito/crédito */}
+          <div className="flex gap-2 flex-wrap">
+            {[{ k: 'valor', l: 'Valor único' }, { k: 'debcred', l: 'Déb + Créd' }].map(({ k, l }) => (
+              <button key={k} onClick={() => setColMap(p => ({ ...p, modo: k }))}
+                className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Data <span className="text-rose-400">*</span></label>
+            {mkSelect('dataCol')}
+          </div>
+          {colMap.modo === 'valor' ? (
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Valor <span className="text-rose-400">*</span></label>
+              {mkSelect('valorCol')}
+            </div>
+          ) : (
+            <>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Débito (saída)</label>
+                {mkSelect('debitoCol')}
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Crédito (entrada)</label>
+                {mkSelect('creditoCol')}
+              </div>
+            </>
+          )}
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Descrição</label>
+            {mkSelect('descricaoCol')}
+          </div>
+          {colMap.modo === 'valor' && (
+            <div>
+              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo (C/D, Entrada/Saída)</label>
+              {mkSelect('tipoCol')}
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <button onClick={confirmarMapeamento} disabled={!canConfirm || previewing}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+              {previewing ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
+              Aplicar
+            </button>
+            <button onClick={onCancel}
+              className="px-4 py-2 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ReconciliacaoAdmin() {
   const { supabase } = useApp();
 
   // ── Upload state ──────────────────────────────────────────────────────────
-  const [ficheiro, setFicheiro] = useState(null);        // File object
+  const [ficheiros, setFicheiros] = useState([]);         // File[]
+  const [previewErrors, setPreviewErrors] = useState([]); // { filename, error }[]
   const [dragging, setDragging] = useState(false);
   const [processando, setProcessando] = useState(false);
   const [previewing, setPreviewing] = useState(false);
@@ -59,6 +571,12 @@ export default function ReconciliacaoAdmin() {
   const [selTransacoes, setSelTransacoes] = useState(new Set());
   const [txSearch, setTxSearch] = useState('');
   const [txTipoFiltro, setTxTipoFiltro] = useState('todos'); // 'todos' | 'debito' | 'credito'
+
+  // ── Edição inline de descrição na pré-visualização ───────────────────────
+  const [editingTxIdx, setEditingTxIdx] = useState(null);
+
+  // ── Edição inline de descrição nos resultados (histórico/run actual) ──────
+  const [editingResultDesc, setEditingResultDesc] = useState(null); // { section, index, value }
 
   // ── Mapeamento de colunas CSV ─────────────────────────────────────────────
   const [csvMapping, setCsvMapping] = useState(null); // { columns, preview } quando needs_mapping
@@ -75,6 +593,10 @@ export default function ReconciliacaoAdmin() {
   const [pendingOrphanConfirm, setPendingOrphanConfirm] = useState(null); // { indices: number[] }
   const [orphanObs, setOrphanObs] = useState('');
   const [bulkConfirmando, setBulkConfirmando] = useState(false);
+  const [showRelatorio, setShowRelatorio] = useState(false);
+  const [selHistorico, setSelHistorico] = useState(new Set());
+  const [relatorioRuns, setRelatorioRuns] = useState(null);
+  const [loadingMultiRel, setLoadingMultiRel] = useState(false);
 
   // ── Classificação de Órfãos ───────────────────────────────────────────────
   const [tags, setTags] = useState([]);
@@ -256,75 +778,105 @@ export default function ReconciliacaoAdmin() {
   const handleDrop = (e) => {
     e.preventDefault();
     setDragging(false);
-    const f = e.dataTransfer.files[0];
-    if (f) validarESelecionarFicheiro(f);
+    adicionarFicheiros(e.dataTransfer.files);
   };
   const handleFileChange = (e) => {
-    const f = e.target.files[0];
-    if (f) validarESelecionarFicheiro(f);
+    adicionarFicheiros(e.target.files);
+    e.target.value = '';
   };
-  const validarESelecionarFicheiro = (f) => {
+  const adicionarFicheiros = (fileList) => {
     setErro(null);
-    const ext = f.name.split('.').pop().toLowerCase();
-    if (!['csv', 'ofx', 'qfx', 'pdf'].includes(ext)) {
-      setErro(`Formato .${ext} não suportado. Formatos aceites: CSV, OFX, QFX, PDF.`);
-      return;
+    const validos = [];
+    const invalidos = [];
+    for (const f of fileList) {
+      const ext = f.name.split('.').pop().toLowerCase();
+      if (['csv', 'ofx', 'qfx', 'pdf'].includes(ext)) validos.push(f);
+      else invalidos.push(f.name);
     }
-    setFicheiro(f);
+    if (invalidos.length) setErro(`Formato não suportado: ${invalidos.join(', ')}. Aceites: CSV, OFX, QFX, PDF.`);
+    if (validos.length) setFicheiros(prev => {
+      const existentes = new Set(prev.map(f => f.name));
+      return [...prev, ...validos.filter(f => !existentes.has(f.name))];
+    });
   };
 
   // ── Etapa 1: pré-visualizar movimentos do extrato ────────────────────────
   const previsar = async () => {
-    if (!ficheiro) return;
+    if (!ficheiros.length) return;
     setPreviewing(true);
     setErro(null);
-    try {
-      const formPayload = new FormData();
-      formPayload.append('file', ficheiro);
-      const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
-      const data = await res.json();
-      if (!res.ok) {
-        let msg = data.error || 'Erro ao ler ficheiro.';
-        if (data.detected) msg = `${data.error} Colunas: ${data.detected.join(', ')}`;
-        setErro(msg);
-        return;
+    setPreviewErrors([]);
+    const allTx = [];
+    const errors = [];
+    const multiSource = ficheiros.length > 1;
+    for (let idx = 0; idx < ficheiros.length; idx++) {
+      const f = ficheiros[idx];
+      try {
+        const fp = new FormData();
+        fp.append('file', f);
+        const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
+        const data = await res.json();
+        if (!res.ok) { errors.push({ filename: f.name, error: data.error || 'Erro ao ler' }); continue; }
+        if (data.needs_mapping) {
+          // Guardar restantes para depois do mapeamento
+          const remaining = ficheiros.slice(idx + 1);
+          if (allTx.length) {
+            setPreviewTransacoes(allTx);
+            setSelTransacoes(new Set(allTx.map((_, i) => i)));
+          }
+          setFicheiros([f, ...remaining]);
+          setCsvMapping({ columns: data.columns, preview: data.preview });
+          setColMap({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+          setPreviewFilename(data.filename);
+          if (errors.length) setPreviewErrors(errors);
+          setPreviewing(false);
+          return;
+        }
+        allTx.push(...data.transactions.map(tx => ({ ...tx, _source: multiSource ? f.name : undefined })));
+      } catch (err) {
+        errors.push({ filename: f.name, error: err.message || 'Erro de rede' });
       }
-      if (data.needs_mapping) {
-        setCsvMapping({ columns: data.columns, preview: data.preview });
-        setColMap({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
-        setPreviewFilename(data.filename);
-        return;
-      }
-      setPreviewTransacoes(data.transactions);
-      setPreviewFilename(data.filename);
-      setSelTransacoes(new Set(data.transactions.map((_, i) => i)));
+    }
+    if (errors.length) setPreviewErrors(errors);
+    if (allTx.length) {
+      setPreviewTransacoes(allTx);
+      setPreviewFilename(ficheiros.map(f => f.name).join(', '));
+      setSelTransacoes(new Set(allTx.map((_, i) => i)));
       setTxSearch('');
       setTxTipoFiltro('todos');
-    } catch (err) {
-      setErro(err.message || 'Erro de rede.');
-    } finally {
-      setPreviewing(false);
     }
+    setFicheiros([]);
+    setPreviewing(false);
   };
 
   // ── Confirmar mapeamento de colunas e re-parsear ──────────────────────
   const confirmarMapeamento = async () => {
-    if (!ficheiro) return;
+    if (!ficheiros.length) return;
+    const ficheiroAtual = ficheiros[0];
+    const restantes = ficheiros.slice(1);
     const mapping = { ...colMap };
     setPreviewing(true);
     setErro(null);
     try {
       const formPayload = new FormData();
-      formPayload.append('file', ficheiro);
+      formPayload.append('file', ficheiroAtual);
       formPayload.append('column_mapping', JSON.stringify(mapping));
       const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); return; }
+      const novasTx = data.transactions.map(tx => ({ ...tx, _source: restantes.length || previewTransacoes?.length ? ficheiroAtual.name : undefined }));
+      const merged = [...(previewTransacoes || []), ...novasTx];
       setCsvMapping(null);
-      setPreviewTransacoes(data.transactions);
-      setSelTransacoes(new Set(data.transactions.map((_, i) => i)));
+      setPreviewTransacoes(merged);
+      setSelTransacoes(new Set(merged.map((_, i) => i)));
       setTxSearch('');
       setTxTipoFiltro('todos');
+      // Continuar com ficheiros restantes
+      if (restantes.length) {
+        setFicheiros(restantes);
+      } else {
+        setFicheiros([]);
+      }
     } catch (err) {
       setErro(err.message || 'Erro de rede.');
     } finally {
@@ -684,6 +1236,134 @@ export default function ReconciliacaoAdmin() {
     }
   };
 
+  // ── Desvincular match ────────────────────────────────────────────────────
+  const [desvinculando, setDesvinculando] = useState(new Set());
+
+  const desvincularMatch = async (matchItem, matchIndex) => {
+    const key = `${matchIndex}`;
+    setDesvinculando(prev => new Set(prev).add(key));
+    try {
+      const runId = runSelecionado?.id ?? resultado?.run_id;
+      const base = runSelecionado?.results_json ?? {
+        matched: resultado?.matched || [],
+        orphan_bank: resultado?.orphan_bank || [],
+        orphan_system: resultado?.orphan_system || [],
+      };
+
+      const newMatched      = base.matched.filter((_, i) => i !== matchIndex);
+      const newOrphanBank   = [...base.orphan_bank,   { transacao: matchItem.transacao, reason: 'desvinculado' }];
+      const newOrphanSystem = [...base.orphan_system, { fatura:    matchItem.fatura,    reason: 'desvinculado' }];
+      const newResults = { matched: newMatched, orphan_bank: newOrphanBank, orphan_system: newOrphanSystem };
+
+      // Reverter status se estiver PAGO
+      if (matchItem.fatura?.status === 'PAGO') {
+        if (matchItem.fatura.fonte === 'recibo') {
+          await supabase.from('receipt_validations')
+            .update({ estado: matchItem.fatura.estado_original || 'valido' })
+            .eq('id', matchItem.fatura.id);
+        } else {
+          await supabase.from('faturas').update({ status: 'PENDENTE' }).eq('id', matchItem.fatura.id);
+        }
+      }
+
+      if (runId) {
+        await supabase.from('reconciliation_runs').update({
+          results_json: newResults,
+          matched_count: newMatched.length,
+          orphan_bank_count: newOrphanBank.length,
+          orphan_system_count: newOrphanSystem.length,
+        }).eq('id', runId);
+      }
+
+      if (runSelecionado) {
+        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+      } else {
+        setResultado(prev => ({ ...prev, ...newResults }));
+      }
+    } catch (err) {
+      alert(`Erro ao desvincular: ${err.message}`);
+    } finally {
+      setDesvinculando(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  };
+
+  // ── Excluir item de um run ───────────────────────────────────────────────
+  const [excluindo, setExcluindo] = useState(new Set());
+
+  const excluirItem = async (section, index) => {
+    const key = `${section}_${index}`;
+    setExcluindo(prev => new Set(prev).add(key));
+    try {
+      const runId = runSelecionado?.id ?? resultado?.run_id;
+      const base = runSelecionado?.results_json ?? {
+        matched: resultado?.matched || [],
+        orphan_bank: resultado?.orphan_bank || [],
+        orphan_system: resultado?.orphan_system || [],
+      };
+      let newMatched = [...base.matched];
+      let newOrphanBank = [...base.orphan_bank];
+      let newOrphanSystem = [...base.orphan_system];
+
+      if (section === 'matched') {
+        const item = newMatched[index];
+        if (item?.fatura?.status === 'PAGO') {
+          if (item.fatura.fonte === 'recibo') {
+            await supabase.from('receipt_validations').update({ estado: item.fatura.estado_original || 'valido' }).eq('id', item.fatura.id);
+          } else {
+            await supabase.from('faturas').update({ status: 'PENDENTE' }).eq('id', item.fatura.id);
+          }
+        }
+        newMatched = newMatched.filter((_, i) => i !== index);
+      } else if (section === 'orphan_bank') {
+        newOrphanBank = newOrphanBank.filter((_, i) => i !== index);
+      } else if (section === 'orphan_system') {
+        newOrphanSystem = newOrphanSystem.filter((_, i) => i !== index);
+      }
+
+      const newResults = { matched: newMatched, orphan_bank: newOrphanBank, orphan_system: newOrphanSystem };
+      if (runId) {
+        await supabase.from('reconciliation_runs').update({
+          results_json: newResults,
+          matched_count: newMatched.length,
+          orphan_bank_count: newOrphanBank.length,
+          orphan_system_count: newOrphanSystem.length,
+        }).eq('id', runId);
+      }
+      if (runSelecionado) {
+        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+      } else {
+        setResultado(prev => ({ ...prev, ...newResults }));
+      }
+    } catch (err) {
+      alert(`Erro ao excluir: ${err.message}`);
+    } finally {
+      setExcluindo(prev => { const s = new Set(prev); s.delete(key); return s; });
+    }
+  };
+
+  // ── Guardar descrição editada nos resultados ──────────────────────────────
+  const saveResultDescricao = async (section, index, newDesc) => {
+    setEditingResultDesc(null);
+    const runId = runSelecionado?.id ?? resultado?.run_id;
+    const base = runSelecionado?.results_json ?? {
+      matched: resultado?.matched || [],
+      orphan_bank: resultado?.orphan_bank || [],
+      orphan_system: resultado?.orphan_system || [],
+    };
+    const newSection = base[section].map((item, i) =>
+      i === index ? { ...item, transacao: { ...item.transacao, descricao: newDesc } } : item
+    );
+    const newResults = { ...base, [section]: newSection };
+    if (runId) {
+      await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', runId);
+    }
+    if (runSelecionado) {
+      setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+    } else {
+      setResultado(prev => ({ ...prev, [section]: newSection }));
+    }
+  };
+
   // ── Render helpers ────────────────────────────────────────────────────────
   const displayData = runSelecionado
     ? { ...runSelecionado.results_json, run_id: runSelecionado.id }
@@ -765,21 +1445,29 @@ export default function ReconciliacaoAdmin() {
             dragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
           }`}
         >
-          <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" className="hidden" onChange={handleFileChange} />
+          <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" multiple className="hidden" onChange={handleFileChange} />
           <Upload size={32} className={`mx-auto mb-3 ${dragging ? 'text-indigo-500' : 'text-slate-300'}`} />
-          {ficheiro ? (
-            <div className="flex items-center justify-center gap-2">
-              <FileText size={16} className="text-indigo-600" />
-              <span className="font-semibold text-slate-700">{ficheiro.name}</span>
-              <button onClick={e => { e.stopPropagation(); setFicheiro(null); setErro(null); }}
-                className="text-slate-400 hover:text-rose-500 ml-1">
-                <X size={14} />
-              </button>
+          {ficheiros.length > 0 ? (
+            <div className="space-y-1.5" onClick={e => e.stopPropagation()}>
+              {ficheiros.map((f, idx) => (
+                <div key={idx} className="flex items-center justify-center gap-2">
+                  <FileText size={14} className="text-indigo-600 flex-shrink-0" />
+                  <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{f.name}</span>
+                  <button onClick={() => setFicheiros(prev => prev.filter((_, i) => i !== idx))}
+                    className="text-slate-400 hover:text-rose-500 flex-shrink-0">
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+              <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline"
+                onClick={() => inputRef.current?.click()}>
+                + Adicionar mais ficheiros
+              </p>
             </div>
           ) : (
             <>
-              <p className="text-slate-500 font-medium">Arraste um ficheiro CSV, OFX ou PDF aqui</p>
-              <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">ou clique para escolher</p>
+              <p className="text-slate-500 font-medium">Arraste ficheiros CSV, OFX ou PDF aqui</p>
+              <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">ou clique para escolher (múltiplos permitidos)</p>
             </>
           )}
         </div>
@@ -791,115 +1479,40 @@ export default function ReconciliacaoAdmin() {
           </div>
         )}
 
-        {ficheiro && !previewing && !previewTransacoes && (
+        {previewErrors.length > 0 && (
+          <div className="mt-3 space-y-1">
+            {previewErrors.map((e, i) => (
+              <div key={i} className="flex items-start gap-2 bg-amber-50 text-amber-700 rounded-xl p-3 text-xs">
+                <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                <span><strong>{e.filename}</strong>: {e.error}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {ficheiros.length > 0 && !previewing && !csvMapping && (
           <button onClick={previsar}
             className="mt-4 w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-2xl py-3 hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest">
-            <ArrowLeftRight size={14} /> Pré-visualizar Movimentos
+            <ArrowLeftRight size={14} /> Pré-visualizar {ficheiros.length > 1 ? `${ficheiros.length} Ficheiros` : 'Movimentos'}
           </button>
         )}
         {previewing && (
           <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600">
-            <Loader2 size={18} className="animate-spin" /> A ler ficheiro...
+            <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
           </div>
         )}
       </div>
 
       {/* Mapeamento de colunas CSV */}
-      {csvMapping && (() => {
-        const cols = csvMapping.columns;
-        const none = '— não usar —';
-        const opts = [none, ...cols];
-        const sel = (field) => (
-          <select
-            value={colMap[field] || ''}
-            onChange={e => setColMap(p => ({ ...p, [field]: e.target.value === none ? '' : e.target.value }))}
-            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          >
-            {opts.map(o => <option key={o} value={o === none ? '' : o}>{o}</option>)}
-          </select>
-        );
-        const canConfirm = colMap.dataCol && (colMap.modo === 'valor' ? colMap.valorCol : (colMap.debitoCol || colMap.creditoCol));
-        return (
-          <div className="bg-white rounded-[2.5rem] shadow-sm border border-amber-100 p-6 sm:p-8 space-y-5">
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600">Mapear Colunas do CSV</h3>
-              <p className="text-xs text-slate-400 mt-0.5">As colunas deste ficheiro não foram reconhecidas automaticamente. Indica qual coluna corresponde a cada campo.</p>
-            </div>
-
-            {/* Prévia da tabela */}
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="text-[11px] w-full">
-                <thead className="bg-slate-50">
-                  <tr>{cols.map(c => <th key={c} className="px-3 py-2 text-left text-slate-500 font-black uppercase tracking-widest whitespace-nowrap">{c}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {csvMapping.preview.map((row, i) => (
-                    <tr key={i} className="border-t border-slate-50">
-                      {cols.map(c => <td key={c} className="px-3 py-2 text-slate-600 truncate max-w-[160px]">{row[c]}</td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Seletor modo valor vs débito/crédito */}
-            <div className="flex gap-2">
-              {[{ k: 'valor', l: 'Coluna de valor único' }, { k: 'debcred', l: 'Colunas débito + crédito' }].map(({ k, l }) => (
-                <button key={k} onClick={() => setColMap(p => ({ ...p, modo: k }))}
-                  className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${colMap.modo === k ? 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>
-                  {l}
-                </button>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Data <span className="text-rose-400">*</span></label>
-                {sel('dataCol')}
-              </div>
-              {colMap.modo === 'valor' ? (
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Valor <span className="text-rose-400">*</span></label>
-                  {sel('valorCol')}
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Débito (saída)</label>
-                    {sel('debitoCol')}
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Crédito (entrada)</label>
-                    {sel('creditoCol')}
-                  </div>
-                </>
-              )}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Descrição</label>
-                {sel('descricaoCol')}
-              </div>
-              {colMap.modo === 'valor' && (
-                <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Tipo (C/D, Entrada/Saída)</label>
-                  {sel('tipoCol')}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <button onClick={confirmarMapeamento} disabled={!canConfirm || previewing}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
-                {previewing ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
-                Aplicar e Pré-visualizar
-              </button>
-              <button onClick={() => { setCsvMapping(null); setFicheiro(null); setErro(null); }}
-                className="px-4 py-2 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest">
-                Cancelar
-              </button>
-            </div>
-          </div>
-        );
-      })()}
+      {csvMapping && (
+        <CsvMappingCard
+          csvMapping={csvMapping}
+          colMap={colMap}
+          setColMap={setColMap}
+          previewing={previewing}
+          confirmarMapeamento={confirmarMapeamento}
+          onCancel={() => { setCsvMapping(null); setFicheiros([]); setErro(null); }}
+        />
+      )}
 
       {/* Preview de movimentos — etapa de seleção */}
       {previewTransacoes && (() => {
@@ -928,7 +1541,7 @@ export default function ReconciliacaoAdmin() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() => { setPreviewTransacoes(null); setFicheiro(null); setErro(null); }}
+                  onClick={() => { setPreviewTransacoes(null); setFicheiros([]); setPreviewErrors([]); setErro(null); }}
                   className="px-3 py-1.5 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
                 >
                   <X size={11} className="inline mr-1" />Cancelar
@@ -997,22 +1610,43 @@ export default function ReconciliacaoAdmin() {
                 <p className="text-center text-slate-400 py-6 text-sm">Nenhum movimento corresponde ao filtro.</p>
               )}
               {visibleIndices.map(({ tx, i }) => (
-                <label key={i} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${selTransacoes.has(i) ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-transparent hover:bg-slate-100'}`}>
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${selTransacoes.has(i) ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-transparent hover:bg-slate-100'}`}>
                   <input
                     type="checkbox"
                     checked={selTransacoes.has(i)}
                     onChange={e => setSelTransacoes(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                    className="accent-indigo-600 w-4 h-4 flex-shrink-0"
+                    className="accent-indigo-600 w-4 h-4 flex-shrink-0 cursor-pointer"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-700 font-medium truncate">{tx.descricao || '—'}</p>
+                    {tx._source && (
+                      <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 truncate mb-0.5">{tx._source}</p>
+                    )}
+                    {editingTxIdx === i ? (
+                      <input
+                        autoFocus
+                        className="w-full text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                        value={tx.descricao}
+                        onChange={e => setPreviewTransacoes(prev => prev.map((t, j) => j === i ? { ...t, descricao: e.target.value } : t))}
+                        onBlur={() => setEditingTxIdx(null)}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setEditingTxIdx(null); }}
+                      />
+                    ) : (
+                      <p className="text-xs text-slate-700 font-medium truncate">{tx.descricao || '—'}</p>
+                    )}
                     <p className="text-[10px] text-slate-400">{tx.data}</p>
                   </div>
+                  <button
+                    onClick={() => setEditingTxIdx(editingTxIdx === i ? null : i)}
+                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
+                    title="Editar descrição"
+                  >
+                    <Pencil size={12} />
+                  </button>
                   <div className="text-right flex-shrink-0 flex items-center gap-2">
                     <TipoBadge tipo={tx.tipo} />
                     <span className="text-sm font-bold text-slate-700">€{Number(tx.valor).toFixed(2)}</span>
                   </div>
-                </label>
+                </div>
               ))}
             </div>
           </div>
@@ -1032,20 +1666,26 @@ export default function ReconciliacaoAdmin() {
             </div>
           )}
 
-          {/* Sub-tab buttons */}
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-6 overflow-x-auto">
-            {[
-              { key: 'matched', label: 'Reconciliados', count: displayData.matched?.length ?? 0, color: 'emerald' },
-              { key: 'orphan_bank', label: 'Órfãos Banco', count: displayData.orphan_bank?.length ?? 0, color: 'amber' },
-              { key: 'orphan_system', label: 'Órfãos Sistema', count: displayData.orphan_system?.length ?? 0, color: 'rose' },
-            ].map(tab => (
-              <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
-                className={`flex-1 flex-shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  activeSubTab === tab.key ? 'bg-white shadow-md' : 'text-slate-400 hover:text-slate-600'
-                }`}>
-                {tab.label} ({tab.count})
-              </button>
-            ))}
+          {/* Sub-tab buttons + download */}
+          <div className="flex items-center gap-2 mb-6">
+            <div className="flex flex-1 gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto">
+              {[
+                { key: 'matched', label: 'Reconciliados', count: displayData.matched?.length ?? 0 },
+                { key: 'orphan_bank', label: 'Órfãos Banco', count: displayData.orphan_bank?.length ?? 0 },
+                { key: 'orphan_system', label: 'Órfãos Sistema', count: displayData.orphan_system?.length ?? 0 },
+              ].map(tab => (
+                <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
+                  className={`flex-1 flex-shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                    activeSubTab === tab.key ? 'bg-white shadow-md' : 'text-slate-400 hover:text-slate-600'
+                  }`}>
+                  {tab.label} ({tab.count})
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setShowRelatorio(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+              <Download size={13} /> Relatório
+            </button>
           </div>
 
           {/* Sub-tab: Reconciliados */}
@@ -1106,23 +1746,62 @@ export default function ReconciliacaoAdmin() {
                           <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">2 movimentos</span>
                         )}
                       </div>
-                      <p className="text-xs text-slate-600 mt-1 truncate font-medium">{item.transacao?.descricao}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? (
+                          <input
+                            autoFocus
+                            className="flex-1 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                            value={editingResultDesc.value}
+                            onChange={e => setEditingResultDesc(prev => ({ ...prev, value: e.target.value }))}
+                            onBlur={() => saveResultDescricao('matched', i, editingResultDesc.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') saveResultDescricao('matched', i, editingResultDesc.value);
+                              if (e.key === 'Escape') setEditingResultDesc(null);
+                            }}
+                          />
+                        ) : (
+                          <p className="flex-1 text-xs text-slate-600 truncate font-medium">{item.transacao?.descricao}</p>
+                        )}
+                        <button
+                          onClick={() => setEditingResultDesc({ section: 'matched', index: i, value: item.transacao?.descricao || '' })}
+                          className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
+                          title="Editar descrição"
+                        >
+                          <Pencil size={11} />
+                        </button>
+                      </div>
                       {item.fatura?.descricao && (
                         <p className="text-xs text-slate-500 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
                       )}
                     </div>
-                    {item.fatura?.status === 'PAGO' ? (
-                      <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest flex-shrink-0">
-                        <CheckCircle size={14} /> Pago
-                      </span>
-                    ) : (
-                      <button onClick={() => confirmarPagamento(item.fatura?.id, item.fatura?.fonte)}
-                        disabled={confirmando.has(item.fatura?.id)}
-                        className="flex-shrink-0 flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
-                        {confirmando.has(item.fatura?.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
-                        Confirmar
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {item.fatura?.status === 'PAGO' ? (
+                        <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                          <CheckCircle size={14} /> Pago
+                        </span>
+                      ) : (
+                        <button onClick={() => confirmarPagamento(item.fatura?.id, item.fatura?.fonte)}
+                          disabled={confirmando.has(item.fatura?.id)}
+                          className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
+                          {confirmando.has(item.fatura?.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                          Confirmar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => desvincularMatch(item, i)}
+                        disabled={desvinculando.has(`${i}`)}
+                        title="Desvincular"
+                        className="p-1.5 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                        {desvinculando.has(`${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
                       </button>
-                    )}
+                      <button
+                        onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('matched', i); }}
+                        disabled={excluindo.has(`matched_${i}`)}
+                        title="Excluir movimento"
+                        className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                        {excluindo.has(`matched_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1200,10 +1879,31 @@ export default function ReconciliacaoAdmin() {
                               <span className="font-black uppercase tracking-widest">Tipo Movimento:</span> {item.transacao.tipoMovimento}
                             </p>
                           )}
-                          <p className="text-xs text-slate-700 font-medium">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descrição: </span>
-                            {item.transacao.descricao || '—'}
-                          </p>
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex-shrink-0">Descrição: </span>
+                            {editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? (
+                              <input
+                                autoFocus
+                                className="flex-1 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                                value={editingResultDesc.value}
+                                onChange={e => setEditingResultDesc(prev => ({ ...prev, value: e.target.value }))}
+                                onBlur={() => saveResultDescricao('orphan_bank', i, editingResultDesc.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') saveResultDescricao('orphan_bank', i, editingResultDesc.value);
+                                  if (e.key === 'Escape') setEditingResultDesc(null);
+                                }}
+                              />
+                            ) : (
+                              <span className="text-xs text-slate-700 font-medium truncate">{item.transacao.descricao || '—'}</span>
+                            )}
+                            <button
+                              onClick={() => setEditingResultDesc({ section: 'orphan_bank', index: i, value: item.transacao.descricao || '' })}
+                              className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
+                              title="Editar descrição"
+                            >
+                              <Pencil size={11} />
+                            </button>
+                          </div>
                           {item.reason === 'ambiguous' && item.candidates && (
                             <p className="text-[10px] text-amber-600 mt-1">
                               Candidatos: {item.candidates.map(c => c.entidade).filter(Boolean).join(', ')}
@@ -1218,6 +1918,13 @@ export default function ReconciliacaoAdmin() {
                           <button onClick={() => pedirObservacaoOrphan([i])}
                             className="flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
                             <CheckCircle size={12} /> Confirmar
+                          </button>
+                          <button
+                            onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('orphan_bank', i); }}
+                            disabled={excluindo.has(`orphan_bank_${i}`)}
+                            title="Excluir movimento"
+                            className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                            {excluindo.has(`orphan_bank_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                           </button>
                         </div>
                       </div>
@@ -1235,13 +1942,22 @@ export default function ReconciliacaoAdmin() {
                 <p className="text-center text-slate-400 py-8 text-sm">Todas as faturas têm correspondência.</p>
               )}
               {(displayData.orphan_system || []).map((item, i) => (
-                <div key={i} className="bg-rose-50 rounded-2xl p-4">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-rose-700">Fatura sem pagamento</span>
-                    <span className="text-sm font-bold text-slate-700">€{Number(item.fatura.valor).toFixed(2)}</span>
-                    <span className="text-[10px] bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">PENDENTE</span>
+                <div key={i} className="bg-rose-50 rounded-2xl p-4 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-rose-700">Fatura sem pagamento</span>
+                      <span className="text-sm font-bold text-slate-700">€{Number(item.fatura.valor).toFixed(2)}</span>
+                      <span className="text-[10px] bg-rose-100 text-rose-600 px-2 py-0.5 rounded-full">PENDENTE</span>
+                    </div>
+                    <p className="text-xs text-slate-600 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
                   </div>
-                  <p className="text-xs text-slate-600 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
+                  <button
+                    onClick={() => { if (window.confirm('Remover esta fatura dos resultados?')) excluirItem('orphan_system', i); }}
+                    disabled={excluindo.has(`orphan_system_${i}`)}
+                    title="Excluir da lista"
+                    className="flex-shrink-0 p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-100 transition-colors disabled:opacity-50">
+                    {excluindo.has(`orphan_system_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  </button>
                 </div>
               ))}
             </div>
@@ -1271,6 +1987,41 @@ export default function ReconciliacaoAdmin() {
             {!loadingHistorico && historico.length === 0 && (
               <p className="text-center text-slate-400 py-4 text-sm">Nenhuma importação anterior.</p>
             )}
+
+            {/* Barra de acções multi-selecção */}
+            {selHistorico.size > 0 && (
+              <div className="flex items-center justify-between mb-3 px-3 py-2 bg-indigo-50 rounded-xl">
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                  {selHistorico.size} seleccionada{selHistorico.size > 1 ? 's' : ''}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setSelHistorico(new Set())}
+                    className="text-[10px] text-slate-400 hover:text-slate-600 font-black uppercase tracking-widest"
+                  >
+                    Limpar
+                  </button>
+                  <button
+                    disabled={loadingMultiRel}
+                    onClick={async () => {
+                      setLoadingMultiRel(true);
+                      try {
+                        const { data } = await supabase
+                          .from('reconciliation_runs')
+                          .select('id, filename, created_at, results_json')
+                          .in('id', [...selHistorico]);
+                        if (data) { setRelatorioRuns(data); setShowRelatorio(true); }
+                      } finally { setLoadingMultiRel(false); }
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                  >
+                    {loadingMultiRel ? <Loader2 size={11} className="animate-spin" /> : <Download size={11} />}
+                    Relatório
+                  </button>
+                </div>
+              </div>
+            )}
+
             {historico.map(run => (
               <div
                 key={run.id}
@@ -1282,15 +2033,30 @@ export default function ReconciliacaoAdmin() {
                     .single();
                   if (data) setRunSelecionado(data);
                 }}
-                className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer"
+                className={`w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer ${selHistorico.has(run.id) ? 'bg-indigo-50' : ''}`}
               >
-                <div>
-                  <p className="text-sm font-semibold text-slate-700">{run.filename}</p>
+                {/* Checkbox de selecção */}
+                <input
+                  type="checkbox"
+                  checked={selHistorico.has(run.id)}
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => {
+                    e.stopPropagation();
+                    setSelHistorico(prev => {
+                      const s = new Set(prev);
+                      e.target.checked ? s.add(run.id) : s.delete(run.id);
+                      return s;
+                    });
+                  }}
+                  className="accent-indigo-600 w-4 h-4 flex-shrink-0 mr-2 cursor-pointer"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-700 truncate">{run.filename}</p>
                   <p className="text-[10px] text-slate-400">
                     {new Date(run.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-black">
+                <div className="flex items-center gap-2 text-[10px] font-black flex-shrink-0">
                   <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{run.matched_count} ok</span>
                   <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{run.orphan_bank_count} banco</span>
                   <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{run.orphan_system_count} sistema</span>
@@ -1300,9 +2066,7 @@ export default function ReconciliacaoAdmin() {
                     className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors disabled:opacity-50"
                     title="Reprocessar extrato com faturas actuais"
                   >
-                    {reprocessando === run.id
-                      ? <Loader2 size={13} className="animate-spin" />
-                      : <RefreshCw size={13} />}
+                    {reprocessando === run.id ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
                   </button>
                   <button
                     onClick={e => apagarRun(e, run.id)}
@@ -1510,6 +2274,18 @@ export default function ReconciliacaoAdmin() {
             </div>
           </div>
         </div>
+      )}
+
+      {showRelatorio && (relatorioRuns || displayData) && (
+        <RelatorioModal
+          displayData={relatorioRuns ? null : displayData}
+          filename={runSelecionado?.filename ?? resultado?.filename ?? 'extrato'}
+          dataRun={runSelecionado
+            ? new Date(runSelecionado.created_at).toLocaleDateString('pt-PT')
+            : new Date().toLocaleDateString('pt-PT')}
+          runs={relatorioRuns}
+          onClose={() => { setShowRelatorio(false); setRelatorioRuns(null); }}
+        />
       )}
     </div>
   );
