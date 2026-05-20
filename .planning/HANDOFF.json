@@ -1,0 +1,98 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-05-20T20:19:37Z",
+  "phase": null,
+  "phase_name": "ad-hoc — faturacao-clientes-pagamentos feature",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
+  "status": "paused",
+  "completed_tasks": [
+    {
+      "id": 1,
+      "name": "Criar tabela faturacao_clientes_pagamentos (migration SQL)",
+      "status": "done",
+      "commit": "75b0acd",
+      "note": "Migration em supabase/migrations/20260520_faturacao_clientes_pagamentos.sql — AINDA NÃO APLICADA NO SUPABASE"
+    },
+    {
+      "id": 2,
+      "name": "CostReports: coluna Pago Banco + Estado + modal de link",
+      "status": "done",
+      "commit": "75b0acd"
+    },
+    {
+      "id": 3,
+      "name": "ReconciliacaoAdmin: botão Associar a Cliente em créditos",
+      "status": "done",
+      "commit": "75b0acd"
+    },
+    {
+      "id": 4,
+      "name": "Auto-associação de entradas bancárias a clientes (mês anterior)",
+      "status": "done",
+      "commit": "1c21580"
+    },
+    {
+      "id": 5,
+      "name": "Fix matching robusto (pontuação, sufixos legais, score por tokens)",
+      "status": "done",
+      "commit": "b8bfc3f"
+    }
+  ],
+  "remaining_tasks": [
+    {
+      "id": 6,
+      "name": "Aplicar migration SQL no Supabase",
+      "status": "not_started",
+      "note": "BLOQUEANTE — sem esta tabela nada funciona. Copiar conteúdo de supabase/migrations/20260520_faturacao_clientes_pagamentos.sql para o SQL Editor do Supabase."
+    },
+    {
+      "id": 7,
+      "name": "Testar auto-associação com extratos reais",
+      "status": "not_started",
+      "note": "Re-selecionar runs existentes no histórico da Reconciliação → botão Auto → verificar CostReports Abril"
+    },
+    {
+      "id": 8,
+      "name": "Deploy Vercel (pendente — version.json modificado)",
+      "status": "not_started",
+      "note": "Apenas public/version.json modificado, não committed. Fazer git add public/version.json + commit + push + vercel --prod"
+    }
+  ],
+  "blockers": [
+    {
+      "description": "Tabela faturacao_clientes_pagamentos não existe no Supabase",
+      "type": "human_action",
+      "workaround": "Aplicar migration manualmente no SQL Editor do Supabase"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Correr migration SQL no Supabase SQL Editor",
+      "context": "Ficheiro: supabase/migrations/20260520_faturacao_clientes_pagamentos.sql — sem isso as operações de link e auto-associação falham silenciosamente",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {
+      "decision": "Período da associação = mês anterior à transação bancária",
+      "rationale": "Clientes pagam em Maio para serviços de Abril",
+      "phase": "ad-hoc"
+    },
+    {
+      "decision": "Matching por nome: score >= 75% dos tokens significativos (3+ chars) sem sufixos legais",
+      "rationale": "Nomes com vírgulas, Lda, SA, etc. causavam falha no match simples",
+      "phase": "ad-hoc"
+    },
+    {
+      "decision": "Auto-associação corre automaticamente após processar extrato e ao selecionar run do histórico",
+      "rationale": "Utilizador quer zero interação manual",
+      "phase": "ad-hoc"
+    }
+  ],
+  "uncommitted_files": ["public/version.json", ".planning/STATE.md"],
+  "next_action": "1) Aplicar migration Supabase. 2) git add public/version.json && commit && push && vercel --prod. 3) Testar coluna Pago Banco em CostReports.",
+  "context_notes": "Feature completa no código, deployed em b8bfc3f. Única coisa em falta é a migration SQL no Supabase. O matching de clientes pode ainda falhar para clientes cujo nome não aparece na descrição bancária — nesse caso o utilizador usa o botão Auto ou associa manualmente via ícone 🔗."
+}
