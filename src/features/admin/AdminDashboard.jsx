@@ -565,7 +565,18 @@ function AdminDashboard(props) {
                 ? { hover: 'hover:bg-emerald-50', icon: 'bg-emerald-100 text-emerald-600', label: 'text-emerald-500', tag: 'Sucesso' }
                 : { hover: 'hover:bg-indigo-50', icon: 'bg-indigo-100 text-indigo-600', label: 'text-indigo-500', tag: 'Informação' };
               return (
-                <button key={notif.id} onClick={() => { markNotifRead(notif.id); setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3`}>
+                <button key={notif.id} onClick={() => {
+                  markNotifRead(notif.id);
+                  const corrId = notif.payload?.correction_id || notif.payload?.correcao_id;
+                  if (corrId) {
+                    setSelectedCorrectionId(corrId);
+                    setActiveTab('portal_validacao');
+                    setPortalSubTab('correcoes');
+                  } else {
+                    setActiveTab('notificacoes');
+                  }
+                  setShowNotifDropdown(false);
+                }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3`}>
                   <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${styles.icon}`}>
                     <Bell size={14} />
                   </div>
