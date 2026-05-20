@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2 } from 'lucide-react';
+import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -1214,6 +1214,39 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     return (
         <div className={`min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-200 font-sans ${printingWorker ? 'pb-0 bg-white' : 'pb-20'}`}>
+            {/* Banner fixo no topo — igual ao do trabalhador */}
+            {!printingWorker && myNotifications.length > 0 && (
+                <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
+                    {myNotifications.map(notif => (
+                        <div key={notif.id} className="pointer-events-auto animate-in slide-in-from-top-4 duration-700">
+                            <div className={`rounded-[2rem] p-0.5 shadow-2xl ${
+                                notif.type === 'error' ? 'bg-gradient-to-br from-rose-500 to-red-600' :
+                                notif.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
+                                notif.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
+                                'bg-gradient-to-br from-indigo-500 to-violet-600'
+                            }`}>
+                                <div className="bg-white/95 backdrop-blur-md rounded-[1.95rem] p-4 shadow-inner">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-2.5 rounded-2xl shrink-0 ${
+                                            notif.type === 'error' ? 'bg-rose-50 text-rose-600' :
+                                            notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
+                                            notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
+                                            'bg-indigo-50 text-indigo-600'
+                                        }`}>
+                                            {notif.type === 'error' ? <AlertCircle size={20} /> : <Bell size={20} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{notif.title}</h3>
+                                            <p className="text-[10px] font-bold text-slate-500 mt-0.5 leading-tight line-clamp-1">{notif.message}</p>
+                                        </div>
+                                        <button onClick={() => handleDismissNotif(notif.id)} className="p-1.5 text-slate-300 hover:text-slate-600 transition-all hover:bg-slate-50 rounded-xl shrink-0"><X size={18} /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
             {!printingWorker && <Header />}
 
             {!printingWorker ? (
@@ -1228,10 +1261,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <div className="h-[2px] w-12 bg-slate-200"></div>
                         </div>
                     </div>
-                    {/* Banner de Notificações */}
-                    {myNotifications.length > 0 && (
+                    {/* Detalhe inline apenas para contra-propostas (precisam de botões aceitar/rejeitar) */}
+                    {myNotifications.filter(n => n.payload?.type === 'counter_proposal').length > 0 && (
                         <div className="mb-8 space-y-4">
-                            {myNotifications.map(notif => (
+                            {myNotifications.filter(n => n.payload?.type === 'counter_proposal').map(notif => (
                                 <div key={notif.id} className="relative overflow-hidden bg-white border border-indigo-100 rounded-[2rem] shadow-xl shadow-indigo-100/30 animate-fade-in">
                                     <div className="absolute top-0 left-0 w-1.5 h-full bg-indigo-600"></div>
                                     <div className="p-6 md:p-8">
