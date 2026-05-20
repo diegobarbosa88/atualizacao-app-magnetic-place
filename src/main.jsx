@@ -24,10 +24,26 @@ if ('serviceWorker' in navigator) {
       const newSW = registration.installing;
       if (!newSW) return;
       newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          // Forçar activação imediata sem esperar por tabs fechadas
+          newSW.postMessage({ type: 'SKIP_WAITING' });
+        }
         if (newSW.state === 'activated') {
           window.location.reload();
         }
       });
     });
+  });
+
+  // Se houver um SW em espera (waiting), activá-lo imediatamente
+  navigator.serviceWorker.ready.then(registration => {
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }
+  });
+
+  // Recarregar quando o SW tomar controlo
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
   });
 }
