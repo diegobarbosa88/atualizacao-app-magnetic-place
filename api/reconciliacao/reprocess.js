@@ -82,9 +82,14 @@ export default async function handler(req, res) {
     estado_original: r.estado,
   })).filter(r => r.valor != null && r.valor > 0);
 
+  const { data: aliasRows } = await supabase
+    .from('reconciliacao_entity_aliases')
+    .select('bank_name, system_entity');
+
   const { matched, orphan_bank, orphan_system } = runMatchingEngine(
     transacoes,
-    [...faturasNorm, ...recibosNorm]
+    [...faturasNorm, ...recibosNorm],
+    aliasRows || []
   );
 
   // Actualizar run existente com os novos resultados

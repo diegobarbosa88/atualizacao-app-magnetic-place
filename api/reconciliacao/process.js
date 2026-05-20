@@ -62,9 +62,14 @@ export default async function handler(req, res) {
     estado_original: r.estado,
   })).filter(r => r.valor != null && r.valor > 0);
 
+  const { data: aliasRows } = await supabase
+    .from('reconciliacao_entity_aliases')
+    .select('bank_name, system_entity');
+
   const { matched, orphan_bank, orphan_system } = runMatchingEngine(
     transactions_json,
-    [...faturasNorm, ...recibosNorm]
+    [...faturasNorm, ...recibosNorm],
+    aliasRows || []
   );
 
   const { data: run, error: runError } = await supabase

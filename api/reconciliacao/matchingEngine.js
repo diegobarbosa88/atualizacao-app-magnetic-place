@@ -1,5 +1,36 @@
 // ─── Matching Engine ──────────────────────────────────────────────────────────
 
+// Extrai nome da entidade de descrições de transferência bancária
+function extractEntityFromDesc(desc) {
+  const patterns = [
+    /TRF\s+IMEDIATA\s+DE\s+/i,
+    /TRANSFERENCIA\s+DE\s+/i,
+    /TRANSF(?:ERENCIA)?\s+DE\s+/i,
+    /TRF\s+DE\s+/i,
+    /ORDEM\s+DE\s+PAGAMENTO\s+DE\s+/i,
+    /PAGAMENTO\s+DE\s+/i,
+    /PAGT\s+DE\s+/i,
+    /RECEBIDO\s+DE\s+/i,
+    /REC\s+DE\s+/i,
+  ];
+  for (const p of patterns) {
+    const m = desc.match(p);
+    if (m) return desc.slice(m.index + m[0].length).trim();
+  }
+  return desc;
+}
+
+// Normaliza nome para comparação (remove sufixos legais, acentos, pontuação)
+function normalizeEntityName(name) {
+  return String(name)
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\b(unipessoal|unip|lda|s\.?a\.?|s\.?l\.?|ltd|llc|inc|srl|bv|nv|gmbh|ag|spa|sarl)\b\.?/gi, '')
+    .replace(/[.,\-&']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
  * Cruza transações bancárias com faturas pendentes do sistema.
  *
@@ -31,7 +62,7 @@ function dateDiffDays(dateA, dateB) {
   return Math.abs((a - b) / 86400000);
 }
 
-export function runMatchingEngine(transacoes, faturas) {
+export function runMatchingEngine(transacoes, faturas, aliases = []) {
   const matched = [];
   const orphan_bank = [];
   const usedFaturaIds = new Set();
@@ -57,14 +88,32 @@ export function runMatchingEngine(transacoes, faturas) {
       continue;
     }
 
-    // Regra 2: desambiguação por entidade na descrição
-    const descLower = (transacao.descricao || '').toLowerCase();
-    const porDescricao = candidatos.filter(f =>
-      f.entidade && descLower.includes(f.entidade.toLowerCase())
-    );
+    // Regra 2: desambiguação por entidade — substring directo + extração de TRF + aliases
+    const extracted = extractEntityFromDesc(transacao.descricao || '');
+    const extractedNorm = normalizeEntityName(extracted);
+    const descFullNorm = normalizeEntityName(transacao.descricao || '');
+
+    let aliasRuleUsed = false;
+    const porDescricao = candidatos.filter(f => {
+      if (!f.entidade) return false;
+      const entNorm = normalizeEntityName(f.entidade);
+      if (!entNorm) return false;
+      // Match directo na descrição completa
+      if (descFullNorm.includes(entNorm)) return true;
+      // Match na parte extraída (após "TRF IMEDIATA DE", etc.)
+      if (extractedNorm.includes(entNorm) || entNorm.includes(extractedNorm)) return true;
+      // Match por alias guardado
+      const hasAlias = aliases.some(a =>
+        normalizeEntityName(a.bank_name) === extractedNorm &&
+        normalizeEntityName(a.system_entity) === entNorm
+      );
+      if (hasAlias) { aliasRuleUsed = true; return true; }
+      return false;
+    });
 
     if (porDescricao.length === 1) {
-      matched.push({ transacao, fatura: porDescricao[0], rule: 'description_match' });
+      const rule = aliasRuleUsed ? 'alias_match' : 'description_match';
+      matched.push({ transacao, fatura: porDescricao[0], rule });
       usedFaturaIds.add(porDescricao[0].id);
       continue;
     }

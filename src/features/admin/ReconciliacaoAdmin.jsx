@@ -607,6 +607,9 @@ export default function ReconciliacaoAdmin() {
   const [showRelatorio, setShowRelatorio] = useState(false);
   const [selHistorico, setSelHistorico] = useState(new Set());
   const [relatorioRuns, setRelatorioRuns] = useState(null);
+  const [aliases, setAliases] = useState([]);
+  const [saveAlias, setSaveAlias] = useState(false);
+  const [showAliases, setShowAliases] = useState(false);
   const [loadingMultiRel, setLoadingMultiRel] = useState(false);
 
   // ── Classificação de Órfãos ───────────────────────────────────────────────
@@ -697,12 +700,16 @@ export default function ReconciliacaoAdmin() {
   const carregarHistorico = async () => {
     setLoadingHistorico(true);
     try {
-      const { data, error } = await supabase
-        .from('reconciliation_runs')
-        .select('id, created_at, filename, transaction_count, matched_count, orphan_bank_count, orphan_system_count')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      const [{ data, error }, { data: aliasData }] = await Promise.all([
+        supabase
+          .from('reconciliation_runs')
+          .select('id, created_at, filename, transaction_count, matched_count, orphan_bank_count, orphan_system_count')
+          .order('created_at', { ascending: false })
+          .limit(20),
+        supabase.from('reconciliacao_entity_aliases').select('*').order('created_at', { ascending: false }),
+      ]);
       if (!error) setHistorico(data || []);
+      setAliases(aliasData || []);
     } finally {
       setLoadingHistorico(false);
     }
@@ -1210,7 +1217,37 @@ export default function ReconciliacaoAdmin() {
       ? { ...r, matched_count: newMatched.length, orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length }
       : r
     ));
+    if (saveAlias && fatura.entidade) {
+      const bankName = extractEntityFromDescUI(transacao.descricao || '');
+      const { data: newAlias } = await supabase
+        .from('reconciliacao_entity_aliases')
+        .upsert({ bank_name: bankName, system_entity: fatura.entidade }, { onConflict: 'bank_name,system_entity' })
+        .select()
+        .single();
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => !(a.bank_name === bankName && a.system_entity === fatura.entidade))]);
+    }
+    setSaveAlias(false);
     setPendingAssociacao(null);
+  };
+
+  // ── Extracção de entidade para UI (espelho da lógica do engine) ────────────
+  const extractEntityFromDescUI = (desc) => {
+    const patterns = [
+      /TRF\s+IMEDIATA\s+DE\s+/i, /TRANSFERENCIA\s+DE\s+/i,
+      /TRANSF(?:ERENCIA)?\s+DE\s+/i, /TRF\s+DE\s+/i,
+      /ORDEM\s+DE\s+PAGAMENTO\s+DE\s+/i, /PAGAMENTO\s+DE\s+/i,
+      /PAGT\s+DE\s+/i, /RECEBIDO\s+DE\s+/i, /REC\s+DE\s+/i,
+    ];
+    for (const p of patterns) {
+      const m = desc.match(p);
+      if (m) return desc.slice(m.index + m[0].length).trim();
+    }
+    return desc;
+  };
+
+  const apagarAlias = async (id) => {
+    await supabase.from('reconciliacao_entity_aliases').delete().eq('id', id);
+    setAliases(prev => prev.filter(a => a.id !== id));
   };
 
   // ── Guardar fatura manual ─────────────────────────────────────────────────
@@ -1692,6 +1729,10 @@ export default function ReconciliacaoAdmin() {
                 </button>
               ))}
             </div>
+            <button onClick={() => setShowAliases(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+              <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
+            </button>
             <button onClick={() => setShowRelatorio(true)}
               className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
               <Download size={13} /> Relatório
@@ -1742,6 +1783,9 @@ export default function ReconciliacaoAdmin() {
                         <span className="text-[10px] text-slate-500">{item.fatura?.entidade}</span>
                         {item.rule === 'confirmed_manual' && (
                           <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">confirmado</span>
+                        )}
+                        {item.rule === 'alias_match' && (
+                          <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">alias</span>
                         )}
                         {item.rule === 'manual' && (
                           <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">manual</span>
@@ -2172,8 +2216,14 @@ export default function ReconciliacaoAdmin() {
               })()}
             </div>
 
+            <label className="flex items-center gap-2 cursor-pointer select-none px-1 pb-1">
+              <input type="checkbox" checked={saveAlias} onChange={e => setSaveAlias(e.target.checked)}
+                className="accent-indigo-600 w-4 h-4" />
+              <span className="text-xs text-slate-600">Guardar como alias (próximos matches automáticos)</span>
+            </label>
+
             <button
-              onClick={() => setPendingAssociacao(null)}
+              onClick={() => { setPendingAssociacao(null); setSaveAlias(false); }}
               className="w-full py-2 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
             >
               Cancelar
@@ -2295,6 +2345,31 @@ export default function ReconciliacaoAdmin() {
                 Cancelar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Gestão de Aliases ─────────────────────────────────────────── */}
+      {showAliases && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-violet-600">Aliases de Entidade</h3>
+              <button onClick={() => setShowAliases(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+            </div>
+            <p className="text-xs text-slate-500">Mapeamentos entre nomes bancários e entidades do sistema para match automático.</p>
+            {aliases.length === 0 && <p className="text-center text-slate-400 py-6 text-sm">Nenhum alias guardado.</p>}
+            {aliases.map(a => (
+              <div key={a.id} className="flex items-center gap-3 bg-violet-50 rounded-xl p-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-700 truncate">{a.bank_name}</p>
+                  <p className="text-[10px] text-violet-600 font-black uppercase tracking-widest truncate">→ {a.system_entity}</p>
+                </div>
+                <button onClick={() => apagarAlias(a.id)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors flex-shrink-0">
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       )}
