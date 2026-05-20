@@ -723,7 +723,7 @@ export default function ReconciliacaoAdmin() {
         });
       });
     }
-    if (toInsert.length > 0) await supabase.from('faturacao_clientes_pagamentos').upsert(toInsert, { onConflict: 'reconciliation_run_id,transaction_section,transaction_index', ignoreDuplicates: true });
+    if (toInsert.length > 0) await supabase.from('faturacao_clientes_pagamentos').insert(toInsert);
     return toInsert.length;
   };
 
@@ -2357,7 +2357,13 @@ export default function ReconciliacaoAdmin() {
                     setRunSelecionado(data);
                     if (data.results_json) {
                       await autoAssociarEntradas(data.results_json, data.id);
-                      await carregarPagamentosLinks(data.id);
+                      const { data: pLinks } = await supabase.from('faturacao_clientes_pagamentos').select('*').eq('reconciliation_run_id', data.id);
+                      setPagamentosLinks(pLinks || []);
+                      const nAssoc = (pLinks || []).filter(p => p.transaction_section === 'orphan_bank').length;
+                      setHistorico(prev => prev.map(r => r.id === data.id
+                        ? { ...r, matched_count: (data.results_json.matched?.length ?? 0) + nAssoc, orphan_bank_count: Math.max(0, (data.results_json.orphan_bank?.length ?? 0) - nAssoc) }
+                        : r
+                      ));
                     }
                   }
                 }}
