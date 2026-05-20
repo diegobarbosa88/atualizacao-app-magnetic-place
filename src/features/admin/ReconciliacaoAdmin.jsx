@@ -1660,7 +1660,7 @@ export default function ReconciliacaoAdmin() {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
             dragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
           }`}
         >
@@ -1874,59 +1874,63 @@ export default function ReconciliacaoAdmin() {
 
       {/* Sub-tabs de Resultados */}
       {displayData && (
-        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8">
+        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-4 sm:p-8">
           {runSelecionado && (
-            <div className="mb-4 flex items-center gap-2 text-sm text-slate-500">
+            <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <button onClick={() => setRunSelecionado(null)}
-                className="text-indigo-600 hover:underline text-[10px] font-black uppercase tracking-widest">
+                className="text-indigo-600 hover:underline text-[10px] font-black uppercase tracking-widest flex-shrink-0">
                 ← Voltar ao run actual
               </button>
-              <span>· A ver: {runSelecionado.filename} ({new Date(runSelecionado.created_at).toLocaleDateString('pt-PT')})</span>
+              <span className="text-xs text-slate-500 truncate">· {runSelecionado.filename} ({new Date(runSelecionado.created_at).toLocaleDateString('pt-PT')})</span>
             </div>
           )}
 
           {/* Sub-tab buttons + download */}
-          <div className="flex items-center gap-2 mb-6">
-            <div className="flex flex-1 gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto">
+          <div className="flex flex-col gap-2 mb-6">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">
               {[
-                { key: 'matched', label: 'Reconciliados', count: displayData.matched?.length ?? 0 },
-                { key: 'orphan_bank', label: 'Órfãos Banco', count: displayData.orphan_bank?.length ?? 0 },
-                { key: 'orphan_system', label: 'Órfãos Sistema', count: displayData.orphan_system?.length ?? 0 },
+                { key: 'matched',       labelFull: 'Reconciliados', labelShort: 'Recon.',  count: (displayData.matched?.length ?? 0) + clientAssocMatched.length },
+                { key: 'orphan_bank',   labelFull: 'Órfãos Banco',  labelShort: 'Banco',   count: Math.max(0, (displayData.orphan_bank?.length ?? 0) - orphanBankAssocSet.size) },
+                { key: 'orphan_system', labelFull: 'Órfãos Sistema', labelShort: 'Sistema', count: displayData.orphan_system?.length ?? 0 },
               ].map(tab => (
                 <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
-                  className={`flex-1 flex-shrink-0 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  className={`flex-1 px-2 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${
                     activeSubTab === tab.key ? 'bg-white shadow-md' : 'text-slate-400 hover:text-slate-600'
                   }`}>
-                  {tab.label} ({tab.count})
+                  <span className="hidden sm:inline">{tab.labelFull}</span>
+                  <span className="sm:hidden">{tab.labelShort}</span>
+                  {' '}({tab.count})
                 </button>
               ))}
             </div>
-            <button
-              onClick={async () => {
-                const runId = runSelecionado?.id ?? displayData?.run_id;
-                const rj = runSelecionado?.results_json ?? { matched: displayData?.matched || [], orphan_bank: displayData?.orphan_bank || [] };
-                if (!runId) return;
-                setAutoAssociando(true);
-                const n = await autoAssociarEntradas(rj, runId);
-                await carregarPagamentosLinks(runId);
-                setAutoAssociando(false);
-                if (n > 0) alert(`${n} entrada${n > 1 ? 's' : ''} associada${n > 1 ? 's' : ''} automaticamente.`);
-                else alert('Nenhuma nova entrada com cliente identificável.');
-              }}
-              disabled={autoAssociando}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
-              title="Associar automaticamente entradas bancárias a clientes (por nome na descrição)"
-            >
-              {autoAssociando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Auto
-            </button>
-            <button onClick={() => setShowAliases(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
-              <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
-            </button>
-            <button onClick={() => setShowRelatorio(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
-              <Download size={13} /> Relatório
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={async () => {
+                  const runId = runSelecionado?.id ?? displayData?.run_id;
+                  const rj = runSelecionado?.results_json ?? { matched: displayData?.matched || [], orphan_bank: displayData?.orphan_bank || [] };
+                  if (!runId) return;
+                  setAutoAssociando(true);
+                  const n = await autoAssociarEntradas(rj, runId);
+                  await carregarPagamentosLinks(runId);
+                  setAutoAssociando(false);
+                  if (n > 0) alert(`${n} entrada${n > 1 ? 's' : ''} associada${n > 1 ? 's' : ''} automaticamente.`);
+                  else alert('Nenhuma nova entrada com cliente identificável.');
+                }}
+                disabled={autoAssociando}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-100 text-slate-500 hover:text-emerald-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0 disabled:opacity-50"
+                title="Associar automaticamente entradas bancárias a clientes (por nome na descrição)"
+              >
+                {autoAssociando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />} Auto
+              </button>
+              <button onClick={() => setShowAliases(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+                <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
+              </button>
+              <button onClick={() => setShowRelatorio(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex-shrink-0">
+                <Download size={13} /> Relatório
+              </button>
+            </div>
           </div>
 
           {/* Sub-tab: Reconciliados */}
@@ -1956,11 +1960,12 @@ export default function ReconciliacaoAdmin() {
                   </div>
                 )}
                 {items.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-2xl p-4">
+                  <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 bg-emerald-50 rounded-2xl p-3 sm:p-4">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                     {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && item.rule !== 'client_association' && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                        className="accent-emerald-600 w-4 h-4 flex-shrink-0" />
+                        className="accent-emerald-600 w-4 h-4 mt-0.5 flex-shrink-0" />
                     )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -2032,7 +2037,8 @@ export default function ReconciliacaoAdmin() {
                         </p>
                       )}
                     </div>
-                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 justify-start sm:justify-end sm:flex-shrink-0">
                       {item.transacao?.tipo === 'credito' && (() => {
                         if (item.rule === 'client_association') {
                           return (
@@ -2155,11 +2161,11 @@ export default function ReconciliacaoAdmin() {
                     );
                   }
                   return (
-                    <div key={i} className={`rounded-2xl p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
+                    <div key={i} className={`rounded-2xl p-3 sm:p-4 ${item.reason === 'ambiguous' ? 'bg-amber-50' : 'bg-rose-50'}`}>
                       <div className="flex items-start gap-3">
                         <input type="checkbox" checked={selOrphan.has(i)}
                           onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                          className="accent-indigo-600 w-4 h-4 mt-1 flex-shrink-0" />
+                          className="accent-indigo-600 w-4 h-4 mt-1 flex-shrink-0 self-start" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap mb-2">
                             <TipoBadge tipo={item.transacao.tipo} />
@@ -2204,44 +2210,44 @@ export default function ReconciliacaoAdmin() {
                               Candidatos: {item.candidates.map(c => c.entidade).filter(Boolean).join(', ')}
                             </p>
                           )}
-                        </div>
-                        <div className="flex-shrink-0 flex gap-2">
-                          {item.transacao?.tipo === 'credito' && (() => {
-                            const link = txLinkInfo('orphan_bank', i);
-                            const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
-                            return link ? (
-                              <span
-                                title={`Associado a ${clientName} (${link.period}) — clique para remover`}
-                                className="flex items-center gap-1 text-indigo-500 text-[9px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-full cursor-pointer hover:bg-rose-50 hover:text-rose-500"
-                                onClick={() => removerAssociacaoCliente('orphan_bank', i)}
-                              >
-                                <Link2 size={10} /> {clientName}
-                              </span>
-                            ) : (
-                              <button
-                                onClick={() => abrirAssociarCliente('orphan_bank', i, item.transacao)}
-                                title="Associar a cliente de faturação"
-                                className="flex items-center gap-1 border border-indigo-100 text-indigo-400 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all"
-                              >
-                                <Link2 size={12} /> Cliente
-                              </button>
-                            );
-                          })()}
-                          <button onClick={() => abrirAssociarFatura(i, item.transacao)}
-                            className="flex items-center gap-1 border border-indigo-200 text-indigo-600 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all">
-                            <Tag size={12} /> Associar
-                          </button>
-                          <button onClick={() => pedirObservacaoOrphan([i])}
-                            className="flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
-                            <CheckCircle size={12} /> Confirmar
-                          </button>
-                          <button
-                            onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('orphan_bank', i); }}
-                            disabled={excluindo.has(`orphan_bank_${i}`)}
-                            title="Excluir movimento"
-                            className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
-                            {excluindo.has(`orphan_bank_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                          </button>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {item.transacao?.tipo === 'credito' && (() => {
+                              const link = txLinkInfo('orphan_bank', i);
+                              const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
+                              return link ? (
+                                <span
+                                  title={`Associado a ${clientName} (${link.period}) — clique para remover`}
+                                  className="flex items-center gap-1 text-indigo-500 text-[9px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-1 rounded-full cursor-pointer hover:bg-rose-50 hover:text-rose-500"
+                                  onClick={() => removerAssociacaoCliente('orphan_bank', i)}
+                                >
+                                  <Link2 size={10} /> {clientName}
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => abrirAssociarCliente('orphan_bank', i, item.transacao)}
+                                  title="Associar a cliente de faturação"
+                                  className="flex items-center gap-1 border border-indigo-100 text-indigo-400 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all"
+                                >
+                                  <Link2 size={12} /> Cliente
+                                </button>
+                              );
+                            })()}
+                            <button onClick={() => abrirAssociarFatura(i, item.transacao)}
+                              className="flex items-center gap-1 border border-indigo-200 text-indigo-600 rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-50 transition-all">
+                              <Tag size={12} /> Associar
+                            </button>
+                            <button onClick={() => pedirObservacaoOrphan([i])}
+                              className="flex items-center gap-1 bg-indigo-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
+                              <CheckCircle size={12} /> Confirmar
+                            </button>
+                            <button
+                              onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('orphan_bank', i); }}
+                              disabled={excluindo.has(`orphan_bank_${i}`)}
+                              title="Excluir movimento"
+                              className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                              {excluindo.has(`orphan_bank_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2378,10 +2384,11 @@ export default function ReconciliacaoAdmin() {
                     {new Date(run.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 text-[10px] font-black flex-shrink-0">
-                  <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{run.matched_count} ok</span>
-                  <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{run.orphan_bank_count} banco</span>
-                  <span className="bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{run.orphan_system_count} sistema</span>
+                <div className="flex items-center gap-1.5 text-[10px] font-black flex-shrink-0">
+                  <span className="hidden sm:inline bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{run.matched_count} ok</span>
+                  <span className="hidden sm:inline bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{run.orphan_bank_count} banco</span>
+                  <span className="hidden sm:inline bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">{run.orphan_system_count} sist.</span>
+                  <span className="sm:hidden bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">{run.matched_count}✓</span>
                   <button
                     onClick={e => reprocessarRun(e, run.id)}
                     disabled={reprocessando === run.id}
