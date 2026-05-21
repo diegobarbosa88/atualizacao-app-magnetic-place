@@ -2157,7 +2157,12 @@ export default function ReconciliacaoAdmin() {
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
                       <input type="checkbox"
                         checked={allPendentes.length > 0 && selMatched.size === allPendentes.length}
-                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => items[i].fatura?.id && items[i].fatura?.status !== 'PAGO')) : new Set())}
+                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => {
+                          const m = items[i];
+                          return m.rule === 'client_association'
+                            ? !m.confirmed_entrada
+                            : m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual';
+                        })) : new Set())}
                         className="accent-emerald-600 w-4 h-4" />
                       Seleccionar todos
                     </label>
