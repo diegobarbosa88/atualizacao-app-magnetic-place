@@ -1,7 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download, Link2, Loader2, CheckCircle, Plus } from 'lucide-react';
+import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download, Link2, Loader2, CheckCircle, Plus, BookOpen, ChevronDown } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const CostReports = () => {
   const { workers, clients, logs, expenses, saveToDb, handleDelete, supabase } = useApp();
@@ -27,6 +29,8 @@ const CostReports = () => {
     id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date())
   });
   const [faturasPago, setFaturasPago] = useState([]);
+  const [showRelatorioMenu, setShowRelatorioMenu] = useState(false);
+  const relatorioMenuRef = useRef(null);
 
   useEffect(() => {
     if (!supabase || !selectedMonth) return;
@@ -69,6 +73,17 @@ const CostReports = () => {
   }, [supabase, selectedMonth]);
 
   useEffect(() => { carregarPagamentos(); }, [carregarPagamentos]);
+
+  useEffect(() => {
+    if (!showRelatorioMenu) return;
+    const handleClick = (e) => {
+      if (relatorioMenuRef.current && !relatorioMenuRef.current.contains(e.target)) {
+        setShowRelatorioMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [showRelatorioMenu]);
 
   // Helpers de pagamento
   const pagamentosDoCliente = (clientId) => pagamentos.filter(p => p.client_id === clientId);
@@ -173,6 +188,208 @@ const CostReports = () => {
     }
     return options;
   }, []);
+
+  const exportRelatorioGeralPDF = async () => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const monthLabel = getMonthLabel();
+    const today = new Date().toLocaleDateString('pt-PT');
+    const totalReceitas = clientCosts.reduce((a, i) => a + i.cost, 0);
+    const totalEquipa = workerCosts.reduce((a, i) => a + i.cost, 0);
+    const totalDesp = totalAllExpenses;
+    const totalCustos = totalEquipa + totalDesp;
+    const resultado = totalReceitas - totalCustos;
+
+    // Cabeçalho
+    doc.setFillColor(79, 70, 229);
+    doc.rect(0, 0, 210, 28, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MAGNETIC PLACE', 14, 12);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('RELATÓRIO GERAL DE CONTABILIDADE', 14, 19);
+    doc.text(`${monthLabel}  ·  Gerado em ${today}`, 14, 25);
+    doc.setTextColor(0, 0, 0);
+
+    let y = 36;
+
+    // Resumo executivo
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RESUMO EXECUTIVO', 14, y);
+    y += 2;
+    autoTable(doc, {
+      startY: y,
+      head: [['Indicador', 'Valor']],
+      body: [
+        ['Faturação Total (Receitas)', formatCurrency(totalReceitas)],
+        ['Custos de Equipa', `-${formatCurrency(totalEquipa)}`],
+        ['Outras Despesas', `-${formatCurrency(totalDesp)}`],
+        ['Total Custos', `-${formatCurrency(totalCustos)}`],
+        ['Resultado Líquido', (resultado >= 0 ? '+' : '') + formatCurrency(resultado)],
+      ],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [79, 70, 229] },
+      bodyStyles: { halign: 'right' },
+      columnStyles: { 0: { halign: 'left', fontStyle: 'bold' } },
+      didParseCell: (data) => {
+        if (data.row.index === 4) {
+          data.cell.styles.textColor = resultado >= 0 ? [5, 150, 105] : [220, 38, 38];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Faturação por cliente
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FATURAÇÃO POR CLIENTE', 14, y);
+    y += 2;
+    autoTable(doc, {
+      startY: y,
+      head: [['Cliente', 'Horas', 'Faturação']],
+      body: [
+        ...clientCosts.map(i => [i.name, `${i.totalHours.toFixed(1)}h`, formatCurrency(i.cost)]),
+        ['TOTAL', `${clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h`, formatCurrency(totalReceitas)],
+      ],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [79, 70, 229] },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+      didParseCell: (data) => {
+        if (data.row.index === clientCosts.length) data.cell.styles.fontStyle = 'bold';
+      },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Nova página se necessário
+    if (y > 220) { doc.addPage(); y = 16; }
+
+    // Custos de equipa
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOS DE EQUIPA', 14, y);
+    y += 2;
+    autoTable(doc, {
+      startY: y,
+      head: [['Trabalhador', 'Horas', 'Custo']],
+      body: [
+        ...workerCosts.map(i => [i.name, `${i.totalHours.toFixed(1)}h`, formatCurrency(i.cost)]),
+        ['TOTAL', `${workerCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h`, formatCurrency(totalEquipa)],
+      ],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [79, 70, 229] },
+      columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+      didParseCell: (data) => {
+        if (data.row.index === workerCosts.length) data.cell.styles.fontStyle = 'bold';
+      },
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    if (y > 220) { doc.addPage(); y = 16; }
+
+    // Despesas
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DESPESAS', 14, y);
+    y += 2;
+    autoTable(doc, {
+      startY: y,
+      head: [['Data', 'Descrição', 'Tipo', 'Valor']],
+      body: [
+        ...allExpensesSorted.map(e => [
+          e.date ? new Date(e.date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—',
+          e.name,
+          e.type,
+          formatCurrency(e.amount),
+        ]),
+        ['', 'TOTAL', '', formatCurrency(totalDesp)],
+      ],
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [79, 70, 229] },
+      columnStyles: { 3: { halign: 'right' } },
+      didParseCell: (data) => {
+        if (data.row.index === allExpensesSorted.length) data.cell.styles.fontStyle = 'bold';
+      },
+    });
+
+    doc.save(`relatorio-geral-${selectedMonth}.pdf`);
+  };
+
+  const exportRelatorioGeralXLS = async () => {
+    const monthLabel = getMonthLabel();
+    const today = new Date().toLocaleDateString('pt-PT');
+    const totalReceitas = clientCosts.reduce((a, i) => a + i.cost, 0);
+    const totalEquipa = workerCosts.reduce((a, i) => a + i.cost, 0);
+    const totalDesp = totalAllExpenses;
+    const totalCustos = totalEquipa + totalDesp;
+    const resultado = totalReceitas - totalCustos;
+    const logoBase64 = await getLogoBase64();
+    const logoHtml = logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="height:50px;border-radius:10px;margin-right:14px;" />` : '';
+
+    const section = (title, color) => `<tr><td colspan="4" style="padding:14px 16px 6px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:${color};border-bottom:2px solid ${color};">${title}</td></tr>`;
+    const headerRow = (cols, bg = '#4F46E5') => `<tr>${cols.map(c => `<th style="background:${bg};color:white;padding:10px 14px;text-align:left;font-size:11px;font-weight:700;">${c}</th>`).join('')}</tr>`;
+    const dataRow = (cols, bg = '#fff', bold = false) => `<tr style="background:${bg};">${cols.map((c, i) => `<td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;font-size:11px;${bold ? 'font-weight:800;' : ''}${i > 0 ? 'text-align:right;' : ''}">${c}</td>`).join('')}</tr>`;
+
+    const resumoRows = [
+      dataRow(['Faturação Total (Receitas)', formatCurrency(totalReceitas)], '#f0fdf4'),
+      dataRow(['Custos de Equipa', `-${formatCurrency(totalEquipa)}`], '#fef2f2'),
+      dataRow(['Outras Despesas', `-${formatCurrency(totalDesp)}`], '#fef2f2'),
+      dataRow(['Total Custos', `-${formatCurrency(totalCustos)}`], '#fef2f2', true),
+      dataRow(['Resultado Líquido', (resultado >= 0 ? '+' : '') + formatCurrency(resultado)], resultado >= 0 ? '#f0fdf4' : '#fef2f2', true),
+    ].join('');
+
+    const clientesRows = [
+      ...clientCosts.map((i, idx) => dataRow([i.name, `${i.totalHours.toFixed(1)}h`, formatCurrency(i.cost)], idx % 2 ? '#f8fafc' : '#fff')),
+      dataRow(['TOTAL', `${clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h`, formatCurrency(totalReceitas)], '#eef2ff', true),
+    ].join('');
+
+    const equipaRows = [
+      ...workerCosts.map((i, idx) => dataRow([i.name, `${i.totalHours.toFixed(1)}h`, formatCurrency(i.cost)], idx % 2 ? '#f8fafc' : '#fff')),
+      dataRow(['TOTAL', `${workerCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h`, formatCurrency(totalEquipa)], '#eef2ff', true),
+    ].join('');
+
+    const despesasRows = [
+      ...allExpensesSorted.map((e, idx) => dataRow([
+        e.date ? new Date(e.date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—',
+        e.name, e.type, formatCurrency(e.amount),
+      ], idx % 2 ? '#f8fafc' : '#fff')),
+      dataRow(['', 'TOTAL', '', formatCurrency(totalDesp)], '#fef2f2', true),
+    ].join('');
+
+    const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><style>
+body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:30px;background:#f8fafc;}
+.header{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;padding:24px 32px;border-radius:16px 16px 0 0;display:flex;align-items:center;}
+.info-bar{background:white;padding:16px 32px;display:flex;gap:32px;border-bottom:1px solid #e2e8f0;}
+.info-label{font-size:9px;text-transform:uppercase;color:#94a3b8;font-weight:700;letter-spacing:1px;}
+.info-value{font-size:13px;font-weight:600;color:#334155;}
+.content{background:white;border-radius:0 0 16px 16px;padding:24px 32px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1);}
+table{width:100%;border-collapse:collapse;margin-bottom:24px;}
+</style></head>
+<body>
+<div class="header">${logoHtml}<div><div style="font-size:20px;font-weight:800;text-transform:uppercase;letter-spacing:2px;">Magnetic Place</div><div style="font-size:12px;opacity:.9;">Relatório Geral de Contabilidade</div></div></div>
+<div class="info-bar">
+  <div><div class="info-label">Período</div><div class="info-value">${monthLabel}</div></div>
+  <div><div class="info-label">Resultado</div><div class="info-value" style="color:${resultado >= 0 ? '#059669' : '#dc2626'}">${(resultado >= 0 ? '+' : '') + formatCurrency(resultado)}</div></div>
+  <div><div class="info-label">Gerado em</div><div class="info-value">${today}</div></div>
+</div>
+<div class="content">
+  <table>${section('Resumo Executivo', '#4F46E5')}${headerRow(['Indicador', 'Valor'])}${resumoRows}</table>
+  <table>${section('Faturação por Cliente', '#059669')}${headerRow(['Cliente', 'Horas', 'Faturação'])}${clientesRows}</table>
+  <table>${section('Custos de Equipa', '#4F46E5')}${headerRow(['Trabalhador', 'Horas', 'Custo'])}${equipaRows}</table>
+  <table>${section('Despesas', '#DC2626')}${headerRow(['Data', 'Descrição', 'Tipo', 'Valor'])}${despesasRows}</table>
+</div></body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url; link.download = `relatorio-geral-${selectedMonth}.xls`;
+    document.body.appendChild(link); link.click();
+    document.body.removeChild(link); URL.revokeObjectURL(url);
+  };
 
   const handleSaveExpense = async () => {
     if (!expenseForm.name || !expenseForm.amount) return alert('Descrição e valor são obrigatórios');
@@ -740,6 +957,30 @@ const CostReports = () => {
           <button onClick={exportToXLS} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-sm hover:bg-indigo-700 transition-all">
             <Download size={13} /> Exportar
           </button>
+          <div className="relative" ref={relatorioMenuRef}>
+            <button
+              onClick={() => setShowRelatorioMenu(v => !v)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-xl font-black text-xs uppercase shadow-sm hover:bg-violet-700 transition-all"
+            >
+              <BookOpen size={13} /> Geral <ChevronDown size={11} />
+            </button>
+            {showRelatorioMenu && (
+              <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
+                <button
+                  onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition-all"
+                >
+                  <FileText size={13} /> PDF
+                </button>
+                <button
+                  onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition-all border-t border-slate-100"
+                >
+                  <Download size={13} /> Excel / XLS
+                </button>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl shadow-sm border border-slate-200 flex-1 sm:flex-none">
             <CalendarRange size={13} className="text-slate-400 shrink-0" />
             <select value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)} className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 cursor-pointer w-full">
