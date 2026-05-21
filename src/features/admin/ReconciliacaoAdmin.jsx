@@ -1937,7 +1937,7 @@ export default function ReconciliacaoAdmin() {
           {activeSubTab === 'matched' && (() => {
             const items = [...(displayData.matched || []), ...clientAssocMatched];
             const faturaIdCount = items.reduce((acc, m) => { if (m.fatura?.id) acc[m.fatura.id] = (acc[m.fatura.id] || 0) + 1; return acc; }, {});
-            const allPendentes = items.filter(m => m.fatura?.status !== 'PAGO');
+            const allPendentes = items.filter(m => m.fatura?.id && m.fatura?.status !== 'PAGO');
             return (
               <div className="space-y-3">
                 {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>}
@@ -1946,7 +1946,7 @@ export default function ReconciliacaoAdmin() {
                     <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
                       <input type="checkbox"
                         checked={allPendentes.length > 0 && selMatched.size === allPendentes.length}
-                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => items[i].fatura?.status !== 'PAGO')) : new Set())}
+                        onChange={e => setSelMatched(e.target.checked ? new Set(items.map((_, i) => i).filter(i => items[i].fatura?.id && items[i].fatura?.status !== 'PAGO')) : new Set())}
                         className="accent-emerald-600 w-4 h-4" />
                       Seleccionar todos
                     </label>
@@ -2091,20 +2091,24 @@ export default function ReconciliacaoAdmin() {
                           Confirmar
                         </button>
                       )}
-                      <button
-                        onClick={() => desvincularMatch(item, i)}
-                        disabled={desvinculando.has(`${i}`)}
-                        title="Desvincular"
-                        className="p-1.5 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
-                        {desvinculando.has(`${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
-                      </button>
-                      <button
-                        onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('matched', i); }}
-                        disabled={excluindo.has(`matched_${i}`)}
-                        title="Excluir movimento"
-                        className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
-                        {excluindo.has(`matched_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                      </button>
+                      {item.rule !== 'client_association' && (
+                        <button
+                          onClick={() => desvincularMatch(item, i)}
+                          disabled={desvinculando.has(`${i}`)}
+                          title="Desvincular"
+                          className="p-1.5 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                          {desvinculando.has(`${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
+                        </button>
+                      )}
+                      {item.rule !== 'client_association' && (
+                        <button
+                          onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('matched', i); }}
+                          disabled={excluindo.has(`matched_${i}`)}
+                          title="Excluir movimento"
+                          className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                          {excluindo.has(`matched_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
