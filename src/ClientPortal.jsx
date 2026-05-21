@@ -571,7 +571,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const thisClient = clients?.find(c => String(c.id) === String(initialClientId));
         const logsByDate = {};
         logs.forEach(l => { if (!logsByDate[l.date]) logsByDate[l.date] = []; logsByDate[l.date].push(l); });
-        const sortedDates = Object.keys(logsByDate).sort((a, b) => b.localeCompare(a));
+        const sortedDates = Object.keys(logsByDate)
+            .filter(d => d && /^\d{4}-\d{2}-\d{2}$/.test(d))
+            .sort((a, b) => b.localeCompare(a));
         const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 
         const renderLogLine = (log) => {
