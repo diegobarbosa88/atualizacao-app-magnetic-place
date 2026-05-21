@@ -1962,7 +1962,7 @@ export default function ReconciliacaoAdmin() {
                 {items.map((item, i) => (
                   <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 bg-emerald-50 rounded-2xl p-3 sm:p-4">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                    {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && item.rule !== 'client_association' && (
+                    {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                         className="accent-emerald-600 w-4 h-4 mt-0.5 flex-shrink-0" />
