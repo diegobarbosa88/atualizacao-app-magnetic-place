@@ -1147,7 +1147,7 @@ export default function ReconciliacaoAdmin() {
     setBulkConfirmando(true);
     try {
       const currentMatched = (runSelecionado ? runSelecionado.results_json : resultado)?.matched || [];
-      const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura.status !== 'PAGO');
+      const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura?.id && _.fatura?.status !== 'PAGO');
       if (!items.length) return;
 
       // Deduplicate por ID (splits não devem confirmar o mesmo recibo duas vezes)
