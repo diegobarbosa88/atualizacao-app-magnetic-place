@@ -198,21 +198,29 @@ const CostReports = () => {
     const totalDesp = totalAllExpenses;
     const totalCustos = totalEquipa + totalDesp;
     const resultado = totalReceitas - totalCustos;
+    const logoBase64 = await getLogoBase64();
 
     // Cabeçalho
     doc.setFillColor(79, 70, 229);
-    doc.rect(0, 0, 210, 28, 'F');
+    doc.rect(0, 0, 210, 32, 'F');
+
+    // Logo no cabeçalho
+    if (logoBase64) {
+      doc.addImage(logoBase64, 'PNG', 14, 4, 22, 22);
+    }
+
+    const textX = logoBase64 ? 42 : 14;
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('MAGNETIC PLACE', 14, 12);
+    doc.text('MAGNETIC PLACE', textX, 14);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text('RELATÓRIO GERAL DE CONTABILIDADE', 14, 19);
-    doc.text(`${monthLabel}  ·  Gerado em ${today}`, 14, 25);
+    doc.text('RELATÓRIO GERAL DE CONTABILIDADE', textX, 21);
+    doc.text(`${monthLabel}  ·  Gerado em ${today}`, textX, 27);
     doc.setTextColor(0, 0, 0);
 
-    let y = 36;
+    let y = 40;
 
     // Resumo executivo
     doc.setFontSize(11);
