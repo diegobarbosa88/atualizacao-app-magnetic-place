@@ -1105,7 +1105,7 @@ export default function ReconciliacaoAdmin() {
         if (error) throw error;
       }
       const updateMatched = matched => matched.map(m =>
-        m.fatura.id === faturaId ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
+        m.fatura?.id === faturaId ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
       );
 
       // Actualizar estado local
@@ -1166,7 +1166,7 @@ export default function ReconciliacaoAdmin() {
       // Actualizar estado local uma única vez com todos os IDs
       const idSet = new Set(allIds);
       const updateAllMatched = matched => matched.map(m =>
-        idSet.has(m.fatura.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
+        m.fatura?.id && idSet.has(m.fatura.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
       );
 
       const runId = runSelecionado?.id ?? resultado?.run_id;

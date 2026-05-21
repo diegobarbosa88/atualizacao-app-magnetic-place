@@ -45,8 +45,7 @@ export default async function handler(req, res) {
 
   const { data: recibos, error: recError } = await supabase
     .from('receipt_validations')
-    .select('id, worker_name, liquido_extraido, mes, estado')
-    .not('estado', 'eq', 'pago');
+    .select('id, worker_name, liquido_extraido, mes, estado');
 
   if (recError) return res.status(500).json({ error: `Erro ao buscar recibos: ${recError.message}` });
 
@@ -58,7 +57,7 @@ export default async function handler(req, res) {
     descricao: `Recibo ${r.worker_name || ''} ${r.mes || ''}`.trim(),
     data_documento: null,
     fonte: 'recibo',
-    status: 'PENDENTE',
+    status: r.estado === 'pago' ? 'PAGO' : 'PENDENTE',
     estado_original: r.estado,
   })).filter(r => r.valor != null && r.valor > 0);
 
