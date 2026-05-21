@@ -4,13 +4,16 @@ import { parse as parseOFX } from 'ofx-js';
 export function normalizeDate(dateStr) {
   if (!dateStr) return null;
   const s = String(dateStr).trim();
-  if (/^\d{8}/.test(s)) {
-    const d = s.slice(0, 8);
-    return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`;
+  // ISO com ou sem hora: 2024-01-15 | 2024-01-15T00:00:00 | 2024-01-15 00:00:00
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  // 8 dígitos compactos: 20240115
+  if (/^\d{8}$/.test(s)) {
+    return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
   }
-  const match = s.match(/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/);
+  // DD/MM/YYYY | DD-MM-YYYY | DD.MM.YYYY (com ou sem hora no final)
+  const match = s.match(/^(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/);
   if (match) return `${match[3]}-${match[2]}-${match[1]}`;
-  return s;
+  return null;
 }
 
 export function normStr(s) {
