@@ -1150,31 +1150,37 @@ export default function ReconciliacaoAdmin() {
     const faturasPorConfirmar = porConfirmar.filter(m => m.fatura.fonte !== 'recibo');
     const recibosPorConfirmar = porConfirmar.filter(m => m.fatura.fonte === 'recibo');
 
-    // Batch-read dados para todas as faturas com data de transação
+    // Batch-read dados para TODAS as faturas que vão ser actualizadas
+    // (inclui faturas sem transacao.data para não apagar dados existentes ao fazer spread)
+    const allFaturaIdsUpdate = [...new Set([
+      ...faturasPorConfirmar.map(m => m.fatura.id),
+      ...faturaItemsComData.map(m => m.fatura.id),
+    ])];
     let dadosMap = {};
-    if (faturaItemsComData.length) {
+    if (allFaturaIdsUpdate.length) {
       const { data: faturasAtuals } = await supabase
-        .from('faturas').select('id, dados').in('id', faturaItemsComData.map(m => m.fatura.id));
+        .from('faturas').select('id, dados').in('id', allFaturaIdsUpdate);
       dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
     }
 
-    // Faturas que precisam de data_pagamento definida (não têm ainda ou vão ser confirmadas agora)
+    // Faturas já PAGO que ainda não têm data_pagamento mas têm data de transação
     const semDataPagamento = faturaItemsComData.filter(
-      m => !dadosMap[m.fatura.id]?.data_pagamento
+      m => m.fatura.status === 'PAGO' && !dadosMap[m.fatura.id]?.data_pagamento
     );
 
     await Promise.all([
-      // Confirmar como PAGO as faturas ainda pendentes + setar data_pagamento
-      ...faturasPorConfirmar.map(m => supabase.from('faturas').update({
-        status: 'PAGO',
-        dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao?.data || undefined },
-      }).eq('id', m.fatura.id)),
+      // Confirmar como PAGO; só toca em dados se há data de transação (evita apagar dados Gemini)
+      ...faturasPorConfirmar.map(m => {
+        const payload = { status: 'PAGO' };
+        if (m.transacao?.data) {
+          payload.dados = { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data };
+        }
+        return supabase.from('faturas').update(payload).eq('id', m.fatura.id);
+      }),
       // Para faturas já PAGO mas sem data_pagamento, apenas gravar a data
-      ...semDataPagamento
-        .filter(m => m.fatura.status === 'PAGO')
-        .map(m => supabase.from('faturas').update({
-          dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data },
-        }).eq('id', m.fatura.id)),
+      ...semDataPagamento.map(m => supabase.from('faturas').update({
+        dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data },
+      }).eq('id', m.fatura.id)),
       // Confirmar recibos pendentes
       ...recibosPorConfirmar.map(m =>
         supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', m.fatura.id)
