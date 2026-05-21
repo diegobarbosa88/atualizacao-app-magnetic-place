@@ -735,11 +735,13 @@ export default function ReconciliacaoAdmin() {
   const [pagamentosLinks, setPagamentosLinks] = useState([]); // faturacao_clientes_pagamentos para o run actual
 
   const carregarPagamentosLinks = async (runId) => {
-    if (!runId || !supabase) return;
+    if (!supabase) return;
     const { data } = await supabase
       .from('faturacao_clientes_pagamentos')
       .select('*')
-      .eq('reconciliation_run_id', runId);
+      .or(runId
+        ? `reconciliation_run_id.eq.${runId},reconciliation_run_id.is.null`
+        : 'reconciliation_run_id.is.null');
     setPagamentosLinks(data || []);
   };
 
@@ -781,8 +783,16 @@ export default function ReconciliacaoAdmin() {
 
   const removerAssociacaoCliente = async (section, index) => {
     const existente = txLinkInfo(section, index);
-    if (!existente) return;
-    await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
+    if (existente) {
+      await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
+    } else {
+      // Fallback: registos com reconciliation_run_id nulo não carregados via txLinkInfo
+      await supabase.from('faturacao_clientes_pagamentos')
+        .delete()
+        .eq('transaction_section', section)
+        .eq('transaction_index', index)
+        .is('reconciliation_run_id', null);
+    }
     const runId = runSelecionado?.id ?? resultado?.run_id;
     await carregarPagamentosLinks(runId);
   };
