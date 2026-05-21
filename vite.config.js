@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
-import basicSsl from '@vitejs/plugin-basic-ssl'
 import fs from 'fs'
 
 const versionPlugin = {
@@ -15,7 +14,6 @@ const versionPlugin = {
 export default defineConfig({
   plugins: [
     versionPlugin,
-    basicSsl(),
     react(),
     tailwindcss(),
     VitePWA({
@@ -77,6 +75,5 @@ export default defineConfig({
     host: true,
     port: 4179,
     strictPort: false,
-    https: true,
   },
 })

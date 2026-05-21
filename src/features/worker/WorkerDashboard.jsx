@@ -103,6 +103,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   // Sugestão de entrada/saída ao abrir o portal
   useEffect(() => {
     if (!currentUser || geoSuggestionDismissed) return;
+    if (!currentUser.name?.toLowerCase().includes('diego rocha barbosa')) return;
     const client = clients.find(c => c.id === currentUser.defaultClientId);
     if (!client) return;
 
@@ -285,6 +286,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     String(l.workerId) === String(currentUser?.id) &&
     l.startTime && !l.endTime
   );
+
+  // GPS check-in/out só activo para Diego Rocha Barbosa (fase de teste)
+  const gpsCheckInEnabled = currentUser?.name?.toLowerCase().includes('diego rocha barbosa');
 
   // Filtrar pendingApprovals - só meses >= dataInicio
   const filteredPendingApprovals = pendingApprovals.filter(pending => {
@@ -552,7 +556,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         </div>
 
         {/* CARD EM SERVIÇO */}
-        {todayOpenLog && (
+        {gpsCheckInEnabled && todayOpenLog && (
           <div className="mb-6 bg-indigo-600 rounded-[2rem] shadow-xl shadow-indigo-200 overflow-hidden animate-in slide-in-from-top-4 duration-500">
             <div className="p-6 flex flex-col gap-4">
               <div className="flex items-center gap-5">
@@ -601,7 +605,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         )}
 
         {/* CARD ENTRADA / SAÍDA — só aparece se não há já um log em aberto (nesse caso o card "Em serviço" trata de tudo) */}
-        {geoSuggestion && !geoSuggestionDismissed && !todayOpenLog && (
+        {gpsCheckInEnabled && geoSuggestion && !geoSuggestionDismissed && !todayOpenLog && (
           <div className={`mb-6 rounded-[2rem] border shadow-xl overflow-hidden animate-in slide-in-from-top-4 duration-500 ${geoSuggestion.within === false ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
             <div className="p-6 flex flex-col md:flex-row items-center gap-5">
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${geoSuggestion.within === false ? 'bg-amber-400 text-white' : 'bg-emerald-500 text-white'}`}>

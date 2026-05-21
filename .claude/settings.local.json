@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx playwright *)"
+      "Bash(npx playwright *)",
+      "Bash(npx vercel *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
