@@ -1119,7 +1119,8 @@ export default function ReconciliacaoAdmin() {
       carregarHistorico();
       if (data.run_id) {
         await autoAssociarEntradas(data, data.run_id);
-        const newMatched = await autoConfirmarMatched(data.matched || [], data.run_id);
+        const fullResults = { matched: data.matched || [], orphan_bank: data.orphan_bank || [], orphan_system: data.orphan_system || [] };
+        const newMatched = await autoConfirmarMatched(data.matched || [], data.run_id, fullResults);
         setResultado(prev => ({ ...prev, matched: newMatched }));
         await carregarPagamentosLinks(data.run_id);
       }
@@ -1132,8 +1133,9 @@ export default function ReconciliacaoAdmin() {
 
   // ── Auto-confirmar todos os matches de um run ────────────────────────────
   // Marca como PAGO todas as faturas/recibos reconciliados que ainda não estão pagos.
-  // Devolve o array matched actualizado com status PAGO.
-  const autoConfirmarMatched = async (matchedItems, runId) => {
+  // fullResults: { matched, orphan_bank, orphan_system } — passado directamente para
+  // evitar depender do React state (que pode ainda não ter sido actualizado).
+  const autoConfirmarMatched = async (matchedItems, runId, fullResults) => {
     if (!supabase || !matchedItems?.length) return matchedItems;
     const porConfirmar = matchedItems.filter(
       m => m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual'
@@ -1143,7 +1145,7 @@ export default function ReconciliacaoAdmin() {
     const faturaItems = porConfirmar.filter(m => m.fatura.fonte !== 'recibo');
     const reciboItems = porConfirmar.filter(m => m.fatura.fonte === 'recibo');
 
-    // Batch-read dados existentes para merge de data_pagamento
+    // Batch-read dados existentes para merge de data_pagamento (transactions_json.data)
     let dadosMap = {};
     if (faturaItems.length) {
       const { data: faturasAtuals } = await supabase
@@ -1169,11 +1171,11 @@ export default function ReconciliacaoAdmin() {
       confirmedIds.has(m.fatura?.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
     );
 
-    // Persistir status actualizado no run
+    // Persistir status actualizado no run usando fullResults (não depende do React state)
     if (runId) {
-      const base = runSelecionado?.results_json ?? resultado;
+      const base = fullResults ?? runSelecionado?.results_json ?? resultado ?? {};
       await supabase.from('reconciliation_runs').update({
-        results_json: { ...(base || {}), matched: newMatched },
+        results_json: { ...base, matched: newMatched },
       }).eq('id', runId);
     }
 
@@ -2511,7 +2513,7 @@ export default function ReconciliacaoAdmin() {
                     setRunSelecionado(data);
                     if (data.results_json) {
                       await autoAssociarEntradas(data.results_json, data.id);
-                      const newMatched = await autoConfirmarMatched(data.results_json.matched || [], data.id);
+                      const newMatched = await autoConfirmarMatched(data.results_json.matched || [], data.id, data.results_json);
                       if (newMatched !== data.results_json.matched) {
                         setRunSelecionado(prev => prev
                           ? { ...prev, results_json: { ...prev.results_json, matched: newMatched } }
