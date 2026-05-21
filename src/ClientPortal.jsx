@@ -666,7 +666,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 const dayLogs = logsByDate[dateStr];
                                 const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
                                 const isExpanded = expandedHistoryDays.has(dateStr);
-                                const dObj = new Date(dateStr + 'T00:00:00');
+                                const [dy, dm, dd] = dateStr.split('-').map(Number);
+                                const dObj = new Date(dy, dm - 1, dd);
                                 const isToday = dateStr === todayStr;
                                 return (
                                     <React.Fragment key={dateStr}>
