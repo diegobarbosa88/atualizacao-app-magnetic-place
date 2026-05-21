@@ -1169,13 +1169,13 @@ export default function ReconciliacaoAdmin() {
     );
 
     await Promise.all([
-      // Confirmar como PAGO; grava data_pagamento (transacao.data ou hoje como fallback)
+      // Confirmar como PAGO; só grava data_pagamento se há data real da transação
       ...faturasPorConfirmar.map(m => {
-        const dataPag = m.transacao?.data || new Date().toISOString().slice(0, 10);
-        return supabase.from('faturas').update({
-          status: 'PAGO',
-          dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: dataPag },
-        }).eq('id', m.fatura.id);
+        const payload = { status: 'PAGO' };
+        if (m.transacao?.data) {
+          payload.dados = { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data };
+        }
+        return supabase.from('faturas').update(payload).eq('id', m.fatura.id);
       }),
       // Para faturas já PAGO mas sem data_pagamento, apenas gravar a data
       ...semDataPagamento.map(m => supabase.from('faturas').update({
@@ -1218,11 +1218,14 @@ export default function ReconciliacaoAdmin() {
         if (error) throw error;
       } else {
         // Ler dados existentes para fazer merge (não sobrescrever)
-        const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
-        const dataPag = txDate || new Date().toISOString().slice(0, 10);
+        const dadosUpdate = {};
+        if (txDate) {
+          const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
+          dadosUpdate.dados = { ...(f?.dados || {}), data_pagamento: txDate };
+        }
         const { error } = await supabase
           .from('faturas')
-          .update({ status: 'PAGO', dados: { ...(f?.dados || {}), data_pagamento: dataPag } })
+          .update({ status: 'PAGO', ...dadosUpdate })
           .eq('id', faturaId);
         if (error) throw error;
       }
@@ -1291,15 +1294,15 @@ export default function ReconciliacaoAdmin() {
         dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
       }
 
-      // Confirmar faturas em paralelo; data_pagamento sempre gravada (hoje como fallback)
+      // Confirmar faturas em paralelo; só grava data_pagamento se há data real
       await Promise.all(uniqueFaturas.map(item => {
         if (item.fatura.fonte === 'recibo')
           return supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id);
-        const dataPag = item.transacao?.data || new Date().toISOString().slice(0, 10);
-        return supabase.from('faturas').update({
-          status: 'PAGO',
-          dados: { ...(dadosMap[item.fatura.id] || {}), data_pagamento: dataPag },
-        }).eq('id', item.fatura.id);
+        const payload = { status: 'PAGO' };
+        if (item.transacao?.data) {
+          payload.dados = { ...(dadosMap[item.fatura.id] || {}), data_pagamento: item.transacao.data };
+        }
+        return supabase.from('faturas').update(payload).eq('id', item.fatura.id);
       }));
 
       // Construir results_json actualizado (faturas + entradas num único update)
