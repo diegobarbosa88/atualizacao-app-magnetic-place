@@ -23,9 +23,28 @@ const CostReports = () => {
     new Date().toISOString().substring(0, 7)
   );
   const [isAddingExpense, setIsAddingExpense] = useState(false);
-  const [expenseForm, setExpenseForm] = useState({ 
-    id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) 
+  const [expenseForm, setExpenseForm] = useState({
+    id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date())
   });
+  const [faturasPago, setFaturasPago] = useState([]);
+
+  useEffect(() => {
+    if (!supabase || !selectedMonth) return;
+    supabase
+      .from('faturas')
+      .select('id, entidade, descricao, valor, data_documento, dados, filename')
+      .eq('status', 'PAGO')
+      .gte('data_documento', `${selectedMonth}-01`)
+      .lte('data_documento', `${selectedMonth}-31`)
+      .then(({ data }) => setFaturasPago(data || []));
+  }, [supabase, selectedMonth]);
+
+  const parseFaturaValor = (f) => {
+    if (!f) return 0;
+    const v = parseFloat(String(f.valor ?? '').replace(/\./g, '').replace(',', '.')) || 0;
+    const v2 = parseFloat(f.dados?.valor_total) || 0;
+    return (v > 0 ? v : v2) || 0;
+  };
 
   // Carregar pagamentos bancários para o mês seleccionado
   const carregarPagamentos = useCallback(async () => {
@@ -253,14 +272,14 @@ const CostReports = () => {
       colgroup = '<colgroup><col style="width: 120px"><col style="width: 250px"><col style="width: 100px"><col style="width: 130px"></colgroup>';
       headers = '<th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Data</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:left;font-weight:bold;border-bottom:2px solid #3730A3;">Descrição</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:center;font-weight:bold;border-bottom:2px solid #3730A3;">Tipo</th><th style="background:#4F46E5;color:white;padding:12px 16px;text-align:right;font-weight:bold;border-bottom:2px solid #3730A3;">Valor</th>';
       
-      sortedExpenses.forEach((exp, idx) => {
+      allExpensesSorted.forEach((exp, idx) => {
         const bgColor = idx % 2 === 0 ? '#ffffff' : '#F8FAFC';
-        const typeBg = exp.type === 'fixo' ? '#DBEAFE' : '#FEF3C7';
-        const typeColor = exp.type === 'fixo' ? '#1D4ED8' : '#D97706';
+        const typeBg = exp.type === 'fatura' ? '#EDE9FE' : exp.type === 'fixo' ? '#DBEAFE' : '#FEF3C7';
+        const typeColor = exp.type === 'fatura' ? '#7C3AED' : exp.type === 'fixo' ? '#1D4ED8' : '#D97706';
         tableRows += `<tr style="background:${bgColor};"><td style="padding:10px 16px;border-bottom:1px solid #E2E8F0;">${formatDate(exp.date)}</td><td style="padding:10px 16px;font-weight:600;border-bottom:1px solid #E2E8F0;">${exp.name}</td><td style="padding:10px 16px;text-align:center;"><span style="background:${typeBg};color:${typeColor};padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;">${exp.type}</span></td><td style="padding:10px 16px;text-align:right;font-weight:600;color:#DC2626;border-bottom:1px solid #E2E8F0;">-${formatCurrency(exp.amount)}</td></tr>`;
       });
-      
-      totalSection = `<tr style="background:#FEF2F2;"><td colspan="3" style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #DC2626;">Total Despesas</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:#DC2626;border-top:2px solid #DC2626;">-${formatCurrency(totalExpenses)}</td></tr>`;
+
+      totalSection = `<tr style="background:#FEF2F2;"><td colspan="3" style="padding:14px 16px;font-weight:800;text-transform:uppercase;border-top:2px solid #DC2626;">Total</td><td style="padding:14px 16px;text-align:right;font-weight:800;font-size:16px;color:#DC2626;border-top:2px solid #DC2626;">-${formatCurrency(totalAllExpenses)}</td></tr>`;
     }
 
     const logoHtml = logoBase64 
@@ -312,7 +331,7 @@ const CostReports = () => {
     </div>
     <div class="info-item">
       <span class="info-label">Total Registos</span>
-      <span class="info-value">${activeTab === 'workers' ? workerCosts.length : activeTab === 'clients' ? clientCosts.length : activeTab === 'margins' ? clientMargins.length : sortedExpenses.length}</span>
+      <span class="info-value">${activeTab === 'workers' ? workerCosts.length : activeTab === 'clients' ? clientCosts.length : activeTab === 'margins' ? clientMargins.length : allExpensesSorted.length}</span>
     </div>
   </div>
   <div class="content">
@@ -435,6 +454,26 @@ const CostReports = () => {
   const totalExpenses = useMemo(() => {
     return filteredExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
   }, [filteredExpenses]);
+
+  const faturasMes = useMemo(() => {
+    return faturasPago.map(f => ({
+      id: `fatura_${f.id}`,
+      date: f.data_documento,
+      name: f.entidade || f.descricao || f.filename || 'Fatura',
+      amount: parseFaturaValor(f),
+      type: 'fatura',
+      _isFatura: true,
+    })).sort((a, b) => new Date(b.date) - new Date(a.date));
+  }, [faturasPago]);
+
+  const totalFaturas = useMemo(() => faturasMes.reduce((s, f) => s + f.amount, 0), [faturasMes]);
+
+  const allExpensesSorted = useMemo(() => {
+    return [...sortedExpenses.map(e => ({ ...e, _isFatura: false })), ...faturasMes]
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  }, [sortedExpenses, faturasMes]);
+
+  const totalAllExpenses = useMemo(() => totalExpenses + totalFaturas, [totalExpenses, totalFaturas]);
 
   const renderTable = () => {
     if (activeTab === 'workers') {
@@ -617,27 +656,33 @@ const CostReports = () => {
                 </tr>
               </thead>
               <tbody>
-                {sortedExpenses.length === 0 ? (
+                {allExpensesSorted.length === 0 ? (
                   <tr><td colSpan="5" className="py-16 text-center text-slate-400 text-sm font-medium">Sem despesas para o período selecionado.</td></tr>
-                ) : sortedExpenses.map((exp) => (
+                ) : allExpensesSorted.map((exp) => (
                   <tr key={exp.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
                     <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-xs font-bold text-slate-500 whitespace-nowrap font-mono">
                       {new Date(exp.date).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' })}
                     </td>
                     <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-800">{exp.name}</td>
                     <td className="px-4 py-3 border-y border-slate-100">
-                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${exp.type === 'fixo' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>{exp.type}</span>
+                      <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${
+                        exp.type === 'fatura' ? 'bg-violet-100 text-violet-700' :
+                        exp.type === 'fixo'   ? 'bg-blue-100 text-blue-700' :
+                                                'bg-amber-100 text-amber-700'
+                      }`}>{exp.type}</span>
                     </td>
                     <td className="px-4 py-3 border-y border-slate-100 font-black text-rose-600 text-right whitespace-nowrap">-{formatCurrency(exp.amount)}</td>
                     <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-right">
-                      <button onClick={() => handleDelete('expenses', exp.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={15} /></button>
+                      {!exp._isFatura && (
+                        <button onClick={() => handleDelete('expenses', exp.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={15} /></button>
+                      )}
                     </td>
                   </tr>
                 ))}
-                {sortedExpenses.length > 0 && (
+                {allExpensesSorted.length > 0 && (
                   <tr className="bg-slate-100/60">
-                    <td colSpan="3" className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total Despesas</td>
-                    <td className="px-4 py-3 font-black text-rose-600 text-right">-{formatCurrency(totalExpenses)}</td>
+                    <td colSpan="3" className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
+                    <td className="px-4 py-3 font-black text-rose-600 text-right">-{formatCurrency(totalAllExpenses)}</td>
                     <td className="px-4 py-3 rounded-r-2xl"></td>
                   </tr>
                 )}
