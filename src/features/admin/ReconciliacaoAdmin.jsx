@@ -1218,14 +1218,11 @@ export default function ReconciliacaoAdmin() {
         if (error) throw error;
       } else {
         // Ler dados existentes para fazer merge (não sobrescrever)
-        const dadosUpdate = {};
-        if (txDate) {
-          const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
-          dadosUpdate.dados = { ...(f?.dados || {}), data_pagamento: txDate };
-        }
+        const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
+        const dataPag = txDate || new Date().toISOString().slice(0, 10);
         const { error } = await supabase
           .from('faturas')
-          .update({ status: 'PAGO', ...dadosUpdate })
+          .update({ status: 'PAGO', dados: { ...(f?.dados || {}), data_pagamento: dataPag } })
           .eq('id', faturaId);
         if (error) throw error;
       }
@@ -1285,26 +1282,25 @@ export default function ReconciliacaoAdmin() {
       const allFaturaIds = uniqueFaturas.map(m => m.fatura.id);
       if (allFaturaIds.length) setConfirmando(new Set(allFaturaIds));
 
-      // Ler dados existentes das faturas para merge de data_pagamento
-      const faturaItemsWithData = uniqueFaturas.filter(i => i.fatura.fonte !== 'recibo' && i.transacao?.data);
+      // Ler dados existentes de TODAS as faturas (não só as com transacao.data)
+      const faturaIdsNaoRecibo = uniqueFaturas.filter(i => i.fatura.fonte !== 'recibo').map(i => i.fatura.id);
       let dadosMap = {};
-      if (faturaItemsWithData.length) {
+      if (faturaIdsNaoRecibo.length) {
         const { data: faturasAtuals } = await supabase
-          .from('faturas').select('id, dados').in('id', faturaItemsWithData.map(i => i.fatura.id));
+          .from('faturas').select('id, dados').in('id', faturaIdsNaoRecibo);
         dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
       }
 
-      // Confirmar faturas em paralelo
-      await Promise.all(uniqueFaturas.map(item =>
-        item.fatura.fonte === 'recibo'
-          ? supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id)
-          : supabase.from('faturas').update({
-              status: 'PAGO',
-              ...(item.transacao?.data
-                ? { dados: { ...(dadosMap[item.fatura.id] || {}), data_pagamento: item.transacao.data } }
-                : {}),
-            }).eq('id', item.fatura.id)
-      ));
+      // Confirmar faturas em paralelo; data_pagamento sempre gravada (hoje como fallback)
+      await Promise.all(uniqueFaturas.map(item => {
+        if (item.fatura.fonte === 'recibo')
+          return supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id);
+        const dataPag = item.transacao?.data || new Date().toISOString().slice(0, 10);
+        return supabase.from('faturas').update({
+          status: 'PAGO',
+          dados: { ...(dadosMap[item.fatura.id] || {}), data_pagamento: dataPag },
+        }).eq('id', item.fatura.id);
+      }));
 
       // Construir results_json actualizado (faturas + entradas num único update)
       const runId = runSelecionado?.id ?? resultado?.run_id;
