@@ -26,6 +26,7 @@ const ClientManagerContent = () => {
   const [confirmDeleteHistoryId, setConfirmDeleteHistoryId] = useState(null);
   const [confirmDeleteClientId, setConfirmDeleteClientId] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [geocodeLoading, setGeocodeLoading] = useState(false);
 
   // D-07: Função para carregar histórico
   const loadClientValorHoraHistory = async (clientId, clientName) => {
@@ -57,6 +58,26 @@ const ClientManagerContent = () => {
     if (error) { alert('Erro ao apagar: ' + error.message); return; }
     setConfirmDeleteHistoryId(null);
     await loadClientValorHoraHistory(showClientHistory.clientId, showClientHistory.clientName);
+  };
+
+  const handleGeocodeMorada = async () => {
+    if (!clientForm.morada) return;
+    setGeocodeLoading(true);
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clientForm.morada)}&format=json&limit=1`, {
+        headers: { 'Accept-Language': 'pt' }
+      });
+      const data = await res.json();
+      if (data && data[0]) {
+        setClientForm(prev => ({ ...prev, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }));
+      } else {
+        alert('Morada não encontrada. Tente uma morada mais detalhada.');
+      }
+    } catch {
+      alert('Erro ao geocodificar a morada.');
+    } finally {
+      setGeocodeLoading(false);
+    }
   };
 
   const handleUseCurrentLocation = async () => {
@@ -215,6 +236,16 @@ const ClientManagerContent = () => {
                   {geoLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
                   Usar localização atual
                 </button>
+                {clientForm.morada && (
+                  <button
+                    onClick={handleGeocodeMorada}
+                    disabled={geocodeLoading}
+                    className="w-full flex items-center justify-center gap-2 bg-white border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-4 py-3 rounded-xl font-black text-xs uppercase shadow-sm transition-all"
+                  >
+                    {geocodeLoading ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
+                    Aplicar morada à geolocalização
+                  </button>
+                )}
               </div>
 
               {/* AÇÕES */}

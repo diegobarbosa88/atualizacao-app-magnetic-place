@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Download, ChevronDown, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -42,6 +42,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [lastRealtimeUpdate, setLastRealtimeUpdate] = useState(null);
     const [now, setNow] = useState(() => new Date());
     const [todayLogs, setTodayLogs] = useState([]);
+    const [expandedLogLocations, setExpandedLogLocations] = useState(new Set());
+    const [expandedHistoryDays, setExpandedHistoryDays] = useState(new Set());
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(t);
@@ -552,144 +554,146 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     };
 
     const mapsLink = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
+    const moradaMapsLink = (morada) => morada ? `https://www.google.com/maps/search/${encodeURIComponent(morada)}` : null;
 
-    const LocationPin = ({ lat, lng, verified, showEmpty = false }) => {
-        if (lat == null || lng == null) {
-            if (!showEmpty) return null;
-            return <span className="text-[10px] text-slate-300 font-bold">Sem GPS</span>;
-        }
-        const color = verified === true ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
-            : verified === false ? 'text-rose-500 bg-rose-50 border-rose-200'
-            : 'text-slate-500 bg-slate-50 border-slate-200';
-        return (
-            <a href={mapsLink(lat, lng)} target="_blank" rel="noopener noreferrer"
-                className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border ${color} hover:opacity-80 transition-opacity`}
-                title={`${lat.toFixed(5)}, ${lng.toFixed(5)}`}>
-                📍 Ver mapa
-            </a>
-        );
+    const LocationDot = ({ lat, lng, verified }) => {
+        if (lat == null || lng == null) return null;
+        const cls = verified === true
+            ? 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse'
+            : verified === false
+            ? 'bg-rose-400'
+            : 'bg-slate-300';
+        return <span className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${cls}`} title={verified === true ? 'Na localização' : verified === false ? 'Fora da localização' : 'GPS registado'} />;
     };
 
-    const renderHoje = () => {
-        const activeNow = todayLogs.filter(l => l.startTime && !l.endTime).length;
-        const getWorkerId = (l) => l.workerId || l.worker_id;
-        const workerIds = [...new Set(todayLogs.map(getWorkerId))];
-        const workerCards = workerIds.map(wId => {
-            const w = workers.find(work => String(work.id) === String(wId)) || { name: 'Desconhecido' };
-            const wLogs = todayLogs.filter(l => String(getWorkerId(l)) === String(wId));
-            return { wId, name: w.name, logs: wLogs };
-        }).sort((a, b) => a.name.localeCompare(b.name));
+    const renderHistorico = () => {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const thisClient = clients?.find(c => String(c.id) === String(initialClientId));
+        const logsByDate = {};
+        logs.forEach(l => { if (!logsByDate[l.date]) logsByDate[l.date] = []; logsByDate[l.date].push(l); });
+        const sortedDates = Object.keys(logsByDate).sort((a, b) => b.localeCompare(a));
+        const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+        const renderLogLine = (log) => {
+            const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+            const isOpen = log.startTime && !log.endTime;
+            const inBreak = isOpen && log.breakStart && !log.breakEnd;
+            const logHasGps = log.check_in_lat || log.check_out_lat || log.break_start_lat || log.break_end_lat;
+            const isLocExpanded = expandedLogLocations.has(log.id);
+            const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+            const gpsPoints = [
+                log.check_in_lat ? { label: 'Entrada', lat: log.check_in_lat, lng: log.check_in_lng, cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' } : null,
+                log.break_start_lat ? { label: 'Pausa ↑', lat: log.break_start_lat, lng: log.break_start_lng, cls: 'text-amber-700 bg-amber-50 border-amber-200' } : null,
+                log.break_end_lat ? { label: 'Pausa ↓', lat: log.break_end_lat, lng: log.break_end_lng, cls: 'text-orange-700 bg-orange-50 border-orange-200' } : null,
+                log.check_out_lat ? { label: 'Saída', lat: log.check_out_lat, lng: log.check_out_lng, cls: 'text-rose-700 bg-rose-50 border-rose-200' } : null,
+            ].filter(Boolean);
+            return (
+                <div key={log.id} className="px-6 py-3 border-b border-slate-100 last:border-0">
+                    {worker && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{worker.name}</p>}
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Entrada</span>
+                            <span className={`text-sm font-black font-mono ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</span>
+                            <LocationDot lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} />
+                            {isOpen && !inBreak && <span className="text-[9px] font-bold text-emerald-500">{formatElapsed(log.startTime)}</span>}
+                        </div>
+                        <span className="text-slate-200">|</span>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pausa</span>
+                            {log.breakStart ? (
+                                <>
+                                    <span className={`text-sm font-black font-mono ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>{log.breakStart}{log.breakEnd ? ` → ${log.breakEnd}` : ' → …'}</span>
+                                    <LocationDot lat={log.break_start_lat} lng={log.break_start_lng} verified={null} />
+                                    {inBreak && <span className="text-[9px] font-bold text-amber-500">{formatElapsed(log.breakStart)}</span>}
+                                </>
+                            ) : <span className="text-slate-300 font-bold text-sm">–</span>}
+                        </div>
+                        <span className="text-slate-200">|</span>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saída</span>
+                            <span className="text-sm font-black font-mono text-slate-700">{log.endTime || '–'}</span>
+                            {log.endTime && <LocationDot lat={log.check_out_lat} lng={log.check_out_lng} verified={null} />}
+                        </div>
+                        <span className="text-slate-200">|</span>
+                        <span className="text-sm font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</span>
+                        {logHasGps && (
+                            <button onClick={(e) => { e.stopPropagation(); setExpandedLogLocations(prev => { const n = new Set(prev); n.has(log.id) ? n.delete(log.id) : n.add(log.id); return n; }); }}
+                                className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
+                                <Navigation size={9} /> Locais
+                            </button>
+                        )}
+                    </div>
+                    {isLocExpanded && (
+                        <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in fade-in duration-200">
+                            <div className="flex flex-wrap gap-1.5">
+                                {thisClient?.morada && (
+                                    <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all">
+                                        <MapPin size={10} /> {thisClient.morada}
+                                    </a>
+                                )}
+                                {gpsPoints.map(p => (
+                                    <a key={p.label} href={mapsLink(p.lat, p.lng)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black border ${p.cls} hover:opacity-75 transition-all`}>
+                                        <MapPin size={10} /> {p.label}
+                                    </a>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
 
         return (
-            <div className="animate-fade-in space-y-6">
-                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="animate-fade-in space-y-4">
+                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-8 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div>
-                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registos de Hoje</h2>
-                        <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
+                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Histórico de Registos</h2>
+                        <p className="text-2xl font-black text-slate-800 mt-1 uppercase">{new Date().toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        {activeNow > 0 && (
-                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl">
-                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
-                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{activeNow} em serviço</span>
-                            </div>
-                        )}
-                        {lastRealtimeUpdate && (
-                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
-                                {lastRealtimeUpdate.toLocaleTimeString('pt-PT')}
-                            </div>
-                        )}
-                    </div>
+                    {lastRealtimeUpdate && (
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
+                            Atualizado: {lastRealtimeUpdate.toLocaleTimeString('pt-PT')}
+                        </div>
+                    )}
                 </section>
 
-                <section className="space-y-4">
-                    {workerCards.length === 0 ? (
-                        <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-12 text-center text-slate-400 font-bold text-sm">Nenhum registo para hoje ainda.</div>
-                    ) : workerCards.map(({ wId, name, logs: wLogs }) => (
-                        <div key={wId} className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                            {/* Cabeçalho do trabalhador */}
-                            <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="font-black text-slate-800 text-lg uppercase tracking-tight">{name}</p>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{wLogs.length} registo{wLogs.length !== 1 ? 's' : ''} hoje</p>
-                                </div>
-                                {wLogs.some(l => l.startTime && !l.endTime) && (
-                                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wide">
-                                            {wLogs.find(l => l.startTime && !l.endTime)?.breakStart && !wLogs.find(l => l.startTime && !l.endTime)?.breakEnd
-                                                ? 'Em pausa'
-                                                : 'Em serviço'}
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Logs do trabalhador */}
-                            {wLogs.map(log => {
-                                const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
-                                const isOpen = log.startTime && !log.endTime;
-                                const inBreak = isOpen && log.breakStart && !log.breakEnd;
+                {sortedDates.length === 0 ? (
+                    <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-12 text-center text-slate-400 font-bold text-sm">Sem registos para este período.</div>
+                ) : (
+                    <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                        <div className="divide-y divide-slate-100">
+                            {sortedDates.map(dateStr => {
+                                const dayLogs = logsByDate[dateStr];
+                                const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+                                const isExpanded = expandedHistoryDays.has(dateStr);
+                                const dObj = new Date(dateStr + 'T00:00:00');
+                                const isToday = dateStr === todayStr;
                                 return (
-                                    <div key={log.id} className="px-8 py-6 border-b border-slate-50 last:border-0">
-                                        {/* Timeline de acções */}
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                            {/* Entrada */}
-                                            <div className={`rounded-2xl p-4 border ${isOpen && !inBreak ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100'}`}>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Entrada</p>
-                                                <p className={`text-xl font-black ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</p>
-                                                {isOpen && !inBreak && (
-                                                    <p className="text-[10px] font-bold text-emerald-500 mt-0.5">{formatElapsed(log.startTime)}</p>
-                                                )}
-                                                <div className="mt-2">
-                                                    <LocationPin lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} showEmpty />
-                                                </div>
+                                    <React.Fragment key={dateStr}>
+                                        <div onClick={() => setExpandedHistoryDays(prev => { const n = new Set(prev); n.has(dateStr) ? n.delete(dateStr) : n.add(dateStr); return n; })}
+                                            className={`px-6 py-4 flex items-center gap-4 cursor-pointer transition-colors hover:bg-slate-50 ${isExpanded ? 'bg-indigo-50/30' : ''}`}>
+                                            <div className="flex items-baseline gap-2 min-w-[60px]">
+                                                <span className="text-2xl font-black text-slate-800">{dObj.getDate()}</span>
+                                                <span className="text-[10px] uppercase font-bold text-slate-400">{dayNames[dObj.getDay()]}</span>
                                             </div>
-
-                                            {/* Pausa */}
-                                            <div className={`rounded-2xl p-4 border ${inBreak ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pausa</p>
-                                                {log.breakStart ? (
-                                                    <>
-                                                        <p className={`text-base font-black ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>
-                                                            {log.breakStart} {log.breakEnd ? `→ ${log.breakEnd}` : '→ …'}
-                                                        </p>
-                                                        {inBreak && (
-                                                            <p className="text-[10px] font-bold text-amber-500 mt-0.5">{formatElapsed(log.breakStart)}</p>
-                                                        )}
-                                                        <div className="mt-2 flex flex-wrap gap-1">
-                                                            <LocationPin lat={log.break_start_lat} lng={log.break_start_lng} />
-                                                            {log.breakEnd && <LocationPin lat={log.break_end_lat} lng={log.break_end_lng} />}
-                                                        </div>
-                                                    </>
-                                                ) : (
-                                                    <p className="text-slate-300 font-bold text-sm">–</p>
-                                                )}
+                                            <div className="flex-1 flex items-center gap-3 flex-wrap">
+                                                {isToday && <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase">Hoje</span>}
+                                                {dayTotal > 0 && <span className="text-[10px] font-black text-indigo-600">{dayTotal.toFixed(2)}h</span>}
+                                                <span className="text-[10px] text-slate-300 font-bold">{dayLogs.length} registo{dayLogs.length !== 1 ? 's' : ''}</span>
                                             </div>
-
-                                            {/* Saída */}
-                                            <div className={`rounded-2xl p-4 border ${log.endTime ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-100 opacity-50'}`}>
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saída</p>
-                                                <p className="text-xl font-black text-slate-700">{log.endTime || '–'}</p>
-                                                {log.endTime && (
-                                                    <div className="mt-2">
-                                                        <LocationPin lat={log.check_out_lat} lng={log.check_out_lng} showEmpty />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Total */}
-                                            <div className="rounded-2xl p-4 border bg-indigo-50 border-indigo-100 flex flex-col justify-center">
-                                                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Total</p>
-                                                <p className="text-2xl font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</p>
-                                            </div>
+                                            {isExpanded ? <ChevronUp size={18} className="text-indigo-400 flex-shrink-0" /> : <ChevronDown size={18} className="text-slate-300 flex-shrink-0" />}
                                         </div>
-                                    </div>
+                                        {isExpanded && (
+                                            <div className="border-t border-slate-100 bg-slate-50/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                {dayLogs.map(renderLogLine)}
+                                            </div>
+                                        )}
+                                    </React.Fragment>
                                 );
                             })}
                         </div>
-                    ))}
-                </section>
+                    </div>
+                )}
             </div>
         );
     };
@@ -706,6 +710,41 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <p className="text-4xl font-black text-indigo-700">{originalTotal}h</p>
                 </div>
             </section>
+
+            {(() => {
+                const todayStr = new Date().toLocaleDateString('en-CA');
+                const activeNow = logs.filter(l => String(l.clientId) === String(initialClientId) && l.date === todayStr && l.startTime && !l.endTime);
+                if (activeNow.length === 0) return null;
+                return (
+                    <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
+                        <div className="px-8 py-5 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
+                                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Tempo Real</h3>
+                            </div>
+                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl uppercase tracking-wide">{activeNow.length} em serviço</span>
+                        </div>
+                        <div className="divide-y divide-slate-50">
+                            {activeNow.map(log => {
+                                const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                                const inBreak = log.breakStart && !log.breakEnd;
+                                return (
+                                    <div key={log.id} className="px-6 py-4 flex items-center gap-4">
+                                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse'}`} />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</p>
+                                            <p className="text-[10px] font-bold text-slate-400">{inBreak ? `Em pausa desde ${log.breakStart}` : `Em serviço desde ${log.startTime}`}</p>
+                                        </div>
+                                        <span className={`text-sm font-black ${inBreak ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                            {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
+                                        </span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </section>
+                );
+            })()}
 
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -1701,11 +1740,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     {(currentView === 'inicio' || currentView === 'hoje') && (
                         <div className="flex gap-2 mb-6">
                             <button onClick={() => setCurrentView('inicio')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'inicio' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Início</button>
-                            <button onClick={() => setCurrentView('hoje')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'hoje' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Hoje</button>
+                            <button onClick={() => setCurrentView('hoje')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'hoje' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Histórico</button>
                         </div>
                     )}
                     {currentView === 'inicio' && renderInicio()}
-                    {currentView === 'hoje' && renderHoje()}
+                    {currentView === 'hoje' && renderHistorico()}
                     {currentView === 'editar_relatorio' && (
                         <ClientReportFlow
                             clientId={initialClientId}
