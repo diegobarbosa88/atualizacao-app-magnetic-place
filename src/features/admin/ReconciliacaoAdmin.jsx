@@ -1146,9 +1146,12 @@ export default function ReconciliacaoAdmin() {
     if (!selMatched.size) return;
     setBulkConfirmando(true);
     try {
-      const currentMatched = (runSelecionado ? runSelecionado.results_json : resultado)?.matched || [];
-      const items = currentMatched.filter((_, i) => selMatched.has(i) && _.fatura?.id && _.fatura?.status !== 'PAGO');
-      if (!items.length) return;
+      const allDisplayItems = [...((runSelecionado ? runSelecionado.results_json : resultado)?.matched || []), ...clientAssocMatched];
+      const items = allDisplayItems.filter((m, i) => selMatched.has(i) && m.fatura?.id && m.fatura?.status !== 'PAGO');
+      if (!items.length) {
+        alert('Os itens selecionados não têm fatura para confirmar (transferências de clientes já estão associadas).');
+        return;
+      }
 
       // Deduplicate por ID (splits não devem confirmar o mesmo recibo duas vezes)
       const seenIds = new Set();
@@ -2075,8 +2078,11 @@ export default function ReconciliacaoAdmin() {
                         <span className="flex items-center gap-1 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Confirmado
                         </span>
-                      ) : item.rule === 'client_association' ? null
-                      : item.fatura?.status === 'PAGO' ? (
+                      ) : item.rule === 'client_association' ? (
+                        <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                          <CheckCircle size={14} /> Associado
+                        </span>
+                      ) : item.fatura?.status === 'PAGO' ? (
                         <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Pago
                         </span>
