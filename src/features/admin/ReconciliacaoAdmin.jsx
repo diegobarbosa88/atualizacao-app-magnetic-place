@@ -1169,13 +1169,13 @@ export default function ReconciliacaoAdmin() {
     );
 
     await Promise.all([
-      // Confirmar como PAGO; só toca em dados se há data de transação (evita apagar dados Gemini)
+      // Confirmar como PAGO; grava data_pagamento (transacao.data ou hoje como fallback)
       ...faturasPorConfirmar.map(m => {
-        const payload = { status: 'PAGO' };
-        if (m.transacao?.data) {
-          payload.dados = { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data };
-        }
-        return supabase.from('faturas').update(payload).eq('id', m.fatura.id);
+        const dataPag = m.transacao?.data || new Date().toISOString().slice(0, 10);
+        return supabase.from('faturas').update({
+          status: 'PAGO',
+          dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: dataPag },
+        }).eq('id', m.fatura.id);
       }),
       // Para faturas já PAGO mas sem data_pagamento, apenas gravar a data
       ...semDataPagamento.map(m => supabase.from('faturas').update({

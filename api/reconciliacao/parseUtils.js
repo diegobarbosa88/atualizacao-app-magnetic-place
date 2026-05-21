@@ -10,9 +10,12 @@ export function normalizeDate(dateStr) {
   if (/^\d{8}$/.test(s)) {
     return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
   }
-  // DD/MM/YYYY | DD-MM-YYYY | DD.MM.YYYY (com ou sem hora no final)
-  const match = s.match(/^(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})/);
-  if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+  // YYYY/MM/DD | YYYY.MM.DD (ano primeiro, separador não-hífen)
+  const matchYMD = s.match(/^(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})/);
+  if (matchYMD) return `${matchYMD[1]}-${matchYMD[2].padStart(2,'0')}-${matchYMD[3].padStart(2,'0')}`;
+  // DD/MM/YYYY | DD-MM-YYYY | DD.MM.YYYY | D/M/YYYY (com ou sem hora no final)
+  const matchDMY = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
+  if (matchDMY) return `${matchDMY[3]}-${matchDMY[2].padStart(2,'0')}-${matchDMY[1].padStart(2,'0')}`;
   return null;
 }
 
