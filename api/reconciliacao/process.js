@@ -25,8 +25,7 @@ export default async function handler(req, res) {
 
   const { data: faturas, error: fatError } = await supabase
     .from('faturas')
-    .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename')
-    .not('status', 'eq', 'PAGO');
+    .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename');
 
   if (fatError) return res.status(500).json({ error: `Erro ao buscar faturas: ${fatError.message}` });
 
@@ -35,6 +34,7 @@ export default async function handler(req, res) {
     const v2 = parseValorFatura(f.dados?.valor_total);
     return {
       ...f,
+      status_original: f.status,
       valor: (v1 != null && v1 > 0) ? v1 : (v2 != null && v2 > 0 ? v2 : null),
       entidade: f.entidade || f.dados?.fornecedor || '',
       descricao: f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || f.filename || '',

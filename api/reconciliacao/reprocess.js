@@ -41,11 +41,10 @@ export default async function handler(req, res) {
     return isNaN(n) ? null : n;
   };
 
-  // Buscar faturas frescas (excluindo PAGO)
+  // Buscar faturas
   const { data: faturas, error: fatError } = await supabase
     .from('faturas')
-    .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename')
-    .not('status', 'eq', 'PAGO');
+    .select('id, tipo, valor, data_documento, descricao, entidade, status, fonte, dados, filename');
 
   if (fatError) return res.status(500).json({ error: `Erro ao buscar faturas: ${fatError.message}` });
 
@@ -54,6 +53,7 @@ export default async function handler(req, res) {
     const v2 = parseValorFatura(f.dados?.valor_total);
     return {
       ...f,
+      status_original: f.status,
       valor: (v1 != null && v1 > 0) ? v1 : (v2 != null && v2 > 0 ? v2 : null),
       entidade: f.entidade || f.dados?.fornecedor || '',
       descricao: f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || f.filename || '',
@@ -65,8 +65,7 @@ export default async function handler(req, res) {
   // Buscar recibos validados
   const { data: recibos, error: recError } = await supabase
     .from('receipt_validations')
-    .select('id, worker_name, liquido_extraido, mes, estado')
-    .not('estado', 'eq', 'pago');
+    .select('id, worker_name, liquido_extraido, mes, estado');
 
   if (recError) return res.status(500).json({ error: `Erro ao buscar recibos: ${recError.message}` });
 
@@ -78,7 +77,7 @@ export default async function handler(req, res) {
     descricao: `Recibo ${r.worker_name || ''} ${r.mes || ''}`.trim(),
     data_documento: null,
     fonte: 'recibo',
-    status: 'PENDENTE',
+    status: r.estado === 'pago' ? 'PAGO' : 'PENDENTE',
     estado_original: r.estado,
   })).filter(r => r.valor != null && r.valor > 0);
 

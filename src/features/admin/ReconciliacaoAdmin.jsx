@@ -877,13 +877,28 @@ export default function ReconciliacaoAdmin() {
       .eq('id', runId)
       .single();
     if (runData?.results_json?.matched?.length) {
-      const faturaIds = runData.results_json.matched
-        .filter(m => m.fatura?.fonte !== 'recibo')
-        .map(m => m.fatura?.id)
-        .filter(Boolean);
+      const faturaMatches = runData.results_json.matched
+        .filter(m => m.fatura?.fonte !== 'recibo' && m.fatura?.id);
       const reciboMatches = runData.results_json.matched
         .filter(m => m.fatura?.fonte === 'recibo' && m.fatura?.id);
-      if (faturaIds.length) await supabase.from('faturas').update({ status: 'PENDENTE' }).in('id', faturaIds);
+
+      // Reverter cada fatura para o seu status original (PENDENTE por defeito para runs antigos)
+      if (faturaMatches.length) {
+        const porStatus = {};
+        for (const m of faturaMatches) {
+          const st = m.fatura.status_original || 'PENDENTE';
+          if (!porStatus[st]) porStatus[st] = [];
+          porStatus[st].push(m.fatura.id);
+        }
+        const results = await Promise.all(
+          Object.entries(porStatus).map(([st, ids]) =>
+            supabase.from('faturas').update({ status: st }).in('id', ids)
+          )
+        );
+        const fatErr = results.find(r => r.error);
+        if (fatErr) { alert(`Erro ao reverter faturas: ${fatErr.error.message}`); return; }
+      }
+
       // Reverter cada recibo para o seu estado original (valido ou aviso)
       if (reciboMatches.length) {
         const porEstado = {};
@@ -892,11 +907,13 @@ export default function ReconciliacaoAdmin() {
           if (!porEstado[est]) porEstado[est] = [];
           porEstado[est].push(m.fatura.id);
         }
-        await Promise.all(
+        const results = await Promise.all(
           Object.entries(porEstado).map(([est, ids]) =>
             supabase.from('receipt_validations').update({ estado: est }).in('id', ids)
           )
         );
+        const recErr = results.find(r => r.error);
+        if (recErr) { alert(`Erro ao reverter recibos: ${recErr.error.message}`); return; }
       }
     }
     const { error, count } = await supabase.from('reconciliation_runs').delete({ count: 'exact' }).eq('id', runId);
