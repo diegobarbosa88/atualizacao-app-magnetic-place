@@ -478,7 +478,7 @@ const CostReports = () => {
       id: `fatura_${f.id}`,
       _faturaId: f.id,
       date: f.dados?.data_pagamento || f.dados?.data_fatura || f.data_documento || f.importado_em,
-      name: f.entidade || f.descricao || f.filename || 'Fatura',
+      name: f.dados?.fornecedor || f.entidade || f.descricao || f.filename || 'Fatura',
       amount: parseFaturaValor(f),
       type: 'fatura',
       _isFatura: true,
