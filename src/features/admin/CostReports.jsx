@@ -33,13 +33,26 @@ const CostReports = () => {
     const d = new Date(selectedMonth + '-01');
     d.setMonth(d.getMonth() + 1);
     const nextMonthFirst = d.toISOString().substring(0, 10);
-    supabase
-      .from('faturas')
-      .select('id, entidade, descricao, valor, data_documento, dados, filename')
-      .eq('status', 'PAGO')
-      .gte('data_documento', `${selectedMonth}-01`)
-      .lt('data_documento', nextMonthFirst)
-      .then(({ data }) => setFaturasPago(data || []));
+    const cols = 'id, entidade, descricao, valor, data_documento, dados, filename';
+    Promise.all([
+      // Faturas sem data_pagamento → mês pela data do documento
+      supabase.from('faturas').select(cols).eq('status', 'PAGO')
+        .gte('data_documento', `${selectedMonth}-01`)
+        .lt('data_documento', nextMonthFirst)
+        .filter('dados->>data_pagamento', 'is', 'null'),
+      // Faturas reconciliadas → mês pela data de pagamento bancário
+      supabase.from('faturas').select(cols).eq('status', 'PAGO')
+        .gte('dados->>data_pagamento', `${selectedMonth}-01`)
+        .lt('dados->>data_pagamento', nextMonthFirst),
+    ]).then(([{ data: byDoc }, { data: byPay }]) => {
+      const seen = new Set();
+      const merged = [...(byDoc || []), ...(byPay || [])].filter(f => {
+        if (seen.has(f.id)) return false;
+        seen.add(f.id);
+        return true;
+      });
+      setFaturasPago(merged);
+    });
   }, [supabase, selectedMonth]);
 
   const parseFaturaValor = (f) => {

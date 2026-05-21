@@ -1105,7 +1105,7 @@ export default function ReconciliacaoAdmin() {
   };
 
   // ── Confirmar Pagamento (individual, não-bulk per D-10) ────────────────────
-  const confirmarPagamento = async (faturaId, fonte) => {
+  const confirmarPagamento = async (faturaId, fonte, txDate) => {
     setConfirmando(prev => new Set(prev).add(faturaId));
     try {
       if (fonte === 'recibo') {
@@ -1115,9 +1115,15 @@ export default function ReconciliacaoAdmin() {
           .eq('id', faturaId);
         if (error) throw error;
       } else {
+        // Ler dados existentes para fazer merge (não sobrescrever)
+        const dadosUpdate = {};
+        if (txDate) {
+          const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
+          dadosUpdate.dados = { ...(f?.dados || {}), data_pagamento: txDate };
+        }
         const { error } = await supabase
           .from('faturas')
-          .update({ status: 'PAGO' })
+          .update({ status: 'PAGO', ...dadosUpdate })
           .eq('id', faturaId);
         if (error) throw error;
       }
@@ -1173,11 +1179,25 @@ export default function ReconciliacaoAdmin() {
       const allIds = uniqueItems.map(m => m.fatura.id);
       setConfirmando(new Set(allIds));
 
+      // Ler dados existentes das faturas (não-recibo) para merge de data_pagamento
+      const faturaItems = uniqueItems.filter(i => i.fatura.fonte !== 'recibo' && i.transacao?.data);
+      let dadosMap = {};
+      if (faturaItems.length) {
+        const { data: faturasAtuals } = await supabase
+          .from('faturas').select('id, dados').in('id', faturaItems.map(i => i.fatura.id));
+        dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
+      }
+
       // Todos os updates em paralelo (já deduplicados)
       await Promise.all(uniqueItems.map(item =>
         item.fatura.fonte === 'recibo'
           ? supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id)
-          : supabase.from('faturas').update({ status: 'PAGO' }).eq('id', item.fatura.id)
+          : supabase.from('faturas').update({
+              status: 'PAGO',
+              ...(item.transacao?.data
+                ? { dados: { ...(dadosMap[item.fatura.id] || {}), data_pagamento: item.transacao.data } }
+                : {}),
+            }).eq('id', item.fatura.id)
       ));
 
       // Actualizar estado local uma única vez com todos os IDs
@@ -2134,7 +2154,7 @@ export default function ReconciliacaoAdmin() {
                           <CheckCircle size={14} /> Pago
                         </span>
                       ) : (
-                        <button onClick={() => confirmarPagamento(item.fatura?.id, item.fatura?.fonte)}
+                        <button onClick={() => confirmarPagamento(item.fatura?.id, item.fatura?.fonte, item.transacao?.data)}
                           disabled={confirmando.has(item.fatura?.id)}
                           className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
                           {confirmando.has(item.fatura?.id) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
