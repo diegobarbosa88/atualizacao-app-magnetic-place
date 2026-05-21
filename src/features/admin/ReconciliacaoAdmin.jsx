@@ -916,6 +916,26 @@ export default function ReconciliacaoAdmin() {
         if (recErr) { alert(`Erro ao reverter recibos: ${recErr.error.message}`); return; }
       }
     }
+    // Limpar data_pagamento das faturas confirmadas via este run
+    if (runData?.results_json?.matched?.length) {
+      const fatIds = runData.results_json.matched
+        .filter(m => m.fatura?.fonte !== 'recibo' && m.fatura?.id)
+        .map(m => m.fatura.id);
+      if (fatIds.length) {
+        const { data: faturasAtuals } = await supabase.from('faturas').select('id, dados').in('id', fatIds);
+        const comDataPagamento = (faturasAtuals || []).filter(f => f.dados?.data_pagamento);
+        if (comDataPagamento.length) {
+          await Promise.all(comDataPagamento.map(f => {
+            const { data_pagamento, ...dadosSem } = f.dados;
+            return supabase.from('faturas').update({ dados: dadosSem }).eq('id', f.id);
+          }));
+        }
+      }
+    }
+
+    // Apagar registos de associação de clientes ligados a este run
+    await supabase.from('faturacao_clientes_pagamentos').delete().eq('reconciliation_run_id', runId);
+
     const { error, count } = await supabase.from('reconciliation_runs').delete({ count: 'exact' }).eq('id', runId);
     if (error) { alert(`Erro ao apagar: ${error.message}`); return; }
     if (count === 0) { alert('Sem permissão para apagar. Aplique a política RLS de DELETE na tabela reconciliation_runs.'); return; }
@@ -934,6 +954,10 @@ export default function ReconciliacaoAdmin() {
       });
       const data = await res.json();
       if (!res.ok) { alert(data.error || 'Erro ao reprocessar.'); return; }
+      // Limpar links antigos (índices mudaram) e recriar auto-associações
+      await supabase.from('faturacao_clientes_pagamentos').delete().eq('reconciliation_run_id', runId);
+      await autoAssociarEntradas({ matched: data.matched, orphan_bank: data.orphan_bank }, runId);
+      await carregarPagamentosLinks(runId);
       // Actualizar contadores no histórico
       setHistorico(prev => prev.map(r => r.id === runId
         ? { ...r, matched_count: data.matched_count, orphan_bank_count: data.orphan_bank_count, orphan_system_count: data.orphan_system_count }
