@@ -1693,6 +1693,42 @@ export default function ReconciliacaoAdmin() {
     }
   };
 
+  // ── Confirmar entrada (client_association sem fatura) ───────────────────────
+  const [confirmandoEntrada, setConfirmandoEntrada] = useState(new Set());
+
+  const confirmarEntrada = async (item, displayIndex) => {
+    setConfirmandoEntrada(prev => new Set(prev).add(displayIndex));
+    try {
+      const runId = runSelecionado?.id ?? resultado?.run_id;
+      const base = runSelecionado?.results_json ?? {
+        matched: resultado?.matched || [],
+        orphan_bank: resultado?.orphan_bank || [],
+        orphan_system: resultado?.orphan_system || [],
+      };
+
+      // Encontrar o item em orphan_bank pelo índice original e marcá-lo como confirmado
+      const newOrphanBank = (base.orphan_bank || []).map((ob, idx) =>
+        idx === item._orig_index ? { ...ob, confirmed_entrada: true } : ob
+      );
+      const newResults = { ...base, orphan_bank: newOrphanBank };
+
+      if (runId) {
+        await supabase.from('reconciliation_runs')
+          .update({ results_json: newResults })
+          .eq('id', runId);
+      }
+      if (runSelecionado) {
+        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+      } else {
+        setResultado(prev => ({ ...prev, orphan_bank: newOrphanBank }));
+      }
+    } catch (err) {
+      alert(`Erro ao confirmar entrada: ${err.message}`);
+    } finally {
+      setConfirmandoEntrada(prev => { const s = new Set(prev); s.delete(displayIndex); return s; });
+    }
+  };
+
   // ── Guardar descrição editada nos resultados ──────────────────────────────
   const saveResultDescricao = async (section, index, newDesc) => {
     setEditingResultDesc(null);
@@ -1723,15 +1759,19 @@ export default function ReconciliacaoAdmin() {
 
   const clientAssocMatched = pagamentosLinks
     .filter(p => p.transaction_section === 'orphan_bank')
-    .map(p => ({
-      transacao: p.transaction_data,
-      fatura: null,
-      rule: 'client_association',
-      client_name: clients?.find(c => c.id === p.client_id)?.name || p.client_id,
-      period: p.period,
-      _orig_section: 'orphan_bank',
-      _orig_index: p.transaction_index,
-    }));
+    .map(p => {
+      const orphanItem = (displayData?.orphan_bank || []).find((_, idx) => idx === p.transaction_index);
+      return {
+        transacao: p.transaction_data,
+        fatura: null,
+        rule: 'client_association',
+        client_name: clients?.find(c => c.id === p.client_id)?.name || p.client_id,
+        period: p.period,
+        _orig_section: 'orphan_bank',
+        _orig_index: p.transaction_index,
+        confirmed_entrada: orphanItem?.confirmed_entrada || false,
+      };
+    });
   const orphanBankAssocSet = new Set(
     pagamentosLinks.filter(p => p.transaction_section === 'orphan_bank').map(p => p.transaction_index)
   );
@@ -2224,9 +2264,19 @@ export default function ReconciliacaoAdmin() {
                           <CheckCircle size={14} /> Confirmado
                         </span>
                       ) : item.rule === 'client_association' ? (
-                        <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
-                          <CheckCircle size={14} /> Associado
-                        </span>
+                        item.confirmed_entrada ? (
+                          <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                            <CheckCircle size={14} /> Confirmado
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => confirmarEntrada(item, i)}
+                            disabled={confirmandoEntrada.has(i)}
+                            className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
+                            {confirmandoEntrada.has(i) ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                            Confirmar
+                          </button>
+                        )
                       ) : item.fatura?.status === 'PAGO' ? (
                         <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Pago
