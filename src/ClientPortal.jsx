@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Download, ChevronDown, ChevronUp, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
 import { sendValidationEmail } from './utils/emailUtils';
 import ValidationStamp from './components/common/ValidationStampWithQR';
+import ClientPortalNavbar from './components/common/ClientPortalNavbar';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
@@ -44,6 +45,70 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [todayLogs, setTodayLogs] = useState([]);
     const [expandedLogLocations, setExpandedLogLocations] = useState(new Set());
     const [expandedHistoryDays, setExpandedHistoryDays] = useState(new Set());
+
+    // --- CLIENT SESSION / LOGIN ---
+    const [clientSession, setClientSession] = useState(() => {
+        try {
+            const saved = localStorage.getItem('magnetic_client_session');
+            if (!saved) return null;
+            const parsed = JSON.parse(saved);
+            if (!parsed || Date.now() > parsed.expiry) {
+                localStorage.removeItem('magnetic_client_session');
+                return null;
+            }
+            return parsed;
+        } catch { return null; }
+    });
+    const [loginNif, setLoginNif] = useState('');
+    const [loginEmail, setLoginEmail] = useState('');
+    const [loginError, setLoginError] = useState('');
+    const [lang, setLang] = useState(() => localStorage.getItem('magnetic_lang') || 'pt');
+
+    const effectiveClientId = clientSession?.clientId || initialClientId || null;
+
+    const changeLang = (l) => {
+        setLang(l);
+        localStorage.setItem('magnetic_lang', l);
+    };
+
+    const handleLogin = () => {
+        if (clients.length === 0) return;
+        const nifNorm = (loginNif || '').replace(/[\s.\-]/g, '').trim();
+        const emailNorm = (loginEmail || '').toLowerCase().trim();
+        const client = clients.find(c => {
+            const nifMatch = nifNorm && (c.nif || '').replace(/[\s.\-]/g, '').trim() === nifNorm;
+            const emailMatch = !emailNorm || (c.email || '').toLowerCase().trim() === emailNorm;
+            return nifMatch && emailMatch;
+        });
+        if (!client) { setLoginError('NIF ou email incorretos.'); return; }
+        const session = { clientId: client.id, name: client.name, expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 };
+        localStorage.setItem('magnetic_client_session', JSON.stringify(session));
+        setClientSession(session);
+        setLoginError('');
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('magnetic_client_session');
+        setClientSession(null);
+        setLoginNif('');
+        setLoginEmail('');
+    };
+
+    // Direct access: ?client=X&month=Y bypasses login
+    const isDirectAccess = initialClientId && initialMonth && !clientSession;
+
+    const [selectedTab, setSelectedTab] = useState(isDirectAccess ? 'validar' : 'dashboard');
+    const [selectedMonth, setSelectedMonth] = useState(initialMonth || null);
+    const [validarSubView, setValidarSubView] = useState('selector'); // 'selector' | 'page'
+
+    // When direct access, set validating month
+    useEffect(() => {
+        if (isDirectAccess && initialMonth) {
+            setSelectedMonth(initialMonth);
+            setValidarSubView('page');
+        }
+    }, [isDirectAccess, initialMonth]);
+
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(t);
@@ -78,12 +143,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const canvasRef = useRef(null);
 
     const isApproved = useMemo(() => {
-        return clientApprovals?.some(a => a.client_id === initialClientId && a.month === initialMonth);
-    }, [clientApprovals, initialClientId, initialMonth]);
+        return clientApprovals?.some(a => a.client_id === effectiveClientId && a.month === selectedMonth);
+    }, [clientApprovals, effectiveClientId, selectedMonth]);
 
     const approvalData = useMemo(() => {
-        return clientApprovals?.find(a => a.client_id === initialClientId && a.month === initialMonth);
-    }, [clientApprovals, initialClientId, initialMonth]);
+        return clientApprovals?.find(a => a.client_id === effectiveClientId && a.month === selectedMonth);
+    }, [clientApprovals, effectiveClientId, selectedMonth]);
 
     // Limpar assinatura se o administrador anular a validação
     useEffect(() => {
@@ -237,7 +302,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         });
     };
 
-    const clientObj = clients.find(c => c.id === initialClientId) || { name: 'Cliente Não Encontrado' };
+    const clientObj = clients.find(c => c.id === effectiveClientId) || { name: 'Cliente Não Encontrado' };
     const getMonthName = (monthStr) => {
         if (!monthStr || monthStr.length !== 7) return monthStr;
         const [y, m] = monthStr.split('-');
@@ -246,12 +311,23 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     };
 
     const clientData = useMemo(() => {
-        return { name: clientObj.name, period: getMonthName(initialMonth) };
-    }, [clientObj, initialMonth]);
+        return { name: clientObj.name, period: getMonthName(selectedMonth) };
+    }, [clientObj, selectedMonth]);
+
+    const availableMonths = useMemo(() => {
+        if (!effectiveClientId) return [];
+        return [...new Set(
+            logs
+                .filter(l => String(l.clientId) === String(effectiveClientId)
+                    && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0
+                    && l.date && /^\d{4}-\d{2}/.test(l.date))
+                .map(l => l.date.substring(0, 7))
+        )].sort((a, b) => b.localeCompare(a));
+    }, [logs, effectiveClientId]);
 
     const originalWorkersData = useMemo(() => {
-        if (!initialClientId || !initialMonth) return [];
-        const clientLogs = logs.filter(l => String(l.clientId) === String(initialClientId) && l.date && l.date.substring(0, 7) === initialMonth);
+        if (!effectiveClientId || !selectedMonth) return [];
+        const clientLogs = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date && l.date.substring(0, 7) === selectedMonth);
         const workerIds = [...new Set(clientLogs.map(l => l.workerId))];
 
         return workerIds.map(wId => {
@@ -1479,9 +1555,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     ))}
                 </div>
             )}
-            {!printingWorker && <Header />}
-
-            {!printingWorker ? (
+            return (
                 <main className="max-w-6xl mx-auto px-4 md:px-8 mt-12">
                     <div className="mb-12 text-center animate-fade-in">
                         <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tighter mb-4 leading-none">
