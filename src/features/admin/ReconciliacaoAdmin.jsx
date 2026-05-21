@@ -1266,26 +1266,30 @@ export default function ReconciliacaoAdmin() {
     setBulkConfirmando(true);
     try {
       const allDisplayItems = [...((runSelecionado ? runSelecionado.results_json : resultado)?.matched || []), ...clientAssocMatched];
-      const items = allDisplayItems.filter((m, i) => selMatched.has(i) && m.fatura?.id && m.fatura?.status !== 'PAGO');
-      if (!items.length) return;
+      const selectedItems = allDisplayItems.filter((_, i) => selMatched.has(i));
 
-      // Deduplicate por ID (splits não devem confirmar o mesmo recibo duas vezes)
+      const faturaSelected = selectedItems.filter(m => m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual');
+      const entradaSelected = selectedItems.filter(m => m.rule === 'client_association' && !m.confirmed_entrada);
+
+      if (!faturaSelected.length && !entradaSelected.length) return;
+
+      // Deduplicate faturas por ID
       const seenIds = new Set();
-      const uniqueItems = items.filter(m => { if (seenIds.has(m.fatura.id)) return false; seenIds.add(m.fatura.id); return true; });
-      const allIds = uniqueItems.map(m => m.fatura.id);
-      setConfirmando(new Set(allIds));
+      const uniqueFaturas = faturaSelected.filter(m => { if (seenIds.has(m.fatura.id)) return false; seenIds.add(m.fatura.id); return true; });
+      const allFaturaIds = uniqueFaturas.map(m => m.fatura.id);
+      if (allFaturaIds.length) setConfirmando(new Set(allFaturaIds));
 
-      // Ler dados existentes das faturas (não-recibo) para merge de data_pagamento
-      const faturaItems = uniqueItems.filter(i => i.fatura.fonte !== 'recibo' && i.transacao?.data);
+      // Ler dados existentes das faturas para merge de data_pagamento
+      const faturaItemsWithData = uniqueFaturas.filter(i => i.fatura.fonte !== 'recibo' && i.transacao?.data);
       let dadosMap = {};
-      if (faturaItems.length) {
+      if (faturaItemsWithData.length) {
         const { data: faturasAtuals } = await supabase
-          .from('faturas').select('id, dados').in('id', faturaItems.map(i => i.fatura.id));
+          .from('faturas').select('id, dados').in('id', faturaItemsWithData.map(i => i.fatura.id));
         dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
       }
 
-      // Todos os updates em paralelo (já deduplicados)
-      await Promise.all(uniqueItems.map(item =>
+      // Confirmar faturas em paralelo
+      await Promise.all(uniqueFaturas.map(item =>
         item.fatura.fonte === 'recibo'
           ? supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id)
           : supabase.from('faturas').update({
@@ -1296,36 +1300,33 @@ export default function ReconciliacaoAdmin() {
             }).eq('id', item.fatura.id)
       ));
 
-      // Actualizar estado local uma única vez com todos os IDs
-      const idSet = new Set(allIds);
-      const updateAllMatched = matched => matched.map(m =>
+      // Construir results_json actualizado (faturas + entradas num único update)
+      const runId = runSelecionado?.id ?? resultado?.run_id;
+      const baseResults = runSelecionado?.results_json ?? {
+        matched: resultado?.matched || [],
+        orphan_bank: resultado?.orphan_bank || [],
+        orphan_system: resultado?.orphan_system || [],
+      };
+
+      const idSet = new Set(allFaturaIds);
+      const newMatched = (baseResults.matched || []).map(m =>
         m.fatura?.id && idSet.has(m.fatura.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
       );
 
-      const runId = runSelecionado?.id ?? resultado?.run_id;
-      let newMatched;
-      if (runSelecionado) {
-        newMatched = updateAllMatched(runSelecionado.results_json.matched || []);
-        setRunSelecionado(prev => ({
-          ...prev,
-          results_json: { ...prev.results_json, matched: newMatched },
-        }));
-      } else {
-        newMatched = updateAllMatched(resultado?.matched || []);
-        setResultado(prev => ({ ...prev, matched: newMatched }));
-      }
+      const origIndicesConfirmadas = new Set(entradaSelected.map(m => m._orig_index));
+      const newOrphanBank = (baseResults.orphan_bank || []).map((ob, idx) =>
+        origIndicesConfirmadas.has(idx) ? { ...ob, confirmed_entrada: true } : ob
+      );
 
-      // Persistir no run
+      const newResults = { ...baseResults, matched: newMatched, orphan_bank: newOrphanBank };
+
       if (runId) {
-        const baseResults = runSelecionado?.results_json ?? {
-          matched: resultado?.matched || [],
-          orphan_bank: resultado?.orphan_bank || [],
-          orphan_system: resultado?.orphan_system || [],
-        };
-        await supabase
-          .from('reconciliation_runs')
-          .update({ results_json: { ...baseResults, matched: newMatched } })
-          .eq('id', runId);
+        await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', runId);
+      }
+      if (runSelecionado) {
+        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
+      } else {
+        setResultado(prev => ({ ...prev, matched: newMatched, orphan_bank: newOrphanBank }));
       }
 
       setSelMatched(new Set());
@@ -2143,7 +2144,11 @@ export default function ReconciliacaoAdmin() {
           {activeSubTab === 'matched' && (() => {
             const items = [...(displayData.matched || []), ...clientAssocMatched];
             const faturaIdCount = items.reduce((acc, m) => { if (m.fatura?.id) acc[m.fatura.id] = (acc[m.fatura.id] || 0) + 1; return acc; }, {});
-            const allPendentes = items.filter(m => m.fatura?.id && m.fatura?.status !== 'PAGO');
+            const allPendentes = items.filter(m =>
+              m.rule === 'client_association'
+                ? !m.confirmed_entrada
+                : m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual'
+            );
             return (
               <div className="space-y-3">
                 {items.length === 0 && <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transação reconciliada.</p>}
@@ -2168,7 +2173,10 @@ export default function ReconciliacaoAdmin() {
                 {items.map((item, i) => (
                   <div key={i} className="flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 bg-emerald-50 rounded-2xl p-3 sm:p-4">
                     <div className="flex items-start gap-3 min-w-0 flex-1">
-                    {item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual' && (
+                    {(item.rule === 'client_association'
+                      ? !item.confirmed_entrada
+                      : item.fatura?.status !== 'PAGO' && item.rule !== 'confirmed_manual'
+                    ) && (
                       <input type="checkbox" checked={selMatched.has(i)}
                         onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                         className="accent-emerald-600 w-4 h-4 mt-0.5 flex-shrink-0" />
