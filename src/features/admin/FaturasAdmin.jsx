@@ -59,6 +59,7 @@ export default function FaturasAdmin() {
   const [filtroValorMin, setFiltroValorMin] = useState('');
   const [filtroValorMax, setFiltroValorMax] = useState('');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [filtroStatus, setFiltroStatus] = useState('todas'); // 'todas' | 'pendentes' | 'pagas'
   const [ordem, setOrdem] = useState({ campo: 'importado_em', dir: 'desc' });
 
   // Sincronizar quando o context carregar a config do Supabase
@@ -218,6 +219,8 @@ export default function FaturasAdmin() {
     if (filtroDataAte) lista = lista.filter(f => (f.dados?.data_fatura || f.importado_em || '').slice(0, 10) <= filtroDataAte);
     if (filtroValorMin !== '') lista = lista.filter(f => (f.dados?.valor_total ?? 0) >= parseFloat(filtroValorMin));
     if (filtroValorMax !== '') lista = lista.filter(f => (f.dados?.valor_total ?? 0) <= parseFloat(filtroValorMax));
+    if (filtroStatus === 'pendentes') lista = lista.filter(f => (f.status || 'PENDENTE') === 'PENDENTE');
+    if (filtroStatus === 'pagas') lista = lista.filter(f => f.status === 'PAGO');
     lista.sort((a, b) => {
       let va, vb;
       if (ordem.campo === 'fornecedor') { va = a.dados?.fornecedor || ''; vb = b.dados?.fornecedor || ''; }
@@ -230,7 +233,7 @@ export default function FaturasAdmin() {
       return 0;
     });
     return lista;
-  }, [faturas, pesquisa, filtroDataDe, filtroDataAte, filtroValorMin, filtroValorMax, ordem]);
+  }, [faturas, pesquisa, filtroDataDe, filtroDataAte, filtroValorMin, filtroValorMax, filtroStatus, ordem]);
 
   const toggleOrdem = (campo) => setOrdem(prev =>
     prev.campo === campo ? { campo, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { campo, dir: 'asc' }
@@ -269,11 +272,12 @@ export default function FaturasAdmin() {
 
   const [gerandoPdf, setGerandoPdf] = useState(false);
 
-  const gerarPDF = async () => {
-    const lista = selecionados.size > 0
+  const gerarPDF = async (listaOverride = null) => {
+    const lista = listaOverride ?? (selecionados.size > 0
       ? faturasFiltradas.filter(f => selecionados.has(f.id))
-      : faturasFiltradas;
+      : faturasFiltradas);
     if (!lista.length) return;
+    const soReconciliadas = listaOverride != null || filtroStatus === 'pagas';
     setGerandoPdf(true);
     try {
       const hoje = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -304,11 +308,13 @@ export default function FaturasAdmin() {
 
       // Column definitions [label, width, align]
       const cols = [
-        ['Nº Fatura',  38, 'left'],
-        ['Fornecedor', 72, 'left'],
-        ['Data',       24, 'center'],
-        ['Total (€)',  24, 'right'],
-        ['IVA (€)',    24, 'right'],
+        ['Nº Fatura',  30, 'left'],
+        ['Fornecedor', 50, 'left'],
+        ['Data',       20, 'center'],
+        ['Total (€)',  22, 'right'],
+        ['IVA (€)',    18, 'right'],
+        ['Estado',     18, 'center'],
+        ['Ficheiro',   24, 'left'],
       ];
 
       const rowH = 7;
@@ -332,7 +338,7 @@ export default function FaturasAdmin() {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(7.5);
       pdf.setTextColor(100, 116, 139); // slate-500
-      pdf.text('Relatório de Faturas', textX, y + 12);
+      pdf.text(soReconciliadas ? 'Relatório de Faturas Reconciliadas' : 'Relatório de Faturas', textX, y + 12);
 
       pdf.setFont('helvetica', 'bold');
       pdf.setFontSize(7);
@@ -397,6 +403,8 @@ export default function FaturasAdmin() {
           d.data_fatura,
           d.valor_total != null ? Number(d.valor_total).toFixed(2) + ' €' : '—',
           d.iva != null ? Number(d.iva).toFixed(2) + ' €' : '—',
+          lista[i].status === 'PAGO' ? '✓ Pago' : 'Pendente',
+          lista[i].filename,
         ];
 
         cx = M;
@@ -429,7 +437,7 @@ export default function FaturasAdmin() {
       pdf.setTextColor(199, 210, 254);
       pdf.text(totalIva.toFixed(2) + ' €', cx + cols[4][1] - 2, y + rowH - 1, { align: 'right' });
 
-      pdf.save(`faturas_${hoje.replace(/\//g, '-')}.pdf`);
+      pdf.save(`${soReconciliadas ? 'reconciliadas' : 'faturas'}_${hoje.replace(/\//g, '-')}.pdf`);
     } catch (e) {
       alert('Erro ao gerar PDF: ' + e.message);
     } finally {
@@ -488,7 +496,12 @@ export default function FaturasAdmin() {
           Faturas Importadas
         </h2>
         <div className="flex items-center gap-2">
-          <button onClick={gerarPDF} disabled={gerandoPdf || faturasFiltradas.length === 0}
+          <button onClick={() => gerarPDF(faturas.filter(f => f.status === 'PAGO'))} disabled={gerandoPdf || faturas.filter(f => f.status === 'PAGO').length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+            {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            <span className="hidden sm:inline">Reconciliadas</span>
+          </button>
+          <button onClick={() => gerarPDF()} disabled={gerandoPdf || faturasFiltradas.length === 0}
             className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-sm">
             {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
             <span className="hidden sm:inline">{selecionados.size > 0 ? `PDF (${selecionados.size})` : 'PDF'}</span>
@@ -647,6 +660,27 @@ export default function FaturasAdmin() {
         )}
       </div>
 
+      {/* Pills de filtro por status */}
+      {faturas.length > 0 && (
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+          {[
+            { key: 'todas', label: `Todas (${faturas.length})` },
+            { key: 'pendentes', label: `Pendentes (${faturas.filter(f => (f.status || 'PENDENTE') === 'PENDENTE').length})` },
+            { key: 'pagas', label: null, jsx: (
+              <span className="flex items-center gap-1">
+                <CheckCircle size={11} className={filtroStatus === 'pagas' ? 'text-emerald-500' : 'text-slate-400'} />
+                {`Reconciliadas (${faturas.filter(f => f.status === 'PAGO').length})`}
+              </span>
+            )},
+          ].map(({ key, label, jsx }) => (
+            <button key={key} onClick={() => setFiltroStatus(key)}
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtroStatus === key ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>
+              {jsx ?? label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Barra de acções em lote */}
       {selecionados.size > 0 && (
         <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl flex-wrap">
@@ -699,6 +733,7 @@ export default function FaturasAdmin() {
                   <ThSort campo="data_fatura" label="Data" />
                   <ThSort campo="valor_total" label="Total" />
                   <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">IVA</th>
+                  <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
                   <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
                 </tr>
               </thead>
@@ -726,6 +761,12 @@ export default function FaturasAdmin() {
                       <CelEdit fatura={f} campo="data_fatura" valor={d.data_fatura} tipo="date" className="text-xs text-slate-500 whitespace-nowrap" />
                       <CelEdit fatura={f} campo="valor_total" valor={d.valor_total != null ? Number(d.valor_total).toFixed(2) : null} tipo="number" className="text-xs font-semibold text-slate-700 whitespace-nowrap" />
                       <CelEdit fatura={f} campo="iva" valor={d.iva != null ? Number(d.iva).toFixed(2) : null} tipo="number" className="text-xs text-slate-500 whitespace-nowrap" />
+                      <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                        {f.status === 'PAGO'
+                          ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={11} /> Pago</span>
+                          : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Pendente</span>
+                        }
+                      </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
                           <a href={f.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Abrir"><ExternalLink size={14} /></a>
