@@ -32,6 +32,9 @@ const CostReports = () => {
   const [showRelatorioMenu, setShowRelatorioMenu] = useState(false);
   const relatorioMenuRef = useRef(null);
 
+  const [faturasExcluidas, setFaturasExcluidas] = useState([]);
+  const [showExcluidas, setShowExcluidas] = useState(false);
+
   useEffect(() => {
     if (!supabase || !selectedMonth) return;
     supabase
@@ -41,15 +44,19 @@ const CostReports = () => {
       .then(({ data, error }) => {
         if (error) { console.error('faturasPago:', error); return; }
         // Prioridade: data_pagamento (bancária) > data_fatura (Gemini) > data_documento > importado_em
-        const filtered = (data || []).filter(f => {
-          if (f.dados?.excluida_das_despesas) return false;
+        const filtered = [];
+        const excluidas = [];
+        (data || []).forEach(f => {
           const data_ref = f.dados?.data_pagamento
             || f.dados?.data_fatura
             || f.data_documento
             || f.importado_em;
-          return data_ref?.substring(0, 7) === selectedMonth;
+          if (data_ref?.substring(0, 7) !== selectedMonth) return;
+          if (f.dados?.excluida_das_despesas) excluidas.push(f);
+          else filtered.push(f);
         });
         setFaturasPago(filtered);
+        setFaturasExcluidas(excluidas);
       });
   }, [supabase, selectedMonth]);
 
@@ -695,7 +702,19 @@ table{width:100%;border-collapse:collapse;margin-bottom:24px;}
     await supabase.from('faturas').update({
       dados: { ...(f?.dados || {}), excluida_das_despesas: true },
     }).eq('id', faturaId);
+    const fatura = faturasPago.find(x => x.id === faturaId);
     setFaturasPago(prev => prev.filter(x => x.id !== faturaId));
+    if (fatura) setFaturasExcluidas(prev => [...prev, { ...fatura, dados: { ...(fatura.dados || {}), excluida_das_despesas: true } }]);
+  };
+
+  const restaurarFaturaDespesa = async (faturaId) => {
+    const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
+    const novosDados = { ...(f?.dados || {}) };
+    delete novosDados.excluida_das_despesas;
+    await supabase.from('faturas').update({ dados: novosDados }).eq('id', faturaId);
+    const fatura = faturasExcluidas.find(x => x.id === faturaId);
+    setFaturasExcluidas(prev => prev.filter(x => x.id !== faturaId));
+    if (fatura) setFaturasPago(prev => [...prev, { ...fatura, dados: novosDados }]);
   };
 
   const faturasMes = useMemo(() => {
@@ -935,6 +954,56 @@ table{width:100%;border-collapse:collapse;margin-bottom:24px;}
               </tbody>
             </table>
           </div>
+
+          {/* Secção: faturas excluídas das despesas */}
+          {faturasExcluidas.length > 0 && (
+            <div className="mt-6">
+              <button
+                onClick={() => setShowExcluidas(p => !p)}
+                className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                <ChevronDown size={13} className={`transition-transform ${showExcluidas ? 'rotate-180' : ''}`} />
+                Excluídas das despesas ({faturasExcluidas.length})
+              </button>
+              {showExcluidas && (
+                <div className="mt-3 overflow-x-auto -mx-2">
+                  <table className="w-full text-left border-separate border-spacing-y-1">
+                    <thead>
+                      <tr className="text-slate-300">
+                        <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
+                        <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Fornecedor</th>
+                        <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Valor</th>
+                        <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {faturasExcluidas.map(f => {
+                        const data_ref = f.dados?.data_pagamento || f.dados?.data_fatura || f.data_documento || f.importado_em;
+                        return (
+                          <tr key={f.id} className="opacity-50 hover:opacity-80 transition-opacity">
+                            <td className="px-4 py-2 rounded-l-xl border-y border-l border-slate-100 text-xs font-bold text-slate-400 font-mono whitespace-nowrap">
+                              {data_ref ? new Date(data_ref).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '—'}
+                            </td>
+                            <td className="px-4 py-2 border-y border-slate-100 text-sm text-slate-500">{f.dados?.fornecedor || f.entidade || f.descricao || f.filename || '—'}</td>
+                            <td className="px-4 py-2 border-y border-slate-100 text-sm font-bold text-slate-400 text-right whitespace-nowrap">{formatCurrency(parseFaturaValor(f))}</td>
+                            <td className="px-4 py-2 rounded-r-xl border-y border-r border-slate-100 text-right">
+                              <button
+                                onClick={() => restaurarFaturaDespesa(f.id)}
+                                className="px-3 py-1 text-[10px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all"
+                                title="Restaurar nas despesas"
+                              >
+                                Restaurar
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
