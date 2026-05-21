@@ -38,6 +38,7 @@ const CostReports = () => {
         if (error) { console.error('faturasPago:', error); return; }
         // Prioridade: data_pagamento (bancária) > data_fatura (Gemini) > data_documento > importado_em
         const filtered = (data || []).filter(f => {
+          if (f.dados?.excluida_das_despesas) return false;
           const data_ref = f.dados?.data_pagamento
             || f.dados?.data_fatura
             || f.data_documento
@@ -464,9 +465,18 @@ const CostReports = () => {
     return filteredExpenses.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
   }, [filteredExpenses]);
 
+  const excluirFaturaDespesa = async (faturaId) => {
+    const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
+    await supabase.from('faturas').update({
+      dados: { ...(f?.dados || {}), excluida_das_despesas: true },
+    }).eq('id', faturaId);
+    setFaturasPago(prev => prev.filter(x => x.id !== faturaId));
+  };
+
   const faturasMes = useMemo(() => {
     return faturasPago.map(f => ({
       id: `fatura_${f.id}`,
+      _faturaId: f.id,
       date: f.dados?.data_pagamento || f.dados?.data_fatura || f.data_documento || f.importado_em,
       name: f.entidade || f.descricao || f.filename || 'Fatura',
       amount: parseFaturaValor(f),
@@ -682,7 +692,9 @@ const CostReports = () => {
                     </td>
                     <td className="px-4 py-3 border-y border-slate-100 font-black text-rose-600 text-right whitespace-nowrap">-{formatCurrency(exp.amount)}</td>
                     <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-right">
-                      {!exp._isFatura && (
+                      {exp._isFatura ? (
+                        <button onClick={() => excluirFaturaDespesa(exp._faturaId)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-xl transition-all" title="Excluir das despesas"><Trash2 size={15} /></button>
+                      ) : (
                         <button onClick={() => handleDelete('expenses', exp.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-xl transition-all"><Trash2 size={15} /></button>
                       )}
                     </td>
