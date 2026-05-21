@@ -703,7 +703,6 @@ export default function ReconciliacaoAdmin() {
     const jaAssociados = new Set((existentes || []).map(p => `${p.transaction_section}_${p.transaction_index}`));
     const toInsert = [];
     for (const { key, items } of [
-      { key: 'matched',     items: resultsJson.matched || [] },
       { key: 'orphan_bank', items: resultsJson.orphan_bank || [] },
     ]) {
       items.forEach((item, idx) => {
@@ -783,13 +782,6 @@ export default function ReconciliacaoAdmin() {
     const existente = txLinkInfo(section, index);
     if (existente) {
       await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
-    } else {
-      // Fallback: registos com reconciliation_run_id nulo não carregados via txLinkInfo
-      await supabase.from('faturacao_clientes_pagamentos')
-        .delete()
-        .eq('transaction_section', section)
-        .eq('transaction_index', index)
-        .is('reconciliation_run_id', null);
     }
     const runId = runSelecionado?.id ?? resultado?.run_id;
     await carregarPagamentosLinks(runId);
@@ -1466,6 +1458,31 @@ export default function ReconciliacaoAdmin() {
   // ── Desvincular match ────────────────────────────────────────────────────
   const [desvinculando, setDesvinculando] = useState(new Set());
 
+  // Remove o registo de faturacao_clientes_pagamentos para (section, index)
+  // e decrementa os índices de todos os registos subsequentes da mesma secção.
+  const limparEReindexarLinks = async (runId, section, removedIndex) => {
+    if (!runId) return;
+    await supabase
+      .from('faturacao_clientes_pagamentos')
+      .delete()
+      .eq('reconciliation_run_id', runId)
+      .eq('transaction_section', section)
+      .eq('transaction_index', removedIndex);
+    const { data: posteriores } = await supabase
+      .from('faturacao_clientes_pagamentos')
+      .select('id, transaction_index')
+      .eq('reconciliation_run_id', runId)
+      .eq('transaction_section', section)
+      .gt('transaction_index', removedIndex);
+    if (posteriores?.length) {
+      await Promise.all(posteriores.map(p =>
+        supabase.from('faturacao_clientes_pagamentos')
+          .update({ transaction_index: p.transaction_index - 1 })
+          .eq('id', p.id)
+      ));
+    }
+  };
+
   const desvincularMatch = async (matchItem, matchIndex) => {
     const key = `${matchIndex}`;
     setDesvinculando(prev => new Set(prev).add(key));
@@ -1502,6 +1519,9 @@ export default function ReconciliacaoAdmin() {
           orphan_bank_count: newOrphanBank.length,
           orphan_system_count: newOrphanSystem.length,
         }).eq('id', runId);
+        // Apagar registo e reindexar matched após remoção
+        await limparEReindexarLinks(runId, 'matched', matchIndex);
+        await carregarPagamentosLinks(runId);
       }
 
       if (runSelecionado) {
@@ -1557,6 +1577,11 @@ export default function ReconciliacaoAdmin() {
           orphan_bank_count: newOrphanBank.length,
           orphan_system_count: newOrphanSystem.length,
         }).eq('id', runId);
+        // Apagar registo e reindexar secção após remoção (orphan_system não tem links)
+        if (section !== 'orphan_system') {
+          await limparEReindexarLinks(runId, section, index);
+          await carregarPagamentosLinks(runId);
+        }
       }
       if (runSelecionado) {
         setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
@@ -2390,9 +2415,13 @@ export default function ReconciliacaoAdmin() {
                     setRunSelecionado(data);
                     if (data.results_json) {
                       await autoAssociarEntradas(data.results_json, data.id);
-                      const { data: pLinks } = await supabase.from('faturacao_clientes_pagamentos').select('*').eq('reconciliation_run_id', data.id);
-                      setPagamentosLinks(pLinks || []);
-                      const nAssoc = (pLinks || []).filter(p => p.transaction_section === 'orphan_bank').length;
+                      // Busca só a contagem para actualizar o contador do histórico;
+                      // o carregarPagamentosLinks completo é feito pelo useEffect abaixo.
+                      const { data: pLinksCount } = await supabase
+                        .from('faturacao_clientes_pagamentos')
+                        .select('transaction_section')
+                        .eq('reconciliation_run_id', data.id);
+                      const nAssoc = (pLinksCount || []).filter(p => p.transaction_section === 'orphan_bank').length;
                       setHistorico(prev => prev.map(r => r.id === data.id
                         ? { ...r, matched_count: (data.results_json.matched?.length ?? 0) + nAssoc, orphan_bank_count: Math.max(0, (data.results_json.orphan_bank?.length ?? 0) - nAssoc) }
                         : r
