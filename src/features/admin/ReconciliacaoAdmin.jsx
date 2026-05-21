@@ -1148,10 +1148,7 @@ export default function ReconciliacaoAdmin() {
     try {
       const allDisplayItems = [...((runSelecionado ? runSelecionado.results_json : resultado)?.matched || []), ...clientAssocMatched];
       const items = allDisplayItems.filter((m, i) => selMatched.has(i) && m.fatura?.id && m.fatura?.status !== 'PAGO');
-      if (!items.length) {
-        alert('Os itens selecionados não têm fatura para confirmar (transferências de clientes já estão associadas).');
-        return;
-      }
+      if (!items.length) return;
 
       // Deduplicate por ID (splits não devem confirmar o mesmo recibo duas vezes)
       const seenIds = new Set();
