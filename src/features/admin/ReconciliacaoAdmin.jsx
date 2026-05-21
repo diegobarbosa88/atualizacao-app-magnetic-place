@@ -2075,7 +2075,8 @@ export default function ReconciliacaoAdmin() {
                         <span className="flex items-center gap-1 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Confirmado
                         </span>
-                      ) : item.fatura?.status === 'PAGO' ? (
+                      ) : item.rule === 'client_association' ? null
+                      : item.fatura?.status === 'PAGO' ? (
                         <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
                           <CheckCircle size={14} /> Pago
                         </span>
