@@ -103,7 +103,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   // Sugestão de entrada/saída ao abrir o portal
   useEffect(() => {
     if (!currentUser || geoSuggestionDismissed) return;
-    if (!currentUser.name?.toLowerCase().includes('diego rocha barbosa')) return;
+    if (!currentUser.name?.toLowerCase().includes('diego rocha barbosa') && !currentUser.name?.toLowerCase().includes('trabalhador teste')) return;
     const client = clients.find(c => c.id === currentUser.defaultClientId);
     if (!client) return;
 
