@@ -735,13 +735,11 @@ export default function ReconciliacaoAdmin() {
   const [pagamentosLinks, setPagamentosLinks] = useState([]); // faturacao_clientes_pagamentos para o run actual
 
   const carregarPagamentosLinks = async (runId) => {
-    if (!supabase) return;
+    if (!supabase || !runId) return;
     const { data } = await supabase
       .from('faturacao_clientes_pagamentos')
       .select('*')
-      .or(runId
-        ? `reconciliation_run_id.eq.${runId},reconciliation_run_id.is.null`
-        : 'reconciliation_run_id.is.null');
+      .eq('reconciliation_run_id', runId);
     setPagamentosLinks(data || []);
   };
 
