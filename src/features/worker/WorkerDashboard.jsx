@@ -3,8 +3,8 @@ import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
   Clock, ChevronLeft, ChevronRight, Calendar, CheckCircle,
-  LogOut, Timer, TrendingUp, Edit2, Save, Plus, Users,
-  AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Sparkles, Download, LayoutGrid
+  LogOut, LogIn, Timer, TrendingUp, Edit2, Save, Plus, Users,
+  AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Sparkles, Download, LayoutGrid, MapPin, Navigation
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import {
@@ -68,6 +68,14 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const { setCurrentUser, workerChangeRequests } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
   const [geoLoading, setGeoLoading] = useState(false);
+  const [geoSuggestion, setGeoSuggestion] = useState(null); // { type, within, dist, lat, lng, client, logId }
+  const [geoSuggestionDismissed, setGeoSuggestionDismissed] = useState(false);
+  const [geoActionLoading, setGeoActionLoading] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 30000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleSaveWithGeoCheck = async (formData, isMain, ds) => {
     const client = clients.find(c => c.id === formData.clientId);
@@ -90,6 +98,132 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       }
     }
     handleSaveEntry(enriched, isMain, ds);
+  };
+
+  // Sugestão de entrada/saída ao abrir o portal
+  useEffect(() => {
+    if (!currentUser || geoSuggestionDismissed) return;
+    const client = clients.find(c => c.id === currentUser.defaultClientId);
+    if (!client) return;
+
+    const today = new Date().toLocaleDateString('en-CA');
+    const todayWorkerLogs = logs.filter(l =>
+      l.date === today &&
+      String(l.workerId) === String(currentUser.id) &&
+      String(l.clientId) === String(currentUser.defaultClientId)
+    );
+    const openLog = todayWorkerLogs.find(l => l.startTime && !l.endTime);
+
+    // Mostrar card imediatamente (sem GPS)
+    if (openLog) {
+      setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
+    } else {
+      setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
+    }
+
+    // Enriquecer com GPS se disponível e coordenadas configuradas
+    if (client.lat != null && client.lng != null) {
+      getCurrentPosition()
+        .then(({ lat, lng }) => {
+          const within = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
+          const dist = Math.round(distanceMeters(lat, lng, client.lat, client.lng));
+          if (openLog) {
+            setGeoSuggestion(prev => prev ? { ...prev, within, dist, lat, lng } : prev);
+          } else {
+            setGeoSuggestion(prev => prev ? { ...prev, within, dist, lat, lng } : prev);
+          }
+        })
+        .catch(() => {}); // GPS indisponível — card fica sem info de distância
+    }
+  }, [currentUser?.id, logs.length]);
+
+  const nowTimeStr = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+
+  const handleConfirmGeoSuggestion = async () => {
+    if (!geoSuggestion || !currentUser) return;
+    setGeoActionLoading(true);
+    const timeStr = nowTimeStr();
+    const today = new Date().toLocaleDateString('en-CA');
+
+    try {
+      // Capturar GPS no momento do clique (mais fiável que no momento do card)
+      const pos = await getGpsSilent();
+      const client = geoSuggestion.client;
+      const lat = pos?.lat ?? null;
+      const lng = pos?.lng ?? null;
+      let verified = null;
+      if (pos && client?.lat != null && client?.lng != null) {
+        verified = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
+      }
+
+      if (geoSuggestion.type === 'entrada') {
+        const logId = `l${Date.now()}`;
+        await saveToDb('logs', logId, {
+          id: logId,
+          date: today,
+          workerId: currentUser.id,
+          clientId: currentUser.defaultClientId,
+          startTime: timeStr,
+          endTime: null,
+          breakStart: null,
+          breakEnd: null,
+          hours: 0,
+          description: '',
+          check_in_lat: lat,
+          check_in_lng: lng,
+          geo_verified: verified,
+        });
+      } else {
+        const existingLog = logs.find(l => l.id === geoSuggestion.logId);
+        if (existingLog) {
+          await saveToDb('logs', existingLog.id, {
+            ...existingLog,
+            endTime: timeStr,
+            check_out_lat: lat,
+            check_out_lng: lng,
+          });
+        }
+      }
+      setGeoSuggestion(null);
+      setGeoSuggestionDismissed(false);
+    } finally {
+      setGeoActionLoading(false);
+    }
+  };
+
+  const getGpsSilent = async () => {
+    try { return await getCurrentPosition(); } catch { return null; }
+  };
+
+  const handleRegistarPausa = async (tipo) => {
+    if (!todayOpenLog) return;
+    const timeStr = nowTimeStr();
+    const pos = await getGpsSilent();
+    const updates = tipo === 'inicio'
+      ? { breakStart: timeStr, break_start_lat: pos?.lat ?? null, break_start_lng: pos?.lng ?? null }
+      : { breakEnd: timeStr, break_end_lat: pos?.lat ?? null, break_end_lng: pos?.lng ?? null };
+    await saveToDb('logs', todayOpenLog.id, { ...todayOpenLog, ...updates });
+  };
+
+  const handleRegistarSaida = async () => {
+    if (!todayOpenLog) return;
+    setGeoActionLoading(true);
+    try {
+      const pos = await getGpsSilent();
+      await saveToDb('logs', todayOpenLog.id, {
+        ...todayOpenLog,
+        endTime: nowTimeStr(),
+        check_out_lat: pos?.lat ?? null,
+        check_out_lng: pos?.lng ?? null,
+      });
+      setGeoSuggestion(null);
+      setGeoSuggestionDismissed(false); // permite nova entrada mais tarde
+    } finally {
+      setGeoActionLoading(false);
+    }
   };
 
   const [expandedSchedules, setExpandedSchedules] = useState(() =>
@@ -132,6 +266,25 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const workerStartDate = workerDataInicio
     ? new Date(workerDataInicio)
     : null;
+
+  const formatElapsed = (startTimeStr) => {
+    const [h, m] = startTimeStr.split(':').map(Number);
+    const start = new Date(now);
+    start.setHours(h, m, 0, 0);
+    const diffMins = Math.max(0, Math.floor((now - start) / 60000));
+    if (diffMins < 1) return 'agora mesmo';
+    if (diffMins < 60) return `${diffMins} min`;
+    const hh = Math.floor(diffMins / 60);
+    const mm = diffMins % 60;
+    return mm > 0 ? `${hh}h ${mm}min` : `${hh}h`;
+  };
+
+  const todayStr = toISODateLocal(new Date());
+  const todayOpenLog = !myApproval && logs.find(l =>
+    l.date === todayStr &&
+    String(l.workerId) === String(currentUser?.id) &&
+    l.startTime && !l.endTime
+  );
 
   // Filtrar pendingApprovals - só meses >= dataInicio
   const filteredPendingApprovals = pendingApprovals.filter(pending => {
@@ -397,6 +550,97 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             </div>
           )}
         </div>
+
+        {/* CARD EM SERVIÇO */}
+        {todayOpenLog && (
+          <div className="mb-6 bg-indigo-600 rounded-[2rem] shadow-xl shadow-indigo-200 overflow-hidden animate-in slide-in-from-top-4 duration-500">
+            <div className="p-6 flex flex-col gap-4">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Timer size={28} className="text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Em serviço desde {todayOpenLog.startTime}</p>
+                  <p className="text-white font-black text-2xl leading-tight">{formatElapsed(todayOpenLog.startTime)}</p>
+                  <p className="text-indigo-200 text-sm font-bold mt-0.5">
+                    {clients.find(c => String(c.id) === String(todayOpenLog.clientId))?.name || 'Unidade'}
+                  </p>
+                </div>
+                <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
+              </div>
+
+              {/* Pausa info */}
+              {todayOpenLog.breakStart && !todayOpenLog.breakEnd && (
+                <div className="bg-amber-400/20 border border-amber-300/30 rounded-xl px-4 py-2 flex items-center gap-2">
+                  <Coffee size={14} className="text-amber-200" />
+                  <span className="text-amber-100 text-sm font-bold">Em pausa desde {todayOpenLog.breakStart} · {formatElapsed(todayOpenLog.breakStart)}</span>
+                </div>
+              )}
+
+              {/* Botões */}
+              <div className="flex gap-2 flex-wrap">
+                {/* Pausa */}
+                {!todayOpenLog.breakStart && (
+                  <button onClick={() => handleRegistarPausa('inicio')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-white/15 hover:bg-white/25 text-white transition-all active:scale-95">
+                    <Coffee size={14} /> Iniciar Pausa
+                  </button>
+                )}
+                {todayOpenLog.breakStart && !todayOpenLog.breakEnd && (
+                  <button onClick={() => handleRegistarPausa('fim')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-amber-400/30 hover:bg-amber-400/50 text-amber-100 transition-all active:scale-95">
+                    <Coffee size={14} /> Terminar Pausa
+                  </button>
+                )}
+                {/* Saída */}
+                <button onClick={handleRegistarSaida} disabled={geoActionLoading} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-rose-500 hover:bg-rose-600 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50">
+                  {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
+                  Registar Saída
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* CARD ENTRADA / SAÍDA — só aparece se não há já um log em aberto (nesse caso o card "Em serviço" trata de tudo) */}
+        {geoSuggestion && !geoSuggestionDismissed && !todayOpenLog && (
+          <div className={`mb-6 rounded-[2rem] border shadow-xl overflow-hidden animate-in slide-in-from-top-4 duration-500 ${geoSuggestion.within === false ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+            <div className="p-6 flex flex-col md:flex-row items-center gap-5">
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${geoSuggestion.within === false ? 'bg-amber-400 text-white' : 'bg-emerald-500 text-white'}`}>
+                {geoSuggestion.type === 'entrada' ? <LogIn size={26} /> : <LogOut size={26} />}
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                {geoSuggestion.dist != null && (
+                  <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${geoSuggestion.within === false ? 'text-amber-600' : 'text-emerald-600'}`}>
+                    {geoSuggestion.within ? `Na unidade · ${geoSuggestion.dist} m` : `A ${geoSuggestion.dist} m da unidade`}
+                  </p>
+                )}
+                <p className="text-slate-800 font-black text-lg leading-tight">
+                  {geoSuggestion.type === 'entrada'
+                    ? `Registar chegada em ${geoSuggestion.client.name}?`
+                    : `Registar saída de ${geoSuggestion.client.name}?`}
+                </p>
+                {geoSuggestion.type === 'saida' && geoSuggestion.startTime && (
+                  <p className="text-sm text-slate-500 font-bold mt-0.5">Entrada registada às {geoSuggestion.startTime}</p>
+                )}
+              </div>
+              <div className="flex gap-2 flex-shrink-0">
+                <button
+                  onClick={handleConfirmGeoSuggestion}
+                  disabled={geoActionLoading}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-sm uppercase tracking-wide text-white transition-all active:scale-95 shadow-sm ${geoSuggestion.within === false ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'} disabled:opacity-50`}
+                >
+                  {geoActionLoading ? <Loader2 size={16} className="animate-spin" /> : (geoSuggestion.type === 'entrada' ? <LogIn size={16} /> : <LogOut size={16} />)}
+                  {geoSuggestion.type === 'entrada' ? 'Registar Entrada' : 'Registar Saída'}
+                </button>
+                <button
+                  onClick={() => { setGeoSuggestion(null); setGeoSuggestionDismissed(true); }}
+                  className="px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide text-slate-500 bg-white border border-slate-200 hover:bg-slate-50 transition-all"
+                >
+                  Ignorar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {myApproval ? (
           <div className="mb-10 bg-emerald-50/80 border border-emerald-200 rounded-[3rem] p-12 text-center text-emerald-800 shadow-inner animate-in zoom-in-95">

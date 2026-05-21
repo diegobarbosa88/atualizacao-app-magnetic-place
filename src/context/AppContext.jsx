@@ -366,6 +366,12 @@ export const AppProvider = ({ children }) => {
         check_in_lat: data.check_in_lat ?? null,
         check_in_lng: data.check_in_lng ?? null,
         geo_verified: data.geo_verified ?? null,
+        break_start_lat: data.break_start_lat ?? null,
+        break_start_lng: data.break_start_lng ?? null,
+        break_end_lat: data.break_end_lat ?? null,
+        break_end_lng: data.break_end_lng ?? null,
+        check_out_lat: data.check_out_lat ?? null,
+        check_out_lng: data.check_out_lng ?? null,
       };
     } else if (tableName === 'clients') {
       // Remover campos calculados em memória que não existem na BD

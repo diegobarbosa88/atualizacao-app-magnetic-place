@@ -40,6 +40,37 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [clientIp, setClientIp] = useState('Localhost');
     const [correctionMode, setCorrectionMode] = useState('triagem'); // 'triagem', 'manual', 'comentario'
     const [lastRealtimeUpdate, setLastRealtimeUpdate] = useState(null);
+    const [now, setNow] = useState(() => new Date());
+    const [todayLogs, setTodayLogs] = useState([]);
+    useEffect(() => {
+        const t = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(t);
+    }, []);
+
+    // Carregar logs de hoje ao mudar para tab "Hoje"
+    useEffect(() => {
+        if (currentView !== 'hoje' || !supabase || !initialClientId) return;
+        const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD em hora local
+        supabase
+            .from('logs')
+            .select('*')
+            .eq('clientId', initialClientId)
+            .eq('date', today)
+            .then(({ data }) => setTodayLogs(data || []));
+    }, [currentView, supabase, initialClientId]);
+
+    // Actualizar todayLogs em tempo real via eventos da subscrição
+    useEffect(() => {
+        if (!lastRealtimeUpdate) return;
+        if (currentView !== 'hoje' || !supabase || !initialClientId) return;
+        const today = new Date().toLocaleDateString('en-CA');
+        supabase
+            .from('logs')
+            .select('*')
+            .eq('clientId', initialClientId)
+            .eq('date', today)
+            .then(({ data }) => setTodayLogs(data || []));
+    }, [lastRealtimeUpdate]);
     const [editingWorkerId, setEditingWorkerId] = useState(null);
     const [editingDayId, setEditingDayId] = useState(null);
     const canvasRef = useRef(null);
@@ -508,27 +539,46 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         </header>
     );
 
-    const renderHoje = () => {
-        const today = new Date().toISOString().slice(0, 10);
-        const todayLogs = logs.filter(l => l.date === today && String(l.clientId) === String(initialClientId));
-        const workerIds = [...new Set(todayLogs.map(l => l.workerId))];
+    const formatElapsed = (startTimeStr) => {
+        const [h, m] = startTimeStr.split(':').map(Number);
+        const start = new Date(now);
+        start.setHours(h, m, 0, 0);
+        const diffMins = Math.max(0, Math.floor((now - start) / 60000));
+        if (diffMins < 1) return 'agora mesmo';
+        if (diffMins < 60) return `${diffMins} min`;
+        const hh = Math.floor(diffMins / 60);
+        const mm = diffMins % 60;
+        return mm > 0 ? `${hh}h ${mm}min` : `${hh}h`;
+    };
 
-        const workerRows = workerIds.map(wId => {
+    const mapsLink = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
+
+    const LocationPin = ({ lat, lng, verified, showEmpty = false }) => {
+        if (lat == null || lng == null) {
+            if (!showEmpty) return null;
+            return <span className="text-[10px] text-slate-300 font-bold">Sem GPS</span>;
+        }
+        const color = verified === true ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+            : verified === false ? 'text-rose-500 bg-rose-50 border-rose-200'
+            : 'text-slate-500 bg-slate-50 border-slate-200';
+        return (
+            <a href={mapsLink(lat, lng)} target="_blank" rel="noopener noreferrer"
+                className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full border ${color} hover:opacity-80 transition-opacity`}
+                title={`${lat.toFixed(5)}, ${lng.toFixed(5)}`}>
+                📍 Ver mapa
+            </a>
+        );
+    };
+
+    const renderHoje = () => {
+        const activeNow = todayLogs.filter(l => l.startTime && !l.endTime).length;
+        const getWorkerId = (l) => l.workerId || l.worker_id;
+        const workerIds = [...new Set(todayLogs.map(getWorkerId))];
+        const workerCards = workerIds.map(wId => {
             const w = workers.find(work => String(work.id) === String(wId)) || { name: 'Desconhecido' };
-            const wLogs = todayLogs.filter(l => l.workerId === wId);
-            return wLogs.map(log => {
-                const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
-                let gpsBadge = null;
-                if (log.geo_verified === true) {
-                    gpsBadge = <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">✓ GPS</span>;
-                } else if (log.geo_verified === false) {
-                    gpsBadge = <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">✗ Fora da zona</span>;
-                } else if (log.check_in_lat != null) {
-                    gpsBadge = <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">~ GPS</span>;
-                }
-                return { wId, name: w.name, log, hours: h, gpsBadge };
-            });
-        }).flat().sort((a, b) => a.name.localeCompare(b.name));
+            const wLogs = todayLogs.filter(l => String(getWorkerId(l)) === String(wId));
+            return { wId, name: w.name, logs: wLogs };
+        }).sort((a, b) => a.name.localeCompare(b.name));
 
         return (
             <div className="animate-fade-in space-y-6">
@@ -537,46 +587,108 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registos de Hoje</h2>
                         <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
                     </div>
-                    {lastRealtimeUpdate && (
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
-                            Última actualização: {lastRealtimeUpdate.toLocaleTimeString('pt-PT')}
-                        </div>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {activeNow > 0 && (
+                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl">
+                                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
+                                <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">{activeNow} em serviço</span>
+                            </div>
+                        )}
+                        {lastRealtimeUpdate && (
+                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
+                                {lastRealtimeUpdate.toLocaleTimeString('pt-PT')}
+                            </div>
+                        )}
+                    </div>
                 </section>
 
-                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
-                    <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-                        <h3 className="font-black text-slate-800 text-2xl uppercase tracking-tighter">Colaboradores em Serviço</h3>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 block">{workerRows.length} registo{workerRows.length !== 1 ? 's' : ''} hoje</span>
-                    </div>
-                    {workerRows.length === 0 ? (
-                        <div className="p-12 text-center text-slate-400 font-bold text-sm">Nenhum registo para hoje ainda.</div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
-                                <thead>
-                                    <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-100">
-                                        <th className="p-5">Colaborador</th>
-                                        <th className="p-5">Entrada</th>
-                                        <th className="p-5">Saída</th>
-                                        <th className="p-5 text-right">Horas</th>
-                                        <th className="p-5 text-right">GPS</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {workerRows.map(({ wId, name, log, hours, gpsBadge }) => (
-                                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                                            <td className="p-5 font-black text-slate-800 text-sm">{name}</td>
-                                            <td className="p-5 font-bold text-slate-600 text-sm">{log.startTime || '--:--'}</td>
-                                            <td className="p-5 font-bold text-slate-600 text-sm">{log.endTime ? log.endTime : <span className="text-amber-500 font-black">A trabalhar…</span>}</td>
-                                            <td className="p-5 text-right font-black text-indigo-600">{hours > 0 ? `${hours.toFixed(2)}h` : '–'}</td>
-                                            <td className="p-5 text-right">{gpsBadge || <span className="text-slate-300 text-[10px]">–</span>}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                <section className="space-y-4">
+                    {workerCards.length === 0 ? (
+                        <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-12 text-center text-slate-400 font-bold text-sm">Nenhum registo para hoje ainda.</div>
+                    ) : workerCards.map(({ wId, name, logs: wLogs }) => (
+                        <div key={wId} className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+                            {/* Cabeçalho do trabalhador */}
+                            <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between gap-4">
+                                <div>
+                                    <p className="font-black text-slate-800 text-lg uppercase tracking-tight">{name}</p>
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{wLogs.length} registo{wLogs.length !== 1 ? 's' : ''} hoje</p>
+                                </div>
+                                {wLogs.some(l => l.startTime && !l.endTime) && (
+                                    <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <span className="text-[10px] font-black text-emerald-600 uppercase tracking-wide">
+                                            {wLogs.find(l => l.startTime && !l.endTime)?.breakStart && !wLogs.find(l => l.startTime && !l.endTime)?.breakEnd
+                                                ? 'Em pausa'
+                                                : 'Em serviço'}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Logs do trabalhador */}
+                            {wLogs.map(log => {
+                                const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+                                const isOpen = log.startTime && !log.endTime;
+                                const inBreak = isOpen && log.breakStart && !log.breakEnd;
+                                return (
+                                    <div key={log.id} className="px-8 py-6 border-b border-slate-50 last:border-0">
+                                        {/* Timeline de acções */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            {/* Entrada */}
+                                            <div className={`rounded-2xl p-4 border ${isOpen && !inBreak ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100'}`}>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Entrada</p>
+                                                <p className={`text-xl font-black ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</p>
+                                                {isOpen && !inBreak && (
+                                                    <p className="text-[10px] font-bold text-emerald-500 mt-0.5">{formatElapsed(log.startTime)}</p>
+                                                )}
+                                                <div className="mt-2">
+                                                    <LocationPin lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} showEmpty />
+                                                </div>
+                                            </div>
+
+                                            {/* Pausa */}
+                                            <div className={`rounded-2xl p-4 border ${inBreak ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pausa</p>
+                                                {log.breakStart ? (
+                                                    <>
+                                                        <p className={`text-base font-black ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>
+                                                            {log.breakStart} {log.breakEnd ? `→ ${log.breakEnd}` : '→ …'}
+                                                        </p>
+                                                        {inBreak && (
+                                                            <p className="text-[10px] font-bold text-amber-500 mt-0.5">{formatElapsed(log.breakStart)}</p>
+                                                        )}
+                                                        <div className="mt-2 flex flex-wrap gap-1">
+                                                            <LocationPin lat={log.break_start_lat} lng={log.break_start_lng} />
+                                                            {log.breakEnd && <LocationPin lat={log.break_end_lat} lng={log.break_end_lng} />}
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <p className="text-slate-300 font-bold text-sm">–</p>
+                                                )}
+                                            </div>
+
+                                            {/* Saída */}
+                                            <div className={`rounded-2xl p-4 border ${log.endTime ? 'bg-slate-50 border-slate-200' : 'bg-slate-50 border-slate-100 opacity-50'}`}>
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Saída</p>
+                                                <p className="text-xl font-black text-slate-700">{log.endTime || '–'}</p>
+                                                {log.endTime && (
+                                                    <div className="mt-2">
+                                                        <LocationPin lat={log.check_out_lat} lng={log.check_out_lng} showEmpty />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Total */}
+                                            <div className="rounded-2xl p-4 border bg-indigo-50 border-indigo-100 flex flex-col justify-center">
+                                                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Total</p>
+                                                <p className="text-2xl font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    )}
+                    ))}
                 </section>
             </div>
         );
