@@ -32,13 +32,17 @@ const CostReports = () => {
     if (!supabase || !selectedMonth) return;
     supabase
       .from('faturas')
-      .select('id, entidade, descricao, valor, data_documento, dados, filename')
+      .select('id, entidade, descricao, valor, data_documento, dados, filename, importado_em')
       .eq('status', 'PAGO')
-      .then(({ data }) => {
-        // Usar data_pagamento (bancária) se existir, senão data_documento
+      .then(({ data, error }) => {
+        if (error) { console.error('faturasPago:', error); return; }
+        // Prioridade: data_pagamento (bancária) > data_fatura (Gemini) > data_documento > importado_em
         const filtered = (data || []).filter(f => {
-          const data_ref = f.dados?.data_pagamento || f.data_documento;
-          return data_ref?.startsWith(selectedMonth);
+          const data_ref = f.dados?.data_pagamento
+            || f.dados?.data_fatura
+            || f.data_documento
+            || f.importado_em;
+          return data_ref?.substring(0, 7) === selectedMonth;
         });
         setFaturasPago(filtered);
       });
@@ -463,7 +467,7 @@ const CostReports = () => {
   const faturasMes = useMemo(() => {
     return faturasPago.map(f => ({
       id: `fatura_${f.id}`,
-      date: f.data_documento,
+      date: f.dados?.data_pagamento || f.dados?.data_fatura || f.data_documento || f.importado_em,
       name: f.entidade || f.descricao || f.filename || 'Fatura',
       amount: parseFaturaValor(f),
       type: 'fatura',
