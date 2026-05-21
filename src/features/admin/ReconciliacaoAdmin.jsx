@@ -1137,33 +1137,51 @@ export default function ReconciliacaoAdmin() {
   // evitar depender do React state (que pode ainda não ter sido actualizado).
   const autoConfirmarMatched = async (matchedItems, runId, fullResults) => {
     if (!supabase || !matchedItems?.length) return matchedItems;
+
+    // Faturas (não recibos) com transacao.data — candidatas a receber data_pagamento
+    const faturaItemsComData = matchedItems.filter(
+      m => m.fatura?.id && m.fatura?.fonte !== 'recibo' && m.transacao?.data
+    );
+
+    // Faturas que ainda não estão PAGO — precisam de ser confirmadas
     const porConfirmar = matchedItems.filter(
       m => m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual'
     );
-    if (!porConfirmar.length) return matchedItems;
+    const faturasPorConfirmar = porConfirmar.filter(m => m.fatura.fonte !== 'recibo');
+    const recibosPorConfirmar = porConfirmar.filter(m => m.fatura.fonte === 'recibo');
 
-    const faturaItems = porConfirmar.filter(m => m.fatura.fonte !== 'recibo');
-    const reciboItems = porConfirmar.filter(m => m.fatura.fonte === 'recibo');
-
-    // Batch-read dados existentes para merge de data_pagamento (transactions_json.data)
+    // Batch-read dados para todas as faturas com data de transação
     let dadosMap = {};
-    if (faturaItems.length) {
+    if (faturaItemsComData.length) {
       const { data: faturasAtuals } = await supabase
-        .from('faturas').select('id, dados').in('id', faturaItems.map(m => m.fatura.id));
+        .from('faturas').select('id, dados').in('id', faturaItemsComData.map(m => m.fatura.id));
       dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
     }
 
+    // Faturas que precisam de data_pagamento definida (não têm ainda ou vão ser confirmadas agora)
+    const semDataPagamento = faturaItemsComData.filter(
+      m => !dadosMap[m.fatura.id]?.data_pagamento
+    );
+
     await Promise.all([
-      ...faturaItems.map(m => supabase.from('faturas').update({
+      // Confirmar como PAGO as faturas ainda pendentes + setar data_pagamento
+      ...faturasPorConfirmar.map(m => supabase.from('faturas').update({
         status: 'PAGO',
-        ...(m.transacao?.data
-          ? { dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data } }
-          : {}),
+        dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao?.data || undefined },
       }).eq('id', m.fatura.id)),
-      ...reciboItems.map(m =>
+      // Para faturas já PAGO mas sem data_pagamento, apenas gravar a data
+      ...semDataPagamento
+        .filter(m => m.fatura.status === 'PAGO')
+        .map(m => supabase.from('faturas').update({
+          dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data },
+        }).eq('id', m.fatura.id)),
+      // Confirmar recibos pendentes
+      ...recibosPorConfirmar.map(m =>
         supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', m.fatura.id)
       ),
     ]);
+
+    if (!porConfirmar.length && !semDataPagamento.length) return matchedItems;
 
     // Array actualizado com status PAGO
     const confirmedIds = new Set(porConfirmar.map(m => m.fatura.id));
@@ -1172,7 +1190,7 @@ export default function ReconciliacaoAdmin() {
     );
 
     // Persistir status actualizado no run usando fullResults (não depende do React state)
-    if (runId) {
+    if (runId && confirmedIds.size > 0) {
       const base = fullResults ?? runSelecionado?.results_json ?? resultado ?? {};
       await supabase.from('reconciliation_runs').update({
         results_json: { ...base, matched: newMatched },
