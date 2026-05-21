@@ -1,6 +1,18 @@
 import { parse } from 'csv-parse/sync';
 import { parse as parseOFX } from 'ofx-js';
 
+const MONTH_NAMES = {
+  jan: '01', fev: '02', feb: '02', mar: '03', abr: '04', apr: '04',
+  mai: '05', may: '05', jun: '06', jul: '07', ago: '08', aug: '08',
+  set: '09', sep: '09', oct: '10', out: '10', nov: '11', dez: '12', dec: '12',
+  janeiro: '01', fevereiro: '02', marco: '03', abril: '04', maio: '05',
+  junho: '06', julho: '07', agosto: '08', setembro: '09', outubro: '10',
+  novembro: '11', dezembro: '12',
+  january: '01', february: '02', march: '03', april: '04',
+  june: '06', july: '07', august: '08', september: '09',
+  october: '10', november: '11', december: '12',
+};
+
 export function normalizeDate(dateStr) {
   if (!dateStr) return null;
   const s = String(dateStr).trim();
@@ -16,6 +28,13 @@ export function normalizeDate(dateStr) {
   // DD/MM/YYYY | DD-MM-YYYY | DD.MM.YYYY | D/M/YYYY (com ou sem hora no final)
   const matchDMY = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})/);
   if (matchDMY) return `${matchDMY[3]}-${matchDMY[2].padStart(2,'0')}-${matchDMY[1].padStart(2,'0')}`;
+  // DD-MON-YYYY | DD/MON/YYYY | DD MON YYYY (nomes de mês PT/EN: "15-Abr-2026", "15 Apr 2026")
+  const matchTextMonth = s.match(/^(\d{1,2})[\s\/\-]([a-záéíóúâêãõü]+)[\s\/\-](\d{4})/i);
+  if (matchTextMonth) {
+    const key = matchTextMonth[2].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    const mm = MONTH_NAMES[key];
+    if (mm) return `${matchTextMonth[3]}-${mm}-${matchTextMonth[1].padStart(2, '0')}`;
+  }
   return null;
 }
 

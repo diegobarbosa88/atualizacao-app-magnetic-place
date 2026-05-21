@@ -1167,19 +1167,29 @@ export default function ReconciliacaoAdmin() {
     const semDataPagamento = faturaItemsComData.filter(
       m => m.fatura.status === 'PAGO' && !dadosMap[m.fatura.id]?.data_pagamento
     );
+    // Faturas já PAGO sem data_pagamento E sem data de transação — usar hoje como fallback
+    const pagasSemDataNenhuma = matchedItems.filter(
+      m => m.fatura?.id && m.fatura?.fonte !== 'recibo' &&
+        m.fatura.status === 'PAGO' && !m.transacao?.data && !dadosMap[m.fatura.id]?.data_pagamento
+    );
 
+    const hoje = new Date().toISOString().slice(0, 10);
     await Promise.all([
-      // Confirmar como PAGO; só grava data_pagamento se há data real da transação
+      // Confirmar como PAGO; usa data da transação, ou data já existente em dados, ou hoje como último recurso
       ...faturasPorConfirmar.map(m => {
+        const existente = dadosMap[m.fatura.id] || {};
+        const dataPagamento = m.transacao?.data || existente.data_pagamento || hoje;
         const payload = { status: 'PAGO' };
-        if (m.transacao?.data) {
-          payload.dados = { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data };
-        }
+        payload.dados = { ...existente, data_pagamento: dataPagamento };
         return supabase.from('faturas').update(payload).eq('id', m.fatura.id);
       }),
-      // Para faturas já PAGO mas sem data_pagamento, apenas gravar a data
+      // Para faturas já PAGO mas sem data_pagamento, gravar a data da transação
       ...semDataPagamento.map(m => supabase.from('faturas').update({
         dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data },
+      }).eq('id', m.fatura.id)),
+      // Para faturas já PAGO sem data_pagamento e sem transacao.data, usar hoje
+      ...pagasSemDataNenhuma.map(m => supabase.from('faturas').update({
+        dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: hoje },
       }).eq('id', m.fatura.id)),
       // Confirmar recibos pendentes
       ...recibosPorConfirmar.map(m =>
@@ -1187,7 +1197,7 @@ export default function ReconciliacaoAdmin() {
       ),
     ]);
 
-    if (!porConfirmar.length && !semDataPagamento.length) return matchedItems;
+    if (!porConfirmar.length && !semDataPagamento.length && !pagasSemDataNenhuma.length) return matchedItems;
 
     // Array actualizado com status PAGO
     const confirmedIds = new Set(porConfirmar.map(m => m.fatura.id));
@@ -1218,11 +1228,11 @@ export default function ReconciliacaoAdmin() {
         if (error) throw error;
       } else {
         // Ler dados existentes para fazer merge (não sobrescrever)
-        const dadosUpdate = {};
-        if (txDate) {
-          const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
-          dadosUpdate.dados = { ...(f?.dados || {}), data_pagamento: txDate };
-        }
+        const { data: f } = await supabase.from('faturas').select('dados').eq('id', faturaId).single();
+        const dadosExistentes = f?.dados || {};
+        // Prioridade: data da transação → data já gravada → hoje como último recurso
+        const dataPagamento = txDate || dadosExistentes.data_pagamento || new Date().toISOString().slice(0, 10);
+        const dadosUpdate = { dados: { ...dadosExistentes, data_pagamento: dataPagamento } };
         const { error } = await supabase
           .from('faturas')
           .update({ status: 'PAGO', ...dadosUpdate })
@@ -1295,13 +1305,13 @@ export default function ReconciliacaoAdmin() {
       }
 
       // Confirmar faturas em paralelo; só grava data_pagamento se há data real
+      const hojeB = new Date().toISOString().slice(0, 10);
       await Promise.all(uniqueFaturas.map(item => {
         if (item.fatura.fonte === 'recibo')
           return supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', item.fatura.id);
-        const payload = { status: 'PAGO' };
-        if (item.transacao?.data) {
-          payload.dados = { ...(dadosMap[item.fatura.id] || {}), data_pagamento: item.transacao.data };
-        }
+        const existenteB = dadosMap[item.fatura.id] || {};
+        const dataPagamento = item.transacao?.data || existenteB.data_pagamento || hojeB;
+        const payload = { status: 'PAGO', dados: { ...existenteB, data_pagamento: dataPagamento } };
         return supabase.from('faturas').update(payload).eq('id', item.fatura.id);
       }));
 
