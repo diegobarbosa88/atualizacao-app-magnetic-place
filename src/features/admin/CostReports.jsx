@@ -30,12 +30,15 @@ const CostReports = () => {
 
   useEffect(() => {
     if (!supabase || !selectedMonth) return;
+    const d = new Date(selectedMonth + '-01');
+    d.setMonth(d.getMonth() + 1);
+    const nextMonthFirst = d.toISOString().substring(0, 10);
     supabase
       .from('faturas')
       .select('id, entidade, descricao, valor, data_documento, dados, filename')
       .eq('status', 'PAGO')
       .gte('data_documento', `${selectedMonth}-01`)
-      .lte('data_documento', `${selectedMonth}-31`)
+      .lt('data_documento', nextMonthFirst)
       .then(({ data }) => setFaturasPago(data || []));
   }, [supabase, selectedMonth]);
 
