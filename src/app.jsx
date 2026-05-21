@@ -122,8 +122,9 @@ export default function App() {
       n.is_active &&
       (n.target_type === 'all' ||
         (currentUser.role === 'admin' && n.target_type === 'admin') ||
-        (n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
-      !dismissedNotifs.includes(n.id)
+        (currentUser.role !== 'admin' && n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
+      !dismissedNotifs.includes(n.id) &&
+      !(n.dismissed_by_ids || []).includes(currentUser.id)
     );
   }, [appNotifications, currentUser, dismissedNotifs]);
 
