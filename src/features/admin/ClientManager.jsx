@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
-import { 
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check
+import {
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2
 } from 'lucide-react';
+import { getCurrentPosition } from '../../utils/geoUtils';
 
 const ClientManagerContent = () => {
   const { clients, supabase } = useApp();
@@ -24,6 +25,7 @@ const ClientManagerContent = () => {
   const [editingHistoryDraft, setEditingHistoryDraft] = useState({});
   const [confirmDeleteHistoryId, setConfirmDeleteHistoryId] = useState(null);
   const [confirmDeleteClientId, setConfirmDeleteClientId] = useState(null);
+  const [geoLoading, setGeoLoading] = useState(false);
 
   // D-07: Função para carregar histórico
   const loadClientValorHoraHistory = async (clientId, clientName) => {
@@ -55,6 +57,18 @@ const ClientManagerContent = () => {
     if (error) { alert('Erro ao apagar: ' + error.message); return; }
     setConfirmDeleteHistoryId(null);
     await loadClientValorHoraHistory(showClientHistory.clientId, showClientHistory.clientName);
+  };
+
+  const handleUseCurrentLocation = async () => {
+    setGeoLoading(true);
+    try {
+      const { lat, lng } = await getCurrentPosition();
+      setClientForm(prev => ({ ...prev, lat, lng }));
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setGeoLoading(false);
+    }
   };
 
   const openEditClient = async (c) => {
@@ -175,6 +189,32 @@ const ClientManagerContent = () => {
                 <p className="text-xs text-slate-500">
                   Regista a morada e os detalhes de faturação para constarem nos relatórios enviados.
                 </p>
+              </div>
+
+              {/* GEOLOCALIZAÇÃO */}
+              <div className="bg-violet-50 p-6 rounded-[2rem] border border-violet-100">
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin size={16} className="text-violet-600" />
+                  <h4 className="font-black text-violet-700 text-sm uppercase tracking-widest">Geolocalização da Unidade</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Latitude</label>
+                    <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border border-violet-100 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-50 transition-all" placeholder="38.7169" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Longitude</label>
+                    <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border border-violet-100 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-50 transition-all" placeholder="-9.1399" />
+                  </div>
+                </div>
+                <div className="space-y-1 mb-3">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Raio (metros)</label>
+                  <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border border-violet-100 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-50 transition-all" placeholder="200" />
+                </div>
+                <button onClick={handleUseCurrentLocation} disabled={geoLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-black text-xs uppercase shadow-sm transition-all">
+                  {geoLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
+                  Usar localização atual
+                </button>
               </div>
 
               {/* AÇÕES */}

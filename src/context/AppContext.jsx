@@ -362,7 +362,10 @@ export const AppProvider = ({ children }) => {
         endTime: data.endTime,
         breakStart: data.breakStart,
         breakEnd: data.breakEnd,
-        hours: data.hours || data.totalHours
+        hours: data.hours || data.totalHours,
+        check_in_lat: data.check_in_lat ?? null,
+        check_in_lng: data.check_in_lng ?? null,
+        geo_verified: data.geo_verified ?? null,
       };
     } else if (tableName === 'clients') {
       // Remover campos calculados em memória que não existem na BD

@@ -20,6 +20,7 @@ import {
   getScheduleForDay
 } from '../../utils/formatUtils';
 
+import { getCurrentPosition, isWithinGeofence, distanceMeters } from '../../utils/geoUtils';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import WorkerDocuments from '../../components/common/WorkerDocuments';
@@ -66,6 +67,30 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
 
   const { setCurrentUser, workerChangeRequests } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
+  const [geoLoading, setGeoLoading] = useState(false);
+
+  const handleSaveWithGeoCheck = async (formData, isMain, ds) => {
+    const client = clients.find(c => c.id === formData.clientId);
+    let enriched = formData;
+    if (client?.lat != null && client?.lng != null) {
+      setGeoLoading(true);
+      try {
+        const { lat, lng } = await getCurrentPosition();
+        const within = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
+        if (!within) {
+          const dist = Math.round(distanceMeters(lat, lng, client.lat, client.lng));
+          const ok = window.confirm(`Estás a ${dist} m da unidade (raio: ${client.geo_radius_m ?? 200} m). Confirmas o registo na mesma?`);
+          if (!ok) { setGeoLoading(false); return; }
+        }
+        enriched = { ...formData, check_in_lat: lat, check_in_lng: lng, geo_verified: within };
+      } catch {
+        // GPS indisponível — registo sem verificação
+      } finally {
+        setGeoLoading(false);
+      }
+    }
+    handleSaveEntry(enriched, isMain, ds);
+  };
 
   const [expandedSchedules, setExpandedSchedules] = useState(() =>
     currentUser?.defaultScheduleId ? new Set([currentUser.defaultScheduleId]) : new Set()
@@ -394,8 +419,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 clients={clients}
                 assignedClients={currentUser?.assignedClients}
                 onChange={setMainFormData}
-                onSave={() => {
-                  handleSaveEntry(mainFormData, true);
+                onSave={async () => {
+                  await handleSaveWithGeoCheck(mainFormData, true);
                   if (mainFormData.clientId && mainFormData.startTime && mainFormData.endTime) {
                     setSuccessMsg('Registo inserido com sucesso!');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -513,7 +538,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                               clients={clients}
                               assignedClients={currentUser?.assignedClients}
                               onChange={setInlineFormData}
-                              onSave={() => { handleSaveEntry(inlineFormData, false, ds); setInlineEditingDate(null); }}
+                              onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
                               onCancel={() => setInlineEditingDate(null)}
                               systemSettings={systemSettings}
                             />

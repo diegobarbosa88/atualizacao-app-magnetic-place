@@ -39,6 +39,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [signatureSaved, setSignatureSaved] = useState(null);
     const [clientIp, setClientIp] = useState('Localhost');
     const [correctionMode, setCorrectionMode] = useState('triagem'); // 'triagem', 'manual', 'comentario'
+    const [lastRealtimeUpdate, setLastRealtimeUpdate] = useState(null);
     const [editingWorkerId, setEditingWorkerId] = useState(null);
     const [editingDayId, setEditingDayId] = useState(null);
     const canvasRef = useRef(null);
@@ -86,6 +87,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 } else if (payload.eventType === 'INSERT') {
                     setLogs(prev => [...prev, payload.new]);
                 }
+                setLastRealtimeUpdate(new Date());
             })
             .subscribe();
 
@@ -505,6 +507,80 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             </div>
         </header>
     );
+
+    const renderHoje = () => {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayLogs = logs.filter(l => l.date === today && String(l.clientId) === String(initialClientId));
+        const workerIds = [...new Set(todayLogs.map(l => l.workerId))];
+
+        const workerRows = workerIds.map(wId => {
+            const w = workers.find(work => String(work.id) === String(wId)) || { name: 'Desconhecido' };
+            const wLogs = todayLogs.filter(l => l.workerId === wId);
+            return wLogs.map(log => {
+                const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+                let gpsBadge = null;
+                if (log.geo_verified === true) {
+                    gpsBadge = <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">✓ GPS</span>;
+                } else if (log.geo_verified === false) {
+                    gpsBadge = <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-100 text-rose-700">✗ Fora da zona</span>;
+                } else if (log.check_in_lat != null) {
+                    gpsBadge = <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">~ GPS</span>;
+                }
+                return { wId, name: w.name, log, hours: h, gpsBadge };
+            });
+        }).flat().sort((a, b) => a.name.localeCompare(b.name));
+
+        return (
+            <div className="animate-fade-in space-y-6">
+                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div>
+                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Registos de Hoje</h2>
+                        <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: '2-digit', month: 'long' })}</p>
+                    </div>
+                    {lastRealtimeUpdate && (
+                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
+                            Última actualização: {lastRealtimeUpdate.toLocaleTimeString('pt-PT')}
+                        </div>
+                    )}
+                </section>
+
+                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
+                    <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                        <h3 className="font-black text-slate-800 text-2xl uppercase tracking-tighter">Colaboradores em Serviço</h3>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 block">{workerRows.length} registo{workerRows.length !== 1 ? 's' : ''} hoje</span>
+                    </div>
+                    {workerRows.length === 0 ? (
+                        <div className="p-12 text-center text-slate-400 font-bold text-sm">Nenhum registo para hoje ainda.</div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-100">
+                                        <th className="p-5">Colaborador</th>
+                                        <th className="p-5">Entrada</th>
+                                        <th className="p-5">Saída</th>
+                                        <th className="p-5 text-right">Horas</th>
+                                        <th className="p-5 text-right">GPS</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {workerRows.map(({ wId, name, log, hours, gpsBadge }) => (
+                                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
+                                            <td className="p-5 font-black text-slate-800 text-sm">{name}</td>
+                                            <td className="p-5 font-bold text-slate-600 text-sm">{log.startTime || '--:--'}</td>
+                                            <td className="p-5 font-bold text-slate-600 text-sm">{log.endTime ? log.endTime : <span className="text-amber-500 font-black">A trabalhar…</span>}</td>
+                                            <td className="p-5 text-right font-black text-indigo-600">{hours > 0 ? `${hours.toFixed(2)}h` : '–'}</td>
+                                            <td className="p-5 text-right">{gpsBadge || <span className="text-slate-300 text-[10px]">–</span>}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </section>
+            </div>
+        );
+    };
 
     const renderInicio = () => (
         <div className="animate-fade-in space-y-8">
@@ -1510,7 +1586,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                     )}
 
+                    {(currentView === 'inicio' || currentView === 'hoje') && (
+                        <div className="flex gap-2 mb-6">
+                            <button onClick={() => setCurrentView('inicio')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'inicio' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Início</button>
+                            <button onClick={() => setCurrentView('hoje')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'hoje' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Hoje</button>
+                        </div>
+                    )}
                     {currentView === 'inicio' && renderInicio()}
+                    {currentView === 'hoje' && renderHoje()}
                     {currentView === 'editar_relatorio' && (
                         <ClientReportFlow
                             clientId={initialClientId}
