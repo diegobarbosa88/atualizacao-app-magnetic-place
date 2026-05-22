@@ -45,6 +45,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [todayLogs, setTodayLogs] = useState([]);
     const [expandedLogLocations, setExpandedLogLocations] = useState(new Set());
     const [expandedHistoryDays, setExpandedHistoryDays] = useState(new Set());
+    const [calSelectedDay, setCalSelectedDay] = useState(null);
 
     // --- CLIENT SESSION / LOGIN ---
     const [clientSession, setClientSession] = useState(() => {
@@ -665,14 +666,22 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const renderHistorico = () => {
         const todayStr = new Date().toLocaleDateString('en-CA');
         const thisClient = clients?.find(c => String(c.id) === String(effectiveClientId));
+
+        // Build logsByDate for the selected month
         const logsByDate = {};
         logs
-            .filter(l => String(l.clientId) === String(effectiveClientId) && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0)
+            .filter(l => String(l.clientId) === String(effectiveClientId)
+                && l.date && l.date.substring(0, 7) === selectedMonth)
             .forEach(l => { if (!logsByDate[l.date]) logsByDate[l.date] = []; logsByDate[l.date].push(l); });
-        const sortedDates = Object.keys(logsByDate)
-            .filter(d => d && /^\d{4}-\d{2}-\d{2}$/.test(d))
-            .sort((a, b) => a.localeCompare(b));
-        const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+        // Calendar grid setup
+        const [calYear, calMonth] = selectedMonth ? selectedMonth.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1];
+        const firstDay = new Date(calYear, calMonth - 1, 1);
+        const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+        // Week starts Monday: 0=Mon…6=Sun
+        const startOffset = (firstDay.getDay() + 6) % 7;
+        const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+        const weekDayLabels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
 
         const renderLogLine = (log) => {
             const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
@@ -688,7 +697,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 log.check_out_lat ? { label: 'Saída', lat: log.check_out_lat, lng: log.check_out_lng, cls: 'text-rose-700 bg-rose-50 border-rose-200' } : null,
             ].filter(Boolean);
             return (
-                <div key={log.id} className="px-6 py-3 border-b border-slate-100 last:border-0">
+                <div key={log.id} className="px-5 py-3 border-b border-slate-100 last:border-0">
                     {worker && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{worker.name}</p>}
                     <div className="flex items-center gap-3 flex-wrap">
                         <div className="flex items-center gap-1.5">
@@ -724,7 +733,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         )}
                     </div>
                     {isLocExpanded && (
-                        <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100 animate-in fade-in duration-200">
+                        <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
                             <div className="flex flex-wrap gap-1.5">
                                 {thisClient?.morada && (
                                     <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all">
@@ -743,56 +752,114 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             );
         };
 
-        return (
-            <div className="animate-fade-in space-y-4">
-                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-8 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div>
-                        <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Histórico de Registos</h2>
-                        <p className="text-2xl font-black text-slate-800 mt-1 uppercase">{new Date().toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</p>
-                    </div>
-                    {lastRealtimeUpdate && (
-                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl">
-                            Atualizado: {lastRealtimeUpdate.toLocaleTimeString('pt-PT')}
-                        </div>
-                    )}
-                </section>
+        const selectedDayLogs = calSelectedDay ? (logsByDate[calSelectedDay] || []) : [];
+        const monthTotalHours = Object.values(logsByDate).flat()
+            .reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+        const daysWithLogs = Object.keys(logsByDate).length;
 
-                {sortedDates.length === 0 ? (
-                    <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-12 text-center text-slate-400 font-bold text-sm">Sem registos para este período.</div>
-                ) : (
-                    <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="divide-y divide-slate-100">
-                            {sortedDates.map(dateStr => {
-                                const dayLogs = logsByDate[dateStr];
-                                const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
-                                const isExpanded = expandedHistoryDays.has(dateStr);
-                                const [dy, dm, dd] = dateStr.split('-').map(Number);
-                                const dObj = new Date(dy, dm - 1, dd);
-                                const isToday = dateStr === todayStr;
-                                return (
-                                    <React.Fragment key={dateStr}>
-                                        <div onClick={() => setExpandedHistoryDays(prev => { const n = new Set(prev); n.has(dateStr) ? n.delete(dateStr) : n.add(dateStr); return n; })}
-                                            className={`px-6 py-4 flex items-center gap-4 cursor-pointer transition-colors hover:bg-slate-50 ${isExpanded ? 'bg-indigo-50/30' : ''}`}>
-                                            <div className="flex items-baseline gap-2 min-w-[60px]">
-                                                <span className="text-2xl font-black text-slate-800">{dObj.getDate()}</span>
-                                                <span className="text-[10px] uppercase font-bold text-slate-400">{dayNames[dObj.getDay()]}</span>
-                                            </div>
-                                            <div className="flex-1 flex items-center gap-3 flex-wrap">
-                                                {isToday && <span className="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase">Hoje</span>}
-                                                {dayTotal > 0 && <span className="text-[10px] font-black text-indigo-600">{dayTotal.toFixed(2)}h</span>}
-                                                <span className="text-[10px] text-slate-300 font-bold">{dayLogs.length} registo{dayLogs.length !== 1 ? 's' : ''}</span>
-                                            </div>
-                                            {isExpanded ? <ChevronUp size={18} className="text-indigo-400 flex-shrink-0" /> : <ChevronDown size={18} className="text-slate-300 flex-shrink-0" />}
-                                        </div>
-                                        {isExpanded && (
-                                            <div className="border-t border-slate-100 bg-slate-50/20 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                {dayLogs.map(renderLogLine)}
-                                            </div>
-                                        )}
-                                    </React.Fragment>
-                                );
-                            })}
+        return (
+            <div className="animate-fade-in space-y-5">
+                {/* Header */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Histórico</p>
+                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mt-0.5">
+                            {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+                        </h2>
+                    </div>
+                    <div className="flex gap-3">
+                        <div className="bg-white border border-slate-100 rounded-2xl px-4 py-2 text-center shadow-sm">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
+                            <p className="text-lg font-black text-indigo-600">{monthTotalHours.toFixed(1)}h</p>
                         </div>
+                        <div className="bg-white border border-slate-100 rounded-2xl px-4 py-2 text-center shadow-sm">
+                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dias</p>
+                            <p className="text-lg font-black text-slate-800">{daysWithLogs}</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Calendar Grid */}
+                <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                    {/* Week day headers */}
+                    <div className="grid grid-cols-7 border-b border-slate-100">
+                        {weekDayLabels.map(d => (
+                            <div key={d} className="py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">{d}</div>
+                        ))}
+                    </div>
+                    {/* Day cells */}
+                    <div className="grid grid-cols-7">
+                        {Array.from({ length: totalCells }).map((_, idx) => {
+                            const dayNum = idx - startOffset + 1;
+                            if (dayNum < 1 || dayNum > daysInMonth) {
+                                return <div key={idx} className="aspect-square sm:aspect-auto sm:min-h-[72px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
+                            }
+                            const dateStr = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                            const dayLogs = logsByDate[dateStr] || [];
+                            const hasLogs = dayLogs.length > 0;
+                            const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+                            const isToday = dateStr === todayStr;
+                            const isSelected = calSelectedDay === dateStr;
+                            const hasOpen = dayLogs.some(l => l.startTime && !l.endTime);
+                            return (
+                                <div
+                                    key={dateStr}
+                                    onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
+                                    className={`relative aspect-square sm:aspect-auto sm:min-h-[72px] p-2 border-b border-r border-slate-100 flex flex-col cursor-pointer transition-all select-none
+                                        ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''}
+                                        ${isSelected ? 'bg-indigo-600 text-white' : hasLogs ? 'hover:bg-indigo-50 bg-white' : 'hover:bg-slate-50 bg-white'}
+                                    `}
+                                >
+                                    <span className={`text-sm font-black leading-none ${isToday ? (isSelected ? 'text-white' : 'text-indigo-600') : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>
+                                        {dayNum}
+                                    </span>
+                                    {isToday && !isSelected && (
+                                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />
+                                    )}
+                                    {hasOpen && (
+                                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
+                                    )}
+                                    {hasLogs && (
+                                        <div className="mt-auto">
+                                            <p className={`text-[9px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>
+                                                {dayTotal.toFixed(1)}h
+                                            </p>
+                                            <p className={`text-[8px] font-bold leading-none mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>
+                                                {dayLogs.length} reg.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Detail panel for selected day */}
+                {calSelectedDay && (
+                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Registos do dia</p>
+                                <p className="text-base font-black text-slate-800 mt-0.5">
+                                    {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                </p>
+                            </div>
+                            <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
+                                <X size={16} />
+                            </button>
+                        </div>
+                        {selectedDayLogs.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 text-sm font-bold">Sem registos.</div>
+                        ) : (
+                            selectedDayLogs.map(renderLogLine)
+                        )}
+                    </div>
+                )}
+
+                {Object.keys(logsByDate).length === 0 && (
+                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-10 text-center text-slate-400 font-bold text-sm">
+                        Sem registos para {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
                     </div>
                 )}
             </div>
