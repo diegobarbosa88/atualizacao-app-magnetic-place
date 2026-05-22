@@ -637,7 +637,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     const renderHistorico = () => {
         const todayStr = new Date().toLocaleDateString('en-CA');
-        const thisClient = clients?.find(c => String(c.id) === String(initialClientId));
+        const thisClient = clients?.find(c => String(c.id) === String(effectiveClientId));
         const logsByDate = {};
         logs
             .filter(l => calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0)
@@ -772,12 +772,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         );
     };
 
-    const renderInicio = () => (
+    const renderDashboard = () => (
         <div className="animate-fade-in space-y-8">
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período de Validação</h2>
-                    <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{clientData.period}</p>
+                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período Selecionado</h2>
+                    <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{clientData.period || '—'}</p>
                 </div>
                 <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 md:min-w-[200px] text-center shadow-inner">
                     <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mb-1">Total de Horas</p>
@@ -787,7 +787,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             {(() => {
                 const todayStr = new Date().toLocaleDateString('en-CA');
-                const activeNow = logs.filter(l => String(l.clientId) === String(initialClientId) && l.date === todayStr && l.startTime && !l.endTime);
+                const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
                 if (activeNow.length === 0) return null;
                 return (
                     <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
@@ -893,7 +893,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             </section>
 
-            {currentView === 'inicio' && !printingWorker && (
+            {selectedTab === 'validar' && !printingWorker && (
                 <section id="validar-horarios-section" className="approval-section bg-white rounded-[3rem] shadow-xl border border-slate-100 p-8 md:p-12 animate-in slide-in-from-bottom-8 duration-500">
                     {isApproved ? (
                         <div className="text-center py-6">
@@ -942,14 +942,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     const canvas = canvasRef.current;
                                     const base64Image = cropSignatureCanvas(canvas);
                                     setSignatureSaved(base64Image);
-                                    const safeClientId = String(initialClientId || 'unknown');
-                                    const safeMonth = String(initialMonth || 'unknown');
+                                    const safeClientId = String(effectiveClientId || 'unknown');
+                                    const safeMonth = String(selectedMonth || 'unknown');
                                     const id = "c_appr_" + safeClientId + "_" + safeMonth;
 
                                     const approvalData = {
                                         id,
-                                        client_id: initialClientId,
-                                        month: initialMonth,
+                                        client_id: effectiveClientId,
+                                        month: selectedMonth,
                                         signature_base64: base64Image,
                                         approved_total_hours: originalTotal,
                                         has_corrections: false,
@@ -1583,17 +1583,26 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             )}
             {!printingWorker ? (
-                <main className="max-w-6xl mx-auto px-4 md:px-8 mt-12">
-                    <div className="mb-12 text-center animate-fade-in">
-                        <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tighter mb-4 leading-none">
-                            Portal do <span className="text-indigo-600">Cliente</span>
-                        </h1>
-                        <div className="flex items-center justify-center gap-4">
-                            <div className="h-[2px] w-12 bg-slate-200"></div>
-                            <p className="text-xs md:text-sm font-bold text-slate-400 uppercase tracking-[0.5em]">Validação e Aprovação de Horas</p>
-                            <div className="h-[2px] w-12 bg-slate-200"></div>
-                        </div>
-                    </div>
+                <>
+                    <ClientPortalNavbar
+                        clientObj={clientObj}
+                        selectedMonth={selectedMonth}
+                        setSelectedMonth={setSelectedMonth}
+                        selectedTab={selectedTab}
+                        setSelectedTab={setSelectedTab}
+                        availableMonths={availableMonths}
+                        getMonthName={getMonthName}
+                        onLogout={handleLogout}
+                        workers={workers}
+                        clientLogs={logs.filter(l => String(l.clientId) === String(effectiveClientId))}
+                        now={now}
+                        formatElapsed={formatElapsed}
+                        systemSettings={systemSettings}
+                        lang={lang}
+                        changeLang={changeLang}
+                        myNotifications={myNotifications}
+                    />
+                    <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
                     {/* Detalhe inline apenas para contra-propostas (precisam de botões aceitar/rejeitar) */}
                     {myNotifications.filter(n => n.payload?.type === 'counter_proposal').length > 0 && (
                         <div className="mb-8 space-y-4">
@@ -1843,22 +1852,16 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                     )}
 
-                    {(currentView === 'inicio' || currentView === 'hoje') && (
-                        <div className="flex gap-2 mb-6">
-                            <button onClick={() => setCurrentView('inicio')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'inicio' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Início</button>
-                            <button onClick={() => setCurrentView('hoje')} className={`px-5 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${currentView === 'hoje' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200' : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'}`}>Histórico</button>
-                        </div>
-                    )}
-                    {currentView === 'inicio' && renderInicio()}
-                    {currentView === 'hoje' && renderHistorico()}
+                    {currentView === 'inicio' && selectedTab !== 'historico' && renderDashboard()}
+                    {currentView === 'inicio' && selectedTab === 'historico' && renderHistorico()}
                     {currentView === 'editar_relatorio' && (
                         <ClientReportFlow
-                            clientId={initialClientId}
-                            month={initialMonth}
+                            clientId={effectiveClientId}
+                            month={selectedMonth}
                             workers={(() => {
                                 const ids = new Set(
                                     logs
-                                        .filter(l => String(l.clientId) === String(initialClientId) && l.date && l.date.substring(0, 7) === initialMonth)
+                                        .filter(l => String(l.clientId) === String(effectiveClientId) && l.date && l.date.substring(0, 7) === selectedMonth)
                                         .map(l => String(l.workerId))
                                 );
                                 return workers.filter(w => ids.has(String(w.id)));
@@ -1888,6 +1891,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     {currentView === 'sucesso_assinatura' && renderSucessoAssinatura()}
                     {currentView === 'sucesso_reporte' && renderSucessoReporte()}
                 </main>
+                </>
             ) : (
                 <div className="w-full bg-white flex justify-center items-center min-h-screen">
                     <div className="w-[794px]">
