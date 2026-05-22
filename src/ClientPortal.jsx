@@ -1005,7 +1005,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 {Array.from({ length: totalCells }).map((_, idx) => {
                                     const dayNum = idx - startOffset + 1;
                                     if (dayNum < 1 || dayNum > daysInMonth) {
-                                        return <div key={idx} className="aspect-[5/4] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40 rounded-xl m-0.5" />;
+                                        return <div key={idx} className="aspect-[1.7/1] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40 rounded-xl m-0.5" />;
                                     }
                                     const dateStr = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
                                     const dayLogs = logsByDate[dateStr] || [];
@@ -1017,7 +1017,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     return (
                                         <div key={dateStr}
                                             onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                            className={`relative aspect-[5/4] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
+                                            className={`relative aspect-[1.7/1] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
                                             <span className={`text-base font-black leading-none ${isToday && !isSelected ? 'text-indigo-600' : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
                                             {isToday && !isSelected && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
