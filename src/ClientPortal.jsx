@@ -863,7 +863,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-7 border-b border-slate-200">
                     <div>
                         <div className="flex flex-wrap items-center gap-3 mb-7">
-                            <span className="px-3 py-3.5 rounded-lg bg-slate-700 text-white text-[17px] font-bold uppercase tracking-widest shadow-sm">
+                            <span className="px-3 py-3.5 rounded-lg bg-slate-700 text-white text-[15px] font-bold uppercase tracking-widest shadow-sm">
                                 {t('client_panel')}
                             </span>
                             <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-slate-300" />
@@ -872,8 +872,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 {new Date().toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                             </span>
                         </div>
-                        <p className="text-indigo-600 font-extrabold text-m tracking-widest uppercase mb-1">{t('hello')},</p>
-                        <span className="text-3xl md:text-3xl font-extrabold text-slate-800 tracking-tight uppercase leading-tight">
+                        <div className="text-indigo-600 font-extrabold text-m mt-12 mb-1 tracking-widest uppercase">{t('hello')},</div>
+                        <span className="text-3xl md:text-2xl font-extrabold text-slate-800 tracking-tight uppercase leading-tight">
                             {clientObj.name}
                         </span>
                         <div className="text-slate-500 text-xs mt-3 font-medium max-w-l leading-relaxed">
@@ -906,8 +906,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             onClick={() => { const idx = availableMonths.indexOf(selectedMonth); if (idx < availableMonths.length - 1) setSelectedMonth(availableMonths[idx + 1]); }}
                             disabled={availableMonths.indexOf(selectedMonth) >= availableMonths.length - 1}
                             className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-20 transition-all"
-                        ><ChevronLeft size={14} /></button>
-                        <p className="text-base font-black text-slate-800 uppercase leading-tight min-w-[80px] text-center">{clientData.period || '—'}</p>
+                        ><ChevronLeft size={17} /></button>
+                        <p className="text-2xl font-black text-slate-800 uppercase leading-tight min-w-[80px] text-center">{clientData.period || '—'}</p>
                         <button
                             onClick={() => { const idx = availableMonths.indexOf(selectedMonth); if (idx > 0) setSelectedMonth(availableMonths[idx - 1]); }}
                             disabled={availableMonths.indexOf(selectedMonth) <= 0}
@@ -917,11 +917,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
                 <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
                     <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">{t('total_hours')}</p>
-                    <p className="text-4xl font-black text-white">{originalTotal}h</p>
+                    <p className="text-3xl font-black text-white">{originalTotal}h</p>
                 </div>
                 <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('workers')}</p>
-                    <p className="text-4xl font-black text-slate-800">{originalWorkersData.length}</p>
+                    <p className="text-3xl font-black text-slate-800">{originalWorkersData.length}</p>
                 </div>
             </div>
 
@@ -1111,7 +1111,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             <div key={dateStr}
                                                 onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
                                                 className="relative m-0.3 rounded-xl overflow-hidden cursor-pointer select-none flex flex-col"
-                                                style={{ background: 'linear-gradient(160deg, #064e3b 0%, #065f46 60%, #047857 100%)', minHeight: '100%' }}>
+                                                style={{ background: 'linear-gradient(160deg, #058664 0%, #077e5c 60%, #06966d 100%)', minHeight: '100%' }}>
                                                 {/* Número do dia + dot */}
                                                 <div className="flex items-center justify-between px-3 pt-0.5">
                                                     <span className="text-s font-black text-white/60 leading-none">{dayNum}</span>
