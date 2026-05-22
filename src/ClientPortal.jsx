@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Download, ChevronDown, ChevronUp, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
@@ -229,7 +229,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return filtered;
     }, [appNotifications, initialClientId, dismissedNotifs]);
 
-    const handleAcceptContestation = async (notif) => {
+    const handleAcceptContestation = useCallback(async (notif) => {
         const changes = notif.payload?.changes;
         if (!changes || !Array.isArray(changes)) {
             alert("Erro: Não foi possível encontrar os dados da contra-proposta.");
@@ -297,7 +297,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             console.error("Erro ao aplicar contra-proposta:", error);
             alert("Ocorreu um erro ao atualizar os dados. Por favor, tente novamente.");
         }
-    };
+    }, [clientData, clientSession, supabase, logs, initialClientId, saveToDb]);
 
     const handleDismissNotif = (id) => {
         setDismissedNotifs(prev => {
