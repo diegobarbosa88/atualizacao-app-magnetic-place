@@ -391,9 +391,9 @@ export default function App() {
           appNotifications={appNotifications}
           clientApprovals={clientApprovals}
           supabase={supabase}
-          renderReport={(workerId, isGlobal, portalLogs) => (
+          renderReport={(workerId, isGlobal, portalLogs, portalClientId, portalMonth) => (
             <ClientTimesheetReport
-              data={{ client: clients.find(c => c.id === urlClient), logs: portalLogs || logs, workers, clients, month: urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
+              data={{ client: clients.find(c => String(c.id) === String(portalClientId || urlClient)), logs: portalLogs || logs, workers, clients, month: portalMonth || urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
               isEmbedded={true}
               hideActions={true}
               onBack={() => { }}

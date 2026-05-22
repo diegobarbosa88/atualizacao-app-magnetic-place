@@ -84,6 +84,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const session = { clientId: client.id, name: client.name, expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 };
         localStorage.setItem('magnetic_client_session', JSON.stringify(session));
         setClientSession(session);
+        // Forçar selectedMonth no mesmo batch de estado para evitar render vazio
+        const months = [...new Set(
+            (initialLogs || [])
+                .filter(l => String(l.clientId) === String(client.id)
+                    && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0
+                    && l.date && /^\d{4}-\d{2}/.test(l.date))
+                .map(l => l.date.substring(0, 7))
+        )].sort((a, b) => b.localeCompare(a));
+        if (months.length > 0) setSelectedMonth(months[0]);
         setLoginError('');
     };
 
@@ -889,7 +898,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                 <td colSpan="3" className="p-0">
                                                     <div className="p-6">
                                                         <div id={`report-worker-${worker.id}`} className="overflow-hidden bg-white">
-                                                            {renderReport(worker.id, true, logs)}
+                                                            {renderReport(worker.id, true, logs, effectiveClientId, selectedMonth)}
                                                         </div>
                                                     </div>
                                                 </td>
