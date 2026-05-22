@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -907,12 +907,25 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     Sem registos de horas para {clientData.period}.
                 </div>
             )}
+
+            {/* Botão Validar Período */}
+            <button
+                onClick={() => setSelectedTab('validar')}
+                className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase tracking-widest py-5 rounded-[2rem] shadow-lg shadow-indigo-200 transition-all"
+            >
+                <CheckCircle size={20} />
+                Validar Período
+            </button>
         </div>
         );
     };
 
     const renderValidar = () => (
         <div className="animate-fade-in space-y-8">
+            {/* Voltar */}
+            <button onClick={() => setSelectedTab('dashboard')} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
+                <ChevronLeft size={16} /> Voltar ao Dashboard
+            </button>
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
                     <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período Selecionado</h2>

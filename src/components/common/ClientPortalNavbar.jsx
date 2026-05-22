@@ -82,20 +82,8 @@ export default function ClientPortalNavbar({
           </div>
         </div>
 
-        {/* Center: Tab Pills Navigation */}
-        <div className="flex-1 flex justify-center w-full md:w-auto">
-          <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
-            {tabs.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setSelectedTab(t.id)}
-                className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${selectedTab === t.id ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Center: vazio — navegação feita por botão no dashboard */}
+        <div className="flex-1" />
 
         {/* Right: Actions */}
         <div className="hidden md:flex items-center gap-4 shrink-0">
