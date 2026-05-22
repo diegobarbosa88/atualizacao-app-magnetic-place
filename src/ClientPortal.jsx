@@ -72,7 +72,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     };
 
     const handleLogin = () => {
-        if (clients.length === 0) return;
+        if (clients.length === 0) { setLoginError('A carregar dados, por favor aguarde...'); return; }
         const nifNorm = (loginNif || '').replace(/[\s.\-]/g, '').trim();
         const emailNorm = (loginEmail || '').toLowerCase().trim();
         const client = clients.find(c => {
@@ -208,11 +208,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             .catch(err => console.error("Erro ao obter IP:", err));
     }, []);
 
-    const [dismissedNotifs, setDismissedNotifs] = useState(() => {
+    const [dismissedNotifs, setDismissedNotifs] = useState([]);
+    useEffect(() => {
+        if (!effectiveClientId) return;
         try {
-            return JSON.parse(localStorage.getItem(`dismissed_client_notifs_${initialClientId}`) || '[]');
-        } catch { return []; }
-    });
+            setDismissedNotifs(JSON.parse(localStorage.getItem(`dismissed_client_notifs_${effectiveClientId}`) || '[]'));
+        } catch { setDismissedNotifs([]); }
+    }, [effectiveClientId]);
 
     const myNotifications = useMemo(() => {
         if (!appNotifications || !initialClientId) return [];
@@ -349,7 +351,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             });
             return { id: wId, name: w.name, role: w.profissao || 'Colaborador', totalHours: parseFloat(total.toFixed(2)), dailyRecords };
         }).sort((a, b) => a.name.localeCompare(b.name));
-    }, [logs, workers, initialClientId, initialMonth]);
+    }, [logs, workers, effectiveClientId, selectedMonth]);
 
     const originalTotal = parseFloat(originalWorkersData.reduce((acc, curr) => acc + curr.totalHours, 0).toFixed(2));
     const draftTotal = parseFloat(draftData.reduce((acc, curr) => acc + (Number(curr.editedTotalHours) || 0), 0).toFixed(2));
@@ -501,7 +503,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             return dates;
         };
 
-        const allDates = getAllMonthDates(initialMonth);
+        const allDates = getAllMonthDates(selectedMonth);
 
         const editableData = originalWorkersData.map(w => {
             // Mapear logs existentes por data (garantindo que pegamos apenas a parte YYYY-MM-DD)
@@ -562,7 +564,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         setDraftData(prev => prev.map(w => {
             if (w.id === workerId) {
                 const newDaily = w.dailyRecords.map(d => {
-                    if (d.date === dateStr) {
+                    if (d.rawDate === dateStr) {
                         const newEntry = field === 'entry' ? val : d.editedEntry;
                         const newExit = field === 'exit' ? val : d.editedExit;
                         const newBreakStart = field === 'breakStart' ? val : d.editedBreakStart;
@@ -579,21 +581,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         }));
     };
 
-    useEffect(() => {
-        const style = document.createElement('style');
-        style.innerHTML = `
-      .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-      input[type="time"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
-      input[type="time"] { position: relative; }
-    `;
-        document.head.appendChild(style);
-        return () => {
-            if (document.head.contains(style)) {
-                document.head.removeChild(style);
-            }
-        };
-    }, []);
+    // Animation and time input styles moved into dangerouslySetInnerHTML block (WR-08)
 
     const Header = () => (
         <header className="bg-white border-b border-slate-200 p-4 sticky top-0 z-10 w-full shadow-sm py-4">
@@ -1911,6 +1899,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             <style dangerouslySetInnerHTML={{
                 __html: `
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        input[type="time"]::-webkit-calendar-picker-indicator { background: transparent; bottom: 0; color: transparent; cursor: pointer; height: auto; left: 0; position: absolute; right: 0; top: 0; width: auto; }
+        input[type="time"] { position: relative; }
         @page { size: A4 portrait; margin: 0; }
         @media print {
           body {
