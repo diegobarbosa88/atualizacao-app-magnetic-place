@@ -107,7 +107,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     // Direct access bypass disabled — require proper login always (security: CR-06)
     const isDirectAccess = false;
 
-    const [selectedTab, setSelectedTab] = useState(isDirectAccess ? 'validar' : 'dashboard');
+    const [selectedTab, setSelectedTab] = useState(() => {
+        if (initialMonth) {
+            try {
+                const sess = JSON.parse(localStorage.getItem('magnetic_client_session') || 'null');
+                if (sess && Date.now() < sess.expiry) return 'validar';
+            } catch {}
+        }
+        return 'dashboard';
+    });
     const [selectedMonth, setSelectedMonth] = useState(() => {
         if (initialMonth) return initialMonth;
         // Calcular mês mais recente de forma síncrona a partir da sessão + logs iniciais
@@ -815,9 +823,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
                 return (
                     <section className="space-y-4">
-                        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-                                <h3 className="font-black text-slate-800 text-base uppercase tracking-tighter">Calendário — {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
+                        <div className="bg-white rounded-[3rem] shadow-2xl border-2 border-indigo-100 overflow-hidden">
+                            <div className="px-6 py-5 border-b border-indigo-100 bg-indigo-600 flex items-center justify-between">
+                                <h3 className="font-black text-white text-base uppercase tracking-tighter">Calendário — {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
+                                <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">{Object.keys(logsByDate).length} dias</span>
                             </div>
                             {/* Week day headers */}
                             <div className="grid grid-cols-7 border-b border-slate-100">
@@ -882,9 +891,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             {/* Lista compacta de colaboradores */}
             {originalWorkersData.length > 0 && (
-                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
-                    <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
-                        <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">Colaboradores — {clientData.period}</h3>
+                <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden opacity-80">
+                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                        <h3 className="font-black text-slate-500 text-sm uppercase tracking-tighter">Colaboradores — {clientData.period}</h3>
                     </div>
                     <div className="divide-y divide-slate-50">
                         {originalWorkersData.map(worker => (
@@ -908,14 +917,16 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             )}
 
-            {/* Botão Validar Período */}
-            <button
-                onClick={() => setSelectedTab('validar')}
-                className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase tracking-widest py-5 rounded-[2rem] shadow-lg shadow-indigo-200 transition-all"
-            >
-                <CheckCircle size={20} />
-                Validar Período
-            </button>
+            {/* Botão Validar Período — link único do mês */}
+            {effectiveClientId && selectedMonth && (
+                <a
+                    href={`${window.location.origin}${window.location.pathname}?client=${effectiveClientId}&month=${selectedMonth}`}
+                    className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase tracking-widest py-5 rounded-[2rem] shadow-lg shadow-indigo-200 transition-all"
+                >
+                    <CheckCircle size={20} />
+                    Validar Período
+                </a>
+            )}
         </div>
         );
     };
