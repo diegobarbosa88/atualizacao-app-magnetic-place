@@ -907,7 +907,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             disabled={availableMonths.indexOf(selectedMonth) >= availableMonths.length - 1}
                             className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-20 transition-all"
                         ><ChevronLeft size={14} /></button>
-                        <p className="text-sm font-black text-slate-800 uppercase leading-tight min-w-[80px] text-center">{clientData.period || '—'}</p>
+                        <p className="text-base font-black text-slate-800 uppercase leading-tight min-w-[80px] text-center">{clientData.period || '—'}</p>
                         <button
                             onClick={() => { const idx = availableMonths.indexOf(selectedMonth); if (idx > 0) setSelectedMonth(availableMonths[idx - 1]); }}
                             disabled={availableMonths.indexOf(selectedMonth) <= 0}
