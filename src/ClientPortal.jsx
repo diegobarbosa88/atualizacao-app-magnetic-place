@@ -1975,9 +1975,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                     </div>
 
-                    <div className="lg:hidden mb-10 text-center">
-                        <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 mx-auto mb-3 object-contain" onError={e => e.target.style.display = 'none'} />
-                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">{t('client_panel')}</h2>
+                    {/* Logo visível em todos os tamanhos no formulário */}
+                    <div className="flex items-center gap-3 mb-8">
+                        <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 w-auto object-contain" onError={e => e.target.style.display = 'none'} />
+                        <div>
+                            <p className="font-black text-slate-900 text-sm uppercase tracking-tight leading-none">Magnetic Place</p>
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unipessoal Lda</p>
+                        </div>
                     </div>
 
                     <div className="mb-8">
@@ -1988,13 +1992,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">NIF</label>
-                            <input type="text" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder={t('nif_placeholder')}
+                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
+                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder={t('email_placeholder')}
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
-                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder={t('email_placeholder')}
+                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Senha (NIF)</label>
+                            <input type="password" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="••••••••"
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         {loginError && (
