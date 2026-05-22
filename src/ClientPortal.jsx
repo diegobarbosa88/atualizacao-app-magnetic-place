@@ -98,7 +98,25 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const isDirectAccess = false;
 
     const [selectedTab, setSelectedTab] = useState(isDirectAccess ? 'validar' : 'dashboard');
-    const [selectedMonth, setSelectedMonth] = useState(initialMonth || null);
+    const [selectedMonth, setSelectedMonth] = useState(() => {
+        if (initialMonth) return initialMonth;
+        // Calcular mês mais recente de forma síncrona a partir da sessão + logs iniciais
+        try {
+            const sessStr = localStorage.getItem('magnetic_client_session');
+            if (!sessStr) return null;
+            const sess = JSON.parse(sessStr);
+            if (!sess || Date.now() > sess.expiry) return null;
+            const clientId = sess.clientId;
+            const months = [...new Set(
+                (initialLogs || [])
+                    .filter(l => String(l.clientId) === String(clientId)
+                        && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0
+                        && l.date && /^\d{4}-\d{2}/.test(l.date))
+                    .map(l => l.date.substring(0, 7))
+            )].sort((a, b) => b.localeCompare(a));
+            return months[0] || null;
+        } catch { return null; }
+    });
     const [validarSubView, setValidarSubView] = useState('selector'); // 'selector' | 'page'
 
     // When direct access, set validating month
@@ -640,7 +658,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const thisClient = clients?.find(c => String(c.id) === String(effectiveClientId));
         const logsByDate = {};
         logs
-            .filter(l => calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0)
+            .filter(l => String(l.clientId) === String(effectiveClientId) && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0)
             .forEach(l => { if (!logsByDate[l.date]) logsByDate[l.date] = []; logsByDate[l.date].push(l); });
         const sortedDates = Object.keys(logsByDate)
             .filter(d => d && /^\d{4}-\d{2}-\d{2}$/.test(d))
@@ -1589,7 +1607,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         selectedMonth={selectedMonth}
                         setSelectedMonth={setSelectedMonth}
                         selectedTab={selectedTab}
-                        setSelectedTab={setSelectedTab}
+                        setSelectedTab={(tab) => { setSelectedTab(tab); goToView('inicio'); }}
                         availableMonths={availableMonths}
                         getMonthName={getMonthName}
                         onLogout={handleLogout}
