@@ -680,8 +680,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         <div className="animate-fade-in space-y-6">
             {/* Saudação */}
             <div className="pt-2">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Painel do Cliente</p>
                 <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mt-1">Olá, {clientObj.name}</h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
 
             {/* Stats */}
@@ -1636,30 +1637,78 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     );
 
     const renderLogin = () => (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 flex items-center justify-center p-4">
-            <div className="w-full max-w-md">
-                <div className="text-center mb-10">
-                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-14 mx-auto mb-4 object-contain" onError={e => e.target.style.display = 'none'} />
-                    <h1 className="text-3xl font-black text-white uppercase tracking-tight">Portal do Cliente</h1>
-                    <p className="text-indigo-400 font-bold text-sm mt-2 uppercase tracking-widest">Aceda à sua área reservada</p>
+        <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+            {/* Painel esquerdo — branding */}
+            <div className="hidden md:flex md:w-2/5 bg-indigo-600 flex-col items-center justify-center p-12 relative overflow-hidden">
+                {/* Círculos decorativos */}
+                <div className="absolute -top-24 -left-24 w-72 h-72 bg-indigo-500/40 rounded-full" />
+                <div className="absolute -bottom-20 -right-16 w-96 h-96 bg-indigo-700/50 rounded-full" />
+                <div className="relative z-10 text-center">
+                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-16 mx-auto mb-8 object-contain brightness-0 invert" onError={e => e.target.style.display = 'none'} />
+                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">Painel<br />do Cliente</h1>
+                    <div className="mt-6 w-12 h-1 bg-white/40 rounded-full mx-auto" />
+                    <p className="mt-6 text-indigo-200 font-bold text-sm leading-relaxed">Consulte as horas dos<br />seus colaboradores e<br />valide o período mensal.</p>
                 </div>
-                <div className="bg-white/10 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-10 border border-white/10 shadow-2xl">
-                    <div className="space-y-5">
-                        <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-2">NIF</label>
-                            <input type="text" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="NIF do cliente" className="w-full px-5 py-4 bg-white/10 border border-white/10 rounded-2xl text-white placeholder-slate-400 font-bold text-sm focus:outline-none focus:border-indigo-400 transition-all" />
-                        </div>
-                        <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-300 mb-2">Email</label>
-                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Email associado" className="w-full px-5 py-4 bg-white/10 border border-white/10 rounded-2xl text-white placeholder-slate-400 font-bold text-sm focus:outline-none focus:border-indigo-400 transition-all" />
-                        </div>
-                        {loginError && (
-                            <div className="bg-rose-500/20 border border-rose-400/30 rounded-xl px-4 py-3 text-rose-200 text-xs font-bold text-center">{loginError}</div>
-                        )}
-                        <button onClick={handleLogin} disabled={clients.length === 0} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">{clients.length === 0 ? 'A carregar...' : 'Entrar'}</button>
+                <p className="absolute bottom-8 text-indigo-300/60 text-[10px] font-bold uppercase tracking-widest">© {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}</p>
+            </div>
+
+            {/* Painel direito — formulário */}
+            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-16">
+                {/* Logo mobile */}
+                <div className="md:hidden text-center mb-10">
+                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-12 mx-auto mb-4 object-contain" onError={e => e.target.style.display = 'none'} />
+                    <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Painel do Cliente</h1>
+                </div>
+
+                <div className="w-full max-w-sm">
+                    <div className="mb-8">
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Bem-vindo</p>
+                        <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Iniciar sessão</h2>
+                        <p className="text-slate-400 text-sm font-bold mt-2">Introduza o seu NIF e email para aceder à sua área.</p>
                     </div>
+
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">NIF</label>
+                            <input
+                                type="text"
+                                value={loginNif}
+                                onChange={e => setLoginNif(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                                placeholder="Ex: 123456789"
+                                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Email</label>
+                            <input
+                                type="email"
+                                value={loginEmail}
+                                onChange={e => setLoginEmail(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                                placeholder="email@empresa.pt"
+                                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                            />
+                        </div>
+
+                        {loginError && (
+                            <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-rose-600 text-xs font-bold">
+                                <AlertCircle size={14} className="flex-shrink-0" />
+                                {loginError}
+                            </div>
+                        )}
+
+                        <button
+                            onClick={handleLogin}
+                            disabled={clients.length === 0}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                        >
+                            {clients.length === 0 ? 'A carregar...' : 'Entrar'}
+                        </button>
+                    </div>
+
+                    <p className="text-center text-slate-300 text-[10px] font-bold mt-8 uppercase tracking-widest md:hidden">© {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}</p>
                 </div>
-                <p className="text-center text-indigo-400/60 text-[10px] font-bold mt-6 uppercase tracking-widest">© {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}</p>
             </div>
         </div>
     );
