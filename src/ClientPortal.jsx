@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -27,7 +27,7 @@ const TRANSLATIONS = {
         period: 'Período',
         total_hours: 'Total de Horas',
         workers: 'Colaboradores',
-        real_time: 'Tempo Real',
+        real_time: 'Trabalhando Agora',
         nobody_working: 'Ninguém em serviço agora',
         on_break: 'Em pausa',
         on_duty: 'Em serviço',
@@ -111,7 +111,7 @@ const TRANSLATIONS = {
         period: 'Período',
         total_hours: 'Total de Horas',
         workers: 'Colaboradores',
-        real_time: 'Tiempo Real',
+        real_time: 'Trabajando Ahora',
         nobody_working: 'Nadie en servicio ahora',
         on_break: 'En pausa',
         on_duty: 'En servicio',
@@ -218,6 +218,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [expandedHistoryDays, setExpandedHistoryDays] = useState(new Set());
     const [calSelectedDay, setCalSelectedDay] = useState(null);
     const [isWorkersModalOpen, setIsWorkersModalOpen] = useState(false);
+    const [rotatingWorkerIdx, setRotatingWorkerIdx] = useState(0);
+    useEffect(() => {
+        const timer = setInterval(() => setRotatingWorkerIdx(i => i + 1), 4000);
+        return () => clearInterval(timer);
+    }, []);
 
     // --- CLIENT SESSION / LOGIN ---
     const [clientSession, setClientSession] = useState(() => {
@@ -849,6 +854,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const renderDashboard = () => {
         const todayStr = new Date().toLocaleDateString('en-CA');
         const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
+        const todayAllLogs = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime);
+        const fakeWorkers = [];
         return (
         <div className="animate-fade-in space-y-6">
             {/* Saudação */}
@@ -886,91 +893,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             </div>
 
-            {/* Tempo Real */}
-            {(() => {
-                const avatarColors = [
-                    'bg-indigo-100 text-indigo-700', 'bg-purple-100 text-purple-700',
-                    'bg-blue-100 text-blue-700', 'bg-rose-100 text-rose-700',
-                    'bg-amber-100 text-amber-700', 'bg-teal-100 text-teal-700',
-                    'bg-slate-200 text-slate-700',
-                ];
-                const compact = activeNow.length > 3;
-                const maxVisible = 5;
-                const visibleLogs = activeNow.slice(0, maxVisible);
-                const overflow = activeNow.length - maxVisible;
-                return (
-            <section
-                onClick={() => compact && activeNow.length > 0 && setIsWorkersModalOpen(true)}
-                className={`bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden ${compact && activeNow.length > 0 ? 'cursor-pointer hover:shadow-2xl hover:border-emerald-200 transition-all active:scale-[0.99]' : ''}`}
-            >
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                    <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-300'}`} />
-                        <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">{t('real_time')}</h3>
-                    </div>
-                    {activeNow.length > 0 && compact && (
-                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">{activeNow.length} ativos · Ver detalhes →</span>
-                    )}
-                </div>
-
-                {activeNow.length === 0 ? (
-                    <p className="text-sm font-bold text-slate-300 text-center py-5">{t('nobody_working')}</p>
-                ) : compact ? (
-                    /* Muitos trabalhadores — facepile */
-                    <div className="px-6 py-4 flex items-center gap-3">
-                        <div className="flex items-center">
-                            {visibleLogs.map((log, i) => {
-                                const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
-                                const initial = (worker?.name || 'C').charAt(0).toUpperCase();
-                                const color = avatarColors[i % avatarColors.length];
-                                return (
-                                    <div key={log.id} className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs ring-2 ring-white ${color} ${i > 0 ? '-ml-2' : ''}`} style={{ zIndex: maxVisible - i }}>
-                                        {initial}
-                                    </div>
-                                );
-                            })}
-                            {overflow > 0 && (
-                                <div className="w-9 h-9 -ml-2 rounded-full flex items-center justify-center font-black text-xs ring-2 ring-white bg-slate-100 text-slate-500" style={{ zIndex: 0 }}>
-                                    +{overflow}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ) : (
-                    /* Poucos trabalhadores (≤3) — detalhes inline */
-                    <div className="divide-y divide-slate-50">
-                        {activeNow.map((log, i) => {
-                            const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
-                            const inBreak = log.breakStart && !log.breakEnd;
-                            const elapsed = inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime);
-                            const color = avatarColors[i % avatarColors.length];
-                            const initial = (worker?.name || 'C').charAt(0).toUpperCase();
-                            return (
-                                <div key={log.id} className="flex items-center gap-3 px-5 py-3">
-                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs flex-shrink-0 ${color}`}>{initial}</div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-black text-slate-800 text-sm leading-none truncate">{worker?.name || 'Colaborador'}</p>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{worker?.profissao || worker?.role || '—'}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 mt-0.5">Trabalhando desde <span className="font-black text-slate-600">{log.startTime}</span></p>
-                                    </div>
-                                    <div className="flex-shrink-0 text-right">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${inBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                                            {inBreak ? t('on_break') : elapsed}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-                {!compact && activeNow.length > 0 && (
-                    <div className="px-5 py-3 border-t border-slate-50 flex justify-end">
-                        <button onClick={() => setIsWorkersModalOpen(true)} className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest hover:underline">Ver em modal →</button>
-                    </div>
-                )}
-            </section>
-                );
-            })()}
 
             {/* Modal trabalhadores em tempo real */}
             {isWorkersModalOpen && (
@@ -991,7 +913,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                         <div className="max-h-[60vh] overflow-y-auto p-2">
                             {activeNow.map((log, i) => {
-                                const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                                const worker = [...workers, ...fakeWorkers].find(w => String(w.id) === String(log.workerId || log.worker_id));
                                 const inBreak = log.breakStart && !log.breakEnd;
                                 const elapsed = inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime);
                                 const avatarColors = ['bg-indigo-100 text-indigo-700','bg-purple-100 text-purple-700','bg-blue-100 text-blue-700','bg-rose-100 text-rose-700','bg-amber-100 text-amber-700','bg-teal-100 text-teal-700','bg-slate-200 text-slate-700'];
@@ -1051,7 +973,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
                     const isOpen = log.startTime && !log.endTime;
                     const inBreak = isOpen && log.breakStart && !log.breakEnd;
-                    const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                    const worker = [...workers, ...fakeWorkers].find(w => String(w.id) === String(log.workerId || log.worker_id));
                     const logHasGps = log.check_in_lat || log.check_out_lat || log.break_start_lat || log.break_end_lat;
                     const isLocExpanded = expandedLogLocations.has(log.id);
                     const gpsPoints = [
@@ -1134,7 +1056,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 {Array.from({ length: totalCells }).map((_, idx) => {
                                     const dayNum = idx - startOffset + 1;
                                     if (dayNum < 1 || dayNum > daysInMonth) {
-                                        return <div key={idx} className="aspect-[1.7/1] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40 rounded-xl m-0.5" />;
+                                        return <div key={idx} className="aspect-[3/2] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40 rounded-xl m-0.5" />;
                                     }
                                     const dateStr = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
                                     const dayLogs = logsByDate[dateStr] || [];
@@ -1143,12 +1065,59 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     const isToday = dateStr === calTodayStr;
                                     const isSelected = calSelectedDay === dateStr;
                                     const hasOpen = dayLogs.some(l => l.startTime && !l.endTime);
+                                    const todayAvatarBgs = ['bg-indigo-400','bg-purple-400','bg-blue-400','bg-rose-400','bg-amber-400','bg-teal-400','bg-pink-400'];
+                                    if (isToday) {
+                                        const currentLog = todayAllLogs.length > 0 ? todayAllLogs[rotatingWorkerIdx % todayAllLogs.length] : null;
+                                        const currentW = currentLog ? [...workers, ...fakeWorkers].find(wk => String(wk.id) === String(currentLog.workerId || currentLog.worker_id)) : null;
+                                        const hasExited = !!currentLog?.endTime;
+                                        const inBreak = !hasExited && currentLog?.breakStart && !currentLog?.breakEnd;
+                                        const returnedBreak = !hasExited && currentLog?.breakStart && currentLog?.breakEnd;
+                                        const statusIcon = hasExited ? <LogOut size={17} className="text-rose-400" /> : inBreak ? <Coffee size={17} className="text-amber-300" /> : returnedBreak ? <PlayCircle size={17} className="text-sky-300" /> : <LogIn size={17} className="text-emerald-300" />;
+                                        const statusTime = hasExited ? currentLog.endTime : inBreak ? currentLog.breakStart : returnedBreak ? currentLog.breakEnd : currentLog?.startTime;
+                                        const wIdx = todayAllLogs.length > 0 ? rotatingWorkerIdx % todayAllLogs.length : 0;
+                                        return (
+                                            <div key={dateStr}
+                                                onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
+                                                className="relative m-0.5 rounded-xl overflow-hidden cursor-pointer select-none flex flex-col"
+                                                style={{ background: 'linear-gradient(160deg, #064e3b 0%, #065f46 60%, #047857 100%)', minHeight: '100%' }}>
+                                                {/* Número do dia + dot */}
+                                                <div className="flex items-center justify-between px-3 pt-0.5">
+                                                    <span className="text-xs font-black text-white/60 leading-none">{dayNum}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <span className="text-[7px] font-black text-emerald-300 uppercase tracking-widest">ao vivo</span>
+                                                        <span className="relative flex h-2.7 w-2.7">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75" />
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {/* Worker rotativo — centrado, ocupa tudo */}
+                                                {currentLog && currentW ? (
+                                                    <div className="flex-1 flex flex-col items-center justify-start text-center px-1 pt-0.1 pb-0 gap-1.0">
+                                                        <p className="text-xs font-black text-white leading-tight w-full truncate">{currentW.name}</p>
+                                                        <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-wide lead    ing-none w-full truncate mt-0.3">{currentW.profissao || currentW.role || '—'}</p>
+                                                        <p className="flex items-center justify-center gap-1 mt-2.5 leading-none">{statusIcon}<span className="font-black text-white text-sm">{statusTime}</span></p>
+                                                        {todayAllLogs.length > 1 && (
+                                                            <div className="flex gap-0.5 mt-2 w-full px-1">
+                                                                {todayAllLogs.map((l, di) => (
+                                                                    <span key={di} className={`h-0.5 flex-1 rounded-full ${di === wIdx ? (l.endTime ? 'bg-rose-400' : 'bg-emerald-300') : 'bg-white/20'}`} />
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex-1 flex items-center justify-center">
+                                                        <p className="text-[9px] font-bold text-emerald-300/60 text-center">{t('nobody_working')}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    }
                                     return (
                                         <div key={dateStr}
                                             onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                            className={`relative aspect-[1.7/1] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
-                                            <span className={`text-base font-black leading-none ${isToday && !isSelected ? 'text-indigo-600' : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
-                                            {isToday && !isSelected && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
+                                            className={`relative aspect-[3/2] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
+                                            <span className={`text-base font-black leading-none ${isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                                             {hasLogs && (
                                                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
