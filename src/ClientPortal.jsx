@@ -823,15 +823,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
                 return (
                     <section className="space-y-4">
-                        <div className="bg-white rounded-[3rem] shadow-2xl border-2 border-indigo-100 overflow-hidden">
-                            <div className="px-6 py-5 border-b border-indigo-100 bg-indigo-600 flex items-center justify-between">
-                                <h3 className="font-black text-white text-base uppercase tracking-tighter">Calendário — {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
-                                <span className="text-[9px] font-black text-indigo-300 uppercase tracking-widest">{Object.keys(logsByDate).length} dias</span>
+                        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">Calendário — {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.keys(logsByDate).length} dias</span>
                             </div>
                             {/* Week day headers */}
                             <div className="grid grid-cols-7 border-b border-slate-100">
                                 {weekDayLabels.map(d => (
-                                    <div key={d} className="py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">{d}</div>
+                                    <div key={d} className="py-2 text-center text-[11px] font-black uppercase tracking-widest text-slate-400">{d}</div>
                                 ))}
                             </div>
                             {/* Day cells */}
@@ -839,7 +839,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 {Array.from({ length: totalCells }).map((_, idx) => {
                                     const dayNum = idx - startOffset + 1;
                                     if (dayNum < 1 || dayNum > daysInMonth) {
-                                        return <div key={idx} className="aspect-square sm:aspect-auto sm:min-h-[64px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
+                                        return <div key={idx} className="aspect-square sm:aspect-auto sm:min-h-[72px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
                                     }
                                     const dateStr = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
                                     const dayLogs = logsByDate[dateStr] || [];
@@ -851,14 +851,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     return (
                                         <div key={dateStr}
                                             onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                            className={`relative aspect-square sm:aspect-auto sm:min-h-[64px] p-2 border-b border-r border-slate-100 flex flex-col cursor-pointer transition-all select-none ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white' : 'hover:bg-slate-50 bg-white'}`}>
-                                            <span className={`text-sm font-black leading-none ${isToday && !isSelected ? 'text-indigo-600' : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
+                                            className={`relative aspect-square sm:aspect-auto sm:min-h-[72px] p-2 border-b border-r border-slate-100 flex flex-col cursor-pointer transition-all select-none ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white' : 'hover:bg-slate-50 bg-white'}`}>
+                                            <span className={`text-base font-black leading-none ${isToday && !isSelected ? 'text-indigo-600' : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
                                             {isToday && !isSelected && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                                             {hasLogs && (
                                                 <div className="mt-auto">
-                                                    <p className={`text-[9px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>{dayTotal.toFixed(1)}h</p>
-                                                    <p className={`text-[8px] font-bold leading-none mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} reg.</p>
+                                                    <p className={`text-[11px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>{dayTotal.toFixed(1)}h</p>
+                                                    <p className={`text-[9px] font-bold leading-none mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} reg.</p>
                                                 </div>
                                             )}
                                         </div>
@@ -891,21 +891,21 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             {/* Lista compacta de colaboradores */}
             {originalWorkersData.length > 0 && (
-                <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden opacity-80">
-                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
-                        <h3 className="font-black text-slate-500 text-sm uppercase tracking-tighter">Colaboradores — {clientData.period}</h3>
+                <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                        <h3 className="font-black text-slate-400 text-xs uppercase tracking-widest">Colaboradores — {clientData.period}</h3>
                     </div>
                     <div className="divide-y divide-slate-50">
                         {originalWorkersData.map(worker => (
-                            <div key={worker.id} className="px-6 py-4 flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-sm flex-shrink-0 uppercase">
+                            <div key={worker.id} className="px-5 py-2.5 flex items-center gap-3">
+                                <div className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-xs flex-shrink-0 uppercase">
                                     {worker.name.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="font-black text-slate-800 text-sm truncate">{worker.name}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
+                                    <p className="font-black text-slate-700 text-xs truncate">{worker.name}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
                                 </div>
-                                <span className="text-xl font-black text-indigo-700">{worker.totalHours}h</span>
+                                <span className="text-sm font-black text-indigo-600">{worker.totalHours}h</span>
                             </div>
                         ))}
                     </div>
