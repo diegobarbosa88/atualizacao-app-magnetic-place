@@ -29,6 +29,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
   const [autoScale, setAutoScale] = useState(1);
   const [manualZoom, setManualZoom] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [scaledContainerHeight, setScaledContainerHeight] = useState(null);
   const scale = isExporting ? 1 : (manualZoom ?? autoScale);
 
   useEffect(() => {
@@ -44,6 +45,12 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
     if (scaleWrapperRef.current) ro.observe(scaleWrapperRef.current);
     return () => ro.disconnect();
   }, [isEmbedded]);
+
+  useEffect(() => {
+    if (!isEmbedded || isExporting || !scaleContentRef.current) return;
+    const h = scaleContentRef.current.scrollHeight;
+    setScaledContainerHeight(h * scale);
+  });
 
   const columns = [
     { id: 'day', label: 'Dia', width: '30px' },
@@ -306,7 +313,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
 
   return (
-    <div ref={scaleWrapperRef} className={`bg-white min-h-screen font-sans text-slate-900 ${isEmbedded ? 'relative w-full' : 'absolute inset-0 z-[500]'} overflow-y-auto print:bg-white print:static print:overflow-visible print:inset-auto print:z-0 print:min-h-0 print:shadow-none print:border-none`}>
+    <div ref={scaleWrapperRef} className={`bg-white font-sans text-slate-900 ${isEmbedded ? 'relative w-full' : 'min-h-screen absolute inset-0 z-[500]'} overflow-y-auto print:bg-white print:static print:overflow-visible print:inset-auto print:z-0 print:min-h-0 print:shadow-none print:border-none`}>
 
       <div ref={reportContainerRef} className={isEmbedded ? 'w-full pdf-export-mode' : 'max-w-5xl mx-auto p-4 sm:p-12 report-container pdf-export-mode'}>
         {!hideActions && (
@@ -375,7 +382,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Sem registos para este período.</div>
         )}
 
-        <div style={(isEmbedded && !isExporting) ? { display: 'flex', justifyContent: 'center' } : undefined}>
+        <div style={(isEmbedded && !isExporting) ? { display: 'flex', justifyContent: 'center', height: scaledContainerHeight ? `${scaledContainerHeight}px` : undefined, overflow: 'hidden' } : undefined}>
         <div
           ref={isEmbedded ? scaleContentRef : null}
           style={(isEmbedded && !isExporting) ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
