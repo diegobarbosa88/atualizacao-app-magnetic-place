@@ -109,13 +109,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         }
     }, [isDirectAccess, initialMonth]);
 
-    // Após login via formulário, selecionar automaticamente o mês mais recente disponível
-    useEffect(() => {
-        if (!selectedMonth && effectiveClientId && availableMonths.length > 0) {
-            setSelectedMonth(availableMonths[0]);
-        }
-    }, [effectiveClientId, availableMonths, selectedMonth]);
-
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(t);
@@ -330,6 +323,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 .map(l => l.date.substring(0, 7))
         )].sort((a, b) => b.localeCompare(a));
     }, [logs, effectiveClientId]);
+
+    // Após login via formulário, selecionar automaticamente o mês mais recente disponível
+    // (tem de estar DEPOIS da declaração de availableMonths para evitar TDZ)
+    useEffect(() => {
+        if (!selectedMonth && effectiveClientId && availableMonths.length > 0) {
+            setSelectedMonth(availableMonths[0]);
+        }
+    }, [effectiveClientId, availableMonths, selectedMonth]);
 
     const originalWorkersData = useMemo(() => {
         if (!effectiveClientId || !selectedMonth) return [];
