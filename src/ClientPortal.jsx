@@ -1637,116 +1637,83 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     );
 
     const renderLogin = () => (
-        <div className="min-h-screen w-full flex flex-col md:flex-row bg-white font-sans text-slate-800">
+        <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
 
-            {/* ── LADO ESQUERDO — Branding ── */}
-            <div className="relative w-full md:w-[45%] lg:w-[50%] bg-[#0A071B] overflow-hidden flex flex-col justify-between p-8 md:p-12 lg:p-20 min-h-[40vh] md:min-h-screen">
+            {/* ── LADO ESQUERDO — Arte / Branding ── */}
+            <div className="lg:w-3/5 relative flex flex-col justify-between p-8 md:p-14 overflow-hidden bg-[#0f0f1a] min-h-[45vh] lg:min-h-screen">
 
-                {/* Gradientes de fundo */}
-                <div className="absolute top-[-20%] left-[-10%] w-[70%] h-[70%] bg-indigo-700/30 rounded-full blur-[120px] pointer-events-none" />
-                <div className="absolute bottom-[-10%] right-[-20%] w-[60%] h-[60%] bg-purple-800/20 rounded-full blur-[100px] pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-[#0f0f1a] to-violet-950" />
+                <div className="absolute inset-0 opacity-[0.07]" style={{backgroundImage:'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize:'32px 32px'}} />
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-600/25 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-15%] left-[-5%] w-[450px] h-[450px] bg-violet-700/20 rounded-full blur-[100px]" />
 
-                {/* Topo: Logo */}
-                <div className="relative z-10 flex items-center gap-4">
+                {/* Logo + nome */}
+                <div className="relative z-10 flex items-center gap-3">
                     <img
                         src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
                         alt="Logo"
-                        className="h-10 object-contain"
+                        className="h-10 w-auto object-contain flex-shrink-0"
                         style={{ filter: 'brightness(0) invert(1)' }}
                         onError={e => { e.target.style.display = 'none'; }}
                     />
-                    <span className="text-white/80 font-semibold tracking-wide">{systemSettings?.companyName || 'Magnetic Place'}</span>
+                    <span className="text-white/80 font-bold text-sm uppercase tracking-widest">Magnetic Place Unipessoal Lda</span>
                 </div>
 
-                {/* Centro: Títulos */}
-                <div className="relative z-10 mt-16 md:mt-0">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8">
-                        <ShieldCheck size={16} className="text-indigo-400" />
-                        <span className="text-xs font-semibold text-indigo-200 tracking-wider uppercase">Área Reservada</span>
+                {/* Título gigante */}
+                <div className="relative z-10 my-auto py-10">
+                    <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
+                        <span className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
+                        <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">Área Reservada</span>
                     </div>
-
-                    <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-6">
-                        Painel do{' '}
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                            Cliente
-                        </span>
+                    <h1 className="text-6xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
+                        <span className="text-white">Painel<br /></span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-violet-300 to-indigo-200">do<br />Cliente</span>
                     </h1>
-
-                    <div className="flex items-center gap-4 text-indigo-200/80">
-                        <div className="h-[2px] w-12 bg-indigo-500/50 rounded-full" />
-                        <p className="text-sm md:text-base font-medium tracking-wide">CONSULTE HORAS · VALIDE PERÍODOS</p>
+                    <div className="flex items-center gap-3 mt-8">
+                        <div className="h-px w-12 bg-white/20" />
+                        <p className="text-white/60 text-sm font-semibold">Consulte horas · Valide períodos</p>
                     </div>
                 </div>
 
-                {/* Rodapé */}
-                <div className="relative z-10 mt-16 md:mt-0 text-xs text-indigo-300/40">
-                    © {new Date().getFullYear()} {(systemSettings?.companyName || 'Magnetic Place').toUpperCase()}. Todos os direitos reservados.
-                </div>
+                <p className="relative z-10 text-white/30 text-[10px] font-bold uppercase tracking-widest">
+                    © {new Date().getFullYear()} Magnetic Place Unipessoal Lda
+                </p>
             </div>
 
             {/* ── LADO DIREITO — Formulário ── */}
-            <div className="w-full md:w-[55%] lg:w-[50%] flex items-center justify-center p-8 sm:p-12 lg:p-24 bg-slate-50">
-                <div className="w-full max-w-md">
+            <div className="lg:w-2/5 flex items-center justify-center p-8 md:p-14 bg-white">
+                <div className="w-full max-w-sm">
 
-                    {/* Cabeçalho */}
-                    <div className="mb-10">
-                        <p className="text-indigo-600 font-bold text-xs tracking-widest uppercase mb-2">Bem-vindo de volta</p>
-                        <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3 tracking-tight">Iniciar Sessão</h2>
-                        <p className="text-slate-500 text-sm">Introduza o seu NIF e Email para aceder à sua área reservada.</p>
+                    <div className="lg:hidden mb-10 text-center">
+                        <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 mx-auto mb-3 object-contain" onError={e => e.target.style.display = 'none'} />
+                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Painel do Cliente</h2>
                     </div>
 
-                    {/* Campos */}
-                    <div className="space-y-5">
-                        <div className="space-y-2">
-                            <label htmlFor="cp-nif" className="block text-sm font-semibold text-slate-700">NIF</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                                    <Hash size={18} />
-                                </div>
-                                <input
-                                    id="cp-nif"
-                                    type="text"
-                                    value={loginNif}
-                                    onChange={e => setLoginNif(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                                    placeholder="Ex: 123456789"
-                                    className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 placeholder-slate-400 font-medium text-slate-900 transition-all"
-                                />
-                            </div>
-                        </div>
+                    <div className="mb-8">
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">Bem-vindo</p>
+                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Iniciar<br />sessão</h2>
+                        <p className="text-slate-400 text-sm font-medium mt-3 leading-relaxed">Introduza o seu NIF e email para aceder à sua área.</p>
+                    </div>
 
-                        <div className="space-y-2">
-                            <label htmlFor="cp-email" className="block text-sm font-semibold text-slate-700">Email</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                                    <Mail size={18} />
-                                </div>
-                                <input
-                                    id="cp-email"
-                                    type="email"
-                                    value={loginEmail}
-                                    onChange={e => setLoginEmail(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                                    placeholder="email@empresa.pt"
-                                    className="w-full pl-11 pr-4 py-3.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 placeholder-slate-400 font-medium text-slate-900 transition-all"
-                                />
-                            </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">NIF</label>
+                            <input type="text" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Ex: 123456789"
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
-
+                        <div>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
+                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="email@empresa.pt"
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
+                        </div>
                         {loginError && (
-                            <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-rose-600 text-sm font-semibold">
-                                <AlertCircle size={15} className="flex-shrink-0" />
-                                {loginError}
+                            <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-rose-600 text-xs font-bold">
+                                <AlertCircle size={14} className="flex-shrink-0" /> {loginError}
                             </div>
                         )}
-
-                        <button
-                            onClick={handleLogin}
-                            disabled={clients.length === 0}
-                            className="w-full mt-2 group relative flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm py-4 px-8 rounded-xl transition-all duration-300 hover:-translate-y-0.5 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/40 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
-                        >
-                            <span>{clients.length === 0 ? 'A carregar...' : 'Entrar na Conta'}</span>
-                            {clients.length > 0 && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                        <button onClick={handleLogin} disabled={clients.length === 0}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-[0.15em] transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            {clients.length === 0 ? 'A carregar...' : 'Entrar'}
                         </button>
                     </div>
                 </div>
