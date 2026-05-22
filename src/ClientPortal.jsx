@@ -1936,7 +1936,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 {/* Título gigante */}
                 <div className="relative z-10 my-auto py-10">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
-                        <span className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
+                        <img
+                            src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
+                            alt="Logo"
+                            className="h-4 w-auto object-contain flex-shrink-0"
+                            style={{ filter: 'brightness(0) invert(1)' }}
+                            onError={e => { e.target.style.display = 'none'; }}
+                        />
                         <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">{t('restricted_area')}</span>
                     </div>
                     <h1 className="text-6xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
