@@ -29,8 +29,20 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
   const [autoScale, setAutoScale] = useState(1);
   const [manualZoom, setManualZoom] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [scaledContainerHeight, setScaledContainerHeight] = useState(null);
-  const scale = isExporting ? 1 : (manualZoom ?? autoScale);
+  const scale = (isExporting || isPrinting) ? 1 : (manualZoom ?? autoScale);
+
+  useEffect(() => {
+    const before = () => setIsPrinting(true);
+    const after = () => setIsPrinting(false);
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    return () => {
+      window.removeEventListener('beforeprint', before);
+      window.removeEventListener('afterprint', after);
+    };
+  }, []);
 
   useEffect(() => {
     if (!isEmbedded) return;
@@ -382,11 +394,11 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Sem registos para este período.</div>
         )}
 
-        <div className="report-scale-outer" style={(isEmbedded && !isExporting) ? { display: 'flex', justifyContent: 'center', height: scaledContainerHeight ? `${scaledContainerHeight}px` : undefined, overflow: 'hidden' } : undefined}>
+        <div className="report-scale-outer" style={(isEmbedded && !isExporting && !isPrinting) ? { display: 'flex', justifyContent: 'center', height: scaledContainerHeight ? `${scaledContainerHeight}px` : undefined, overflow: 'hidden' } : undefined}>
         <div
           ref={isEmbedded ? scaleContentRef : null}
           className="report-scale-inner"
-          style={(isEmbedded && !isExporting) ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
+          style={(isEmbedded && !isExporting && !isPrinting) ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
         >
         {reportUnits.map((unit, idx) => (
           <div key={`${unit.id}-${idx}`} id={`report-unit-${idx}`} className="a4-paper">
