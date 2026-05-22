@@ -1536,7 +1536,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         {loginError && (
                             <div className="bg-rose-500/20 border border-rose-400/30 rounded-xl px-4 py-3 text-rose-200 text-xs font-bold text-center">{loginError}</div>
                         )}
-                        <button onClick={handleLogin} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/30 active:scale-95">Entrar</button>
+                        <button onClick={handleLogin} disabled={clients.length === 0} className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/30 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">{clients.length === 0 ? 'A carregar...' : 'Entrar'}</button>
                     </div>
                 </div>
                 <p className="text-center text-indigo-400/60 text-[10px] font-bold mt-6 uppercase tracking-widest">© {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}</p>
