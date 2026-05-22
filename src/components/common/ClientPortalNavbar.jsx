@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, ChevronLeft, ChevronRight, LogOut, X, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
-import { useApp } from '../../context/AppContext';
 
 export default function ClientPortalNavbar({
   clientObj,
@@ -17,9 +16,9 @@ export default function ClientPortalNavbar({
   formatElapsed,
   systemSettings,
   lang,
-  changeLang
+  changeLang,
+  myNotifications = []
 }) {
-  const { myNotifications } = useApp();
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
 
