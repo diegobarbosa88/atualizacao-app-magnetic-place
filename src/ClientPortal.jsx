@@ -1637,57 +1637,89 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     );
 
     const renderLogin = () => (
-        <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
-            {/* Painel esquerdo — branding */}
-            <div className="hidden md:flex md:w-2/5 bg-indigo-600 flex-col items-center justify-center p-12 relative overflow-hidden">
-                {/* Círculos decorativos */}
-                <div className="absolute -top-24 -left-24 w-72 h-72 bg-indigo-500/40 rounded-full" />
-                <div className="absolute -bottom-20 -right-16 w-96 h-96 bg-indigo-700/50 rounded-full" />
-                <div className="relative z-10 text-center">
-                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-16 mx-auto mb-8 object-contain brightness-0 invert" onError={e => e.target.style.display = 'none'} />
-                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">Painel<br />do Cliente</h1>
-                    <div className="mt-6 w-12 h-1 bg-white/40 rounded-full mx-auto" />
-                    <p className="mt-6 text-indigo-200 font-bold text-sm leading-relaxed">Consulte as horas dos<br />seus colaboradores e<br />valide o período mensal.</p>
+        <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
+
+            {/* ── LADO ESQUERDO — Arte / Branding ── */}
+            <div className="lg:w-3/5 relative flex flex-col justify-between p-8 md:p-14 overflow-hidden bg-[#0f0f1a] min-h-[45vh] lg:min-h-screen">
+
+                {/* Gradiente de fundo */}
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-950 via-[#0f0f1a] to-violet-950" />
+
+                {/* Grade de pontos decorativos */}
+                <div className="absolute inset-0 opacity-[0.07]" style={{backgroundImage:'radial-gradient(circle, #ffffff 1px, transparent 1px)', backgroundSize:'32px 32px'}} />
+
+                {/* Orbs de luz */}
+                <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-indigo-600/25 rounded-full blur-[120px]" />
+                <div className="absolute bottom-[-15%] left-[-5%] w-[450px] h-[450px] bg-violet-700/20 rounded-full blur-[100px]" />
+                <div className="absolute top-[35%] left-[20%] w-[200px] h-[200px] bg-indigo-400/10 rounded-full blur-[60px]" />
+
+                {/* Conteúdo relativo */}
+                <div className="relative z-10">
+                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 object-contain brightness-0 invert opacity-80" onError={e => e.target.style.display = 'none'} />
                 </div>
-                <p className="absolute bottom-8 text-indigo-300/60 text-[10px] font-bold uppercase tracking-widest">© {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}</p>
+
+                <div className="relative z-10 my-auto py-10">
+                    {/* Pílula de badge */}
+                    <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-400/30 rounded-full px-4 py-2 mb-8">
+                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
+                        <span className="text-indigo-300 text-[11px] font-black uppercase tracking-[0.2em]">Área Reservada</span>
+                    </div>
+
+                    {/* Título gigante */}
+                    <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white uppercase leading-[0.9] tracking-tighter">
+                        Painel<br />
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">do<br />Cliente</span>
+                    </h1>
+
+                    {/* Linha decorativa */}
+                    <div className="flex items-center gap-3 mt-8">
+                        <div className="h-px flex-1 max-w-[60px] bg-gradient-to-r from-indigo-500/0 to-indigo-400/60" />
+                        <p className="text-slate-400 text-sm font-bold">Consulte horas · Valide períodos</p>
+                    </div>
+                </div>
+
+                <p className="relative z-10 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+                    © {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}
+                </p>
             </div>
 
-            {/* Painel direito — formulário */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-16">
-                {/* Logo mobile */}
-                <div className="md:hidden text-center mb-10">
-                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-12 mx-auto mb-4 object-contain" onError={e => e.target.style.display = 'none'} />
-                    <h1 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Painel do Cliente</h1>
-                </div>
-
+            {/* ── LADO DIREITO — Formulário ── */}
+            <div className="lg:w-2/5 flex items-center justify-center p-8 md:p-14 bg-white">
                 <div className="w-full max-w-sm">
+
+                    {/* Logo mobile */}
+                    <div className="lg:hidden mb-10 text-center">
+                        <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 mx-auto mb-3 object-contain" onError={e => e.target.style.display = 'none'} />
+                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Painel do Cliente</h2>
+                    </div>
+
                     <div className="mb-8">
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1">Bem-vindo</p>
-                        <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter">Iniciar sessão</h2>
-                        <p className="text-slate-400 text-sm font-bold mt-2">Introduza o seu NIF e email para aceder à sua área.</p>
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">Bem-vindo</p>
+                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Iniciar<br />sessão</h2>
+                        <p className="text-slate-400 text-sm font-medium mt-3 leading-relaxed">Introduza o seu NIF e email<br />para aceder à sua área.</p>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">NIF</label>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">NIF</label>
                             <input
                                 type="text"
                                 value={loginNif}
                                 onChange={e => setLoginNif(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
                                 placeholder="Ex: 123456789"
-                                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all"
                             />
                         </div>
                         <div>
-                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5">Email</label>
+                            <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
                             <input
                                 type="email"
                                 value={loginEmail}
                                 onChange={e => setLoginEmail(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleLogin()}
                                 placeholder="email@empresa.pt"
-                                className="w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                                className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all"
                             />
                         </div>
 
@@ -1701,13 +1733,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         <button
                             onClick={handleLogin}
                             disabled={clients.length === 0}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-[0.15em] transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {clients.length === 0 ? 'A carregar...' : 'Entrar'}
                         </button>
                     </div>
-
-                    <p className="text-center text-slate-300 text-[10px] font-bold mt-8 uppercase tracking-widest md:hidden">© {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}</p>
                 </div>
             </div>
         </div>
