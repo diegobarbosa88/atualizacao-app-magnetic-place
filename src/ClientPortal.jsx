@@ -700,32 +700,25 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             </div>
 
-            {/* Tempo Real */}
-            <section className={`rounded-[3rem] shadow-xl overflow-hidden border transition-all ${activeNow.length > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}>
-                <div className={`px-8 py-5 flex items-center justify-between gap-4 ${activeNow.length > 0 ? 'border-b border-emerald-100' : ''}`}>
-                    <div className="flex items-center gap-3">
-                        <span className={`w-3 h-3 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse' : 'bg-slate-300'}`} />
-                        <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Tempo Real</h3>
-                    </div>
-                    {activeNow.length > 0
-                        ? <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl uppercase">{activeNow.length} em serviço</span>
-                        : <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl uppercase">Ninguém em serviço agora</span>
-                    }
+            {/* Tempo Real — pill minimalista */}
+            <section className="bg-white rounded-[2rem] shadow-xl border border-slate-100 px-6 py-5">
+                <div className="flex items-center gap-2 mb-4">
+                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-300'}`} />
+                    <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">Tempo Real</h3>
                 </div>
-                {activeNow.length > 0 && (
-                    <div className="divide-y divide-emerald-50">
+                {activeNow.length === 0 ? (
+                    <p className="text-sm font-bold text-slate-300 text-center py-2">Ninguém em serviço agora</p>
+                ) : (
+                    <div className="space-y-2">
                         {activeNow.map(log => {
                             const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
                             const inBreak = log.breakStart && !log.breakEnd;
                             return (
-                                <div key={log.id} className="px-6 py-4 flex items-center gap-4">
-                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse'}`} />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</p>
-                                        <p className="text-[10px] font-bold text-slate-400">{inBreak ? `Em pausa desde ${log.breakStart}` : `Em serviço desde ${log.startTime}`}</p>
-                                    </div>
-                                    <span className={`text-sm font-black ${inBreak ? 'text-amber-600' : 'text-emerald-600'}`}>
-                                        {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
+                                <div key={log.id} className="flex items-center justify-between gap-3">
+                                    <span className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</span>
+                                    <span className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide ${inBreak ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
+                                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
+                                        {inBreak ? 'Em pausa' : 'Em serviço'} · {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
                                     </span>
                                 </div>
                             );
