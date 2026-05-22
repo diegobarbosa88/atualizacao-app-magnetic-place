@@ -1117,12 +1117,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         <div key={dateStr}
                                             onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
                                             className={`relative aspect-[3/2] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
-                                            <span className={`text-base font-black leading-none ${isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
+                                            <span className={`text-xs font-black leading-none ${isSelected ? 'text-white/70' : hasLogs ? 'text-slate-400' : 'text-slate-300'}`}>{dayNum}</span>
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                                             {hasLogs && (
                                                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
-                                                    <p className={`text-[11px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>{dayTotal.toFixed(1)}h</p>
-                                                    <p className={`text-[9px] font-bold leading-none ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
+                                                    <p className={`text-base font-black leading-none ${isSelected ? 'text-white' : 'text-indigo-600'}`}>{dayTotal.toFixed(1)}h</p>
+                                                    <p className={`text-[10px] font-bold leading-none ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
                                                 </div>
                                             )}
                                         </div>
