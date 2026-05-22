@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Download, ChevronDown, ChevronUp, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
@@ -663,208 +663,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return <span className={`inline-block w-2.5 h-2.5 rounded-full flex-shrink-0 ${cls}`} title={verified === true ? 'Na localização' : verified === false ? 'Fora da localização' : 'GPS registado'} />;
     };
 
-    const renderHistorico = () => {
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        const thisClient = clients?.find(c => String(c.id) === String(effectiveClientId));
-
-        // Build logsByDate for the selected month
-        const logsByDate = {};
-        logs
-            .filter(l => String(l.clientId) === String(effectiveClientId)
-                && l.date && l.date.substring(0, 7) === selectedMonth)
-            .forEach(l => { if (!logsByDate[l.date]) logsByDate[l.date] = []; logsByDate[l.date].push(l); });
-
-        // Calendar grid setup
-        const [calYear, calMonth] = selectedMonth ? selectedMonth.split('-').map(Number) : [new Date().getFullYear(), new Date().getMonth() + 1];
-        const firstDay = new Date(calYear, calMonth - 1, 1);
-        const daysInMonth = new Date(calYear, calMonth, 0).getDate();
-        // Week starts Monday: 0=Mon…6=Sun
-        const startOffset = (firstDay.getDay() + 6) % 7;
-        const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-        const weekDayLabels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
-
-        const renderLogLine = (log) => {
-            const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
-            const isOpen = log.startTime && !log.endTime;
-            const inBreak = isOpen && log.breakStart && !log.breakEnd;
-            const logHasGps = log.check_in_lat || log.check_out_lat || log.break_start_lat || log.break_end_lat;
-            const isLocExpanded = expandedLogLocations.has(log.id);
-            const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
-            const gpsPoints = [
-                log.check_in_lat ? { label: 'Entrada', lat: log.check_in_lat, lng: log.check_in_lng, cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' } : null,
-                log.break_start_lat ? { label: 'Pausa ↑', lat: log.break_start_lat, lng: log.break_start_lng, cls: 'text-amber-700 bg-amber-50 border-amber-200' } : null,
-                log.break_end_lat ? { label: 'Pausa ↓', lat: log.break_end_lat, lng: log.break_end_lng, cls: 'text-orange-700 bg-orange-50 border-orange-200' } : null,
-                log.check_out_lat ? { label: 'Saída', lat: log.check_out_lat, lng: log.check_out_lng, cls: 'text-rose-700 bg-rose-50 border-rose-200' } : null,
-            ].filter(Boolean);
-            return (
-                <div key={log.id} className="px-5 py-3 border-b border-slate-100 last:border-0">
-                    {worker && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{worker.name}</p>}
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Entrada</span>
-                            <span className={`text-sm font-black font-mono ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</span>
-                            <LocationDot lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} />
-                            {isOpen && !inBreak && <span className="text-[9px] font-bold text-emerald-500">{formatElapsed(log.startTime)}</span>}
-                        </div>
-                        <span className="text-slate-200">|</span>
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pausa</span>
-                            {log.breakStart ? (
-                                <>
-                                    <span className={`text-sm font-black font-mono ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>{log.breakStart}{log.breakEnd ? ` → ${log.breakEnd}` : ' → …'}</span>
-                                    <LocationDot lat={log.break_start_lat} lng={log.break_start_lng} verified={null} />
-                                    {inBreak && <span className="text-[9px] font-bold text-amber-500">{formatElapsed(log.breakStart)}</span>}
-                                </>
-                            ) : <span className="text-slate-300 font-bold text-sm">–</span>}
-                        </div>
-                        <span className="text-slate-200">|</span>
-                        <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saída</span>
-                            <span className="text-sm font-black font-mono text-slate-700">{log.endTime || '–'}</span>
-                            {log.endTime && <LocationDot lat={log.check_out_lat} lng={log.check_out_lng} verified={null} />}
-                        </div>
-                        <span className="text-slate-200">|</span>
-                        <span className="text-sm font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</span>
-                        {logHasGps && (
-                            <button onClick={(e) => { e.stopPropagation(); setExpandedLogLocations(prev => { const n = new Set(prev); n.has(log.id) ? n.delete(log.id) : n.add(log.id); return n; }); }}
-                                className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
-                                <Navigation size={9} /> Locais
-                            </button>
-                        )}
-                    </div>
-                    {isLocExpanded && (
-                        <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex flex-wrap gap-1.5">
-                                {thisClient?.morada && (
-                                    <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all">
-                                        <MapPin size={10} /> {thisClient.morada}
-                                    </a>
-                                )}
-                                {gpsPoints.map(p => (
-                                    <a key={p.label} href={mapsLink(p.lat, p.lng)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black border ${p.cls} hover:opacity-75 transition-all`}>
-                                        <MapPin size={10} /> {p.label}
-                                    </a>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        };
-
-        const selectedDayLogs = calSelectedDay ? (logsByDate[calSelectedDay] || []) : [];
-        const monthTotalHours = Object.values(logsByDate).flat()
-            .reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
-        const daysWithLogs = Object.keys(logsByDate).length;
-
-        return (
-            <div className="animate-fade-in space-y-5">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Histórico</p>
-                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter mt-0.5">
-                            {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
-                        </h2>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="bg-white border border-slate-100 rounded-2xl px-4 py-2 text-center shadow-sm">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Total</p>
-                            <p className="text-lg font-black text-indigo-600">{monthTotalHours.toFixed(1)}h</p>
-                        </div>
-                        <div className="bg-white border border-slate-100 rounded-2xl px-4 py-2 text-center shadow-sm">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dias</p>
-                            <p className="text-lg font-black text-slate-800">{daysWithLogs}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Calendar Grid */}
-                <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                    {/* Week day headers */}
-                    <div className="grid grid-cols-7 border-b border-slate-100">
-                        {weekDayLabels.map(d => (
-                            <div key={d} className="py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">{d}</div>
-                        ))}
-                    </div>
-                    {/* Day cells */}
-                    <div className="grid grid-cols-7">
-                        {Array.from({ length: totalCells }).map((_, idx) => {
-                            const dayNum = idx - startOffset + 1;
-                            if (dayNum < 1 || dayNum > daysInMonth) {
-                                return <div key={idx} className="aspect-square sm:aspect-auto sm:min-h-[72px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
-                            }
-                            const dateStr = `${calYear}-${String(calMonth).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                            const dayLogs = logsByDate[dateStr] || [];
-                            const hasLogs = dayLogs.length > 0;
-                            const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
-                            const isToday = dateStr === todayStr;
-                            const isSelected = calSelectedDay === dateStr;
-                            const hasOpen = dayLogs.some(l => l.startTime && !l.endTime);
-                            return (
-                                <div
-                                    key={dateStr}
-                                    onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                    className={`relative aspect-square sm:aspect-auto sm:min-h-[72px] p-2 border-b border-r border-slate-100 flex flex-col cursor-pointer transition-all select-none
-                                        ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''}
-                                        ${isSelected ? 'bg-indigo-600 text-white' : hasLogs ? 'hover:bg-indigo-50 bg-white' : 'hover:bg-slate-50 bg-white'}
-                                    `}
-                                >
-                                    <span className={`text-sm font-black leading-none ${isToday ? (isSelected ? 'text-white' : 'text-indigo-600') : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>
-                                        {dayNum}
-                                    </span>
-                                    {isToday && !isSelected && (
-                                        <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-                                    )}
-                                    {hasOpen && (
-                                        <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-                                    )}
-                                    {hasLogs && (
-                                        <div className="mt-auto">
-                                            <p className={`text-[9px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>
-                                                {dayTotal.toFixed(1)}h
-                                            </p>
-                                            <p className={`text-[8px] font-bold leading-none mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>
-                                                {dayLogs.length} reg.
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                {/* Detail panel for selected day */}
-                {calSelectedDay && (
-                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Registos do dia</p>
-                                <p className="text-base font-black text-slate-800 mt-0.5">
-                                    {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                </p>
-                            </div>
-                            <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all">
-                                <X size={16} />
-                            </button>
-                        </div>
-                        {selectedDayLogs.length === 0 ? (
-                            <div className="p-8 text-center text-slate-400 text-sm font-bold">Sem registos.</div>
-                        ) : (
-                            selectedDayLogs.map(renderLogLine)
-                        )}
-                    </div>
-                )}
-
-                {Object.keys(logsByDate).length === 0 && (
-                    <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 p-10 text-center text-slate-400 font-bold text-sm">
-                        Sem registos para {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
-                    </div>
-                )}
-            </div>
-        );
-    };
+    // renderHistorico removed — calendar integrated in renderDashboard
 
     const renderDashboard = () => {
         const todayStr = new Date().toLocaleDateString('en-CA');
@@ -926,6 +725,160 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <p className="text-4xl font-black text-slate-800">{originalWorkersData.length}</p>
                 </div>
             </div>
+
+            {/* Calendário de Histórico */}
+            {selectedMonth && (() => {
+                const [calYear, calMonth] = selectedMonth.split('-').map(Number);
+                const logsByDate = {};
+                logs
+                    .filter(l => String(l.clientId) === String(effectiveClientId)
+                        && l.date && l.date.substring(0, 7) === selectedMonth)
+                    .forEach(l => { if (!logsByDate[l.date]) logsByDate[l.date] = []; logsByDate[l.date].push(l); });
+                const firstDay = new Date(calYear, calMonth - 1, 1);
+                const daysInMonth = new Date(calYear, calMonth, 0).getDate();
+                const startOffset = (firstDay.getDay() + 6) % 7;
+                const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+                const weekDayLabels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+                const calTodayStr = new Date().toLocaleDateString('en-CA');
+
+                const selectedDayLogs = calSelectedDay ? (logsByDate[calSelectedDay] || []) : [];
+                const thisClient = clients?.find(c => String(c.id) === String(effectiveClientId));
+
+                const renderCalLogLine = (log) => {
+                    const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+                    const isOpen = log.startTime && !log.endTime;
+                    const inBreak = isOpen && log.breakStart && !log.breakEnd;
+                    const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                    const logHasGps = log.check_in_lat || log.check_out_lat || log.break_start_lat || log.break_end_lat;
+                    const isLocExpanded = expandedLogLocations.has(log.id);
+                    const gpsPoints = [
+                        log.check_in_lat ? { label: 'Entrada', lat: log.check_in_lat, lng: log.check_in_lng, cls: 'text-emerald-700 bg-emerald-50 border-emerald-200' } : null,
+                        log.break_start_lat ? { label: 'Pausa ↑', lat: log.break_start_lat, lng: log.break_start_lng, cls: 'text-amber-700 bg-amber-50 border-amber-200' } : null,
+                        log.break_end_lat ? { label: 'Pausa ↓', lat: log.break_end_lat, lng: log.break_end_lng, cls: 'text-orange-700 bg-orange-50 border-orange-200' } : null,
+                        log.check_out_lat ? { label: 'Saída', lat: log.check_out_lat, lng: log.check_out_lng, cls: 'text-rose-700 bg-rose-50 border-rose-200' } : null,
+                    ].filter(Boolean);
+                    return (
+                        <div key={log.id} className="px-5 py-3 border-b border-slate-100 last:border-0">
+                            {worker && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{worker.name}</p>}
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Entrada</span>
+                                    <span className={`text-sm font-black font-mono ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</span>
+                                    <LocationDot lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} />
+                                    {isOpen && !inBreak && <span className="text-[9px] font-bold text-emerald-500">{formatElapsed(log.startTime)}</span>}
+                                </div>
+                                <span className="text-slate-200">|</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pausa</span>
+                                    {log.breakStart ? (
+                                        <>
+                                            <span className={`text-sm font-black font-mono ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>{log.breakStart}{log.breakEnd ? ` → ${log.breakEnd}` : ' → …'}</span>
+                                            <LocationDot lat={log.break_start_lat} lng={log.break_start_lng} verified={null} />
+                                            {inBreak && <span className="text-[9px] font-bold text-amber-500">{formatElapsed(log.breakStart)}</span>}
+                                        </>
+                                    ) : <span className="text-slate-300 font-bold text-sm">–</span>}
+                                </div>
+                                <span className="text-slate-200">|</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saída</span>
+                                    <span className="text-sm font-black font-mono text-slate-700">{log.endTime || '–'}</span>
+                                    {log.endTime && <LocationDot lat={log.check_out_lat} lng={log.check_out_lng} verified={null} />}
+                                </div>
+                                <span className="text-slate-200">|</span>
+                                <span className="text-sm font-black text-indigo-700">{h > 0 ? `${h.toFixed(2)}h` : '–'}</span>
+                                {logHasGps && (
+                                    <button onClick={(e) => { e.stopPropagation(); setExpandedLogLocations(prev => { const n = new Set(prev); n.has(log.id) ? n.delete(log.id) : n.add(log.id); return n; }); }}
+                                        className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
+                                        <Navigation size={9} /> Locais
+                                    </button>
+                                )}
+                            </div>
+                            {isLocExpanded && (
+                                <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {thisClient?.morada && (
+                                            <a href={moradaMapsLink(thisClient.morada)} target="_blank" rel="noreferrer" className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-all">
+                                                <MapPin size={10} /> {thisClient.morada}
+                                            </a>
+                                        )}
+                                        {gpsPoints.map(p => (
+                                            <a key={p.label} href={mapsLink(p.lat, p.lng)} target="_blank" rel="noreferrer" className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black border ${p.cls} hover:opacity-75 transition-all`}>
+                                                <MapPin size={10} /> {p.label}
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                };
+
+                return (
+                    <section className="space-y-4">
+                        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+                                <h3 className="font-black text-slate-800 text-base uppercase tracking-tighter">Calendário — {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
+                            </div>
+                            {/* Week day headers */}
+                            <div className="grid grid-cols-7 border-b border-slate-100">
+                                {weekDayLabels.map(d => (
+                                    <div key={d} className="py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">{d}</div>
+                                ))}
+                            </div>
+                            {/* Day cells */}
+                            <div className="grid grid-cols-7">
+                                {Array.from({ length: totalCells }).map((_, idx) => {
+                                    const dayNum = idx - startOffset + 1;
+                                    if (dayNum < 1 || dayNum > daysInMonth) {
+                                        return <div key={idx} className="aspect-square sm:aspect-auto sm:min-h-[64px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
+                                    }
+                                    const dateStr = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+                                    const dayLogs = logsByDate[dateStr] || [];
+                                    const hasLogs = dayLogs.length > 0;
+                                    const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+                                    const isToday = dateStr === calTodayStr;
+                                    const isSelected = calSelectedDay === dateStr;
+                                    const hasOpen = dayLogs.some(l => l.startTime && !l.endTime);
+                                    return (
+                                        <div key={dateStr}
+                                            onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
+                                            className={`relative aspect-square sm:aspect-auto sm:min-h-[64px] p-2 border-b border-r border-slate-100 flex flex-col cursor-pointer transition-all select-none ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white' : 'hover:bg-slate-50 bg-white'}`}>
+                                            <span className={`text-sm font-black leading-none ${isToday && !isSelected ? 'text-indigo-600' : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
+                                            {isToday && !isSelected && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
+                                            {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
+                                            {hasLogs && (
+                                                <div className="mt-auto">
+                                                    <p className={`text-[9px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>{dayTotal.toFixed(1)}h</p>
+                                                    <p className={`text-[8px] font-bold leading-none mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} reg.</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Detalhe do dia selecionado */}
+                        {calSelectedDay && (
+                            <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Registos do dia</p>
+                                        <p className="text-base font-black text-slate-800 mt-0.5">
+                                            {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"><X size={16} /></button>
+                                </div>
+                                {selectedDayLogs.length === 0
+                                    ? <div className="p-8 text-center text-slate-400 text-sm font-bold">Sem registos.</div>
+                                    : selectedDayLogs.map(renderCalLogLine)
+                                }
+                            </div>
+                        )}
+                    </section>
+                );
+            })()}
 
             {/* Lista compacta de colaboradores */}
             {originalWorkersData.length > 0 && (
@@ -2004,7 +1957,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     )}
 
                     {currentView === 'inicio' && selectedTab === 'dashboard' && renderDashboard()}
-                    {currentView === 'inicio' && selectedTab === 'historico' && renderHistorico()}
                     {currentView === 'inicio' && selectedTab === 'validar' && renderValidar()}
                     {currentView === 'editar_relatorio' && (
                         <ClientReportFlow

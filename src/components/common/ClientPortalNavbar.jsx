@@ -32,7 +32,6 @@ export default function ClientPortalNavbar({
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'historico', label: 'Histórico' },
     { id: 'validar', label: 'Validar' },
   ];
 
