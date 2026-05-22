@@ -94,8 +94,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         setLoginEmail('');
     };
 
-    // Direct access: ?client=X&month=Y bypasses login
-    const isDirectAccess = initialClientId && initialMonth && !clientSession;
+    // Direct access bypass disabled — require proper login always (security: CR-06)
+    const isDirectAccess = false;
 
     const [selectedTab, setSelectedTab] = useState(isDirectAccess ? 'validar' : 'dashboard');
     const [selectedMonth, setSelectedMonth] = useState(initialMonth || null);
@@ -123,7 +123,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             .select('*')
             .eq('clientId', initialClientId)
             .eq('date', today)
-            .then(({ data }) => setTodayLogs(data || []));
+            .then(({ data, error }) => {
+                if (error) { console.error('[ClientPortal] todayLogs fetch error:', error); return; }
+                setTodayLogs(data || []);
+            });
     }, [currentView, supabase, initialClientId]);
 
     // Actualizar todayLogs em tempo real via eventos da subscrição
@@ -136,8 +139,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             .select('*')
             .eq('clientId', initialClientId)
             .eq('date', today)
-            .then(({ data }) => setTodayLogs(data || []));
-    }, [lastRealtimeUpdate]);
+            .then(({ data, error }) => {
+                if (error) { console.error('[ClientPortal] todayLogs fetch error:', error); return; }
+                setTodayLogs(data || []);
+            });
+    }, [lastRealtimeUpdate, currentView, supabase, initialClientId]);
     const [editingWorkerId, setEditingWorkerId] = useState(null);
     const [editingDayId, setEditingDayId] = useState(null);
     const canvasRef = useRef(null);
@@ -1459,8 +1465,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <button onClick={async () => {
                         const correcoesTexto = generateCorrectionMessage(true);
                         const fullMonthSnapshot = draftData;
+                        const notifId = "notif_" + Date.now();
                         const newNotif = {
-                            id: "notif_" + Date.now(),
+                            id: notifId,
                             title: `Divergência Reportada: ${clientData.name}`,
                             message: correcoesTexto,
                             type: 'warning',
@@ -1588,7 +1595,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     ))}
                 </div>
             )}
-            return (
+            {!printingWorker ? (
                 <main className="max-w-6xl mx-auto px-4 md:px-8 mt-12">
                     <div className="mb-12 text-center animate-fade-in">
                         <h1 className="text-5xl md:text-7xl font-black text-slate-900 uppercase tracking-tighter mb-4 leading-none">
@@ -1900,7 +1907,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         {renderReport(printingWorker === 'all' ? null : printingWorker, false)}
                     </div>
                 </div>
-            )
+            )}
 
             <style dangerouslySetInnerHTML={{
                 __html: `
