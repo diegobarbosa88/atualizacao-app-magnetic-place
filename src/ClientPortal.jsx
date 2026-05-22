@@ -860,9 +860,21 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('period')}</p>
-                    <p className="text-base font-black text-slate-800 uppercase leading-tight">{clientData.period || '—'}</p>
+                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-4 text-center flex flex-col items-center gap-2">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{t('period')}</p>
+                    <div className="flex items-center gap-1">
+                        <button
+                            onClick={() => { const idx = availableMonths.indexOf(selectedMonth); if (idx < availableMonths.length - 1) setSelectedMonth(availableMonths[idx + 1]); }}
+                            disabled={availableMonths.indexOf(selectedMonth) >= availableMonths.length - 1}
+                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-20 transition-all"
+                        ><ChevronLeft size={14} /></button>
+                        <p className="text-sm font-black text-slate-800 uppercase leading-tight min-w-[80px] text-center">{clientData.period || '—'}</p>
+                        <button
+                            onClick={() => { const idx = availableMonths.indexOf(selectedMonth); if (idx > 0) setSelectedMonth(availableMonths[idx - 1]); }}
+                            disabled={availableMonths.indexOf(selectedMonth) <= 0}
+                            className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 disabled:opacity-20 transition-all"
+                        ><ChevronRight size={14} /></button>
+                    </div>
                 </div>
                 <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
                     <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">{t('total_hours')}</p>

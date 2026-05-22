@@ -93,17 +93,6 @@ export default function ClientPortalNavbar({
 
         {/* Right: Actions */}
         <div className="hidden md:flex items-center gap-4 shrink-0">
-          {/* Month Selector */}
-          {selectedMonth && (
-            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
-              <button onClick={handleMonthPrev} className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-500 transition-all"><ChevronLeft size={14} /></button>
-              <span className="font-bold text-xs uppercase tracking-widest text-indigo-600 min-w-[100px] text-center">
-                {getMonthName(selectedMonth)}
-              </span>
-              <button onClick={handleMonthNext} className="p-1.5 hover:bg-slate-100 rounded-xl text-slate-500 transition-all"><ChevronRight size={14} /></button>
-            </div>
-          )}
-
           {/* Language Switcher */}
           <div className="flex rounded-xl overflow-hidden border border-slate-200 shadow-inner">
             <button onClick={() => changeLang('pt')} title="Português" className={`flex items-center gap-1.5 px-3 py-2 transition-all ${lang === 'pt' ? 'bg-indigo-50' : 'bg-white opacity-50 hover:opacity-80'}`}>
