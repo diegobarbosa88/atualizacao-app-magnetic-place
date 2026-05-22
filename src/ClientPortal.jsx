@@ -676,7 +676,23 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mt-1">Olá, {clientObj.name}</h2>
             </div>
 
-            {/* Tempo Real — sempre visível */}
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Período</p>
+                    <p className="text-base font-black text-slate-800 uppercase leading-tight">{clientData.period || '—'}</p>
+                </div>
+                <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
+                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">Total de Horas</p>
+                    <p className="text-4xl font-black text-white">{originalTotal}h</p>
+                </div>
+                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Colaboradores</p>
+                    <p className="text-4xl font-black text-slate-800">{originalWorkersData.length}</p>
+                </div>
+            </div>
+
+            {/* Tempo Real */}
             <section className={`rounded-[3rem] shadow-xl overflow-hidden border transition-all ${activeNow.length > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}>
                 <div className={`px-8 py-5 flex items-center justify-between gap-4 ${activeNow.length > 0 ? 'border-b border-emerald-100' : ''}`}>
                     <div className="flex items-center gap-3">
@@ -709,22 +725,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     </div>
                 )}
             </section>
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Período</p>
-                    <p className="text-base font-black text-slate-800 uppercase leading-tight">{clientData.period || '—'}</p>
-                </div>
-                <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
-                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">Total de Horas</p>
-                    <p className="text-4xl font-black text-white">{originalTotal}h</p>
-                </div>
-                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Colaboradores</p>
-                    <p className="text-4xl font-black text-slate-800">{originalWorkersData.length}</p>
-                </div>
-            </div>
 
             {/* Calendário de Histórico */}
             {selectedMonth && (() => {
