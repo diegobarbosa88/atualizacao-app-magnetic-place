@@ -823,17 +823,17 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.keys(logsByDate).length} dias</span>
                             </div>
                             {/* Week day headers */}
-                            <div className="grid grid-cols-7 border-b border-slate-100">
+                            <div className="grid grid-cols-7 border-b border-slate-100 px-1">
                                 {weekDayLabels.map(d => (
                                     <div key={d} className="py-2 text-center text-[11px] font-black uppercase tracking-widest text-slate-400">{d}</div>
                                 ))}
                             </div>
                             {/* Day cells */}
-                            <div className="grid grid-cols-7">
+                            <div className="grid grid-cols-7 p-1 gap-0">
                                 {Array.from({ length: totalCells }).map((_, idx) => {
                                     const dayNum = idx - startOffset + 1;
                                     if (dayNum < 1 || dayNum > daysInMonth) {
-                                        return <div key={idx} className="aspect-square sm:aspect-auto sm:min-h-[72px] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40" />;
+                                        return <div key={idx} className="aspect-[5/4] border-b border-r border-slate-50 last:border-r-0 bg-slate-50/40 rounded-xl m-0.5" />;
                                     }
                                     const dateStr = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
                                     const dayLogs = logsByDate[dateStr] || [];
@@ -845,7 +845,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     return (
                                         <div key={dateStr}
                                             onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                            className={`relative aspect-square sm:aspect-auto sm:min-h-[72px] p-2 border-b border-r border-slate-100 flex flex-col cursor-pointer transition-all select-none ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''} ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white' : 'hover:bg-slate-50 bg-white'}`}>
+                                            className={`relative aspect-[5/4] p-2 rounded-xl m-0.5 flex flex-col cursor-pointer transition-all select-none ${isSelected ? 'bg-indigo-600' : hasLogs ? 'hover:bg-indigo-50 bg-white border border-indigo-100' : 'hover:bg-slate-50 bg-white border border-slate-100'}`}>
                                             <span className={`text-base font-black leading-none ${isToday && !isSelected ? 'text-indigo-600' : isSelected ? 'text-white' : hasLogs ? 'text-slate-800' : 'text-slate-300'}`}>{dayNum}</span>
                                             {isToday && !isSelected && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
