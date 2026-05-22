@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, ChevronLeft, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
