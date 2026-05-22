@@ -329,6 +329,7 @@ body {
   padding: 20px;
   width: 100%;
   max-width: 794px;
+  min-height: auto !important;
   box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 .embedded-mode .report-container {

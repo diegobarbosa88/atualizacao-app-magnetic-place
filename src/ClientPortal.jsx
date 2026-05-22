@@ -1,11 +1,10 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar, Activity } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
 import { sendValidationEmail } from './utils/emailUtils';
 import ValidationStamp from './components/common/ValidationStampWithQR';
-import ClientPortalNavbar from './components/common/ClientPortalNavbar';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 
 const TRANSLATIONS = {
@@ -223,6 +222,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const timer = setInterval(() => setRotatingWorkerIdx(i => i + 1), 4000);
         return () => clearInterval(timer);
     }, []);
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
 
     // --- CLIENT SESSION / LOGIN ---
     const [clientSession, setClientSession] = useState(() => {
@@ -361,6 +361,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [editingWorkerId, setEditingWorkerId] = useState(null);
     const [editingDayId, setEditingDayId] = useState(null);
     const canvasRef = useRef(null);
+    const notifRef = useRef(null);
+    useEffect(() => {
+        const handler = (e) => {
+            if (notifRef.current && !notifRef.current.contains(e.target)) setShowNotifDropdown(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     const isApproved = useMemo(() => {
         return clientApprovals?.some(a => a.client_id === effectiveClientId && a.month === selectedMonth);
@@ -858,44 +866,105 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const fakeWorkers = [];
         return (
         <div className="animate-fade-in space-y-7">
-            {/* Saudação — Cabeçalho Corporativo */}
-            <div className="mb-10">
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-7 border-b border-slate-200">
-                    <div>
-                        <div className="flex flex-wrap items-center gap-3 mb-7">
-                            <span className="px-3 py-3.5 rounded-lg bg-slate-700 text-white text-[15px] font-bold uppercase tracking-widest shadow-sm">
+            {/* Cabeçalho Minimalista Executivo */}
+            <header className="mb-10 pb-8 border-b border-zinc-200">
+                {/* Barra de topo: Logo + Controlos */}
+                <div className="flex items-center justify-between mb-10">
+                    <div className="flex items-center gap-3">
+                        <img
+                            src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
+                            alt="Logo"
+                            className="h-17 w-auto object-contain"
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <span className="font-bold text-base tracking-tighter uppercase text-slate-900 hidden md:inline">
+                            {systemSettings?.companyName || 'Magnetic Place'}
+                        </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => changeLang('pt')} title="Português" className={`flex items-center p-1.5 rounded-lg transition-all ${lang === 'pt' ? 'opacity-100' : 'opacity-30 hover:opacity-60'}`}>
+                                <span className="inline-flex h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
+                                    <span className="w-2/5 bg-green-700" /><span className="w-3/5 bg-red-600" />
+                                </span>
+                            </button>
+                            <button onClick={() => changeLang('es')} title="Español" className={`flex items-center p-1.5 rounded-lg transition-all ${lang === 'es' ? 'opacity-100' : 'opacity-30 hover:opacity-60'}`}>
+                                <span className="inline-flex flex-col h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
+                                    <span className="flex-1 bg-red-600" /><span className="flex-[2] bg-yellow-400" /><span className="flex-1 bg-red-600" />
+                                </span>
+                            </button>
+                        </div>
+                        <div className="relative" ref={notifRef}>
+                            <button onClick={() => setShowNotifDropdown(s => !s)} className="relative p-1.5 text-slate-500 hover:text-slate-800 transition-all">
+                                <Bell size={18} />
+                                {activeNow.length > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{activeNow.length}</span>
+                                )}
+                            </button>
+                            {showNotifDropdown && (
+                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+                                    <div className="p-4 border-b border-slate-100 bg-indigo-50 flex items-center gap-2">
+                                        <Bell size={16} className="text-indigo-600" />
+                                        <span className="font-black text-slate-800 text-sm uppercase tracking-widest">{t('notifications')}</span>
+                                    </div>
+                                    <div className="max-h-64 overflow-y-auto">
+                                        {activeNow.length === 0 ? (
+                                            <div className="p-4 text-center text-slate-400 text-xs font-bold">{t('no_notifications')}</div>
+                                        ) : (
+                                            activeNow.map((log) => {
+                                                const w = workers.find(wk => String(wk.id) === String(log.workerId));
+                                                return (
+                                                    <div key={log.id} className="p-3 border-b border-slate-50 last:border-0">
+                                                        <p className="font-black text-slate-700 text-xs">{w?.name || 'Colaborador'}</p>
+                                                        <p className="text-slate-400 text-[10px]">{t('on_duty_since')} {log.startTime}</p>
+                                                    </div>
+                                                );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-rose-500 transition-all">
+                            <LogOut size={18} />
+                        </button>
+                    </div>
+                </div>
+                {/* Saudação + Estado */}
+                <div className="flex flex-col lg:flex-row lg:items-end w-full gap-8">
+                    <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-5">
+                            <span className="px-2.5 py-1 rounded-md bg-zinc-900 text-zinc-50 text-[10px] font-bold uppercase tracking-widest shadow-sm">
                                 {t('client_panel')}
                             </span>
-                            <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-slate-300" />
-                            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide capitalize">
-                                <Calendar size={14} className="text-slate-400" />
-                                {new Date().toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                            </span>
+                            <div className="w-1 h-1 rounded-full bg-zinc-300 hidden sm:block" />
+                            <div className="flex items-center gap-1.5 text-sm text-zinc-500 font-medium">
+                                <Calendar size={15} />
+                                <span className="capitalize">{new Date().toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            </div>
                         </div>
-                        <div className="text-indigo-600 font-extrabold text-m mt-12 mb-1 tracking-widest uppercase">{t('hello')},</div>
-                        <span className="text-3xl md:text-2xl font-extrabold text-slate-800 tracking-tight uppercase leading-tight">
-                            {clientObj.name}
-                        </span>
-                        <div className="text-slate-500 text-xs mt-3 font-medium max-w-l leading-relaxed">
+                        <div className="text-4xl md:text-4xl font-semibold text-zinc-900 tracking-tight">
+                            <span className="text-zinc-400 font-light">{t('hello')},</span> {clientObj.name}
+                        </div>
+                        <div className="mt-3 text-zinc-500 text-xs leading-relaxed max-w-md">
                             Acompanhe o desempenho da sua equipa, valide períodos de trabalho e consulte relatórios de forma rápida e segura.
                         </div>
                     </div>
-
-                    {/* Indicador de Estado */}
-                    <div className="flex shrink-0 w-full lg:w-auto bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                        <div className="flex flex-col lg:items-end text-left lg:text-right w-full">
-                            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Estado da Conta</p>
-                            <div className="flex items-center gap-2.5">
-                                <span className="relative flex h-2.5 w-2.5">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
-                                </span>
-                                <span className="text-sm font-bold text-slate-800">Ativa & Sincronizada</span>
+                    <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 ml-auto">
+                        <div className="flex items-center gap-3 px-3 py-1.5 bg-white rounded-full border border-zinc-200 shadow-sm transition-all hover:shadow-md">
+                            <div className="relative flex h-2.5 w-2.5">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
                             </div>
+                            <span className="text-sm font-semibold text-zinc-800 tracking-wide">Sistema Operacional</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium px-1">
+                            <Activity size={12} />
+                            <span>Sincronizado há instantes</span>
                         </div>
                     </div>
                 </div>
-            </div>
+            </header>
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -2089,24 +2158,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             )}
             {!printingWorker ? (
                 <>
-                    <ClientPortalNavbar
-                        clientObj={clientObj}
-                        selectedMonth={selectedMonth}
-                        setSelectedMonth={setSelectedMonth}
-                        selectedTab={selectedTab}
-                        setSelectedTab={(tab) => { setSelectedTab(tab); goToView('inicio'); }}
-                        availableMonths={availableMonths}
-                        getMonthName={getMonthName}
-                        onLogout={handleLogout}
-                        workers={workers}
-                        clientLogs={logs.filter(l => String(l.clientId) === String(effectiveClientId))}
-                        now={now}
-                        formatElapsed={formatElapsed}
-                        systemSettings={systemSettings}
-                        lang={lang}
-                        changeLang={changeLang}
-                        myNotifications={myNotifications}
-                    />
                     <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
                     {/* Detalhe inline apenas para contra-propostas (precisam de botões aceitar/rejeitar) */}
                     {myNotifications.filter(n => n.payload?.type === 'counter_proposal').length > 0 && (
@@ -2398,8 +2449,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </main>
                 </>
             ) : (
-                <div className="w-full bg-white flex justify-center items-center min-h-screen">
-                    <div className="w-[794px]">
+                <div className="w-full bg-white">
+                    <div className="w-[794px] mx-auto">
                         {renderReport(printingWorker === 'all' ? null : printingWorker, false)}
                     </div>
                 </div>
@@ -2413,11 +2464,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         input[type="time"] { position: relative; }
         @page { size: A4 portrait; margin: 0; }
         @media print {
-          body {
-             margin: 0;
-             background-color: white !important;
+          html, body {
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0;
+            background-color: white !important;
           }
           #root {
+            height: auto !important;
             background-color: white !important;
           }
           * {
