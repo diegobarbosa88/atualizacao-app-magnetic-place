@@ -103,7 +103,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   // Sugestão de entrada/saída ao abrir o portal
   useEffect(() => {
     if (!currentUser || geoSuggestionDismissed) return;
-    if (!currentUser.name?.toLowerCase().includes('diego rocha barbosa') && !currentUser.name?.toLowerCase().includes('trabalhador teste')) return;
+    // gps_enabled field controlled in Supabase worker record
+    if (currentUser.gps_enabled !== true) return;
     const client = clients.find(c => c.id === currentUser.defaultClientId);
     if (!client) return;
 
@@ -287,8 +288,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     l.startTime && !l.endTime
   );
 
-  // GPS check-in/out só activo para Diego Rocha Barbosa (fase de teste)
-  const gpsCheckInEnabled = currentUser?.name?.toLowerCase().includes('diego rocha barbosa');
+  // gps_enabled field controlled in Supabase worker record
+  const gpsCheckInEnabled = currentUser?.gps_enabled === true;
 
   // Filtrar pendingApprovals - só meses >= dataInicio
   const filteredPendingApprovals = pendingApprovals.filter(pending => {
