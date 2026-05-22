@@ -928,7 +928,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const renderValidar = () => (
         <div className="animate-fade-in space-y-8">
             {/* Voltar */}
-            <button onClick={() => setSelectedTab('dashboard')} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
+            <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
                 <ChevronLeft size={16} /> Voltar ao Dashboard
             </button>
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
