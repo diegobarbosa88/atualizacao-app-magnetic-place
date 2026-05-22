@@ -109,6 +109,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         }
     }, [isDirectAccess, initialMonth]);
 
+    // Após login via formulário, selecionar automaticamente o mês mais recente disponível
+    useEffect(() => {
+        if (!selectedMonth && effectiveClientId && availableMonths.length > 0) {
+            setSelectedMonth(availableMonths[0]);
+        }
+    }, [effectiveClientId, availableMonths, selectedMonth]);
+
     useEffect(() => {
         const t = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(t);
