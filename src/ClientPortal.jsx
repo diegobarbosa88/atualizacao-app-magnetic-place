@@ -856,9 +856,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             {isToday && !isSelected && <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-indigo-500 rounded-full" />}
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                                             {hasLogs && (
-                                                <div className="mt-auto">
+                                                <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
                                                     <p className={`text-[11px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>{dayTotal.toFixed(1)}h</p>
-                                                    <p className={`text-[9px] font-bold leading-none mt-0.5 ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} reg.</p>
+                                                    <p className={`text-[9px] font-bold leading-none ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? 'registo' : 'registos'}</p>
                                                 </div>
                                             )}
                                         </div>
