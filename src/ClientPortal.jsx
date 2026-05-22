@@ -886,7 +886,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             </div>
 
-            {/* Tempo Real — facepile clicável */}
+            {/* Tempo Real */}
             {(() => {
                 const avatarColors = [
                     'bg-indigo-100 text-indigo-700', 'bg-purple-100 text-purple-700',
@@ -894,25 +894,30 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     'bg-amber-100 text-amber-700', 'bg-teal-100 text-teal-700',
                     'bg-slate-200 text-slate-700',
                 ];
+                const compact = activeNow.length > 3;
                 const maxVisible = 5;
                 const visibleLogs = activeNow.slice(0, maxVisible);
                 const overflow = activeNow.length - maxVisible;
                 return (
             <section
-                onClick={() => activeNow.length > 0 && setIsWorkersModalOpen(true)}
-                className={`bg-white rounded-[2rem] shadow-xl border border-slate-100 px-6 py-5 flex items-center justify-between gap-4 ${activeNow.length > 0 ? 'cursor-pointer hover:shadow-2xl hover:border-emerald-200 transition-all active:scale-[0.99]' : ''}`}
+                onClick={() => compact && activeNow.length > 0 && setIsWorkersModalOpen(true)}
+                className={`bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden ${compact && activeNow.length > 0 ? 'cursor-pointer hover:shadow-2xl hover:border-emerald-200 transition-all active:scale-[0.99]' : ''}`}
             >
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
                         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-300'}`} />
                         <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">{t('real_time')}</h3>
                     </div>
+                    {activeNow.length > 0 && compact && (
+                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">{activeNow.length} ativos · Ver detalhes →</span>
+                    )}
                 </div>
+
                 {activeNow.length === 0 ? (
-                    <p className="text-sm font-bold text-slate-300">{t('nobody_working')}</p>
-                ) : (
-                    <div className="flex items-center gap-3">
-                        {/* Facepile */}
+                    <p className="text-sm font-bold text-slate-300 text-center py-5">{t('nobody_working')}</p>
+                ) : compact ? (
+                    /* Muitos trabalhadores — facepile */
+                    <div className="px-6 py-4 flex items-center gap-3">
                         <div className="flex items-center">
                             {visibleLogs.map((log, i) => {
                                 const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
@@ -930,10 +935,37 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 </div>
                             )}
                         </div>
-                        <div className="text-right">
-                            <p className="font-black text-slate-800 text-sm">{activeNow.length} ativo{activeNow.length > 1 ? 's' : ''}</p>
-                            <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Ver detalhes →</p>
-                        </div>
+                    </div>
+                ) : (
+                    /* Poucos trabalhadores (≤3) — detalhes inline */
+                    <div className="divide-y divide-slate-50">
+                        {activeNow.map((log, i) => {
+                            const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                            const inBreak = log.breakStart && !log.breakEnd;
+                            const elapsed = inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime);
+                            const color = avatarColors[i % avatarColors.length];
+                            const initial = (worker?.name || 'C').charAt(0).toUpperCase();
+                            return (
+                                <div key={log.id} className="flex items-center gap-3 px-5 py-3">
+                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs flex-shrink-0 ${color}`}>{initial}</div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-black text-slate-800 text-sm leading-none truncate">{worker?.name || 'Colaborador'}</p>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{worker?.profissao || worker?.role || '—'}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 mt-0.5">Trabalhando desde <span className="font-black text-slate-600">{log.startTime}</span></p>
+                                    </div>
+                                    <div className="flex-shrink-0 text-right">
+                                        <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${inBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                            {inBreak ? t('on_break') : elapsed}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+                {!compact && activeNow.length > 0 && (
+                    <div className="px-5 py-3 border-t border-slate-50 flex justify-end">
+                        <button onClick={() => setIsWorkersModalOpen(true)} className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest hover:underline">Ver em modal →</button>
                     </div>
                 )}
             </section>
@@ -1927,8 +1959,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
                         alt="Logo"
                         className="h-10 w-auto object-contain flex-shrink-0"
-                        style={{ filter: 'brightness(0) invert(1)' }}
-                        onError={e => { e.target.style.display = 'none'; }}
+                        onError={e => { e.target.src = 'MAGNETIC (3).png'; }}
                     />
                     <span className="text-white/80 font-bold text-sm uppercase tracking-widest">Magnetic Place Unipessoal Lda</span>
                 </div>
@@ -1936,13 +1967,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 {/* Título gigante */}
                 <div className="relative z-10 my-auto py-10">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
-                        <img
-                            src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
-                            alt="Logo"
-                            className="h-4 w-auto object-contain flex-shrink-0"
-                            style={{ filter: 'brightness(0) invert(1)' }}
-                            onError={e => { e.target.style.display = 'none'; }}
-                        />
+                        <span className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
                         <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">{t('restricted_area')}</span>
                     </div>
                     <h1 className="text-6xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
