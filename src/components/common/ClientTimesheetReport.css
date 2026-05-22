@@ -208,6 +208,17 @@ body {
     margin: 0 !important;
   }
 
+  /* Resetar scale no modo impressão */
+  .report-scale-outer {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  .report-scale-inner {
+    transform: none !important;
+    width: 100% !important;
+  }
+
   /* Garantir quebras de página corretas */
   .a4-paper {
     page-break-after: always !important;

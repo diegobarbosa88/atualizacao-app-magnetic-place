@@ -382,9 +382,10 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           <div className="flex items-center justify-center py-12 text-slate-400 text-sm">Sem registos para este período.</div>
         )}
 
-        <div style={(isEmbedded && !isExporting) ? { display: 'flex', justifyContent: 'center', height: scaledContainerHeight ? `${scaledContainerHeight}px` : undefined, overflow: 'hidden' } : undefined}>
+        <div className="report-scale-outer" style={(isEmbedded && !isExporting) ? { display: 'flex', justifyContent: 'center', height: scaledContainerHeight ? `${scaledContainerHeight}px` : undefined, overflow: 'hidden' } : undefined}>
         <div
           ref={isEmbedded ? scaleContentRef : null}
+          className="report-scale-inner"
           style={(isEmbedded && !isExporting) ? { transform: `scale(${scale})`, transformOrigin: 'top center', width: '794px', flexShrink: 0 } : undefined}
         >
         {reportUnits.map((unit, idx) => (
