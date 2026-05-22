@@ -2486,6 +2486,18 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             width: 100% !important;
             max-width: 100% !important;
             min-height: auto !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+          }
+          .report-scale-outer {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .report-scale-inner {
+            transform: none !important;
+            width: 100% !important;
+            height: auto !important;
           }
         }
       `}} />
