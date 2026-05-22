@@ -973,7 +973,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             </div>
                                             <div>
                                                 <p className="font-black text-slate-900 text-sm">{worker?.name || 'Colaborador'}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{worker?.role || '—'}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{worker?.profissao || worker?.role || '—'}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
@@ -1130,22 +1130,27 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             </div>
                         </div>
 
-                        {/* Detalhe do dia selecionado */}
+                        {/* Modal detalhe do dia */}
                         {calSelectedDay && (
-                            <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
-                                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
-                                    <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">{t('day_records')}</p>
-                                        <p className="text-base font-black text-slate-800 mt-0.5">
-                                            {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' })}
-                                        </p>
+                            <div className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center p-4" onClick={() => setCalSelectedDay(null)}>
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                                <div className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+                                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">{t('day_records')}</p>
+                                            <p className="text-base font-black text-slate-800 mt-0.5">
+                                                {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' })}
+                                            </p>
+                                        </div>
+                                        <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"><X size={16} /></button>
                                     </div>
-                                    <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"><X size={16} /></button>
+                                    <div className="max-h-[60vh] overflow-y-auto">
+                                        {selectedDayLogs.length === 0
+                                            ? <div className="p-8 text-center text-slate-400 text-sm font-bold">{t('no_records')}</div>
+                                            : selectedDayLogs.map(renderCalLogLine)
+                                        }
+                                    </div>
                                 </div>
-                                {selectedDayLogs.length === 0
-                                    ? <div className="p-8 text-center text-slate-400 text-sm font-bold">{t('no_records')}</div>
-                                    : selectedDayLogs.map(renderCalLogLine)
-                                }
                             </div>
                         )}
                     </section>
