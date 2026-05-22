@@ -799,7 +799,99 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         );
     };
 
-    const renderDashboard = () => (
+    const renderDashboard = () => {
+        const todayStr = new Date().toLocaleDateString('en-CA');
+        const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
+        return (
+        <div className="animate-fade-in space-y-6">
+            {/* Saudação */}
+            <div className="pt-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mt-1">Olá, {clientObj.name}</h2>
+            </div>
+
+            {/* Tempo Real — sempre visível */}
+            <section className={`rounded-[3rem] shadow-xl overflow-hidden border transition-all ${activeNow.length > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'}`}>
+                <div className={`px-8 py-5 flex items-center justify-between gap-4 ${activeNow.length > 0 ? 'border-b border-emerald-100' : ''}`}>
+                    <div className="flex items-center gap-3">
+                        <span className={`w-3 h-3 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse' : 'bg-slate-300'}`} />
+                        <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Tempo Real</h3>
+                    </div>
+                    {activeNow.length > 0
+                        ? <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl uppercase">{activeNow.length} em serviço</span>
+                        : <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl uppercase">Ninguém em serviço agora</span>
+                    }
+                </div>
+                {activeNow.length > 0 && (
+                    <div className="divide-y divide-emerald-50">
+                        {activeNow.map(log => {
+                            const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                            const inBreak = log.breakStart && !log.breakEnd;
+                            return (
+                                <div key={log.id} className="px-6 py-4 flex items-center gap-4">
+                                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse'}`} />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</p>
+                                        <p className="text-[10px] font-bold text-slate-400">{inBreak ? `Em pausa desde ${log.breakStart}` : `Em serviço desde ${log.startTime}`}</p>
+                                    </div>
+                                    <span className={`text-sm font-black ${inBreak ? 'text-amber-600' : 'text-emerald-600'}`}>
+                                        {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </section>
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Período</p>
+                    <p className="text-base font-black text-slate-800 uppercase leading-tight">{clientData.period || '—'}</p>
+                </div>
+                <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
+                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">Total de Horas</p>
+                    <p className="text-4xl font-black text-white">{originalTotal}h</p>
+                </div>
+                <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Colaboradores</p>
+                    <p className="text-4xl font-black text-slate-800">{originalWorkersData.length}</p>
+                </div>
+            </div>
+
+            {/* Lista compacta de colaboradores */}
+            {originalWorkersData.length > 0 && (
+                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
+                    <div className="px-8 py-5 border-b border-slate-100 bg-slate-50/50">
+                        <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">Colaboradores — {clientData.period}</h3>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                        {originalWorkersData.map(worker => (
+                            <div key={worker.id} className="px-6 py-4 flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-sm flex-shrink-0 uppercase">
+                                    {worker.name.charAt(0)}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-black text-slate-800 text-sm truncate">{worker.name}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
+                                </div>
+                                <span className="text-xl font-black text-indigo-700">{worker.totalHours}h</span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+            {originalWorkersData.length === 0 && selectedMonth && (
+                <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-12 text-center text-slate-400 font-bold">
+                    Sem registos de horas para {clientData.period}.
+                </div>
+            )}
+        </div>
+        );
+    };
+
+    const renderValidar = () => (
         <div className="animate-fade-in space-y-8">
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
@@ -811,41 +903,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <p className="text-4xl font-black text-indigo-700">{originalTotal}h</p>
                 </div>
             </section>
-
-            {(() => {
-                const todayStr = new Date().toLocaleDateString('en-CA');
-                const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
-                if (activeNow.length === 0) return null;
-                return (
-                    <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
-                        <div className="px-8 py-5 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
-                                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tight">Tempo Real</h3>
-                            </div>
-                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl uppercase tracking-wide">{activeNow.length} em serviço</span>
-                        </div>
-                        <div className="divide-y divide-slate-50">
-                            {activeNow.map(log => {
-                                const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
-                                const inBreak = log.breakStart && !log.breakEnd;
-                                return (
-                                    <div key={log.id} className="px-6 py-4 flex items-center gap-4">
-                                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.8)] animate-pulse'}`} />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</p>
-                                            <p className="text-[10px] font-bold text-slate-400">{inBreak ? `Em pausa desde ${log.breakStart}` : `Em serviço desde ${log.startTime}`}</p>
-                                        </div>
-                                        <span className={`text-sm font-black ${inBreak ? 'text-amber-600' : 'text-emerald-600'}`}>
-                                            {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </section>
-                );
-            })()}
 
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -920,7 +977,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
             </section>
 
-            {selectedTab === 'validar' && !printingWorker && (
+            {!printingWorker && (
                 <section id="validar-horarios-section" className="approval-section bg-white rounded-[3rem] shadow-xl border border-slate-100 p-8 md:p-12 animate-in slide-in-from-bottom-8 duration-500">
                     {isApproved ? (
                         <div className="text-center py-6">
@@ -1879,8 +1936,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                     )}
 
-                    {currentView === 'inicio' && selectedTab !== 'historico' && renderDashboard()}
+                    {currentView === 'inicio' && selectedTab === 'dashboard' && renderDashboard()}
                     {currentView === 'inicio' && selectedTab === 'historico' && renderHistorico()}
+                    {currentView === 'inicio' && selectedTab === 'validar' && renderValidar()}
                     {currentView === 'editar_relatorio' && (
                         <ClientReportFlow
                             clientId={effectiveClientId}
