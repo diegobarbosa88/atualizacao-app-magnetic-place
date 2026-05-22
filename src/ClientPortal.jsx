@@ -1653,32 +1653,38 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 <div className="absolute bottom-[-15%] left-[-5%] w-[450px] h-[450px] bg-violet-700/20 rounded-full blur-[100px]" />
                 <div className="absolute top-[35%] left-[20%] w-[200px] h-[200px] bg-indigo-400/10 rounded-full blur-[60px]" />
 
-                {/* Conteúdo relativo */}
+                {/* Logo no topo */}
                 <div className="relative z-10">
-                    <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 object-contain brightness-0 invert opacity-80" onError={e => e.target.style.display = 'none'} />
+                    <img
+                        src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
+                        alt="Logo"
+                        className="h-12 object-contain"
+                        style={{ filter: 'brightness(0) invert(1)' }}
+                        onError={e => e.target.style.display = 'none'}
+                    />
                 </div>
 
                 <div className="relative z-10 my-auto py-10">
                     {/* Pílula de badge */}
-                    <div className="inline-flex items-center gap-2 bg-indigo-500/20 border border-indigo-400/30 rounded-full px-4 py-2 mb-8">
-                        <span className="w-2 h-2 bg-indigo-400 rounded-full animate-pulse" />
-                        <span className="text-indigo-300 text-[11px] font-black uppercase tracking-[0.2em]">Área Reservada</span>
+                    <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
+                        <span className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
+                        <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">Área Reservada</span>
                     </div>
 
                     {/* Título gigante */}
-                    <h1 className="text-6xl md:text-7xl lg:text-8xl font-black text-white uppercase leading-[0.9] tracking-tighter">
-                        Painel<br />
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">do<br />Cliente</span>
+                    <h1 className="text-6xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
+                        <span className="text-white">Painel<br /></span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-violet-300 to-indigo-200">do<br />Cliente</span>
                     </h1>
 
-                    {/* Linha decorativa */}
+                    {/* Subtítulo */}
                     <div className="flex items-center gap-3 mt-8">
-                        <div className="h-px flex-1 max-w-[60px] bg-gradient-to-r from-indigo-500/0 to-indigo-400/60" />
-                        <p className="text-slate-400 text-sm font-bold">Consulte horas · Valide períodos</p>
+                        <div className="h-px w-12 bg-white/20" />
+                        <p className="text-white/60 text-sm font-semibold">Consulte horas · Valide períodos</p>
                     </div>
                 </div>
 
-                <p className="relative z-10 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+                <p className="relative z-10 text-white/30 text-[10px] font-bold uppercase tracking-widest">
                     © {new Date().getFullYear()} {systemSettings?.companyName || 'Magnetic Place'}
                 </p>
             </div>
