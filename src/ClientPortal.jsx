@@ -217,6 +217,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [expandedLogLocations, setExpandedLogLocations] = useState(new Set());
     const [expandedHistoryDays, setExpandedHistoryDays] = useState(new Set());
     const [calSelectedDay, setCalSelectedDay] = useState(null);
+    const [isWorkersModalOpen, setIsWorkersModalOpen] = useState(false);
 
     // --- CLIENT SESSION / LOGIN ---
     const [clientSession, setClientSession] = useState(() => {
@@ -873,32 +874,116 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             </div>
 
-            {/* Tempo Real — pill minimalista */}
-            <section className="bg-white rounded-[2rem] shadow-xl border border-slate-100 px-6 py-5">
-                <div className="flex items-center gap-2 mb-4">
-                    <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-300'}`} />
-                    <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">{t('real_time')}</h3>
+            {/* Tempo Real — facepile clicável */}
+            {(() => {
+                const avatarColors = [
+                    'bg-indigo-100 text-indigo-700', 'bg-purple-100 text-purple-700',
+                    'bg-blue-100 text-blue-700', 'bg-rose-100 text-rose-700',
+                    'bg-amber-100 text-amber-700', 'bg-teal-100 text-teal-700',
+                    'bg-slate-200 text-slate-700',
+                ];
+                const maxVisible = 5;
+                const visibleLogs = activeNow.slice(0, maxVisible);
+                const overflow = activeNow.length - maxVisible;
+                return (
+            <section
+                onClick={() => activeNow.length > 0 && setIsWorkersModalOpen(true)}
+                className={`bg-white rounded-[2rem] shadow-xl border border-slate-100 px-6 py-5 flex items-center justify-between gap-4 ${activeNow.length > 0 ? 'cursor-pointer hover:shadow-2xl hover:border-emerald-200 transition-all active:scale-[0.99]' : ''}`}
+            >
+                <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-300'}`} />
+                        <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">{t('real_time')}</h3>
+                    </div>
                 </div>
                 {activeNow.length === 0 ? (
-                    <p className="text-sm font-bold text-slate-300 text-center py-2">{t('nobody_working')}</p>
+                    <p className="text-sm font-bold text-slate-300">{t('nobody_working')}</p>
                 ) : (
-                    <div className="space-y-2">
-                        {activeNow.map(log => {
-                            const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
-                            const inBreak = log.breakStart && !log.breakEnd;
-                            return (
-                                <div key={log.id} className="flex items-center justify-between gap-3">
-                                    <span className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</span>
-                                    <span className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide ${inBreak ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
-                                        {inBreak ? t('on_break') : t('on_duty')} · {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
-                                    </span>
+                    <div className="flex items-center gap-3">
+                        {/* Facepile */}
+                        <div className="flex items-center">
+                            {visibleLogs.map((log, i) => {
+                                const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                                const initial = (worker?.name || 'C').charAt(0).toUpperCase();
+                                const color = avatarColors[i % avatarColors.length];
+                                return (
+                                    <div key={log.id} className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-xs ring-2 ring-white ${color} ${i > 0 ? '-ml-2' : ''}`} style={{ zIndex: maxVisible - i }}>
+                                        {initial}
+                                    </div>
+                                );
+                            })}
+                            {overflow > 0 && (
+                                <div className="w-9 h-9 -ml-2 rounded-full flex items-center justify-center font-black text-xs ring-2 ring-white bg-slate-100 text-slate-500" style={{ zIndex: 0 }}>
+                                    +{overflow}
                                 </div>
-                            );
-                        })}
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <p className="font-black text-slate-800 text-sm">{activeNow.length} ativo{activeNow.length > 1 ? 's' : ''}</p>
+                            <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Ver detalhes →</p>
+                        </div>
                     </div>
                 )}
             </section>
+                );
+            })()}
+
+            {/* Modal trabalhadores em tempo real */}
+            {isWorkersModalOpen && (
+                <div className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center p-4" onClick={() => setIsWorkersModalOpen(false)}>
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                    <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
+                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-emerald-50/50">
+                            <div className="flex items-center gap-3">
+                                <span className="relative flex h-3 w-3">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                                </span>
+                                <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">Em serviço agora</h3>
+                            </div>
+                            <button onClick={() => setIsWorkersModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="max-h-[60vh] overflow-y-auto p-2">
+                            {activeNow.map((log, i) => {
+                                const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
+                                const inBreak = log.breakStart && !log.breakEnd;
+                                const elapsed = inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime);
+                                const avatarColors = ['bg-indigo-100 text-indigo-700','bg-purple-100 text-purple-700','bg-blue-100 text-blue-700','bg-rose-100 text-rose-700','bg-amber-100 text-amber-700','bg-teal-100 text-teal-700','bg-slate-200 text-slate-700'];
+                                const color = avatarColors[i % avatarColors.length];
+                                const initial = (worker?.name || 'C').charAt(0).toUpperCase();
+                                return (
+                                    <div key={log.id} className="flex items-center justify-between p-4 hover:bg-slate-50 rounded-2xl transition-colors">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-11 h-11 rounded-full flex items-center justify-center font-black text-sm ring-4 ring-white shadow-sm ${color}`}>
+                                                {initial}
+                                            </div>
+                                            <div>
+                                                <p className="font-black text-slate-900 text-sm">{worker?.name || 'Colaborador'}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{worker?.role || '—'}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-lg inline-block ${inBreak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                {inBreak ? t('on_break') : elapsed}
+                                            </p>
+                                            <p className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-widest">
+                                                Desde {log.startTime}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                            <button onClick={() => setIsWorkersModalOpen(false)} className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl transition-colors">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Calendário de Histórico */}
             {selectedMonth && (() => {
