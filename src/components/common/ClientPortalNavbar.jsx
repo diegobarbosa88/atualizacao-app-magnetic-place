@@ -61,8 +61,8 @@ export default function ClientPortalNavbar({
   const activeNow = clientLogs.filter(l => l.date === todayStr && l.startTime && !l.endTime);
 
   return (
-    <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
-      <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-6" style={{ maxWidth: `var(--app-max-width, 1400px)` }}>
+    <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-6">
         {/* Left: Logo + Company Name */}
         <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase shrink-0">

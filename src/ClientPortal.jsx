@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -857,12 +857,44 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const todayAllLogs = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime);
         const fakeWorkers = [];
         return (
-        <div className="animate-fade-in space-y-6">
-            {/* Saudação */}
-            <div className="pt-2">
-                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{t('client_panel')}</p>
-                <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mt-1">{t('hello')}, {clientObj.name}</h2>
-                <p className="text-[10px] font-bold text-slate-400 mt-1">{new Date().toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+        <div className="animate-fade-in space-y-7">
+            {/* Saudação — Cabeçalho Corporativo */}
+            <div className="mb-10">
+                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-7 border-b border-slate-200">
+                    <div>
+                        <div className="flex flex-wrap items-center gap-3 mb-7">
+                            <span className="px-3 py-3.5 rounded-lg bg-slate-700 text-white text-[17px] font-bold uppercase tracking-widest shadow-sm">
+                                {t('client_panel')}
+                            </span>
+                            <span className="hidden sm:inline-block w-1.5 h-1.5 rounded-full bg-slate-300" />
+                            <span className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wide capitalize">
+                                <Calendar size={14} className="text-slate-400" />
+                                {new Date().toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                        </div>
+                        <p className="text-indigo-600 font-extrabold text-m tracking-widest uppercase mb-1">{t('hello')},</p>
+                        <span className="text-3xl md:text-3xl font-extrabold text-slate-800 tracking-tight uppercase leading-tight">
+                            {clientObj.name}
+                        </span>
+                        <div className="text-slate-500 text-xs mt-3 font-medium max-w-l leading-relaxed">
+                            Acompanhe o desempenho da sua equipa, valide períodos de trabalho e consulte relatórios de forma rápida e segura.
+                        </div>
+                    </div>
+
+                    {/* Indicador de Estado */}
+                    <div className="flex shrink-0 w-full lg:w-auto bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <div className="flex flex-col lg:items-end text-left lg:text-right w-full">
+                            <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1.5">Estado da Conta</p>
+                            <div className="flex items-center gap-2.5">
+                                <span className="relative flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500" />
+                                </span>
+                                <span className="text-sm font-bold text-slate-800">Ativa & Sincronizada</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* Stats */}
@@ -1121,7 +1153,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             {hasOpen && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />}
                                             {hasLogs && (
                                                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
-                                                    <p className={`text-base font-black leading-none ${isSelected ? 'text-white' : 'text-indigo-600'}`}>{dayTotal.toFixed(1)}h</p>
+                                                    <p className={`text-base font-black leading-none ${isSelected ? 'text-white' : 'text-slate-500'}`}>{dayTotal.toFixed(1)}h</p>
                                                     <p className={`text-[10px] font-bold leading-none ${isSelected ? 'text-indigo-200' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
                                                 </div>
                                             )}
