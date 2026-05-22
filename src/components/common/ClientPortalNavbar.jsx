@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, ChevronLeft, ChevronRight, LogOut, X, CheckCircle, AlertCircle, Sparkles } from 'lucide-react';
 
+const NAV_TR = {
+    pt: { notifications: 'Notificações', no_notifications: 'Nenhuma notificação', on_duty_since: 'Em serviço desde', logout: 'Sair' },
+    es: { notifications: 'Notificaciones', no_notifications: 'Sin notificaciones', on_duty_since: 'En servicio desde', logout: 'Salir' },
+};
+
 export default function ClientPortalNavbar({
   clientObj,
   selectedMonth,
@@ -21,6 +26,7 @@ export default function ClientPortalNavbar({
 }) {
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
+  const nt = (key) => (NAV_TR[lang] || NAV_TR.pt)[key] || key;
 
   useEffect(() => {
     const handler = (e) => {
@@ -127,18 +133,18 @@ export default function ClientPortalNavbar({
               <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-indigo-50 flex items-center gap-2">
                   <Bell size={16} className="text-indigo-600" />
-                  <span className="font-black text-slate-800 text-sm uppercase tracking-widest">Notificações</span>
+                  <span className="font-black text-slate-800 text-sm uppercase tracking-widest">{nt('notifications')}</span>
                 </div>
                 <div className="max-h-64 overflow-y-auto">
                   {activeNow.length === 0 ? (
-                    <div className="p-4 text-center text-slate-400 text-xs font-bold">Nenhuma notificação</div>
+                    <div className="p-4 text-center text-slate-400 text-xs font-bold">{nt('no_notifications')}</div>
                   ) : (
                     activeNow.map((log, i) => {
                       const w = workers.find(wk => String(wk.id) === String(log.workerId));
                       return (
                         <div key={log.id} className="p-3 border-b border-slate-50 last:border-0">
                           <p className="font-black text-slate-700 text-xs">{w?.name || 'Colaborador'}</p>
-                          <p className="text-slate-400 text-[10px]">Em serviço desde {log.startTime}</p>
+                          <p className="text-slate-400 text-[10px]">{nt('on_duty_since')} {log.startTime}</p>
                         </div>
                       );
                     })
@@ -150,7 +156,7 @@ export default function ClientPortalNavbar({
 
           {/* Logout */}
           <button onClick={onLogout} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 font-black text-[10px] uppercase tracking-widest transition-all">
-            <LogOut size={14} /> Sair
+            <LogOut size={14} /> {nt('logout')}
           </button>
         </div>
       </div>

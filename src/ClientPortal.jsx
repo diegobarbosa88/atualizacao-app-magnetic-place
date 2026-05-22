@@ -8,6 +8,177 @@ import ValidationStamp from './components/common/ValidationStampWithQR';
 import ClientPortalNavbar from './components/common/ClientPortalNavbar';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 
+const TRANSLATIONS = {
+    pt: {
+        restricted_area: 'Área Reservada',
+        panel_title_1: 'Painel',
+        panel_title_2: 'do\nCliente',
+        tagline: 'Consulte horas · Valide períodos',
+        welcome: 'Bem-vindo',
+        sign_in_1: 'Iniciar',
+        sign_in_2: 'sessão',
+        sign_in_desc: 'Introduza o seu NIF e email para aceder à sua área.',
+        loading: 'A carregar...',
+        enter: 'Entrar',
+        nif_placeholder: 'Ex: 123456789',
+        email_placeholder: 'email@empresa.pt',
+        client_panel: 'Painel do Cliente',
+        hello: 'Olá',
+        period: 'Período',
+        total_hours: 'Total de Horas',
+        workers: 'Colaboradores',
+        real_time: 'Tempo Real',
+        nobody_working: 'Ninguém em serviço agora',
+        on_break: 'Em pausa',
+        on_duty: 'Em serviço',
+        calendar: 'Calendário',
+        days: 'dias',
+        record_singular: 'registo',
+        record_plural: 'registos',
+        day_records: 'Registos do dia',
+        no_records: 'Sem registos.',
+        no_hours: 'Sem registos de horas para',
+        validate_period: 'Validar Período',
+        week_days: ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'],
+        locale: 'pt-PT',
+        back_dashboard: 'Voltar ao Dashboard',
+        selected_period: 'Período Selecionado',
+        hours_detail: 'Detalhe de Horas',
+        detailed_summary: 'Resumo descriminado',
+        download_all: 'Baixar Todos (PDF)',
+        worker_col: 'Colaborador',
+        hours_col: 'Horas',
+        action_col: 'Ação',
+        no_workers: 'Nenhum colaborador registado para este cliente no mês de',
+        report_validated: 'Relatório Validado',
+        already_validated: 'Este relatório já foi validado e assinado digitalmente em:',
+        download_signed: 'Baixar Relatório Assinado',
+        editing_disabled: 'A possibilidade de edição foi desativada após a aprovação.',
+        client_approval: 'Aprovação do Cliente',
+        sign_to_validate: 'Assine abaixo para validar e aprovar o relatório de',
+        sign_here: 'Assine Aqui',
+        clear_canvas: 'Limpar Quadro',
+        validate_approve: 'Validar e Aprovar Horas',
+        found_divergence: 'Encontrou alguma divergência nos horários?',
+        edit_report: 'Editar Relatório',
+        entry: 'Entrada',
+        break_label: 'Pausa',
+        exit_label: 'Saída',
+        locations: 'Locais',
+        how_report: 'Como deseja reportar?',
+        choose_method: 'Escolha o método mais simples para si',
+        quick_msg: 'Mensagem Rápida',
+        quick_msg_desc: 'Explique o erro por texto. Ideal para problemas gerais ou quando não quer editar horas manualmente.',
+        precision_adj: 'Ajuste de Precisão',
+        precision_adj_desc: 'Altere os horários de entrada e saída colaborador a colaborador. Ideal para correções exatas.',
+        choose_this: 'Escolher este método',
+        back_start: 'Voltar para o Início',
+        describe_divergence: 'Descreva a divergência',
+        describe_desc: 'Explique de forma clara o que está incorreto no relatório. O administrador irá analisar e entrar em contacto se necessário.',
+        describe_placeholder: 'Ex: O colaborador João Silva não esteve presente no dia 15...',
+        send_admin: 'Enviar Mensagem ao Admin',
+        change_method: 'Alterar Método',
+        approved_success: 'Aprovado Com Sucesso',
+        signature_registered: 'A sua assinatura foi registada na plataforma central e o processo concluído.',
+        view_summary: 'Ver Resumo Novamente',
+        corrections_sent: 'Correções Enviadas',
+        corrections_desc: 'O relatório detalhado com os pedidos de alteração foi enviado para análise pelo administrador.',
+        back_to_start: 'Voltar ao Início',
+        accept_counter: 'Aceitar Contra-proposta',
+        close: 'Fechar',
+        ignore_notif: 'Ignorar',
+        validate_hours: 'Validar Horas',
+        admin_justification: 'Justificação do Administrador',
+        notifications: 'Notificações',
+        no_notifications: 'Nenhuma notificação',
+        on_duty_since: 'Em serviço desde',
+    },
+    es: {
+        restricted_area: 'Área Reservada',
+        panel_title_1: 'Panel',
+        panel_title_2: 'del\nCliente',
+        tagline: 'Consulte horas · Valide períodos',
+        welcome: 'Bienvenido',
+        sign_in_1: 'Iniciar',
+        sign_in_2: 'sesión',
+        sign_in_desc: 'Introduzca su NIF y email para acceder a su área.',
+        loading: 'Cargando...',
+        enter: 'Entrar',
+        nif_placeholder: 'Ej: 123456789',
+        email_placeholder: 'email@empresa.es',
+        client_panel: 'Panel del Cliente',
+        hello: 'Hola',
+        period: 'Período',
+        total_hours: 'Total de Horas',
+        workers: 'Colaboradores',
+        real_time: 'Tiempo Real',
+        nobody_working: 'Nadie en servicio ahora',
+        on_break: 'En pausa',
+        on_duty: 'En servicio',
+        calendar: 'Calendario',
+        days: 'días',
+        record_singular: 'registro',
+        record_plural: 'registros',
+        day_records: 'Registros del día',
+        no_records: 'Sin registros.',
+        no_hours: 'Sin registros de horas para',
+        validate_period: 'Validar Período',
+        week_days: ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'],
+        locale: 'es-ES',
+        back_dashboard: 'Volver al Dashboard',
+        selected_period: 'Período Seleccionado',
+        hours_detail: 'Detalle de Horas',
+        detailed_summary: 'Resumen detallado',
+        download_all: 'Descargar Todos (PDF)',
+        worker_col: 'Colaborador',
+        hours_col: 'Horas',
+        action_col: 'Acción',
+        no_workers: 'Ningún colaborador registrado para este cliente en el mes de',
+        report_validated: 'Informe Validado',
+        already_validated: 'Este informe ya fue validado y firmado digitalmente en:',
+        download_signed: 'Descargar Informe Firmado',
+        editing_disabled: 'La posibilidad de edición fue desactivada tras la aprobación.',
+        client_approval: 'Aprobación del Cliente',
+        sign_to_validate: 'Firme abajo para validar y aprobar el informe de',
+        sign_here: 'Firme Aquí',
+        clear_canvas: 'Limpiar',
+        validate_approve: 'Validar y Aprobar Horas',
+        found_divergence: '¿Encontró alguna divergencia en los horarios?',
+        edit_report: 'Editar Informe',
+        entry: 'Entrada',
+        break_label: 'Pausa',
+        exit_label: 'Salida',
+        locations: 'Lugares',
+        how_report: '¿Cómo desea reportar?',
+        choose_method: 'Elija el método más simple',
+        quick_msg: 'Mensaje Rápido',
+        quick_msg_desc: 'Explique el error por texto. Ideal para problemas generales o cuando no quiere editar horas manualmente.',
+        precision_adj: 'Ajuste de Precisión',
+        precision_adj_desc: 'Cambie los horarios de entrada y salida colaborador a colaborador. Ideal para correcciones exactas.',
+        choose_this: 'Elegir este método',
+        back_start: 'Volver al Inicio',
+        describe_divergence: 'Describa la divergencia',
+        describe_desc: 'Explique de forma clara qué está incorrecto en el informe. El administrador analizará y se pondrá en contacto si es necesario.',
+        describe_placeholder: 'Ej: El colaborador Juan Silva no estuvo presente el día 15...',
+        send_admin: 'Enviar Mensaje al Admin',
+        change_method: 'Cambiar Método',
+        approved_success: 'Aprobado Con Éxito',
+        signature_registered: 'Su firma fue registrada en la plataforma central y el proceso concluido.',
+        view_summary: 'Ver Resumen Nuevamente',
+        corrections_sent: 'Correcciones Enviadas',
+        corrections_desc: 'El informe detallado con los pedidos de cambio fue enviado para análisis por el administrador.',
+        back_to_start: 'Volver al Inicio',
+        accept_counter: 'Aceptar Contrapropuesta',
+        close: 'Cerrar',
+        ignore_notif: 'Ignorar',
+        validate_hours: 'Validar Horas',
+        admin_justification: 'Justificación del Administrador',
+        notifications: 'Notificaciones',
+        no_notifications: 'Sin notificaciones',
+        on_duty_since: 'En servicio desde',
+    }
+};
+
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
     const [eh, em] = entry.split(':').map(n => parseInt(n, 10) || 0);
@@ -64,6 +235,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [loginEmail, setLoginEmail] = useState('');
     const [loginError, setLoginError] = useState('');
     const [lang, setLang] = useState(() => localStorage.getItem('magnetic_lang') || 'pt');
+    const t = (key) => (TRANSLATIONS[lang] || TRANSLATIONS.pt)[key] || key;
 
     const effectiveClientId = clientSession?.clientId || initialClientId || null;
 
@@ -680,23 +852,23 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         <div className="animate-fade-in space-y-6">
             {/* Saudação */}
             <div className="pt-2">
-                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Painel do Cliente</p>
-                <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mt-1">Olá, {clientObj.name}</h2>
-                <p className="text-[10px] font-bold text-slate-400 mt-1">{new Date().toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">{t('client_panel')}</p>
+                <h2 className="text-3xl font-black text-slate-800 uppercase tracking-tighter mt-1">{t('hello')}, {clientObj.name}</h2>
+                <p className="text-[10px] font-bold text-slate-400 mt-1">{new Date().toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Período</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('period')}</p>
                     <p className="text-base font-black text-slate-800 uppercase leading-tight">{clientData.period || '—'}</p>
                 </div>
                 <div className="bg-indigo-600 rounded-[2rem] shadow-lg shadow-indigo-200 p-6 text-center">
-                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">Total de Horas</p>
+                    <p className="text-[9px] font-black text-indigo-300 uppercase tracking-widest mb-2">{t('total_hours')}</p>
                     <p className="text-4xl font-black text-white">{originalTotal}h</p>
                 </div>
                 <div className="bg-white rounded-[2rem] shadow-lg border border-slate-100 p-6 text-center col-span-2 md:col-span-1">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Colaboradores</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">{t('workers')}</p>
                     <p className="text-4xl font-black text-slate-800">{originalWorkersData.length}</p>
                 </div>
             </div>
@@ -705,10 +877,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             <section className="bg-white rounded-[2rem] shadow-xl border border-slate-100 px-6 py-5">
                 <div className="flex items-center gap-2 mb-4">
                     <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${activeNow.length > 0 ? 'bg-emerald-500 animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-slate-300'}`} />
-                    <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">Tempo Real</h3>
+                    <h3 className="font-black text-slate-700 text-xs uppercase tracking-widest">{t('real_time')}</h3>
                 </div>
                 {activeNow.length === 0 ? (
-                    <p className="text-sm font-bold text-slate-300 text-center py-2">Ninguém em serviço agora</p>
+                    <p className="text-sm font-bold text-slate-300 text-center py-2">{t('nobody_working')}</p>
                 ) : (
                     <div className="space-y-2">
                         {activeNow.map(log => {
@@ -719,7 +891,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     <span className="font-black text-slate-800 text-sm truncate">{worker?.name || 'Colaborador'}</span>
                                     <span className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide ${inBreak ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}`}>
                                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${inBreak ? 'bg-amber-400' : 'bg-emerald-500 animate-pulse'}`} />
-                                        {inBreak ? 'Em pausa' : 'Em serviço'} · {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
+                                        {inBreak ? t('on_break') : t('on_duty')} · {inBreak ? formatElapsed(log.breakStart) : formatElapsed(log.startTime)}
                                     </span>
                                 </div>
                             );
@@ -740,7 +912,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 const daysInMonth = new Date(calYear, calMonth, 0).getDate();
                 const startOffset = (firstDay.getDay() + 6) % 7;
                 const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
-                const weekDayLabels = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+                const weekDayLabels = t('week_days');
                 const calTodayStr = new Date().toLocaleDateString('en-CA');
 
                 const selectedDayLogs = calSelectedDay ? (logsByDate[calSelectedDay] || []) : [];
@@ -764,14 +936,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             {worker && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{worker.name}</p>}
                             <div className="flex items-center gap-3 flex-wrap">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Entrada</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t('entry')}</span>
                                     <span className={`text-sm font-black font-mono ${isOpen && !inBreak ? 'text-emerald-700' : 'text-slate-700'}`}>{log.startTime || '–'}</span>
                                     <LocationDot lat={log.check_in_lat} lng={log.check_in_lng} verified={log.geo_verified} />
                                     {isOpen && !inBreak && <span className="text-[9px] font-bold text-emerald-500">{formatElapsed(log.startTime)}</span>}
                                 </div>
                                 <span className="text-slate-200">|</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pausa</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t('break_label')}</span>
                                     {log.breakStart ? (
                                         <>
                                             <span className={`text-sm font-black font-mono ${inBreak ? 'text-amber-600' : 'text-slate-600'}`}>{log.breakStart}{log.breakEnd ? ` → ${log.breakEnd}` : ' → …'}</span>
@@ -782,7 +954,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 </div>
                                 <span className="text-slate-200">|</span>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saída</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{t('exit_label')}</span>
                                     <span className="text-sm font-black font-mono text-slate-700">{log.endTime || '–'}</span>
                                     {log.endTime && <LocationDot lat={log.check_out_lat} lng={log.check_out_lng} verified={null} />}
                                 </div>
@@ -791,7 +963,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 {logHasGps && (
                                     <button onClick={(e) => { e.stopPropagation(); setExpandedLogLocations(prev => { const n = new Set(prev); n.has(log.id) ? n.delete(log.id) : n.add(log.id); return n; }); }}
                                         className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black transition-all ${isLocExpanded ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}>
-                                        <Navigation size={9} /> Locais
+                                        <Navigation size={9} /> {t('locations')}
                                     </button>
                                 )}
                             </div>
@@ -819,8 +991,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <section className="space-y-4">
                         <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">Calendário — {new Date(calYear, calMonth - 1).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.keys(logsByDate).length} dias</span>
+                                <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">{t('calendar')} — {new Date(calYear, calMonth - 1).toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' })}</h3>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.keys(logsByDate).length} {t('days')}</span>
                             </div>
                             {/* Week day headers */}
                             <div className="grid grid-cols-7 border-b border-slate-100 px-1">
@@ -852,7 +1024,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             {hasLogs && (
                                                 <div className="flex-1 flex flex-col items-center justify-center gap-0.5">
                                                     <p className={`text-[11px] font-black leading-none ${isSelected ? 'text-indigo-200' : 'text-indigo-500'}`}>{dayTotal.toFixed(1)}h</p>
-                                                    <p className={`text-[9px] font-bold leading-none ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? 'registo' : 'registos'}</p>
+                                                    <p className={`text-[9px] font-bold leading-none ${isSelected ? 'text-indigo-300' : 'text-slate-400'}`}>{dayLogs.length} {dayLogs.length === 1 ? t('record_singular') : t('record_plural')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -866,15 +1038,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
                                 <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
                                     <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">Registos do dia</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">{t('day_records')}</p>
                                         <p className="text-base font-black text-slate-800 mt-0.5">
-                                            {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                            {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' })}
                                         </p>
                                     </div>
                                     <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"><X size={16} /></button>
                                 </div>
                                 {selectedDayLogs.length === 0
-                                    ? <div className="p-8 text-center text-slate-400 text-sm font-bold">Sem registos.</div>
+                                    ? <div className="p-8 text-center text-slate-400 text-sm font-bold">{t('no_records')}</div>
                                     : selectedDayLogs.map(renderCalLogLine)
                                 }
                             </div>
@@ -887,7 +1059,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             {originalWorkersData.length > 0 && (
                 <section className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                     <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
-                        <h3 className="font-black text-slate-400 text-xs uppercase tracking-widest">Colaboradores — {clientData.period}</h3>
+                        <h3 className="font-black text-slate-400 text-xs uppercase tracking-widest">{t('workers')} — {clientData.period}</h3>
                     </div>
                     <div className="divide-y divide-slate-50">
                         {originalWorkersData.map(worker => (
@@ -907,7 +1079,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             )}
             {originalWorkersData.length === 0 && selectedMonth && (
                 <div className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-12 text-center text-slate-400 font-bold">
-                    Sem registos de horas para {clientData.period}.
+                    {t('no_hours')} {clientData.period}.
                 </div>
             )}
 
@@ -918,7 +1090,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     className="w-full flex items-center justify-center gap-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-sm uppercase tracking-widest py-5 rounded-[2rem] shadow-lg shadow-indigo-200 transition-all"
                 >
                     <CheckCircle size={20} />
-                    Validar Período
+                    {t('validate_period')}
                 </a>
             )}
         </div>
@@ -929,15 +1101,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         <div className="animate-fade-in space-y-8">
             {/* Voltar */}
             <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
-                <ChevronLeft size={16} /> Voltar ao Dashboard
+                <ChevronLeft size={16} /> {t('back_dashboard')}
             </button>
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
-                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Período Selecionado</h2>
+                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('selected_period')}</h2>
                     <p className="text-3xl font-black text-slate-800 mt-2 uppercase">{clientData.period || '—'}</p>
                 </div>
                 <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 md:min-w-[200px] text-center shadow-inner">
-                    <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mb-1">Total de Horas</p>
+                    <p className="text-[10px] text-indigo-500 font-black uppercase tracking-widest mb-1">{t('total_hours')}</p>
                     <p className="text-4xl font-black text-indigo-700">{originalTotal}h</p>
                 </div>
             </section>
@@ -945,13 +1117,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden">
                 <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row justify-between items-center gap-6">
                     <div>
-                        <h3 className="font-black text-slate-800 text-2xl uppercase tracking-tighter">Detalhe de Horas</h3>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 block">Resumo descriminado</span>
+                        <h3 className="font-black text-slate-800 text-2xl uppercase tracking-tighter">{t('hours_detail')}</h3>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 block">{t('detailed_summary')}</span>
                     </div>
                     {originalWorkersData.length > 1 && (
                         <button onClick={handleDownloadAll} className="w-full md:w-auto inline-flex items-center justify-center gap-3 bg-emerald-600 border border-emerald-500 hover:bg-emerald-700 text-white px-6 py-4 rounded-2xl shadow-sm transition-all font-black text-xs uppercase tracking-widest active:scale-95">
                             <Download size={18} />
-                            Baixar Todos (PDF)
+                            {t('download_all')}
                         </button>
                     )}
                 </div>
@@ -960,9 +1132,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 text-slate-400 text-[10px] uppercase tracking-widest font-black border-b border-slate-100">
-                                <th className="p-6">Colaborador</th>
-                                <th className="p-6 text-right">Horas</th>
-                                <th className="p-6 text-right w-24">Ação</th>
+                                <th className="p-6">{t('worker_col')}</th>
+                                <th className="p-6 text-right">{t('hours_col')}</th>
+                                <th className="p-6 text-right w-24">{t('action_col')}</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
@@ -1005,7 +1177,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             {originalWorkersData.length === 0 && (
                                 <tr>
                                     <td colSpan="3" className="p-8 text-center text-slate-500 font-bold">
-                                        Nenhum colaborador registado para este cliente no mês de {clientData.period}.
+                                        {t('no_workers')} {clientData.period}.
                                     </td>
                                 </tr>
                             )}
@@ -1022,10 +1194,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <div className="w-24 h-24 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border-4 border-emerald-100 shadow-lg shadow-emerald-200/50">
                                 <CheckCircle size={48} />
                             </div>
-                            <h3 className="font-black text-3xl text-slate-800 uppercase tracking-tighter mb-4">Relatório Validado</h3>
+                            <h3 className="font-black text-3xl text-slate-800 uppercase tracking-tighter mb-4">{t('report_validated')}</h3>
                             <div className="text-center mb-10">
                                 <p className="text-slate-500 text-sm font-medium leading-relaxed">
-                                    Este relatório já foi validado e assinado digitalmente em:
+                                    {t('already_validated')}
                                 </p>
                                 <p className="text-emerald-600 text-base font-bold mt-2">
                                     {new Date(approvalData?.created_at).toLocaleString('pt-PT')}
@@ -1037,28 +1209,28 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     onClick={handleDownloadAll}
                                     className="w-full sm:flex-1 px-8 py-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-emerald-200 active:scale-95 flex items-center justify-center gap-3"
                                 >
-                                    <Download size={20} /> Baixar Relatório Assinado
+                                    <Download size={20} /> {t('download_signed')}
                                 </button>
                             </div>
 
                             <div className="mt-12 pt-8 border-t border-slate-100 flex flex-col items-center gap-3">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">A possibilidade de edição foi desativada após a aprovação.</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('editing_disabled')}</p>
                             </div>
                         </div>
                     ) : (
                         <>
                             <div className="text-center mb-10">
-                                <h3 className="font-black text-2xl text-slate-800 uppercase tracking-tighter mb-2">Aprovação do Cliente</h3>
-                                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">Assine abaixo para validar e aprovar o relatório de {originalTotal} horas.</p>
+                                <h3 className="font-black text-2xl text-slate-800 uppercase tracking-tighter mb-2">{t('client_approval')}</h3>
+                                <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">{t('sign_to_validate')} {originalTotal} {t('hours_col').toLowerCase()}.</p>
                             </div>
 
                             <div id="signature-canvas-area" className="relative w-full max-w-2xl mx-auto bg-slate-50 border-2 border-dashed border-slate-300 rounded-[2rem] overflow-hidden mb-6 shadow-inner">
                                 <canvas ref={canvasRef} className="w-full cursor-crosshair touch-none" style={{ touchAction: 'none' }} onMouseDown={startDrawing} onMouseMove={draw} onMouseUp={stopDrawing} onMouseLeave={stopDrawing} onTouchStart={startDrawing} onTouchMove={draw} onTouchEnd={stopDrawing} />
-                                {!hasSignature && <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">Assine Aqui</div>}
+                                {!hasSignature && <div className="absolute inset-0 pointer-events-none flex items-center justify-center text-slate-300 font-black text-2xl uppercase tracking-wider opacity-60">{t('sign_here')}</div>}
                             </div>
 
                             <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-2xl mx-auto">
-                                <button onClick={clearCanvas} className="w-full sm:w-auto px-6 py-4 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">Limpar Quadro</button>
+                                <button onClick={clearCanvas} className="w-full sm:w-auto px-6 py-4 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all">{t('clear_canvas')}</button>
 
                                 <button onClick={() => {
                                     const canvas = canvasRef.current;
@@ -1113,14 +1285,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             alert("Erro ao guardar a validação. Por favor, tente novamente.");
                                         });
                                 }} disabled={!hasSignature || originalTotal === 0} className={`w-full sm:flex-1 px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl flex justify-center ${hasSignature && originalTotal > 0 ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30 active:scale-95' : 'bg-slate-200 text-slate-400 cursor-not-allowed'}`}>
-                                    Validar e Aprovar Horas
+                                    {t('validate_approve')}
                                 </button>
                             </div>
 
                             <div className="mt-12 pt-8 border-t border-slate-100 text-center">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Encontrou alguma divergência nos horários?</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('found_divergence')}</p>
                                 <button onClick={startReport} className="inline-flex items-center gap-3 text-white bg-slate-900 hover:bg-slate-800 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 disabled:opacity-50" disabled={originalTotal === 0}>
-                                    Editar Relatório
+                                    {t('edit_report')}
                                 </button>
                             </div>
                         </>
@@ -1135,8 +1307,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             return (
                 <div className="animate-fade-in max-w-4xl mx-auto py-10">
                     <div className="text-center mb-12">
-                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter mb-4">Como deseja reportar?</h2>
-                        <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">Escolha o método mais simples para si</p>
+                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter mb-4">{t('how_report')}</h2>
+                        <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">{t('choose_method')}</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1148,10 +1320,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <div className="w-16 h-16 bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 rounded-2xl flex items-center justify-center mb-8 transition-colors">
                                 <MessageCircle size={32} />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tight">Mensagem Rápida</h3>
-                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">Explique o erro por texto. Ideal para problemas gerais ou quando não quer editar horas manualmente.</p>
+                            <h3 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tight">{t('quick_msg')}</h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">{t('quick_msg_desc')}</p>
                             <div className="inline-flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest">
-                                Escolher este método <ChevronDown size={14} className="-rotate-90" />
+                                {t('choose_this')} <ChevronDown size={14} className="-rotate-90" />
                             </div>
                         </button>
 
@@ -1163,16 +1335,16 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <div className="w-16 h-16 bg-slate-50 text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-500 rounded-2xl flex items-center justify-center mb-8 transition-colors">
                                 <Sparkles size={32} />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tight">Ajuste de Precisão</h3>
-                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">Altere os horários de entrada e saída colaborador a colaborador. Ideal para correções exatas.</p>
+                            <h3 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tight">{t('precision_adj')}</h3>
+                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">{t('precision_adj_desc')}</p>
                             <div className="inline-flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase tracking-widest">
-                                Escolher este método <ChevronDown size={14} className="-rotate-90" />
+                                {t('choose_this')} <ChevronDown size={14} className="-rotate-90" />
                             </div>
                         </button>
                     </div>
 
                     <div className="mt-12 text-center">
-                        <button onClick={() => goToView('inicio')} className="text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest transition-colors">Voltar para o Início</button>
+                        <button onClick={() => goToView('inicio')} className="text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest transition-colors">{t('back_start')}</button>
                     </div>
                 </div>
             );
@@ -1186,16 +1358,16 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <button onClick={() => setCorrectionMode('triagem')} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all">
                                 <ChevronDown size={24} className="rotate-90" />
                             </button>
-                            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Descreva a divergência</h2>
+                            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{t('describe_divergence')}</h2>
                         </div>
 
-                        <p className="text-slate-500 text-sm font-medium mb-8">Explique de forma clara o que está incorreto no relatório. O administrador irá analisar e entrar em contacto se necessário.</p>
+                        <p className="text-slate-500 text-sm font-medium mb-8">{t('describe_desc')}</p>
 
                         <textarea
                             rows="8"
                             value={reportJustification}
                             onChange={(e) => setReportJustification(e.target.value)}
-                            placeholder="Ex: O colaborador João Silva não esteve presente no dia 15..."
+                            placeholder={t('describe_placeholder')}
                             className="w-full border-2 border-slate-100 rounded-3xl p-6 bg-slate-50 text-slate-800 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none mb-10 shadow-inner"
                         ></textarea>
 
@@ -1245,9 +1417,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 }}
                                 className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
                             >
-                                Enviar Mensagem ao Admin
+                                {t('send_admin')}
                             </button>
-                            <button onClick={() => setCorrectionMode('triagem')} className="w-full py-5 text-slate-400 font-black uppercase tracking-widest text-[10px]">Alterar Método</button>
+                            <button onClick={() => setCorrectionMode('triagem')} className="w-full py-5 text-slate-400 font-black uppercase tracking-widest text-[10px]">{t('change_method')}</button>
                         </div>
                     </div>
                 </div>
@@ -1619,9 +1791,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             <div className="w-24 h-24 bg-emerald-50 text-emerald-500 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner border border-emerald-100">
                 ✅
             </div>
-            <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter mb-4">Aprovado Com Sucesso</h2>
-            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto mb-10 leading-relaxed">A sua assinatura foi registada na plataforma central e o processo concluído.</p>
-            <button onClick={() => goToView('inicio')} className="text-slate-500 font-black text-[10px] uppercase tracking-widest bg-slate-50 px-8 py-4 rounded-2xl border border-slate-200 hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm">Ver Resumo Novamente</button>
+            <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter mb-4">{t('approved_success')}</h2>
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto mb-10 leading-relaxed">{t('signature_registered')}</p>
+            <button onClick={() => goToView('inicio')} className="text-slate-500 font-black text-[10px] uppercase tracking-widest bg-slate-50 px-8 py-4 rounded-2xl border border-slate-200 hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm">{t('view_summary')}</button>
         </div>
     );
 
@@ -1630,9 +1802,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             <div className="w-24 h-24 bg-indigo-50 text-indigo-600 rounded-[2rem] flex items-center justify-center mb-8 shadow-inner border border-indigo-100">
                 🚀
             </div>
-            <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter mb-4">Correções Enviadas</h2>
-            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto mb-10 leading-relaxed">O relatório detalhado com os pedidos de alteração foi enviado para análise pelo administrador.</p>
-            <button onClick={() => goToView('inicio')} className="text-slate-500 font-black text-[10px] uppercase tracking-widest bg-slate-50 px-8 py-4 rounded-2xl border border-slate-200 hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm">Voltar ao Início</button>
+            <h2 className="text-4xl font-black text-slate-800 uppercase tracking-tighter mb-4">{t('corrections_sent')}</h2>
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-widest max-w-md mx-auto mb-10 leading-relaxed">{t('corrections_desc')}</p>
+            <button onClick={() => goToView('inicio')} className="text-slate-500 font-black text-[10px] uppercase tracking-widest bg-slate-50 px-8 py-4 rounded-2xl border border-slate-200 hover:bg-slate-100 hover:text-slate-800 transition-all shadow-sm">{t('back_to_start')}</button>
         </div>
     );
 
@@ -1663,15 +1835,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 <div className="relative z-10 my-auto py-10">
                     <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-8">
                         <span className="w-2 h-2 bg-indigo-300 rounded-full animate-pulse" />
-                        <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">Área Reservada</span>
+                        <span className="text-white/80 text-[11px] font-black uppercase tracking-[0.2em]">{t('restricted_area')}</span>
                     </div>
                     <h1 className="text-6xl md:text-7xl lg:text-8xl font-black uppercase leading-[0.9] tracking-tighter">
-                        <span className="text-white">Painel<br /></span>
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-violet-300 to-indigo-200">do<br />Cliente</span>
+                        <span className="text-white">{t('panel_title_1')}<br /></span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-violet-300 to-indigo-200">{t('panel_title_2').split('\n').map((line, i) => <React.Fragment key={i}>{line}{i < t('panel_title_2').split('\n').length - 1 && <br />}</React.Fragment>)}</span>
                     </h1>
                     <div className="flex items-center gap-3 mt-8">
                         <div className="h-px w-12 bg-white/20" />
-                        <p className="text-white/60 text-sm font-semibold">Consulte horas · Valide períodos</p>
+                        <p className="text-white/60 text-sm font-semibold">{t('tagline')}</p>
                     </div>
                 </div>
 
@@ -1683,27 +1855,44 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             {/* ── LADO DIREITO — Formulário ── */}
             <div className="lg:w-2/5 flex items-center justify-center p-8 md:p-14 bg-white">
                 <div className="w-full max-w-sm">
+                    {/* Language switcher */}
+                    <div className="flex justify-end mb-6">
+                        <div className="flex rounded-xl overflow-hidden border border-slate-200 shadow-inner">
+                            <button onClick={() => changeLang('pt')} title="Português" className={`flex items-center gap-1.5 px-3 py-2 transition-all ${lang === 'pt' ? 'bg-indigo-50' : 'bg-white opacity-50 hover:opacity-80'}`}>
+                                <span className="inline-flex h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
+                                    <span className="w-2/5 bg-green-700" /><span className="w-3/5 bg-red-600" />
+                                </span>
+                                <span className="text-[9px] font-black text-slate-600">PT</span>
+                            </button>
+                            <button onClick={() => changeLang('es')} title="Español" className={`flex items-center gap-1.5 px-3 py-2 transition-all border-l border-slate-200 ${lang === 'es' ? 'bg-indigo-50' : 'bg-white opacity-50 hover:opacity-80'}`}>
+                                <span className="inline-flex flex-col h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
+                                    <span className="flex-1 bg-red-600" /><span className="flex-[2] bg-yellow-400" /><span className="flex-1 bg-red-600" />
+                                </span>
+                                <span className="text-[9px] font-black text-slate-600">ES</span>
+                            </button>
+                        </div>
+                    </div>
 
                     <div className="lg:hidden mb-10 text-center">
                         <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 mx-auto mb-3 object-contain" onError={e => e.target.style.display = 'none'} />
-                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Painel do Cliente</h2>
+                        <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">{t('client_panel')}</h2>
                     </div>
 
                     <div className="mb-8">
-                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">Bem-vindo</p>
-                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">Iniciar<br />sessão</h2>
-                        <p className="text-slate-400 text-sm font-medium mt-3 leading-relaxed">Introduza o seu NIF e email para aceder à sua área.</p>
+                        <p className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-2">{t('welcome')}</p>
+                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter leading-none">{t('sign_in_1')}<br />{t('sign_in_2')}</h2>
+                        <p className="text-slate-400 text-sm font-medium mt-3 leading-relaxed">{t('sign_in_desc')}</p>
                     </div>
 
                     <div className="space-y-4">
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">NIF</label>
-                            <input type="text" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Ex: 123456789"
+                            <input type="text" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder={t('nif_placeholder')}
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
-                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="email@empresa.pt"
+                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder={t('email_placeholder')}
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         {loginError && (
@@ -1713,7 +1902,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         )}
                         <button onClick={handleLogin} disabled={clients.length === 0}
                             className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-[0.15em] transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {clients.length === 0 ? 'A carregar...' : 'Entrar'}
+                            {clients.length === 0 ? t('loading') : t('enter')}
                         </button>
                     </div>
                 </div>
@@ -1804,7 +1993,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                         <div className="space-y-6">
                                                             {notif.payload.reason && (
                                                                 <div className="bg-amber-50 p-4 rounded-2xl border border-amber-100">
-                                                                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">Justificação do Administrador</p>
+                                                                    <p className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-1">{t('admin_justification')}</p>
                                                                     <p className="text-xs text-amber-800 font-medium italic">"{notif.payload.reason}"</p>
                                                                 </div>
                                                             )}
@@ -1989,13 +2178,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                                 }}
                                                                 className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
                                                             >
-                                                                <CheckCircle size={14} /> Validar Horas
+                                                                <CheckCircle size={14} /> {t('validate_hours')}
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDismissNotif(notif.id)}
                                                                 className="bg-slate-100 text-slate-500 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                                                             >
-                                                                Fechar
+                                                                {t('close')}
                                                             </button>
                                                         </>
                                                     ) : notif.payload?.type === 'counter_proposal' ? (
@@ -2004,13 +2193,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                                 onClick={() => handleAcceptContestation(notif)}
                                                                 className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
                                                             >
-                                                                <CheckCircle size={14} /> Aceitar Contra-proposta
+                                                                <CheckCircle size={14} /> {t('accept_counter')}
                                                             </button>
                                                             <button
                                                                 onClick={() => handleDismissNotif(notif.id)}
                                                                 className="bg-slate-100 text-slate-500 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                                                             >
-                                                                Ignorar
+                                                                {t('ignore_notif')}
                                                             </button>
                                                         </>
                                                     ) : (
@@ -2018,7 +2207,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                             onClick={() => handleDismissNotif(notif.id)}
                                                             className="bg-slate-100 text-slate-500 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-slate-200 transition-all active:scale-95"
                                                         >
-                                                            Fechar
+                                                            {t('close')}
                                                         </button>
                                                     )}
                                                 </div>
