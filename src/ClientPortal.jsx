@@ -231,6 +231,27 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return filtered;
     }, [appNotifications, initialClientId, dismissedNotifs]);
 
+    const handleDismissNotif = (id) => {
+        setDismissedNotifs(prev => {
+            if (prev.includes(id)) return prev;
+            const updated = [...prev, id];
+            localStorage.setItem(`dismissed_client_notifs_${initialClientId}`, JSON.stringify(updated));
+            return updated;
+        });
+    };
+
+    const clientObj = clients.find(c => c.id === effectiveClientId) || { name: 'Cliente Não Encontrado' };
+    const getMonthName = (monthStr) => {
+        if (!monthStr || monthStr.length !== 7) return monthStr;
+        const [y, m] = monthStr.split('-');
+        const d = new Date(y, m - 1);
+        return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+    };
+
+    const clientData = useMemo(() => {
+        return { name: clientObj.name, period: getMonthName(selectedMonth) };
+    }, [clientObj, selectedMonth]);
+
     const handleAcceptContestation = useCallback(async (notif) => {
         const changes = notif.payload?.changes;
         if (!changes || !Array.isArray(changes)) {
@@ -239,8 +260,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         }
 
         try {
-            // 1. Aplicar as alterações nos LOGS originais e atualizar estado local
-            // Fase 1: recolher operações e gerar IDs únicos antes de paralelizar
             const updates = [];
             const inserts = [];
             for (const w of changes) {
@@ -263,19 +282,16 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     }
                 }
             }
-            // Fase 2: persistir em paralelo
             await Promise.all([
                 ...updates.map(u => saveToDb('logs', u.id, u.data)),
                 ...inserts.map(i => saveToDb('logs', i.id, i.data)),
             ]);
-            // Fase 3: um único setLogs consolidado para evitar batching incorrecto
             setLogs(prev => {
                 const updateMap = new Map(updates.map(u => [u.id, u.data]));
                 const updated = prev.map(l => updateMap.has(l.id) ? { ...l, ...updateMap.get(l.id) } : l);
                 return [...updated, ...inserts.map(i => i.data)];
             });
 
-            // 2. Notificar o administrador que o cliente aceitou e os dados foram aplicados
             const timestamp = Date.now();
             const adminNotifId = `accp_${notif.id}_${timestamp}`;
             await saveToDb('app_notifications', adminNotifId, {
@@ -287,12 +303,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 is_active: true
             });
 
-            // 3. Marcar a notificação atual como lida
             handleDismissNotif(notif.id);
-
             alert("As alterações foram aplicadas! Por favor, assine agora o relatório atualizado.");
-
-            // 4. Levar o cliente para a área de assinatura
             window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
 
         } catch (error) {
@@ -300,27 +312,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             alert("Ocorreu um erro ao atualizar os dados. Por favor, tente novamente.");
         }
     }, [clientData, clientSession, supabase, logs, initialClientId, saveToDb]);
-
-    const handleDismissNotif = (id) => {
-        setDismissedNotifs(prev => {
-            if (prev.includes(id)) return prev;
-            const updated = [...prev, id];
-            localStorage.setItem(`dismissed_client_notifs_${initialClientId}`, JSON.stringify(updated));
-            return updated;
-        });
-    };
-
-    const clientObj = clients.find(c => c.id === effectiveClientId) || { name: 'Cliente Não Encontrado' };
-    const getMonthName = (monthStr) => {
-        if (!monthStr || monthStr.length !== 7) return monthStr;
-        const [y, m] = monthStr.split('-');
-        const d = new Date(y, m - 1);
-        return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-    };
-
-    const clientData = useMemo(() => {
-        return { name: clientObj.name, period: getMonthName(selectedMonth) };
-    }, [clientObj, selectedMonth]);
 
     const availableMonths = useMemo(() => {
         if (!effectiveClientId) return [];
