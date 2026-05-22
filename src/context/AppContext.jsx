@@ -49,6 +49,8 @@ export const AppProvider = ({ children }) => {
   // --- VIEW & AUTH STATE ---
   const [view, setView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
+    const isClientPortalDomain = window.location.hostname.includes('painelcliente');
+    if (isClientPortalDomain) return 'client_portal';
     return params.get('view') || localStorage.getItem('magnetic_view') || 'login';
   });
   
