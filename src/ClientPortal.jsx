@@ -1078,11 +1078,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         return (
                                             <div key={dateStr}
                                                 onClick={() => setCalSelectedDay(isSelected ? null : dateStr)}
-                                                className="relative m-0.5 rounded-xl overflow-hidden cursor-pointer select-none flex flex-col"
+                                                className="relative m-0.3 rounded-xl overflow-hidden cursor-pointer select-none flex flex-col"
                                                 style={{ background: 'linear-gradient(160deg, #064e3b 0%, #065f46 60%, #047857 100%)', minHeight: '100%' }}>
                                                 {/* Número do dia + dot */}
                                                 <div className="flex items-center justify-between px-3 pt-0.5">
-                                                    <span className="text-xs font-black text-white/60 leading-none">{dayNum}</span>
+                                                    <span className="text-s font-black text-white/60 leading-none">{dayNum}</span>
                                                     <div className="flex items-center gap-1">
                                                         <span className="text-[7px] font-black text-emerald-300 uppercase tracking-widest">ao vivo</span>
                                                         <span className="relative flex h-2.7 w-2.7">
@@ -1093,12 +1093,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                 </div>
                                                 {/* Worker rotativo — centrado, ocupa tudo */}
                                                 {currentLog && currentW ? (
-                                                    <div className="flex-1 flex flex-col items-center justify-start text-center px-1 pt-0.1 pb-0 gap-1.0">
-                                                        <p className="text-xs font-black text-white leading-tight w-full truncate">{currentW.name}</p>
-                                                        <p className="text-[9px] font-bold text-emerald-400 uppercase tracking-wide lead    ing-none w-full truncate mt-0.3">{currentW.profissao || currentW.role || '—'}</p>
-                                                        <p className="flex items-center justify-center gap-1 mt-2.5 leading-none">{statusIcon}<span className="font-black text-white text-sm">{statusTime}</span></p>
+                                                    <div className="flex-1 flex flex-col items-center justify-start text-center px-1 pt-0.1 pb-0 gap-0.3">
+                                                        <div className="text-[11.7px] gap-1 mt-1.5 font-black text-white leading-tight w-full truncate">{currentW.name}</div>
+                                                        <p className="text-[9.9px] font-bold text-emerald-400 uppercase tracking-wide leading-none w-full truncate mt-0.7">{currentW.profissao || currentW.role || '—'}</p>
+                                                        <div className="flex items-center justify-center gap-1 mt-1.5 leading-none">{statusIcon}<span className="font-black text-white text-xs">{statusTime}</span></div>
                                                         {todayAllLogs.length > 1 && (
-                                                            <div className="flex gap-0.5 mt-2 w-full px-1">
+                                                            <div className="flex gap-0.5 mt-5 w-full px-1">
                                                                 {todayAllLogs.map((l, di) => (
                                                                     <span key={di} className={`h-0.5 flex-1 rounded-full ${di === wIdx ? (l.endTime ? 'bg-rose-400' : 'bg-emerald-300') : 'bg-white/20'}`} />
                                                                 ))}
