@@ -30,7 +30,6 @@ function TagBadge({ nome, cor }) {
   );
 }
 import { useApp } from '../../context/AppContext';
-import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 
 function TipoBadge({ tipo }) {
   if (tipo === 'credito') return (
@@ -615,87 +614,6 @@ function matchClientByDesc(descricao, clients) {
   return bestMatch;
 }
 
-// ─── Componentes de Análise Salarial ─────────────────────────────────────────
-const MESES_PT_SAL = {
-  '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
-  '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
-  '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
-};
-
-function fmtEur(v) {
-  return (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-
-function SalarioEmployeeCard({ employee }) {
-  const [open, setOpen] = React.useState(false);
-  const allMatch = employee.months.every(m => m.status === 'Match Exato');
-  const pending = employee.months.filter(m => m.status !== 'Match Exato').length;
-  return (
-    <div className="border border-slate-200 rounded-2xl overflow-hidden">
-      <button onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left">
-        <div className="flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allMatch ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-          <span className="text-sm font-bold text-slate-800">{employee.employee_name}</span>
-          <span className="text-[10px] text-slate-400">{employee.months.length} mês(es)</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-[10px] font-black uppercase tracking-widest ${allMatch ? 'text-emerald-600' : 'text-amber-600'}`}>
-            {allMatch ? 'Tudo Ok' : `${pending} pendente(s)`}
-          </span>
-          {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
-        </div>
-      </button>
-      {open && (
-        <div className="divide-y divide-slate-100 bg-slate-50">
-          {employee.months.map(m => {
-            const [ano, mm] = m.month.split('-');
-            const isMatch = m.status === 'Match Exato';
-            return (
-              <div key={m.month} className="px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                      {MESES_PT_SAL[mm]} {ano}
-                    </span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isMatch ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {isMatch ? <CheckCircle size={9} /> : <AlertCircle size={9} />} {m.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3 text-[11px] text-slate-600">
-                    <span>Recibo: <strong>{fmtEur(m.expected_amount)}</strong></span>
-                    <span>Pago: <strong>{fmtEur(m.total_paid)}</strong></span>
-                    <span className={`font-bold ${Math.abs(m.balance) <= 0.01 ? 'text-emerald-600' : 'text-red-600'}`}>
-                      Saldo: {fmtEur(m.balance)}
-                    </span>
-                  </div>
-                </div>
-                {m.transfers.length > 0 ? (
-                  <div className="space-y-1">
-                    {m.transfers.map((t, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
-                            {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
-                          </span>
-                          <span className="text-[11px] text-slate-500">{t.date}</span>
-                        </div>
-                        <span className="text-[12px] font-bold text-slate-700">{fmtEur(t.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-slate-400 italic">Nenhuma transferência identificada</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
 
@@ -765,16 +683,6 @@ export default function ReconciliacaoAdmin() {
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [runSelecionado, setRunSelecionado] = useState(null); // run do histórico a ver
   const [reprocessando, setReprocessando] = useState(null); // id do run a reprocessar
-
-  // ── Aba Salários ──────────────────────────────────────────────────────────
-  const [salarioTxJson, setSalarioTxJson] = useState([]);   // tx do run activo (novo)
-  const [salarioResultado, setSalarioResultado] = useState(null);
-  const [loadingSalarios, setLoadingSalarios] = useState(false);
-  const [salarioAliases, setSalarioAliases] = useState([]);  // { id, pattern, worker_name }
-  const [salarioAssocModal, setSalarioAssocModal] = useState(null); // { tx } | null
-  const [salarioAssocPattern, setSalarioAssocPattern] = useState('');
-  const [salarioAssocWorker, setSalarioAssocWorker] = useState('');
-  const [salarioAssocSaving, setSalarioAssocSaving] = useState(false);
 
   // ── Formulário inserção manual ─────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -883,8 +791,6 @@ export default function ReconciliacaoAdmin() {
   useEffect(() => {
     carregarHistorico();
     carregarTags();
-    supabase?.from('reconciliacao_salarial_aliases').select('*').order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setSalarioAliases(data); });
   }, []);
 
   // Carregar links de cliente quando muda o run activo
@@ -913,41 +819,6 @@ export default function ReconciliacaoAdmin() {
     setOrphanObservacoes(obs);
     setOrphanClassificacoes(classif);
   }, [runSelecionado?.id, resultado?.run_id]);
-
-  // Análise salarial — corre quando o tab Salários é activado
-  useEffect(() => {
-    if (activeSubTab !== 'salarios' || !supabase) return;
-    const isHistoryRun = !!runSelecionado;
-    const runCreatedAt = runSelecionado?.created_at;
-    const year = runCreatedAt
-      ? String(new Date(runCreatedAt).getFullYear())
-      : String(new Date().getFullYear());
-
-    setLoadingSalarios(true);
-    setSalarioResultado(null);
-
-    const analyze = async (txs) => {
-      const { data: recibos } = await supabase
-        .from('receipt_validations')
-        .select('worker_id, worker_name, mes, liquido_extraido')
-        .like('mes', `${year}-%`)
-        .not('estado', 'in', '("erro","invalido")');
-      const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases: salarioAliases });
-      setSalarioResultado(res);
-      setLoadingSalarios(false);
-    };
-
-    if (isHistoryRun) {
-      supabase
-        .from('reconciliation_runs')
-        .select('transactions_json')
-        .eq('id', runSelecionado.id)
-        .single()
-        .then(({ data }) => analyze(data?.transactions_json || []));
-    } else {
-      analyze(salarioTxJson);
-    }
-  }, [activeSubTab, runSelecionado?.id, resultado?.run_id]);
 
   const carregarTags = async () => {
     const { data } = await supabase
@@ -1242,8 +1113,6 @@ export default function ReconciliacaoAdmin() {
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
       setResultado(data);
-      setSalarioTxJson(selected);
-      setSalarioResultado(null);
       setActiveSubTab('matched');
       setPreviewTransacoes(null);
       setFicheiros([]);
@@ -2245,7 +2114,6 @@ export default function ReconciliacaoAdmin() {
                 { key: 'matched',       labelFull: 'Reconciliados', labelShort: 'Recon.',  count: (displayData.matched?.length ?? 0) + clientAssocMatched.length },
                 { key: 'orphan_bank',   labelFull: 'Órfãos Banco',  labelShort: 'Banco',   count: Math.max(0, (displayData.orphan_bank?.length ?? 0) - orphanBankAssocSet.size) },
                 { key: 'orphan_system', labelFull: 'Órfãos Sistema', labelShort: 'Sistema', count: displayData.orphan_system?.length ?? 0 },
-                { key: 'salarios',      labelFull: 'Salários',       labelShort: 'Sal.',    count: null },
               ].map(tab => (
                 <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
                   className={`flex-1 px-2 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -2641,193 +2509,7 @@ export default function ReconciliacaoAdmin() {
             );
           })()}
 
-          {/* Sub-tab: Salários */}
-          {activeSubTab === 'salarios' && (
-            <div className="space-y-3">
-              {loadingSalarios ? (
-                <div className="flex flex-col items-center justify-center py-12 gap-3">
-                  <Loader2 size={24} className="animate-spin text-indigo-400" />
-                  <p className="text-[11px] text-slate-400">A analisar pagamentos salariais…</p>
-                </div>
-              ) : !salarioResultado ? (
-                <p className="text-center text-slate-400 py-8 text-sm">Sem dados de análise salarial.</p>
-              ) : (
-                <>
-                  {/* Sumário */}
-                  <div className="grid grid-cols-3 gap-3 mb-2">
-                    {[
-                      { label: 'Trabalhadores', value: salarioResultado.summary.total_employees_processed, color: 'text-slate-700', bg: 'bg-slate-50' },
-                      { label: 'Match Exato',   value: salarioResultado.summary.total_exact_matches,       color: 'text-emerald-700', bg: 'bg-emerald-50' },
-                      { label: 'Pendentes',     value: salarioResultado.summary.total_pending_balances,    color: 'text-amber-700',   bg: 'bg-amber-50' },
-                    ].map(c => (
-                      <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center`}>
-                        <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
-                      </div>
-                    ))}
-                  </div>
 
-                  {salarioResultado.employees.length === 0 ? (
-                    <div className="text-center py-8 text-[12px] text-slate-400">
-                      Nenhum trabalhador identificado nas transferências.<br />
-                      Verifique se os nomes constam nas descrições dos movimentos bancários.
-                    </div>
-                  ) : (
-                    salarioResultado.employees.map(emp => (
-                      <SalarioEmployeeCard key={emp.employee_name} employee={emp} />
-                    ))
-                  )}
-
-                  {/* Transferências não identificadas */}
-                  {(salarioResultado.unmatched_transactions || []).length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-2 flex items-center gap-1">
-                        <AlertCircle size={11} /> Não Identificadas ({salarioResultado.unmatched_transactions.length})
-                      </p>
-                      <div className="space-y-1">
-                        {salarioResultado.unmatched_transactions.map((tx, i) => (
-                          <div key={i} className="flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
-                            <div className="flex-1 min-w-0 mr-3">
-                              <p className="text-[11px] text-slate-600 truncate">{tx.descricao}</p>
-                              <p className="text-[10px] text-slate-400">{tx.date} · {fmtEur(tx.amount)}</p>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setSalarioAssocModal(tx);
-                                setSalarioAssocPattern('');
-                                setSalarioAssocWorker('');
-                              }}
-                              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
-                            >
-                              Associar
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Lista de aliases activos */}
-                  {salarioAliases.length > 0 && (
-                    <div className="mt-3 border-t border-slate-100 pt-3">
-                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2">Aliases Guardados</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {salarioAliases.map(a => (
-                          <div key={a.id} className="flex items-center gap-1 bg-slate-100 rounded-xl px-2 py-1">
-                            <span className="text-[10px] text-slate-600 max-w-[120px] truncate">{a.pattern}</span>
-                            <span className="text-[9px] text-slate-400">→</span>
-                            <span className="text-[10px] font-bold text-indigo-700 max-w-[100px] truncate">{a.worker_name}</span>
-                            <button
-                              onClick={async () => {
-                                await supabase.from('reconciliacao_salarial_aliases').delete().eq('id', a.id);
-                                setSalarioAliases(prev => prev.filter(x => x.id !== a.id));
-                                setSalarioResultado(null);
-                              }}
-                              className="ml-1 text-slate-300 hover:text-rose-500 transition-colors"
-                            >
-                              <X size={10} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Modal: associar transação não identificada a trabalhador */}
-          {salarioAssocModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-              <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-sm font-black text-slate-800">Associar Transferência</h3>
-                  <button onClick={() => setSalarioAssocModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-                </div>
-
-                <div className="bg-slate-50 rounded-2xl px-4 py-3">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Descrição do movimento</p>
-                  <p className="text-[12px] text-slate-700 break-all">{salarioAssocModal.descricao}</p>
-                  <p className="text-[11px] text-slate-500 mt-1">{salarioAssocModal.date} · {fmtEur(salarioAssocModal.amount)}</p>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">
-                      Padrão a identificar (parte da descrição)
-                    </label>
-                    <input
-                      value={salarioAssocPattern}
-                      onChange={e => setSalarioAssocPattern(e.target.value)}
-                      placeholder="Ex: João Silva"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    />
-                    {(() => {
-                      const p = salarioAssocPattern.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-                      if (p.length < 4) return (
-                        <p className="text-[10px] text-slate-400 mt-1">Escreve parte do nome do trabalhador tal como aparece na descrição (mínimo 4 caracteres).</p>
-                      );
-                      const allTx = (salarioResultado?.unmatched_transactions || []);
-                      const matchCount = allTx.filter(t =>
-                        t.descricao.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(p)
-                      ).length;
-                      if (matchCount === 0) return (
-                        <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> Nenhuma transação corresponde a este padrão.</p>
-                      );
-                      if (matchCount > 1) return (
-                        <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> Este padrão vai capturar {matchCount} transferências. Sê mais específico se só queres associar esta.</p>
-                      );
-                      return (
-                        <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><CheckCircle size={10} /> Corresponde exactamente a 1 transferência.</p>
-                      );
-                    })()}
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">
-                      Trabalhador
-                    </label>
-                    <select
-                      value={salarioAssocWorker}
-                      onChange={e => setSalarioAssocWorker(e.target.value)}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    >
-                      <option value="">Seleccionar…</option>
-                      {[...new Set((salarioResultado?.employees || []).map(e => e.employee_name))].sort().map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-2">
-                  <button onClick={() => setSalarioAssocModal(null)}
-                    className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                    Cancelar
-                  </button>
-                  <button
-                    disabled={!salarioAssocPattern.trim() || !salarioAssocWorker || salarioAssocSaving}
-                    onClick={async () => {
-                      setSalarioAssocSaving(true);
-                      const newAlias = { pattern: salarioAssocPattern.trim(), worker_name: salarioAssocWorker };
-                      const { data, error } = await supabase.from('reconciliacao_salarial_aliases').insert(newAlias).select().single();
-                      if (!error && data) setSalarioAliases(prev => [data, ...prev]);
-                      setSalarioAssocSaving(false);
-                      setSalarioAssocModal(null);
-                      // Re-trigger salary analysis
-                      setSalarioResultado(null);
-                      setActiveSubTab('matched');
-                      setTimeout(() => setActiveSubTab('salarios'), 50);
-                    }}
-                    className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-                  >
-                    {salarioAssocSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Guardar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Sub-tab: Órfãos Sistema */}
           {activeSubTab === 'orphan_system' && (

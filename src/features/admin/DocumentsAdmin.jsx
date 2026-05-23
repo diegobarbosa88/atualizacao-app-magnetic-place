@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   FileText, Eye, Trash2, Search, Upload, Loader2, Plus, X,
   Clock, FileSignature, CheckCircle, ChevronUp, ChevronDown, LayoutList, BarChart3,
-  Users, Building2, Activity, History, Zap
+  Users, Building2, Activity, History, Zap, Coins, Receipt,
 } from 'lucide-react';
 import { formatDocDate } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
@@ -16,6 +16,8 @@ import {
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
+import SalariosTab from './SalariosTab';
+import FaturasTab from './FaturasTab';
 import FaturasAdmin from './FaturasAdmin';
 import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
@@ -42,6 +44,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const props = { workers, documents, setDocuments, systemSettings, onSwitchTab, ...rest };
   const { supabase: clientSupabase, companySignature, stampStyle } = useApp();
   const [activeSubTab, setActiveSubTab] = useState('documentos');
+  const [validarSubTab, setValidarSubTab] = useState('recibos');
 
   const {
     generatedDocs,
@@ -366,7 +369,25 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       </div>
 
       {activeSubTab === 'validar-recibo' ? (
-        <ValidarReciboAdmin workers={workers} />
+        <>
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-sm">
+            {[
+              { id: 'recibos',  label: 'Recibos',  icon: CheckCircle },
+              { id: 'salarios', label: 'Salários', icon: Coins },
+              { id: 'faturas',  label: 'Faturas',  icon: Receipt },
+            ].map(t => (
+              <button key={t.id} onClick={() => setValidarSubTab(t.id)}
+                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  validarSubTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                }`}>
+                <t.icon size={12} /> {t.label}
+              </button>
+            ))}
+          </div>
+          {validarSubTab === 'recibos' && <ValidarReciboAdmin workers={workers} />}
+          {validarSubTab === 'salarios' && <SalariosTab />}
+          {validarSubTab === 'faturas' && <FaturasTab />}
+        </>
       ) : activeSubTab === 'templates' ? (
         <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
       ) : activeSubTab === 'relatorios' ? (

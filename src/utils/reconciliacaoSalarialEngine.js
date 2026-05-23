@@ -34,7 +34,7 @@ function toDisplayDate(isoDate) {
 }
 
 // aliases: [{ pattern: string, worker_name: string }]
-export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [] }) {
+export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [], tolerancia = 0.01 }) {
   const txDebito = transacoes.filter(t => t.tipo === 'debito' && t.valor > 0);
 
   // Build worker map from receipts
@@ -118,7 +118,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
             expected_amount: m.expected_amount,
             total_paid,
             balance,
-            status: Math.abs(balance) <= 0.01 ? 'Match Exato' : 'Saldo Pendente',
+            status: Math.abs(balance) <= tolerancia ? 'Match Exato' : 'Saldo Pendente',
             transfers: m.transfers,
           };
         }),
