@@ -485,8 +485,8 @@ function AdminDashboard(props) {
         <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-6" style={{ maxWidth: `var(--app-max-width)` }}>
           {/* Lado Esquerdo: Logo */}
           <div className="flex items-center justify-between w-full md:w-auto">
-            <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase shrink-0">
-              <CompanyLogo className="h-8 w-8" />
+            <div className="flex items-center gap-3 font-bold text-base tracking-tighter uppercase shrink-0">
+              <CompanyLogo className="h-17 w-auto" />
               <span className="hidden md:inline">{systemSettings.companyName}</span>
             </div>
             {/* Mobile Actions */}
