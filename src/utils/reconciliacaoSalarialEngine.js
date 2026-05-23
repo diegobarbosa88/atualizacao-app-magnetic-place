@@ -16,13 +16,10 @@ function workerScore(workerName, descricao) {
 function classifyTransfer(txDate, refMes) {
   if (!txDate || !refMes) return null;
   const [refYear, refMonth] = refMes.split('-').map(Number);
-  const parts = txDate.split('-').map(Number);
-  const [txYear, txMonth, txDay] = parts;
+  const [txYear, txMonth, txDay] = txDate.split('-').map(Number);
 
-  // Adiantamento: dias 15-31 do mês de referência
   if (txYear === refYear && txMonth === refMonth && txDay >= 15) return 'Adiantamento';
 
-  // Liquidação: dias 1-15 do mês seguinte
   const nextMonth = refMonth === 12 ? 1 : refMonth + 1;
   const nextYear = refMonth === 12 ? refYear + 1 : refYear;
   if (txYear === nextYear && txMonth === nextMonth && txDay <= 15) return 'Liquidação';
@@ -36,8 +33,8 @@ function toDisplayDate(isoDate) {
   return `${d}.${m}.${y}`;
 }
 
-export function runReconciliacaoSalarial({ recibos, transacoes, ano }) {
-  // Only outgoing payments
+// aliases: [{ pattern: string, worker_name: string }]
+export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [] }) {
   const txDebito = transacoes.filter(t => t.tipo === 'debito' && t.valor > 0);
 
   // Build worker map from receipts
@@ -64,41 +61,48 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano }) {
     }
   });
 
-  // Assign each transaction to best-matching worker, then classify per month
-  txDebito.forEach(tx => {
-    let bestWorker = null;
-    let bestScore = 0;
+  const matchedIndices = new Set();
 
-    Object.values(workerMap).forEach(w => {
-      const score = workerScore(w.employee_name, tx.descricao);
-      if (score > bestScore) {
-        bestScore = score;
-        bestWorker = w;
+  txDebito.forEach((tx, idx) => {
+    // 1. Check manual aliases first (exact substring in description)
+    let targetWorker = null;
+    const nDesc = normStr(tx.descricao);
+    for (const alias of aliases) {
+      if (alias.pattern && nDesc.includes(normStr(alias.pattern))) {
+        targetWorker = workerMap[normStr(alias.worker_name)] ?? null;
+        if (targetWorker) break;
       }
-    });
+    }
 
-    // Require at least 2 matching significant words
-    if (!bestWorker || bestScore < 2) return;
+    // 2. Fallback: score-based automatic matching
+    if (!targetWorker) {
+      let bestScore = 0;
+      Object.values(workerMap).forEach(w => {
+        const score = workerScore(w.employee_name, tx.descricao);
+        if (score > bestScore) { bestScore = score; targetWorker = w; }
+      });
+      if (!targetWorker || bestScore < 2) return; // unmatched
+    }
 
-    // Classify against every month this worker has a receipt for
-    Object.values(bestWorker._monthsMap).forEach(monthData => {
+    matchedIndices.add(idx);
+
+    Object.values(targetWorker._monthsMap).forEach(monthData => {
       const type = classifyTransfer(tx.data, monthData.month);
       if (!type) return;
-      // Avoid duplicate (same tx already added to this month)
       const alreadyAdded = monthData.transfers.some(
         t => t.date === toDisplayDate(tx.data) && t.amount === tx.valor && t.type === type
       );
       if (!alreadyAdded) {
-        monthData.transfers.push({
-          date: toDisplayDate(tx.data),
-          amount: tx.valor,
-          type,
-        });
+        monthData.transfers.push({ date: toDisplayDate(tx.data), amount: tx.valor, type });
       }
     });
   });
 
-  // Compute totals and status
+  // Unmatched debits — returned so the UI can let the user assign them manually
+  const unmatched_transactions = txDebito
+    .filter((_, i) => !matchedIndices.has(i))
+    .map(tx => ({ date: toDisplayDate(tx.data), data: tx.data, amount: tx.valor, descricao: tx.descricao }));
+
   const employees = Object.values(workerMap)
     .filter(w => w.months.length > 0)
     .map(w => ({
@@ -131,5 +135,6 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano }) {
       total_pending_balances: totalPending,
     },
     employees,
+    unmatched_transactions,
   };
 }
