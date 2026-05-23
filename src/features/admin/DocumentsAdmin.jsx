@@ -18,7 +18,6 @@ import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmi
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import FaturasAdmin from './FaturasAdmin';
 import ReconciliacaoAdmin from './ReconciliacaoAdmin';
-import ReconciliacaoSalarialAdmin from './ReconciliacaoSalarialAdmin';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 
@@ -345,7 +344,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             { id: 'documentos', icon: FileText, label: 'Documentos' },
             { id: 'faturas', icon: FileText, label: 'Faturas' },
             { id: 'reconciliacao', icon: Activity, label: 'Reconciliação' },
-            { id: 'rec-salarial', icon: Users, label: 'Rec. Salarial' },
             { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
             { id: 'validar-recibo', icon: CheckCircle, label: 'Validar' },
@@ -377,8 +375,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         <FaturasAdmin />
       ) : activeSubTab === 'reconciliacao' ? (
         <ReconciliacaoAdmin />
-      ) : activeSubTab === 'rec-salarial' ? (
-        <ReconciliacaoSalarialAdmin />
       ) : (
         <>
           {/* Pills de contagem por estado */}

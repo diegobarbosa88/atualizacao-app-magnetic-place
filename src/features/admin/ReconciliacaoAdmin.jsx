@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
   AlertCircle, Clock, FileText, Loader2, Plus, ArrowLeftRight,
-  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag, Download, Unlink, Pencil, Link2
+  ArrowDownLeft, ArrowUpRight, Trash2, RefreshCw, Tag, Download, Unlink, Pencil, Link2, Coins
 } from 'lucide-react';
 
 const COR_MAP = {
@@ -30,6 +30,7 @@ function TagBadge({ nome, cor }) {
   );
 }
 import { useApp } from '../../context/AppContext';
+import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 
 function TipoBadge({ tipo }) {
   if (tipo === 'credito') return (
@@ -614,6 +615,87 @@ function matchClientByDesc(descricao, clients) {
   return bestMatch;
 }
 
+// ─── Componentes de Análise Salarial ─────────────────────────────────────────
+const MESES_PT_SAL = {
+  '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
+  '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+  '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
+};
+
+function fmtEur(v) {
+  return (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+function SalarioEmployeeCard({ employee }) {
+  const [open, setOpen] = React.useState(false);
+  const allMatch = employee.months.every(m => m.status === 'Match Exato');
+  const pending = employee.months.filter(m => m.status !== 'Match Exato').length;
+  return (
+    <div className="border border-slate-200 rounded-2xl overflow-hidden">
+      <button onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left">
+        <div className="flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allMatch ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+          <span className="text-sm font-bold text-slate-800">{employee.employee_name}</span>
+          <span className="text-[10px] text-slate-400">{employee.months.length} mês(es)</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-[10px] font-black uppercase tracking-widest ${allMatch ? 'text-emerald-600' : 'text-amber-600'}`}>
+            {allMatch ? 'Tudo Ok' : `${pending} pendente(s)`}
+          </span>
+          {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+        </div>
+      </button>
+      {open && (
+        <div className="divide-y divide-slate-100 bg-slate-50">
+          {employee.months.map(m => {
+            const [ano, mm] = m.month.split('-');
+            const isMatch = m.status === 'Match Exato';
+            return (
+              <div key={m.month} className="px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                      {MESES_PT_SAL[mm]} {ano}
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${isMatch ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {isMatch ? <CheckCircle size={9} /> : <AlertCircle size={9} />} {m.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-slate-600">
+                    <span>Recibo: <strong>{fmtEur(m.expected_amount)}</strong></span>
+                    <span>Pago: <strong>{fmtEur(m.total_paid)}</strong></span>
+                    <span className={`font-bold ${Math.abs(m.balance) <= 0.01 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      Saldo: {fmtEur(m.balance)}
+                    </span>
+                  </div>
+                </div>
+                {m.transfers.length > 0 ? (
+                  <div className="space-y-1">
+                    {m.transfers.map((t, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
+                            {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
+                          </span>
+                          <span className="text-[11px] text-slate-500">{t.date}</span>
+                        </div>
+                        <span className="text-[12px] font-bold text-slate-700">{fmtEur(t.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic">Nenhuma transferência identificada</p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
 
@@ -683,6 +765,11 @@ export default function ReconciliacaoAdmin() {
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [runSelecionado, setRunSelecionado] = useState(null); // run do histórico a ver
   const [reprocessando, setReprocessando] = useState(null); // id do run a reprocessar
+
+  // ── Aba Salários ──────────────────────────────────────────────────────────
+  const [salarioTxJson, setSalarioTxJson] = useState([]);   // tx do run activo (novo)
+  const [salarioResultado, setSalarioResultado] = useState(null);
+  const [loadingSalarios, setLoadingSalarios] = useState(false);
 
   // ── Formulário inserção manual ─────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -819,6 +906,41 @@ export default function ReconciliacaoAdmin() {
     setOrphanObservacoes(obs);
     setOrphanClassificacoes(classif);
   }, [runSelecionado?.id, resultado?.run_id]);
+
+  // Análise salarial — corre quando o tab Salários é activado
+  useEffect(() => {
+    if (activeSubTab !== 'salarios' || !supabase) return;
+    const isHistoryRun = !!runSelecionado;
+    const runCreatedAt = runSelecionado?.created_at;
+    const year = runCreatedAt
+      ? String(new Date(runCreatedAt).getFullYear())
+      : String(new Date().getFullYear());
+
+    setLoadingSalarios(true);
+    setSalarioResultado(null);
+
+    const analyze = async (txs) => {
+      const { data: recibos } = await supabase
+        .from('receipt_validations')
+        .select('worker_id, worker_name, mes, liquido_extraido')
+        .like('mes', `${year}-%`)
+        .not('estado', 'in', '("erro","invalido")');
+      const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year });
+      setSalarioResultado(res);
+      setLoadingSalarios(false);
+    };
+
+    if (isHistoryRun) {
+      supabase
+        .from('reconciliation_runs')
+        .select('transactions_json')
+        .eq('id', runSelecionado.id)
+        .single()
+        .then(({ data }) => analyze(data?.transactions_json || []));
+    } else {
+      analyze(salarioTxJson);
+    }
+  }, [activeSubTab, runSelecionado?.id, resultado?.run_id]);
 
   const carregarTags = async () => {
     const { data } = await supabase
@@ -1113,6 +1235,8 @@ export default function ReconciliacaoAdmin() {
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
       setResultado(data);
+      setSalarioTxJson(selected);
+      setSalarioResultado(null);
       setActiveSubTab('matched');
       setPreviewTransacoes(null);
       setFicheiros([]);
@@ -2114,6 +2238,7 @@ export default function ReconciliacaoAdmin() {
                 { key: 'matched',       labelFull: 'Reconciliados', labelShort: 'Recon.',  count: (displayData.matched?.length ?? 0) + clientAssocMatched.length },
                 { key: 'orphan_bank',   labelFull: 'Órfãos Banco',  labelShort: 'Banco',   count: Math.max(0, (displayData.orphan_bank?.length ?? 0) - orphanBankAssocSet.size) },
                 { key: 'orphan_system', labelFull: 'Órfãos Sistema', labelShort: 'Sistema', count: displayData.orphan_system?.length ?? 0 },
+                { key: 'salarios',      labelFull: 'Salários',       labelShort: 'Sal.',    count: null },
               ].map(tab => (
                 <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
                   className={`flex-1 px-2 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -2121,7 +2246,7 @@ export default function ReconciliacaoAdmin() {
                   }`}>
                   <span className="hidden sm:inline">{tab.labelFull}</span>
                   <span className="sm:hidden">{tab.labelShort}</span>
-                  {' '}({tab.count})
+                  {tab.count !== null && ` (${tab.count})`}
                 </button>
               ))}
             </div>
@@ -2508,6 +2633,47 @@ export default function ReconciliacaoAdmin() {
               </div>
             );
           })()}
+
+          {/* Sub-tab: Salários */}
+          {activeSubTab === 'salarios' && (
+            <div className="space-y-3">
+              {loadingSalarios ? (
+                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                  <Loader2 size={24} className="animate-spin text-indigo-400" />
+                  <p className="text-[11px] text-slate-400">A analisar pagamentos salariais…</p>
+                </div>
+              ) : !salarioResultado ? (
+                <p className="text-center text-slate-400 py-8 text-sm">Sem dados de análise salarial.</p>
+              ) : (
+                <>
+                  {/* Sumário */}
+                  <div className="grid grid-cols-3 gap-3 mb-2">
+                    {[
+                      { label: 'Trabalhadores', value: salarioResultado.summary.total_employees_processed, color: 'text-slate-700', bg: 'bg-slate-50' },
+                      { label: 'Match Exato',   value: salarioResultado.summary.total_exact_matches,       color: 'text-emerald-700', bg: 'bg-emerald-50' },
+                      { label: 'Pendentes',     value: salarioResultado.summary.total_pending_balances,    color: 'text-amber-700',   bg: 'bg-amber-50' },
+                    ].map(c => (
+                      <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center`}>
+                        <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {salarioResultado.employees.length === 0 ? (
+                    <div className="text-center py-8 text-[12px] text-slate-400">
+                      Nenhum trabalhador identificado nas transferências.<br />
+                      Verifique se os nomes constam nas descrições dos movimentos bancários.
+                    </div>
+                  ) : (
+                    salarioResultado.employees.map(emp => (
+                      <SalarioEmployeeCard key={emp.employee_name} employee={emp} />
+                    ))
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* Sub-tab: Órfãos Sistema */}
           {activeSubTab === 'orphan_system' && (
