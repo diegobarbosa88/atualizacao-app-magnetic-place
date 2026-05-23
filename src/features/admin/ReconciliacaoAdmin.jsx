@@ -2694,7 +2694,7 @@ export default function ReconciliacaoAdmin() {
                             <button
                               onClick={() => {
                                 setSalarioAssocModal(tx);
-                                setSalarioAssocPattern(tx.descricao.split(' ').slice(0, 4).join(' '));
+                                setSalarioAssocPattern('');
                                 setSalarioAssocWorker('');
                               }}
                               className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
@@ -2763,7 +2763,25 @@ export default function ReconciliacaoAdmin() {
                       placeholder="Ex: João Silva"
                       className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
                     />
-                    <p className="text-[10px] text-slate-400 mt-1">Futuras transferências com este texto serão automaticamente associadas ao mesmo trabalhador.</p>
+                    {(() => {
+                      const p = salarioAssocPattern.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+                      if (p.length < 4) return (
+                        <p className="text-[10px] text-slate-400 mt-1">Escreve parte do nome do trabalhador tal como aparece na descrição (mínimo 4 caracteres).</p>
+                      );
+                      const allTx = (salarioResultado?.unmatched_transactions || []);
+                      const matchCount = allTx.filter(t =>
+                        t.descricao.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(p)
+                      ).length;
+                      if (matchCount === 0) return (
+                        <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> Nenhuma transação corresponde a este padrão.</p>
+                      );
+                      if (matchCount > 1) return (
+                        <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> Este padrão vai capturar {matchCount} transferências. Sê mais específico se só queres associar esta.</p>
+                      );
+                      return (
+                        <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><CheckCircle size={10} /> Corresponde exactamente a 1 transferência.</p>
+                      );
+                    })()}
                   </div>
 
                   <div>
