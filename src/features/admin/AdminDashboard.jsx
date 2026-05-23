@@ -486,18 +486,18 @@ function AdminDashboard(props) {
           {/* Lado Esquerdo: Logo */}
           <div className="flex items-center justify-between w-full md:w-auto">
             <div className="flex items-center gap-3 font-bold text-base tracking-tighter uppercase shrink-0">
-              <CompanyLogo className="h-17 w-auto" />
+              <CompanyLogo className="h-14 w-auto" />
               <span className="hidden md:inline">{systemSettings.companyName}</span>
             </div>
             {/* Mobile Actions */}
-            <div className="flex md:hidden items-center gap-2">
-              <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative">
-                <Bell size={18} />
+            <div className="flex md:hidden items-center gap-1">
+              <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative">
+                <Bell size={17} />
                 {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
               </button>
-              {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"><Users size={18} /></button>}
-              <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"><BarChart3 size={18} /></button>
-              <button onClick={onLogout} className="p-2 text-slate-400"><LogOut size={18} /></button>
+              {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"><Users size={18} /></button>}
+              <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"><BarChart3 size={18} /></button>
+              <button onClick={onLogout} className="p-1 text-slate-400"><LogOut size={18} /></button>
             </div>
           </div>
 
@@ -516,10 +516,10 @@ function AdminDashboard(props) {
 
           {/* Lado Direito: Ações */}
           <div className="hidden md:flex items-center gap-4 shrink-0">
-            <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm relative"><Bell size={18} /> {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}</button>
-            <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"><BarChart3 size={18} /></button>
-            {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Users size={18} /></button>}
-            <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={20} /></button>
+            <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm relative"><Bell size={18} /> {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}</button>
+            <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"><BarChart3 size={18} /></button>
+            {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Users size={18} /></button>}
+            <button onClick={onLogout} className="p-1 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={20} /></button>
           </div>
         </div>
       </nav>
