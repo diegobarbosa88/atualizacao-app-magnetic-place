@@ -172,18 +172,24 @@ function normWorker(s) {
 
 function workerScore(descricao, workerName) {
   const descNorm = normWorker(descricao);
-  const tokens = normWorker(workerName).split(' ').filter(w => w.length >= 3);
+  const workerNorm = normWorker(workerName);
+  if (!workerNorm || workerNorm.length < 3) return 0;
+  if (descNorm.includes(workerNorm) || workerNorm.includes(descNorm)) return 3;
+  const tokens = workerNorm.split(' ').filter(w => w.length >= 2);
   if (tokens.length === 0) return 0;
-  return tokens.filter(t => descNorm.includes(t)).length;
+  const hits = tokens.filter(t => descNorm.includes(t)).length;
+  return hits;
 }
 
 function findBestReceipt(matchedWorkerName, txData, receipts) {
-  const prevMonth = previousMonth(txData); // recibos do mês N são pagos no mês N+1
+  const prevMonth = previousMonth(txData);
   const txMonth = txData.substring(0, 7);
   const workerNorm = normWorker(matchedWorkerName);
-  const workerReceipts = receipts.filter(r => normWorker(r.worker_name) === workerNorm);
+  const workerReceipts = receipts.filter(r => {
+    const rNorm = normWorker(r.worker_name);
+    return rNorm.includes(workerNorm) || workerNorm.includes(rNorm);
+  });
   if (workerReceipts.length === 0) return null;
-  // Prioridade: mês anterior (padrão: recibo de Abril pago em Maio)
   return workerReceipts.find(r => r.mes === prevMonth)
     || workerReceipts.find(r => r.mes === txMonth)
     || workerReceipts.sort((a, b) => b.mes.localeCompare(a.mes))[0];
@@ -767,13 +773,21 @@ export default function MovimentacoesTab() {
         }
       }
 
-      // 2. Token scoring por nome de trabalhador
+      // 2. Token scoring por nome de trabalhador (mais permissivo)
       if (!matchedWorkerName) {
+        const descClean = normWorker(tx.descricao)
+          .replace(/\bp\/\s*/gi, '')
+          .replace(/\bapp\s*\d*/gi, '')
+          .replace(/\bapp\b/gi, '')
+          .replace(/\d+/g, '')
+          .replace(/[-&]/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
         const uniqueWorkers = [...new Map(recsArr.map(r => [normWorker(r.worker_name), r])).values()];
-        let bestScore = 1; // mínimo 2 tokens
+        let bestScore = 0;
         for (const receipt of uniqueWorkers) {
-          const score = workerScore(tx.descricao, receipt.worker_name);
-          if (score >= 2 && score > bestScore) {
+          const score = workerScore(descClean, receipt.worker_name);
+          if (score >= 1 && score > bestScore) {
             bestScore = score;
             matchedWorkerName = receipt.worker_name;
           }
@@ -818,15 +832,17 @@ export default function MovimentacoesTab() {
       const bankNorm = normName(bankName);
       const descUpper = String(tx.descricao || '').toUpperCase();
 
-      // 1. Alias explícito
-      const alias = alsArr.find(a => normName(a.bank_name) === bankNorm);
+      // 1. Alias explícito (fuzzy match)
+      const alias = alsArr.find(a => {
+        const aNorm = normName(a.bank_name);
+        return bankNorm.includes(aNorm) || aNorm.includes(bankNorm);
+      });
       if (alias) {
         if (alias.resolucao === 'interno') {
           toInsertInternos.push({ run_id: rid, tx_key: key });
           existingIntKeys.add(key);
           continue;
         }
-        // nota_credito: apenas para créditos (não auto-match débitos como fatura)
         if (alias.resolucao === 'nota_credito' && alias.client_id && tx.tipo === 'credito') {
           toInsertNcs.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
           existingNcKeys.add(key);
@@ -841,18 +857,20 @@ export default function MovimentacoesTab() {
         continue;
       }
 
-      // 2b. Palavras-chave de taxa bancária (débito apenas)
+      // 2b. Taxa bancária: débitos com keywords de banco
+      //    Avaliado DEPOIS de alias para permitir alias sobrescrever
       if (tx.tipo === 'debito' && BANCO_KEYWORDS.some(k => descUpper.includes(k))) {
         const faturaBanco = fatsArr.find(f =>
           f.dados?.fornecedor === 'Novo Banco, S.A.' &&
-          f.dados?.numero_fatura === '4314117912'
+          String(f.dados?.numero_fatura) === '4314117912'
         );
         if (faturaBanco) {
           toInsertFaturas.push({ fatura_id: faturaBanco.id, run_id: rid, tx_key: key, auto_matched: true });
-        } else {
-          toInsertInternos.push({ run_id: rid, tx_key: key });
           existingIntKeys.add(key);
+          continue;
         }
+        toInsertInternos.push({ run_id: rid, tx_key: key });
+        existingIntKeys.add(key);
         continue;
       }
 
