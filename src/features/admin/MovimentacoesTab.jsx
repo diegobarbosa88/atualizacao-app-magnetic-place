@@ -901,13 +901,11 @@ export default function MovimentacoesTab() {
         if (ncFinder) console.log('[DEBUG] NC 2026/000058894 found! status:', ncFinder.status, 'valor_total:', ncFinder.dados?.valor_total);
         for (const f of fatsArr) {
           if (!f.dados?.numero_fatura?.startsWith('NC')) continue;
-          if (f.status === 'PAGO') continue;
           const valorFat = Math.abs(parseFloat(f.dados?.valor_total) || 0);
           if (Math.abs(valorTx - valorFat) > 0.01) continue;
           const tokens = normName(f.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
           if (tokens.length === 0) continue;
           const hits = tokens.filter(t => descNorm.includes(t)).length;
-          console.log('[DEBUG] Step4 - checking NC:', f.dados?.numero_fatura, 'tokens:', tokens, 'hits:', hits, 'descNorm:', descNorm);
           if (hits >= 1) {
             console.log('[DEBUG] Step4 - NC MATCHED! client_id:', f.id);
             toInsertNcs.push({ run_id: rid, tx_key: key, client_id: f.id, period: tx.data.substring(0, 7) });
