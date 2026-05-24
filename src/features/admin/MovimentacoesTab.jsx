@@ -901,6 +901,40 @@ export default function MovimentacoesTab() {
           }
         }
       }
+
+      // 5. Ligação virtual: crédito não matched → fatura cliente pendente → diferença coberta por fatura fornecedor (comissão bancária)
+      if (tx.tipo === 'credito' && !existingNcKeys.has(key) && !toInsertFaturas.some(f => f.tx_key === key)) {
+        const valorTx = Math.abs(parseFloat(tx.valor) || 0);
+
+        // a) Procurar fatura de cliente (tipo=cliente, status=PENDENTE) com valor > tx.valor
+        const clienteFatura = fatsArr.find(f =>
+          f.tipo === 'cliente' &&
+          f.status === 'PENDENTE' &&
+          Number(f.dados?.valor_total) > valorTx + 0.01
+        );
+
+        if (clienteFatura) {
+          const valorFaturaCliente = Math.abs(parseFloat(clienteFatura.dados?.valor_total) || 0);
+          const diferenca = valorFaturaCliente - valorTx;
+
+          // b) Se diferença está entre 0.01 e 0.50 (tolerância), procurar fatura fornecedor
+          if (diferenca > 0.01 && diferenca <= 0.50) {
+            const fornecedorFatura = fatsArr.find(f =>
+              f.tipo === 'fornecedor' &&
+              f.status === 'PENDENTE' &&
+              Math.abs(parseFloat(f.dados?.valor_total || 0) - diferenca) <= 0.01
+            );
+
+            if (fornecedorFatura) {
+              // Criar links: entrada → fatura cliente
+              toInsertFaturas.push({ fatura_id: clienteFatura.id, run_id: rid, tx_key: key, auto_matched: true });
+              // Atualizar status das faturas para PAGO
+              sb.from('faturas').update({ status: 'PAGO' }).eq('id', clienteFatura.id).then(() => {});
+              sb.from('faturas').update({ status: 'PAGO' }).eq('id', fornecedorFatura.id).then(() => {});
+            }
+          }
+        }
+      }
     }
 
     let count = 0;
