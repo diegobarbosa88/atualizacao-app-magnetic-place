@@ -936,6 +936,17 @@ export default function ReconciliacaoAdmin() {
     // Apagar registos de associação de clientes ligados a este run
     await supabase.from('faturacao_clientes_pagamentos').delete().eq('reconciliation_run_id', runId);
 
+    // Apagar links de faturas e reset status das faturas para PENDENTE
+    const { data: linksFaturas } = await supabase
+      .from('fatura_pagamento_links')
+      .select('fatura_id')
+      .eq('run_id', runId);
+    if (linksFaturas?.length > 0) {
+      const faturaIds = [...new Set(linksFaturas.map(l => l.fatura_id))];
+      await supabase.from('faturas').update({ status: 'PENDENTE' }).in('id', faturaIds);
+      await supabase.from('fatura_pagamento_links').delete().eq('run_id', runId);
+    }
+
     const { error, count } = await supabase.from('reconciliation_runs').delete({ count: 'exact' }).eq('id', runId);
     if (error) { alert(`Erro ao apagar: ${error.message}`); return; }
     if (count === 0) { alert('Sem permissão para apagar. Aplique a política RLS de DELETE na tabela reconciliation_runs.'); return; }
