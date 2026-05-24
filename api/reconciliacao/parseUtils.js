@@ -97,6 +97,7 @@ export function parseCsv(content) {
   const debitoCol = detectColumn(headers, ['débito', 'debito', 'debit']);
   const creditoCol = detectColumn(headers, ['crédito', 'credito', 'credit']);
   const tipoCol = detectColumn(headers, ['tipo movimento', 'tipo', 'type']);
+  const nibCol = detectColumn(headers, ['nib', 'iban', 'nib ordenante', 'iban ordenante', 'nib do ordenante', 'conta origem', 'conta_origem', 'nib origem']);
 
   if (!dataCol || (!valorCol && !debitoCol && !creditoCol)) {
     const err = new Error('UNRECOGNIZED_COLUMNS');
@@ -131,6 +132,7 @@ export function parseCsv(content) {
       data: normalizeDate(row[dataCol]),
       descricao: String(row[descricaoCol] || '').trim(),
       tipoMovimento: tipoCol ? String(row[tipoCol] || '').trim() : null,
+      nib: nibCol ? String(row[nibCol] || '').trim() || null : null,
       valor,
       tipo,
     };
@@ -155,7 +157,7 @@ export function parseCsvColumns(content) {
 
 // Processa CSV com mapeamento explícito de colunas fornecido pelo utilizador
 export function parseCsvWithMapping(content, mapping) {
-  const { dataCol, valorCol, descricaoCol, debitoCol, creditoCol, tipoCol } = mapping;
+  const { dataCol, valorCol, descricaoCol, debitoCol, creditoCol, tipoCol, nibCol } = mapping;
   const cleaned = content.replace(/^﻿/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   const firstLine = cleaned.split('\n')[0];
   const delimiter = detectDelimiter(firstLine);
@@ -190,6 +192,7 @@ export function parseCsvWithMapping(content, mapping) {
       data: normalizeDate(row[dataCol]),
       descricao: String(row[descricaoCol] || '').trim(),
       tipoMovimento: tipoCol ? String(row[tipoCol] || '').trim() : null,
+      nib: nibCol ? String(row[nibCol] || '').trim() || null : null,
       valor,
       tipo,
     };

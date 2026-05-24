@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   FileText, Eye, Trash2, Search, Upload, Loader2, Plus, X,
   Clock, FileSignature, CheckCircle, ChevronUp, ChevronDown, LayoutList, BarChart3,
-  Users, Building2, Activity, History, Zap, Coins, Receipt,
+  Users, Building2, Activity, History, Zap, Coins, Receipt, TrendingUp,
 } from 'lucide-react';
 import { formatDocDate } from '../../utils/dateUtils';
 import { useApp } from '../../context/AppContext';
@@ -18,6 +18,7 @@ import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmi
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import SalariosTab from './SalariosTab';
 import FaturasTab from './FaturasTab';
+import MovimentacoesTab from './MovimentacoesTab';
 import FaturasAdmin from './FaturasAdmin';
 import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
@@ -370,11 +371,12 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
 
       {activeSubTab === 'validar-recibo' ? (
         <>
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-sm">
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-lg">
             {[
               { id: 'recibos',  label: 'Recibos',  icon: CheckCircle },
               { id: 'salarios', label: 'Salários', icon: Coins },
               { id: 'faturas',  label: 'Faturas',  icon: Receipt },
+              { id: 'entradas', label: 'Movimentações', icon: TrendingUp },
             ].map(t => (
               <button key={t.id} onClick={() => setValidarSubTab(t.id)}
                 className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
@@ -387,6 +389,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           {validarSubTab === 'recibos' && <ValidarReciboAdmin workers={workers} />}
           {validarSubTab === 'salarios' && <SalariosTab />}
           {validarSubTab === 'faturas' && <FaturasTab />}
+          {validarSubTab === 'entradas' && <MovimentacoesTab />}
         </>
       ) : activeSubTab === 'templates' ? (
         <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
