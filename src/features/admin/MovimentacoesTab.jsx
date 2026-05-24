@@ -6,6 +6,7 @@ import {
   X, Loader2, Download, FileText, MessageSquare, Undo2,
   ArrowLeftRight, Link, Tag, Trash2, Zap, Plus, Receipt,
   TrendingUp, TrendingDown, UserCheck, FileMinus,
+  RefreshCw,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -1343,6 +1344,19 @@ if (toInsertNcs.length > 0) {
             )}
           </button>
         ))}
+
+        {/* Botão Atualizar Match */}
+        <button
+          onClick={handleRunAutoMatch}
+          disabled={autoMatching}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 ml-auto"
+        >
+          {autoMatching ? (
+            <><Loader2 size={11} className="animate-spin" /> A procurar...</>
+          ) : (
+            <><RefreshCw size={11} /> Atualizar Match</>
+          )}
+        </button>
       </div>
 
       {/* KPIs */}
