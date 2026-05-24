@@ -902,8 +902,9 @@ export default function MovimentacoesTab() {
         }
       }
 
-      // 5. Ligação virtual: crédito não matched → fatura cliente pendente → diferença coberta por fatura fornecedor (comissão bancária)
-      if (tx.tipo === 'credito' && !existingNcKeys.has(key) && !toInsertFaturas.some(f => f.tx_key === key)) {
+      // 5. Ligação virtual: crédito → fatura cliente pendente → diferença coberta por fatura fornecedor (comissão bancária)
+      // Executa mesmo se Step 3 já fez match (existingNcKeys) — precisamos verificar se a fatura cliente fica PAGA
+      if (tx.tipo === 'credito' && !toInsertFaturas.some(f => f.tx_key === key)) {
         const valorTx = Math.abs(parseFloat(tx.valor) || 0);
 
         // a) Procurar fatura de cliente (tipo=cliente, status=PENDENTE) com valor > tx.valor
@@ -917,7 +918,7 @@ export default function MovimentacoesTab() {
           const valorFaturaCliente = Math.abs(parseFloat(clienteFatura.dados?.valor_total) || 0);
           const diferenca = valorFaturaCliente - valorTx;
 
-          // b) Se diferença está entre 0.01 e 0.50 (tolerância), procurar fatura fornecedor
+          // b) Se diferença está entre 0.01 e 500 (tolerância), procurar fatura fornecedor
           if (diferenca > 0.01 && diferenca <= 500.00) {
             const fornecedorFatura = fatsArr.find(f =>
               f.tipo === 'fornecedor' &&
