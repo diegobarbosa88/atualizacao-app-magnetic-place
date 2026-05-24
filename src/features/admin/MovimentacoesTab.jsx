@@ -824,9 +824,13 @@ export default function MovimentacoesTab() {
     const existingIntKeys = new Set(curInternos.map(i => i.tx_key));
     const existingNcKeys = new Set(curNcs.map(n => n.tx_key));
 
+    console.log('[DEBUG] Processing tx:', key, 'tipo:', tx.tipo, 'desc:', tx.descricao, 'valor:', tx.valor);
     for (const tx of unresolved) {
       const key = txKey(tx);
-      if (existingIntKeys.has(key) || existingNcKeys.has(key) || extraExcludeKeys.has(key)) continue;
+      if (existingIntKeys.has(key) || existingNcKeys.has(key) || extraExcludeKeys.has(key)) {
+        console.log('[DEBUG] SKIPPED - already matched or excluded');
+        continue;
+      }
 
       const bankName = extractBankName(tx.descricao);
       const bankNorm = normName(bankName);
@@ -838,6 +842,7 @@ export default function MovimentacoesTab() {
         return bankNorm.includes(aNorm) || aNorm.includes(bankNorm);
       });
       if (alias) {
+        console.log('[DEBUG] Step1 - ALIAS matched:', alias.bank_name, 'resolucao:', alias.resolucao);
         if (alias.resolucao === 'interno') {
           toInsertInternos.push({ run_id: rid, tx_key: key });
           existingIntKeys.add(key);
@@ -852,6 +857,7 @@ export default function MovimentacoesTab() {
 
       // 2. Palavras-chave de interno
       if (INTERNO_KEYWORDS.some(k => descUpper.includes(k))) {
+        console.log('[DEBUG] Step2 - INTERNO keyword matched');
         toInsertInternos.push({ run_id: rid, tx_key: key });
         existingIntKeys.add(key);
         continue;
@@ -860,6 +866,7 @@ export default function MovimentacoesTab() {
       // 2b. Taxa bancária: débitos com keywords de banco
       //    Avaliado DEPOIS de alias para permitir alias sobrescrever
       if (tx.tipo === 'debito' && BANCO_KEYWORDS.some(k => descUpper.includes(k))) {
+        console.log('[DEBUG] Step2b - BANCO keyword matched');
         const faturaBanco = fatsArr.find(f =>
           f.dados?.fornecedor === 'Novo Banco, S.A.' &&
           String(f.dados?.numero_fatura) === '4314117912'
@@ -876,7 +883,9 @@ export default function MovimentacoesTab() {
 
       // 3. Match por tokens de cliente (apenas créditos)
       if (tx.tipo === 'credito') {
+        console.log('[DEBUG] Step3 - matchClientByTokens. descNorm:', normName(tx.descricao || ''), 'clientList.len:', clientList.length);
         const client = matchClientByTokens(tx.descricao, clientList);
+        console.log('[DEBUG] Step3 result:', client ? `MATCHED client ${client.name} id=${client.id}` : 'no match');
         if (client) {
           toInsertNcs.push({ run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
           existingNcKeys.add(key);
@@ -887,6 +896,9 @@ export default function MovimentacoesTab() {
       if (tx.tipo === 'credito' && !existingNcKeys.has(key)) {
         const valorTx = Math.abs(parseFloat(tx.valor) || 0);
         const descNorm = normName(tx.descricao || '');
+        console.log('[DEBUG] Step4 - NC matching. valorTx:', valorTx, 'fatsArr.len:', fatsArr.length, 'NCs:', fatsArr.filter(f=>f.dados?.numero_fatura?.startsWith('NC')).length);
+        const ncFinder = fatsArr.find(f=>f.dados?.numero_fatura === 'NC 2026/000058894');
+        if (ncFinder) console.log('[DEBUG] NC 2026/000058894 found! status:', ncFinder.status, 'valor_total:', ncFinder.dados?.valor_total);
         for (const f of fatsArr) {
           if (!f.dados?.numero_fatura?.startsWith('NC')) continue;
           if (f.status === 'PAGO') continue;
@@ -895,7 +907,9 @@ export default function MovimentacoesTab() {
           const tokens = normName(f.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
           if (tokens.length === 0) continue;
           const hits = tokens.filter(t => descNorm.includes(t)).length;
+          console.log('[DEBUG] Step4 - checking NC:', f.dados?.numero_fatura, 'tokens:', tokens, 'hits:', hits, 'descNorm:', descNorm);
           if (hits >= 1) {
+            console.log('[DEBUG] Step4 - NC MATCHED! client_id:', f.id);
             toInsertNcs.push({ run_id: rid, tx_key: key, client_id: f.id, period: tx.data.substring(0, 7) });
             existingNcKeys.add(key);
             break;
