@@ -922,7 +922,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:24px;}
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor (€)</label>
-                  <input type="number" value={faturaForm.valor} onChange={e => setFaturaForm({ ...faturaForm, valor: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-indigo-700 outline-none shadow-sm" placeholder="0.00" />
+                  <input type="text" value={faturaForm.valor} onChange={e => setFaturaForm({ ...faturaForm, valor: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-indigo-700 outline-none shadow-sm" placeholder="0,00" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label>
