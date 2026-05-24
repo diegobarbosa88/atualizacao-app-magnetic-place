@@ -419,6 +419,8 @@ export default function MovimentacoesTab() {
   const [aliases, setAliases] = useState([]);
   const [runId, setRunId] = useState(null);
   const [runData, setRunData] = useState(null);
+  const [activeRunId, setActiveRunId] = useState(null);
+  const [allRuns, setAllRuns] = useState([]);
   const [loading, setLoading] = useState(false);
   const [autoMatching, setAutoMatching] = useState(false);
   const [autoMatchCount, setAutoMatchCount] = useState(null);
@@ -475,18 +477,41 @@ export default function MovimentacoesTab() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  // ── Load run data ──────────────────────────────────────────────────────────
 
-  // ── Auto-match ─────────────────────────────────────────────────────────────
-
-  const handleRunAutoMatch = async () => {
+  const loadRun = async (overrideRunId) => {
     if (!supabase) return;
-    const { data: run } = await supabase
-      .from('reconciliation_runs')
-      .select('id, transactions_json, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+
+    let run;
+    if (overrideRunId) {
+      const { data } = await supabase
+        .from('reconciliation_runs')
+        .select('id, filename, transactions_json, created_at')
+        .eq('id', overrideRunId)
+        .single();
+      run = data;
+    } else if (activeRunId) {
+      const { data } = await supabase
+        .from('reconciliation_runs')
+        .select('id, filename, transactions_json, created_at')
+        .eq('id', activeRunId)
+        .single();
+      run = data;
+    }
+
+    if (!run) {
+      const { data } = await supabase
+        .from('reconciliation_runs')
+        .select('id, filename, transactions_json, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      run = data;
+      if (run) {
+        setActiveRunId(run.id);
+        setAllRuns(prev => prev.some(r => r.id === run.id) ? prev : [run, ...prev].slice(0, 10));
+      }
+    }
 
     if (!run) return;
 
@@ -592,8 +617,25 @@ export default function MovimentacoesTab() {
     }
   };
 
+  const handleRunAutoMatch = async () => {
+    await loadRun();
+  };
+
   useEffect(() => {
     handleRunAutoMatch();
+  }, []);
+
+  useEffect(() => {
+    const fetchRuns = async () => {
+      if (!supabase) return;
+      const { data } = await supabase
+        .from('reconciliation_runs')
+        .select('id, filename, created_at')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (data) setAllRuns(data);
+    };
+    fetchRuns();
   }, []);
 
   async function updateFaturasPagoIfComplete(fatsArr, curFatLinks, txsData, sb, rid) {
@@ -1346,7 +1388,7 @@ if (toInsertNcs.length > 0) {
         <button
           onClick={handleRunAutoMatch}
           disabled={autoMatching}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50 ml-auto"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-colors disabled:opacity-50"
         >
           {autoMatching ? (
             <><Loader2 size={11} className="animate-spin" /> A procurar...</>
@@ -1355,6 +1397,28 @@ if (toInsertNcs.length > 0) {
           )}
         </button>
       </div>
+
+      {/* Run selector */}
+      {allRuns.length > 1 && (
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-black text-slate-400 uppercase">Extrato:</span>
+          <select
+            value={activeRunId || ''}
+            onChange={e => {
+              const id = e.target.value;
+              setActiveRunId(id);
+              loadRun(id);
+            }}
+            className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
+          >
+            {allRuns.map(r => (
+              <option key={r.id} value={r.id}>
+                {r.filename || 'Sem nome'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="flex items-start justify-between gap-3">
