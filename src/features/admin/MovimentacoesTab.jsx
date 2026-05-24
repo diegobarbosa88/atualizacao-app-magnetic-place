@@ -1,0 +1,1723 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import {
+  CheckCircle, AlertCircle, ChevronDown, ChevronUp,
+  X, Loader2, Download, FileText, MessageSquare, Undo2,
+  ArrowLeftRight, Link, Tag, Trash2, Zap, Plus, Receipt,
+  TrendingUp, TrendingDown, UserCheck, FileMinus,
+} from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const MESES = { '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr', '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez' };
+
+const INTERNO_KEYWORDS = [
+  'TRF INTERNA', 'TRANSF INTERNA', 'TRANSFERENCIA INTERNA',
+  'TRF ENTRE CONTAS', 'TRANSFERENCIA ENTRE CONTAS',
+  'CONTA PROPRIA', 'PROPRIA CONTA',
+];
+
+const BANCO_KEYWORDS = [
+  'COMISSÃO DE MANUTENÇÃO', 'MANUTENÇÃO DE CONTA',
+  'IMPOSTO SELO', 'DEB IMPOSTO SELO',
+  'COMISSÃO', 'TARIFA', 'TAXE', 'COMMISSION',
+  'COMISSAO', 'COMISSÃO DE', 'DEB COMISSÃO',
+];
+
+// Status internos (não mudam com tipo da tx)
+const STATUS_KEYS = {
+  COM_CLIENTE:  'Com Cliente',
+  COM_RECIBO:   'Com Recibo',
+  COM_FATURA:   'Com Fatura',
+  NOTA_CREDITO: 'Nota Crédito',
+  INTERNO:      'Interno',
+  JUSTIFICADO:  'Justificado',
+  SEM_CLIENTE:  'Sem Cliente',
+};
+
+const STATUS_CFG = {
+  'Com Cliente':  { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: CheckCircle },
+  'Com Recibo':   { bg: 'bg-teal-100',    text: 'text-teal-700',    icon: UserCheck },
+  'Com Fatura':   { bg: 'bg-orange-100',  text: 'text-orange-700',  icon: FileMinus },
+  'Nota Crédito': { bg: 'bg-blue-100',    text: 'text-blue-700',    icon: Link },
+  'Com NC':       { bg: 'bg-indigo-100',  text: 'text-indigo-700',  icon: FileText },
+  'Interno':      { bg: 'bg-purple-100',  text: 'text-purple-700',  icon: ArrowLeftRight },
+  'Justificado':  { bg: 'bg-violet-100',  text: 'text-violet-700',  icon: MessageSquare },
+  'Sem Cliente':  { bg: 'bg-amber-100',   text: 'text-amber-700',   icon: AlertCircle },
+};
+
+function isTaxaBancaria(desc) {
+  if (!desc) return false;
+  const descUpper = String(desc).toUpperCase();
+  return BANCO_KEYWORDS.some(k => descUpper.includes(k));
+}
+
+// Labels visuais dependentes do tipo da transacção
+function labelStatus(status, tipo, ncEntry, faturasData, descricao) {
+  if (status === 'Interno' && descricao && isTaxaBancaria(descricao)) return 'Taxa Bancária';
+  if (tipo === 'debito') {
+    if (status === 'Com Cliente')  return 'Com Fatura';
+    if (status === 'Nota Crédito') return 'Fatura';
+    if (status === 'Sem Cliente')  return 'Sem Fatura';
+  }
+  if (status === 'Nota Crédito') {
+    if (ncEntry && faturasData) {
+      const isFornecedorNc = faturasData.some(f => f.id === ncEntry.client_id && f.dados?.numero_fatura?.startsWith('NC'));
+      return isFornecedorNc ? 'Com NC' : 'Cliente';
+    }
+    return 'Cliente';
+  }
+  if (status === 'Sem Cliente')  return 'Sem Entrada';
+  return status;
+}
+
+// ── Utilitários ───────────────────────────────────────────────────────────────
+
+function fmtEur(v) {
+  return (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
+
+function fmtMes(yyyymm) {
+  if (!yyyymm) return '—';
+  const [ano, mm] = yyyymm.split('-');
+  return `${MESES[mm] || mm} ${ano}`;
+}
+
+function txKey(tx) {
+  return `${tx.data}|${tx.descricao}|${tx.valor}`;
+}
+
+function previousMonth(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setMonth(d.getMonth() - 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function extractBankName(desc) {
+  const patterns = [
+    /TRF\s+IMEDIATA\s+DE\s+/i, /TRANSFERENCIA\s+DE\s+/i,
+    /TRANSF(?:ERENCIA)?\s+DE\s+/i, /TRF\s+DE\s+/i,
+    /ORDEM\s+DE\s+PAGAMENTO\s+DE\s+/i, /PAGAMENTO\s+DE\s+/i,
+    /PAGT\s+DE\s+/i, /RECEBIDO\s+DE\s+/i, /REC\s+DE\s+/i,
+  ];
+  for (const p of patterns) {
+    const m = String(desc || '').match(p);
+    if (m) return String(desc).slice(m.index + m[0].length).trim();
+  }
+  return String(desc || '').trim();
+}
+
+function normName(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\b(unipessoal|lda|s\.?a\.?|ltd|sa|sl|srl|eirl|me|eireli|inc|llc|gmbh|bv)\b/gi, '')
+    .replace(/[.,\-&']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function sigTokens(name) {
+  return normName(name).split(' ').filter(w => w.length >= 3);
+}
+
+function matchClientByTokens(descricao, clients) {
+  const descNorm = normName(descricao || '');
+  let bestMatch = null;
+  let bestScore = 0;
+  for (const client of (clients || [])) {
+    const tokens = sigTokens(client.name || '');
+    if (tokens.length === 0) continue;
+    const hits = tokens.filter(t => descNorm.includes(t)).length;
+    const score = hits / tokens.length;
+    if (hits >= 1 && score >= 0.75 && score > bestScore) {
+      bestScore = score;
+      bestMatch = client;
+    }
+  }
+  return bestMatch;
+}
+
+function clienteLink(tx, pagamentos) {
+  return pagamentos?.find(p =>
+    p.transaction_data?.data === tx.data &&
+    p.transaction_data?.descricao === tx.descricao &&
+    String(p.transaction_data?.valor) === String(tx.valor)
+  );
+}
+
+function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks) {
+  const key = txKey(tx);
+  if (clienteLink(tx, pagamentos)) return STATUS_KEYS.COM_CLIENTE;
+  if (reciboLinks?.some(r => r.tx_key === key)) return STATUS_KEYS.COM_RECIBO;
+  if (faturaLinks?.some(f => f.tx_key === key)) return STATUS_KEYS.COM_FATURA;
+  if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.NOTA_CREDITO;
+  if (internos?.some(i => i.tx_key === key)) return STATUS_KEYS.INTERNO;
+  if (justificacoes?.some(j => j.tx_key === key)) return STATUS_KEYS.JUSTIFICADO;
+  return STATUS_KEYS.SEM_CLIENTE;
+}
+
+// Normalização para matching de nomes de trabalhadores
+function normWorker(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[.,\-&']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function workerScore(descricao, workerName) {
+  const descNorm = normWorker(descricao);
+  const tokens = normWorker(workerName).split(' ').filter(w => w.length >= 3);
+  if (tokens.length === 0) return 0;
+  return tokens.filter(t => descNorm.includes(t)).length;
+}
+
+function findBestReceipt(matchedWorkerName, txData, receipts) {
+  const prevMonth = previousMonth(txData); // recibos do mês N são pagos no mês N+1
+  const txMonth = txData.substring(0, 7);
+  const workerNorm = normWorker(matchedWorkerName);
+  const workerReceipts = receipts.filter(r => normWorker(r.worker_name) === workerNorm);
+  if (workerReceipts.length === 0) return null;
+  // Prioridade: mês anterior (padrão: recibo de Abril pago em Maio)
+  return workerReceipts.find(r => r.mes === prevMonth)
+    || workerReceipts.find(r => r.mes === txMonth)
+    || workerReceipts.sort((a, b) => b.mes.localeCompare(a.mes))[0];
+}
+
+// ── Linha de transacção ───────────────────────────────────────────────────────
+
+function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
+  const status = statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks);
+  const tipo = tx.tipo; // 'credito' | 'debito'
+  const key = txKey(tx);
+  const link = clienteLink(tx, pagamentos);
+  const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
+  const justEntry = justificacoes.find(j => j.tx_key === key);
+  const ncEntry = notasCredito.find(n => n.tx_key === key);
+  const ncClientName = ncEntry ? (clients?.find(c => c.id === ncEntry.client_id)?.name || (faturasData?.find(f => f.id === ncEntry.client_id)?.dados?.fornecedor) || ncEntry.client_id) : null;
+  const reciboEntry = reciboLinks?.find(r => r.tx_key === key);
+  const faturaEntry = faturaLinks?.find(f => f.tx_key === key);
+  const faturaData = faturaEntry ? faturasData?.find(f => f.id === faturaEntry.fatura_id) : null;
+  const cfg = STATUS_CFG[status] || STATUS_CFG['Sem Cliente'];
+  const Icon = cfg.icon;
+  const displayStatus = labelStatus(status, tipo, ncEntry, faturasData, tx.descricao);
+
+  return (
+    <div className="px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex flex-col gap-1 min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{tx.data}</span>
+
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${cfg.bg} ${cfg.text}`}>
+              <Icon size={9} /> {displayStatus}
+              {ncEntry?.auto_matched && status === STATUS_KEYS.NOTA_CREDITO && (
+                <Zap size={8} className="ml-0.5 opacity-60" title="Auto-match" />
+              )}
+              {internos.find(i2 => i2.tx_key === key)?.auto_matched && status === STATUS_KEYS.INTERNO && (
+                <Zap size={8} className="ml-0.5 opacity-60" title="Auto-match" />
+              )}
+            </span>
+
+            {status === STATUS_KEYS.COM_CLIENTE && clientName && (
+              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{clientName}</span>
+            )}
+            {status === STATUS_KEYS.COM_RECIBO && reciboEntry && (
+              <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">
+                {reciboEntry.worker_name} · {fmtMes(reciboEntry.mes)}
+                {reciboEntry.auto_matched && <Zap size={8} className="inline ml-0.5 opacity-60" title="Auto-match" />}
+              </span>
+            )}
+            {status === STATUS_KEYS.COM_RECIBO && (
+              <button onClick={() => onDesfazerRecibo(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
+            {status === STATUS_KEYS.COM_FATURA && faturaData && (
+              <span className="text-[9px] font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-full">
+                {faturaData.dados?.fornecedor || '—'}{faturaData.dados?.numero_fatura ? ` · ${faturaData.dados.numero_fatura}` : ''}
+                {faturaEntry?.auto_matched && <Zap size={8} className="inline ml-0.5 opacity-60" title="Auto-match" />}
+              </span>
+            )}
+            {status === STATUS_KEYS.COM_FATURA && (
+              <button onClick={() => onDesfazerFatura(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
+            {status === STATUS_KEYS.NOTA_CREDITO && ncClientName && (
+              <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                {ncClientName} · {fmtMes(ncEntry.period)}
+              </span>
+            )}
+            {status === STATUS_KEYS.JUSTIFICADO && (
+              <span className="text-[9px] text-slate-400 italic max-w-[200px] truncate" title={justEntry?.justification}>
+                "{justEntry?.justification}"
+              </span>
+            )}
+
+            {status === STATUS_KEYS.NOTA_CREDITO && (
+              <button onClick={() => onDesfazerCliente(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
+            {status === STATUS_KEYS.INTERNO && (
+              <button onClick={() => onDesfazerInterno(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
+            {status === STATUS_KEYS.JUSTIFICADO && (
+              <button onClick={() => onRemoverJustificacao(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
+          </div>
+          <p className="text-[10px] text-slate-400 truncate max-w-sm" title={tx.descricao}>{tx.descricao}</p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className={`text-[12px] font-bold ${tipo === 'debito' ? 'text-rose-600' : 'text-emerald-700'}`}>
+            {tipo === 'debito' ? '-' : ''}{fmtEur(Math.abs(parseFloat(tx.valor) || 0))}
+          </span>
+          {status === STATUS_KEYS.SEM_CLIENTE && (
+            <div className="flex items-center gap-1 flex-wrap justify-end">
+              {tipo === 'debito' && (
+                <button onClick={() => onAcaoRecibo(tx)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors">
+                  <UserCheck size={9} /> Recibo
+                </button>
+              )}
+              {tipo === 'debito' && (
+                <button onClick={() => onAcaoFatura(tx)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
+                  <FileMinus size={9} /> Fatura Doc
+                </button>
+              )}
+              {tipo === 'debito' ? (
+                <button onClick={() => onAcaoCliente(tx)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                  <Receipt size={9} /> Fatura
+                </button>
+              ) : (
+                <button onClick={() => onAcaoCliente(tx)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                  <Link size={9} /> Cliente
+                </button>
+              )}
+              <button onClick={() => onMarcarInterno(tx)}
+                className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
+                <ArrowLeftRight size={9} /> Interno
+              </button>
+              <button onClick={() => onJustificar(tx)}
+                className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors">
+                <MessageSquare size={9} /> Justificar
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Card por mês ──────────────────────────────────────────────────────────────
+
+function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
+  const [open, setOpen] = useState(false);
+  const semCliente = txs.filter(tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks) === STATUS_KEYS.SEM_CLIENTE).length;
+  const allOk = semCliente === 0;
+  const totalMes = txs.reduce((s, tx) => {
+    const v = parseFloat(tx.valor) || 0;
+    return s + (tx.tipo === 'debito' ? -Math.abs(v) : Math.abs(v));
+  }, 0);
+
+  return (
+    <div className="border border-slate-200 rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+      >
+        <div className="flex items-center gap-3">
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+          <span className="text-sm font-bold text-slate-800">{fmtMes(mes)}</span>
+          <span className="text-[10px] text-slate-400">{txs.length} transacção(ões)</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className={`text-[11px] font-black ${totalMes < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
+            {totalMes < 0 ? '-' : ''}{fmtEur(Math.abs(totalMes))}
+          </span>
+          <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
+            {allOk ? 'Tudo Ok' : `${semCliente} s/ resolver`}
+          </span>
+          {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+        </div>
+      </button>
+
+      {open && (
+        <div className="divide-y divide-slate-100 bg-slate-50">
+          {txs.map((tx, i) => (
+            <TxRow
+              key={i}
+              tx={tx}
+              pagamentos={pagamentos}
+              justificacoes={justificacoes}
+              internos={internos}
+              notasCredito={notasCredito}
+              reciboLinks={reciboLinks}
+              faturaLinks={faturaLinks}
+              faturasData={faturasData}
+              clients={clients}
+              onJustificar={onJustificar}
+              onRemoverJustificacao={onRemoverJustificacao}
+              onMarcarInterno={onMarcarInterno}
+              onDesfazerInterno={onDesfazerInterno}
+              onAcaoCliente={onAcaoCliente}
+              onDesfazerCliente={onDesfazerCliente}
+              onAcaoRecibo={onAcaoRecibo}
+              onDesfazerRecibo={onDesfazerRecibo}
+              onAcaoFatura={onAcaoFatura}
+              onDesfazerFatura={onDesfazerFatura}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
+
+export default function MovimentacoesTab() {
+  const { supabase, clients } = useApp();
+
+  const [allTxs, setAllTxs] = useState([]);
+  const [pagamentos, setPagamentos] = useState([]);
+  const [justificacoes, setJustificacoes] = useState([]);
+  const [internos, setInternos] = useState([]);
+  const [notasCredito, setNotasCredito] = useState([]);
+  const [reciboLinks, setReciboLinks] = useState([]);
+  const [faturaLinks, setFaturaLinks] = useState([]);
+  const [faturasData, setFaturasData] = useState([]);
+  const [receipts, setReceipts] = useState([]);
+  const [salarialAliases, setSalarialAliases] = useState([]);
+  const [aliases, setAliases] = useState([]);
+  const [runId, setRunId] = useState(null);
+  const [runData, setRunData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [autoMatching, setAutoMatching] = useState(false);
+  const [autoMatchCount, setAutoMatchCount] = useState(null);
+  const [showAliases, setShowAliases] = useState(false);
+  const [filter, setFilter] = useState('all'); // 'all' | 'entradas' | 'saidas'
+
+  // Modal: fatura de fornecedor
+  const [faturaModal, setFaturaModal] = useState(null);
+  const [faturaSelId, setFaturaSelId] = useState('');
+  const [faturaSaving, setFaturaSaving] = useState(false);
+
+  // Modal: recibo de trabalhador
+  const [reciboModal, setReciboModal] = useState(null);
+  const [reciboWorkerId, setReciboWorkerId] = useState('');
+  const [reciboWorkerName, setReciboWorkerName] = useState('');
+  const [reciboMes, setReciboMes] = useState('');
+  const [reciboSaving, setReciboSaving] = useState(false);
+
+  // Modal: cliente/fatura (usado para entradas E saídas)
+  const [ncModal, setNcModal] = useState(null);
+  const [ncClientId, setNcClientId] = useState('');
+  const [ncPeriod, setNcPeriod] = useState('');
+  const [ncNotas, setNcNotas] = useState('');
+  const [ncSaveAlias, setNcSaveAlias] = useState(false);
+  const [ncAliasName, setNcAliasName] = useState('');
+  const [ncSaving, setNcSaving] = useState(false);
+
+  // Modal: interno
+  const [internoModal, setInternoModal] = useState(null);
+  const [internoSaveAlias, setInternoSaveAlias] = useState(false);
+  const [internoAliasName, setInternoAliasName] = useState('');
+  const [internoSaving, setInternoSaving] = useState(false);
+
+  // Modal: justificação
+  const [justModal, setJustModal] = useState(null);
+  const [justText, setJustText] = useState('');
+  const [justSaving, setJustSaving] = useState(false);
+
+  // Modal: adicionar alias manualmente
+  const [addAliasModal, setAddAliasModal] = useState(false);
+  const [addAliasName, setAddAliasName] = useState('');
+  const [addAliasResolucao, setAddAliasResolucao] = useState('interno');
+  const [addAliasClientId, setAddAliasClientId] = useState('');
+  const [addAliasSaving, setAddAliasSaving] = useState(false);
+
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const exportRef = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    const init = async () => {
+      if (!supabase) return;
+      setLoading(true);
+
+      const { data: run } = await supabase
+        .from('reconciliation_runs')
+        .select('id, transactions_json, created_at')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (!run) { setLoading(false); return; }
+
+      const rid = run.id;
+      setRunId(rid);
+      setRunData(run);
+
+      const txs = run.transactions_json || [];
+      setAllTxs(txs);
+
+      const runYear = new Date(run.created_at).getFullYear();
+      const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
+        supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period').eq('reconciliation_run_id', rid),
+        supabase.from('entrada_justifications').select('tx_key, justification').eq('run_id', rid),
+        supabase.from('entrada_internos').select('tx_key').eq('run_id', rid),
+        supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas').eq('run_id', rid),
+        supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
+        supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
+        supabase.from('reconciliacao_salarial_aliases').select('pattern, worker_name'),
+        supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').like('mes', `${runYear}-%`).not('estado', 'in', '("erro","invalido")'),
+        supabase.from('faturas').select('id, dados, status').order('importado_em', { ascending: false }),
+        supabase.from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched').eq('run_id', rid),
+      ]);
+
+      const pagsArr = pags || [];
+      const justArr = just || [];
+      const intsArr = ints || [];
+      const ncsArr = ncs || [];
+      const alsArr = als || [];
+      const rlsArr = rls || [];
+      const salAlsArr = salAls || [];
+      const recsArr = recs || [];
+
+      const fatsArr = fats || [];
+      const fatLinksArr = fatLinks || [];
+      setPagamentos(pagsArr);
+      setJustificacoes(justArr);
+      setInternos(intsArr);
+      setNotasCredito(ncsArr);
+      setAliases(alsArr);
+      setReciboLinks(rlsArr);
+      setSalarialAliases(salAlsArr);
+      setReceipts(recsArr);
+      setFaturasData(fatsArr);
+      setFaturaLinks(fatLinksArr);
+      setLoading(false);
+
+      // Auto-match: apenas transacções sem resolução
+      const resolvedKeys = new Set([
+        ...pagsArr.map(p => `${p.transaction_data?.data}|${p.transaction_data?.descricao}|${p.transaction_data?.valor}`),
+        ...justArr.map(j => j.tx_key),
+        ...intsArr.map(i => i.tx_key),
+        ...ncsArr.map(n => n.tx_key),
+        ...rlsArr.map(r => r.tx_key),
+        ...fatLinksArr.map(f => f.tx_key),
+      ]);
+
+      const unresolved = txs.filter(tx => !resolvedKeys.has(txKey(tx)));
+      if (unresolved.length === 0) return;
+
+      setAutoMatching(true);
+      let totalCount = 0;
+      const { count: faturaCount, insertedKeys: faturaKeys } = await runAutoMatchFaturas(
+        unresolved.filter(tx => tx.tipo === 'debito'), fatsArr, rid, fatLinksArr, setFaturaLinks, supabase
+      );
+      totalCount += faturaCount;
+
+      const { count: splitCount, insertedKeys: splitKeys } = await runAutoMatchFaturasSplit(
+        unresolved.filter(tx => tx.tipo === 'debito'), fatsArr, rid, fatLinksArr, setFaturaLinks, supabase
+      );
+      totalCount += splitCount;
+      const faturaAllKeys = new Set([...faturaKeys, ...splitKeys]);
+
+      const debitosParaRecibo = unresolved.filter(tx => tx.tipo === 'debito' && !faturaAllKeys.has(txKey(tx)));
+      const reciboCount = await runAutoMatchRecibos(
+        debitosParaRecibo, rid, salAlsArr, recsArr, rlsArr, setReciboLinks, supabase
+      );
+      totalCount += reciboCount;
+
+      const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, ncsArr, setInternos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
+      totalCount += matchCount;
+
+      if (totalCount > 0) setAutoMatchCount(totalCount);
+      setAutoMatching(false);
+
+      // Actualizar status de faturas para PAGO se todos os débitos foram linkados
+      const novoBancoFatura = fatsArr.find(f =>
+        f.dados?.fornecedor === 'Novo Banco, S.A.' &&
+        String(f.dados?.numero_fatura) === '4314117912'
+      );
+      if (novoBancoFatura) {
+        const { data: freshFatLinks } = await supabase
+          .from('fatura_pagamento_links')
+          .select('fatura_id, tx_key')
+          .eq('fatura_id', novoBancoFatura.id)
+          .eq('run_id', rid);
+        if (freshFatLinks && freshFatLinks.length > 0) {
+          updateFaturasPagoIfComplete(fatsArr, freshFatLinks, txs, supabase, rid);
+        }
+      }
+    };
+    init();
+  }, []);
+
+  async function updateFaturasPagoIfComplete(fatsArr, curFatLinks, txsData, sb, rid) {
+    if (!curFatLinks || !curFatLinks.length || !txsData || !txsData.length) return;
+    const linkedFatIds = [...new Set(curFatLinks.map(l => l.fatura_id))];
+
+    for (const faturaId of linkedFatIds) {
+      const fatura = fatsArr.find(f => f.id === faturaId);
+      if (!fatura) continue;
+      if (fatura.status === 'PAGO') continue;
+
+      const fornecedor = String(fatura.dados?.fornecedor || '');
+      const numFatura = String(fatura.dados?.numero_fatura || '');
+
+      if (fornecedor !== 'Novo Banco, S.A.' || numFatura !== '4314117912') continue;
+
+      const valorTotal = Math.abs(parseFloat(fatura.dados?.valor_total) || 0);
+      if (valorTotal <= 0) continue;
+
+      const linksForFatura = curFatLinks.filter(l => l.fatura_id === faturaId);
+      let soma = 0;
+      for (const link of linksForFatura) {
+        const tx = txsData.find(t => txKey(t) === link.tx_key);
+        if (tx) soma += Math.abs(parseFloat(tx.valor) || 0);
+      }
+
+      if (soma >= valorTotal - 0.01) {
+        await sb.from('faturas').update({ status: 'PAGO' }).eq('id', faturaId);
+        setFaturasData(prev => prev.map(f => f.id === faturaId ? { ...f, status: 'PAGO' } : f));
+      }
+    }
+  }
+
+  // ── Auto-match ────────────────────────────────────────────────────────────
+
+  async function runAutoMatchFaturas(debitos, fatsArr, rid, curFatLinks, setFatLinks, sb) {
+    if (!debitos.length || !fatsArr.length) return { count: 0, insertedKeys: new Set() };
+    const existingKeys = new Set(curFatLinks.map(f => f.tx_key));
+    const usedFatIds = new Set(curFatLinks.map(f => f.fatura_id));
+    const toInsert = [];
+
+    for (const tx of debitos) {
+      const key = txKey(tx);
+      if (existingKeys.has(key)) continue;
+      const valorTx = Math.abs(parseFloat(tx.valor) || 0);
+
+      let bestFatura = null;
+      let bestScore = 0;
+
+      for (const f of fatsArr) {
+        if (usedFatIds.has(f.id)) continue;
+        const valorFat = parseFloat(f.dados?.valor_total) || 0;
+        if (Math.abs(valorTx - valorFat) > 0.01) continue;
+        const tokens = normName(f.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
+        if (tokens.length === 0) continue;
+        const descNorm = normName(tx.descricao || '');
+        const hits = tokens.filter(t => descNorm.includes(t)).length;
+        if (hits >= 1 && hits > bestScore) {
+          bestScore = hits;
+          bestFatura = f;
+        }
+      }
+
+      if (!bestFatura) continue;
+      existingKeys.add(key);
+      usedFatIds.add(bestFatura.id);
+      toInsert.push({ fatura_id: bestFatura.id, run_id: rid, tx_key: key, auto_matched: true });
+    }
+
+    if (toInsert.length === 0) return { count: 0, insertedKeys: new Set() };
+    const { data } = await sb.from('fatura_pagamento_links')
+      .upsert(toInsert, { onConflict: 'run_id,tx_key' })
+      .select('fatura_id, run_id, tx_key, auto_matched');
+    if (data) setFatLinks(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+    return { count: data?.length || 0, insertedKeys: new Set(toInsert.map(r => r.tx_key)) };
+  }
+
+  async function runAutoMatchFaturasSplit(debitos, fatsArr, rid, curFatLinks, setFatLinks, sb) {
+    if (!debitos.length || !fatsArr.length) return { count: 0, insertedKeys: new Set() };
+    const usedFatIds = new Set(curFatLinks.map(f => f.fatura_id));
+    const usedTxKeys = new Set(curFatLinks.map(f => f.tx_key));
+
+    const unmatchedDebitos = debitos.filter(tx => !usedTxKeys.has(txKey(tx)));
+    const unmatchedFaturas = fatsArr.filter(f => !usedFatIds.has(f.id));
+
+    if (unmatchedDebitos.length === 0 || unmatchedFaturas.length === 0) {
+      return { count: 0, insertedKeys: new Set() };
+    }
+
+    const debitosPorFornecedor = {};
+    for (const tx of unmatchedDebitos) {
+      const descNorm = normName(tx.descricao || '');
+      const valor = Math.abs(parseFloat(tx.valor) || 0);
+      if (!debitosPorFornecedor[descNorm]) debitosPorFornecedor[descNorm] = [];
+      debitosPorFornecedor[descNorm].push({ ...tx, _valor: valor });
+    }
+
+    const toInsert = [];
+    const insertedFatIds = new Set();
+    const insertedTxKeys = new Set();
+
+    for (const fatura of unmatchedFaturas) {
+      if (insertedFatIds.has(fatura.id)) continue;
+      const tokens = normName(fatura.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
+      if (tokens.length === 0) continue;
+
+      const matchingDebitos = [];
+      for (const [descNorm, txs] of Object.entries(debitosPorFornecedor)) {
+        const hits = tokens.filter(t => descNorm.includes(t)).length;
+        if (hits >= 1) {
+          for (const tx of txs) {
+            if (!insertedTxKeys.has(txKey(tx))) {
+              matchingDebitos.push(tx);
+            }
+          }
+        }
+      }
+
+      if (matchingDebitos.length < 2) continue;
+
+      const valorFat = parseFloat(fatura.dados?.valor_total) || 0;
+      if (valorFat <= 0) continue;
+
+      const subset = findSubsetSum(matchingDebitos, valorFat);
+      if (subset.length > 0) {
+        for (const tx of subset) {
+          toInsert.push({ fatura_id: fatura.id, run_id: rid, tx_key: txKey(tx), auto_matched: true });
+          insertedTxKeys.add(txKey(tx));
+        }
+        insertedFatIds.add(fatura.id);
+      }
+    }
+
+    if (toInsert.length === 0) return { count: 0, insertedKeys: new Set() };
+    const { data } = await sb.from('fatura_pagamento_links')
+      .upsert(toInsert, { onConflict: 'run_id,tx_key' })
+      .select('fatura_id, run_id, tx_key, auto_matched');
+    if (data) setFatLinks(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+    return { count: data?.length || 0, insertedKeys: new Set(toInsert.map(r => r.tx_key)) };
+  }
+
+  function findSubsetSum(items, target) {
+    const tolerance = 0.01;
+    const vals = items.map(tx => tx._valor || Math.abs(parseFloat(tx.valor) || 0));
+
+    function backtrack(index, currentSum, path) {
+      if (Math.abs(currentSum - target) < tolerance) return path.slice();
+      if (currentSum > target || index >= vals.length) return null;
+      for (let i = index; i < vals.length; i++) {
+        path.push(i);
+        const result = backtrack(i + 1, currentSum + vals[i], path);
+        if (result) return result;
+        path.pop();
+      }
+      return null;
+    }
+
+    const result = backtrack(0, 0, []);
+    if (!result) return [];
+    return result.map(i => items[i]);
+  }
+
+  async function runAutoMatchRecibos(debitos, rid, salAlsArr, recsArr, curRls, setRls, sb) {
+    if (!debitos.length || !recsArr.length) return 0;
+    const existingKeys = new Set(curRls.map(r => r.tx_key));
+    const toInsert = [];
+
+    for (const tx of debitos) {
+      const key = txKey(tx);
+      if (existingKeys.has(key)) continue;
+
+      let matchedWorkerName = null;
+
+      // 1. Alias salarial: verifica se algum pattern está na descrição
+      for (const alias of salAlsArr) {
+        if (!alias.pattern) continue;
+        const patternNorm = normWorker(alias.pattern);
+        const descNorm = normWorker(tx.descricao);
+        if (descNorm.includes(patternNorm)) {
+          matchedWorkerName = alias.worker_name;
+          break;
+        }
+      }
+
+      // 2. Token scoring por nome de trabalhador
+      if (!matchedWorkerName) {
+        const uniqueWorkers = [...new Map(recsArr.map(r => [normWorker(r.worker_name), r])).values()];
+        let bestScore = 1; // mínimo 2 tokens
+        for (const receipt of uniqueWorkers) {
+          const score = workerScore(tx.descricao, receipt.worker_name);
+          if (score >= 2 && score > bestScore) {
+            bestScore = score;
+            matchedWorkerName = receipt.worker_name;
+          }
+        }
+      }
+
+      if (!matchedWorkerName) continue;
+
+      const bestReceipt = findBestReceipt(matchedWorkerName, tx.data, recsArr);
+      if (!bestReceipt) continue;
+
+      toInsert.push({
+        run_id: rid,
+        tx_key: key,
+        worker_id: bestReceipt.worker_id || null,
+        worker_name: bestReceipt.worker_name,
+        mes: bestReceipt.mes,
+        auto_matched: true,
+      });
+      existingKeys.add(key);
+    }
+
+    if (toInsert.length === 0) return 0;
+    const { data } = await sb.from('movimentacao_recibo_links').upsert(toInsert, { onConflict: 'run_id,tx_key' }).select('tx_key, worker_id, worker_name, mes, auto_matched');
+    if (data) setRls(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+    return data?.length || 0;
+  }
+
+  async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, curNcs, setInts, setNcs, setFatLinks, sb, extraExcludeKeys = new Set(), fatsArr = []) {
+    const toInsertInternos = [];
+    const toInsertNcs = [];
+    const toInsertFaturas = [];
+    // Copia para não modificar os arrays de estado directamente
+    const existingIntKeys = new Set(curInternos.map(i => i.tx_key));
+    const existingNcKeys = new Set(curNcs.map(n => n.tx_key));
+
+    for (const tx of unresolved) {
+      const key = txKey(tx);
+      if (existingIntKeys.has(key) || existingNcKeys.has(key) || extraExcludeKeys.has(key)) continue;
+
+      const bankName = extractBankName(tx.descricao);
+      const bankNorm = normName(bankName);
+      const descUpper = String(tx.descricao || '').toUpperCase();
+
+      // 1. Alias explícito
+      const alias = alsArr.find(a => normName(a.bank_name) === bankNorm);
+      if (alias) {
+        if (alias.resolucao === 'interno') {
+          toInsertInternos.push({ run_id: rid, tx_key: key });
+          existingIntKeys.add(key);
+          continue;
+        }
+        // nota_credito: apenas para créditos (não auto-match débitos como fatura)
+        if (alias.resolucao === 'nota_credito' && alias.client_id && tx.tipo === 'credito') {
+          toInsertNcs.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
+          existingNcKeys.add(key);
+          continue;
+        }
+      }
+
+      // 2. Palavras-chave de interno
+      if (INTERNO_KEYWORDS.some(k => descUpper.includes(k))) {
+        toInsertInternos.push({ run_id: rid, tx_key: key });
+        existingIntKeys.add(key);
+        continue;
+      }
+
+      // 2b. Palavras-chave de taxa bancária (débito apenas)
+      if (tx.tipo === 'debito' && BANCO_KEYWORDS.some(k => descUpper.includes(k))) {
+        const faturaBanco = fatsArr.find(f =>
+          f.dados?.fornecedor === 'Novo Banco, S.A.' &&
+          f.dados?.numero_fatura === '4314117912'
+        );
+        if (faturaBanco) {
+          toInsertFaturas.push({ fatura_id: faturaBanco.id, run_id: rid, tx_key: key, auto_matched: true });
+        } else {
+          toInsertInternos.push({ run_id: rid, tx_key: key });
+          existingIntKeys.add(key);
+        }
+        continue;
+      }
+
+      // 3. Match por tokens de cliente (apenas créditos)
+      if (tx.tipo === 'credito') {
+        const client = matchClientByTokens(tx.descricao, clientList);
+        if (client) {
+          toInsertNcs.push({ run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
+          existingNcKeys.add(key);
+        }
+      }
+
+      // 4. Match créditos com Notas de Crédito de fornecedores (NC na tabela faturas)
+      if (tx.tipo === 'credito' && !existingNcKeys.has(key)) {
+        const valorTx = Math.abs(parseFloat(tx.valor) || 0);
+        const descNorm = normName(tx.descricao || '');
+        for (const f of fatsArr) {
+          if (!f.dados?.numero_fatura?.startsWith('NC')) continue;
+          if (f.status === 'PAGO') continue;
+          const valorFat = Math.abs(parseFloat(f.dados?.valor_total) || 0);
+          if (Math.abs(valorTx - valorFat) > 0.01) continue;
+          const tokens = normName(f.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
+          if (tokens.length === 0) continue;
+          const hits = tokens.filter(t => descNorm.includes(t)).length;
+          if (hits >= 1) {
+            toInsertNcs.push({ run_id: rid, tx_key: key, client_id: f.id, period: tx.data.substring(0, 7) });
+            existingNcKeys.add(key);
+            break;
+          }
+        }
+      }
+    }
+
+    let count = 0;
+    if (toInsertInternos.length > 0) {
+      const { data } = await sb.from('entrada_internos').upsert(toInsertInternos, { onConflict: 'run_id,tx_key' }).select('tx_key');
+      if (data) {
+        const tagged = data.map(d => ({ ...d, auto_matched: true }));
+        setInts(prev => [...prev, ...tagged.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+        count += data.length;
+      }
+    }
+if (toInsertNcs.length > 0) {
+      const { data } = await sb.from('entrada_nota_credito_links').upsert(toInsertNcs, { onConflict: 'run_id,tx_key' }).select('tx_key, client_id, period, notas');
+      if (data) {
+        const tagged = data.map(d => ({ ...d, auto_matched: true }));
+        setNcs(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+        count += data.length;
+      }
+    }
+    if (toInsertFaturas.length > 0) {
+      const { data } = await sb.from('fatura_pagamento_links').upsert(toInsertFaturas, { onConflict: 'run_id,tx_key' }).select('fatura_id, run_id, tx_key, auto_matched');
+      if (data) {
+        setFatLinks(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+        count += data.length;
+      }
+    }
+    return count;
+  }
+
+  // ── Dados derivados ───────────────────────────────────────────────────────
+
+  const creditos = allTxs.filter(t => t.tipo === 'credito');
+  const debitos  = allTxs.filter(t => t.tipo === 'debito');
+  const filteredTxs = filter === 'entradas' ? creditos : filter === 'saidas' ? debitos : allTxs;
+
+  const getStatus = tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks);
+
+  const totalResolvido = filteredTxs.filter(tx => getStatus(tx) !== STATUS_KEYS.SEM_CLIENTE).length;
+  const semResolver    = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.SEM_CLIENTE).length;
+  const totalEntradas  = creditos.reduce((s, tx) => s + Math.abs(parseFloat(tx.valor) || 0), 0);
+  const totalSaidas    = debitos.reduce((s, tx) => s + Math.abs(parseFloat(tx.valor) || 0), 0);
+
+  const comClienteCount  = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.COM_CLIENTE).length;
+  const comReciboCount   = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.COM_RECIBO).length;
+  const comFaturaCount   = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.COM_FATURA).length;
+  const notaCreditoCount = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.NOTA_CREDITO).length;
+  const internoCount     = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.INTERNO).length;
+  const justCount        = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.JUSTIFICADO).length;
+
+  const grupos = filteredTxs.reduce((acc, tx) => {
+    const mes = (tx.data || '').substring(0, 7) || 'Desconhecido';
+    (acc[mes] = acc[mes] || []).push(tx);
+    return acc;
+  }, {});
+
+  // ── Exportar ──────────────────────────────────────────────────────────────
+
+  const buildRows = () =>
+    filteredTxs.map(tx => {
+      const status = getStatus(tx);
+      const key = txKey(tx);
+      const link = clienteLink(tx, pagamentos);
+      const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || '') : '';
+      const ncEntry = notasCredito.find(n => n.tx_key === key);
+      const ncClientName = ncEntry ? (clients?.find(c => c.id === ncEntry.client_id)?.name || ncEntry.client_id || '') : '';
+      const justEntry = justificacoes.find(j => j.tx_key === key);
+      const detalhe = status === STATUS_KEYS.COM_CLIENTE ? clientName
+        : status === STATUS_KEYS.NOTA_CREDITO ? `${ncClientName} · ${fmtMes(ncEntry?.period)}`
+        : status === STATUS_KEYS.JUSTIFICADO ? (justEntry?.justification || '')
+        : '';
+      const valor = tx.tipo === 'debito' ? `-${fmtEur(Math.abs(parseFloat(tx.valor) || 0))}` : fmtEur(tx.valor);
+      return [tx.data, tx.tipo === 'debito' ? 'Saída' : 'Entrada', tx.descricao || '', valor, labelStatus(status, tx.tipo), detalhe];
+    });
+
+  const handleExportCsv = () => {
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe'].map(esc).join(';');
+    const rows = buildRows().map(r => r.map(esc).join(';'));
+    const blob = new Blob(['﻿' + [header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'movimentacoes_validacao.csv'; a.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const handleExportPdf = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFontSize(14); doc.setTextColor(30);
+    doc.text('Relatório de Movimentações', 14, 18);
+    doc.setFontSize(8); doc.setTextColor(120);
+    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : '—'}`, 14, 24);
+    autoTable(doc, {
+      startY: 30,
+      head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
+      body: buildRows(),
+      styles: { fontSize: 6.5, cellPadding: 1.3 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
+    });
+    doc.save('movimentacoes_validacao.pdf');
+    setShowExportMenu(false);
+  };
+
+  // ── Acções: Interno ───────────────────────────────────────────────────────
+
+  const handleConfirmarInterno = async () => {
+    if (!internoModal || !runId) return;
+    setInternoSaving(true);
+    const key = txKey(internoModal);
+    await supabase.from('entrada_internos').upsert({ run_id: runId, tx_key: key }, { onConflict: 'run_id,tx_key' });
+    setInternos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
+
+    if (internoSaveAlias && internoAliasName.trim()) {
+      const { data: newAlias } = await supabase
+        .from('movimentacoes_aliases')
+        .upsert({ bank_name: internoAliasName.trim(), resolucao: 'interno', client_id: null }, { onConflict: 'bank_name' })
+        .select('id, bank_name, resolucao, client_id')
+        .single();
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== internoAliasName.trim())]);
+    }
+
+    setInternoSaving(false);
+    setInternoModal(null);
+    setInternoSaveAlias(false);
+    setInternoAliasName('');
+  };
+
+  const handleDesfazerInterno = async (tx) => {
+    const key = txKey(tx);
+    await supabase.from('entrada_internos').delete().eq('run_id', runId).eq('tx_key', key);
+    setInternos(prev => prev.filter(i => i.tx_key !== key));
+  };
+
+  // ── Acções: Cliente / Fatura ──────────────────────────────────────────────
+
+  const handleOpenAcaoCliente = (tx) => {
+    const mes = (tx.data || '').substring(0, 7);
+    setNcModal(tx);
+    setNcClientId('');
+    setNcPeriod(mes);
+    setNcNotas('');
+    setNcSaveAlias(false);
+  };
+
+  const handleSaveAcaoCliente = async () => {
+    if (!ncClientId || !ncPeriod || !ncModal || !runId) return;
+    setNcSaving(true);
+    const key = txKey(ncModal);
+    const { data, error } = await supabase
+      .from('entrada_nota_credito_links')
+      .upsert(
+        { run_id: runId, tx_key: key, client_id: ncClientId, period: ncPeriod, notas: ncNotas.trim() || null },
+        { onConflict: 'run_id,tx_key' }
+      )
+      .select('tx_key, client_id, period, notas')
+      .single();
+    if (!error && data) {
+      setNotasCredito(prev => [...prev.filter(n => n.tx_key !== data.tx_key), data]);
+    }
+
+    if (ncSaveAlias && ncAliasName.trim()) {
+      const { data: newAlias } = await supabase
+        .from('movimentacoes_aliases')
+        .upsert({ bank_name: ncAliasName.trim(), resolucao: 'nota_credito', client_id: ncClientId }, { onConflict: 'bank_name' })
+        .select('id, bank_name, resolucao, client_id')
+        .single();
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== ncAliasName.trim())]);
+    }
+
+    setNcSaving(false);
+    setNcModal(null);
+    setNcAliasName('');
+  };
+
+  const handleDesfazerCliente = async (tx) => {
+    const key = txKey(tx);
+    await supabase.from('entrada_nota_credito_links').delete().eq('run_id', runId).eq('tx_key', key);
+    setNotasCredito(prev => prev.filter(n => n.tx_key !== key));
+  };
+
+  // ── Acções: Justificação ──────────────────────────────────────────────────
+
+  const handleSaveJustificacao = async () => {
+    if (!justText.trim() || !justModal || !runId) return;
+    setJustSaving(true);
+    const key = txKey(justModal);
+    const { data, error } = await supabase
+      .from('entrada_justifications')
+      .upsert({ run_id: runId, tx_key: key, justification: justText.trim() }, { onConflict: 'run_id,tx_key' })
+      .select('tx_key, justification')
+      .single();
+    if (!error && data) {
+      setJustificacoes(prev => [...prev.filter(j => j.tx_key !== data.tx_key), data]);
+    }
+    setJustSaving(false);
+    setJustModal(null);
+    setJustText('');
+  };
+
+  const handleRemoverJustificacao = async (tx) => {
+    const key = txKey(tx);
+    await supabase.from('entrada_justifications').delete().eq('run_id', runId).eq('tx_key', key);
+    setJustificacoes(prev => prev.filter(j => j.tx_key !== key));
+  };
+
+  // ── Acções: Aliases ───────────────────────────────────────────────────────
+
+  const handleApagarAlias = async (id) => {
+    await supabase.from('movimentacoes_aliases').delete().eq('id', id);
+    setAliases(prev => prev.filter(a => a.id !== id));
+  };
+
+  // ── Acções: Recibo ────────────────────────────────────────────────────────
+
+  const handleOpenAcaoRecibo = (tx) => {
+    setReciboModal(tx);
+    setReciboWorkerId('');
+    setReciboWorkerName('');
+    setReciboMes(previousMonth(tx.data)); // recibo do mês anterior por defeito
+  };
+
+  const handleSaveAcaoRecibo = async () => {
+    if (!reciboWorkerName || !reciboMes || !reciboModal || !runId) return;
+    setReciboSaving(true);
+    const key = txKey(reciboModal);
+    const { data, error } = await supabase
+      .from('movimentacao_recibo_links')
+      .upsert(
+        { run_id: runId, tx_key: key, worker_id: reciboWorkerId || null, worker_name: reciboWorkerName, mes: reciboMes, auto_matched: false },
+        { onConflict: 'run_id,tx_key' }
+      )
+      .select('tx_key, worker_id, worker_name, mes, auto_matched')
+      .single();
+    if (!error && data) {
+      setReciboLinks(prev => [...prev.filter(r => r.tx_key !== data.tx_key), data]);
+    }
+    setReciboSaving(false);
+    setReciboModal(null);
+  };
+
+  const handleDesfazerRecibo = async (tx) => {
+    const key = txKey(tx);
+    await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId).eq('tx_key', key);
+    setReciboLinks(prev => prev.filter(r => r.tx_key !== key));
+  };
+
+  // ── Acções: Fatura ────────────────────────────────────────────────────────
+
+  const handleOpenAcaoFatura = (tx) => {
+    setFaturaModal(tx);
+    setFaturaSelId('');
+  };
+
+  const handleSaveAcaoFatura = async () => {
+    if (!faturaSelId || !faturaModal || !runId) return;
+    setFaturaSaving(true);
+    const key = txKey(faturaModal);
+    const { data, error } = await supabase
+      .from('fatura_pagamento_links')
+      .upsert({ fatura_id: faturaSelId, run_id: runId, tx_key: key, auto_matched: false }, { onConflict: 'fatura_id' })
+      .select('fatura_id, run_id, tx_key, auto_matched')
+      .single();
+    if (!error && data) {
+      setFaturaLinks(prev => [...prev.filter(f => f.tx_key !== data.tx_key && f.fatura_id !== data.fatura_id), data]);
+    }
+    setFaturaSaving(false);
+    setFaturaModal(null);
+    setFaturaSelId('');
+  };
+
+  const handleDesfazerFatura = async (tx) => {
+    const key = txKey(tx);
+    await supabase.from('fatura_pagamento_links').delete().eq('run_id', runId).eq('tx_key', key);
+    setFaturaLinks(prev => prev.filter(f => f.tx_key !== key));
+  };
+
+  const handleSaveNovoAlias = async () => {
+    if (!addAliasName.trim()) return;
+    if (addAliasResolucao === 'nota_credito' && !addAliasClientId) return;
+    setAddAliasSaving(true);
+    const { data: newAlias } = await supabase
+      .from('movimentacoes_aliases')
+      .upsert(
+        { bank_name: addAliasName.trim(), resolucao: addAliasResolucao, client_id: addAliasResolucao === 'nota_credito' ? addAliasClientId : null },
+        { onConflict: 'bank_name' }
+      )
+      .select('id, bank_name, resolucao, client_id')
+      .single();
+    if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== addAliasName.trim())]);
+    setAddAliasSaving(false);
+    setAddAliasModal(false);
+    setAddAliasName('');
+    setAddAliasResolucao('interno');
+    setAddAliasClientId('');
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 gap-3">
+        <Loader2 size={24} className="animate-spin text-indigo-400" />
+        <p className="text-[11px] text-slate-400">A carregar movimentações do extrato…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {/* Filtros: Todas | Entradas | Saídas */}
+      <div className="flex items-center gap-1.5">
+        {[
+          { key: 'all',      label: 'Todas',    count: allTxs.length },
+          { key: 'entradas', label: 'Entradas', count: creditos.length, icon: TrendingUp,   color: 'text-emerald-600' },
+          { key: 'saidas',   label: 'Saídas',   count: debitos.length,  icon: TrendingDown, color: 'text-rose-600' },
+        ].map(({ key, label, count, icon: Icon, color }) => (
+          <button
+            key={key}
+            onClick={() => setFilter(key)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              filter === key
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            {Icon && <Icon size={11} className={filter === key ? 'text-white' : color} />}
+            {label}
+            {count > 0 && (
+              <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-black ${filter === key ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-500'}`}>
+                {count}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* KPIs */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="grid grid-cols-3 gap-3 flex-1">
+          {[
+            { label: 'Total',        value: filteredTxs.length, color: 'text-slate-700',   bg: 'bg-slate-50' },
+            { label: 'Resolvidos',   value: totalResolvido,     color: 'text-emerald-700', bg: 'bg-emerald-50' },
+            { label: 'Por Resolver', value: semResolver,        color: 'text-amber-700',   bg: 'bg-amber-50' },
+          ].map(c => (
+            <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center`}>
+              <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="flex flex-col gap-1.5 flex-shrink-0">
+          <button
+            onClick={() => setShowAliases(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${showAliases ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}
+          >
+            <Tag size={13} /> Aliases {aliases.length > 0 && `(${aliases.length})`}
+          </button>
+          <div className="relative" ref={exportRef}>
+            <button
+              onClick={() => setShowExportMenu(v => !v)}
+              className="w-full flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+            >
+              <Download size={13} /> Exportar
+            </button>
+            {showExportMenu && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px]">
+                <button onClick={handleExportCsv}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <FileText size={13} className="text-emerald-600" /> CSV
+                </button>
+                <button onClick={handleExportPdf}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <FileText size={13} className="text-rose-500" /> PDF
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Totais de entradas/saídas */}
+      {(filter === 'all' || filter === 'entradas' || filter === 'saidas') && (
+        <div className="flex gap-2">
+          {filter !== 'saidas' && totalEntradas > 0 && (
+            <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-1.5">
+              <TrendingUp size={11} className="text-emerald-600" />
+              <span className="text-[10px] font-black text-emerald-700">+{fmtEur(totalEntradas)}</span>
+            </div>
+          )}
+          {filter !== 'entradas' && totalSaidas > 0 && (
+            <div className="flex items-center gap-1.5 bg-rose-50 border border-rose-100 rounded-xl px-3 py-1.5">
+              <TrendingDown size={11} className="text-rose-600" />
+              <span className="text-[10px] font-black text-rose-700">-{fmtEur(totalSaidas)}</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Breakdown dos resolvidos */}
+      {totalResolvido > 0 && (
+        <div className="flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest text-slate-400">
+          {comClienteCount > 0 && <span className="text-emerald-600">{comClienteCount} Com Cliente/Fatura</span>}
+          {comReciboCount > 0 && <><span>·</span><span className="text-teal-600">{comReciboCount} Com Recibo</span></>}
+          {comFaturaCount > 0 && <><span>·</span><span className="text-orange-600">{comFaturaCount} Com Fatura Doc</span></>}
+          {notaCreditoCount > 0 && <><span>·</span><span className="text-blue-600">{notaCreditoCount} Cliente/Fatura</span></>}
+          {internoCount > 0 && <><span>·</span><span className="text-purple-600">{internoCount} Interno</span></>}
+          {justCount > 0 && <><span>·</span><span className="text-violet-600">{justCount} Justificados</span></>}
+        </div>
+      )}
+
+      {/* Auto-match */}
+      {autoMatching && (
+        <div className="flex items-center gap-2 text-[10px] text-indigo-500 font-bold">
+          <Loader2 size={12} className="animate-spin" /> A executar auto-match…
+        </div>
+      )}
+      {autoMatchCount !== null && autoMatchCount > 0 && !autoMatching && (
+        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-2">
+          <Zap size={13} className="text-indigo-500 flex-shrink-0" />
+          <p className="text-[10px] font-bold text-indigo-700">
+            Auto-match: {autoMatchCount} transacç{autoMatchCount !== 1 ? 'ões resolvidas' : 'ão resolvida'} automaticamente
+          </p>
+          <button onClick={() => setAutoMatchCount(null)} className="ml-auto text-indigo-300 hover:text-indigo-500">
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {/* Painel de aliases */}
+      {showAliases && (
+        <div className="border border-slate-200 rounded-2xl overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Aliases de Movimentações</p>
+            <button
+              onClick={() => { setAddAliasModal(true); setAddAliasName(''); setAddAliasResolucao('interno'); setAddAliasClientId(''); }}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors"
+            >
+              <Plus size={11} /> Alias
+            </button>
+          </div>
+          {aliases.length === 0 ? (
+            <p className="text-[11px] text-slate-400 text-center py-6">Nenhum alias guardado ainda.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {aliases.map(a => {
+                const clientName = a.client_id ? (clients?.find(c => c.id === a.client_id)?.name || a.client_id) : null;
+                const cfg = a.resolucao === 'interno' ? STATUS_CFG['Interno'] : STATUS_CFG['Nota Crédito'];
+                const Icon = cfg.icon;
+                return (
+                  <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${cfg.bg} ${cfg.text} flex-shrink-0`}>
+                      <Icon size={9} /> {a.resolucao === 'interno' ? 'Interno' : 'Cliente'}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-slate-700 truncate" title={a.bank_name}>{a.bank_name}</p>
+                      {clientName && <p className="text-[9px] text-slate-400">{clientName}</p>}
+                    </div>
+                    <button onClick={() => handleApagarAlias(a.id)}
+                      className="text-slate-300 hover:text-rose-500 transition-colors flex-shrink-0">
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {runData && (
+        <p className="text-[10px] text-slate-400">
+          Extrato importado em {new Date(runData.created_at).toLocaleDateString('pt-PT')} · {creditos.length} entradas · {debitos.length} saídas
+        </p>
+      )}
+
+      {/* Lista por mês */}
+      {Object.keys(grupos).length === 0 ? (
+        <p className="text-center text-slate-400 py-8 text-sm">Nenhuma transacção encontrada.</p>
+      ) : (
+        Object.entries(grupos)
+          .sort(([a], [b]) => b.localeCompare(a))
+          .map(([mes, txs]) => (
+            <MovMesCard
+              key={mes}
+              mes={mes}
+              txs={txs}
+              pagamentos={pagamentos}
+              justificacoes={justificacoes}
+              internos={internos}
+              notasCredito={notasCredito}
+              reciboLinks={reciboLinks}
+              clients={clients}
+              faturaLinks={faturaLinks}
+              faturasData={faturasData}
+              onJustificar={tx => { setJustModal(tx); setJustText(''); }}
+              onRemoverJustificacao={handleRemoverJustificacao}
+              onMarcarInterno={tx => { setInternoModal(tx); setInternoSaveAlias(false); }}
+              onDesfazerInterno={handleDesfazerInterno}
+              onAcaoCliente={handleOpenAcaoCliente}
+              onDesfazerCliente={handleDesfazerCliente}
+              onAcaoRecibo={handleOpenAcaoRecibo}
+              onDesfazerRecibo={handleDesfazerRecibo}
+              onAcaoFatura={handleOpenAcaoFatura}
+              onDesfazerFatura={handleDesfazerFatura}
+            />
+          ))
+      )}
+
+      {/* Modal: Interno */}
+      {internoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Marcar como Interno</h3>
+              <button onClick={() => setInternoModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="bg-purple-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1">Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(internoModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{internoModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{internoModal.descricao}</p>
+            </div>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={internoSaveAlias} onChange={e => {
+                setInternoSaveAlias(e.target.checked);
+                if (e.target.checked) setInternoAliasName(extractBankName(internoModal.descricao));
+              }} className="w-4 h-4 rounded accent-purple-600" />
+              <span className="text-[11px] font-bold text-slate-600">
+                Guardar alias <span className="font-normal text-slate-400">— reconhecer automaticamente em importações futuras</span>
+              </span>
+            </label>
+            {internoSaveAlias && (
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do alias</label>
+                <input type="text" value={internoAliasName} onChange={e => setInternoAliasName(e.target.value)}
+                  className="w-full border border-purple-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-300 bg-purple-50" />
+              </div>
+            )}
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setInternoModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button disabled={internoSaving} onClick={handleConfirmarInterno}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {internoSaving ? <Loader2 size={13} className="animate-spin" /> : <ArrowLeftRight size={13} />} Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Cliente / Fatura */}
+      {ncModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">
+                {ncModal.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a Cliente'}
+              </h3>
+              <button onClick={() => setNcModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className={`rounded-2xl px-4 py-3 ${ncModal.tipo === 'debito' ? 'bg-rose-50' : 'bg-blue-50'}`}>
+              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${ncModal.tipo === 'debito' ? 'text-rose-600' : 'text-blue-600'}`}>Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(ncModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{ncModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{ncModal.descricao}</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Cliente</label>
+                <select value={ncClientId} onChange={e => setNcClientId(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+                  <option value="">— Selecionar cliente —</option>
+                  {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Mês de referência</label>
+                <input type="month" value={ncPeriod} onChange={e => setNcPeriod(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Notas (opcional)</label>
+                <input type="text" value={ncNotas} onChange={e => setNcNotas(e.target.value)}
+                  placeholder={ncModal.tipo === 'debito' ? 'Ex: Fatura nº 42, pagamento a fornecedor…' : 'Ex: Nota de crédito nº 42, pagamento parcial…'}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              {ncModal.tipo === 'credito' && (
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={ncSaveAlias} onChange={e => {
+                    setNcSaveAlias(e.target.checked);
+                    if (e.target.checked) setNcAliasName(extractBankName(ncModal.descricao));
+                  }} className="w-4 h-4 rounded accent-blue-600" />
+                  <span className="text-[11px] font-bold text-slate-600">
+                    Guardar alias <span className="font-normal text-slate-400">— auto-match futuro para este remetente</span>
+                  </span>
+                </label>
+              )}
+              {ncSaveAlias && ncModal.tipo === 'credito' && (
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do alias</label>
+                  <input type="text" value={ncAliasName} onChange={e => setNcAliasName(e.target.value)}
+                    className="w-full border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-blue-50" />
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setNcModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button disabled={!ncClientId || !ncPeriod || ncSaving} onClick={handleSaveAcaoCliente}
+                className={`flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 ${ncModal.tipo === 'debito' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                {ncSaving ? <Loader2 size={13} className="animate-spin" /> : ncModal.tipo === 'debito' ? <Receipt size={13} /> : <Link size={13} />}
+                {ncModal.tipo === 'debito' ? 'Ligar Fatura' : 'Ligar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Justificação */}
+      {justModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Justificar Transacção</h3>
+              <button onClick={() => { setJustModal(null); setJustText(''); }} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="bg-amber-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(justModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{justModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{justModal.descricao}</p>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Justificação</label>
+              <textarea value={justText} onChange={e => setJustText(e.target.value)}
+                placeholder="Ex: Juro bancário, reembolso de despesa, transferência interna…"
+                rows={3}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => { setJustModal(null); setJustText(''); }}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button disabled={!justText.trim() || justSaving} onClick={handleSaveJustificacao}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Fatura de fornecedor */}
+      {faturaModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Ligar a Fatura de Fornecedor</h3>
+              <button onClick={() => setFaturaModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="bg-orange-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-orange-600 mb-1">Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(faturaModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{faturaModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{faturaModal.descricao}</p>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Fatura</label>
+              <select value={faturaSelId} onChange={e => setFaturaSelId(e.target.value)}
+                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
+                <option value="">— Selecionar fatura —</option>
+                {faturasData.filter(f => f.status !== 'PAGO' && !faturaLinks.some(l => l.fatura_id === f.id))
+                  .sort((a, b) => (a.dados?.fornecedor || '').localeCompare(b.dados?.fornecedor || ''))
+                  .map(f => (
+                    <option key={f.id} value={f.id}>
+                      {f.dados?.fornecedor || 'Sem fornecedor'} · {f.dados?.numero_fatura || '—'} · {fmtEur(f.dados?.valor_total)}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setFaturaModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button disabled={!faturaSelId || faturaSaving} onClick={handleSaveAcaoFatura}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {faturaSaving ? <Loader2 size={13} className="animate-spin" /> : <FileMinus size={13} />} Ligar Fatura
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Recibo de trabalhador */}
+      {reciboModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Ligar a Recibo de Trabalhador</h3>
+              <button onClick={() => setReciboModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="bg-teal-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 mb-1">Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(reciboModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{reciboModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{reciboModal.descricao}</p>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Trabalhador</label>
+                <select
+                  value={reciboWorkerName}
+                  onChange={e => {
+                    const selected = e.target.value;
+                    setReciboWorkerName(selected);
+                    const workerReceipt = receipts.find(r => r.worker_name === selected);
+                    setReciboWorkerId(workerReceipt?.worker_id || '');
+                    // Pré-selecionar mês anterior (recibo de Abril pago em Maio)
+                    const prevM = previousMonth(reciboModal.data);
+                    const hasPrev = receipts.some(r => r.worker_name === selected && r.mes === prevM);
+                    setReciboMes(hasPrev ? prevM : (workerReceipt?.mes || ''));
+                  }}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                >
+                  <option value="">— Selecionar trabalhador —</option>
+                  {[...new Set(receipts.map(r => r.worker_name))].sort().map(name => (
+                    <option key={name} value={name}>{name}</option>
+                  ))}
+                </select>
+              </div>
+              {reciboWorkerName && (
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Mês do recibo</label>
+                  <select
+                    value={reciboMes}
+                    onChange={e => setReciboMes(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
+                  >
+                    <option value="">— Selecionar mês —</option>
+                    {receipts
+                      .filter(r => r.worker_name === reciboWorkerName)
+                      .sort((a, b) => b.mes.localeCompare(a.mes))
+                      .map(r => (
+                        <option key={r.mes} value={r.mes}>
+                          {fmtMes(r.mes)} — {fmtEur(r.liquido_extraido)}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setReciboModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button
+                disabled={!reciboWorkerName || !reciboMes || reciboSaving}
+                onClick={handleSaveAcaoRecibo}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {reciboSaving ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />} Ligar Recibo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Novo Alias */}
+      {addAliasModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Novo Alias</h3>
+              <button onClick={() => setAddAliasModal(false)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do banco/remetente</label>
+                <input type="text" value={addAliasName} onChange={e => setAddAliasName(e.target.value)}
+                  placeholder="Ex: EMPRESA EXEMPLO LDA"
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Resolução</label>
+                <div className="flex gap-2">
+                  {[
+                    { val: 'interno',      label: 'Interno',  cfg: STATUS_CFG['Interno'] },
+                    { val: 'nota_credito', label: 'Cliente',  cfg: STATUS_CFG['Nota Crédito'] },
+                  ].map(({ val, label, cfg }) => (
+                    <button key={val} onClick={() => setAddAliasResolucao(val)}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${addAliasResolucao === val ? `border-current ${cfg.bg} ${cfg.text}` : 'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {addAliasResolucao === 'nota_credito' && (
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Cliente</label>
+                  <select value={addAliasClientId} onChange={e => setAddAliasClientId(e.target.value)}
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
+                    <option value="">— Selecionar cliente —</option>
+                    {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setAddAliasModal(false)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button
+                disabled={!addAliasName.trim() || (addAliasResolucao === 'nota_credito' && !addAliasClientId) || addAliasSaving}
+                onClick={handleSaveNovoAlias}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {addAliasSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
