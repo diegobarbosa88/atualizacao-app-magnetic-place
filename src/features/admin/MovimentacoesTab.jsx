@@ -918,10 +918,10 @@ export default function MovimentacoesTab() {
           const valorFaturaCliente = Math.abs(parseFloat(clienteFatura.dados?.valor_total) || 0);
           const diferenca = valorFaturaCliente - valorTx;
 
-          // b) Se diferença está entre 0.01 e 500 (tolerância), procurar fatura fornecedor
+          // b) Se diferença está entre 0.01 e 500 (tolerância), procurar fatura pendente com valor ≈ diferença
           if (diferenca > 0.01 && diferenca <= 500.00) {
             const fornecedorFatura = fatsArr.find(f =>
-              f.tipo === 'fornecedor' &&
+              (!f.tipo || f.tipo === 'fornecedor') &&
               f.status === 'PENDENTE' &&
               Math.abs(parseFloat(f.dados?.valor_total || 0) - diferenca) <= 0.01
             );
