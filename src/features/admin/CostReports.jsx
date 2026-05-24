@@ -35,6 +35,13 @@ const CostReports = () => {
   const [faturasExcluidas, setFaturasExcluidas] = useState([]);
   const [showExcluidas, setShowExcluidas] = useState(false);
 
+  // ── Faturas de CLIENTES (inserção manual) ─────────────────────────────────
+  const [clienteFaturas, setClienteFaturas] = useState([]);
+  const [faturasLoading, setFaturasLoading] = useState(false);
+  const [isAddingFatura, setIsAddingFatura] = useState(false);
+  const [faturaForm, setFaturaForm] = useState({ cliente: '', numero: '', valor: '', data: toISODateLocal(new Date()) });
+  const [faturaSaving, setFaturaSaving] = useState(false);
+
   useEffect(() => {
     if (!supabase || !selectedMonth) return;
     supabase
@@ -59,6 +66,57 @@ const CostReports = () => {
         setFaturasExcluidas(excluidas);
       });
   }, [supabase, selectedMonth]);
+
+  // Carregar faturas de clientes da tabela faturas (tipo=cliente)
+  useEffect(() => {
+    if (!supabase) return;
+    setFaturasLoading(true);
+    supabase
+      .from('faturas')
+      .select('id, dados, status, importado_em')
+      .eq('tipo', 'cliente')
+      .order('importado_em', { ascending: false })
+      .then(({ data }) => {
+        setClienteFaturas(data || []);
+        setFaturasLoading(false);
+      });
+  }, [supabase]);
+
+  const handleSaveFatura = async () => {
+    if (!faturaForm.cliente || !faturaForm.numero || !faturaForm.valor) {
+      return alert('Cliente, número e valor são obrigatórios');
+    }
+    setFaturaSaving(true);
+    const id = `cf_${Date.now()}`;
+    const valorNum = parseFloat(faturaForm.valor.replace(/\./g, '').replace(',', '.')) || 0;
+    await supabase.from('faturas').insert({
+      id,
+      tipo: 'cliente',
+      dados: {
+        fornecedor: faturaForm.cliente,
+        numero_fatura: faturaForm.numero,
+        valor_total: valorNum,
+        data_fatura: faturaForm.data,
+      },
+      status: 'PENDENTE',
+      fonte: 'manual',
+      valor: valorNum,
+      data_documento: faturaForm.data,
+      descricao: `Fatura cliente: ${faturaForm.cliente}`,
+      entidade: faturaForm.cliente,
+      filename: `fatura_cliente_${id}.pdf`,
+      storage_path: '',
+      url: '',
+      mime_type: 'application/pdf',
+      tamanho: 0,
+      importado_em: new Date().toISOString(),
+    });
+    setFaturaForm({ cliente: '', numero: '', valor: '', data: toISODateLocal(new Date()) });
+    setIsAddingFatura(false);
+    setFaturaSaving(false);
+    const { data } = await supabase.from('faturas').select('id, dados, status, importado_em').eq('tipo', 'cliente').order('importado_em', { ascending: false });
+    setClienteFaturas(data || []);
+  };
 
   const parseFaturaValor = (f) => {
     if (!f) return 0;
@@ -834,6 +892,102 @@ table{width:100%;border-collapse:collapse;margin-bottom:24px;}
       );
     }
 
+    if (activeTab === 'faturas') {
+      return (
+        <div>
+          {/* Header com botão adicionar */}
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-700 uppercase tracking-tight">Faturas de Clientes</h3>
+              <p className="text-[10px] text-slate-400 mt-0.5">{clienteFaturas.filter(f => f.status === 'PENDENTE').length} pendentes · {clienteFaturas.filter(f => f.status === 'PAGO').length} pagas</p>
+            </div>
+            <button
+              onClick={() => setIsAddingFatura(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase shadow-sm hover:bg-indigo-700 transition-colors"
+            >
+              <Plus size={12} /> Inserir Fatura
+            </button>
+          </div>
+
+          {/* Formulário de inserção */}
+          {isAddingFatura && (
+            <div className="mb-6 bg-slate-50 p-4 sm:p-6 rounded-2xl border border-slate-200">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Cliente</label>
+                  <input type="text" value={faturaForm.cliente} onChange={e => setFaturaForm({ ...faturaForm, cliente: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm" placeholder="Nome do cliente..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Número Fatura</label>
+                  <input type="text" value={faturaForm.numero} onChange={e => setFaturaForm({ ...faturaForm, numero: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm" placeholder="FT 2026/001..." />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor (€)</label>
+                  <input type="number" value={faturaForm.valor} onChange={e => setFaturaForm({ ...faturaForm, valor: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-indigo-700 outline-none shadow-sm" placeholder="0.00" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label>
+                  <input type="date" value={faturaForm.data} onChange={e => setFaturaForm({ ...faturaForm, data: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm shadow-sm" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <button onClick={handleSaveFatura} disabled={faturaSaving} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {faturaSaving ? <><Loader2 size={14} className="animate-spin inline" /> A guardar...</> : 'Guardar Fatura'}
+                </button>
+                <button onClick={() => { setIsAddingFatura(false); setFaturaForm({ cliente: '', numero: '', valor: '', data: toISODateLocal(new Date()) }); }} className="px-6 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-300 transition-colors">Cancelar</button>
+              </div>
+            </div>
+          )}
+
+          {/* Tabela de faturas de clientes */}
+          <div className="overflow-x-auto -mx-2">
+            <table className="w-full text-left border-separate border-spacing-y-2">
+              <thead>
+                <tr className="text-slate-400">
+                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Cliente</th>
+                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Número</th>
+                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Valor</th>
+                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Data</th>
+                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Estado</th>
+                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clienteFaturas.length === 0 ? (
+                  <tr><td colSpan="6" className="py-16 text-center text-slate-400 text-sm font-medium">Nenhuma fatura de cliente inserida.</td></tr>
+                ) : clienteFaturas.map(f => {
+                  const dados = f.dados || {};
+                  const valor = parseFaturaValor({ dados: { valor_total: dados.valor_total } });
+                  return (
+                    <tr key={f.id} className="bg-white hover:shadow-md transition-all duration-300 border border-slate-100">
+                      <td className="px-4 py-3 rounded-l-2xl text-sm font-black text-slate-800">{dados.fornecedor || '—'}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-slate-600">{dados.numero_fatura || '—'}</td>
+                      <td className="px-4 py-3 text-sm font-black text-indigo-700">{formatCurrency(valor)}</td>
+                      <td className="px-4 py-3 text-sm font-bold text-slate-500">{dados.data_fatura ? new Date(dados.data_fatura).toLocaleDateString('pt-PT') : '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                          f.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                        }`}>{f.status}</span>
+                      </td>
+                      <td className="px-4 py-3 rounded-r-2xl text-right">
+                        {f.status === 'PENDENTE' && (
+                          <button onClick={async () => {
+                            await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', f.id);
+                            const { data } = await supabase.from('faturas').select('id, dados, status, importado_em').eq('tipo', 'cliente').order('importado_em', { ascending: false });
+                            setClienteFaturas(data || []);
+                          }} className="text-emerald-600 hover:text-emerald-800 text-xs font-black uppercase hover:underline">Marcar PAGO</button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
     if (activeTab === 'margins') {
       return (
         <div className="overflow-x-auto -mx-2">
@@ -1075,6 +1229,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:24px;}
           {[
             { id: 'workers', icon: Users, label: 'Equipa' },
             { id: 'clients', icon: Building2, label: 'Clientes' },
+            { id: 'faturas', icon: FileText, label: 'Faturas' },
             { id: 'margins', icon: TrendingUp, label: 'Margem' },
             { id: 'expenses', icon: Receipt, label: 'Despesas' },
           ].map(({ id, icon: Icon, label }) => (
