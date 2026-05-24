@@ -569,6 +569,10 @@ export default function MovimentacoesTab() {
       const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, ncsArr, setInternos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
       totalCount += matchCount;
 
+      // Step 5: Ligação virtual para comissões bancárias — executa para TODAS as entradas com cliente
+      const linkCount = await runVirtualLinkStep(supabase, rid, txs, fatsArr, ncsArr, fatLinksArr, setFaturaLinks);
+      totalCount += linkCount;
+
       if (totalCount > 0) setAutoMatchCount(totalCount);
       setAutoMatching(false);
 
@@ -814,6 +818,71 @@ export default function MovimentacoesTab() {
     const { data } = await sb.from('movimentacao_recibo_links').upsert(toInsert, { onConflict: 'run_id,tx_key' }).select('tx_key, worker_id, worker_name, mes, auto_matched');
     if (data) setRls(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
     return data?.length || 0;
+  }
+
+  // Step 5: Ligação virtual para comissões bancárias
+  // Executa para TODAS as entradas de crédito (não só unresolved)
+  // Quando entrada ≠ fatura cliente, verifica se diferença corresponde a fatura de fornecedor
+  async function runVirtualLinkStep(sb, rid, txs, fatsArr, ncsArr, curFatLinks, setFatLinks) {
+    let count = 0;
+
+    // Só processa créditos que já têm client_id (Step 3 fez match)
+    const creditWithClient = txs.filter(tx =>
+      tx.tipo === 'credito' &&
+      ncsArr.some(n => n.tx_key === txKey(tx))
+    );
+
+    for (const tx of creditWithClient) {
+      const key = txKey(tx);
+      const clientNc = ncsArr.find(n => n.tx_key === key);
+      if (!clientNc) continue;
+
+      const valorTx = Math.abs(parseFloat(tx.valor) || 0);
+
+      // Procurar fatura de cliente (tipo=cliente, status=PENDENTE) com valor > tx.valor
+      const clienteFatura = fatsArr.find(f =>
+        f.tipo === 'cliente' &&
+        f.status === 'PENDENTE' &&
+        Number(f.dados?.valor_total) > valorTx + 0.01
+      );
+
+      if (!clienteFatura) continue;
+
+      const valorFaturaCliente = Math.abs(parseFloat(clienteFatura.dados?.valor_total) || 0);
+      const diferenca = valorFaturaCliente - valorTx;
+
+      // Se diferença está entre 0.01 e 500, procurar fatura com valor ≈ diferença
+      if (diferenca > 0.01 && diferenca <= 500.00) {
+        const comissaoFatura = fatsArr.find(f =>
+          (!f.tipo || f.tipo === 'fornecedor') &&
+          f.status === 'PENDENTE' &&
+          Math.abs(parseFloat(f.dados?.valor_total || 0) - diferenca) <= 0.01
+        );
+
+        if (comissaoFatura) {
+          // Criar fatura_pagamento_links se ainda não existir
+          const jaLinkado = curFatLinks.some(fl => fl.fatura_id === clienteFatura.id && fl.tx_key === key);
+          if (!jaLinkado) {
+            await sb.from('fatura_pagamento_links').upsert({
+              fatura_id: clienteFatura.id,
+              run_id: rid,
+              tx_key: key,
+              auto_matched: true,
+            }, { onConflict: 'fatura_id,tx_key' });
+          }
+
+          // Atualizar status das faturas para PAGO
+          await sb.from('faturas').update({ status: 'PAGO' }).eq('id', clienteFatura.id);
+          await sb.from('faturas').update({ status: 'PAGO' }).eq('id', comissaoFatura.id);
+          count++;
+
+          // Atualizar state local
+          setFatLinks(prev => [...prev, { fatura_id: clienteFatura.id, run_id: rid, tx_key: key, auto_matched: true }]);
+        }
+      }
+    }
+
+    return count;
   }
 
   async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, curNcs, setInts, setNcs, setFatLinks, sb, extraExcludeKeys = new Set(), fatsArr = []) {
