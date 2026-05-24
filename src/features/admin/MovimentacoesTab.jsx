@@ -477,126 +477,123 @@ export default function MovimentacoesTab() {
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    const init = async () => {
-      if (!supabase) return;
-      setLoading(true);
+  // ── Auto-match ─────────────────────────────────────────────────────────────
 
-      const { data: run } = await supabase
-        .from('reconciliation_runs')
-        .select('id, transactions_json, created_at')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single();
+  const handleRunAutoMatch = async () => {
+    if (!supabase) return;
+    const { data: run } = await supabase
+      .from('reconciliation_runs')
+      .select('id, transactions_json, created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
 
-      if (!run) { setLoading(false); return; }
+    if (!run) return;
 
-      const rid = run.id;
-      setRunId(rid);
-      setRunData(run);
+    const rid = run.id;
+    setRunId(rid);
+    setRunData(run);
 
-      const txs = run.transactions_json || [];
-      setAllTxs(txs);
+    const txs = run.transactions_json || [];
+    setAllTxs(txs);
 
-      const runYear = new Date(run.created_at).getFullYear();
-      const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
-        supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period').eq('reconciliation_run_id', rid),
-        supabase.from('entrada_justifications').select('tx_key, justification').eq('run_id', rid),
-        supabase.from('entrada_internos').select('tx_key').eq('run_id', rid),
-        supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas').eq('run_id', rid),
-        supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
-        supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
-        supabase.from('reconciliacao_salarial_aliases').select('pattern, worker_name'),
-        supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').like('mes', `${runYear}-%`).not('estado', 'in', '("erro","invalido")'),
-        supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
-        supabase.from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched').eq('run_id', rid),
-      ]);
+    const runYear = new Date(run.created_at).getFullYear();
+    const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
+      supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period').eq('reconciliation_run_id', rid),
+      supabase.from('entrada_justifications').select('tx_key, justification').eq('run_id', rid),
+      supabase.from('entrada_internos').select('tx_key').eq('run_id', rid),
+      supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas').eq('run_id', rid),
+      supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
+      supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
+      supabase.from('reconciliacao_salarial_aliases').select('pattern, worker_name'),
+      supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').like('mes', `${runYear}-%`).not('estado', 'in', '("erro","invalido")'),
+      supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
+      supabase.from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched').eq('run_id', rid),
+    ]);
 
-      const pagsArr = pags || [];
-      const justArr = just || [];
-      const intsArr = ints || [];
-      const ncsArr = ncs || [];
-      const alsArr = als || [];
-      const rlsArr = rls || [];
-      const salAlsArr = salAls || [];
-      const recsArr = recs || [];
+    const pagsArr = pags || [];
+    const justArr = just || [];
+    const intsArr = ints || [];
+    const ncsArr = ncs || [];
+    const alsArr = als || [];
+    const rlsArr = rls || [];
+    const salAlsArr = salAls || [];
+    const recsArr = recs || [];
 
-      const fatsArr = fats || [];
-      const fatLinksArr = fatLinks || [];
-      setPagamentos(pagsArr);
-      setJustificacoes(justArr);
-      setInternos(intsArr);
-      setNotasCredito(ncsArr);
-      setAliases(alsArr);
-      setReciboLinks(rlsArr);
-      setSalarialAliases(salAlsArr);
-      setReceipts(recsArr);
-      setFaturasData(fatsArr);
-      setFaturaLinks(fatLinksArr);
-      setLoading(false);
+    const fatsArr = fats || [];
+    const fatLinksArr = fatLinks || [];
+    setPagamentos(pagsArr);
+    setJustificacoes(justArr);
+    setInternos(intsArr);
+    setNotasCredito(ncsArr);
+    setAliases(alsArr);
+    setReciboLinks(rlsArr);
+    setSalarialAliases(salAlsArr);
+    setReceipts(recsArr);
+    setFaturasData(fatsArr);
+    setFaturaLinks(fatLinksArr);
+    setLoading(false);
 
-      // Auto-match: apenas transacções sem resolução
-      const resolvedKeys = new Set([
-        ...pagsArr.map(p => `${p.transaction_data?.data}|${p.transaction_data?.descricao}|${p.transaction_data?.valor}`),
-        ...justArr.map(j => j.tx_key),
-        ...intsArr.map(i => i.tx_key),
-        ...ncsArr.map(n => n.tx_key),
-        ...rlsArr.map(r => r.tx_key),
-        ...fatLinksArr.map(f => f.tx_key),
-      ]);
+    const resolvedKeys = new Set([
+      ...pagsArr.map(p => `${p.transaction_data?.data}|${p.transaction_data?.descricao}|${p.transaction_data?.valor}`),
+      ...justArr.map(j => j.tx_key),
+      ...intsArr.map(i => i.tx_key),
+      ...ncsArr.map(n => n.tx_key),
+      ...rlsArr.map(r => r.tx_key),
+      ...fatLinksArr.map(f => f.tx_key),
+    ]);
 
-      const unresolved = txs.filter(tx => !resolvedKeys.has(txKey(tx)));
-      if (unresolved.length === 0) return;
+    const unresolved = txs.filter(tx => !resolvedKeys.has(txKey(tx)));
+    if (unresolved.length === 0) return;
 
-      setAutoMatching(true);
-      let totalCount = 0;
-      const { count: faturaCount, insertedKeys: faturaKeys } = await runAutoMatchFaturas(
-        unresolved.filter(tx => tx.tipo === 'debito'), fatsArr, rid, fatLinksArr, setFaturaLinks, supabase
-      );
-      totalCount += faturaCount;
+    setAutoMatching(true);
+    let totalCount = 0;
+    const { count: faturaCount, insertedKeys: faturaKeys } = await runAutoMatchFaturas(
+      unresolved.filter(tx => tx.tipo === 'debito'), fatsArr, rid, fatLinksArr, setFaturaLinks, supabase
+    );
+    totalCount += faturaCount;
 
-      const { count: splitCount, insertedKeys: splitKeys } = await runAutoMatchFaturasSplit(
-        unresolved.filter(tx => tx.tipo === 'debito'), fatsArr, rid, fatLinksArr, setFaturaLinks, supabase
-      );
-      totalCount += splitCount;
-      const faturaAllKeys = new Set([...faturaKeys, ...splitKeys]);
+    const { count: splitCount, insertedKeys: splitKeys } = await runAutoMatchFaturasSplit(
+      unresolved.filter(tx => tx.tipo === 'debito'), fatsArr, rid, fatLinksArr, setFaturaLinks, supabase
+    );
+    totalCount += splitCount;
+    const faturaAllKeys = new Set([...faturaKeys, ...splitKeys]);
 
-      const debitosParaRecibo = unresolved.filter(tx => tx.tipo === 'debito' && !faturaAllKeys.has(txKey(tx)));
-      const reciboCount = await runAutoMatchRecibos(
-        debitosParaRecibo, rid, salAlsArr, recsArr, rlsArr, setReciboLinks, supabase
-      );
-      totalCount += reciboCount;
+    const debitosParaRecibo = unresolved.filter(tx => tx.tipo === 'debito' && !faturaAllKeys.has(txKey(tx)));
+    const reciboCount = await runAutoMatchRecibos(
+      debitosParaRecibo, rid, salAlsArr, recsArr, rlsArr, setReciboLinks, supabase
+    );
+    totalCount += reciboCount;
 
-      const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, ncsArr, setInternos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
-      totalCount += matchCount;
+    const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, ncsArr, setInternos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
+    totalCount += matchCount;
 
-      // Step 5: Ligação virtual para comissões bancárias — executa para TODAS as entradas com cliente
-      // Fetch fresh ncs from DB (runAutoMatch may have created new entries)
-      const { data: freshNcs } = await supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period').eq('run_id', rid);
-      const ncsUpdated = freshNcs || [];
-      const linkCount = await runVirtualLinkStep(supabase, rid, txs, fatsArr, ncsUpdated, fatLinksArr, setFaturaLinks);
-      totalCount += linkCount;
+    const { data: freshNcs } = await supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period').eq('run_id', rid);
+    const ncsUpdated = freshNcs || [];
+    const linkCount = await runVirtualLinkStep(supabase, rid, txs, fatsArr, ncsUpdated, fatLinksArr, setFaturaLinks);
+    totalCount += linkCount;
 
-      if (totalCount > 0) setAutoMatchCount(totalCount);
-      setAutoMatching(false);
+    if (totalCount > 0) setAutoMatchCount(totalCount);
+    setAutoMatching(false);
 
-      // Actualizar status de faturas para PAGO se todos os débitos foram linkados
-      const novoBancoFatura = fatsArr.find(f =>
-        f.dados?.fornecedor === 'Novo Banco, S.A.' &&
-        String(f.dados?.numero_fatura) === '4314117912'
-      );
-      if (novoBancoFatura) {
-        const { data: freshFatLinks } = await supabase
-          .from('fatura_pagamento_links')
-          .select('fatura_id, tx_key')
-          .eq('fatura_id', novoBancoFatura.id)
-          .eq('run_id', rid);
-        if (freshFatLinks && freshFatLinks.length > 0) {
-          updateFaturasPagoIfComplete(fatsArr, freshFatLinks, txs, supabase, rid);
-        }
+    const novoBancoFatura = fatsArr.find(f =>
+      f.dados?.fornecedor === 'Novo Banco, S.A.' &&
+      String(f.dados?.numero_fatura) === '4314117912'
+    );
+    if (novoBancoFatura) {
+      const { data: freshFatLinks } = await supabase
+        .from('fatura_pagamento_links')
+        .select('fatura_id, tx_key')
+        .eq('fatura_id', novoBancoFatura.id)
+        .eq('run_id', rid);
+      if (freshFatLinks && freshFatLinks.length > 0) {
+        updateFaturasPagoIfComplete(fatsArr, freshFatLinks, txs, supabase, rid);
       }
-    };
-    init();
+    }
+  };
+
+  useEffect(() => {
+    handleRunAutoMatch();
   }, []);
 
   async function updateFaturasPagoIfComplete(fatsArr, curFatLinks, txsData, sb, rid) {
