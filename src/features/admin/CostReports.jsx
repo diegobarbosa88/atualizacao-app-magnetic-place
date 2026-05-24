@@ -87,10 +87,15 @@ const CostReports = () => {
       return alert('Cliente, número e valor são obrigatórios');
     }
     setFaturaSaving(true);
-    const id = `cf_${Date.now()}`;
     const valorNum = parseFloat(faturaForm.valor.replace(/\./g, '').replace(',', '.')) || 0;
     await supabase.from('faturas').insert({
-      id,
+      gmail_message_id: `manual_${Date.now()}`,
+      filename: `fatura_cliente_${Date.now()}.pdf`,
+      storage_path: '',
+      url: '',
+      mime_type: 'application/pdf',
+      tamanho: 0,
+      importado_em: new Date().toISOString(),
       tipo: 'cliente',
       dados: {
         fornecedor: faturaForm.cliente,
@@ -104,12 +109,6 @@ const CostReports = () => {
       data_documento: faturaForm.data,
       descricao: `Fatura cliente: ${faturaForm.cliente}`,
       entidade: faturaForm.cliente,
-      filename: `fatura_cliente_${id}.pdf`,
-      storage_path: '',
-      url: '',
-      mime_type: 'application/pdf',
-      tamanho: 0,
-      importado_em: new Date().toISOString(),
     });
     setFaturaForm({ cliente: '', numero: '', valor: '', data: toISODateLocal(new Date()) });
     setIsAddingFatura(false);
