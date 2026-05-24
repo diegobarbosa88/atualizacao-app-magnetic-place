@@ -918,7 +918,7 @@ export default function MovimentacoesTab() {
           const diferenca = valorFaturaCliente - valorTx;
 
           // b) Se diferença está entre 0.01 e 0.50 (tolerância), procurar fatura fornecedor
-          if (diferenca > 0.01 && diferenca <= 0.50) {
+          if (diferenca > 0.01 && diferenca <= 500.00) {
             const fornecedorFatura = fatsArr.find(f =>
               f.tipo === 'fornecedor' &&
               f.status === 'PENDENTE' &&
