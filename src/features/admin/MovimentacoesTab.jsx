@@ -824,9 +824,9 @@ export default function MovimentacoesTab() {
     const existingIntKeys = new Set(curInternos.map(i => i.tx_key));
     const existingNcKeys = new Set(curNcs.map(n => n.tx_key));
 
-    console.log('[DEBUG] Processing tx:', key, 'tipo:', tx.tipo, 'desc:', tx.descricao, 'valor:', tx.valor);
     for (const tx of unresolved) {
       const key = txKey(tx);
+      console.log('[DEBUG] Processing tx:', key, 'tipo:', tx.tipo, 'desc:', tx.descricao, 'valor:', tx.valor);
       if (existingIntKeys.has(key) || existingNcKeys.has(key) || extraExcludeKeys.has(key)) {
         console.log('[DEBUG] SKIPPED - already matched or excluded');
         continue;
