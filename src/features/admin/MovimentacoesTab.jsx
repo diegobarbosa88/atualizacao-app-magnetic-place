@@ -507,7 +507,7 @@ export default function MovimentacoesTab() {
         supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
         supabase.from('reconciliacao_salarial_aliases').select('pattern, worker_name'),
         supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').like('mes', `${runYear}-%`).not('estado', 'in', '("erro","invalido")'),
-        supabase.from('faturas').select('id, dados, status').order('importado_em', { ascending: false }),
+        supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
         supabase.from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched').eq('run_id', rid),
       ]);
 
@@ -570,7 +570,10 @@ export default function MovimentacoesTab() {
       totalCount += matchCount;
 
       // Step 5: Ligação virtual para comissões bancárias — executa para TODAS as entradas com cliente
-      const linkCount = await runVirtualLinkStep(supabase, rid, txs, fatsArr, ncsArr, fatLinksArr, setFaturaLinks);
+      // Fetch fresh ncs from DB (runAutoMatch may have created new entries)
+      const { data: freshNcs } = await supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period').eq('run_id', rid);
+      const ncsUpdated = freshNcs || [];
+      const linkCount = await runVirtualLinkStep(supabase, rid, txs, fatsArr, ncsUpdated, fatLinksArr, setFaturaLinks);
       totalCount += linkCount;
 
       if (totalCount > 0) setAutoMatchCount(totalCount);
