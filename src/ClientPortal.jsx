@@ -1303,10 +1303,16 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     const renderValidar = () => (
         <div className="animate-fade-in space-y-8">
-            {/* Voltar */}
-            <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
-                <ChevronLeft size={16} /> {t('back_dashboard')}
-            </button>
+            {/* Voltar / Efetuar Login */}
+            {clientSession ? (
+                <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
+                    <ChevronLeft size={16} /> {t('back_dashboard')}
+                </button>
+            ) : (
+                <a href={`https://painelcliente.magneticplace.pt/?view=client_portal&client=${effectiveClientId}`} className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-black text-[10px] uppercase tracking-widest transition-all">
+                    <ChevronLeft size={16} /> Efetuar Login
+                </a>
+            )}
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
                     <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{t('selected_period')}</h2>
@@ -2154,8 +2160,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             </div>
                         </div>
                     ))}
-                </div>
+</div>
             )}
+
+            {/* Header Magnetic Place */}
+            {!printingWorker && <Header />}
+
             {!printingWorker ? (
                 <>
                     <main className="max-w-6xl mx-auto px-4 md:px-8 py-8">
