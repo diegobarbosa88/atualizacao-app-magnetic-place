@@ -244,7 +244,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
         const clone = liveNode.cloneNode(true);
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:#fff;z-index:1;overflow:hidden;';
+        wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;z-index:1;overflow:hidden;';
         wrapper.appendChild(clone);
         document.body.appendChild(wrapper);
         await new Promise(r => setTimeout(r, 200));
@@ -252,17 +252,18 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const scrollH = clone.scrollHeight;
         const actualW = clone.offsetWidth || 794;
         const canvas = await html2canvas(clone, {
-          scale: 1,
+          scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
+          windowWidth: 794,
           width: actualW,
           height: scrollH,
         });
 
         document.body.removeChild(wrapper);
 
-        const ratio = pdfWidth / canvas.width;
+        const ratio = pdfWidth / actualW;
         const pageHeightPx = (pdfHeight - 2 * MARGIN_MM) / ratio;
         const totalContentPx = canvas.height;
         const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
