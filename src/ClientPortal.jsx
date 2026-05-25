@@ -286,7 +286,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const isDirectAccess = false;
 
     const [selectedTab, setSelectedTab] = useState(() => {
-        if (initialTokenClientId && initialMonth) return 'validar';
+        const tokenOrClientId = initialTokenClientId || initialClientId;
+        if (tokenOrClientId && initialMonth) return 'validar';
         if (initialMonth) {
             try {
                 const sess = JSON.parse(localStorage.getItem('magnetic_client_session') || 'null');

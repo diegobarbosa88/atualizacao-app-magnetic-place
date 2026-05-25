@@ -29,7 +29,7 @@ import {
 } from './utils/formatUtils';
 import { sendNotificationEmail } from './utils/emailUtils';
 
-const CLIENT_PORTAL_URL = import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/';
+const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/';
 
 // --- App Principal ---
 export default function App() {
