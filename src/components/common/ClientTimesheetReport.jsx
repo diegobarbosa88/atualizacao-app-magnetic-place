@@ -243,46 +243,48 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         if (!liveNode) continue;
 
         const clone = liveNode.cloneNode(true);
+        clone.style.cssText += ';width:210mm !important;overflow:visible;box-sizing:border-box;';
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;width:210mm;background:#fff;z-index:-1;overflow:hidden;';
+        wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;width:210mm;background:#fff;z-index:1;overflow:visible;padding:0;';
         wrapper.appendChild(clone);
         document.body.appendChild(wrapper);
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 500));
 
-        const scrollH = clone.scrollHeight;
-        const actualW = clone.offsetWidth || 794;
+        const contentW = clone.offsetWidth;
+        const contentH = clone.scrollHeight;
         const canvas = await html2canvas(clone, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
-          width: actualW,
-          height: scrollH,
+          width: contentW,
+          height: contentH,
         });
 
         document.body.removeChild(wrapper);
 
-        const ratio = usableW / canvas.width;
-        const pageHeightPx = (pdfHeight - 2 * MARGIN_MM) / ratio;
-        const totalContentPx = canvas.height;
-        const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
+        const imgW = canvas.width;
+        const imgH = canvas.height;
+        const contentRatio = usableW / contentW;
+        const pageHeightPx = (pdfHeight - 2 * MARGIN_MM) / contentRatio;
+        const totalPages = Math.max(1, Math.ceil(imgH / pageHeightPx));
 
         if (totalPages <= 1) {
           if (i > 0) pdf.addPage();
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', MARGIN_MM, MARGIN_MM, usableW, canvas.height * ratio);
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', MARGIN_MM, MARGIN_MM, usableW, imgH * contentRatio);
         } else {
           for (let p = 0; p < totalPages; p++) {
             if (p > 0) pdf.addPage();
             const sliceY = Math.floor(p * pageHeightPx);
             const nextSliceY = Math.floor((p + 1) * pageHeightPx);
             const isLast = p === totalPages - 1;
-            const sliceH = isLast ? totalContentPx - sliceY : nextSliceY - sliceY;
+            const sliceH = isLast ? imgH - sliceY : nextSliceY - sliceY;
             const sliceCanvas = document.createElement('canvas');
-            sliceCanvas.width = canvas.width;
+            sliceCanvas.width = imgW;
             sliceCanvas.height = sliceH;
-            sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+            sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, imgW, sliceH, 0, 0, imgW, sliceH);
             const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-            pdf.addImage(sliceData, 'JPEG', MARGIN_MM, MARGIN_MM, usableW, sliceH * ratio);
+            pdf.addImage(sliceData, 'JPEG', MARGIN_MM, MARGIN_MM, usableW, sliceH * contentRatio);
           }
         }
       }
