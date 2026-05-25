@@ -264,13 +264,13 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         document.body.removeChild(wrapper);
 
         const ratio = pdfWidth / canvas.width;
-        const pageHeightPx = (pdfHeight - 2 * MARGIN_MM) / ratio;
+        const pageHeightPx = pdfHeight / ratio;
         const totalContentPx = canvas.height;
         const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
 
         if (totalPages <= 1) {
           if (i > 0) pdf.addPage();
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, MARGIN_MM, pdfWidth, canvas.height * ratio);
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pdfWidth, canvas.height * ratio);
         } else {
           for (let p = 0; p < totalPages; p++) {
             if (p > 0) pdf.addPage();
@@ -283,7 +283,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
             sliceCanvas.height = sliceH;
             sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
             const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-            pdf.addImage(sliceData, 'JPEG', 0, MARGIN_MM, pdfWidth, sliceH * ratio);
+            pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, sliceH * ratio);
           }
         }
       }
