@@ -869,9 +869,15 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     </div>
                                 )}
                             </div>
-                            <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-rose-500 transition-all">
-                                <LogOut size={18} />
-                            </button>
+                            {clientSession ? (
+                                <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-rose-500 transition-all" title="Sair">
+                                    <LogOut size={18} />
+                                </button>
+                            ) : (
+                                <a href="https://painelcliente.magneticplace.pt/" className="p-1.5 text-indigo-500 hover:text-indigo-700 transition-all" title="Efetuar Login">
+                                    <LogIn size={18} />
+                                </a>
+                            )}
                         </>
                     )}
                 </div>
@@ -1305,14 +1311,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 </div>
             </div>
             {/* Voltar / Efetuar Login */}
-            {clientSession ? (
+            {clientSession && (
                 <button onClick={() => window.location.href = window.location.origin + window.location.pathname} className="flex items-center gap-2 text-slate-400 hover:text-indigo-600 font-black text-[10px] uppercase tracking-widest transition-all">
                     <ChevronLeft size={16} /> {t('back_dashboard')}
                 </button>
-            ) : (
-                <a href="https://painelcliente.magneticplace.pt/" className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-black text-[10px] uppercase tracking-widest transition-all">
-                    <ChevronLeft size={16} /> Efetuar Login
-                </a>
             )}
             <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 overflow-hidden p-6 md:p-10 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div>
