@@ -29,6 +29,13 @@ body {
     page-break-after: always;
     break-after: page;
   }
+  /* Resumo mensal + carimbo: nunca separar entre páginas */
+  .a4-paper > div:last-child {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    orphan: auto !important;
+    widow: auto !important;
+  }
 }
 
 .a4-paper .print-table tr {

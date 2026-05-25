@@ -276,42 +276,37 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           height: scrollH,
         });
 
-        const cropY = canvas.height - (scrollH * 2);
-        const croppedCanvas = cropY > 0 && cropY < canvas.height * 0.95
-          ? canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height - cropY)
-          : null;
-
         document.body.removeChild(wrapper);
 
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = croppedCanvas ? canvas.height - cropY : canvas.height;
-        const ratio = pdfWidth / imgWidth;
-
         const MARGIN_MM = 15;
-        const usablePageHeightMm = pdfHeight - 2 * MARGIN_MM;
-        const pageHeightPx = usablePageHeightMm / ratio;
+        const usableH = pdfHeight - 2 * MARGIN_MM;
+        const ratio = pdfWidth / canvas.width;
+        const pageHeightPx = usableH / ratio;
 
-        const fullCanvasForSlice = croppedCanvas
-          ? (() => { const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height - cropY; c.getContext('2d').putImageData(croppedCanvas, 0, 0); return c; })()
-          : canvas;
+        const totalContentPx = canvas.height;
+        const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
 
-        let sliceY = 0;
-        let firstPage = true;
-        while (sliceY < imgHeight) {
-          const sliceH = Math.min(pageHeightPx, imgHeight - sliceY);
-          const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = imgWidth;
-          sliceCanvas.height = sliceH;
-          sliceCanvas.getContext('2d').drawImage(fullCanvasForSlice, 0, sliceY, imgWidth, sliceH, 0, 0, imgWidth, sliceH);
-          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-          const sliceInMm = sliceH * ratio;
-          if (!firstPage) pdf.addPage();
-          pdf.addImage(sliceData, 'JPEG', 0, MARGIN_MM, pdfWidth, sliceInMm);
-          sliceY += pageHeightPx;
-          firstPage = false;
+        if (totalPages <= 1) {
+          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, MARGIN_MM, pdfWidth, canvas.height * ratio);
+        } else {
+          for (let p = 0; p < totalPages; p++) {
+            const sliceY = Math.floor(p * pageHeightPx);
+            const nextSliceY = Math.floor((p + 1) * pageHeightPx);
+            const isLast = p === totalPages - 1;
+            const sliceH = isLast ? totalContentPx - sliceY : nextSliceY - sliceY;
+            const sliceCanvas = document.createElement('canvas');
+            sliceCanvas.width = canvas.width;
+            sliceCanvas.height = sliceH;
+            sliceCanvas.getContext('2d').drawImage(
+              canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+            );
+            const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+            if (p > 0) pdf.addPage();
+            pdf.addImage(sliceData, 'JPEG', 0, MARGIN_MM, pdfWidth, sliceH * ratio);
+          }
         }
 
         folder.file(`Relatorio_${workerName}_${month}.pdf`, pdf.output('blob'));
