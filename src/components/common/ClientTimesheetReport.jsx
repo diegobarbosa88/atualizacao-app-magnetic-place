@@ -266,18 +266,19 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const ratio = pdfWidth / canvas.width;
         const pageHeightPx = pdfHeight / ratio;
         const totalContentPx = canvas.height;
-        const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
+        const totalPages = totalContentPx <= pageHeightPx ? 1 : Math.ceil(totalContentPx / pageHeightPx);
 
         if (totalPages <= 1) {
           if (i > 0) pdf.addPage();
           pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pdfWidth, canvas.height * ratio);
         } else {
           for (let p = 0; p < totalPages; p++) {
-            if (p > 0) pdf.addPage();
+            if (i > 0 || p > 0) pdf.addPage();
             const sliceY = Math.floor(p * pageHeightPx);
-            const nextSliceY = Math.floor((p + 1) * pageHeightPx);
+            const nextSliceY = Math.min(Math.floor((p + 1) * pageHeightPx), totalContentPx);
             const isLast = p === totalPages - 1;
             const sliceH = isLast ? totalContentPx - sliceY : nextSliceY - sliceY;
+            if (sliceH <= 0) continue;
             const sliceCanvas = document.createElement('canvas');
             sliceCanvas.width = canvas.width;
             sliceCanvas.height = sliceH;
