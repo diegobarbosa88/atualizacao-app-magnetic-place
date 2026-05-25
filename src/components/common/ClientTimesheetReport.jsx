@@ -366,19 +366,44 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const totalContentPx = canvas.height;
         const totalPages = Math.ceil(totalContentPx / pageHeightPx);
 
-        for (let p = 0; p < totalPages; p++) {
-          if (p > 0) pdf.addPage();
-          const sliceY = Math.round(p * pageHeightPx);
-          const sliceH = Math.min(Math.round(pageHeightPx), totalContentPx - sliceY);
-          if (sliceH <= 0) break;
-          const sliceCanvas = document.createElement('canvas');
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = sliceH;
-          sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-          const imageHeightInPdf = Math.floor(sliceH * ratio);
-          pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, imageHeightInPdf, undefined, 'FAST');
-        }
+        // 1. Pegamos a altura real da folha do PDF em milímetros (ex: 297mm se for A4)
+const pdfPageHeightMm = pdf.internal.pageSize.getHeight();
+
+// 2. RECALCULO CRÍTICO: Descobrimos quantos pixels cabem exatamente nessa altura do PDF
+// Isso substitui o valor antigo e incorreto de pageHeightPx
+const exactPageHeightPx = pdfPageHeightMm / ratio;
+
+// 3. Atualizamos o total de páginas com base no novo tamanho exato de corte
+const correctedTotalPages = Math.ceil(totalContentPx / exactPageHeightPx);
+
+// Início do Loop com as correções aplicadas
+for (let p = 0; p < correctedTotalPages; p++) {
+  // Usamos a nova altura exata em pixels para fatiar o Canvas
+  const sliceY = Math.round(p * exactPageHeightPx);
+  const nextSliceY = Math.round((p + 1) * exactPageHeightPx);
+  const isLast = p === correctedTotalPages - 1;
+  const sliceH = isLast ? totalContentPx - sliceY : nextSliceY - sliceY;
+  
+  if (sliceH <= 0) break;
+
+  const sliceCanvas = document.createElement('canvas');
+  sliceCanvas.width = canvas.width;
+  sliceCanvas.height = sliceH;
+  sliceCanvas.getContext('2d').drawImage(
+    canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH
+  );
+  
+  const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+  
+  if (p > 0) pdf.addPage();
+  
+  // Garantimos que a imagem gerada nunca ultrapasse a altura máxima do PDF
+  const calculatedHeight = sliceH * ratio;
+  const imageHeightInPdf = Math.min(calculatedHeight, pdfPageHeightMm);
+
+  pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, imageHeightInPdf, undefined, 'FAST');
+}
+
 
         folder.file(`Relatorio_${workerName}_${month}.pdf`, pdf.output('blob'));
       }
