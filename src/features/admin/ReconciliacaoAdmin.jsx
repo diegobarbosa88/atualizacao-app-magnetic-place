@@ -44,6 +44,18 @@ function TipoBadge({ tipo }) {
   );
 }
 
+function extractMonthYearName(transactionsJson) {
+  if (!transactionsJson || transactionsJson.length === 0) return null;
+  const firstDate = transactionsJson[0]?.data;
+  if (!firstDate) return null;
+  try {
+    const date = new Date(firstDate + 'T00:00:00');
+    return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  } catch {
+    return null;
+  }
+}
+
 // ─── Relatório Modal ──────────────────────────────────────────────────────────
 const COLS_MATCHED = [
   { key: 'data',            label: 'Data Movimento' },
@@ -2661,7 +2673,7 @@ export default function ReconciliacaoAdmin() {
                   className="accent-indigo-600 w-4 h-4 flex-shrink-0 mr-2 cursor-pointer"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-700 truncate">{run.filename}</p>
+                  <p className="text-sm font-semibold text-slate-700 truncate">{extractMonthYearName(run.transactions_json) || run.filename}</p>
                   <p className="text-[10px] text-slate-400">
                     {new Date(run.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </p>
