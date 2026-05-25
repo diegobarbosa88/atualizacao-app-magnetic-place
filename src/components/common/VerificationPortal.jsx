@@ -191,11 +191,11 @@ const VerificationPortal = ({ signatureId }) => {
           >
             <div className="flex items-center justify-center mb-5">
               <div className="relative">
-                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-white bg-opacity-20 shadow-inner">
-                  <ShieldCheck size={36} className="text-white" strokeWidth={2} />
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 shadow-lg shadow-emerald-900/20">
+                  <ShieldCheck size={32} className="text-white" strokeWidth={2} />
                 </div>
-                <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
-                  <CheckCircle size={14} className="text-emerald-600" strokeWidth={2.5} />
+                <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow border-2 border-emerald-600">
+                  <CheckCircle size={16} className="text-emerald-600" strokeWidth={2.5} />
                 </div>
               </div>
             </div>
