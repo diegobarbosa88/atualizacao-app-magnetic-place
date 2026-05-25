@@ -868,7 +868,7 @@ export default function ReconciliacaoAdmin() {
       const [{ data, error }, { data: aliasData }] = await Promise.all([
         supabase
           .from('reconciliation_runs')
-          .select('id, created_at, filename, transaction_count, matched_count, orphan_bank_count, orphan_system_count')
+          .select('id, created_at, filename, transaction_count, matched_count, orphan_bank_count, orphan_system_count, transactions_json')
           .order('created_at', { ascending: false })
           .limit(20),
         supabase.from('reconciliacao_entity_aliases').select('*').order('created_at', { ascending: false }),
