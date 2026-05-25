@@ -232,9 +232,6 @@ body {
   }
 
   /* Forçar quebra antes de cada relatório */
-  .a4-paper {
-    page-break-before: auto !important;
-  }
 }
 
 /* TABELAS UNIFICADAS */
