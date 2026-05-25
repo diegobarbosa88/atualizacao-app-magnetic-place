@@ -270,17 +270,26 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const totalPages = Math.ceil(totalContentPx / pageHeightPx);
 
         for (let p = 0; p < totalPages; p++) {
-          if (p > 0) pdf.addPage();
           const sliceY = Math.round(p * pageHeightPx);
           const sliceH = Math.min(Math.round(pageHeightPx), totalContentPx - sliceY);
           if (sliceH <= 0) break;
+
+          // Cria a página manualmente apenas a partir da segunda fatia
+          if (p > 0) pdf.addPage();
+
           const sliceCanvas = document.createElement('canvas');
           sliceCanvas.width = canvas.width;
           sliceCanvas.height = sliceH;
           sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
           const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-          pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, sliceH * ratio);
+
+          // CORREÇÃO: Força o arredondamento para baixo para a imagem nunca vazar a página
+          const imageHeightInPdf = Math.floor(sliceH * ratio);
+
+          // Insere a imagem com a altura estritamente controlada
+          pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, imageHeightInPdf, undefined, 'FAST');
         }
+
       }
 
       const lastPageIdx = pdf.internal.getNumberOfPages();
