@@ -15,6 +15,20 @@ body {
   color: #0f172a;
   line-height: 1 !important;
   position: relative;
+  page-break-after: always;
+  break-after: page;
+}
+
+@media print {
+  .a4-paper {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
+    padding: 15mm 20mm !important;
+    page-break-after: always;
+    break-after: page;
+  }
 }
 
 .a4-paper .print-table tr {
@@ -67,28 +81,6 @@ body {
 .a4-paper .week-spacing {
   margin-top: 0px !important;
   margin-bottom: 0px !important;
-}
-
-@media print {
-  @page {
-    size: A4 portrait;
-    margin: 0;
-  }
-  body {
-    background-color: white !important;
-  }
-  .a4-paper {
-    margin: 0 !important;
-    padding: 30px !important;
-    box-shadow: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: auto !important;
-  }
-  html, body {
-    height: auto !important;
-    overflow: visible !important;
-  }
 }
 
 .zip-export-mode body {
@@ -158,6 +150,10 @@ body {
 
 /* ESCONDER ELEMENTOS NA HORA DE IMPRIMIR */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
   .no-print { display: none !important; }
   .report-container { padding: 0; max-width: 100%; }
 
