@@ -224,21 +224,38 @@ body {
 
   /* Garantir quebras de página corretas */
   .a4-paper {
+    padding: 15mm 20mm !important;
     page-break-after: always !important;
     break-after: page !important;
+    page-break-before: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    margin: 0 !important;
   }
+  /* Primeiro .a4-paper não precisa de quebra antes — já está no topo */
+  /* Último .a4-paper não força quebra depois */
   .a4-paper:last-child {
     page-break-after: auto !important;
     break-after: auto !important;
   }
-
+  /* Resumo mensal + carimbo: nunca separar entre páginas */
+  .a4-paper > div:last-child {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    orphan: auto !important;
+    widow: auto !important;
+  }
   /* Evitar quebra dentro de elementos */
   .page-break-inside-avoid {
     break-inside: avoid !important;
     page-break-inside: avoid !important;
   }
-
-  /* Forçar quebra antes de cada relatório */
+  /* Forçar quebra antes de cada relatório (exceto primeiro) */
+  .a4-paper + .a4-paper {
+    page-break-before: always !important;
+    break-before: page !important;
+  }
 }
 
 /* TABELAS UNIFICADAS */
