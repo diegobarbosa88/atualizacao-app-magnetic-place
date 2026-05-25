@@ -379,7 +379,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         <>
           <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-lg">
             {[
-              { id: 'reconciliacao', label: 'Reconciliação', icon: Activity },
               { id: 'recibos',  label: 'Recibos',  icon: CheckCircle },
               { id: 'salarios', label: 'Salários', icon: Coins },
               { id: 'faturas',  label: 'Faturas',  icon: Receipt },
@@ -393,7 +392,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
               </button>
             ))}
           </div>
-          {validarSubTab === 'reconciliacao' && <ReconciliacaoAdmin />}
           {validarSubTab === 'recibos' && <ValidarReciboAdmin workers={workers} />}
           {validarSubTab === 'salarios' && <SalariosTab />}
           {validarSubTab === 'faturas' && <FaturasTab />}

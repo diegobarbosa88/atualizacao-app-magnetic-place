@@ -6,7 +6,7 @@ import {
   X, Loader2, Download, FileText, MessageSquare, Undo2,
   ArrowLeftRight, Link, Tag, Trash2, Zap, Plus, Receipt,
   TrendingUp, TrendingDown, UserCheck, FileMinus,
-  RefreshCw,
+  RefreshCw, Upload,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -469,6 +469,19 @@ export default function MovimentacoesTab() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
 
+  // ── Upload state (from ReconciliacaoAdmin) ───────────────────────────────────
+  const [ficheiros, setFicheiros] = useState([]);
+  const [dragging, setDragging] = useState(false);
+  const [processando, setProcessando] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [previewTransacoes, setPreviewTransacoes] = useState(null);
+  const [previewFilename, setPreviewFilename] = useState('');
+  const [selTransacoes, setSelTransacoes] = useState(new Set());
+  const [txSearch, setTxSearch] = useState('');
+  const [txTipoFiltro, setTxTipoFiltro] = useState('todos');
+  const inputRef = useRef(null);
+
   useEffect(() => {
     const handleClick = (e) => {
       if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false);
@@ -637,6 +650,88 @@ export default function MovimentacoesTab() {
     };
     fetchRuns();
   }, []);
+
+  // ── Upload handlers (from ReconciliacaoAdmin) ───────────────────────────────
+
+  const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const handleDragLeave = () => setDragging(false);
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    adicionarFicheiros(e.dataTransfer.files);
+  };
+  const handleFileChange = (e) => {
+    adicionarFicheiros(e.target.files);
+    e.target.value = '';
+  };
+  const adicionarFicheiros = (fileList) => {
+    setErro(null);
+    const validos = [];
+    const invalidos = [];
+    for (const f of fileList) {
+      const ext = f.name.split('.').pop().toLowerCase();
+      if (['csv', 'ofx', 'qfx'].includes(ext)) validos.push(f);
+      else invalidos.push(f.name);
+    }
+    if (invalidos.length) setErro(`Formato não suportado: ${invalidos.join(', ')}. Aceites: CSV, OFX, QFX.`);
+    if (validos.length) setFicheiros(prev => {
+      const existentes = new Set(prev.map(f => f.name));
+      return [...prev, ...validos.filter(f => !existentes.has(f.name))];
+    });
+  };
+
+  const previsar = async () => {
+    if (!ficheiros.length) return;
+    setPreviewing(true);
+    setErro(null);
+    const allTx = [];
+    for (const f of ficheiros) {
+      try {
+        const fp = new FormData();
+        fp.append('file', f);
+        const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
+        const data = await res.json();
+        if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); continue; }
+        allTx.push(...data.transactions.map(tx => ({ ...tx, _source: f.name })));
+      } catch (err) {
+        setErro(err.message || 'Erro de rede.');
+      }
+    }
+    if (allTx.length) {
+      setPreviewTransacoes(allTx);
+      setPreviewFilename(ficheiros.map(f => f.name).join(', '));
+      setSelTransacoes(new Set(allTx.map((_, i) => i)));
+      setTxSearch('');
+      setTxTipoFiltro('todos');
+    }
+    setFicheiros([]);
+    setPreviewing(false);
+  };
+
+  const processar = async () => {
+    if (!previewTransacoes) return;
+    const selected = previewTransacoes.filter((_, i) => selTransacoes.has(i));
+    if (!selected.length) { setErro('Seleccione pelo menos um movimento.'); return; }
+    setProcessando(true);
+    setErro(null);
+    try {
+      const res = await fetch('/api/reconciliacao/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions_json: selected, filename: previewFilename }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
+      setPreviewTransacoes(null);
+      setFicheiros([]);
+      setRunId(null);
+      await loadRun(data.run_id);
+    } catch (err) {
+      setErro(err.message || 'Erro de rede.');
+    } finally {
+      setProcessando(false);
+    }
+  };
 
   async function updateFaturasPagoIfComplete(fatsArr, curFatLinks, txsData, sb, rid) {
     if (!curFatLinks || !curFatLinks.length || !txsData || !txsData.length) return;
@@ -1347,6 +1442,71 @@ if (toInsertNcs.length > 0) {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  // Upload / Preview zone
+  if (ficheiros.length > 0 || previewTransacoes) {
+    return (
+      <div className="space-y-3">
+        {ficheiros.length > 0 && (
+          <div className="bg-white rounded-2xl border-2 border-dashed border-indigo-200 p-6 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <Upload size={28} className="text-indigo-400" />
+              <p className="text-sm font-semibold text-slate-700">{ficheiros.length} ficheiro(s) pronto(s) para processar</p>
+              <p className="text-xs text-slate-400">{ficheiros.map(f => f.name).join(', ')}</p>
+              <div className="flex gap-2">
+                <button onClick={() => setFicheiros([])} className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50">Cancelar</button>
+                <button onClick={previsar} disabled={previewing} className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50">
+                  {previewing ? <Loader2 size={13} className="animate-spin" /> : null}
+                  Pré-visualizar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {previewTransacoes && (
+          <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-slate-700">{previewFilename}</p>
+              <div className="flex gap-2">
+                <button onClick={() => { setPreviewTransacoes(null); setFicheiros([]); }} className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50">Cancelar</button>
+                <button onClick={processar} disabled={processando} className="flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 disabled:opacity-50">
+                  {processando ? <Loader2 size={11} className="animate-spin" /> : null}
+                  Processar
+                </button>
+              </div>
+            </div>
+            <div className="flex gap-2 mb-2">
+              <input type="text" placeholder="Filtrar descrição…" value={txSearch} onChange={e => setTxSearch(e.target.value)} className="flex-1 px-3 py-1.5 text-xs border border-slate-200 rounded-xl" />
+              <select value={txTipoFiltro} onChange={e => setTxTipoFiltro(e.target.value)} className="px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                <option value="todos">Todos</option>
+                <option value="credito">Entradas</option>
+                <option value="debito">Saídas</option>
+              </select>
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {previewTransacoes.filter(tx => {
+                const matchSearch = !txSearch || tx.descricao?.toLowerCase().includes(txSearch.toLowerCase());
+                const matchTipo = txTipoFiltro === 'todos' || tx.tipo === txTipoFiltro;
+                return matchSearch && matchTipo;
+              }).map((tx, i) => (
+                <div key={i} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs ${selTransacoes.has(i) ? 'bg-indigo-50 border border-indigo-200' : 'bg-slate-50 border border-transparent'}`}>
+                  <input type="checkbox" checked={selTransacoes.has(i)} onChange={e => { const s = new Set(selTransacoes); e.target.checked ? s.add(i) : s.delete(i); setSelTransacoes(s); }} className="accent-indigo-600" />
+                  <span className="w-20 text-slate-500">{tx.data}</span>
+                  <span className={`w-16 text-right font-bold ${tx.tipo === 'credito' ? 'text-emerald-600' : 'text-rose-600'}`}>{parseFloat(tx.valor || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2 })} €</span>
+                  <span className="flex-1 truncate text-slate-600">{tx.descricao}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {erro && (
+          <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600">
+            <X size={14} /> {erro}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -1358,6 +1518,24 @@ if (toInsertNcs.length > 0) {
 
   return (
     <div className="space-y-3">
+      {/* Upload zone */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => inputRef.current?.click()}
+        className={`bg-white rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all ${dragging ? 'border-indigo-500 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300'}`}
+      >
+        <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx" multiple onChange={handleFileChange} className="hidden" />
+        <div className="flex flex-col items-center gap-2">
+          <Upload size={24} className={dragging ? 'text-indigo-500' : 'text-slate-400'} />
+          <p className="text-sm font-semibold text-slate-600">
+            {dragging ? 'Largue o ficheiro aqui' : 'Arraste CSV, OFX ou QFX ou clique para selecionar'}
+          </p>
+          <p className="text-[10px] text-slate-400">Suporta múltiplos ficheiros</p>
+        </div>
+      </div>
+
       {/* Filtros: Todas | Entradas | Saídas */}
       <div className="flex items-center gap-1.5">
         {[
