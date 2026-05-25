@@ -245,6 +245,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     const effectiveClientId = initialTokenClientId || clientSession?.clientId || initialClientId || null;
 
+    const todayStr = new Date().toLocaleDateString('en-CA');
+    const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
+
     const changeLang = (l) => {
         setLang(l);
         localStorage.setItem('magnetic_lang', l);
@@ -900,8 +903,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     // renderHistorico removed — calendar integrated in renderDashboard
 
     const renderDashboard = () => {
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
         const todayAllLogs = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime);
         const fakeWorkers = [];
         return (
