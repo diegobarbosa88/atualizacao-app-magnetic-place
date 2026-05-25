@@ -45,7 +45,7 @@ const Header = () => (
 const Footer = () => (
   <footer className="bg-white border-t border-gray-200 py-10 mt-auto">
     <div className="max-w-4xl mx-auto px-6 text-center">
-      <p className="text-xs text-gray-400 max-w-md mx-auto leading-loose">
+      <p className="text-xs text-gray-400 mx-auto leading-loose text-center">
         Este portal é o ponto único de verificação para documentos emitidos pela Magnetic Place. A validação é efetuada em tempo real contra as bases de dados centrais.
       </p>
       <div className="mt-6 pt-6 border-t border-gray-50 flex flex-wrap justify-center gap-x-8 gap-y-4">
@@ -189,9 +189,8 @@ const VerificationPortal = ({ signatureId }) => {
             className="py-10 px-6 text-center text-white"
             style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', boxShadow: '0 10px 15px -3px rgba(16,185,129,0.2)' }}
           >
-            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style={{ background: 'rgba(255,255,255,0.25)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.1)' }}>
-              <div className="absolute inset-0 bg-white bg-opacity-10 rounded-full border border-white border-opacity-20"></div>
-              <CheckCircle size={48} className="text-white relative z-10" strokeWidth={2.5} />
+            <div className="flex items-center justify-center w-20 h-20 rounded-full mb-4 bg-emerald-500 shadow-lg shadow-emerald-200 border-4 border-white">
+              <CheckCircle size={40} className="text-white" strokeWidth={2.5} />
             </div>
             <h1 className="text-3xl font-extrabold mb-2 tracking-tight">Assinatura Verificada</h1>
             <p className="text-emerald-50 font-medium">Documento autenticado eletronicamente com validade plena.</p>
