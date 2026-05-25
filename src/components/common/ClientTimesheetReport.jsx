@@ -361,32 +361,23 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const MARGIN_MM = 15;
-        const usableH = pdfHeight - 2 * MARGIN_MM;
         const ratio = pdfWidth / canvas.width;
-        const pageHeightPx = usableH / ratio;
-
+        const pageHeightPx = pdfHeight / ratio;
         const totalContentPx = canvas.height;
-        const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
+        const totalPages = Math.ceil(totalContentPx / pageHeightPx);
 
-        if (totalPages <= 1) {
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, MARGIN_MM, pdfWidth, canvas.height * ratio);
-        } else {
-          for (let p = 0; p < totalPages; p++) {
-            const sliceY = Math.floor(p * pageHeightPx);
-            const nextSliceY = Math.floor((p + 1) * pageHeightPx);
-            const isLast = p === totalPages - 1;
-            const sliceH = isLast ? totalContentPx - sliceY : nextSliceY - sliceY;
-            const sliceCanvas = document.createElement('canvas');
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = sliceH;
-            sliceCanvas.getContext('2d').drawImage(
-              canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH
-            );
-            const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-            if (p > 0) pdf.addPage();
-            pdf.addImage(sliceData, 'JPEG', 0, MARGIN_MM, pdfWidth, sliceH * ratio);
-          }
+        for (let p = 0; p < totalPages; p++) {
+          if (p > 0) pdf.addPage();
+          const sliceY = Math.round(p * pageHeightPx);
+          const sliceH = Math.min(Math.round(pageHeightPx), totalContentPx - sliceY);
+          if (sliceH <= 0) break;
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceH;
+          sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+          const imageHeightInPdf = Math.floor(sliceH * ratio);
+          pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, imageHeightInPdf, undefined, 'FAST');
         }
 
         folder.file(`Relatorio_${workerName}_${month}.pdf`, pdf.output('blob'));
