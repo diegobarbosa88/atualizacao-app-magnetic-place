@@ -836,8 +836,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             </span>
                         </button>
                     </div>
-                    {showActions && (
-                        <>
+                    {selectedTab === 'dashboard' && (
                             <div className="relative" ref={notifRef}>
                                 <button onClick={() => setShowNotifDropdown(s => !s)} className="relative p-1.5 text-slate-500 hover:text-slate-800 transition-all">
                                     <Bell size={18} />
@@ -869,6 +868,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     </div>
                                 )}
                             </div>
+                            )}
                             {clientSession ? (
                                 <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-rose-500 transition-all" title="Sair">
                                     <LogOut size={18} />
@@ -878,8 +878,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     <LogIn size={18} />
                                 </a>
                             )}
-                        </>
-                    )}
                 </div>
             </div>
         </header>
