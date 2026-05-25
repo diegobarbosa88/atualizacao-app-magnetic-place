@@ -1311,7 +1311,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <ChevronLeft size={16} /> {t('back_dashboard')}
                 </button>
             ) : (
-                <a href={`https://painelcliente.magneticplace.pt/?client=${effectiveClientId?.startsWith('c') ? effectiveClientId : effectiveClientId?.startsWith('client_') ? 'c' + effectiveClientId.replace('client_', '') : 'c' + effectiveClientId}`} className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-black text-[10px] uppercase tracking-widest transition-all">
+                <a href="https://painelcliente.magneticplace.pt/" className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-black text-[10px] uppercase tracking-widest transition-all">
                     <ChevronLeft size={16} /> Efetuar Login
                 </a>
             )}
