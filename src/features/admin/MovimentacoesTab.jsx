@@ -510,41 +510,54 @@ export default function MovimentacoesTab() {
     // "Mostrar todos" — load all runs
     if (overrideRunId === undefined && activeRunId === null) {
       setLoading(true);
-      const { data: allRunsData } = await supabase
-        .from('reconciliation_runs')
-        .select('id, filename, transactions_json, created_at')
-        .order('created_at', { ascending: false })
-        .limit(20);
+      try {
+        const { data: allRunsData, error: runsErr } = await supabase
+          .from('reconciliation_runs')
+          .select('id, filename, created_at')
+          .order('created_at', { ascending: false })
+          .limit(20);
 
-      if (!allRunsData?.length) { setLoading(false); return; }
+        if (runsErr) { console.error('Erro ao carregar runs:', runsErr); setLoading(false); return; }
+        if (!allRunsData?.length) { setLoading(false); return; }
 
-      const allTxsMerged = allRunsData.flatMap(r => r.transactions_json || []);
-      setRunId(null);
-      setRunData(null);
-      setAllTxs(allTxsMerged);
-      setAllRuns(allRunsData);
+        // Collect all transactions from all runs
+        const allTxsMerged = [];
+        for (const run of allRunsData) {
+          const { data: runTxs } = await supabase
+            .from('reconciliation_runs')
+            .select('transactions_json')
+            .eq('id', run.id)
+            .single();
+          if (runTxs?.transactions_json) allTxsMerged.push(...runTxs.transactions_json);
+        }
 
-      // Load all linked data for all runs
-      const runIds = allRunsData.map(r => r.id);
-      const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: recs }, { data: fats }] = await Promise.all([
-        supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period, reconciliation_run_id').in('reconciliation_run_id', runIds),
-        supabase.from('entrada_justifications').select('tx_key, justification, run_id').in('run_id', runIds),
-        supabase.from('entrada_internos').select('tx_key, run_id').in('run_id', runIds),
-        supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas, run_id').in('run_id', runIds),
-        supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
-        supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched, run_id').in('run_id', runIds),
-        supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').not('estado', 'in', '("erro","invalido")'),
-        supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
-      ]);
+        setRunId(null);
+        setRunData(null);
+        setAllTxs(allTxsMerged);
+        setAllRuns(allRunsData);
 
-      setPagamentos(pags || []);
-      setJustificacoes(just || []);
-      setInternos(ints || []);
-      setNotasCredito(ncs || []);
-      setAliases(als || []);
-      setReciboLinks(rls || []);
-      setFaturaLinks([]);
-      setFaturasData(fats || []);
+        // Load all linked data for all runs
+        const runIds = allRunsData.map(r => r.id);
+        const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: recs }, { data: fats }] = await Promise.all([
+          supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period, reconciliation_run_id').in('reconciliation_run_id', runIds),
+          supabase.from('entrada_justifications').select('tx_key, justification, run_id').in('run_id', runIds),
+          supabase.from('entrada_internos').select('tx_key, run_id').in('run_id', runIds),
+          supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas, run_id').in('run_id', runIds),
+          supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
+          supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched, run_id').in('run_id', runIds),
+          supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').not('estado', 'in', '("erro","invalido")'),
+          supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
+        ]);
+
+        setPagamentos(pags || []);
+        setJustificacoes(just || []);
+        setInternos(ints || []);
+        setNotasCredito(ncs || []);
+        setAliases(als || []);
+        setReciboLinks(rls || []);
+        setFaturaLinks([]);
+        setFaturasData(fats || []);
+      } catch (err) { console.error('Erro em loadRun (todos):', err); }
       setLoading(false);
       return;
     }
@@ -553,14 +566,14 @@ export default function MovimentacoesTab() {
     if (overrideRunId) {
       const { data } = await supabase
         .from('reconciliation_runs')
-        .select('id, filename, transactions_json, created_at')
+        .select('id, filename, created_at')
         .eq('id', overrideRunId)
         .single();
       run = data;
     } else if (activeRunId) {
       const { data } = await supabase
         .from('reconciliation_runs')
-        .select('id, filename, transactions_json, created_at')
+        .select('id, filename, created_at')
         .eq('id', activeRunId)
         .single();
       run = data;
@@ -569,7 +582,7 @@ export default function MovimentacoesTab() {
     if (!run) {
       const { data } = await supabase
         .from('reconciliation_runs')
-        .select('id, filename, transactions_json, created_at')
+        .select('id, filename, created_at')
         .order('created_at', { ascending: false })
         .limit(1)
         .single();
@@ -586,7 +599,13 @@ export default function MovimentacoesTab() {
     setRunId(rid);
     setRunData(run);
 
-    const txs = run.transactions_json || [];
+    // Load transactions separately
+    const { data: runData } = await supabase
+      .from('reconciliation_runs')
+      .select('transactions_json')
+      .eq('id', rid)
+      .single();
+    const txs = runData?.transactions_json || [];
     setAllTxs(txs);
 
     const runYear = new Date(run.created_at).getFullYear();
