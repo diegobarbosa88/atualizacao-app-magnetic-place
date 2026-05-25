@@ -39,6 +39,14 @@ const MONTHS_PT = [
 function formatDateLongPT(d = new Date()) {
   return `${d.getDate()} DE ${MONTHS_PT[d.getMonth()]} DE ${d.getFullYear()}`;
 }
+function formatDateShortPT(value) {
+  if (!value || typeof value !== 'string') return value || '';
+  const datePart = value.split('T')[0];
+  const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return value;
+  const [, year, month, day] = match;
+  return `${day}/${month}/${year}`;
+}
 
 export function replaceTemplateFields(html, workerData, systemData = {}, clientData = null) {
   let result = html;
@@ -81,9 +89,12 @@ function getFieldValue(tag, workerData, systemData, clientData) {
     return clientData?.[sourceField] != null ? String(clientData[sourceField]) : '';
   }
 
+  const DATE_FIELDS = ['birthDate', 'ccValidity', 'dataInicio'];
   const sourceField = field.source.replace('workers.', '');
   const direct = workerData?.[sourceField];
-  if (direct != null && direct !== '') return String(direct);
+  if (direct != null && direct !== '') {
+    return DATE_FIELDS.includes(sourceField) ? formatDateShortPT(direct) : String(direct);
+  }
   // Fallback: tag {worker_cc_number} → workers.dni, mas se algum worker antigo
   // tiver ccNumber preenchido, usar esse valor.
   if (sourceField === 'dni' && workerData?.ccNumber) return String(workerData.ccNumber);

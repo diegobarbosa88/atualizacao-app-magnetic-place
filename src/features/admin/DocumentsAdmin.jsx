@@ -289,8 +289,15 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         .from('workers').select('*').eq('id', raw.worker_id).single();
       if (wErr) throw wErr;
 
+      let clientData = null;
+      if (raw.client_id) {
+        const { data: c } = await clientSupabase
+          .from('clients').select('*').eq('id', raw.client_id).maybeSingle();
+        clientData = c || null;
+      }
+
       const buffer = await downloadTemplateBytes(clientSupabase, tmpl.template_docx_path);
-      const renderData = buildRenderData(worker || {}, systemSettings || {});
+      const renderData = buildRenderData(worker || {}, systemSettings || {}, clientData);
       const filledBlob = renderDocx(buffer, renderData);
       setPreview({ title, loading: false, blob: filledBlob, error: '' });
     } catch (err) {
@@ -347,7 +354,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           {[
             { id: 'documentos', icon: FileText, label: 'Documentos' },
             { id: 'faturas', icon: FileText, label: 'Faturas' },
-            { id: 'reconciliacao', icon: Activity, label: 'Reconciliação' },
             { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
             { id: 'validar-recibo', icon: CheckCircle, label: 'Validar' },
@@ -373,6 +379,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         <>
           <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-lg">
             {[
+              { id: 'reconciliacao', label: 'Reconciliação', icon: Activity },
               { id: 'recibos',  label: 'Recibos',  icon: CheckCircle },
               { id: 'salarios', label: 'Salários', icon: Coins },
               { id: 'faturas',  label: 'Faturas',  icon: Receipt },
@@ -386,6 +393,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
               </button>
             ))}
           </div>
+          {validarSubTab === 'reconciliacao' && <ReconciliacaoAdmin />}
           {validarSubTab === 'recibos' && <ValidarReciboAdmin workers={workers} />}
           {validarSubTab === 'salarios' && <SalariosTab />}
           {validarSubTab === 'faturas' && <FaturasTab />}
@@ -397,8 +405,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         <ReportsEmbedded {...props} />
       ) : activeSubTab === 'faturas' ? (
         <FaturasAdmin />
-      ) : activeSubTab === 'reconciliacao' ? (
-        <ReconciliacaoAdmin />
       ) : (
         <>
           {/* Pills de contagem por estado */}
