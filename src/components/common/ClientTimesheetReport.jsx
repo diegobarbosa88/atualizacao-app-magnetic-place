@@ -266,26 +266,19 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const ratio = pdfWidth / canvas.width;
         const pageHeightPx = pdfHeight / ratio;
         const totalContentPx = canvas.height;
-        const totalPages = totalContentPx <= pageHeightPx ? 1 : Math.ceil(totalContentPx / pageHeightPx);
+        const totalPages = Math.ceil(totalContentPx / pageHeightPx);
 
-        if (totalPages <= 1) {
-          if (i > 0) pdf.addPage();
-          pdf.addImage(canvas.toDataURL('image/jpeg', 0.98), 'JPEG', 0, 0, pdfWidth, canvas.height * ratio);
-        } else {
-          for (let p = 0; p < totalPages; p++) {
-            if (i > 0 || p > 0) pdf.addPage();
-            const sliceY = Math.floor(p * pageHeightPx);
-            const nextSliceY = Math.min(Math.floor((p + 1) * pageHeightPx), totalContentPx);
-            const isLast = p === totalPages - 1;
-            const sliceH = isLast ? totalContentPx - sliceY : nextSliceY - sliceY;
-            if (sliceH <= 0) continue;
-            const sliceCanvas = document.createElement('canvas');
-            sliceCanvas.width = canvas.width;
-            sliceCanvas.height = sliceH;
-            sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-            const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
-            pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, sliceH * ratio);
-          }
+        for (let p = 0; p < totalPages; p++) {
+          if (i > 0 || p > 0) pdf.addPage();
+          const sliceY = Math.round(p * pageHeightPx);
+          const sliceH = Math.min(Math.round(pageHeightPx), totalContentPx - sliceY);
+          if (sliceH <= 0) break;
+          const sliceCanvas = document.createElement('canvas');
+          sliceCanvas.width = canvas.width;
+          sliceCanvas.height = sliceH;
+          sliceCanvas.getContext('2d').drawImage(canvas, 0, sliceY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+          const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
+          pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, sliceH * ratio);
         }
       }
 
