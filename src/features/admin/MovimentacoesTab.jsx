@@ -90,6 +90,18 @@ function txKey(tx) {
   return `${tx.data}|${tx.descricao}|${tx.valor}`;
 }
 
+function extractMonthYearName(transactionsJson) {
+  if (!transactionsJson || transactionsJson.length === 0) return null;
+  const firstDate = transactionsJson[0]?.data;
+  if (!firstDate) return null;
+  try {
+    const date = new Date(firstDate + 'T00:00:00');
+    return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+  } catch {
+    return null;
+  }
+}
+
 function previousMonth(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
@@ -494,6 +506,48 @@ export default function MovimentacoesTab() {
 
   const loadRun = async (overrideRunId) => {
     if (!supabase) return;
+
+    // "Mostrar todos" — load all runs
+    if (overrideRunId === undefined && activeRunId === null) {
+      setLoading(true);
+      const { data: allRunsData } = await supabase
+        .from('reconciliation_runs')
+        .select('id, filename, transactions_json, created_at')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (!allRunsData?.length) { setLoading(false); return; }
+
+      const allTxsMerged = allRunsData.flatMap(r => r.transactions_json || []);
+      setRunId(null);
+      setRunData(null);
+      setAllTxs(allTxsMerged);
+      setAllRuns(allRunsData);
+
+      // Load all linked data for all runs
+      const runIds = allRunsData.map(r => r.id);
+      const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: recs }, { data: fats }] = await Promise.all([
+        supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period, reconciliation_run_id').in('reconciliation_run_id', runIds),
+        supabase.from('entrada_justifications').select('tx_key, justification, run_id').in('run_id', runIds),
+        supabase.from('entrada_internos').select('tx_key, run_id').in('run_id', runIds),
+        supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas, run_id').in('run_id', runIds),
+        supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
+        supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched, run_id').in('run_id', runIds),
+        supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').not('estado', 'in', '("erro","invalido")'),
+        supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
+      ]);
+
+      setPagamentos(pags || []);
+      setJustificacoes(just || []);
+      setInternos(ints || []);
+      setNotasCredito(ncs || []);
+      setAliases(als || []);
+      setReciboLinks(rls || []);
+      setFaturaLinks([]);
+      setFaturasData(fats || []);
+      setLoading(false);
+      return;
+    }
 
     let run;
     if (overrideRunId) {
@@ -1577,24 +1631,51 @@ if (toInsertNcs.length > 0) {
       </div>
 
       {/* Run selector */}
-      {allRuns.length > 1 && (
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-black text-slate-400 uppercase">Extrato:</span>
-          <select
-            value={activeRunId || ''}
-            onChange={e => {
-              const id = e.target.value;
-              setActiveRunId(id);
-              loadRun(id);
-            }}
-            className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
-          >
+      {allRuns.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase">Extrato:</span>
+            <select
+              value={activeRunId || ''}
+              onChange={e => {
+                const id = e.target.value;
+                setActiveRunId(id || null);
+                loadRun(id || undefined);
+              }}
+              className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
+            >
+              <option value="">Mostrar todos</option>
+              {allRuns.map(r => (
+                <option key={r.id} value={r.id}>
+                  {extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2">
             {allRuns.map(r => (
-              <option key={r.id} value={r.id}>
-                {r.filename || 'Sem nome'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
-              </option>
+              <div key={r.id} className={`flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold border ${activeRunId === r.id ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
+                <button
+                  onClick={() => { setActiveRunId(r.id); loadRun(r.id); }}
+                  className="hover:underline"
+                >
+                  {extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!window.confirm('Apagar este extrato?')) return;
+                    await supabase.from('reconciliation_runs').delete().eq('id', r.id);
+                    setAllRuns(prev => prev.filter(x => x.id !== r.id));
+                    if (activeRunId === r.id) { setActiveRunId(null); loadRun(); }
+                  }}
+                  className="ml-1 text-rose-400 hover:text-rose-600"
+                  title="Apagar extrato"
+                >
+                  <X size={10} />
+                </button>
+              </div>
             ))}
-          </select>
+          </div>
         </div>
       )}
 
