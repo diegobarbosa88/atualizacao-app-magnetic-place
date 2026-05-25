@@ -263,7 +263,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
         document.body.removeChild(wrapper);
 
-        const ratio = pdfWidth / actualW;
+        const ratio = pdfWidth / canvas.width;
         const pageHeightPx = (pdfHeight - 2 * MARGIN_MM) / ratio;
         const totalContentPx = canvas.height;
         const totalPages = Math.max(1, Math.ceil(totalContentPx / pageHeightPx));
