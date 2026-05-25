@@ -1141,7 +1141,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
                 return (
                     <section className="space-y-6">
-                        <div className="bg-white rounded-[2rem] shadow-xl border border-slate-100 overflow-hidden">
+                        <div className="bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden">
                             <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <h3 className="font-black text-slate-800 text-lg uppercase tracking-tighter">{t('calendar')} — {new Date(calYear, calMonth - 1).toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' })}</h3>
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{Object.keys(logsByDate).length} {t('days')}</span>
