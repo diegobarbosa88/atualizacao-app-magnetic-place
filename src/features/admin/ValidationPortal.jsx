@@ -10,6 +10,13 @@ import { formatHours, calculateDuration } from '../../utils/formatUtils';
 import { sendValidationEmail } from '../../utils/emailUtils';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 
+const toClientLinkId = (id) => {
+  if (!id) return null;
+  if (id.startsWith('c')) return id;
+  if (id.startsWith('client_')) return 'c' + id.replace('client_', '');
+  return 'c' + id;
+};
+
 const ValidationPortal = ({
   onLogin,
   setClienteSelecionado,
@@ -137,7 +144,7 @@ const ValidationPortal = ({
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => {
-                      const link = c.share_token ? `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}` : `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}`;
+                      const link = `https://painelcliente.magneticplace.pt/?client=${encodeURIComponent(toClientLinkId(c.id))}&month=${encodeURIComponent(portalMonthStr)}`;
                       navigator.clipboard.writeText(link);
                     }} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Copiar Link"><Link size={13} /></button>
                   </td>
@@ -176,7 +183,7 @@ const ValidationPortal = ({
             }
             return valSortConfig.direction === 'asc' ? res : -res;
           })).map(c => {
-            const linkUnico = c.share_token ? `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}` : `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}`;
+            const linkUnico = `https://painelcliente.magneticplace.pt/?client=${encodeURIComponent(toClientLinkId(c.id))}&month=${encodeURIComponent(portalMonthStr)}`;
             return (
               <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
                 {/* Header */}
