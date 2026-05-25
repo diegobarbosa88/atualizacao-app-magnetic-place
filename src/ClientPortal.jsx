@@ -426,8 +426,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     useEffect(() => {
         fetch('https://api.ipify.org?format=json')
             .then(res => res.json())
-            .then(data => setClientIp(data.ip))
-            .catch(err => console.error("Erro ao obter IP:", err));
+            .then(data => setClientIp(data.ip || 'N/D'))
+            .catch(() => setClientIp('N/D'));
     }, []);
 
     const [dismissedNotifs, setDismissedNotifs] = useState([]);
@@ -2451,7 +2451,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             ) : (
                 <div className="w-full bg-white">
                     <div className="w-[794px] mx-auto">
-                        {renderReport(printingWorker === 'all' ? null : printingWorker, printingWorker === 'all')}
+                        {renderReport(
+  printingWorker === 'all' ? null : printingWorker,
+  printingWorker === 'all',
+  logs,
+  effectiveClientId,
+  selectedMonth
+)}
                     </div>
                 </div>
             )}
