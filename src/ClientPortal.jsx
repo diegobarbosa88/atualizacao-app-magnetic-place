@@ -2124,7 +2124,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         </div>
     );
 
-    if (!clientSession && !isDirectAccess && !initialTokenClientId) {
+    if (!clientSession && !isDirectAccess && !initialTokenClientId && !initialClientId) {
         return renderLogin();
     }
 
