@@ -259,30 +259,36 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const clone = liveNode.cloneNode(true);
 
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff;z-index:-1;';
+        wrapper.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff;z-index:-1;overflow:hidden;';
         wrapper.appendChild(clone);
         document.body.appendChild(wrapper);
-
         await new Promise(r => setTimeout(r, 100));
 
+        const scrollH = clone.scrollHeight;
+        const actualW = clone.offsetWidth || 794;
         const canvas = await html2canvas(clone, {
           scale: 2,
           useCORS: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: 794,
-          width: clone.offsetWidth || 794,
-          height: clone.offsetHeight,
+          width: actualW,
+          height: scrollH,
         });
+
+        const cropY = canvas.height - (scrollH * 2);
+        const croppedCanvas = cropY > 0 && cropY < canvas.height * 0.95
+          ? canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height - cropY)
+          : null;
 
         document.body.removeChild(wrapper);
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const imgData = (croppedCanvas ? (() => { const c = document.createElement('canvas'); c.width = canvas.width; c.height = canvas.height - cropY; c.getContext('2d').putImageData(croppedCanvas, 0, 0); return c.toDataURL('image/jpeg', 0.98); })() : canvas.toDataURL('image/jpeg', 0.98));
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
+        const imgHeight = croppedCanvas ? canvas.height - cropY : canvas.height;
         const ratio = pdfWidth / imgWidth;
         const heightInMm = imgHeight * ratio;
 
