@@ -189,8 +189,9 @@ const VerificationPortal = ({ signatureId }) => {
             className="py-10 px-6 text-center text-white"
             style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', boxShadow: '0 10px 15px -3px rgba(16,185,129,0.2)' }}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white bg-opacity-20 rounded-full mb-4 border border-white border-opacity-30">
-              <CheckCircle size={48} className="text-white" strokeWidth={2.5} />
+            <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-full mb-4" style={{ background: 'rgba(255,255,255,0.25)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.1)' }}>
+              <div className="absolute inset-0 bg-white bg-opacity-10 rounded-full border border-white border-opacity-20"></div>
+              <CheckCircle size={48} className="text-white relative z-10" strokeWidth={2.5} />
             </div>
             <h1 className="text-3xl font-extrabold mb-2 tracking-tight">Assinatura Verificada</h1>
             <p className="text-emerald-50 font-medium">Documento autenticado eletronicamente com validade plena.</p>
@@ -263,7 +264,22 @@ const VerificationPortal = ({ signatureId }) => {
 
         {/* Botões de ação */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {signature ? (
+          {source === 'worker' && data.signed_pdf_url ? (
+            <a
+              href={data.signed_pdf_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold py-4 px-6 rounded-2xl transition duration-200 shadow-lg shadow-blue-100"
+            >
+              <FileText size={20} />
+              <span>Ver Documento Original (PDF)</span>
+            </a>
+          ) : source === 'client' ? (
+            <div className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-400 font-bold py-4 px-6 rounded-2xl">
+              <FileText size={20} />
+              <span>Documento gerado via impressão</span>
+            </div>
+          ) : signature ? (
             <a
               href={signature}
               target="_blank"
@@ -278,8 +294,8 @@ const VerificationPortal = ({ signatureId }) => {
               disabled
               className="flex items-center justify-center space-x-2 bg-gray-100 text-gray-400 font-bold py-4 px-6 rounded-2xl cursor-not-allowed"
             >
-              <Download size={20} />
-              <span>Ver Assinatura</span>
+              <FileText size={20} />
+              <span>Documento indisponível</span>
             </button>
           )}
           <button
