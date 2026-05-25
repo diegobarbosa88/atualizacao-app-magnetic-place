@@ -281,11 +281,20 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
           pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, sliceH * ratio);
         }
+
+        if (pdf.internal.getNumberOfPages() > i) {
+          const currentPage = pdf.internal.getCurrentPage();
+          const lastPageIdx = pdf.internal.getNumberOfPages();
+          if (lastPageIdx > currentPage) {
+            pdf.setPage(lastPageIdx);
+            pdf.deletePage(lastPageIdx);
+          }
+        }
       }
 
-      const totalPagesFinal = pdf.internal.getNumberOfPages();
-      if (reportUnits.length > 0 && totalPagesFinal > 0) {
-        const lastPageIdx = pdf.internal.getNumberOfPages();
+      const lastPageIdx = pdf.internal.getNumberOfPages();
+      if (lastPageIdx > 0) {
+        pdf.setPage(lastPageIdx);
         pdf.deletePage(lastPageIdx);
       }
 
