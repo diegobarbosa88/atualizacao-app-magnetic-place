@@ -292,12 +292,6 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
       }
 
-      const lastPageIdx = pdf.internal.getNumberOfPages();
-      if (lastPageIdx > 1) {
-        pdf.setPage(lastPageIdx);
-        pdf.deletePage(lastPageIdx);
-      }
-
       const reportClientName = (reportUnits[0]?.client?.name || 'Relatorio').replace(/[^a-zA-Z0-9]/g, '_');
       pdf.save(`Relatorio_${reportClientName}_${month}.pdf`);
 
