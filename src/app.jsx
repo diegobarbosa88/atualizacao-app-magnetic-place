@@ -199,7 +199,7 @@ export default function App() {
     if (!clienteSelecionado) return;
     setIsSendingEmail(true);
     const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
-    const modalLinkUnico = clienteSelecionado.link_gerado || `${CLIENT_PORTAL_URL}&client=${String(clienteSelecionado.id)}&month=${monthStr}`;
+    const modalLinkUnico = clienteSelecionado.link_gerado || (clienteSelecionado.share_token ? `${CLIENT_PORTAL_URL}?token=${clienteSelecionado.share_token}&month=${monthStr}` : `${CLIENT_PORTAL_URL}&client=${String(clienteSelecionado.id)}&month=${monthStr}`);
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
     const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
     const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_PORTAL;
@@ -298,6 +298,13 @@ export default function App() {
   const urlMonth = urlParams.get('month');
   const urlView = urlParams.get('view');
   const urlVerifyId = urlParams.get('id');
+  const urlToken = urlParams.get('token');
+
+  // Resolver clientId a partir do token (links públicos sem login)
+  const tokenResolvedClientId = urlToken
+    ? (clients.find(c => c.share_token === urlToken)?.id || null)
+    : null;
+  const resolvedClientId = tokenResolvedClientId || urlClient || null;
 
   // Portal público de verificação de assinaturas (não requer login)
   if (urlView === 'verify' && urlVerifyId) {
@@ -385,15 +392,16 @@ export default function App() {
           workers={workers}
           logs={logs}
           saveToDb={saveToDb}
-          initialClientId={urlClient}
+          initialClientId={resolvedClientId}
           initialMonth={urlMonth}
+          initialTokenClientId={tokenResolvedClientId}
           systemSettings={systemSettings}
           appNotifications={appNotifications}
           clientApprovals={clientApprovals}
           supabase={supabase}
           renderReport={(workerId, isGlobal, portalLogs, portalClientId, portalMonth) => (
             <ClientTimesheetReport
-              data={{ client: clients.find(c => String(c.id) === String(portalClientId || urlClient)), logs: portalLogs || logs, workers, clients, month: portalMonth || urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
+              data={{ client: clients.find(c => String(c.id) === String(portalClientId || resolvedClientId)), logs: portalLogs || logs, workers, clients, month: portalMonth || urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
               isEmbedded={true}
               hideActions={true}
               onBack={() => { }}
@@ -404,7 +412,7 @@ export default function App() {
       {showFinReport && <FinancialReportOverlay {...{ logs, workers, clients, expenses, finFilter, setFinFilter, setShowFinReport }} />}
       {modalEmailAberto && clienteSelecionado && (() => {
         const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
-        const modalLinkUnico = clienteSelecionado.link_gerado || `${window.location.origin}${window.location.pathname}?view=client_portal&client=${clienteSelecionado.id}&month=${monthStr}`;
+        const modalLinkUnico = clienteSelecionado.link_gerado || (clienteSelecionado.share_token ? `${window.location.origin}${window.location.pathname}?token=${clienteSelecionado.share_token}&month=${monthStr}` : `${window.location.origin}${window.location.pathname}?view=client_portal&client=${clienteSelecionado.id}&month=${monthStr}`);
         return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-indigo-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">

@@ -289,7 +289,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
     if (!confirm(`Aplicar ${resolved} alteração(ões) ao relatório de ${clientName}?`)) return;
     setBusy(true);
     try {
-      await applyCorrection(supabase, { correction, items, logs, reviewer: currentUser?.id, clientName, clientEmail });
+      await applyCorrection(supabase, { correction, items, logs, reviewer: currentUser?.id, clientName, clientEmail, portalBase: window.location.origin, shareToken: client?.share_token });
       setCorrections((prev) =>
         prev.map((c) =>
           c.id === correction.id
@@ -344,6 +344,8 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         reviewer: currentUser?.id,
         clientName,
         clientEmail,
+        portalBase: window.location.origin,
+        shareToken: client?.share_token,
       });
       setCorrections((prev) =>
         prev.map((c) =>
@@ -374,6 +376,8 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         reviewer: currentUser?.id,
         clientName,
         clientEmail,
+        portalBase: window.location.origin,
+        shareToken: client?.share_token,
       });
       setCorrections((prev) =>
         prev.map((c) =>

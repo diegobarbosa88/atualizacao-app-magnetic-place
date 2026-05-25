@@ -6,8 +6,11 @@ import { sendValidationEmail } from './emailUtils';
 
 const safeEmail = (args) => sendValidationEmail(args).catch((e) => console.warn('email error', e));
 
-const buildClientLink = (clientId, month, base) => {
+const buildClientLink = (clientId, month, base, shareToken) => {
   const origin = base || (typeof window !== 'undefined' ? window.location.origin : '');
+  if (shareToken) {
+    return `${origin}/?token=${encodeURIComponent(shareToken)}&month=${encodeURIComponent(month)}`;
+  }
   return `${origin}/?view=client_portal&client=${encodeURIComponent(clientId)}&month=${encodeURIComponent(month)}`;
 };
 const buildAdminLink = (base) => {

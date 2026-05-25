@@ -196,7 +196,7 @@ const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     return Number(Math.max(0, diffMins / 60).toFixed(2));
 };
 
-export default function ClientPortal({ clients, workers, logs: initialLogs, saveToDb, initialClientId, initialMonth, renderReport, systemSettings, appNotifications, clientApprovals, supabase }) {
+export default function ClientPortal({ clients, workers, logs: initialLogs, saveToDb, initialClientId, initialMonth, initialTokenClientId, renderReport, systemSettings, appNotifications, clientApprovals, supabase }) {
     const { companySignature } = useApp();
     const [logs, setLogs] = useState(initialLogs || []);
     const [currentView, setCurrentView] = useState('inicio');
@@ -243,7 +243,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [lang, setLang] = useState(() => localStorage.getItem('magnetic_lang') || 'pt');
     const t = (key) => (TRANSLATIONS[lang] || TRANSLATIONS.pt)[key] || key;
 
-    const effectiveClientId = clientSession?.clientId || initialClientId || null;
+    const effectiveClientId = initialTokenClientId || clientSession?.clientId || initialClientId || null;
 
     const changeLang = (l) => {
         setLang(l);
@@ -2117,7 +2117,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         </div>
     );
 
-    if (!clientSession && !isDirectAccess) {
+    if (!clientSession && !isDirectAccess && !initialTokenClientId) {
         return renderLogin();
     }
 
