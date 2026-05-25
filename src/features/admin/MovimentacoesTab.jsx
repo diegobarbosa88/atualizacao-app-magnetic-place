@@ -492,6 +492,9 @@ export default function MovimentacoesTab() {
   const [selTransacoes, setSelTransacoes] = useState(new Set());
   const [txSearch, setTxSearch] = useState('');
   const [txTipoFiltro, setTxTipoFiltro] = useState('todos');
+  const [csvMapping, setCsvMapping] = useState(null);
+  const [colMap, setColMap] = useState({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+  const [runMonthYear, setRunMonthYear] = useState({});
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -535,6 +538,19 @@ export default function MovimentacoesTab() {
         setRunData(null);
         setAllTxs(allTxsMerged);
         setAllRuns(allRunsData);
+
+        // Populate runMonthYear for all runs
+        for (const run of allRunsData) {
+          const { data: runTxs } = await supabase
+            .from('reconciliation_runs')
+            .select('transactions_json')
+            .eq('id', run.id)
+            .single();
+          if (runTxs?.transactions_json?.length) {
+            const monthYear = extractMonthYearName(runTxs.transactions_json);
+            if (monthYear) setRunMonthYear(prev => ({ ...prev, [run.id]: monthYear }));
+          }
+        }
 
         // Load all linked data for all runs
         const runIds = allRunsData.map(r => r.id);
@@ -607,6 +623,12 @@ export default function MovimentacoesTab() {
       .single();
     const txs = runData?.transactions_json || [];
     setAllTxs(txs);
+
+    // Populate runMonthYear cache
+    if (txs.length > 0) {
+      const monthYear = extractMonthYearName(txs);
+      if (monthYear) setRunMonthYear(prev => ({ ...prev, [rid]: monthYear }));
+    }
 
     const runYear = new Date(run.created_at).getFullYear();
     const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
@@ -757,7 +779,9 @@ export default function MovimentacoesTab() {
     if (!ficheiros.length) return;
     setPreviewing(true);
     setErro(null);
+    setCsvMapping(null);
     const allTx = [];
+    let needsMappingData = null;
     for (const f of ficheiros) {
       try {
         const fp = new FormData();
@@ -765,6 +789,14 @@ export default function MovimentacoesTab() {
         const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
         const data = await res.json();
         if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); continue; }
+        if (data.needs_mapping) {
+          needsMappingData = data;
+          setCsvMapping({ columns: data.columns, preview: data.preview });
+          setColMap({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+          setPreviewFilename(data.filename || f.name);
+          setPreviewing(false);
+          return;
+        }
         allTx.push(...data.transactions.map(tx => ({ ...tx, _source: f.name })));
       } catch (err) {
         setErro(err.message || 'Erro de rede.');
@@ -778,6 +810,32 @@ export default function MovimentacoesTab() {
       setTxTipoFiltro('todos');
     }
     setFicheiros([]);
+    setPreviewing(false);
+  };
+
+  const confirmarMapeamento = async () => {
+    if (!ficheiros.length) return;
+    setPreviewing(true);
+    setErro(null);
+    try {
+      const ficheiroAtual = ficheiros[0];
+      const formPayload = new FormData();
+      formPayload.append('file', ficheiroAtual);
+      formPayload.append('column_mapping', JSON.stringify(colMap));
+      const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
+      const data = await res.json();
+      if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); setPreviewing(false); return; }
+      const novasTx = data.transactions.map(tx => ({ ...tx, _source: ficheiroAtual.name }));
+      setPreviewTransacoes(novasTx);
+      setPreviewFilename(ficheiroAtual.name);
+      setSelTransacoes(new Set(novasTx.map((_, i) => i)));
+      setTxSearch('');
+      setTxTipoFiltro('todos');
+      setCsvMapping(null);
+      setFicheiros(ficheiros.slice(1));
+    } catch (err) {
+      setErro(err.message || 'Erro de rede.');
+    }
     setPreviewing(false);
   };
 
@@ -1535,6 +1593,88 @@ if (toInsertNcs.length > 0) {
             </div>
           </div>
         )}
+        {csvMapping && (
+          <div className="bg-white rounded-2xl border border-indigo-100 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-bold text-indigo-700">Mapeamento de Colunas — {previewFilename}</p>
+              <button onClick={() => { setCsvMapping(null); setFicheiros([]); }} className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-50">Cancelar</button>
+            </div>
+            <p className="text-[10px] text-slate-500">Selecione qual coluna corresponde a cada campo:</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Data</label>
+                <select value={colMap.dataCol} onChange={e => setColMap(p => ({ ...p, dataCol: e.target.value }))} className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                  <option value="">— Selecionar —</option>
+                  {(csvMapping.columns || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Valor</label>
+                <select value={colMap.valorCol} onChange={e => setColMap(p => ({ ...p, valorCol: e.target.value }))} className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                  <option value="">— Selecionar —</option>
+                  {(csvMapping.columns || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Descrição</label>
+                <select value={colMap.descricaoCol} onChange={e => setColMap(p => ({ ...p, descricaoCol: e.target.value }))} className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                  <option value="">— Selecionar —</option>
+                  {(csvMapping.columns || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Tipo (opcional)</label>
+                <select value={colMap.tipoCol} onChange={e => setColMap(p => ({ ...p, tipoCol: e.target.value }))} className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                  <option value="">— Nenhum —</option>
+                  {(csvMapping.columns || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Débito (opcional)</label>
+                <select value={colMap.debitoCol} onChange={e => setColMap(p => ({ ...p, debitoCol: e.target.value }))} className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                  <option value="">— Nenhum —</option>
+                  {(csvMapping.columns || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">Crédito (opcional)</label>
+                <select value={colMap.creditoCol} onChange={e => setColMap(p => ({ ...p, creditoCol: e.target.value }))} className="w-full px-3 py-1.5 text-xs border border-slate-200 rounded-xl">
+                  <option value="">— Nenhum —</option>
+                  {(csvMapping.columns || []).map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </div>
+            {csvMapping.preview && csvMapping.preview.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">Pré-visualização (primeiras 3 linhas)</p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-[10px] border border-slate-100 rounded-lg">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        {(csvMapping.columns || []).map(c => <th key={c} className="px-2 py-1 text-slate-500 font-bold">{c}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvMapping.preview.slice(0, 3).map((row, i) => (
+                        <tr key={i} className="border-t border-slate-100">
+                          {(csvMapping.columns || []).map(c => <td key={c} className="px-2 py-1 text-slate-600">{String(row[c] || '')}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+            <button
+              onClick={confirmarMapeamento}
+              disabled={previewing || !colMap.dataCol || (!colMap.valorCol && !colMap.debitoCol) || !colMap.descricaoCol}
+              className="flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-widest bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {previewing ? <Loader2 size={13} className="animate-spin" /> : null}
+              Confirmar Mapeamento
+            </button>
+          </div>
+        )}
         {previewTransacoes && (
           <div className="bg-white rounded-2xl border border-slate-100 p-4 space-y-3">
             <div className="flex items-center justify-between">
@@ -1666,7 +1806,7 @@ if (toInsertNcs.length > 0) {
               <option value="">Mostrar todos</option>
               {allRuns.map(r => (
                 <option key={r.id} value={r.id}>
-                  {extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
+                  {runMonthYear[r.id] || extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
                 </option>
               ))}
             </select>
@@ -1678,7 +1818,7 @@ if (toInsertNcs.length > 0) {
                   onClick={() => { setActiveRunId(r.id); loadRun(r.id); }}
                   className="hover:underline"
                 >
-                  {extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'}
+                  {runMonthYear[r.id] || extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'}
                 </button>
                 <button
                   onClick={async () => {
