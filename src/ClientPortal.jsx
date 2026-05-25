@@ -2453,7 +2453,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     <div className="w-[794px] mx-auto">
                         {renderReport(
   printingWorker === 'all' ? null : printingWorker,
-  printingWorker === 'all',
+  false,
   logs,
   effectiveClientId,
   selectedMonth
