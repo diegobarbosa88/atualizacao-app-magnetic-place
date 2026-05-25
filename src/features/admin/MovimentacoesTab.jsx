@@ -855,7 +855,8 @@ export default function MovimentacoesTab() {
       if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
       setPreviewTransacoes(null);
       setFicheiros([]);
-      setRunId(null);
+      setActiveRunId(data.run_id);
+      setRunId(data.run_id);
       await loadRun(data.run_id);
     } catch (err) {
       setErro(err.message || 'Erro de rede.');
@@ -1822,10 +1823,76 @@ if (toInsertNcs.length > 0) {
                 </button>
                 <button
                   onClick={async () => {
-                    if (!window.confirm('Apagar este extrato?')) return;
-                    await supabase.from('reconciliation_runs').delete().eq('id', r.id);
-                    setAllRuns(prev => prev.filter(x => x.id !== r.id));
-                    if (activeRunId === r.id) { setActiveRunId(null); loadRun(); }
+                    if (!window.confirm('Apagar este extrato? As faturas confirmadas voltarão a PENDENTE.')) return;
+                    const runId = r.id;
+
+                    // Buscar matched do run
+                    const { data: runData } = await supabase
+                      .from('reconciliation_runs')
+                      .select('results_json')
+                      .eq('id', runId)
+                      .single();
+
+                    if (runData?.results_json?.matched?.length) {
+                      const faturaMatches = runData.results_json.matched
+                        .filter(m => m.fatura?.fonte !== 'recibo' && m.fatura?.id);
+                      const reciboMatches = runData.results_json.matched
+                        .filter(m => m.fatura?.fonte === 'recibo' && m.fatura?.id);
+
+                      if (faturaMatches.length) {
+                        const porStatus = {};
+                        for (const m of faturaMatches) {
+                          const st = m.fatura.status_original || 'PENDENTE';
+                          if (!porStatus[st]) porStatus[st] = [];
+                          porStatus[st].push(m.fatura.id);
+                        }
+                        await Promise.all(
+                          Object.entries(porStatus).map(([st, ids]) =>
+                            supabase.from('faturas').update({ status: st }).in('id', ids)
+                          )
+                        );
+                      }
+
+                      if (reciboMatches.length) {
+                        const porEstado = {};
+                        for (const m of reciboMatches) {
+                          const est = m.fatura.estado_original || 'valido';
+                          if (!porEstado[est]) porEstado[est] = [];
+                          porEstado[est].push(m.fatura.id);
+                        }
+                        await Promise.all(
+                          Object.entries(porEstado).map(([est, ids]) =>
+                            supabase.from('receipt_validations').update({ estado: est }).in('id', ids)
+                          )
+                        );
+                      }
+
+                      const fatIds = faturaMatches.map(m => m.fatura.id);
+                      if (fatIds.length) {
+                        const { data: faturasAtuals } = await supabase.from('faturas').select('id, dados').in('id', fatIds);
+                        const comDataPagamento = (faturasAtuals || []).filter(f => f.dados?.data_pagamento);
+                        if (comDataPagamento.length) {
+                          await Promise.all(comDataPagamento.map(f => {
+                            const { data_pagamento, ...dadosSem } = f.dados;
+                            return supabase.from('faturas').update({ dados: dadosSem }).eq('id', f.id);
+                          }));
+                        }
+                      }
+                    }
+
+                    // Apagar associações
+                    await supabase.from('faturacao_clientes_pagamentos').delete().eq('reconciliation_run_id', runId);
+                    await supabase.from('fatura_pagamento_links').delete().eq('run_id', runId);
+                    await supabase.from('entrada_justifications').delete().eq('run_id', runId);
+                    await supabase.from('entrada_internos').delete().eq('run_id', runId);
+                    await supabase.from('entrada_nota_credito_links').delete().eq('run_id', runId);
+                    await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId);
+
+                    // Apagar o run
+                    await supabase.from('reconciliation_runs').delete().eq('id', runId);
+
+                    setAllRuns(prev => prev.filter(x => x.id !== runId));
+                    if (activeRunId === runId) { setActiveRunId(null); setRunId(null); setAllTxs([]); }
                   }}
                   className="ml-1 text-rose-400 hover:text-rose-600"
                   title="Apagar extrato"
