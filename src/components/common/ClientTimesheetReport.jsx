@@ -263,13 +263,14 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
         document.body.removeChild(wrapper);
 
+        if (i > 0) pdf.addPage();
         const ratio = pdfWidth / canvas.width;
         const pageHeightPx = pdfHeight / ratio;
         const totalContentPx = canvas.height;
         const totalPages = Math.ceil(totalContentPx / pageHeightPx);
 
         for (let p = 0; p < totalPages; p++) {
-          if (i > 0 || p > 0) pdf.addPage();
+          if (p > 0) pdf.addPage();
           const sliceY = Math.round(p * pageHeightPx);
           const sliceH = Math.min(Math.round(pageHeightPx), totalContentPx - sliceY);
           if (sliceH <= 0) break;
@@ -280,6 +281,12 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           const sliceData = sliceCanvas.toDataURL('image/jpeg', 0.98);
           pdf.addImage(sliceData, 'JPEG', 0, 0, pdfWidth, sliceH * ratio);
         }
+      }
+
+      const totalPagesFinal = pdf.internal.getNumberOfPages();
+      if (reportUnits.length > 0 && totalPagesFinal > 0) {
+        const lastPageIdx = pdf.internal.getNumberOfPages();
+        pdf.deletePage(lastPageIdx);
       }
 
       const reportClientName = (reportUnits[0]?.client?.name || 'Relatorio').replace(/[^a-zA-Z0-9]/g, '_');
