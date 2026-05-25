@@ -189,8 +189,15 @@ const VerificationPortal = ({ signatureId }) => {
             className="py-10 px-6 text-center text-white"
             style={{ background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', boxShadow: '0 10px 15px -3px rgba(16,185,129,0.2)' }}
           >
-            <div className="flex items-center justify-center w-20 h-20 rounded-full mb-4 bg-emerald-500 shadow-lg shadow-emerald-200 border-4 border-white">
-              <CheckCircle size={40} className="text-white" strokeWidth={2.5} />
+            <div className="flex items-center justify-center mb-5">
+              <div className="relative">
+                <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-white bg-opacity-20 shadow-inner">
+                  <ShieldCheck size={36} className="text-white" strokeWidth={2} />
+                </div>
+                <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md">
+                  <CheckCircle size={14} className="text-emerald-600" strokeWidth={2.5} />
+                </div>
+              </div>
             </div>
             <h1 className="text-3xl font-extrabold mb-2 tracking-tight">Assinatura Verificada</h1>
             <p className="text-emerald-50 font-medium">Documento autenticado eletronicamente com validade plena.</p>
