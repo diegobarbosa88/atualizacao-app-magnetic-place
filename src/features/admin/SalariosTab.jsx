@@ -266,6 +266,8 @@ export default function SalariosTab({ month }) {
       const prevMonth = txMonth === 1 ? 12 : txMonth - 1;
       const prevYear = txMonth === 1 ? txYear - 1 : txYear;
       const receiptMes = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
+
       // Use worker_name as key since it's more reliable than worker_id
       const workerKey = link.worker_id || normStr(link.worker_name);
       if (!paymentsMap[workerKey]) paymentsMap[workerKey] = {};
