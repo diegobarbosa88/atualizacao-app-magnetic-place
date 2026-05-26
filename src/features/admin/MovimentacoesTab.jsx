@@ -571,7 +571,9 @@ export default function MovimentacoesTab() {
         setNotasCredito(ncs || []);
         setAliases(als || []);
         setReciboLinks(rls || []);
-        setFaturaLinks([]);
+        const { data: fatLinksAllRuns } = await supabase
+          .from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched').in('run_id', runIds);
+        setFaturaLinks(fatLinksAllRuns || []);
         setFaturasData(fats || []);
       } catch (err) { console.error('Erro em loadRun (todos):', err); }
       setLoading(false);
@@ -724,7 +726,9 @@ export default function MovimentacoesTab() {
       }
     }
 
-    const matchedItems = fatLinksArr.map(l => {
+    const { data: freshFatLinks } = await supabase
+      .from('fatura_pagamento_links').select('fatura_id, tx_key').eq('run_id', rid);
+    const matchedItems = (freshFatLinks || []).map(l => {
       const fat = fatsArr.find(f => f.id === l.fatura_id);
       const tx = txs.find(t => txKey(t) === l.tx_key);
       return { fatura: fat, transacao: tx };
