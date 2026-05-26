@@ -267,7 +267,7 @@ export default function SalariosTab({ month }) {
 
     const { data: recibos } = await supabase
       .from('receipt_validations')
-      .select('worker_id, worker_name, mes, liquido_extraido')
+      .select('worker_id, worker_name, mes, liquido_extraido, bruto_plataforma, bruto_extraido')
       .like('mes', `${year}-%`)
       .not('estado', 'in', '("erro","invalido")');
 

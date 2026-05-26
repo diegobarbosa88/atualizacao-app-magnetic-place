@@ -151,16 +151,17 @@ async function guardarValidacao(r, extra = {}) {
     worker_id:        extra.worker?.id   ?? r.worker?.id   ?? null,
     worker_name:      extra.worker?.name ?? r.worker?.name ?? r.nomeExtraido ?? null,
     mes:              extra.mes  ?? r.mes  ?? null,
-    bruto_plataforma: extra.bruto ?? r.bruto ?? null,
+bruto_plataforma: extra.bruto ?? r.bruto ?? null,
     abonos_extraidos: r.abonosExtraidos ?? null,
     ss_extraido:      r.ssExtraido      ?? null,
     irs_extraido:     r.irsExtraido     ?? null,
-    liquido_extraido: r.liquidoExtraido ?? null,
+    liquido_extraido: r.liquidoExtraado ?? null,
     divergencia:      r.divergencia     ?? null,
     estado:           !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido',
     mensagem:         r.mensagem ?? null,
     origem:           r.origem ?? extra.origem ?? null,
     session_id:       extra.sessionId ?? null,
+    bruto_extraido:   r.abonosExtraidos ?? null,
   });
   if (error) throw error;
 }
@@ -1018,6 +1019,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                     <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
                     <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Mês</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Bruto PDF</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">SS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">IRS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
@@ -1030,6 +1032,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                       <td className="px-3 py-2.5 font-bold text-slate-800 max-w-[140px] truncate">{r.worker_name ?? '—'}</td>
                       <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-indigo-700">{r.bruto_extraido != null ? `${Number(r.bruto_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
@@ -1039,9 +1042,9 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                           <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
                             {ESTADO_PT[r.estado] ?? r.estado}
                           </span>
-                          {r.liquido_extraido != null && r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null && (
+                          {r.liquido_extraido != null && (r.bruto_plataforma ?? r.bruto_extraido) != null && r.ss_extraido != null && r.irs_extraido != null && (
                             <DivergenciaBadge
-                              sinal={parseFloat((Number(r.liquido_extraido) - (Number(r.bruto_plataforma) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
+                              sinal={parseFloat((Number(r.liquido_extraido) - ((Number(r.bruto_plataforma) ?? Number(r.bruto_extraido)) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
                               className="text-xs font-bold"
                             />
                           )}

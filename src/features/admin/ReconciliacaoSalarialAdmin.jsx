@@ -160,7 +160,7 @@ export default function ReconciliacaoSalarialAdmin() {
     setResultado(null);
     supabase
       .from('receipt_validations')
-      .select('worker_id, worker_name, mes, liquido_extraido, estado')
+      .select('worker_id, worker_name, mes, liquido_extraido, bruto_plataforma, bruto_extraido, estado')
       .like('mes', `${ano}-%`)
       .not('estado', 'in', '("erro","invalido")')
       .then(({ data, error }) => {
