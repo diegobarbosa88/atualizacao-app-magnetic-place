@@ -565,7 +565,7 @@ export default function MovimentacoesTab() {
           supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
           supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched, run_id').in('run_id', runIds),
           supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').not('estado', 'in', '("erro","invalido")'),
-          supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
+          supabase.from('faturas').select('id, dados, status, tipo, storage_path').order('importado_em', { ascending: false }),
         ]);
 
         setPagamentos(pags || []);
