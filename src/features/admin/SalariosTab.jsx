@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, Loader2, Download, FileText, MessageSquare, Undo2 } from 'lucide-react';
@@ -158,6 +158,37 @@ export default function SalariosTab({ month }) {
   // Exportar dropdown
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
+  const [selectedMonth, setSelectedMonth] = useState(null);
+
+  // Extrair meses únicos disponíveis nos dados
+  const monthsAvailable = useMemo(() => {
+    if (!salarioResultado) return [];
+    const set = new Set();
+    salarioResultado.employees.forEach(emp => emp.months.forEach(m => set.add(m.month)));
+    return [...set].sort();
+  }, [salarioResultado]);
+
+  // Employees filtrados pelo mês seleccionado
+  const employeesFiltered = useMemo(() => {
+    if (!salarioResultado) return [];
+    if (!selectedMonth) return salarioResultado.employees;
+    return salarioResultado.employees
+      .map(emp => ({
+        ...emp,
+        months: emp.months.filter(m => m.month === selectedMonth),
+      }))
+      .filter(emp => emp.months.length > 0);
+  }, [salarioResultado, selectedMonth]);
+
+  // KPIs filtrados pelo mês seleccionado
+  const pendentesEfectivos = employeesFiltered
+    ? employeesFiltered.reduce((acc, emp) => {
+        return acc + emp.months.filter(m =>
+          m.status !== 'Match Exato' &&
+          !justificacoes.some(j => j.employee_name === emp.employee_name && j.month === m.month)
+        ).length;
+      }, 0)
+    : 0;
 
   useEffect(() => {
     const handleClick = (e) => { if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false); };
@@ -207,19 +238,9 @@ export default function SalariosTab({ month }) {
     init();
   }, [year]);
 
-  // KPI pendentes efectivos (exclui justificados)
-  const pendentesEfectivos = salarioResultado
-    ? salarioResultado.employees.reduce((acc, emp) => {
-        return acc + emp.months.filter(m =>
-          m.status !== 'Match Exato' &&
-          !justificacoes.some(j => j.employee_name === emp.employee_name && j.month === m.month)
-        ).length;
-      }, 0)
-    : 0;
-
   // Totais de diferenças com detalhe por entrada
-  const totaisDiferencas = salarioResultado
-    ? salarioResultado.employees.reduce((acc, emp) => {
+  const totaisDiferencas = employeesFiltered
+    ? employeesFiltered.reduce((acc, emp) => {
         emp.months.forEach(m => {
           if (Math.abs(m.balance) <= tolerancia) return;
           const justEntry = justificacoes.find(j => j.employee_name === emp.employee_name && j.month === m.month);
@@ -233,8 +254,8 @@ export default function SalariosTab({ month }) {
 
   // ── Relatórios ──────────────────────────────────────────────────────────────
   const buildRows = () => {
-    if (!salarioResultado) return [];
-    return salarioResultado.employees.flatMap(emp =>
+    if (!employeesFiltered || employeesFiltered.length === 0) return [];
+    return employeesFiltered.flatMap(emp =>
       emp.months.map(m => {
         const justEntry = justificacoes.find(j => j.employee_name === emp.employee_name && j.month === m.month);
         const status = m.status === 'Match Exato' ? 'Match Exato' : justEntry ? 'Justificado' : 'Saldo Pendente';
@@ -361,8 +382,8 @@ export default function SalariosTab({ month }) {
           <div className="flex items-start justify-between gap-3">
             <div className="grid grid-cols-3 gap-3 flex-1">
               {[
-                { label: 'Trabalhadores', value: salarioResultado.summary.total_employees_processed, color: 'text-slate-700', bg: 'bg-slate-50' },
-                { label: 'Match Exato',   value: salarioResultado.summary.total_exact_matches + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+                { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-slate-700', bg: 'bg-slate-50' },
+                { label: 'Match Exato',   value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
                 { label: 'Pendentes',     value: pendentesEfectivos, color: 'text-amber-700', bg: 'bg-amber-50' },
               ].map(c => (
                 <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center`}>
@@ -424,16 +445,43 @@ export default function SalariosTab({ month }) {
               Verifique se os nomes constam nas descrições dos movimentos bancários.
             </div>
           ) : (
-            salarioResultado.employees.map(emp => (
-              <SalarioEmployeeCard
-                key={emp.employee_name}
-                employee={emp}
-                justificacoes={justificacoes}
-                onJustificar={setJustModal}
-                onRemoverJustificacao={handleRemoverJustificacao}
-                tolerancia={tolerancia}
-              />
-            ))
+            <>
+              {/* Seletor de mês */}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setSelectedMonth(null)}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!selectedMonth ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}
+                >
+                  Todos
+                </button>
+                {monthsAvailable.map(mes => (
+                  <button
+                    key={mes}
+                    onClick={() => setSelectedMonth(mes)}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === mes ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}
+                  >
+                    {fmtMes(mes)}
+                  </button>
+                ))}
+              </div>
+
+              {employeesFiltered.length === 0 ? (
+                <div className="text-center py-8 text-[12px] text-slate-400">
+                  Nenhum dado para o mês seleccionado.
+                </div>
+              ) : (
+                employeesFiltered.map(emp => (
+                  <SalarioEmployeeCard
+                    key={emp.employee_name}
+                    employee={emp}
+                    justificacoes={justificacoes}
+                    onJustificar={setJustModal}
+                    onRemoverJustificacao={handleRemoverJustificacao}
+                    tolerancia={tolerancia}
+                  />
+                ))
+              )}
+            </>
           )}
 
           {/* Resumo de diferenças */}

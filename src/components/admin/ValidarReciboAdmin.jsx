@@ -249,12 +249,31 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
       }
     }
     const seen = new Set();
-    const deduplicados = res.filter(r => {
+    const agregados = {};
+    for (const r of res) {
       const key = `${r.worker?.id ?? normalizarNome(r.nomeExtraido ?? '')}|${r.mes}`;
-      if (seen.has(key)) return false;
+      if (!agregados[key]) {
+        agregados[key] = { ...r };
+      } else {
+        const existing = agregados[key];
+        existing.bruto = (existing.bruto || 0) + (r.bruto || 0);
+        if (r.liquidoExtraido != null) {
+          existing.liquidoExtraido = (existing.liquidoExtraido || 0) + r.liquidoExtraido;
+        }
+        if (r.abonosExtraidos != null) {
+          existing.abonosExtraidos = (existing.abonosExtraidos || 0) + r.abonosExtraidos;
+        }
+        if (r.ssExtraido != null) {
+          existing.ssExtraido = (existing.ssExtraido || 0) + r.ssExtraido;
+        }
+        if (r.irsExtraido != null) {
+          existing.irsExtraido = (existing.irsExtraido || 0) + r.irsExtraido;
+        }
+        existing.mensagem = existing.mensagem || r.mensagem;
+      }
       seen.add(key);
-      return true;
-    });
+    }
+    const deduplicados = Object.values(agregados);
     setResultados(deduplicados);
     setProcessando(false);
   };
