@@ -723,6 +723,13 @@ export default function MovimentacoesTab() {
         updateFaturasPagoIfComplete(fatsArr, freshFatLinks, txs, supabase, rid);
       }
     }
+
+    const matchedItems = fatLinksArr.map(l => {
+      const fat = fatsArr.find(f => f.id === l.fatura_id);
+      const tx = txs.find(t => txKey(t) === l.tx_key);
+      return { fatura: fat, transacao: tx };
+    }).filter(m => m.fatura && m.transacao);
+    await autoConfirmarMatched(matchedItems, rid, { matched: matchedItems });
   };
 
   const handleRunAutoMatch = async () => {
@@ -1570,6 +1577,75 @@ if (toInsertNcs.length > 0) {
     setAddAliasName('');
     setAddAliasResolucao('interno');
     setAddAliasClientId('');
+  };
+
+  // ── Auto-confirmar todos os matches de um run ────────────────────────────
+  const autoConfirmarMatched = async (matchedItems, runId, fullResults) => {
+    if (!supabase || !matchedItems?.length) return matchedItems;
+
+    const faturaItemsComData = matchedItems.filter(
+      m => m.fatura?.id && m.fatura?.fonte !== 'recibo' && m.transacao?.data
+    );
+
+    const porConfirmar = matchedItems.filter(
+      m => m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual'
+    );
+    const faturasPorConfirmar = porConfirmar.filter(m => m.fatura.fonte !== 'recibo');
+    const recibosPorConfirmar = porConfirmar.filter(m => m.fatura.fonte === 'recibo');
+
+    const allFaturaIdsUpdate = [...new Set([
+      ...faturasPorConfirmar.map(m => m.fatura.id),
+      ...faturaItemsComData.map(m => m.fatura.id),
+    ])];
+    let dadosMap = {};
+    if (allFaturaIdsUpdate.length) {
+      const { data: faturasAtuals } = await supabase
+        .from('faturas').select('id, dados').in('id', allFaturaIdsUpdate);
+      dadosMap = Object.fromEntries((faturasAtuals || []).map(f => [f.id, f.dados]));
+    }
+
+    const semDataPagamento = faturaItemsComData.filter(
+      m => m.fatura.status === 'PAGO' && !dadosMap[m.fatura.id]?.data_pagamento
+    );
+    const pagasSemDataNenhuma = matchedItems.filter(
+      m => m.fatura?.id && m.fatura?.fonte !== 'recibo' &&
+        m.fatura.status === 'PAGO' && !m.transacao?.data && !dadosMap[m.fatura.id]?.data_pagamento
+    );
+
+    const hoje = new Date().toISOString().slice(0, 10);
+    await Promise.all([
+      ...faturasPorConfirmar.map(m => {
+        const existente = dadosMap[m.fatura.id] || {};
+        const dataPagamento = m.transacao?.data || existente.data_pagamento || hoje;
+        const payload = { status: 'PAGO' };
+        payload.dados = { ...existente, data_pagamento: dataPagamento };
+        return supabase.from('faturas').update(payload).eq('id', m.fatura.id);
+      }),
+      ...semDataPagamento.map(m => supabase.from('faturas').update({
+        dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: m.transacao.data },
+      }).eq('id', m.fatura.id)),
+      ...pagasSemDataNenhuma.map(m => supabase.from('faturas').update({
+        dados: { ...(dadosMap[m.fatura.id] || {}), data_pagamento: hoje },
+      }).eq('id', m.fatura.id)),
+      ...recibosPorConfirmar.map(m =>
+        supabase.from('receipt_validations').update({ estado: 'pago' }).eq('id', m.fatura.id)
+      ),
+    ]);
+
+    if (!porConfirmar.length && !semDataPagamento.length && !pagasSemDataNenhuma.length) return matchedItems;
+
+    const confirmedIds = new Set(porConfirmar.map(m => m.fatura.id));
+    const newMatched = matchedItems.map(m =>
+      confirmedIds.has(m.fatura?.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
+    );
+
+    if (runId && confirmedIds.size > 0) {
+      await supabase.from('reconciliation_runs').update({
+        results_json: { ...(fullResults || {}), matched: newMatched },
+      }).eq('id', runId);
+    }
+
+    return newMatched;
   };
 
   // ── Render ────────────────────────────────────────────────────────────────
