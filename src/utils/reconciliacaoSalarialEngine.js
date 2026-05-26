@@ -67,6 +67,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
   // Pre-populate transfers from movimentacao_recibo_links (paymentsMap)
   if (paymentsMap) {
     Object.values(workerMap).forEach(w => {
+      // Try employee_id first, then fall back to normalized name
       const wPayments = paymentsMap[w.employee_id] || paymentsMap[normStr(w.employee_name)] || {};
       Object.entries(wPayments).forEach(([mes, pay]) => {
         const monthData = w._monthsMap[mes];

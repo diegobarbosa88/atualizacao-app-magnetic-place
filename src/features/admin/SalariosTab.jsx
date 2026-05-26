@@ -256,23 +256,23 @@ export default function SalariosTab({ month }) {
 
     const paymentsMap = {};
     (movLinks || []).forEach(link => {
-      if (!link.worker_id) return;
+      if (!link.worker_id && !link.worker_name) return;
       const tx = txMap[link.tx_key];
       if (!tx) return;
       const type = classifyTransfer(tx.data, link.mes);
       if (!type) return;
-      // link.mes = mês do extracto (e.g. '2026-04')
-      // receiptMes = mês do recibo = link.mes - 1 (e.g. '2026-03')
       const txYear = parseInt(tx.data.substring(0, 4));
       const txMonth = parseInt(tx.data.substring(5, 7));
       const prevMonth = txMonth === 1 ? 12 : txMonth - 1;
       const prevYear = txMonth === 1 ? txYear - 1 : txYear;
       const receiptMes = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
-      if (!paymentsMap[link.worker_id]) paymentsMap[link.worker_id] = {};
-      if (!paymentsMap[link.worker_id][receiptMes]) {
-        paymentsMap[link.worker_id][receiptMes] = { amount: 0, data: tx.data, type };
+      // Use worker_name as key since it's more reliable than worker_id
+      const workerKey = link.worker_id || normStr(link.worker_name);
+      if (!paymentsMap[workerKey]) paymentsMap[workerKey] = {};
+      if (!paymentsMap[workerKey][receiptMes]) {
+        paymentsMap[workerKey][receiptMes] = { amount: 0, data: tx.data, type };
       }
-      paymentsMap[link.worker_id][receiptMes].amount += Math.abs(parseFloat(tx.valor) || 0);
+      paymentsMap[workerKey][receiptMes].amount += Math.abs(parseFloat(tx.valor) || 0);
     });
 
     const { data: recibos } = await supabase
