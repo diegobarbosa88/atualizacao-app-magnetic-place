@@ -1,0 +1,1 @@
+ALTER TABLE receipt_validations ADD COLUMN IF NOT EXISTS bruto_extraido NUMERIC(12,2);

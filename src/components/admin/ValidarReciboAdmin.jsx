@@ -599,7 +599,10 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                 <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
                 <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido PDF</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto PDF</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">SS</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">IRS</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Envio</th>
               </tr>
@@ -617,6 +620,9 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                     </td>
                     <td className="px-4 py-3 text-slate-600 font-medium">{r.mes !== '—' ? formatarMes(r.mes) : '—'}</td>
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'}</td>
+                    <td className="px-4 py-3 text-right font-bold text-indigo-700">{r.abonosExtraidos != null ? `${r.abonosExtraidos.toFixed(2)}€` : '—'}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">{r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-700">{r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
@@ -646,7 +652,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
 
                   {expandido === i && (
                     <tr className="bg-slate-50">
-                      <td colSpan={6} className="px-4 py-4">
+                      <td colSpan={9} className="px-4 py-4">
                         <div className={`rounded-xl border p-4 space-y-3 ${estadoBg(r)}`}>
                           <p className="text-xs font-bold text-slate-700">{r.mensagem}</p>
 
