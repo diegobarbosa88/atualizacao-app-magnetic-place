@@ -633,8 +633,11 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                             setResultados(prev => prev.map((x, idx) => idx === i ? { ...x, ...flags } : x));
                           }}
                         />
-                        {r.sucesso && r.divergenciaSinal != null && (
-                          <DivergenciaBadge sinal={r.divergenciaSinal} className="text-xs font-bold" />
+                        {r.sucesso && (r.divergenciaSinal != null || (r.bruto > 0 && r.abonosExtraidos != null)) && (
+                          <DivergenciaBadge
+                            sinal={r.divergenciaSinal ?? (r.liquidoExtraido - r.abonosExtraidos)}
+                            className="text-xs font-bold"
+                          />
                         )}
                       </div>
                     </td>
@@ -1048,11 +1051,20 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                           <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
                             {ESTADO_PT[r.estado] ?? r.estado}
                           </span>
-                          {r.liquido_extraido != null && (r.bruto_plataforma ?? r.bruto_extraido) != null && r.ss_extraido != null && r.irs_extraido != null && (
-                            <DivergenciaBadge
-                              sinal={parseFloat((Number(r.liquido_extraido) - ((Number(r.bruto_plataforma) ?? Number(r.bruto_extraido)) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
-                              className="text-xs font-bold"
-                            />
+                          {r.liquido_extraido != null && (
+                            (r.bruto_plataforma != null && r.ss_extraido != null && r.irs_extraido != null && (
+                              <DivergenciaBadge
+                                sinal={parseFloat((Number(r.liquido_extraido) - (Number(r.bruto_plataforma) - Number(r.ss_extraido) - Number(r.irs_extraido))).toFixed(2))}
+                                className="text-xs font-bold"
+                              />
+                            ))
+                            ||
+                            (r.bruto_extraido != null && (
+                              <DivergenciaBadge
+                                sinal={parseFloat((Number(r.liquido_extraido) - Number(r.bruto_extraido)).toFixed(2))}
+                                className="text-xs font-bold"
+                              />
+                            ))
                           )}
                           <button
                             onClick={() => {

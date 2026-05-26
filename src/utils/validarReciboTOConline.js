@@ -138,31 +138,40 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
   const irsExtraido = ultimoEuroDaLinha(irsLinha);
 
   // Validação: apenas SS e IRS entram no cálculo; outros descontos são ignorados
-  const liquidoCalculado = brutoPlataforma - ssExtraido - irsExtraido;
-  const divergenciaAbs   = Math.abs(liquidoCalculado - liquidoExtraido);
-  // sinal positivo = PDF tem mais do que calculado; negativo = PDF tem menos
-  const divergenciaSinal = parseFloat((liquidoExtraido - liquidoCalculado).toFixed(2));
-  const valido           = divergenciaAbs <= toleranciaValido;
-  const aviso            = !valido && divergenciaAbs <= toleranciaAviso;
+const liquidoCalculado = (brutoPlataforma && brutoPlataforma > 0)
+    ? brutoPlataforma - ssExtraido - irsExtraido
+    : null;
+  const divergenciaAbs = liquidoCalculado != null
+    ? Math.abs(liquidoCalculado - liquidoExtraido)
+    : null;
+  const divergenciaSinal = divergenciaAbs != null
+    ? parseFloat((liquidoExtraido - liquidoCalculado).toFixed(2))
+    : null;
 
-  const divStr  = divergenciaAbs.toFixed(2);
-  const calcStr = liquidoCalculado.toFixed(2);
+  const temBasePlataforma = brutoPlataforma && brutoPlataforma > 0;
+  const validoRaw  = temBasePlataforma && divergenciaAbs != null ? divergenciaAbs <= toleranciaValido : true;
+  const avisoRaw   = temBasePlataforma && divergenciaAbs != null ? (!validoRaw && divergenciaAbs <= toleranciaAviso) : false;
+
+  const divStr  = divergenciaAbs != null ? divergenciaAbs.toFixed(2) : null;
+  const calcStr = liquidoCalculado != null ? liquidoCalculado.toFixed(2) : null;
 
   return {
     sucesso: true,
-    valido,
-    aviso,
+    valido:  validoRaw,
+    aviso:   avisoRaw,
     abonosExtraidos,
     ssExtraido,
     irsExtraido,
     liquidoExtraido,
-    divergencia:      valido ? 0 : parseFloat(divStr),
+    divergencia:      validoRaw ? 0 : parseFloat(divStr ?? '0'),
     divergenciaSinal,
-    mensagem: valido
-      ? `Recibo válido. ${brutoPlataforma}€ - SS ${ssExtraido}€ - IRS ${irsExtraido}€ = ${liquidoExtraido}€.`
-      : aviso
-        ? `Aviso: divergência de ${divStr}€ (margem tolerada). Esperado ${calcStr}€, recibo tem ${liquidoExtraido}€.`
-        : `Divergência de ${divStr}€. Esperado ${calcStr}€, recibo tem ${liquidoExtraido}€.`,
+    mensagem: !temBasePlataforma
+      ? `Bruto plataforma não disponível — aceitei valor do PDF (${liquidoExtraido}€).`
+      : validoRaw
+        ? `Recibo válido. ${brutoPlataforma}€ - SS ${ssExtraido}€ - IRS ${irsExtraido}€ = ${liquidoExtraido}€.`
+        : avisoRaw
+          ? `Aviso: divergência de ${divStr}€ (margem tolerada). Esperado ${calcStr}€, recibo tem ${liquidoExtraido}€.`
+          : `Divergência de ${divStr}€. Esperado ${calcStr}€, recibo tem ${liquidoExtraido}€.`,
   };
 }
 
