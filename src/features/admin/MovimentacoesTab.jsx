@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
-  X, Loader2, Download, FileText, MessageSquare, Undo2,
+  X, Loader2, Download, FileText, FileArchive, MessageSquare, Undo2,
   ArrowLeftRight, Link, Tag, Trash2, Zap, Plus, Receipt,
   TrendingUp, TrendingDown, UserCheck, FileMinus,
   RefreshCw, Upload,
@@ -437,6 +437,8 @@ export default function MovimentacoesTab() {
   const [loading, setLoading] = useState(false);
   const [autoMatching, setAutoMatching] = useState(false);
   const [autoMatchCount, setAutoMatchCount] = useState(null);
+  const [exportingZip, setExportingZip] = useState(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
   const [showAliases, setShowAliases] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'entradas' | 'saidas'
 
@@ -1397,6 +1399,107 @@ if (toInsertNcs.length > 0) {
     setShowExportMenu(false);
   };
 
+  const handleExportZip = async () => {
+    setExportingZip(true);
+    setExportProgress({ current: 0, total: 0 });
+    setShowExportMenu(false);
+    try {
+      const JSZipLib = (await import('jszip')).default;
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+
+      const zip = new JSZipLib();
+      const relatorioFolder = zip.folder('relatorio');
+      const extratoFolder = zip.folder('extrato');
+      const faturasFolder = zip.folder('faturas');
+
+      const monthLabel = runData
+        ? new Date(runData.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
+        : 'todos';
+      const safeMonth = monthLabel.replace(/[^a-zA-Z0-9]/g, '');
+
+      // ── Relatório PDF ─────────────────────────────────────────────────────
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      doc.setFontSize(14); doc.setTextColor(30);
+      doc.text('Relatório de Movimentações', 14, 18);
+      doc.setFontSize(8); doc.setTextColor(120);
+      doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : 'Todos'}`, 14, 24);
+
+      const rows = buildRows();
+      autoTable(doc, {
+        startY: 30,
+        head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
+        body: rows,
+        styles: { fontSize: 6.5, cellPadding: 1.3 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
+      });
+
+      relatorioFolder.file('Relatorio_Movimentacoes.pdf', doc.output('blob'));
+
+      // ── Extrato CSV ────────────────────────────────────────────────────────
+      const txStatus = (tx) => {
+        const key = txKey(tx);
+        if (faturaLinks.some(f => f.tx_key === key)) return 'Com Fatura';
+        if (reciboLinks.some(r => r.tx_key === key)) return 'Com Recibo';
+        if (internos.some(i => i.tx_key === key)) return 'Interno';
+        if (justificacoes.some(j => j.tx_key === key)) return 'Justificado';
+        if (notasCredito.some(n => n.tx_key === key)) return 'Nota Crédito';
+        if (pagamentos.some(p => p.transaction_data && txKey(p.transaction_data) === key)) return 'Com Cliente';
+        return 'Sem Cliente';
+      };
+
+      const csvLines = ['Data,Tipo,Descrição,Valor (€),Status'];
+      for (const tx of allTxs) {
+        const status = txStatus(tx);
+        csvLines.push(`"${tx.data}","${tx.tipo}","${(tx.descricao || '').replace(/"/g, '""')}","${tx.valor}","${status}"`);
+      }
+      const csvBlob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+      extratoFolder.file('extrato_bancario.csv', csvBlob);
+
+      // ── Faturas PDF do storage ─────────────────────────────────────────────
+      const linkedFatIds = [...new Set(faturaLinks.map(l => l.fatura_id).filter(Boolean))];
+      const faturasNoZip = faturasData.filter(f => linkedFatIds.includes(f.id) && f.storage_path);
+      const total = faturasNoZip.length;
+
+      if (total > 0) {
+        for (let i = 0; i < faturasNoZip.length; i++) {
+          const fat = faturasNoZip[i];
+          setExportProgress({ current: i + 1, total });
+          const fornecedor = (fat.dados?.fornecedor || 'SEM_FORNECEDOR').replace(/[^a-zA-Z0-9]/g, '_');
+          const numero = (fat.dados?.numero_fatura || fat.id).replace(/[^a-zA-Z0-9]/g, '_');
+          const filename = `FAT_${fornecedor}_${numero}.pdf`;
+          try {
+            const { data: pdfBlob, error } = await supabase.storage.from('faturas').download(fat.storage_path);
+            if (error || !pdfBlob) {
+              console.warn(`Fatura ${fat.id} não acessível:`, error?.message);
+              continue;
+            }
+            faturasFolder.file(filename, pdfBlob);
+          } catch (e) {
+            console.warn(`Erro ao baixar fatura ${fat.id}:`, e.message);
+          }
+        }
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `movimentacoes_Extrato_${safeMonth}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Erro ao gerar ZIP:', err);
+      alert('Ocorreu um erro ao gerar o ZIP. Tente novamente.');
+    } finally {
+      setExportingZip(false);
+      setExportProgress({ current: 0, total: 0 });
+    }
+  };
+
   // ── Acções: Interno ───────────────────────────────────────────────────────
 
   const handleConfirmarInterno = async () => {
@@ -2030,6 +2133,11 @@ if (toInsertNcs.length > 0) {
                 <button onClick={handleExportPdf}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                   <FileText size={13} className="text-rose-500" /> PDF
+                </button>
+                <button onClick={handleExportZip} disabled={exportingZip}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50">
+                  {exportingZip ? <Loader2 size={13} className="animate-spin text-indigo-600" /> : <FileArchive size={13} className="text-indigo-600" />}
+                  {exportingZip ? `ZIP ${exportProgress.current}/${exportProgress.total}` : 'ZIP'}
                 </button>
               </div>
             )}
