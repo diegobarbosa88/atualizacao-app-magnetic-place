@@ -6,7 +6,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 ).href;
 
 const MESES_MAP = {
-  janeiro: '01', fevereiro: '02', março: '03', abril: '04',
+  janeiro: '01', fevereiro: '02', 'marco': '03', março: '03', abril: '04',
   maio: '05', junho: '06', julho: '07', agosto: '08',
   setembro: '09', outubro: '10', novembro: '11', dezembro: '12',
 };
@@ -62,8 +62,10 @@ export async function extrairPaginasPdf(file) {
 
 // Extrai nome do trabalhador e mês a partir do texto do PDF TOConline
 export function extrairMetadadosTOConline(text) {
+  // Normalizar texto: remover acentos diacríticos (NFD) para lidar com PDF que extrai "Marco" em vez de "Março"
+  const textoNorm = (text || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   // Mês: "De 1 de Abril 2026" (TOConline) ou "Mês: 04" + "Ano: 2026" (Skia/outros)
-  const mesMatch = text.match(/De \d+ de (\w+) (\d{4})/i);
+  const mesMatch = textoNorm.match(/De \d+ de (\w+) (\d{4})/i);
   const mes = mesMatch
     ? `${mesMatch[2]}-${MESES_MAP[mesMatch[1].toLowerCase()] ?? '??'}`
     : (() => {
