@@ -18,6 +18,7 @@ const INTERNO_KEYWORDS = [
   'TRF INTERNA', 'TRANSF INTERNA', 'TRANSFERENCIA INTERNA',
   'TRF ENTRE CONTAS', 'TRANSFERENCIA ENTRE CONTAS',
   'CONTA PROPRIA', 'PROPRIA CONTA',
+  'APP ', 'APP-', 'MBWAY', 'MB WAY',
 ];
 
 const BANCO_KEYWORDS = [
@@ -1043,11 +1044,13 @@ export default function MovimentacoesTab() {
 
     const descUpper = (s) => (s || '').toUpperCase();
     const isBancoTx = (tx) => BANCO_KEYWORDS.some(k => descUpper(tx.descricao || '').includes(k));
+    const isInternoTx = (tx) => INTERNO_KEYWORDS.some(k => descUpper(tx.descricao || '').includes(k));
 
     for (const tx of debitos) {
       const key = txKey(tx);
       if (existingKeys.has(key)) continue;
       if (isBancoTx(tx)) continue;
+      if (isInternoTx(tx)) continue;
 
       let matchedWorkerName = null;
 
