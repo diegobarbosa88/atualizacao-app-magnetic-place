@@ -1093,12 +1093,26 @@ export default function MovimentacoesTab() {
       const bestReceipt = findBestReceipt(matchedWorkerName, tx.data, recsArr);
       if (!bestReceipt) continue;
 
+      // Calcular mes do link a partir da data da transacção
+      // Dias 1-15 → mês anterior | Dias 16-31 → mês da transacção
+      const txDay = parseInt(tx.data.split('-')[2]);
+      const txYear = parseInt(tx.data.substring(0, 4));
+      const txMonth = parseInt(tx.data.substring(5, 7));
+      let linkMes;
+      if (txDay >= 16) {
+        linkMes = tx.data.substring(0, 7);
+      } else {
+        const prevMonth = txMonth === 1 ? 12 : txMonth - 1;
+        const prevYear = txMonth === 1 ? txYear - 1 : txYear;
+        linkMes = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      }
+
       toInsert.push({
         run_id: rid,
         tx_key: key,
         worker_id: bestReceipt.worker_id || null,
         worker_name: bestReceipt.worker_name,
-        mes: bestReceipt.mes,
+        mes: linkMes,
         auto_matched: true,
       });
       existingKeys.add(key);

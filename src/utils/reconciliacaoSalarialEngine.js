@@ -19,18 +19,12 @@ function classifyTransfer(txDate, refMes) {
   const [txYear, txMonth, txDay] = txDate.split('-').map(Number);
 
   const monthDiff = (txYear - refYear) * 12 + (txMonth - refMonth);
-  // Nova lógica: dias 7-15 = Liquid., dias 1-6 e 16-31 = Adiant.
   if (monthDiff === 0) {
     return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
          : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
   }
   if (monthDiff === 1) {
-    return txDay >= 1 && txDay <= 6 ? 'Adiantamento'
-         : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
-  }
-  if (monthDiff === -1) {
-    return txDay >= 7 && txDay <= 15 ? 'Liquidação'
-         : txDay >= 16 ? 'Adiantamento' : null;
+    return txDay >= 16 ? 'Adiantamento' : null;
   }
   return null;
 }
