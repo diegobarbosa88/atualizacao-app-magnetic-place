@@ -1041,9 +1041,13 @@ export default function MovimentacoesTab() {
     const existingKeys = new Set(curRls.map(r => r.tx_key));
     const toInsert = [];
 
+    const descUpper = (s) => (s || '').toUpperCase();
+    const isBancoTx = (tx) => BANCO_KEYWORDS.some(k => descUpper(tx.descricao || '').includes(k));
+
     for (const tx of debitos) {
       const key = txKey(tx);
       if (existingKeys.has(key)) continue;
+      if (isBancoTx(tx)) continue;
 
       let matchedWorkerName = null;
 
