@@ -1458,6 +1458,30 @@ if (toInsertNcs.length > 0) {
       const csvBlob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
       extratoFolder.file('extrato_bancario.csv', csvBlob);
 
+      // ── Extrato PDF (texto real do extrato) ─────────────────────────────────
+      const docExtrato = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+      docExtrato.setFontSize(16); docExtrato.setTextColor(30);
+      docExtrato.text('Extrato Bancário', 14, 18);
+      docExtrato.setFontSize(9); docExtrato.setTextColor(120);
+      docExtrato.text(`Ficheiro: ${runData?.filename || 'N/A'}  ·  Período: ${monthLabel}  ·  ${allTxs.length} movimentos`, 14, 25);
+
+      const extratoRows = allTxs.map(tx => {
+        const signo = tx.tipo === 'credito' ? '+' : '-';
+        return [tx.data, tx.tipo === 'credito' ? 'Crédito' : 'Débito', tx.descricao || '', `${signo}${tx.valor}`];
+      });
+
+      autoTable(docExtrato, {
+        startY: 30,
+        head: [['Data', 'Tipo', 'Descrição', 'Valor (€)']],
+        body: extratoRows,
+        styles: { fontSize: 7, cellPadding: 1.5 },
+        headStyles: { fillColor: [30, 60, 100], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 20 }, 2: { cellWidth: 180 }, 3: { cellWidth: 30 } },
+      });
+
+      extratoFolder.file('extrato_bancario.pdf', docExtrato.output('blob'));
+
       // ── Faturas PDF do storage ─────────────────────────────────────────────
       const linkedFatIds = [...new Set(faturaLinks.map(l => l.fatura_id).filter(Boolean))];
       const faturasNoZip = faturasData.filter(f => linkedFatIds.includes(f.id) && f.storage_path);
