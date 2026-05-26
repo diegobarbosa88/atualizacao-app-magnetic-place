@@ -11,6 +11,17 @@ const MESES_PT_SAL = {
   '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
 };
 
+const ESTADO_BADGE = {
+  valido:   'bg-emerald-100 text-emerald-700',
+  aviso:    'bg-yellow-100 text-yellow-700',
+  invalido: 'bg-amber-100 text-amber-700',
+};
+const ESTADO_PT = {
+  valido:   'Match Exato',
+  aviso:    'Justificado',
+  invalido: 'Saldo Pendente',
+};
+
 function fmtEur(v) {
   return (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
@@ -66,7 +77,10 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
                       {MESES_PT_SAL[mm]} {ano}
                     </span>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${badgeClass}`}>
+                    <span
+                      onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-80 ${badgeClass}`}
+                    >
                       {isMatch || isJustified ? <CheckCircle size={9} /> : <AlertCircle size={9} />} {displayStatus}
                     </span>
                     {isJustified && (
@@ -201,14 +215,55 @@ export default function SalariosTab({ month }) {
     setLoadingSalarios(true);
     setSalarioResultado(null);
 
-    const { data: latestRun } = await supabase
+    const { data: allRuns } = await supabase
       .from('reconciliation_runs')
-      .select('transactions_json, created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .select('id, transactions_json, created_at')
+      .order('created_at', { ascending: false });
 
-    const txs = latestRun?.transactions_json || [];
+    const runIds = (allRuns || []).map(r => r.id);
+    const allTxs = (allRuns || []).flatMap(r => r.transactions_json || []);
+    const txs = allTxs.filter(tx => (tx.data || '').startsWith(year));
+
+    // Load movimentacao_recibo_links for all runs
+    const { data: movLinks } = runIds.length
+      ? await supabase
+          .from('movimentacao_recibo_links')
+          .select('tx_key, worker_id, worker_name, mes')
+          .in('run_id', runIds)
+      : { data: [] };
+
+    // Build tx_key -> tx map
+    const txKey = (tx) => `${tx.data}|${tx.descricao}|${tx.tipo}`;
+    const txMap = {};
+    txs.forEach(tx => { txMap[txKey(tx)] = tx; });
+
+    // Build paymentsMap: { [worker_id]: { [mes]: { amount, data, type } } }
+    // Use classifyTransfer to determine type based on tx.data vs mes
+    const classifyTransfer = (txDate, refMes) => {
+      if (!txDate || !refMes) return null;
+      const [refYear, refMonth] = refMes.split('-').map(Number);
+      const [txYear, txMonth, txDay] = txDate.split('-').map(Number);
+      const monthDiff = (txYear - refYear) * 12 + (txMonth - refMonth);
+      if (monthDiff === 0) return txDay >= 16 ? 'Adiantamento' : 'Liquidação';
+      if (monthDiff === 1) return txDay <= 15 ? 'Liquidação' : null;
+      if (monthDiff === -1) return txDay >= 16 ? 'Adiantamento' : null;
+      return null;
+    };
+
+    const paymentsMap = {};
+    (movLinks || []).forEach(link => {
+      if (!link.worker_id) return;
+      const tx = txMap[link.tx_key];
+      if (!tx) return;
+      const type = classifyTransfer(tx.data, link.mes);
+      if (!type) return;
+      if (!paymentsMap[link.worker_id]) paymentsMap[link.worker_id] = {};
+      const key = link.mes;
+      if (!paymentsMap[link.worker_id][key]) {
+        paymentsMap[link.worker_id][key] = { amount: 0, data: tx.data, type };
+      }
+      paymentsMap[link.worker_id][key].amount += Math.abs(parseFloat(tx.valor) || 0);
+    });
 
     const { data: recibos } = await supabase
       .from('receipt_validations')
@@ -218,7 +273,7 @@ export default function SalariosTab({ month }) {
 
     const aliases = aliasesOverride ?? salarioAliases;
     const tol = tolOverride !== undefined ? tolOverride : tolerancia;
-    const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol });
+    const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap });
     setSalarioResultado(res);
     setLoadingSalarios(false);
   };

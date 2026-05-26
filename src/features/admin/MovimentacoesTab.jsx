@@ -198,15 +198,15 @@ function workerScore(descricao, workerName) {
 function findBestReceipt(matchedWorkerName, txData, receipts) {
   const prevMonth = previousMonth(txData);
   const txMonth = txData.substring(0, 7);
+  const txDay = parseInt(txData.split('-')[2]);
+  const receiptMonth = txDay >= 16 ? txMonth : prevMonth;
   const workerNorm = normWorker(matchedWorkerName);
   const workerReceipts = receipts.filter(r => {
     const rNorm = normWorker(r.worker_name);
     return rNorm.includes(workerNorm) || workerNorm.includes(rNorm);
   });
   if (workerReceipts.length === 0) return null;
-  return workerReceipts.find(r => r.mes === prevMonth)
-    || workerReceipts.find(r => r.mes === txMonth)
-    || workerReceipts.sort((a, b) => b.mes.localeCompare(a.mes))[0];
+  return workerReceipts.find(r => r.mes === receiptMonth) || null;
 }
 
 // ── Linha de transacção ───────────────────────────────────────────────────────

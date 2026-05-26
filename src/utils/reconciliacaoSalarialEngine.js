@@ -7,7 +7,7 @@ function normStr(s) {
 
 function workerScore(workerName, descricao) {
   const words = normStr(workerName).split(/\s+/)
-    .filter(w => w.length >= 3 && !STOP_WORDS.has(w));
+    .filter(w => w.length >= 2 && !STOP_WORDS.has(w));
   if (!words.length) return 0;
   const nDesc = normStr(descricao);
   return words.filter(w => nDesc.includes(w)).length;
@@ -18,11 +18,22 @@ function classifyTransfer(txDate, refMes) {
   const [refYear, refMonth] = refMes.split('-').map(Number);
   const [txYear, txMonth, txDay] = txDate.split('-').map(Number);
 
-  if (txYear === refYear && txMonth === refMonth && txDay >= 15) return 'Adiantamento';
+  const monthDiff = (txYear - refYear) * 12 + (txMonth - refMonth);
 
-  const nextMonth = refMonth === 12 ? 1 : refMonth + 1;
-  const nextYear = refMonth === 12 ? refYear + 1 : refYear;
-  if (txYear === nextYear && txMonth === nextMonth && txDay <= 15) return 'Liquidação';
+  if (monthDiff === 0) {
+    // Same month — day 16+ = Adiantamento (for next month), day 1-15 = Liquidacao (for prev month)
+    return txDay >= 16 ? 'Adiantamento' : 'Liquidação';
+  }
+
+  if (monthDiff === 1) {
+    // Next month — days 1-15 = Liquidacao for ref month, 16+ = too late
+    return txDay <= 15 ? 'Liquidação' : null;
+  }
+
+  if (monthDiff === -1) {
+    // Previous month — days 16-31 = Adiantamento for ref month, 1-15 = too early
+    return txDay >= 16 ? 'Adiantamento' : null;
+  }
 
   return null;
 }
@@ -34,7 +45,8 @@ function toDisplayDate(isoDate) {
 }
 
 // aliases: [{ pattern: string, worker_name: string }]
-export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [], tolerancia = 0.01 }) {
+// paymentsMap: optional { [worker_id]: { [mes]: { amount, data, type } } } — pre-populated from movimentacao_recibo_links
+export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [], tolerancia = 0.01, paymentsMap = null }) {
   const txDebito = transacoes.filter(t => t.tipo === 'debito' && t.valor > 0);
 
   // Build worker map from receipts
@@ -61,12 +73,33 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
     }
   });
 
+  // Pre-populate transfers from movimentacao_recibo_links (paymentsMap)
+  if (paymentsMap) {
+    Object.values(workerMap).forEach(w => {
+      const wPayments = paymentsMap[w.employee_id] || paymentsMap[normStr(w.employee_name)] || {};
+      Object.entries(wPayments).forEach(([mes, pay]) => {
+        const monthData = w._monthsMap[mes];
+        if (!monthData) return;
+        const alreadyAdded = monthData.transfers.some(
+          t => t.data === pay.data && t.amount === pay.amount && t.type === pay.type
+        );
+        if (!alreadyAdded) {
+          monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type });
+        }
+      });
+    });
+  }
+
   const matchedIndices = new Set();
 
   txDebito.forEach((tx, idx) => {
+    const desc = tx.descricao || '';
+    // Only consider salary transfers: debits with "P/" or "TRF" prefix
+    if (!/^(TRF|P\/)/i.test(desc)) return;
+
     // 1. Check manual aliases first (exact substring in description)
     let targetWorker = null;
-    const nDesc = normStr(tx.descricao);
+    const nDesc = normStr(desc);
     for (const alias of aliases) {
       if (alias.pattern && nDesc.includes(normStr(alias.pattern))) {
         targetWorker = workerMap[normStr(alias.worker_name)] ?? null;
@@ -78,7 +111,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
     if (!targetWorker) {
       let bestScore = 0;
       Object.values(workerMap).forEach(w => {
-        const score = workerScore(w.employee_name, tx.descricao);
+        const score = workerScore(w.employee_name, desc);
         if (score > bestScore) { bestScore = score; targetWorker = w; }
       });
       if (!targetWorker || bestScore < 2) return; // unmatched
