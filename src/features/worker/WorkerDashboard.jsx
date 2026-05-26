@@ -803,7 +803,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
         </div>
 
         <div id="secao-documentos">
-          <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={true} />
+          <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
         </div>
         </>)}
       </main>
