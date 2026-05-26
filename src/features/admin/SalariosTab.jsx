@@ -232,8 +232,8 @@ export default function SalariosTab({ month }) {
           .in('run_id', runIds)
       : { data: [] };
 
-    // Build tx_key -> tx map
-    const txKey = (tx) => `${tx.data}|${tx.descricao}|${tx.tipo}`;
+    // Build tx_key -> tx map (key must match tx_key stored in movimentacao_recibo_links)
+    const txKey = (tx) => `${tx.data}|${tx.descricao}|${tx.valor}`;
     const txMap = {};
     txs.forEach(tx => { txMap[txKey(tx)] = tx; });
 
