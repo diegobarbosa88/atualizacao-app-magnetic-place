@@ -110,6 +110,10 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
 
     matchedIndices.add(idx);
 
+    // Only auto-match if paymentsMap is not provided
+    // (if paymentsMap exists, transfers are pre-populated from movLinks and should not be re-added)
+    if (paymentsMap) return;
+
     Object.values(targetWorker._monthsMap).forEach(monthData => {
       const type = classifyTransfer(tx.data, monthData.month);
       if (!type) return;
