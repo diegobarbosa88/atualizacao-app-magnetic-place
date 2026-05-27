@@ -125,7 +125,7 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                       <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => window.__toggleTipoLink(t, supabase)}
+                            onClick={() => window.__toggleTipoLink(t, supabase, analisarSalarios)}
                             className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
