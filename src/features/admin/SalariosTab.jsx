@@ -32,7 +32,7 @@ function fmtMes(month) {
   return `${MESES_PT_SAL[mm]} ${ano}`;
 }
 
-function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01, onToggleTipo, isOpen, onToggleOpen }) {
+function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01, onTipoUpdate, isOpen, onToggleOpen }) {
   const { supabase } = useApp();
   const pendingMonths = employee.months.filter(m =>
     m.status !== 'Match Exato' &&
@@ -124,7 +124,7 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                       <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => window.__toggleTipoLink(t, supabase, onToggleTipo)}
+                            onClick={() => window.__toggleTipoLink(t, supabase, onTipoUpdate)}
                             className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
@@ -174,6 +174,24 @@ export default function SalariosTab({ month }) {
   const exportRef = useRef(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [openEmployee, setOpenEmployee] = useState(null);
+
+  const handleTipoUpdate = useCallback((linkId, novoTipo) => {
+    setSalarioResultado(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        employees: prev.employees.map(emp => ({
+          ...emp,
+          months: emp.months.map(m => ({
+            ...m,
+            transfers: m.transfers.map(t =>
+              t.linkId === linkId ? { ...t, type: novoTipo } : t
+            ),
+          })),
+        })),
+      };
+    });
+  }, []);
 
   // Extrair meses únicos disponíveis nos dados
   const monthsAvailable = useMemo(() => {
@@ -539,7 +557,7 @@ export default function SalariosTab({ month }) {
                     onJustificar={setJustModal}
                     onRemoverJustificacao={handleRemoverJustificacao}
                     tolerancia={tolerancia}
-                    onToggleTipo={analisarSalarios}
+                    onTipoUpdate={handleTipoUpdate}
                     isOpen={openEmployee === emp.employee_name}
                     onToggleOpen={() => setOpenEmployee(prev => prev === emp.employee_name ? null : emp.employee_name)}
                   />
