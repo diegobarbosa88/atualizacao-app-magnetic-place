@@ -282,7 +282,7 @@ export default function SalariosTab({ month }) {
     const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap });
     setSalarioResultado(res);
     setLoadingSalarios(false);
-  }, [supabase, year, salarioAliases, tolerancia, analisarSalarios]);
+  }, [supabase, year, salarioAliases, tolerancia]);
 
   useEffect(() => {
     const init = async () => {
