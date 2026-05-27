@@ -536,11 +536,6 @@ export default function MovimentacoesTab() {
   const [colMap, setColMap] = useState({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
   const [runMonthYear, setRunMonthYear] = useState({});
   const inputRef = useRef(null);
-  const lastRunIdRef = useRef(null);
-
-  useEffect(() => {
-    if (runId) lastRunIdRef.current = runId;
-  }, [runId]);
 
   useEffect(() => {
     const handleClick = (e) => {
@@ -1634,7 +1629,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerInterno = async (tx) => {
-    const effectiveRunId = runId || lastRunIdRef.current;
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
     await supabase.from('entrada_internos').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
@@ -1666,7 +1661,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerImposto = async (tx) => {
-    const effectiveRunId = runId || lastRunIdRef.current;
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
     await supabase.from('entrada_impostos').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
@@ -1715,7 +1710,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerCliente = async (tx) => {
-    const effectiveRunId = runId || lastRunIdRef.current;
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
     await supabase.from('entrada_nota_credito_links').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
@@ -1742,7 +1737,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleRemoverJustificacao = async (tx) => {
-    const effectiveRunId = runId || lastRunIdRef.current;
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
     await supabase.from('entrada_justifications').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
@@ -1789,7 +1784,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerRecibo = async (tx) => {
-    const effectiveRunId = runId || lastRunIdRef.current;
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
     await supabase.from('movimentacao_recibo_links').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
@@ -1821,7 +1816,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerFatura = async (tx) => {
-    const effectiveRunId = runId || lastRunIdRef.current;
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
     await supabase.from('fatura_pagamento_links').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
