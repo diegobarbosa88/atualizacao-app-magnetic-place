@@ -193,7 +193,7 @@ function workerScore(descricao, workerName) {
   const workerNorm = normWorker(workerName);
   if (!workerNorm || workerNorm.length < 3) return 0;
   if (descNorm.includes(workerNorm) || workerNorm.includes(descNorm)) return 3;
-  const tokens = workerNorm.split(' ').filter(w => w.length >= 2);
+  const tokens = workerNorm.split(' ').filter(w => w.length >= 3);
   if (tokens.length === 0) return 0;
   const hits = tokens.filter(t => descNorm.includes(t)).length;
   return hits;
