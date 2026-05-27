@@ -445,15 +445,15 @@ export default function SalariosTab({ month }) {
   };
 
   // ── Toggle tipo badge Adiantamento/Liquidacao ─────────────────────────────────
-  async function handleToggleTipo(t) {
+  const handleToggleTipo = (t) => {
     if (!t.linkId) return;
     const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
-    await supabase
+    supabase
       .from('movimentacao_recibo_links')
       .update({ tipo: novoTipo })
-      .eq('id', t.linkId);
-    await analisarSalarios(salAliasOverride, tolOverride);
-  }
+      .eq('id', t.linkId)
+      .then(() => analisarSalarios(salAliasOverride, tolOverride));
+  };
 
   return (
     <div className="space-y-3">
