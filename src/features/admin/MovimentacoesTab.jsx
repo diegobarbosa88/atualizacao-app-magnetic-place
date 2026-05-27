@@ -168,6 +168,7 @@ function clienteLink(tx, pagamentos) {
 function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) {
   const key = txKey(tx);
   if (clienteLink(tx, pagamentos)) return STATUS_KEYS.COM_CLIENTE;
+  if (impostos?.some(i => i.tx_key === key)) return STATUS_KEYS.IMPOSTO;
   if (reciboLinks?.some(r => r.tx_key === key)) return STATUS_KEYS.COM_RECIBO;
   if (faturaLinks?.some(f => f.tx_key === key)) return STATUS_KEYS.COM_FATURA;
   if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.NOTA_CREDITO;
@@ -296,6 +297,11 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
                 className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
                 <Undo2 size={9} /> Desfazer
               </button>
+            )}
+            {status === STATUS_KEYS.IMPOSTO && (
+              <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                {fmtMes((tx.data || '').substring(0, 7))}
+              </span>
             )}
             {status === STATUS_KEYS.IMPOSTO && (
               <button onClick={() => onDesfazerImposto(tx)}
