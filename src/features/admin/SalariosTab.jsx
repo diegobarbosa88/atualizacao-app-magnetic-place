@@ -255,17 +255,16 @@ export default function SalariosTab({ month }) {
     };
 
     const paymentsMap = {};
+    let linksProcessed = 0, linksMissingTx = 0, linksNoType = 0;
+    const receiptMesByWorker = {};
     (movLinks || []).forEach(link => {
       if (!link.worker_id && !link.worker_name) return;
       const tx = txMap[link.tx_key];
-      if (!tx) return;
+      if (!tx) { linksMissingTx++; return; }
       const type = classifyTransfer(tx.data, link.mes);
-      if (!type) return;
-      const txYear = parseInt(tx.data.substring(0, 4));
-      const txMonth = parseInt(tx.data.substring(5, 7));
-      const prevMonth = txMonth === 1 ? 12 : txMonth - 1;
-      const prevYear = txMonth === 1 ? txYear - 1 : txYear;
-      const receiptMes = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+      if (!type) { linksNoType++; return; }
+      linksProcessed++;
+      const receiptMes = link.mes;
       const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
 
       const workerKey = link.worker_id || normStr(link.worker_name);
@@ -278,7 +277,11 @@ export default function SalariosTab({ month }) {
         data: tx.data,
         type
       });
+      if (!receiptMesByWorker[workerKey]) receiptMesByWorker[workerKey] = [];
+      if (!receiptMesByWorker[workerKey].includes(receiptMes)) receiptMesByWorker[workerKey].push(receiptMes);
     });
+    console.log('[SALARIOS DEBUG] links loaded:', movLinks?.length, '| processed:', linksProcessed, '| missing tx:', linksMissingTx, '| no type:', linksNoType);
+    console.log('[SALARIOS DEBUG] receiptMes distribution:', JSON.stringify(receiptMesByWorker));
 
     const { data: recibos } = await supabase
       .from('receipt_validations')

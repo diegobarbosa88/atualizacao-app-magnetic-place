@@ -2,7 +2,8 @@ const STOP_WORDS = new Set(['da', 'de', 'do', 'das', 'dos', 'e', 'em', 'a', 'o',
 
 function normStr(s) {
   return String(s || '').toLowerCase().trim()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '');
 }
 
 function workerScore(workerName, descricao) {
@@ -36,7 +37,7 @@ function toDisplayDate(isoDate) {
 }
 
 // aliases: [{ pattern: string, worker_name: string }]
-// paymentsMap: optional { [worker_id]: { [mes]: { amount, data, type } } } — pre-populated from movimentacao_recibo_links
+// paymentsMap: optional { [workerKey]: { [mes]: [{ amount, data, type }, ...] } } — pre-populated from movimentacao_recibo_links
 export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [], tolerancia = 0.01, paymentsMap = null }) {
   const txDebito = transacoes.filter(t => t.tipo === 'debito' && t.valor > 0);
 
@@ -66,22 +67,26 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
 
   // Pre-populate transfers from movimentacao_recibo_links (paymentsMap)
   if (paymentsMap) {
+    let matchedPayments = 0, missedMonth = 0;
     Object.values(workerMap).forEach(w => {
       // Try employee_id first, then fall back to normalized name
+      const wKey = w.employee_id || normStr(w.employee_name);
       const wPayments = paymentsMap[w.employee_id] || paymentsMap[normStr(w.employee_name)] || {};
       Object.entries(wPayments).forEach(([mes, transfers]) => {
-      const monthData = w._monthsMap[mes];
-      if (!monthData) return;
-      (transfers || []).forEach(pay => {
-        const alreadyAdded = monthData.transfers.some(
-          t => t.data === pay.data && t.amount === pay.amount && t.type === pay.type
-        );
-        if (!alreadyAdded) {
-          monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type });
-        }
+        const monthData = w._monthsMap[mes];
+        if (!monthData) { missedMonth++; return; }
+        (transfers || []).forEach(pay => {
+          const alreadyAdded = monthData.transfers.some(
+            t => t.data === pay.data && t.amount === pay.amount && t.type === pay.type
+          );
+          if (!alreadyAdded) {
+            monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type });
+            matchedPayments++;
+          }
+        });
       });
     });
-    });
+    console.log('[ENGINE DEBUG] paymentsMap - workers in workerMap:', Object.keys(workerMap).length, '| paymentsMap keys:', Object.keys(paymentsMap).length, '| matched transfers:', matchedPayments, '| missed (no receipt for month):', missedMonth);
   }
 
   const matchedIndices = new Set();
