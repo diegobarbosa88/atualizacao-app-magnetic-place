@@ -268,13 +268,16 @@ export default function SalariosTab({ month }) {
       const receiptMes = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
       const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
 
-      // Use worker_name as key since it's more reliable than worker_id
       const workerKey = link.worker_id || normStr(link.worker_name);
       if (!paymentsMap[workerKey]) paymentsMap[workerKey] = {};
       if (!paymentsMap[workerKey][receiptMes]) {
-        paymentsMap[workerKey][receiptMes] = { amount: 0, data: tx.data, type };
+        paymentsMap[workerKey][receiptMes] = [];
       }
-      paymentsMap[workerKey][receiptMes].amount += Math.abs(parseFloat(tx.valor) || 0);
+      paymentsMap[workerKey][receiptMes].push({
+        amount: Math.abs(parseFloat(tx.valor) || 0),
+        data: tx.data,
+        type
+      });
     });
 
     const { data: recibos } = await supabase

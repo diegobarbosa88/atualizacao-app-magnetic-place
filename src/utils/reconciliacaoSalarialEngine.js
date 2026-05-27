@@ -69,9 +69,10 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
     Object.values(workerMap).forEach(w => {
       // Try employee_id first, then fall back to normalized name
       const wPayments = paymentsMap[w.employee_id] || paymentsMap[normStr(w.employee_name)] || {};
-      Object.entries(wPayments).forEach(([mes, pay]) => {
-        const monthData = w._monthsMap[mes];
-        if (!monthData) return;
+      Object.entries(wPayments).forEach(([mes, transfers]) => {
+      const monthData = w._monthsMap[mes];
+      if (!monthData) return;
+      (transfers || []).forEach(pay => {
         const alreadyAdded = monthData.transfers.some(
           t => t.data === pay.data && t.amount === pay.amount && t.type === pay.type
         );
@@ -79,6 +80,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
           monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type });
         }
       });
+    });
     });
   }
 
