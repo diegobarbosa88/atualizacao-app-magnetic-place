@@ -545,6 +545,12 @@ export default function MovimentacoesTab() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  useEffect(() => {
+    if (activeRunId === null && allRuns.length > 0) {
+      loadRun(undefined);
+    }
+  }, [activeRunId]);
+
   // ── Load run data ──────────────────────────────────────────────────────────
 
   const loadRun = async (overrideRunId) => {
@@ -2160,7 +2166,6 @@ if (toInsertNcs.length > 0) {
               onChange={e => {
                 const id = e.target.value;
                 setActiveRunId(id || null);
-                loadRun(id || undefined);
               }}
               className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
             >
