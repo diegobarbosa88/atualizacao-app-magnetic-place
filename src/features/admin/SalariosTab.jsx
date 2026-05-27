@@ -11,13 +11,6 @@ const MESES_PT_SAL = {
   '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
 };
 
-const toggleTipoLink = (t, supabase, analisarSalarios, salAliasOverride, tolOverride) => {
-  if (!t.linkId) return;
-  const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
-  supabase.from('movimentacao_recibo_links').update({ tipo: novoTipo }).eq('id', t.linkId)
-    .then(() => analisarSalarios(salAliasOverride, tolOverride));
-};
-
 const ESTADO_BADGE = {
   valido:   'bg-emerald-100 text-emerald-700',
   aviso:    'bg-yellow-100 text-yellow-700',
@@ -133,7 +126,7 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                       <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => toggleTipoLink(t, supabase, analisarSalarios, salAliasOverride, tolOverride)}
+                            onClick={() => toggleTipoLink(t, supabase)}
                             className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
