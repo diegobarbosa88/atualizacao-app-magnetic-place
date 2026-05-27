@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, Loader2, Download, FileText, MessageSquare, Undo2 } from 'lucide-react';
@@ -32,7 +32,7 @@ function fmtMes(month) {
   return `${MESES_PT_SAL[mm]} ${ano}`;
 }
 
-function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01 }) {
+function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01, onToggleTipo }) {
   const { supabase } = useApp();
   const [open, setOpen] = React.useState(false);
   const pendingMonths = employee.months.filter(m =>
@@ -125,7 +125,7 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                       <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => window.__toggleTipoLink(t, supabase, analisarSalarios)}
+                            onClick={() => window.__toggleTipoLink(t, supabase, onToggleTipo)}
                             className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
@@ -211,7 +211,7 @@ export default function SalariosTab({ month }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const analisarSalarios = async (aliasesOverride, tolOverride) => {
+  const analisarSalarios = useCallback(async (aliasesOverride, tolOverride) => {
     if (!supabase) return;
     setLoadingSalarios(true);
     setSalarioResultado(null);
@@ -225,7 +225,6 @@ export default function SalariosTab({ month }) {
     const allTxs = (allRuns || []).flatMap(r => r.transactions_json || []);
     const txs = allTxs.filter(tx => (tx.data || '').startsWith(year));
 
-    // Load movimentacao_recibo_links for all runs
     const { data: movLinks } = runIds.length
       ? await supabase
           .from('movimentacao_recibo_links')
@@ -233,13 +232,10 @@ export default function SalariosTab({ month }) {
           .in('run_id', runIds)
       : { data: [] };
 
-    // Build tx_key -> tx map (key must match tx_key stored in movimentacao_recibo_links)
     const txKey = (tx) => `${tx.data}|${tx.descricao}|${tx.valor}`;
     const txMap = {};
     txs.forEach(tx => { txMap[txKey(tx)] = tx; });
 
-    // Build paymentsMap: { [worker_id]: { [mes]: { amount, data, type } } }
-    // Use classifyTransfer to determine type based on tx.data vs mes
     const classifyTransfer = (txDate, refMes) => {
       if (!txDate || !refMes) return null;
       const [refYear, refMonth] = refMes.split('-').map(Number);
@@ -249,10 +245,10 @@ export default function SalariosTab({ month }) {
         return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
              : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
       }
-  if (monthDiff === 1) {
-    return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
-         : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
-  }
+      if (monthDiff === 1) {
+        return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
+             : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
+      }
       return null;
     };
 
@@ -286,7 +282,7 @@ export default function SalariosTab({ month }) {
     const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap });
     setSalarioResultado(res);
     setLoadingSalarios(false);
-  };
+  }, [supabase, year, salarioAliases, tolerancia, analisarSalarios]);
 
   useEffect(() => {
     const init = async () => {
@@ -543,6 +539,7 @@ export default function SalariosTab({ month }) {
                     onJustificar={setJustModal}
                     onRemoverJustificacao={handleRemoverJustificacao}
                     tolerancia={tolerancia}
+                    onToggleTipo={analisarSalarios}
                   />
                 ))
               )}
