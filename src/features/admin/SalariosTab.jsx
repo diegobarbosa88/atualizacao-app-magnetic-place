@@ -248,19 +248,22 @@ export default function SalariosTab({ month }) {
         return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
              : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
       }
-      if (monthDiff === 1) {
-        return txDay >= 16 ? 'Adiantamento' : null;
-      }
+  if (monthDiff === 1) {
+    return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
+         : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
+  }
       return null;
     };
 
     const paymentsMap = {};
-    let linksProcessed = 0, linksMissingTx = 0;
+    let linksProcessed = 0, linksMissingTx = 0, linksNoType = 0;
     const receiptMesByWorker = {};
     (movLinks || []).forEach(link => {
       if (!link.worker_id && !link.worker_name) return;
       const tx = txMap[link.tx_key];
       if (!tx) { linksMissingTx++; return; }
+      const type = classifyTransfer(tx.data, link.mes);
+      if (!type) { linksNoType++; return; }
       linksProcessed++;
       const receiptMes = link.mes;
       const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
@@ -270,7 +273,6 @@ export default function SalariosTab({ month }) {
       if (!paymentsMap[workerKey][receiptMes]) {
         paymentsMap[workerKey][receiptMes] = [];
       }
-      const type = (tx.data >= '16') ? 'Adiantamento' : 'Liquidação';
       paymentsMap[workerKey][receiptMes].push({
         amount: Math.abs(parseFloat(tx.valor) || 0),
         data: tx.data,
@@ -279,7 +281,7 @@ export default function SalariosTab({ month }) {
       if (!receiptMesByWorker[workerKey]) receiptMesByWorker[workerKey] = [];
       if (!receiptMesByWorker[workerKey].includes(receiptMes)) receiptMesByWorker[workerKey].push(receiptMes);
     });
-    console.log('[SALARIOS DEBUG] links loaded:', movLinks?.length, '| processed:', linksProcessed, '| missing tx:', linksMissingTx);
+    console.log('[SALARIOS DEBUG] links loaded:', movLinks?.length, '| processed:', linksProcessed, '| missing tx:', linksMissingTx, '| no type:', linksNoType);
     console.log('[SALARIOS DEBUG] receiptMes distribution:', JSON.stringify(receiptMesByWorker));
 
     const { data: recibos } = await supabase

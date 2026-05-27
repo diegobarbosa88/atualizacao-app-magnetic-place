@@ -25,7 +25,8 @@ function classifyTransfer(txDate, refMes) {
          : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
   }
   if (monthDiff === 1) {
-    return txDay >= 16 ? 'Adiantamento' : null;
+    return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
+         : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
   }
   return null;
 }
