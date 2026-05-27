@@ -374,7 +374,7 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
 
 // ── Card por mês ──────────────────────────────────────────────────────────────
 
-function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
+function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura, onSelectRun }) {
   const [open, setOpen] = useState(false);
   const semCliente = txs.filter(tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) === STATUS_KEYS.SEM_CLIENTE).length;
   const allOk = semCliente === 0;
@@ -386,14 +386,18 @@ function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredit
   return (
     <div className="border border-slate-200 rounded-2xl overflow-hidden">
       <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
-      >
-        <div className="flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-          <span className="text-sm font-bold text-slate-800">{fmtMes(mes)}</span>
-          <span className="text-[10px] text-slate-400">{txs.length} transacção(ões)</span>
-        </div>
+          onClick={() => setOpen(o => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+            <button
+              onClick={e => { e.stopPropagation(); onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id); }}
+              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+              title="Clique para ver este mês num extrato específico"
+            >{fmtMes(mes)}</button>
+            <span className="text-[10px] text-slate-400">{txs.length} transacção(ões)</span>
+          </div>
         <div className="flex items-center gap-3">
           <span className={`text-[11px] font-black ${totalMes < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
             {totalMes < 0 ? '-' : ''}{fmtEur(Math.abs(totalMes))}
@@ -572,7 +576,7 @@ export default function MovimentacoesTab() {
             .select('transactions_json')
             .eq('id', run.id)
             .single();
-          if (runTxs?.transactions_json) allTxsMerged.push(...runTxs.transactions_json);
+          if (runTxs?.transactions_json) allTxsMerged.push(...runTxs.transactions_json.map(t => ({ ...t, run_id: run.id })));
         }
 
         setRunId(null);
@@ -2145,7 +2149,6 @@ if (toInsertNcs.length > 0) {
               }}
               className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
             >
-              <option value="">Mostrar todos</option>
               {allRuns.map(r => (
                 <option key={r.id} value={r.id}>
                   {runMonthYear[r.id] || extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
@@ -2424,6 +2427,7 @@ if (toInsertNcs.length > 0) {
               onDesfazerRecibo={handleDesfazerRecibo}
               onAcaoFatura={handleOpenAcaoFatura}
               onDesfazerFatura={handleDesfazerFatura}
+              onSelectRun={id => { setActiveRunId(id); loadRun(id); }}
             />
           ))
       )}
