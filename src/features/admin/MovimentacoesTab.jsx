@@ -5,7 +5,7 @@ import {
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
   X, Loader2, Download, FileText, FileArchive, MessageSquare, Undo2,
   ArrowLeftRight, Link, Tag, Trash2, Zap, Plus, Receipt,
-  TrendingUp, TrendingDown, UserCheck, FileMinus,
+  TrendingUp, TrendingDown, UserCheck, FileMinus, Percent,
   RefreshCw, Upload,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -35,6 +35,7 @@ const STATUS_KEYS = {
   COM_FATURA:   'Com Fatura',
   NOTA_CREDITO: 'Nota Crédito',
   INTERNO:      'Interno',
+  IMPOSTO:      'Imposto',
   JUSTIFICADO:  'Justificado',
   SEM_CLIENTE:  'Sem Cliente',
 };
@@ -46,6 +47,7 @@ const STATUS_CFG = {
   'Nota Crédito': { bg: 'bg-blue-100',    text: 'text-blue-700',    icon: Link },
   'Com NC':       { bg: 'bg-indigo-100',  text: 'text-indigo-700',  icon: FileText },
   'Interno':      { bg: 'bg-purple-100',  text: 'text-purple-700',  icon: ArrowLeftRight },
+  'Imposto':      { bg: 'bg-amber-100',   text: 'text-amber-700',   icon: AlertCircle },
   'Justificado':  { bg: 'bg-violet-100',  text: 'text-violet-700',  icon: MessageSquare },
   'Sem Cliente':  { bg: 'bg-amber-100',   text: 'text-amber-700',   icon: AlertCircle },
 };
@@ -163,13 +165,14 @@ function clienteLink(tx, pagamentos) {
   );
 }
 
-function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks) {
+function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) {
   const key = txKey(tx);
   if (clienteLink(tx, pagamentos)) return STATUS_KEYS.COM_CLIENTE;
   if (reciboLinks?.some(r => r.tx_key === key)) return STATUS_KEYS.COM_RECIBO;
   if (faturaLinks?.some(f => f.tx_key === key)) return STATUS_KEYS.COM_FATURA;
   if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.NOTA_CREDITO;
   if (internos?.some(i => i.tx_key === key)) return STATUS_KEYS.INTERNO;
+  if (impostos?.some(i => i.tx_key === key)) return STATUS_KEYS.IMPOSTO;
   if (justificacoes?.some(j => j.tx_key === key)) return STATUS_KEYS.JUSTIFICADO;
   return STATUS_KEYS.SEM_CLIENTE;
 }
@@ -211,8 +214,8 @@ function findBestReceipt(matchedWorkerName, txData, receipts) {
 
 // ── Linha de transacção ───────────────────────────────────────────────────────
 
-function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
-  const status = statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks);
+function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
+  const status = statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos);
   const tipo = tx.tipo; // 'credito' | 'debito'
   const key = txKey(tx);
   const link = clienteLink(tx, pagamentos);
@@ -294,6 +297,12 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
                 <Undo2 size={9} /> Desfazer
               </button>
             )}
+            {status === STATUS_KEYS.IMPOSTO && (
+              <button onClick={() => onDesfazerImposto(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
             {status === STATUS_KEYS.JUSTIFICADO && (
               <button onClick={() => onRemoverJustificacao(tx)}
                 className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
@@ -341,6 +350,12 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
                 className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors">
                 <MessageSquare size={9} /> Justificar
               </button>
+              {tipo === 'debito' && (
+                <button onClick={() => onMarcarImposto(tx)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                  <Percent size={9} /> PAGAMENTO IMPOSTO
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -351,9 +366,9 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
 
 // ── Card por mês ──────────────────────────────────────────────────────────────
 
-function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
+function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
   const [open, setOpen] = useState(false);
-  const semCliente = txs.filter(tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks) === STATUS_KEYS.SEM_CLIENTE).length;
+  const semCliente = txs.filter(tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) === STATUS_KEYS.SEM_CLIENTE).length;
   const allOk = semCliente === 0;
   const totalMes = txs.reduce((s, tx) => {
     const v = parseFloat(tx.valor) || 0;
@@ -394,12 +409,15 @@ function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredit
               notasCredito={notasCredito}
               reciboLinks={reciboLinks}
               faturaLinks={faturaLinks}
+              impostos={impostos}
               faturasData={faturasData}
               clients={clients}
               onJustificar={onJustificar}
               onRemoverJustificacao={onRemoverJustificacao}
               onMarcarInterno={onMarcarInterno}
               onDesfazerInterno={onDesfazerInterno}
+              onMarcarImposto={onMarcarImposto}
+              onDesfazerImposto={onDesfazerImposto}
               onAcaoCliente={onAcaoCliente}
               onDesfazerCliente={onDesfazerCliente}
               onAcaoRecibo={onAcaoRecibo}
@@ -423,6 +441,7 @@ export default function MovimentacoesTab() {
   const [pagamentos, setPagamentos] = useState([]);
   const [justificacoes, setJustificacoes] = useState([]);
   const [internos, setInternos] = useState([]);
+  const [impostos, setImpostos] = useState([]);
   const [notasCredito, setNotasCredito] = useState([]);
   const [reciboLinks, setReciboLinks] = useState([]);
   const [faturaLinks, setFaturaLinks] = useState([]);
@@ -468,6 +487,10 @@ export default function MovimentacoesTab() {
   const [internoSaveAlias, setInternoSaveAlias] = useState(false);
   const [internoAliasName, setInternoAliasName] = useState('');
   const [internoSaving, setInternoSaving] = useState(false);
+
+  // Modal: imposto
+  const [impostoModal, setImpostoModal] = useState(null);
+  const [impostoSaving, setImpostoSaving] = useState(false);
 
   // Modal: justificação
   const [justModal, setJustModal] = useState(null);
@@ -557,10 +580,11 @@ export default function MovimentacoesTab() {
 
         // Load all linked data for all runs
         const runIds = allRunsData.map(r => r.id);
-        const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: recs }, { data: fats }] = await Promise.all([
+const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: ncs }, { data: als }, { data: rls }, { data: recs }, { data: fats }] = await Promise.all([
           supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period, reconciliation_run_id').in('reconciliation_run_id', runIds),
           supabase.from('entrada_justifications').select('tx_key, justification, run_id').in('run_id', runIds),
           supabase.from('entrada_internos').select('tx_key, run_id').in('run_id', runIds),
+          supabase.from('entrada_impostos').select('tx_key, run_id').in('run_id', runIds),
           supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas, run_id').in('run_id', runIds),
           supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
           supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched, run_id').in('run_id', runIds),
@@ -571,6 +595,7 @@ export default function MovimentacoesTab() {
         setPagamentos(pags || []);
         setJustificacoes(just || []);
         setInternos(ints || []);
+        setImpostos(imps || []);
         setNotasCredito(ncs || []);
         setAliases(als || []);
         setReciboLinks(rls || []);
@@ -636,10 +661,11 @@ export default function MovimentacoesTab() {
     }
 
     const runYear = new Date(run.created_at).getFullYear();
-    const [{ data: pags }, { data: just }, { data: ints }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
+    const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
       supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period').eq('reconciliation_run_id', rid),
       supabase.from('entrada_justifications').select('tx_key, justification').eq('run_id', rid),
       supabase.from('entrada_internos').select('tx_key').eq('run_id', rid),
+      supabase.from('entrada_impostos').select('tx_key').eq('run_id', rid),
       supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas').eq('run_id', rid),
       supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
       supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
@@ -652,6 +678,7 @@ export default function MovimentacoesTab() {
     const pagsArr = pags || [];
     const justArr = just || [];
     const intsArr = ints || [];
+    const impsArr = imps || [];
     const ncsArr = ncs || [];
     const alsArr = als || [];
     const rlsArr = rls || [];
@@ -663,6 +690,7 @@ export default function MovimentacoesTab() {
     setPagamentos(pagsArr);
     setJustificacoes(justArr);
     setInternos(intsArr);
+    setImpostos(impsArr);
     setNotasCredito(ncsArr);
     setAliases(alsArr);
     setReciboLinks(rlsArr);
@@ -1344,7 +1372,7 @@ if (toInsertNcs.length > 0) {
   const debitos  = allTxs.filter(t => t.tipo === 'debito');
   const filteredTxs = filter === 'entradas' ? creditos : filter === 'saidas' ? debitos : allTxs;
 
-  const getStatus = tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks);
+  const getStatus = tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos);
 
   const totalResolvido = filteredTxs.filter(tx => getStatus(tx) !== STATUS_KEYS.SEM_CLIENTE).length;
   const semResolver    = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.SEM_CLIENTE).length;
@@ -1566,6 +1594,24 @@ if (toInsertNcs.length > 0) {
     const key = txKey(tx);
     await supabase.from('entrada_internos').delete().eq('run_id', runId).eq('tx_key', key);
     setInternos(prev => prev.filter(i => i.tx_key !== key));
+  };
+
+  // ── Acções: Imposto ───────────────────────────────────────────────────────────
+
+  const handleConfirmarImposto = async () => {
+    if (!impostoModal || !runId) return;
+    setImpostoSaving(true);
+    const key = txKey(impostoModal);
+    await supabase.from('entrada_impostos').upsert({ run_id: runId, tx_key: key }, { onConflict: 'run_id,tx_key' });
+    setImpostos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
+    setImpostoSaving(false);
+    setImpostoModal(null);
+  };
+
+  const handleDesfazerImposto = async (tx) => {
+    const key = txKey(tx);
+    await supabase.from('entrada_impostos').delete().eq('run_id', runId).eq('tx_key', key);
+    setImpostos(prev => prev.filter(i => i.tx_key !== key));
   };
 
   // ── Acções: Cliente / Fatura ──────────────────────────────────────────────
@@ -2300,11 +2346,14 @@ if (toInsertNcs.length > 0) {
               reciboLinks={reciboLinks}
               clients={clients}
               faturaLinks={faturaLinks}
+              impostos={impostos}
               faturasData={faturasData}
               onJustificar={tx => { setJustModal(tx); setJustText(''); }}
               onRemoverJustificacao={handleRemoverJustificacao}
               onMarcarInterno={tx => { setInternoModal(tx); setInternoSaveAlias(false); }}
               onDesfazerInterno={handleDesfazerInterno}
+              onMarcarImposto={tx => setImpostoModal(tx)}
+              onDesfazerImposto={handleDesfazerImposto}
               onAcaoCliente={handleOpenAcaoCliente}
               onDesfazerCliente={handleDesfazerCliente}
               onAcaoRecibo={handleOpenAcaoRecibo}
@@ -2353,6 +2402,34 @@ if (toInsertNcs.length > 0) {
               <button disabled={internoSaving} onClick={handleConfirmarInterno}
                 className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
                 {internoSaving ? <Loader2 size={13} className="animate-spin" /> : <ArrowLeftRight size={13} />} Confirmar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Pagamento Imposto */}
+      {impostoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Pagamento Imposto</h3>
+              <button onClick={() => setImpostoModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="bg-amber-50 rounded-2xl px-4 py-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(impostoModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{impostoModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{impostoModal.descricao}</p>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setImpostoModal(null)}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+                Cancelar
+              </button>
+              <button disabled={impostoSaving} onClick={handleConfirmarImposto}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {impostoSaving ? <Loader2 size={13} className="animate-spin" /> : <Percent size={13} />} Confirmar
               </button>
             </div>
           </div>
