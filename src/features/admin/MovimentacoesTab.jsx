@@ -1681,7 +1681,7 @@ if (toInsertNcs.length > 0) {
 
   const handleDesfazerRecibo = async (tx) => {
     const key = txKey(tx);
-    await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId).eq('tx_key', encodeURIComponent(key));
+    await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId).eq('tx_key', key);
     setReciboLinks(prev => prev.filter(r => r.tx_key !== key));
   };
 

@@ -444,7 +444,8 @@ export default function SalariosTab({ month }) {
     setJustText('');
   };
 
-  const handleToggleTipo = async (t) => {
+  // ── Toggle tipo badge Adiantamento/Liquidacao ─────────────────────────────────
+  async function handleToggleTipo(t) {
     if (!t.linkId) return;
     const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
     await supabase
@@ -452,7 +453,7 @@ export default function SalariosTab({ month }) {
       .update({ tipo: novoTipo })
       .eq('id', t.linkId);
     await analisarSalarios(salAliasOverride, tolOverride);
-  };
+  }
 
   return (
     <div className="space-y-3">
