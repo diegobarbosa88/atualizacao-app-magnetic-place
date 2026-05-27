@@ -21,6 +21,8 @@ const INTERNO_KEYWORDS = [
   'MAGNETIC PLACE'
 ];
 
+const IMPOSTO_KEYWORDS = ['PAGTO AO ESTADO', 'PGT TSU'];
+
 const BANCO_KEYWORDS = [
   'COMISSÃO DE MANUTENÇÃO', 'MANUTENÇÃO DE CONTA',
   'IMPOSTO SELO', 'DEB IMPOSTO SELO',
@@ -496,6 +498,8 @@ export default function MovimentacoesTab() {
 
   // Modal: imposto
   const [impostoModal, setImpostoModal] = useState(null);
+  const [impostoSaveAlias, setImpostoSaveAlias] = useState(false);
+  const [impostoAliasName, setImpostoAliasName] = useState('');
   const [impostoSaving, setImpostoSaving] = useState(false);
 
   // Modal: justificação
@@ -737,7 +741,7 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
     );
     totalCount += reciboCount;
 
-    const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, ncsArr, setInternos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
+    const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, impsArr, ncsArr, setInternos, setImpostos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
     totalCount += matchCount;
 
     const { data: freshNcs } = await supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period').eq('run_id', rid);
@@ -1081,12 +1085,14 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
     const descUpper = (s) => (s || '').toUpperCase();
     const isBancoTx = (tx) => BANCO_KEYWORDS.some(k => descUpper(tx.descricao || '').includes(k));
     const isInternoTx = (tx) => INTERNO_KEYWORDS.some(k => descUpper(tx.descricao || '').includes(k));
+    const isImpostoTx = (tx) => IMPOSTO_KEYWORDS.some(k => descUpper(tx.descricao || '').includes(k));
 
     for (const tx of debitos) {
       const key = txKey(tx);
       if (existingKeys.has(key)) continue;
       if (isBancoTx(tx)) continue;
       if (isInternoTx(tx)) continue;
+      if (isImpostoTx(tx)) continue;
 
       let matchedWorkerName = null;
 
@@ -1223,17 +1229,18 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
     return count;
   }
 
-  async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, curNcs, setInts, setNcs, setFatLinks, sb, extraExcludeKeys = new Set(), fatsArr = []) {
+  async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, curImpostos, curNcs, setInts, setImpostos, setNcs, setFatLinks, sb, extraExcludeKeys = new Set(), fatsArr = []) {
     const toInsertInternos = [];
+    const toInsertImpostos = [];
     const toInsertNcs = [];
     const toInsertFaturas = [];
-    // Copia para não modificar os arrays de estado directamente
     const existingIntKeys = new Set(curInternos.map(i => i.tx_key));
+    const existingImpKeys = new Set(curImpostos.map(i => i.tx_key));
     const existingNcKeys = new Set(curNcs.map(n => n.tx_key));
 
     for (const tx of unresolved) {
       const key = txKey(tx);
-      if (existingIntKeys.has(key) || existingNcKeys.has(key) || extraExcludeKeys.has(key)) continue;
+      if (existingIntKeys.has(key) || existingImpKeys.has(key) || existingNcKeys.has(key) || extraExcludeKeys.has(key)) continue;
 
       const bankName = extractBankName(tx.descricao);
       const bankNorm = normName(bankName);
@@ -1250,6 +1257,11 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
           existingIntKeys.add(key);
           continue;
         }
+        if (alias.resolucao === 'imposto') {
+          toInsertImpostos.push({ run_id: rid, tx_key: key });
+          existingImpKeys.add(key);
+          continue;
+        }
         if (alias.resolucao === 'nota_credito' && alias.client_id && tx.tipo === 'credito') {
           toInsertNcs.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
           existingNcKeys.add(key);
@@ -1261,6 +1273,13 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
       if (INTERNO_KEYWORDS.some(k => descUpper.includes(k))) {
         toInsertInternos.push({ run_id: rid, tx_key: key });
         existingIntKeys.add(key);
+        continue;
+      }
+
+      // 2c. Palavras-chave de imposto
+      if (IMPOSTO_KEYWORDS.some(k => descUpper.includes(k))) {
+        toInsertImpostos.push({ run_id: rid, tx_key: key });
+        existingImpKeys.add(key);
         continue;
       }
 
@@ -1351,6 +1370,14 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
       if (data) {
         const tagged = data.map(d => ({ ...d, auto_matched: true }));
         setInts(prev => [...prev, ...tagged.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+        count += data.length;
+      }
+    }
+    if (toInsertImpostos.length > 0) {
+      const { data } = await sb.from('entrada_impostos').upsert(toInsertImpostos, { onConflict: 'run_id,tx_key' }).select('tx_key');
+      if (data) {
+        const tagged = data.map(d => ({ ...d, auto_matched: true }));
+        setImpostos(prev => [...prev, ...tagged.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
         count += data.length;
       }
     }
@@ -1611,8 +1638,20 @@ if (toInsertNcs.length > 0) {
     const key = txKey(impostoModal);
     await supabase.from('entrada_impostos').upsert({ run_id: runId, tx_key: key }, { onConflict: 'run_id,tx_key' });
     setImpostos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
+
+    if (impostoSaveAlias && impostoAliasName.trim()) {
+      const { data: newAlias } = await supabase
+        .from('movimentacoes_aliases')
+        .upsert({ bank_name: impostoAliasName.trim(), resolucao: 'imposto', client_id: null }, { onConflict: 'bank_name' })
+        .select('id, bank_name, resolucao, client_id')
+        .single();
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== impostoAliasName.trim())]);
+    }
+
     setImpostoSaving(false);
     setImpostoModal(null);
+    setImpostoSaveAlias(false);
+    setImpostoAliasName('');
   };
 
   const handleDesfazerImposto = async (tx) => {
@@ -2434,6 +2473,22 @@ if (toInsertNcs.length > 0) {
               <p className="text-[11px] text-slate-500 mt-0.5">{impostoModal.data}</p>
               <p className="text-[10px] text-slate-400 mt-0.5 break-all">{impostoModal.descricao}</p>
             </div>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input type="checkbox" checked={impostoSaveAlias} onChange={e => {
+                setImpostoSaveAlias(e.target.checked);
+                if (e.target.checked) setImpostoAliasName(extractBankName(impostoModal.descricao));
+              }} className="w-4 h-4 rounded accent-amber-600" />
+              <span className="text-[11px] font-bold text-slate-600">
+                Guardar alias <span className="font-normal text-slate-400">— reconhecer automaticamente em importações futuras</span>
+              </span>
+            </label>
+            {impostoSaveAlias && (
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do alias</label>
+                <input type="text" value={impostoAliasName} onChange={e => setImpostoAliasName(e.target.value)}
+                  className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300 bg-amber-50" />
+              </div>
+            )}
             <div className="flex gap-2 pt-1">
               <button onClick={() => setImpostoModal(null)}
                 className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
