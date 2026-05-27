@@ -1814,9 +1814,10 @@ if (toInsertNcs.length > 0) {
     if (!effectiveRunId) return;
     setFaturaSaving(true);
     const key = txKey(faturaModal);
+    await supabase.from('fatura_pagamento_links').delete().eq('tx_key', key).eq('run_id', effectiveRunId);
     const { data, error } = await supabase
       .from('fatura_pagamento_links')
-      .upsert({ fatura_id: faturaSelId, run_id: effectiveRunId, tx_key: key, auto_matched: false }, { onConflict: 'run_id,tx_key' })
+      .insert({ fatura_id: faturaSelId, run_id: effectiveRunId, tx_key: key, auto_matched: false })
       .select('fatura_id, run_id, tx_key, auto_matched')
       .single();
     if (!error && data) {
