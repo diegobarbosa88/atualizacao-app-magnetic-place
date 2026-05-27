@@ -11,6 +11,12 @@ const MESES_PT_SAL = {
   '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
 };
 
+function toggleTipoLink(t, supabase) {
+  if (!t.linkId) return;
+  const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
+  supabase.from('movimentacao_recibo_links').update({ tipo: novoTipo }).eq('id', t.linkId);
+}
+
 const ESTADO_BADGE = {
   valido:   'bg-emerald-100 text-emerald-700',
   aviso:    'bg-yellow-100 text-yellow-700',
