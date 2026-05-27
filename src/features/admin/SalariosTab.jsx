@@ -32,9 +32,8 @@ function fmtMes(month) {
   return `${MESES_PT_SAL[mm]} ${ano}`;
 }
 
-function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01, onToggleTipo }) {
+function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01, onToggleTipo, isOpen, onToggleOpen }) {
   const { supabase } = useApp();
-  const [open, setOpen] = React.useState(false);
   const pendingMonths = employee.months.filter(m =>
     m.status !== 'Match Exato' &&
     !justificacoes.some(j => j.employee_name === employee.employee_name && j.month === m.month)
@@ -43,7 +42,7 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
 
   return (
     <div className="border border-slate-200 rounded-2xl overflow-hidden">
-      <button onClick={() => setOpen(o => !o)}
+      <button onClick={onToggleOpen}
         className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left">
         <div className="flex items-center gap-3">
           <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
@@ -54,10 +53,10 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
           <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
             {allOk ? 'Tudo Ok' : `${pendingMonths} pendente(s)`}
           </span>
-          {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+          {isOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
         </div>
       </button>
-      {open && (
+      {isOpen && (
         <div className="divide-y divide-slate-100 bg-slate-50">
           {employee.months.map(m => {
             const [ano, mm] = m.month.split('-');
@@ -174,6 +173,7 @@ export default function SalariosTab({ month }) {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
+  const [openEmployee, setOpenEmployee] = useState(null);
 
   // Extrair meses únicos disponíveis nos dados
   const monthsAvailable = useMemo(() => {
@@ -540,6 +540,8 @@ export default function SalariosTab({ month }) {
                     onRemoverJustificacao={handleRemoverJustificacao}
                     tolerancia={tolerancia}
                     onToggleTipo={analisarSalarios}
+                    isOpen={openEmployee === emp.employee_name}
+                    onToggleOpen={() => setOpenEmployee(prev => prev === emp.employee_name ? null : emp.employee_name)}
                   />
                 ))
               )}
