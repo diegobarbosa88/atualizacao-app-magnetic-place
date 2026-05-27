@@ -1816,7 +1816,7 @@ if (toInsertNcs.length > 0) {
     const key = txKey(faturaModal);
     const { data, error } = await supabase
       .from('fatura_pagamento_links')
-      .upsert({ fatura_id: faturaSelId, run_id: effectiveRunId, tx_key: key, auto_matched: false }, { onConflict: 'fatura_id' })
+      .upsert({ fatura_id: faturaSelId, run_id: effectiveRunId, tx_key: key, auto_matched: false }, { onConflict: 'run_id,tx_key' })
       .select('fatura_id, run_id, tx_key, auto_matched')
       .single();
     if (!error && data) {
