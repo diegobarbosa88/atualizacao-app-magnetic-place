@@ -255,19 +255,12 @@ export default function SalariosTab({ month }) {
     };
 
     const paymentsMap = {};
-    let linksProcessed = 0, linksMissingTx = 0, linksNoType = 0;
+    let linksProcessed = 0, linksMissingTx = 0;
     const receiptMesByWorker = {};
-    const noTypeSamples = [];
     (movLinks || []).forEach(link => {
       if (!link.worker_id && !link.worker_name) return;
       const tx = txMap[link.tx_key];
       if (!tx) { linksMissingTx++; return; }
-      const type = classifyTransfer(tx.data, link.mes);
-      if (!type) {
-        linksNoType++;
-        if (noTypeSamples.length < 5) noTypeSamples.push({ tx_data: tx.data, link_mes: link.mes, worker_name: link.worker_name });
-        return;
-      }
       linksProcessed++;
       const receiptMes = link.mes;
       const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
@@ -277,6 +270,7 @@ export default function SalariosTab({ month }) {
       if (!paymentsMap[workerKey][receiptMes]) {
         paymentsMap[workerKey][receiptMes] = [];
       }
+      const type = (tx.data >= '16') ? 'Adiantamento' : 'Liquidação';
       paymentsMap[workerKey][receiptMes].push({
         amount: Math.abs(parseFloat(tx.valor) || 0),
         data: tx.data,
@@ -285,9 +279,8 @@ export default function SalariosTab({ month }) {
       if (!receiptMesByWorker[workerKey]) receiptMesByWorker[workerKey] = [];
       if (!receiptMesByWorker[workerKey].includes(receiptMes)) receiptMesByWorker[workerKey].push(receiptMes);
     });
-    console.log('[SALARIOS DEBUG] links loaded:', movLinks?.length, '| processed:', linksProcessed, '| missing tx:', linksMissingTx, '| no type:', linksNoType);
+    console.log('[SALARIOS DEBUG] links loaded:', movLinks?.length, '| processed:', linksProcessed, '| missing tx:', linksMissingTx);
     console.log('[SALARIOS DEBUG] receiptMes distribution:', JSON.stringify(receiptMesByWorker));
-    if (noTypeSamples.length) console.log('[SALARIOS DEBUG] noType samples (tx_data | link_mes):', JSON.stringify(noTypeSamples));
 
     const { data: recibos } = await supabase
       .from('receipt_validations')
