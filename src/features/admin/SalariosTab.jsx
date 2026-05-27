@@ -4,19 +4,13 @@ import autoTable from 'jspdf-autotable';
 import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, Loader2, Download, FileText, MessageSquare, Undo2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
+import '../../utils/toggleTipoLink';
 
 const MESES_PT_SAL = {
   '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
   '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
   '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
 };
-
-function toggleTipoLink(t, supabase) {
-  if (!t.linkId) return;
-  const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
-  supabase.from('movimentacao_recibo_links').update({ tipo: novoTipo }).eq('id', t.linkId)
-    .then(() => window.location.reload());
-}
 
 const ESTADO_BADGE = {
   valido:   'bg-emerald-100 text-emerald-700',
@@ -39,10 +33,8 @@ function fmtMes(month) {
 }
 
 function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01 }) {
+  const { supabase } = useApp();
   const [open, setOpen] = React.useState(false);
-  const justifiedMonths = employee.months.filter(m =>
-    justificacoes.some(j => j.employee_name === employee.employee_name && j.month === m.month)
-  ).length;
   const pendingMonths = employee.months.filter(m =>
     m.status !== 'Match Exato' &&
     !justificacoes.some(j => j.employee_name === employee.employee_name && j.month === m.month)
@@ -133,7 +125,7 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                       <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => toggleTipoLink(t, supabase)}
+                            onClick={() => window.__toggleTipoLink(t, supabase)}
                             className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
@@ -237,7 +229,7 @@ export default function SalariosTab({ month }) {
     const { data: movLinks } = runIds.length
       ? await supabase
           .from('movimentacao_recibo_links')
-          .select('tx_key, worker_id, worker_name, mes, tipo, run_id')
+          .select('id, tx_key, worker_id, worker_name, mes, tipo, run_id')
           .in('run_id', runIds)
       : { data: [] };
 
@@ -265,34 +257,23 @@ export default function SalariosTab({ month }) {
     };
 
     const paymentsMap = {};
-    let linksProcessed = 0, linksMissingTx = 0, linksNoType = 0;
-    const receiptMesByWorker = {};
     (movLinks || []).forEach(link => {
       if (!link.worker_id && !link.worker_name) return;
       const tx = txMap[link.tx_key];
-      if (!tx) { linksMissingTx++; return; }
+      if (!tx) return;
       const type = link.tipo || classifyTransfer(tx.data, link.mes);
-      if (!type) { linksNoType++; return; }
-      linksProcessed++;
-      const receiptMes = link.mes;
+      if (!type) return;
       const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
-
       const workerKey = link.worker_id || normStr(link.worker_name);
       if (!paymentsMap[workerKey]) paymentsMap[workerKey] = {};
-      if (!paymentsMap[workerKey][receiptMes]) {
-        paymentsMap[workerKey][receiptMes] = [];
-      }
-      paymentsMap[workerKey][receiptMes].push({
+      if (!paymentsMap[workerKey][link.mes]) paymentsMap[workerKey][link.mes] = [];
+      paymentsMap[workerKey][link.mes].push({
         amount: Math.abs(parseFloat(tx.valor) || 0),
         data: tx.data,
         type,
         linkId: link.id
       });
-      if (!receiptMesByWorker[workerKey]) receiptMesByWorker[workerKey] = [];
-      if (!receiptMesByWorker[workerKey].includes(receiptMes)) receiptMesByWorker[workerKey].push(receiptMes);
     });
-    console.log('[SALARIOS DEBUG] links loaded:', movLinks?.length, '| processed:', linksProcessed, '| missing tx:', linksMissingTx, '| no type:', linksNoType);
-    console.log('[SALARIOS DEBUG] receiptMes distribution:', JSON.stringify(receiptMesByWorker));
 
     const { data: recibos } = await supabase
       .from('receipt_validations')
