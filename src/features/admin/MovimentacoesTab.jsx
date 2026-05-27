@@ -644,7 +644,7 @@ export default function MovimentacoesTab() {
       supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
       supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
       supabase.from('reconciliacao_salarial_aliases').select('pattern, worker_name'),
-      supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').like('mes', `${runYear}-%`).not('estado', 'in', '("erro","invalido")'),
+      supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').not('estado', 'in', '("erro","invalido")'),
       supabase.from('faturas').select('id, dados, status, tipo').order('importado_em', { ascending: false }),
       supabase.from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched').eq('run_id', rid),
     ]);
@@ -1677,7 +1677,7 @@ if (toInsertNcs.length > 0) {
 
   const handleDesfazerRecibo = async (tx) => {
     const key = txKey(tx);
-    await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId).eq('tx_key', key);
+    await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId).eq('tx_key', encodeURIComponent(key));
     setReciboLinks(prev => prev.filter(r => r.tx_key !== key));
   };
 
