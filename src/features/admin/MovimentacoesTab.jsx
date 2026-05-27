@@ -2163,6 +2163,7 @@ if (toInsertNcs.length > 0) {
               }}
               className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
             >
+<option value="">Mostrar todos</option>
               {allRuns.map(r => (
                 <option key={r.id} value={r.id}>
                   {runMonthYear[r.id] || extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
