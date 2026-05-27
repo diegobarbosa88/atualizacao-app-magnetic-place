@@ -81,7 +81,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
             t => t.data === pay.data && t.amount === pay.amount && t.type === pay.type
           );
           if (!alreadyAdded) {
-            monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type });
+            monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type, linkId: pay.linkId });
             matchedPayments++;
           }
         });

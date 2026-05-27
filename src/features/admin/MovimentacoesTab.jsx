@@ -1660,13 +1660,17 @@ if (toInsertNcs.length > 0) {
     if (!reciboWorkerName || !reciboMes || !reciboModal || !runId) return;
     setReciboSaving(true);
     const key = txKey(reciboModal);
+    const tipo = (() => {
+      const txDay = parseInt(reciboModal.data.split('-')[2]);
+      return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento' : 'Liquidação';
+    })();
     const { data, error } = await supabase
       .from('movimentacao_recibo_links')
       .upsert(
-        { run_id: runId, tx_key: key, worker_id: reciboWorkerId || null, worker_name: reciboWorkerName, mes: reciboMes, auto_matched: false },
+        { run_id: runId, tx_key: key, worker_id: reciboWorkerId || null, worker_name: reciboWorkerName, mes: reciboMes, tipo, auto_matched: false },
         { onConflict: 'run_id,tx_key' }
       )
-      .select('tx_key, worker_id, worker_name, mes, auto_matched')
+      .select('tx_key, worker_id, worker_name, mes, tipo, auto_matched')
       .single();
     if (!error && data) {
       setReciboLinks(prev => [...prev.filter(r => r.tx_key !== data.tx_key), data]);

@@ -125,9 +125,11 @@ function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJ
                     {m.transfers.map((t, i) => (
                       <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
+                          <button
+                            onClick={() => handleToggleTipo(t, runId)}
+                            className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
-                          </span>
+                          </button>
                           <span className="text-[11px] text-slate-500">{t.date}</span>
                         </div>
                         <span className="text-[12px] font-bold text-slate-700">{fmtEur(t.amount)}</span>
@@ -228,7 +230,7 @@ export default function SalariosTab({ month }) {
     const { data: movLinks } = runIds.length
       ? await supabase
           .from('movimentacao_recibo_links')
-          .select('tx_key, worker_id, worker_name, mes')
+          .select('tx_key, worker_id, worker_name, mes, tipo, run_id')
           .in('run_id', runIds)
       : { data: [] };
 
@@ -262,7 +264,7 @@ export default function SalariosTab({ month }) {
       if (!link.worker_id && !link.worker_name) return;
       const tx = txMap[link.tx_key];
       if (!tx) { linksMissingTx++; return; }
-      const type = classifyTransfer(tx.data, link.mes);
+      const type = link.tipo || classifyTransfer(tx.data, link.mes);
       if (!type) { linksNoType++; return; }
       linksProcessed++;
       const receiptMes = link.mes;
@@ -276,7 +278,8 @@ export default function SalariosTab({ month }) {
       paymentsMap[workerKey][receiptMes].push({
         amount: Math.abs(parseFloat(tx.valor) || 0),
         data: tx.data,
-        type
+        type,
+        linkId: link.id
       });
       if (!receiptMesByWorker[workerKey]) receiptMesByWorker[workerKey] = [];
       if (!receiptMesByWorker[workerKey].includes(receiptMes)) receiptMesByWorker[workerKey].push(receiptMes);
@@ -439,6 +442,16 @@ export default function SalariosTab({ month }) {
     setJustSaving(false);
     setJustModal(null);
     setJustText('');
+  };
+
+  const handleToggleTipo = async (t, runId) => {
+    if (!t.linkId) return;
+    const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
+    await supabase
+      .from('movimentacao_recibo_links')
+      .update({ tipo: novoTipo })
+      .eq('id', t.linkId);
+    await analisarSalarios(salAliasOverride, tolOverride);
   };
 
   return (
