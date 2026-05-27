@@ -1436,24 +1436,37 @@ if (toInsertNcs.length > 0) {
     return acc;
   }, {});
 
-  // ── Exportar ──────────────────────────────────────────────────────────────
+  const ROW_COLORS = {
+    'Com Cliente':   [227, 252, 239],
+    'Com Recibo':    [207, 250, 254],
+    'Com Fatura':   [254, 235, 222],
+    'Nota Crédito': [219, 234, 254],
+    'Interno':       [233, 213, 244],
+    'Imposto':      [254, 243, 199],
+    'Justificado':  [238, 238, 238],
+    'Sem Cliente':   [255, 255, 255],
+  };
 
-  const buildRows = () =>
-    filteredTxs.map(tx => {
-      const status = getStatus(tx);
-      const key = txKey(tx);
-      const link = clienteLink(tx, pagamentos);
-      const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || '') : '';
-      const ncEntry = notasCredito.find(n => n.tx_key === key);
-      const ncClientName = ncEntry ? (clients?.find(c => c.id === ncEntry.client_id)?.name || ncEntry.client_id || '') : '';
-      const justEntry = justificacoes.find(j => j.tx_key === key);
-      const detalhe = status === STATUS_KEYS.COM_CLIENTE ? clientName
-        : status === STATUS_KEYS.NOTA_CREDITO ? `${ncClientName} · ${fmtMes(ncEntry?.period)}`
-        : status === STATUS_KEYS.JUSTIFICADO ? (justEntry?.justification || '')
-        : '';
-      const valor = tx.tipo === 'debito' ? `-${fmtEur(Math.abs(parseFloat(tx.valor) || 0))}` : fmtEur(tx.valor);
-      return [tx.data, tx.tipo === 'debito' ? 'Saída' : 'Entrada', tx.descricao || '', valor, labelStatus(status, tx.tipo), detalhe];
-    });
+  const buildRowsForTx = (tx) => {
+    const status = getStatus(tx);
+    const key = txKey(tx);
+    const link = clienteLink(tx, pagamentos);
+    const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || '') : '';
+    const ncEntry = notasCredito.find(n => n.tx_key === key);
+    const ncClientName = ncEntry ? (clients?.find(c => c.id === ncEntry.client_id)?.name || ncEntry.client_id || '') : '';
+    const justEntry = justificacoes.find(j => j.tx_key === key);
+    const detalhe = status === STATUS_KEYS.COM_CLIENTE ? clientName
+      : status === STATUS_KEYS.NOTA_CREDITO ? `${ncClientName} · ${fmtMes(ncEntry?.period)}`
+      : status === STATUS_KEYS.JUSTIFICADO ? (justEntry?.justification || '')
+      : '';
+    const valor = tx.tipo === 'debito' ? `-${fmtEur(Math.abs(parseFloat(tx.valor) || 0))}` : fmtEur(tx.valor);
+    return { status, row: [tx.data, tx.tipo === 'debito' ? 'Saída' : 'Entrada', tx.descricao || '', valor, labelStatus(status, tx.tipo), detalhe] };
+  };
+
+  const buildRows = () => filteredTxs.map(tx => {
+    const { row } = buildRowsForTx(tx);
+    return row;
+  });
 
   const handleExportCsv = () => {
     const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
@@ -1472,15 +1485,47 @@ if (toInsertNcs.length > 0) {
     doc.text('Relatório de Movimentações', 14, 18);
     doc.setFontSize(8); doc.setTextColor(120);
     doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : '—'}`, 14, 24);
-    autoTable(doc, {
-      startY: 30,
-      head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
-      body: buildRows(),
-      styles: { fontSize: 6.5, cellPadding: 1.3 },
-      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
-    });
+
+    let currentY = 30;
+
+    const sortedMeses = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
+    for (const mes of sortedMeses) {
+      const mesTxs = grupos[mes];
+      const mesLabel = fmtMes(mes);
+
+      doc.setFontSize(11); doc.setTextColor(30);
+      doc.setFillColor(240, 242, 245);
+      doc.rect(14, currentY, 277, 7, 'F');
+      doc.text(mesLabel, 16, currentY + 5);
+      currentY += 10;
+
+      const mesData = mesTxs.map(tx => buildRowsForTx(tx));
+      const body = mesData.map(d => d.row);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
+        body,
+        styles: { fontSize: 6.5, cellPadding: 1.3 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        didParseCell: (data) => {
+          if (data.section === 'body') {
+            const status = mesData[data.row.index]?.status;
+            if (status && ROW_COLORS[status]) {
+              const [r, g, b] = ROW_COLORS[status];
+              data.cell.styles.fillColor = [r, g, b];
+            }
+          }
+        },
+        columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
+        margin: { left: 14, right: 14 },
+      });
+
+      currentY = doc.lastAutoTable.finalY + 8;
+
+      if (currentY > 180) { doc.addPage(); currentY = 20; }
+    }
+
     doc.save('movimentacoes_validacao.pdf');
     setShowExportMenu(false);
   };
@@ -1498,19 +1543,14 @@ if (toInsertNcs.length > 0) {
       const relatorioFolder = zip.folder('relatorio');
       const extratoFolder = zip.folder('extrato');
       const faturasFolder = zip.folder('faturas');
+      const mesesFolder = zip.folder('meses');
 
-      const monthLabel = runData
-        ? new Date(runData.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
-        : 'todos';
-      const safeMonth = monthLabel.replace(/[^a-zA-Z0-9]/g, '');
-
-      // ── Relatório PDF ─────────────────────────────────────────────────────
+      // ── Relatório PDF único (sem cores, como antes no ZIP) ──────────────────
       const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
       doc.setFontSize(14); doc.setTextColor(30);
       doc.text('Relatório de Movimentações', 14, 18);
       doc.setFontSize(8); doc.setTextColor(120);
       doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : 'Todos'}`, 14, 24);
-
       const rows = buildRows();
       autoTable(doc, {
         startY: 30,
@@ -1521,8 +1561,41 @@ if (toInsertNcs.length > 0) {
         alternateRowStyles: { fillColor: [248, 250, 252] },
         columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
       });
-
       relatorioFolder.file('Relatorio_Movimentacoes.pdf', doc.output('blob'));
+
+      // ── PDFs por mês (com cores) ─────────────────────────────────────────────
+      const mesesFolder = zip.folder('meses');
+      const sortedMeses = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
+      for (const mes of sortedMeses) {
+        const mesTxs = grupos[mes];
+        const mesLabel = fmtMes(mes).replace(/[^a-zA-Z0-9]/g, '_');
+        const docMes = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        docMes.setFontSize(14); docMes.setTextColor(30);
+        docMes.text(`Relatório de Movimentações — ${fmtMes(mes)}`, 14, 18);
+        docMes.setFontSize(8); docMes.setTextColor(120);
+        docMes.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : 'Todos'}`, 14, 24);
+        const mesData = mesTxs.map(tx => buildRowsForTx(tx));
+        const body = mesData.map(d => d.row);
+        autoTable(docMes, {
+          startY: 30,
+          head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
+          body,
+          styles: { fontSize: 6.5, cellPadding: 1.3 },
+          headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+          didParseCell: (data) => {
+            if (data.section === 'body') {
+              const status = mesData[data.row.index]?.status;
+              if (status && ROW_COLORS[status]) {
+                const [r, g, b] = ROW_COLORS[status];
+                data.cell.styles.fillColor = [r, g, b];
+              }
+            }
+          },
+          columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
+          margin: { left: 14, right: 14 },
+        });
+        mesesFolder.file(`Relatorio_${mesLabel}.pdf`, docMes.output('blob'));
+      }
 
       // ── Extrato CSV ────────────────────────────────────────────────────────
       const txStatus = (tx) => {
