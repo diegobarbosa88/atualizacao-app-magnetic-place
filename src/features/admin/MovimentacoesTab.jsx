@@ -1607,10 +1607,12 @@ if (toInsertNcs.length > 0) {
   // ── Acções: Interno ───────────────────────────────────────────────────────
 
   const handleConfirmarInterno = async () => {
-    if (!internoModal || !runId) return;
+    if (!internoModal) return;
+    const effectiveRunId = internoModal.run_id || runId;
+    if (!effectiveRunId) return;
     setInternoSaving(true);
     const key = txKey(internoModal);
-    await supabase.from('entrada_internos').upsert({ run_id: runId, tx_key: key }, { onConflict: 'run_id,tx_key' });
+    await supabase.from('entrada_internos').upsert({ run_id: effectiveRunId, tx_key: key }, { onConflict: 'run_id,tx_key' });
     setInternos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
 
     if (internoSaveAlias && internoAliasName.trim()) {
@@ -1639,10 +1641,12 @@ if (toInsertNcs.length > 0) {
   // ── Acções: Imposto ───────────────────────────────────────────────────────────
 
   const handleConfirmarImposto = async () => {
-    if (!impostoModal || !runId) return;
+    if (!impostoModal) return;
+    const effectiveRunId = impostoModal.run_id || runId;
+    if (!effectiveRunId) return;
     setImpostoSaving(true);
     const key = txKey(impostoModal);
-    await supabase.from('entrada_impostos').upsert({ run_id: runId, tx_key: key }, { onConflict: 'run_id,tx_key' });
+    await supabase.from('entrada_impostos').upsert({ run_id: effectiveRunId, tx_key: key }, { onConflict: 'run_id,tx_key' });
     setImpostos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
 
     if (impostoSaveAlias && impostoAliasName.trim()) {
@@ -1680,13 +1684,15 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleSaveAcaoCliente = async () => {
-    if (!ncClientId || !ncPeriod || !ncModal || !runId) return;
+    if (!ncClientId || !ncPeriod || !ncModal) return;
+    const effectiveRunId = ncModal.run_id || runId;
+    if (!effectiveRunId) return;
     setNcSaving(true);
     const key = txKey(ncModal);
     const { data, error } = await supabase
       .from('entrada_nota_credito_links')
       .upsert(
-        { run_id: runId, tx_key: key, client_id: ncClientId, period: ncPeriod, notas: ncNotas.trim() || null },
+        { run_id: effectiveRunId, tx_key: key, client_id: ncClientId, period: ncPeriod, notas: ncNotas.trim() || null },
         { onConflict: 'run_id,tx_key' }
       )
       .select('tx_key, client_id, period, notas')
@@ -1720,12 +1726,14 @@ if (toInsertNcs.length > 0) {
   // ── Acções: Justificação ──────────────────────────────────────────────────
 
   const handleSaveJustificacao = async () => {
-    if (!justText.trim() || !justModal || !runId) return;
+    if (!justText.trim() || !justModal) return;
+    const effectiveRunId = justModal.run_id || runId;
+    if (!effectiveRunId) return;
     setJustSaving(true);
     const key = txKey(justModal);
     const { data, error } = await supabase
       .from('entrada_justifications')
-      .upsert({ run_id: runId, tx_key: key, justification: justText.trim() }, { onConflict: 'run_id,tx_key' })
+      .upsert({ run_id: effectiveRunId, tx_key: key, justification: justText.trim() }, { onConflict: 'run_id,tx_key' })
       .select('tx_key, justification')
       .single();
     if (!error && data) {
@@ -1761,7 +1769,9 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleSaveAcaoRecibo = async () => {
-    if (!reciboWorkerName || !reciboMes || !reciboModal || !runId) return;
+    if (!reciboWorkerName || !reciboMes || !reciboModal) return;
+    const effectiveRunId = reciboModal.run_id || runId;
+    if (!effectiveRunId) return;
     setReciboSaving(true);
     const key = txKey(reciboModal);
     const tipo = (() => {
@@ -1771,7 +1781,7 @@ if (toInsertNcs.length > 0) {
     const { data, error } = await supabase
       .from('movimentacao_recibo_links')
       .upsert(
-        { run_id: runId, tx_key: key, worker_id: reciboWorkerId || null, worker_name: reciboWorkerName, mes: reciboMes, tipo, auto_matched: false },
+        { run_id: effectiveRunId, tx_key: key, worker_id: reciboWorkerId || null, worker_name: reciboWorkerName, mes: reciboMes, tipo, auto_matched: false },
         { onConflict: 'run_id,tx_key' }
       )
       .select('tx_key, worker_id, worker_name, mes, tipo, auto_matched')
@@ -1799,12 +1809,14 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleSaveAcaoFatura = async () => {
-    if (!faturaSelId || !faturaModal || !runId) return;
+    if (!faturaSelId || !faturaModal) return;
+    const effectiveRunId = faturaModal.run_id || runId;
+    if (!effectiveRunId) return;
     setFaturaSaving(true);
     const key = txKey(faturaModal);
     const { data, error } = await supabase
       .from('fatura_pagamento_links')
-      .upsert({ fatura_id: faturaSelId, run_id: runId, tx_key: key, auto_matched: false }, { onConflict: 'fatura_id' })
+      .upsert({ fatura_id: faturaSelId, run_id: effectiveRunId, tx_key: key, auto_matched: false }, { onConflict: 'fatura_id' })
       .select('fatura_id, run_id, tx_key, auto_matched')
       .single();
     if (!error && data) {
