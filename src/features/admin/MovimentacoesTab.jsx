@@ -1417,6 +1417,7 @@ if (toInsertNcs.length > 0) {
   const comFaturaCount   = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.COM_FATURA).length;
   const notaCreditoCount = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.NOTA_CREDITO).length;
   const internoCount     = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.INTERNO).length;
+  const impostoCount     = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.IMPOSTO).length;
   const justCount        = filteredTxs.filter(tx => getStatus(tx) === STATUS_KEYS.JUSTIFICADO).length;
 
   const grupos = filteredTxs.reduce((acc, tx) => {
@@ -2310,6 +2311,7 @@ if (toInsertNcs.length > 0) {
           {comFaturaCount > 0 && <><span>·</span><span className="text-orange-600">{comFaturaCount} Com Fatura Doc</span></>}
           {notaCreditoCount > 0 && <><span>·</span><span className="text-blue-600">{notaCreditoCount} Cliente/Fatura</span></>}
           {internoCount > 0 && <><span>·</span><span className="text-purple-600">{internoCount} Interno</span></>}
+          {impostoCount > 0 && <><span>·</span><span className="text-amber-600">{impostoCount} Imposto</span></>}
           {justCount > 0 && <><span>·</span><span className="text-violet-600">{justCount} Justificados</span></>}
         </div>
       )}
