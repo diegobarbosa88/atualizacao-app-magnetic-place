@@ -14,7 +14,8 @@ const MESES_PT_SAL = {
 function toggleTipoLink(t, supabase) {
   if (!t.linkId) return;
   const novoTipo = t.type === 'Adiantamento' ? 'Liquidação' : 'Adiantamento';
-  supabase.from('movimentacao_recibo_links').update({ tipo: novoTipo }).eq('id', t.linkId);
+  supabase.from('movimentacao_recibo_links').update({ tipo: novoTipo }).eq('id', t.linkId)
+    .then(() => window.location.reload());
 }
 
 const ESTADO_BADGE = {
