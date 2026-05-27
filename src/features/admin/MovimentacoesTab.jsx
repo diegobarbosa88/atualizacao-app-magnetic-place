@@ -1591,6 +1591,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerInterno = async (tx) => {
+    if (!runId) return;
     const key = txKey(tx);
     await supabase.from('entrada_internos').delete().eq('run_id', runId).eq('tx_key', key);
     setInternos(prev => prev.filter(i => i.tx_key !== key));
@@ -1609,6 +1610,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerImposto = async (tx) => {
+    if (!runId) return;
     const key = txKey(tx);
     await supabase.from('entrada_impostos').delete().eq('run_id', runId).eq('tx_key', key);
     setImpostos(prev => prev.filter(i => i.tx_key !== key));
@@ -1656,6 +1658,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerCliente = async (tx) => {
+    if (!runId) return;
     const key = txKey(tx);
     await supabase.from('entrada_nota_credito_links').delete().eq('run_id', runId).eq('tx_key', key);
     setNotasCredito(prev => prev.filter(n => n.tx_key !== key));
@@ -1681,6 +1684,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleRemoverJustificacao = async (tx) => {
+    if (!runId) return;
     const key = txKey(tx);
     await supabase.from('entrada_justifications').delete().eq('run_id', runId).eq('tx_key', key);
     setJustificacoes(prev => prev.filter(j => j.tx_key !== key));
@@ -1726,6 +1730,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerRecibo = async (tx) => {
+    if (!runId) return;
     const key = txKey(tx);
     await supabase.from('movimentacao_recibo_links').delete().eq('run_id', runId).eq('tx_key', key);
     setReciboLinks(prev => prev.filter(r => r.tx_key !== key));
@@ -1756,6 +1761,7 @@ if (toInsertNcs.length > 0) {
   };
 
   const handleDesfazerFatura = async (tx) => {
+    if (!runId) return;
     const key = txKey(tx);
     await supabase.from('fatura_pagamento_links').delete().eq('run_id', runId).eq('tx_key', key);
     setFaturaLinks(prev => prev.filter(f => f.tx_key !== key));
