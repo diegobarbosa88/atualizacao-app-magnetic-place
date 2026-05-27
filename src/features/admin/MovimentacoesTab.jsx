@@ -1819,6 +1819,13 @@ if (toInsertNcs.length > 0) {
     const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
     const key = txKey(tx);
+
+    // Restore fatura to PENDENTE before deleting link
+    const link = faturaLinks.find(f => f.tx_key === key);
+    if (link?.fatura_id) {
+      await supabase.from('faturas').update({ status: 'PENDENTE' }).eq('id', link.fatura_id);
+    }
+
     await supabase.from('fatura_pagamento_links').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
     setFaturaLinks(prev => prev.filter(f => f.tx_key !== key));
   };
