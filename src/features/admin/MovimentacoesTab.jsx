@@ -1468,6 +1468,89 @@ if (toInsertNcs.length > 0) {
     return row;
   });
 
+  const calcTotals = (txs) => {
+    const totCredito = txs.filter(t => t.tipo === 'credito').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totDebito = txs.filter(t => t.tipo === 'debito').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totImposto = txs.filter(t => {
+      const key = txKey(t);
+      return impostos?.some(i => i.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totInterno = txs.filter(t => {
+      const key = txKey(t);
+      return internos?.some(i => i.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totFatura = txs.filter(t => {
+      const key = txKey(t);
+      return faturaLinks?.some(f => f.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totRecibo = txs.filter(t => {
+      const key = txKey(t);
+      return reciboLinks?.some(r => r.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totCliente = txs.filter(t => {
+      const key = txKey(t);
+      return clienteLink(t, pagamentos);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totSemCliente = txs.filter(t => {
+      const key = txKey(t);
+      return !impostos?.some(i => i.tx_key === key)
+        && !internos?.some(i => i.tx_key === key)
+        && !faturaLinks?.some(f => f.tx_key === key)
+        && !reciboLinks?.some(r => r.tx_key === key)
+        && !clienteLink(t, pagamentos)
+        && !justificacoes?.some(j => j.tx_key === key)
+        && !notasCredito?.some(n => n.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totJustificado = txs.filter(t => {
+      const key = txKey(t);
+      return justificacoes?.some(j => j.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totNotaCredito = txs.filter(t => {
+      const key = txKey(t);
+      return notasCredito?.some(n => n.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totSemCliente, totJustificado, totNotaCredito };
+  };
+
+  const renderPdfSummary = (doc, y, txs) => {
+    const t = calcTotals(txs);
+    const linha = (label, valor, r, g, b) => {
+      doc.setFillColor(r, g, b);
+      doc.rect(14, y, 277, 7, 'F');
+      doc.setFontSize(9); doc.setTextColor(30);
+      doc.text(label, 16, y + 5);
+      doc.setTextColor(0);
+      doc.text(fmtEur(valor), 291, y + 5, { align: 'right' });
+      y += 8;
+    };
+    doc.setFontSize(11); doc.setTextColor(30); doc.setFont('helvetica', 'bold');
+    doc.text('Resumo', 14, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    linha('Total Créditos', t.totCredito, 227, 252, 239);
+    linha('Total Débitos', t.totDebito, 254, 235, 222);
+    linha(`Imposto (${txs.filter(tx => { const k = txKey(tx); return impostos?.some(i => i.tx_key === k); }).length} transações)`, t.totImposto, 254, 243, 199);
+    linha(`Interno (${txs.filter(tx => { const k = txKey(tx); return internos?.some(i => i.tx_key === k); }).length} transações)`, t.totInterno, 233, 213, 244);
+    linha(`Com Fatura (${txs.filter(tx => { const k = txKey(tx); return faturaLinks?.some(f => f.tx_key === k); }).length} transações)`, t.totFatura, 254, 235, 222);
+    linha(`Com Recibo (${txs.filter(tx => { const k = txKey(tx); return reciboLinks?.some(r => r.tx_key === k); }).length} transações)`, t.totRecibo, 207, 250, 254);
+    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return clienteLink(tx, pagamentos); }).length} transações)`, t.totCliente, 227, 252, 239);
+    linha(`Justificado (${txs.filter(tx => { const k = txKey(tx); return justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totJustificado, 238, 238, 238);
+    linha(`Nota Crédito (${txs.filter(tx => { const k = txKey(tx); return notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totNotaCredito, 219, 234, 254);
+    linha(`Sem Cliente (${txs.filter(tx => { const k = txKey(tx); return !impostos?.some(i => i.tx_key === k) && !internos?.some(i => i.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k) && !reciboLinks?.some(r => r.tx_key === k) && !clienteLink(tx, pagamentos) && !justificacoes?.some(j => j.tx_key === k) && !notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totSemCliente, 255, 255, 255);
+    return y;
+  };
+
+  const getLogoBase64 = async () => {
+    try {
+      const response = await fetch('/MAGNETIC (3).png');
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch { return null; }
+  };
+
   const handleExportCsv = () => {
     const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const header = ['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe'].map(esc).join(';');
@@ -1479,14 +1562,16 @@ if (toInsertNcs.length > 0) {
     setShowExportMenu(false);
   };
 
-  const handleExportPdf = () => {
+  const handleExportPdf = async () => {
+    const logoBase64 = await getLogoBase64();
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 4, 22, 22);
     doc.setFontSize(14); doc.setTextColor(30);
-    doc.text('Relatório de Movimentações', 14, 18);
+    doc.text('Relatório de Movimentações', logoBase64 ? 42 : 14, 18);
     doc.setFontSize(8); doc.setTextColor(120);
-    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : '—'}`, 14, 24);
+    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : '—'}`, logoBase64 ? 42 : 14, 24);
 
-    let currentY = 30;
+    let currentY = logoBase64 ? 30 : 28;
 
     const sortedMeses = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
     for (const mes of sortedMeses) {
@@ -1506,7 +1591,7 @@ if (toInsertNcs.length > 0) {
         startY: currentY,
         head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
         body,
-        styles: { fontSize: 6.5, cellPadding: 1.3 },
+        styles: { fontSize: 6.5, cellPadding: 1.5, lineHeight: 1.2 },
         headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
         didParseCell: (data) => {
           if (data.section === 'body') {
@@ -1517,15 +1602,27 @@ if (toInsertNcs.length > 0) {
             }
           }
         },
-        columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 16 },
+          2: { cellWidth: 60, cellStyles: { overflow: 'linebreak' } },
+          3: { cellWidth: 22 },
+          4: { cellWidth: 28 },
+          5: { cellWidth: 50 },
+        },
         margin: { left: 14, right: 14 },
+        showHead: 'firstPage',
       });
 
-      currentY = doc.lastAutoTable.finalY + 8;
+      currentY = doc.lastAutoTable.finalY + 6;
 
       if (currentY > 180) { doc.addPage(); currentY = 20; }
     }
 
+    doc.addPage();
+    doc.setFontSize(16); doc.setTextColor(30);
+    doc.text('Resumo Financeiro', 14, 20);
+    renderPdfSummary(doc, 28, filteredTxs);
     doc.save('movimentacoes_validacao.pdf');
     setShowExportMenu(false);
   };
@@ -1538,6 +1635,12 @@ if (toInsertNcs.length > 0) {
       const JSZipLib = (await import('jszip')).default;
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
+      const logoBase64 = await getLogoBase64();
+
+      const monthLabel = runData
+        ? new Date(runData.created_at).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
+        : 'todos';
+      const safeMonth = monthLabel.replace(/[^a-zA-Z0-9]/g, '');
 
       const zip = new JSZipLib();
       const relatorioFolder = zip.folder('relatorio');
@@ -1564,23 +1667,24 @@ if (toInsertNcs.length > 0) {
       relatorioFolder.file('Relatorio_Movimentacoes.pdf', doc.output('blob'));
 
       // ── PDFs por mês (com cores) ─────────────────────────────────────────────
-      const mesesFolder = zip.folder('meses');
       const sortedMeses = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
       for (const mes of sortedMeses) {
         const mesTxs = grupos[mes];
         const mesLabel = fmtMes(mes).replace(/[^a-zA-Z0-9]/g, '_');
         const docMes = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        if (logoBase64) docMes.addImage(logoBase64, 'PNG', 14, 4, 22, 22);
         docMes.setFontSize(14); docMes.setTextColor(30);
-        docMes.text(`Relatório de Movimentações — ${fmtMes(mes)}`, 14, 18);
+        docMes.text(`Relatório de Movimentações — ${fmtMes(mes)}`, logoBase64 ? 42 : 14, 18);
         docMes.setFontSize(8); docMes.setTextColor(120);
-        docMes.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : 'Todos'}`, 14, 24);
+        docMes.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · Extrato: ${runData?.created_at ? new Date(runData.created_at).toLocaleDateString('pt-PT') : 'Todos'}`, logoBase64 ? 42 : 14, 24);
+        const startY = logoBase64 ? 30 : 28;
         const mesData = mesTxs.map(tx => buildRowsForTx(tx));
         const body = mesData.map(d => d.row);
         autoTable(docMes, {
-          startY: 30,
+          startY,
           head: [['Data', 'Tipo', 'Descrição', 'Valor (€)', 'Status', 'Detalhe']],
           body,
-          styles: { fontSize: 6.5, cellPadding: 1.3 },
+          styles: { fontSize: 6.5, cellPadding: 1.5, lineHeight: 1.2 },
           headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
           didParseCell: (data) => {
             if (data.section === 'body') {
@@ -1591,9 +1695,21 @@ if (toInsertNcs.length > 0) {
               }
             }
           },
-          columnStyles: { 2: { cellWidth: 55 }, 5: { cellWidth: 45 } },
+          columnStyles: {
+            0: { cellWidth: 22 },
+            1: { cellWidth: 16 },
+            2: { cellWidth: 60, cellStyles: { overflow: 'linebreak' } },
+            3: { cellWidth: 22 },
+            4: { cellWidth: 28 },
+            5: { cellWidth: 50 },
+          },
           margin: { left: 14, right: 14 },
+          showHead: 'firstPage',
         });
+        docMes.addPage();
+        docMes.setFontSize(16); docMes.setTextColor(30);
+        docMes.text(`Resumo — ${fmtMes(mes)}`, 14, 20);
+        renderPdfSummary(docMes, 28, mesTxs);
         mesesFolder.file(`Relatorio_${mesLabel}.pdf`, docMes.output('blob'));
       }
 
