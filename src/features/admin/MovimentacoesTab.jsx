@@ -2166,6 +2166,7 @@ if (toInsertNcs.length > 0) {
               onChange={e => {
                 const id = e.target.value;
                 setActiveRunId(id || null);
+                if (id) loadRun(id);
               }}
               className="flex-1 text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-xl px-3 py-1.5 max-w-xs"
             >
