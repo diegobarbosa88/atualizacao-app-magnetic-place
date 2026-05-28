@@ -242,8 +242,17 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
               )}
             </span>
 
-            {status === STATUS_KEYS.COM_CLIENTE && clientName && (
-              <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{clientName}</span>
+            {status === STATUS_KEYS.COM_CLIENTE && (
+              (() => {
+                const link = clienteLink(tx, pagamentos);
+                const linkClientName = link ? (clients?.find(c => c.id === link.client_id)?.name || link.client_id) : null;
+                const linkPeriod = link?.period ? fmtMes(link.period) : null;
+                return linkClientName && (
+                  <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                    {linkClientName}{linkPeriod ? ` - ${linkPeriod}` : ''}
+                  </span>
+                );
+              })()
             )}
             {status === STATUS_KEYS.COM_CLIENTE && (
               <button onClick={() => onDesfazerCliente(tx)}
