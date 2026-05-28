@@ -1487,10 +1487,6 @@ const calcTotals = (txs) => {
       const key = txKey(t);
       return reciboLinks?.some(r => r.tx_key === key) && !faturaLinks?.some(f => f.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    const totCliente = txs.filter(t => {
-      const key = txKey(t);
-      return clienteLink(t, pagamentos) && !notasCredito?.some(n => n.tx_key === key);
-    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totSemCliente = txs.filter(t => {
       const key = txKey(t);
       return !impostos?.some(i => i.tx_key === key)
