@@ -1505,7 +1505,7 @@ if (toInsertNcs.length > 0) {
       const key = txKey(t);
       return justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-const totNotaCredito = txs.filter(t => {
+    const totNotaCredito = txs.filter(t => {
       const key = txKey(t);
       return notasCredito?.some(n => n.tx_key === key) && !clienteLink(t, pagamentos);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
@@ -1516,10 +1516,6 @@ const totNotaCredito = txs.filter(t => {
     const totRecibo = txs.filter(t => {
       const key = txKey(t);
       return reciboLinks?.some(r => r.tx_key === key) && !faturaLinks?.some(f => f.tx_key === key);
-    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    const totFatura = txs.filter(t => {
-      const key = txKey(t);
-      return faturaLinks?.some(f => f.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totSemCliente, totJustificado, totNotaCredito };
   };
