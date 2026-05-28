@@ -1283,6 +1283,16 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
         }
       }
 
+      if (!alias && tx.tipo === 'credito') {
+        const matched = matchClientByTokens(tx.descricao, clientList);
+        if (matched?.id) {
+          const val = parseFloat(tx.valor) || 0;
+          toInsertClientes.push({ run_id: rid, tx_key: key, client_id: matched.id, period: previousMonth(tx.data), valor_faturado: val, valor_pago: val });
+          existingPagKeys.add(key);
+          continue;
+        }
+      }
+
       if (INTERNO_KEYWORDS.some(k => descUpper.includes(k))) {
         toInsertInternos.push({ run_id: rid, tx_key: key });
         existingIntKeys.add(key);
