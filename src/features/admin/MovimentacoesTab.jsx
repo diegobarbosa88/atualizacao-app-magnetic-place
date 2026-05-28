@@ -47,6 +47,7 @@ const STATUS_CFG = {
   'Com Recibo':   { bg: 'bg-teal-100',    text: 'text-teal-700',    icon: UserCheck },
   'Com Fatura':   { bg: 'bg-orange-100',  text: 'text-orange-700',  icon: FileMinus },
   'Nota Crédito': { bg: 'bg-blue-100',    text: 'text-blue-700',    icon: Link },
+  'NC':           { bg: 'bg-blue-100',    text: 'text-blue-700',    icon: FileText },
   'Com NC':       { bg: 'bg-indigo-100',  text: 'text-indigo-700',  icon: FileText },
   'Interno':      { bg: 'bg-purple-100',  text: 'text-purple-700',  icon: ArrowLeftRight },
   'Imposto':      { bg: 'bg-amber-100',   text: 'text-amber-700',   icon: AlertCircle },
@@ -68,14 +69,8 @@ function labelStatus(status, tipo, ncEntry, faturasData, descricao) {
     if (status === 'Nota Crédito') return 'Fatura';
     if (status === 'Sem Cliente')  return 'Sem Fatura';
   }
-  if (status === 'Nota Crédito') {
-    if (ncEntry && faturasData) {
-      const isFornecedorNc = faturasData.some(f => f.id === ncEntry.client_id && f.dados?.numero_fatura?.startsWith('NC'));
-      return isFornecedorNc ? 'Com NC' : 'Cliente';
-    }
-    return 'Cliente';
-  }
-  if (status === 'Sem Cliente')  return 'Sem Entrada';
+  if (status === 'Nota Crédito') return 'NC';
+  if (status === 'Sem Cliente') return 'Sem Entrada';
   return status;
 }
 
@@ -344,7 +339,7 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
               ) : (
                 <button onClick={() => onAcaoCliente(tx)}
                   className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
-                  <Link size={9} /> Cliente
+                  <Link size={9} /> CLIENTE
                 </button>
               )}
               <button onClick={() => onMarcarInterno(tx)}
@@ -1940,10 +1935,16 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
 
   const handleDesfazerCliente = async (tx) => {
     const key = txKey(tx);
-    const existing = pagamentos.find(p => p.tx_key === key);
-    if (existing) {
-      await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existing.id);
-      setPagamentos(prev => prev.filter(p => p.id !== existing.id));
+    const existingPag = pagamentos.find(p => p.tx_key === key);
+    if (existingPag) {
+      await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existingPag.id);
+      setPagamentos(prev => prev.filter(p => p.id !== existingPag.id));
+      return;
+    }
+    const existingNc = notasCredito.find(n => n.tx_key === key);
+    if (existingNc) {
+      await supabase.from('entrada_nota_credito_links').delete().eq('id', existingNc.id);
+      setNotasCredito(prev => prev.filter(n => n.id !== existingNc.id));
     }
   };
 
@@ -2611,7 +2612,7 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
                 return (
                   <div key={a.id} className="flex items-center gap-3 px-4 py-2.5">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${cfg.bg} ${cfg.text} flex-shrink-0`}>
-                      <Icon size={9} /> {a.resolucao === 'interno' ? 'Interno' : 'Cliente'}
+                      <Icon size={9} /> {a.resolucao === 'interno' ? 'Interno' : a.resolucao === 'com_cliente' ? 'Com Cliente' : 'NC'}
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="text-[11px] font-bold text-slate-700 truncate" title={a.bank_name}>{a.bank_name}</p>
@@ -2766,7 +2767,7 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
             <div className="flex items-start justify-between">
               <h3 className="text-sm font-black text-slate-800">
-                {ncModal.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a Cliente'}
+                {ncModal.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a NC'}
               </h3>
               <button onClick={() => setNcModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
             </div>
