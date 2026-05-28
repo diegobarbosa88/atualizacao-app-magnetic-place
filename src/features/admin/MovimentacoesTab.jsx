@@ -159,14 +159,18 @@ function matchClientByTokens(descricao, clients) {
   return bestMatch;
 }
 
-function clienteLink(tx, notasCredito) {
-  return notasCredito?.find(n => n.tx_key === txKey(tx));
+function clienteLink(tx, pagamentos) {
+  return pagamentos?.find(p =>
+    p.transaction_data?.data === tx.data &&
+    p.transaction_data?.descricao === tx.descricao &&
+    String(p.transaction_data?.valor) === String(tx.valor)
+  );
 }
 
 function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) {
   const key = txKey(tx);
-  if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.COM_CLIENTE;
-  if (pagamentos?.some(p => p.transaction_data?.data === tx.data && p.transaction_data?.descricao === tx.descricao && String(p.transaction_data?.valor) === String(tx.valor))) return STATUS_KEYS.COM_CLIENTE;
+  if (clienteLink(tx, pagamentos)) return STATUS_KEYS.COM_CLIENTE;
+  if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.NOTA_CREDITO;
   if (impostos?.some(i => i.tx_key === key)) return STATUS_KEYS.IMPOSTO;
   if (reciboLinks?.some(r => r.tx_key === key)) return STATUS_KEYS.COM_RECIBO;
   if (faturaLinks?.some(f => f.tx_key === key)) return STATUS_KEYS.COM_FATURA;
@@ -1446,11 +1450,12 @@ if (toInsertNcs.length > 0) {
   const buildRowsForTx = (tx) => {
     const status = getStatus(tx);
     const key = txKey(tx);
-    const link = notasCredito.find(n => n.tx_key === key);
+    const link = clienteLink(tx, pagamentos);
+    const ncEntry = notasCredito.find(n => n.tx_key === key);
     const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || '') : '';
-    const ncEntry = link;
     const justEntry = justificacoes.find(j => j.tx_key === key);
     const detalhe = status === STATUS_KEYS.COM_CLIENTE ? clientName
+      : status === STATUS_KEYS.NOTA_CREDITO ? `${clientName || ncEntry?.client_id || ''} · ${fmtMes(ncEntry?.period || '')}`
       : status === STATUS_KEYS.JUSTIFICADO ? (justEntry?.justification || '')
       : '';
     const valor = tx.tipo === 'debito' ? `-${fmtEur(Math.abs(parseFloat(tx.valor) || 0))}` : fmtEur(tx.valor);
@@ -1481,12 +1486,21 @@ const calcTotals = (txs) => {
       const key = txKey(t);
       return reciboLinks?.some(r => r.tx_key === key) && !faturaLinks?.some(f => f.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-const totSemCliente = txs.filter(t => {
+    const totCliente = txs.filter(t => {
+      const key = txKey(t);
+      return clienteLink(t, pagamentos);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totNotaCredito = txs.filter(t => {
+      const key = txKey(t);
+      return notasCredito?.some(n => n.tx_key === key);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    const totSemCliente = txs.filter(t => {
       const key = txKey(t);
       return !impostos?.some(i => i.tx_key === key)
         && !internos?.some(i => i.tx_key === key)
         && !faturaLinks?.some(f => f.tx_key === key)
         && !reciboLinks?.some(r => r.tx_key === key)
+        && !clienteLink(t, pagamentos)
         && !notasCredito?.some(n => n.tx_key === key)
         && !justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
@@ -1494,6 +1508,7 @@ const totSemCliente = txs.filter(t => {
       const key = txKey(t);
       return justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+    return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totNotaCredito, totSemCliente, totJustificado };
     const totCliente = txs.filter(t => {
       const key = txKey(t);
       return notasCredito?.some(n => n.tx_key === key);
@@ -1517,12 +1532,36 @@ const totSemCliente = txs.filter(t => {
     doc.setFont('helvetica', 'normal');
     linha('Total Créditos', t.totCredito, 227, 252, 239);
     linha('Total Débitos', t.totDebito, 254, 235, 222);
-    linha(`Imposto (${txs.filter(tx => { const k = txKey(tx); return impostos?.some(i => i.tx_key === k); }).length} transações)`, t.totImposto, 254, 243, 199);
-    linha(`Interno (${txs.filter(tx => { const k = txKey(tx); return internos?.some(i => i.tx_key === k); }).length} transações)`, t.totInterno, 233, 213, 244);
+    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return clienteLink(tx, pagamentos); }).length} transações)`, t.totCliente, 227, 252, 239);
+    linha(`Nota Crédito (${txs.filter(tx => { const k = txKey(tx); return notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totNotaCredito, 219, 234, 254);
     linha(`Com Fatura (${txs.filter(tx => { const k = txKey(tx); return faturaLinks?.some(f => f.tx_key === k); }).length} transações)`, t.totFatura, 254, 235, 222);
-    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totCliente, 227, 252, 239);
+    linha(`Com Recibo (${txs.filter(tx => { const k = txKey(tx); return reciboLinks?.some(r => r.tx_key === k); }).length} transações)`, t.totRecibo, 207, 250, 254);
+    linha(`Imposto (${txs.filter(tx => { const k = txKey(tx); return impostos?.some(i => i.tx_key === k); }).length} transações)`, t.totImposto, 254, 243, 199);
     linha(`Justificado (${txs.filter(tx => { const k = txKey(tx); return justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totJustificado, 238, 238, 238);
-    linha(`Sem Cliente (${txs.filter(tx => { const k = txKey(tx); return !impostos?.some(i => i.tx_key === k) && !internos?.some(i => i.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k) && !reciboLinks?.some(r => r.tx_key === k) && !notasCredito?.some(n => n.tx_key === k) && !justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totSemCliente, 255, 255, 255);
+    linha(`Sem Cliente (${txs.filter(tx => { const k = txKey(tx); return !impostos?.some(i => i.tx_key === k) && !internos?.some(i => i.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k) && !reciboLinks?.some(r => r.tx_key === k) && !clienteLink(tx, pagamentos) && !notasCredito?.some(n => n.tx_key === k) && !justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totSemCliente, 255, 255, 255);
+    return y;
+  };
+
+  const renderPdfBalance = (doc, y, grupos) => {
+    doc.setFontSize(11); doc.setTextColor(30); doc.setFont('helvetica', 'bold');
+    doc.text('Balanço Mensal', 14, y); y += 6;
+    doc.setFont('helvetica', 'normal');
+    const sortedMeses = Object.keys(grupos).sort((a, b) => b.localeCompare(a));
+    let acumulado = 0;
+    for (const mes of sortedMeses) {
+      const mesCred = grupos[mes].filter(t => t.tipo === 'credito').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+      const mesDeb = grupos[mes].filter(t => t.tipo === 'debito').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+      const saldoMes = mesCred - mesDeb;
+      acumulado += saldoMes;
+      const cor = saldoMes >= 0 ? [227, 252, 239] : [254, 235, 222];
+      doc.setFillColor(...cor);
+      doc.rect(14, y, 277, 7, 'F');
+      doc.setFontSize(9); doc.setTextColor(30);
+      doc.text(fmtMes(mes), 16, y + 5);
+      doc.setTextColor(saldoMes >= 0 ? 0 : 180);
+      doc.text(`+${fmtEur(mesCred)} | -${fmtEur(mesDeb)} | Saldo: ${saldoMes >= 0 ? '+' : ''}${fmtEur(saldoMes)} | Acum: ${acumulado >= 0 ? '+' : ''}${fmtEur(acumulado)}`, 291, y + 5, { align: 'right' });
+      y += 8;
+    }
     return y;
   };
 
@@ -1609,7 +1648,11 @@ const totSemCliente = txs.filter(t => {
     doc.addPage();
     doc.setFontSize(16); doc.setTextColor(30);
     doc.text('Resumo Financeiro', 14, 20);
-    renderPdfSummary(doc, 28, filteredTxs);
+    let summaryY = renderPdfSummary(doc, 28, filteredTxs);
+    doc.addPage();
+    doc.setFontSize(16); doc.setTextColor(30);
+    doc.text('Balanço Mensal', 14, 20);
+    renderPdfBalance(doc, 28, grupos);
     doc.save('movimentacoes_validacao.pdf');
     setShowExportMenu(false);
   };
@@ -1703,7 +1746,8 @@ const totSemCliente = txs.filter(t => {
       // ── Extrato CSV ────────────────────────────────────────────────────────
       const txStatus = (tx) => {
         const key = txKey(tx);
-        if (notasCredito.some(n => n.tx_key === key)) return 'Com Cliente';
+        if (clienteLink(tx, pagamentos)) return 'Com Cliente';
+        if (notasCredito.some(n => n.tx_key === key)) return 'Nota Crédito';
         if (faturaLinks.some(f => f.tx_key === key)) return 'Com Fatura';
         if (reciboLinks.some(r => r.tx_key === key)) return 'Com Recibo';
         if (internos.some(i => i.tx_key === key)) return 'Interno';
@@ -1871,22 +1915,28 @@ const totSemCliente = txs.filter(t => {
     if (!effectiveRunId) return;
     setNcSaving(true);
     const key = txKey(ncModal);
-    const { data, error } = await supabase
-      .from('entrada_nota_credito_links')
-      .upsert(
-        { run_id: effectiveRunId, tx_key: key, client_id: ncClientId, period: ncPeriod, notas: ncNotas.trim() || null },
-        { onConflict: 'run_id,tx_key' }
-      )
-      .select('tx_key, client_id, period, notas')
-      .single();
-    if (!error && data) {
-      setNotasCredito(prev => [...prev.filter(n => n.tx_key !== data.tx_key), data]);
+    const existing = pagamentos.find(p => p.transaction_data?.data === ncModal.data && p.transaction_data?.descricao === ncModal.descricao && String(p.transaction_data?.valor) === String(ncModal.valor));
+    if (existing) {
+      await supabase.from('faturacao_clientes_pagamentos').update({ client_id: ncClientId, period: ncPeriod }).eq('id', existing.id);
+    } else {
+      await supabase.from('faturacao_clientes_pagamentos').insert({
+        client_id: ncClientId,
+        period: ncPeriod,
+        reconciliation_run_id: effectiveRunId,
+        transaction_data: ncModal,
+        valor_pago: parseFloat(ncModal.valor || 0),
+      });
     }
+    const { data: refreshed } = await supabase
+      .from('faturacao_clientes_pagamentos')
+      .select('transaction_data, client_id, period, reconciliation_run_id')
+      .eq('reconciliation_run_id', effectiveRunId);
+    setPagamentos(refreshed || []);
 
     if (ncSaveAlias && ncAliasName.trim()) {
       const { data: newAlias } = await supabase
         .from('movimentacoes_aliases')
-        .upsert({ bank_name: ncAliasName.trim(), resolucao: 'nota_credito', client_id: ncClientId }, { onConflict: 'bank_name' })
+        .upsert({ bank_name: ncAliasName.trim(), resolucao: 'com_cliente', client_id: ncClientId }, { onConflict: 'bank_name' })
         .select('id, bank_name, resolucao, client_id')
         .single();
       if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== ncAliasName.trim())]);
@@ -1900,9 +1950,11 @@ const totSemCliente = txs.filter(t => {
   const handleDesfazerCliente = async (tx) => {
     const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    const key = txKey(tx);
-    await supabase.from('entrada_nota_credito_links').delete().eq('run_id', effectiveRunId).eq('tx_key', key);
-    setNotasCredito(prev => prev.filter(n => n.tx_key !== key));
+    const existing = pagamentos.find(p => p.transaction_data?.data === tx.data && p.transaction_data?.descricao === tx.descricao && String(p.transaction_data?.valor) === String(tx.valor));
+    if (existing) {
+      await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existing.id);
+      setPagamentos(prev => prev.filter(p => p.id !== existing.id));
+    }
   };
 
   // ── Acções: Justificação ──────────────────────────────────────────────────
