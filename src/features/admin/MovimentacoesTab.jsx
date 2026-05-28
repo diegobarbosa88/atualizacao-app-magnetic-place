@@ -160,11 +160,8 @@ function matchClientByTokens(descricao, clients) {
 }
 
 function clienteLink(tx, pagamentos) {
-  return pagamentos?.find(p =>
-    p.transaction_data?.data === tx.data &&
-    p.transaction_data?.descricao === tx.descricao &&
-    String(p.transaction_data?.valor) === String(tx.valor)
-  );
+  const key = txKey(tx);
+  return pagamentos?.find(p => p.tx_key === key);
 }
 
 function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) {
@@ -601,7 +598,7 @@ export default function MovimentacoesTab() {
         // Load all linked data for all runs
         const runIds = allRunsData.map(r => r.id);
 const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: ncs }, { data: als }, { data: rls }, { data: recs }, { data: fats }] = await Promise.all([
-          supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period, reconciliation_run_id').in('reconciliation_run_id', runIds),
+          supabase.from('faturacao_clientes_pagamentos').select('tx_key, client_id, period, run_id').in('run_id', runIds),
           supabase.from('entrada_justifications').select('tx_key, justification, run_id').in('run_id', runIds),
           supabase.from('entrada_internos').select('tx_key, run_id').in('run_id', runIds),
           supabase.from('entrada_impostos').select('tx_key, run_id').in('run_id', runIds),
@@ -682,7 +679,7 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
 
     const runYear = new Date(run.created_at).getFullYear();
     const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: ncs }, { data: als }, { data: rls }, { data: salAls }, { data: recs }, { data: fats }, { data: fatLinks }] = await Promise.all([
-      supabase.from('faturacao_clientes_pagamentos').select('transaction_data, client_id, period').eq('reconciliation_run_id', rid),
+      supabase.from('faturacao_clientes_pagamentos').select('tx_key, client_id, period').eq('run_id', rid),
       supabase.from('entrada_justifications').select('tx_key, justification').eq('run_id', rid),
       supabase.from('entrada_internos').select('tx_key').eq('run_id', rid),
       supabase.from('entrada_impostos').select('tx_key').eq('run_id', rid),
@@ -721,7 +718,7 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
     setLoading(false);
 
     const resolvedKeys = new Set([
-      ...pagsArr.map(p => `${p.transaction_data?.data}|${p.transaction_data?.descricao}|${p.transaction_data?.valor}`),
+      ...pagsArr.map(p => p.tx_key),
       ...justArr.map(j => j.tx_key),
       ...intsArr.map(i => i.tx_key),
       ...ncsArr.map(n => n.tx_key),
@@ -1274,7 +1271,7 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
           continue;
         }
         if (alias.resolucao === 'com_cliente' && alias.client_id && tx.tipo === 'credito') {
-          toInsertClientes.push({ reconciliation_run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
+          toInsertClientes.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
           existingPagKeys.add(key);
           continue;
         }
@@ -1382,7 +1379,7 @@ if (toInsertNcs.length > 0) {
       }
     }
     if (toInsertClientes.length > 0) {
-      const { data } = await sb.from('faturacao_clientes_pagamentos').upsert(toInsertClientes, { onConflict: 'reconciliation_run_id,transaction_data' }).select('tx_key, client_id, period');
+      const { data } = await sb.from('faturacao_clientes_pagamentos').upsert(toInsertClientes, { onConflict: 'run_id,tx_key' }).select('tx_key, client_id, period');
       if (data) {
         setPags(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
         count += data.length;
@@ -1736,7 +1733,7 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
         if (reciboLinks.some(r => r.tx_key === key)) return 'Com Recibo';
         if (internos.some(i => i.tx_key === key)) return 'Interno';
         if (justificacoes.some(j => j.tx_key === key)) return 'Justificado';
-        if (pagamentos.some(p => p.transaction_data && txKey(p.transaction_data) === key)) return 'Com Cliente';
+        if (pagamentos.some(p => p.tx_key === key)) return 'Com Cliente';
         return 'Sem Cliente';
       };
 
@@ -1899,22 +1896,21 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     if (!effectiveRunId) return;
     setNcSaving(true);
     const key = txKey(ncModal);
-    const existing = pagamentos.find(p => p.transaction_data?.data === ncModal.data && p.transaction_data?.descricao === ncModal.descricao && String(p.transaction_data?.valor) === String(ncModal.valor));
+    const existing = pagamentos.find(p => p.tx_key === key);
     if (existing) {
       await supabase.from('faturacao_clientes_pagamentos').update({ client_id: ncClientId, period: ncPeriod }).eq('id', existing.id);
     } else {
       await supabase.from('faturacao_clientes_pagamentos').insert({
+        run_id: effectiveRunId,
+        tx_key: key,
         client_id: ncClientId,
         period: ncPeriod,
-        reconciliation_run_id: effectiveRunId,
-        transaction_data: ncModal,
-        valor_pago: parseFloat(ncModal.valor || 0),
       });
     }
     const { data: refreshed } = await supabase
       .from('faturacao_clientes_pagamentos')
-      .select('transaction_data, client_id, period, reconciliation_run_id')
-      .eq('reconciliation_run_id', effectiveRunId);
+      .select('tx_key, client_id, period, run_id')
+      .eq('run_id', effectiveRunId);
     setPagamentos(refreshed || []);
 
     if (ncSaveAlias && ncAliasName.trim()) {
@@ -1932,9 +1928,8 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
   };
 
   const handleDesfazerCliente = async (tx) => {
-    const effectiveRunId = tx.run_id || runId;
-    if (!effectiveRunId) return;
-    const existing = pagamentos.find(p => p.transaction_data?.data === tx.data && p.transaction_data?.descricao === tx.descricao && String(p.transaction_data?.valor) === String(tx.valor));
+    const key = txKey(tx);
+    const existing = pagamentos.find(p => p.tx_key === key);
     if (existing) {
       await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existing.id);
       setPagamentos(prev => prev.filter(p => p.id !== existing.id));
@@ -2459,7 +2454,7 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
                     }
 
                     // Apagar associações
-                    await supabase.from('faturacao_clientes_pagamentos').delete().eq('reconciliation_run_id', runId);
+                    await supabase.from('faturacao_clientes_pagamentos').delete().eq('run_id', runId);
                     await supabase.from('fatura_pagamento_links').delete().eq('run_id', runId);
                     await supabase.from('entrada_justifications').delete().eq('run_id', runId);
                     await supabase.from('entrada_internos').delete().eq('run_id', runId);
