@@ -1505,6 +1505,10 @@ const calcTotals = (txs) => {
       const key = txKey(t);
       return justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
+const totCliente = txs.filter(t => {
+      const key = txKey(t);
+      return clienteLink(t, pagamentos);
+    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totNotaCredito = txs.filter(t => {
       const key = txKey(t);
       return notasCredito?.some(n => n.tx_key === key) && !clienteLink(t, pagamentos);
@@ -1531,8 +1535,7 @@ const calcTotals = (txs) => {
     linha(`Imposto (${txs.filter(tx => { const k = txKey(tx); return impostos?.some(i => i.tx_key === k); }).length} transações)`, t.totImposto, 254, 243, 199);
     linha(`Interno (${txs.filter(tx => { const k = txKey(tx); return internos?.some(i => i.tx_key === k); }).length} transações)`, t.totInterno, 233, 213, 244);
     linha(`Com Fatura (${txs.filter(tx => { const k = txKey(tx); return faturaLinks?.some(f => f.tx_key === k); }).length} transações)`, t.totFatura, 254, 235, 222);
-    linha(`Com Recibo (${txs.filter(tx => { const k = txKey(tx); return reciboLinks?.some(r => r.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k); }).length} transações)`, t.totRecibo, 207, 250, 254);
-    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return clienteLink(tx, pagamentos) && !notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totCliente, 227, 252, 239);
+    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return clienteLink(tx, pagamentos); }).length} transações)`, t.totCliente, 227, 252, 239);
     linha(`Justificado (${txs.filter(tx => { const k = txKey(tx); return justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totJustificado, 238, 238, 238);
     linha(`Nota Crédito (${txs.filter(tx => { const k = txKey(tx); return notasCredito?.some(n => n.tx_key === k) && !clienteLink(tx, pagamentos); }).length} transações)`, t.totNotaCredito, 219, 234, 254);
     linha(`Sem Cliente (${txs.filter(tx => { const k = txKey(tx); return !impostos?.some(i => i.tx_key === k) && !internos?.some(i => i.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k) && !reciboLinks?.some(r => r.tx_key === k) && !clienteLink(tx, pagamentos) && !justificacoes?.some(j => j.tx_key === k) && !notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totSemCliente, 255, 255, 255);
