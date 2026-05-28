@@ -1508,12 +1508,7 @@ const calcTotals = (txs) => {
       const key = txKey(t);
       return justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totNotaCredito, totSemCliente, totJustificado };
-    const totCliente = txs.filter(t => {
-      const key = txKey(t);
-      return notasCredito?.some(n => n.tx_key === key);
-    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totSemCliente, totJustificado };
+return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totNotaCredito, totSemCliente, totJustificado };
   };
 
   const renderPdfSummary = (doc, y, txs) => {
