@@ -1312,24 +1312,6 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
         continue;
       }
 
-      if (tx.tipo === 'credito' && !existingPagKeys.has(key)) {
-        const client = matchClientByTokens(tx.descricao, clientList);
-        if (client) {
-          toInsertClientes.push({ reconciliation_run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
-          existingPagKeys.add(key);
-          continue;
-        }
-      }
-
-      if (tx.tipo === 'credito' && !existingPagKeys.has(key)) {
-        const client = matchClientByTokens(tx.descricao, clientList);
-        if (client) {
-          toInsertClientes.push({ reconciliation_run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
-          existingPagKeys.add(key);
-          continue;
-        }
-      }
-
       if (tx.tipo === 'credito' && !existingNcKeys.has(key)) {
         const valorTx = Math.abs(parseFloat(tx.valor) || 0);
         const descNorm = normName(tx.descricao || '');
