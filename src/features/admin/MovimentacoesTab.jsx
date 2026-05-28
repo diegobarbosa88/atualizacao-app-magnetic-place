@@ -1400,7 +1400,7 @@ if (toInsertNcs.length > 0) {
       }
     }
     if (toInsertClientes.length > 0) {
-      const { data } = await sb.from('faturacao_clientes_pagamentos').upsert(toInsertClientes, { onConflict: 'reconciliation_run_id,tx_key' }).select('tx_key, client_id, period');
+      const { data } = await sb.from('faturacao_clientes_pagamentos').upsert(toInsertClientes, { onConflict: 'reconciliation_run_id,transaction_data' }).select('tx_key, client_id, period');
       if (data) {
         setPags(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
         count += data.length;
