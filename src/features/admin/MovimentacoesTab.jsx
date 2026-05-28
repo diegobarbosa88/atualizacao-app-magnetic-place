@@ -1468,7 +1468,7 @@ if (toInsertNcs.length > 0) {
     return row;
   });
 
-  const calcTotals = (txs) => {
+const calcTotals = (txs) => {
     const totCredito = txs.filter(t => t.tipo === 'credito').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totDebito = txs.filter(t => t.tipo === 'debito').reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totImposto = txs.filter(t => {
@@ -1485,11 +1485,11 @@ if (toInsertNcs.length > 0) {
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totRecibo = txs.filter(t => {
       const key = txKey(t);
-      return reciboLinks?.some(r => r.tx_key === key);
+      return reciboLinks?.some(r => r.tx_key === key) && !faturaLinks?.some(f => f.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totCliente = txs.filter(t => {
       const key = txKey(t);
-      return clienteLink(t, pagamentos);
+      return clienteLink(t, pagamentos) && !notasCredito?.some(n => n.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totSemCliente = txs.filter(t => {
       const key = txKey(t);
@@ -1508,14 +1508,6 @@ if (toInsertNcs.length > 0) {
     const totNotaCredito = txs.filter(t => {
       const key = txKey(t);
       return notasCredito?.some(n => n.tx_key === key) && !clienteLink(t, pagamentos);
-    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    const totCliente = txs.filter(t => {
-      const key = txKey(t);
-      return clienteLink(t, pagamentos) && !notasCredito?.some(n => n.tx_key === key);
-    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    const totRecibo = txs.filter(t => {
-      const key = txKey(t);
-      return reciboLinks?.some(r => r.tx_key === key) && !faturaLinks?.some(f => f.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totSemCliente, totJustificado, totNotaCredito };
   };
