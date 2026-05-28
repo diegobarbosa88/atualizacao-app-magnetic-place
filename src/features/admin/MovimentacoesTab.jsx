@@ -245,6 +245,12 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
             {status === STATUS_KEYS.COM_CLIENTE && clientName && (
               <span className="text-[9px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{clientName}</span>
             )}
+            {status === STATUS_KEYS.COM_CLIENTE && (
+              <button onClick={() => onDesfazerCliente(tx)}
+                className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors">
+                <Undo2 size={9} /> Desfazer
+              </button>
+            )}
             {status === STATUS_KEYS.COM_RECIBO && reciboEntry && (
               <span className="text-[9px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-full">
                 {reciboEntry.worker_name} · {fmtMes(reciboEntry.mes)}
