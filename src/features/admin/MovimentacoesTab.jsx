@@ -159,21 +159,17 @@ function matchClientByTokens(descricao, clients) {
   return bestMatch;
 }
 
-function clienteLink(tx, pagamentos) {
-  return pagamentos?.find(p =>
-    p.transaction_data?.data === tx.data &&
-    p.transaction_data?.descricao === tx.descricao &&
-    String(p.transaction_data?.valor) === String(tx.valor)
-  );
+function clienteLink(tx, notasCredito) {
+  return notasCredito?.find(n => n.tx_key === txKey(tx));
 }
 
 function statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) {
   const key = txKey(tx);
-  if (clienteLink(tx, pagamentos)) return STATUS_KEYS.COM_CLIENTE;
+  if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.COM_CLIENTE;
+  if (pagamentos?.some(p => p.transaction_data?.data === tx.data && p.transaction_data?.descricao === tx.descricao && String(p.transaction_data?.valor) === String(tx.valor))) return STATUS_KEYS.COM_CLIENTE;
   if (impostos?.some(i => i.tx_key === key)) return STATUS_KEYS.IMPOSTO;
   if (reciboLinks?.some(r => r.tx_key === key)) return STATUS_KEYS.COM_RECIBO;
   if (faturaLinks?.some(f => f.tx_key === key)) return STATUS_KEYS.COM_FATURA;
-  if (notasCredito?.some(n => n.tx_key === key)) return STATUS_KEYS.NOTA_CREDITO;
   if (internos?.some(i => i.tx_key === key)) return STATUS_KEYS.INTERNO;
   if (impostos?.some(i => i.tx_key === key)) return STATUS_KEYS.IMPOSTO;
   if (justificacoes?.some(j => j.tx_key === key)) return STATUS_KEYS.JUSTIFICADO;
@@ -1450,13 +1446,11 @@ if (toInsertNcs.length > 0) {
   const buildRowsForTx = (tx) => {
     const status = getStatus(tx);
     const key = txKey(tx);
-    const link = clienteLink(tx, pagamentos);
+    const link = notasCredito.find(n => n.tx_key === key);
     const clientName = link ? (clients?.find(c => c.id === link.client_id)?.name || '') : '';
-    const ncEntry = notasCredito.find(n => n.tx_key === key);
-    const ncClientName = ncEntry ? (clients?.find(c => c.id === ncEntry.client_id)?.name || ncEntry.client_id || '') : '';
+    const ncEntry = link;
     const justEntry = justificacoes.find(j => j.tx_key === key);
     const detalhe = status === STATUS_KEYS.COM_CLIENTE ? clientName
-      : status === STATUS_KEYS.NOTA_CREDITO ? `${ncClientName} · ${fmtMes(ncEntry?.period)}`
       : status === STATUS_KEYS.JUSTIFICADO ? (justEntry?.justification || '')
       : '';
     const valor = tx.tipo === 'debito' ? `-${fmtEur(Math.abs(parseFloat(tx.valor) || 0))}` : fmtEur(tx.valor);
@@ -1487,29 +1481,24 @@ const calcTotals = (txs) => {
       const key = txKey(t);
       return reciboLinks?.some(r => r.tx_key === key) && !faturaLinks?.some(f => f.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    const totSemCliente = txs.filter(t => {
+const totSemCliente = txs.filter(t => {
       const key = txKey(t);
       return !impostos?.some(i => i.tx_key === key)
         && !internos?.some(i => i.tx_key === key)
         && !faturaLinks?.some(f => f.tx_key === key)
         && !reciboLinks?.some(r => r.tx_key === key)
-        && !clienteLink(t, pagamentos)
-        && !justificacoes?.some(j => j.tx_key === key)
-        && !notasCredito?.some(n => n.tx_key === key);
+        && !notasCredito?.some(n => n.tx_key === key)
+        && !justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
     const totJustificado = txs.filter(t => {
       const key = txKey(t);
       return justificacoes?.some(j => j.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-const totCliente = txs.filter(t => {
+    const totCliente = txs.filter(t => {
       const key = txKey(t);
-      return clienteLink(t, pagamentos);
+      return notasCredito?.some(n => n.tx_key === key);
     }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    const totNotaCredito = txs.filter(t => {
-      const key = txKey(t);
-      return notasCredito?.some(n => n.tx_key === key) && !clienteLink(t, pagamentos);
-    }).reduce((s, t) => s + parseFloat(t.valor || 0), 0);
-    return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totSemCliente, totJustificado, totNotaCredito };
+    return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, totCliente, totSemCliente, totJustificado };
   };
 
   const renderPdfSummary = (doc, y, txs) => {
@@ -1531,10 +1520,9 @@ const totCliente = txs.filter(t => {
     linha(`Imposto (${txs.filter(tx => { const k = txKey(tx); return impostos?.some(i => i.tx_key === k); }).length} transações)`, t.totImposto, 254, 243, 199);
     linha(`Interno (${txs.filter(tx => { const k = txKey(tx); return internos?.some(i => i.tx_key === k); }).length} transações)`, t.totInterno, 233, 213, 244);
     linha(`Com Fatura (${txs.filter(tx => { const k = txKey(tx); return faturaLinks?.some(f => f.tx_key === k); }).length} transações)`, t.totFatura, 254, 235, 222);
-    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return clienteLink(tx, pagamentos); }).length} transações)`, t.totCliente, 227, 252, 239);
+    linha(`Com Cliente (${txs.filter(tx => { const k = txKey(tx); return notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totCliente, 227, 252, 239);
     linha(`Justificado (${txs.filter(tx => { const k = txKey(tx); return justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totJustificado, 238, 238, 238);
-    linha(`Nota Crédito (${txs.filter(tx => { const k = txKey(tx); return notasCredito?.some(n => n.tx_key === k) && !clienteLink(tx, pagamentos); }).length} transações)`, t.totNotaCredito, 219, 234, 254);
-    linha(`Sem Cliente (${txs.filter(tx => { const k = txKey(tx); return !impostos?.some(i => i.tx_key === k) && !internos?.some(i => i.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k) && !reciboLinks?.some(r => r.tx_key === k) && !clienteLink(tx, pagamentos) && !justificacoes?.some(j => j.tx_key === k) && !notasCredito?.some(n => n.tx_key === k); }).length} transações)`, t.totSemCliente, 255, 255, 255);
+    linha(`Sem Cliente (${txs.filter(tx => { const k = txKey(tx); return !impostos?.some(i => i.tx_key === k) && !internos?.some(i => i.tx_key === k) && !faturaLinks?.some(f => f.tx_key === k) && !reciboLinks?.some(r => r.tx_key === k) && !notasCredito?.some(n => n.tx_key === k) && !justificacoes?.some(j => j.tx_key === k); }).length} transações)`, t.totSemCliente, 255, 255, 255);
     return y;
   };
 
@@ -1715,11 +1703,11 @@ const totCliente = txs.filter(t => {
       // ── Extrato CSV ────────────────────────────────────────────────────────
       const txStatus = (tx) => {
         const key = txKey(tx);
+        if (notasCredito.some(n => n.tx_key === key)) return 'Com Cliente';
         if (faturaLinks.some(f => f.tx_key === key)) return 'Com Fatura';
         if (reciboLinks.some(r => r.tx_key === key)) return 'Com Recibo';
         if (internos.some(i => i.tx_key === key)) return 'Interno';
         if (justificacoes.some(j => j.tx_key === key)) return 'Justificado';
-        if (notasCredito.some(n => n.tx_key === key)) return 'Nota Crédito';
         if (pagamentos.some(p => p.transaction_data && txKey(p.transaction_data) === key)) return 'Com Cliente';
         return 'Sem Cliente';
       };
