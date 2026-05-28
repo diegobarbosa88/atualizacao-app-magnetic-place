@@ -1271,7 +1271,8 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
           continue;
         }
         if (alias.resolucao === 'com_cliente' && alias.client_id && tx.tipo === 'credito') {
-          toInsertClientes.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
+          const val = parseFloat(tx.valor) || 0;
+          toInsertClientes.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data), valor_faturado: val, valor_pago: val });
           existingPagKeys.add(key);
           continue;
         }
