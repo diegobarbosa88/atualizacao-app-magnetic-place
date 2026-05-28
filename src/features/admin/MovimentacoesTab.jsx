@@ -751,7 +751,7 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
     );
     totalCount += reciboCount;
 
-    const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, impsArr, ncsArr, setInternos, setImpostos, setNotasCredito, setFaturaLinks, supabase, faturaAllKeys, fatsArr);
+    const matchCount = await runAutoMatch(unresolved, rid, alsArr, clients, intsArr, impsArr, ncsArr, setInternos, setImpostos, setNotasCredito, setFaturaLinks, setPagamentos, supabase, faturaAllKeys, fatsArr);
     totalCount += matchCount;
 
     const { data: freshNcs } = await supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period').eq('run_id', rid);
@@ -1239,14 +1239,16 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
     return count;
   }
 
-  async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, curImpostos, curNcs, setInts, setImpostos, setNcs, setFatLinks, sb, extraExcludeKeys = new Set(), fatsArr = []) {
+async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, curImpostos, curNcs, setInts, setImpostos, setNcs, setFatLinks, setPags, sb, extraExcludeKeys = new Set(), fatsArr = []) {
     const toInsertInternos = [];
     const toInsertImpostos = [];
     const toInsertNcs = [];
+    const toInsertClientes = [];
     const toInsertFaturas = [];
     const existingIntKeys = new Set(curInternos.map(i => i.tx_key));
     const existingImpKeys = new Set(curImpostos.map(i => i.tx_key));
     const existingNcKeys = new Set(curNcs.map(n => n.tx_key));
+    const existingPagKeys = new Set();
 
     for (const tx of unresolved) {
       const key = txKey(tx);
@@ -1256,7 +1258,6 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
       const bankNorm = normName(bankName);
       const descUpper = String(tx.descricao || '').toUpperCase();
 
-      // 1. Alias explícito (fuzzy match)
       const alias = alsArr.find(a => {
         const aNorm = normName(a.bank_name);
         return bankNorm.includes(aNorm) || aNorm.includes(bankNorm);
@@ -1267,6 +1268,77 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
           existingIntKeys.add(key);
           continue;
         }
+        if (alias.resolucao === 'imposto') {
+          toInsertImpostos.push({ run_id: rid, tx_key: key });
+          existingImpKeys.add(key);
+          continue;
+        }
+        if (alias.resolucao === 'com_cliente' && alias.client_id && tx.tipo === 'credito') {
+          toInsertClientes.push({ reconciliation_run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
+          existingPagKeys.add(key);
+          continue;
+        }
+        if (alias.resolucao === 'nota_credito' && alias.client_id && tx.tipo === 'credito') {
+          toInsertNcs.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
+          existingNcKeys.add(key);
+          continue;
+        }
+      }
+
+      if (INTERNO_KEYWORDS.some(k => descUpper.includes(k))) {
+        toInsertInternos.push({ run_id: rid, tx_key: key });
+        existingIntKeys.add(key);
+        continue;
+      }
+
+      if (IMPOSTO_KEYWORDS.some(k => descUpper.includes(k))) {
+        toInsertImpostos.push({ run_id: rid, tx_key: key });
+        existingImpKeys.add(key);
+        continue;
+      }
+
+      if (tx.tipo === 'debito' && BANCO_KEYWORDS.some(k => descUpper.includes(k))) {
+        const faturaBanco = fatsArr.find(f =>
+          f.dados?.fornecedor === 'Novo Banco, S.A.' &&
+          String(f.dados?.numero_fatura) === '4314117912'
+        );
+        if (faturaBanco) {
+          toInsertFaturas.push({ fatura_id: faturaBanco.id, run_id: rid, tx_key: key, auto_matched: true });
+          existingIntKeys.add(key);
+          continue;
+        }
+        toInsertInternos.push({ run_id: rid, tx_key: key });
+        existingIntKeys.add(key);
+        continue;
+      }
+
+      if (tx.tipo === 'credito' && !existingPagKeys.has(key)) {
+        const client = matchClientByTokens(tx.descricao, clientList);
+        if (client) {
+          toInsertClientes.push({ reconciliation_run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
+          existingPagKeys.add(key);
+          continue;
+        }
+      }
+
+      if (tx.tipo === 'credito' && !existingNcKeys.has(key)) {
+        const valorTx = Math.abs(parseFloat(tx.valor) || 0);
+        const descNorm = normName(tx.descricao || '');
+        for (const f of fatsArr) {
+          if (!f.dados?.numero_fatura?.startsWith('NC')) continue;
+          const valorFat = Math.abs(parseFloat(f.dados?.valor_total) || 0);
+          if (Math.abs(valorTx - valorFat) > 0.01) continue;
+          const tokens = normName(f.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
+          if (tokens.length === 0) continue;
+          const hits = tokens.filter(t => descNorm.includes(t)).length;
+          if (hits >= 1) {
+            toInsertNcs.push({ run_id: rid, tx_key: key, client_id: f.id, period: tx.data.substring(0, 7) });
+            existingNcKeys.add(key);
+            break;
+          }
+        }
+      }
+    }
         if (alias.resolucao === 'imposto') {
           toInsertImpostos.push({ run_id: rid, tx_key: key });
           existingImpKeys.add(key);
@@ -1310,12 +1382,13 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
         continue;
       }
 
-      // 3. Match por tokens de cliente (apenas créditos)
-      if (tx.tipo === 'credito') {
+      // 3. Match por tokens de cliente (apenas créditos) → faturacao_clientes_pagamentos
+      if (tx.tipo === 'credito' && !existingPagKeys.has(key)) {
         const client = matchClientByTokens(tx.descricao, clientList);
         if (client) {
-          toInsertNcs.push({ run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
-          existingNcKeys.add(key);
+          toInsertClientes.push({ reconciliation_run_id: rid, tx_key: key, client_id: client.id, period: previousMonth(tx.data) });
+          existingPagKeys.add(key);
+          continue;
         }
       }
 
@@ -1396,6 +1469,13 @@ if (toInsertNcs.length > 0) {
       if (data) {
         const tagged = data.map(d => ({ ...d, auto_matched: true }));
         setNcs(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
+        count += data.length;
+      }
+    }
+    if (toInsertClientes.length > 0) {
+      const { data } = await sb.from('faturacao_clientes_pagamentos').upsert(toInsertClientes, { onConflict: 'reconciliation_run_id,tx_key' }).select('tx_key, client_id, period');
+      if (data) {
+        setPags(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
         count += data.length;
       }
     }
