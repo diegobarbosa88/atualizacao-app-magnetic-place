@@ -1321,68 +1321,6 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
         }
       }
 
-      if (tx.tipo === 'credito' && !existingNcKeys.has(key)) {
-        const valorTx = Math.abs(parseFloat(tx.valor) || 0);
-        const descNorm = normName(tx.descricao || '');
-        for (const f of fatsArr) {
-          if (!f.dados?.numero_fatura?.startsWith('NC')) continue;
-          const valorFat = Math.abs(parseFloat(f.dados?.valor_total) || 0);
-          if (Math.abs(valorTx - valorFat) > 0.01) continue;
-          const tokens = normName(f.dados?.fornecedor || '').split(' ').filter(w => w.length >= 3);
-          if (tokens.length === 0) continue;
-          const hits = tokens.filter(t => descNorm.includes(t)).length;
-          if (hits >= 1) {
-            toInsertNcs.push({ run_id: rid, tx_key: key, client_id: f.id, period: tx.data.substring(0, 7) });
-            existingNcKeys.add(key);
-            break;
-          }
-        }
-      }
-    }
-        if (alias.resolucao === 'imposto') {
-          toInsertImpostos.push({ run_id: rid, tx_key: key });
-          existingImpKeys.add(key);
-          continue;
-        }
-        if (alias.resolucao === 'nota_credito' && alias.client_id && tx.tipo === 'credito') {
-          toInsertNcs.push({ run_id: rid, tx_key: key, client_id: alias.client_id, period: previousMonth(tx.data) });
-          existingNcKeys.add(key);
-          continue;
-        }
-      }
-
-      // 2. Palavras-chave de interno
-      if (INTERNO_KEYWORDS.some(k => descUpper.includes(k))) {
-        toInsertInternos.push({ run_id: rid, tx_key: key });
-        existingIntKeys.add(key);
-        continue;
-      }
-
-      // 2c. Palavras-chave de imposto
-      if (IMPOSTO_KEYWORDS.some(k => descUpper.includes(k))) {
-        toInsertImpostos.push({ run_id: rid, tx_key: key });
-        existingImpKeys.add(key);
-        continue;
-      }
-
-      // 2b. Taxa bancária: débitos com keywords de banco
-      //    Avaliado DEPOIS de alias para permitir alias sobrescrever
-      if (tx.tipo === 'debito' && BANCO_KEYWORDS.some(k => descUpper.includes(k))) {
-        const faturaBanco = fatsArr.find(f =>
-          f.dados?.fornecedor === 'Novo Banco, S.A.' &&
-          String(f.dados?.numero_fatura) === '4314117912'
-        );
-        if (faturaBanco) {
-          toInsertFaturas.push({ fatura_id: faturaBanco.id, run_id: rid, tx_key: key, auto_matched: true });
-          existingIntKeys.add(key);
-          continue;
-        }
-        toInsertInternos.push({ run_id: rid, tx_key: key });
-        existingIntKeys.add(key);
-        continue;
-      }
-
-      // 3. Match por tokens de cliente (apenas créditos) → faturacao_clientes_pagamentos
       if (tx.tipo === 'credito' && !existingPagKeys.has(key)) {
         const client = matchClientByTokens(tx.descricao, clientList);
         if (client) {
@@ -1392,7 +1330,6 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
         }
       }
 
-      // 4. Match créditos com Notas de Crédito de fornecedores (NC na tabela faturas)
       if (tx.tipo === 'credito' && !existingNcKeys.has(key)) {
         const valorTx = Math.abs(parseFloat(tx.valor) || 0);
         const descNorm = normName(tx.descricao || '');
@@ -1411,34 +1348,24 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
         }
       }
 
-      // 5. Ligação virtual: crédito → fatura cliente pendente → diferença coberta por fatura fornecedor (comissão bancária)
-      // Executa mesmo se Step 3 já fez match (existingNcKeys) — precisamos verificar se a fatura cliente fica PAGA
       if (tx.tipo === 'credito' && !toInsertFaturas.some(f => f.tx_key === key)) {
         const valorTx = Math.abs(parseFloat(tx.valor) || 0);
-
-        // a) Procurar fatura de cliente (tipo=cliente, status=PENDENTE) com valor > tx.valor
         const clienteFatura = fatsArr.find(f =>
           f.tipo === 'cliente' &&
           f.status === 'PENDENTE' &&
           Number(f.dados?.valor_total) > valorTx + 0.01
         );
-
         if (clienteFatura) {
           const valorFaturaCliente = Math.abs(parseFloat(clienteFatura.dados?.valor_total) || 0);
           const diferenca = valorFaturaCliente - valorTx;
-
-          // b) Se diferença está entre 0.01 e 500 (tolerância), procurar fatura pendente com valor ≈ diferença
           if (diferenca > 0.01 && diferenca <= 500.00) {
             const fornecedorFatura = fatsArr.find(f =>
               (!f.tipo || f.tipo === 'fornecedor') &&
               f.status === 'PENDENTE' &&
               Math.abs(parseFloat(f.dados?.valor_total || 0) - diferenca) <= 0.01
             );
-
             if (fornecedorFatura) {
-              // Criar links: entrada → fatura cliente
               toInsertFaturas.push({ fatura_id: clienteFatura.id, run_id: rid, tx_key: key, auto_matched: true });
-              // Atualizar status das faturas para PAGO
               sb.from('faturas').update({ status: 'PAGO' }).eq('id', clienteFatura.id).then(() => {});
               sb.from('faturas').update({ status: 'PAGO' }).eq('id', fornecedorFatura.id).then(() => {});
             }
