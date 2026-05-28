@@ -209,7 +209,7 @@ function findBestReceipt(matchedWorkerName, txData, receipts) {
 
 // ── Linha de transacção ───────────────────────────────────────────────────────
 
-function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
+function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onOpenNcManual, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura }) {
   const status = statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos);
   const tipo = tx.tipo; // 'credito' | 'debito'
   const key = txKey(tx);
@@ -357,6 +357,12 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
                   <Link size={9} /> CLIENTE
                 </button>
               )}
+              {tipo === 'credito' && (
+                <button onClick={() => onOpenNcManual(tx)}
+                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors">
+                  <FileText size={9} /> NC
+                </button>
+              )}
               <button onClick={() => onMarcarInterno(tx)}
                 className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
                 <ArrowLeftRight size={9} /> Interno
@@ -381,7 +387,7 @@ function TxRow({ tx, pagamentos, justificacoes, internos, notasCredito, reciboLi
 
 // ── Card por mês ──────────────────────────────────────────────────────────────
 
-function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura, onSelectRun }) {
+function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos, faturasData, clients, onJustificar, onRemoverJustificacao, onMarcarInterno, onDesfazerInterno, onMarcarImposto, onDesfazerImposto, onAcaoCliente, onDesfazerCliente, onOpenNcManual, onAcaoRecibo, onDesfazerRecibo, onAcaoFatura, onDesfazerFatura, onSelectRun }) {
   const [open, setOpen] = useState(false);
   const semCliente = txs.filter(tx => statusTx(tx, pagamentos, justificacoes, internos, notasCredito, reciboLinks, faturaLinks, impostos) === STATUS_KEYS.SEM_CLIENTE).length;
   const allOk = semCliente === 0;
@@ -439,6 +445,7 @@ function MovMesCard({ mes, txs, pagamentos, justificacoes, internos, notasCredit
               onDesfazerImposto={onDesfazerImposto}
               onAcaoCliente={onAcaoCliente}
               onDesfazerCliente={onDesfazerCliente}
+              onOpenNcManual={onOpenNcManual}
               onAcaoRecibo={onAcaoRecibo}
               onDesfazerRecibo={onDesfazerRecibo}
               onAcaoFatura={onAcaoFatura}
@@ -500,6 +507,10 @@ export default function MovimentacoesTab() {
   const [ncSaveAlias, setNcSaveAlias] = useState(false);
   const [ncAliasName, setNcAliasName] = useState('');
   const [ncSaving, setNcSaving] = useState(false);
+  const [ncManualModal, setNcManualModal] = useState(null);
+  const [ncManualFaturaId, setNcManualFaturaId] = useState('');
+  const [ncManualLoading, setNcManualLoading] = useState(false);
+  const [ncManualFaturas, setNcManualFaturas] = useState([]);
 
   // Modal: interno
   const [internoModal, setInternoModal] = useState(null);
@@ -693,7 +704,7 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
       supabase.from('entrada_justifications').select('tx_key, justification').eq('run_id', rid),
       supabase.from('entrada_internos').select('tx_key').eq('run_id', rid),
       supabase.from('entrada_impostos').select('tx_key').eq('run_id', rid),
-      supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas').eq('run_id', rid),
+      supabase.from('entrada_nota_credito_links').select('id, tx_key, client_id, period, notas').eq('run_id', rid),
       supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
       supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched').eq('run_id', rid),
       supabase.from('reconciliacao_salarial_aliases').select('pattern, worker_name'),
@@ -1963,6 +1974,46 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     }
   };
 
+  const handleOpenNcManual = async (tx) => {
+    setNcManualModal(tx);
+    setNcManualFaturaId('');
+    setNcManualLoading(true);
+    const { data } = await supabase
+      .from('faturas')
+      .select('id, dados')
+      .order('importado_em', { ascending: false });
+    const ncFaturas = (data || []).filter(f => f.dados?.numero_fatura?.startsWith('NC'));
+    setNcManualFaturas(ncFaturas);
+    setNcManualLoading(false);
+  };
+
+  const handleSaveNcManual = async () => {
+    if (!ncManualFaturaId || !ncManualModal) return;
+    const effectiveRunId = ncManualModal.run_id || runId;
+    if (!effectiveRunId) return;
+    setNcSaving(true);
+    const key = txKey(ncManualModal);
+    const existing = notasCredito.find(n => n.tx_key === key);
+    if (existing) {
+      await supabase.from('entrada_nota_credito_links').update({ client_id: ncManualFaturaId }).eq('id', existing.id);
+    } else {
+      await supabase.from('entrada_nota_credito_links').insert({
+        run_id: effectiveRunId,
+        tx_key: key,
+        client_id: ncManualFaturaId,
+        period: previousMonth(ncManualModal.data),
+      });
+    }
+    const { data: refreshed } = await supabase
+      .from('entrada_nota_credito_links')
+      .select('id, tx_key, client_id, period')
+      .eq('run_id', effectiveRunId);
+    setNotasCredito(refreshed || []);
+    setNcSaving(false);
+    setNcManualModal(null);
+    setNcManualFaturaId('');
+  };
+
   // ── Acções: Justificação ──────────────────────────────────────────────────
 
   const handleSaveJustificacao = async () => {
@@ -2679,6 +2730,7 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
               onDesfazerImposto={handleDesfazerImposto}
               onAcaoCliente={handleOpenAcaoCliente}
               onDesfazerCliente={handleDesfazerCliente}
+              onOpenNcManual={handleOpenNcManual}
               onAcaoRecibo={handleOpenAcaoRecibo}
               onDesfazerRecibo={handleDesfazerRecibo}
               onAcaoFatura={handleOpenAcaoFatura}
@@ -2842,6 +2894,49 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
                 className={`flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 ${ncModal.tipo === 'debito' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
                 {ncSaving ? <Loader2 size={13} className="animate-spin" /> : ncModal.tipo === 'debito' ? <Receipt size={13} /> : <Link size={13} />}
                 {ncModal.tipo === 'debito' ? 'Ligar Fatura' : 'Ligar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: NC Manual */}
+      {ncManualModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <h3 className="text-sm font-black text-slate-800">Ligar a Nota de Crédito</h3>
+              <button onClick={() => setNcManualModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+            </div>
+            <div className="rounded-2xl px-4 py-3 bg-indigo-50">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Transacção</p>
+              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(ncManualModal.valor) || 0))}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">{ncManualModal.data}</p>
+              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{ncManualModal.descricao}</p>
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Selecionar Fatura NC</label>
+              {ncManualLoading ? (
+                <p className="text-[11px] text-slate-400">A carregar...</p>
+              ) : (
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {ncManualFaturas.length === 0 && <p className="text-[11px] text-slate-400">Sem faturas NC disponíveis</p>}
+                  {ncManualFaturas.map(f => (
+                    <button key={f.id} onClick={() => setNcManualFaturaId(f.id)}
+                      className={`w-full text-left px-3 py-2 rounded-xl border transition-colors ${ncManualFaturaId === f.id ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}>
+                      <p className="text-[11px] font-bold text-slate-700">{f.dados?.numero_fatura}</p>
+                      <p className="text-[10px] text-slate-500">{f.dados?.fornecedor}</p>
+                      <p className="text-[10px] font-bold text-slate-600">{fmtEur(parseFloat(f.dados?.valor_total) || 0)}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setNcManualModal(null)} className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Cancelar</button>
+              <button disabled={!ncManualFaturaId || ncSaving} onClick={handleSaveNcManual}
+                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+                {ncSaving ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />} Ligar NC
               </button>
             </div>
           </div>
