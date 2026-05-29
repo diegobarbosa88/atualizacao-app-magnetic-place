@@ -645,7 +645,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         message: `O seu pedido de ${item.date} foi aprovado pelo cliente.`,
                         type: 'success',
                         target_type: 'worker',
-                        target_worker_id: String(item.worker_id),
+                        target_worker_ids: [String(item.worker_id)],
                         created_at: new Date().toISOString(),
                         is_active: true
                     });
@@ -710,7 +710,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         message: `O seu pedido de ${item.date} foi rejeitado pelo cliente.${rejectionMsg}`,
                         type: 'error',
                         target_type: 'worker',
-                        target_worker_id: String(item.worker_id),
+                        target_worker_ids: [String(item.worker_id)],
                         created_at: new Date().toISOString(),
                         is_active: true
                     });
