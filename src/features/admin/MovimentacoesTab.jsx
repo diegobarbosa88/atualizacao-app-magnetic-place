@@ -623,7 +623,7 @@ const [{ data: pags }, { data: just }, { data: ints }, { data: imps }, { data: n
           supabase.from('entrada_justifications').select('tx_key, justification, run_id').in('run_id', runIds),
           supabase.from('entrada_internos').select('tx_key, run_id').in('run_id', runIds),
           supabase.from('entrada_impostos').select('tx_key, run_id').in('run_id', runIds),
-          supabase.from('entrada_nota_credito_links').select('tx_key, client_id, period, notas, run_id').in('run_id', runIds),
+          supabase.from('entrada_nota_credito_links').select('id, tx_key, client_id, period, notas, run_id').in('run_id', runIds),
           supabase.from('movimentacoes_aliases').select('id, bank_name, resolucao, client_id'),
           supabase.from('movimentacao_recibo_links').select('tx_key, worker_id, worker_name, mes, auto_matched, run_id').in('run_id', runIds),
           supabase.from('receipt_validations').select('worker_id, worker_name, mes, liquido_extraido').not('estado', 'in', '("erro","invalido")'),
