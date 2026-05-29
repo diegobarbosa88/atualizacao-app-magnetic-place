@@ -10,16 +10,21 @@ export async function callGemini(prompt, systemInstruction = "", apiKey = "") {
   if (!apiKey) return "A IA precisa de uma chave API configurada.";
   
   const model = import.meta.env.VITE_GEMINI_MODEL || 'gemini-2.5-flash';
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const payload = {
     contents: [{ role: 'user', parts: [{ text: prompt }] }],
     ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
   };
 
   try {
+    // CR-02 fix: Use POST with Authorization header instead of URL query parameter
+    // API keys in URL query params are logged by browsers, proxies, and servers
     const response = await fetch(url, { 
       method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Authorization': `Bearer ${apiKey}`
+      }, 
       body: JSON.stringify(payload) 
     });
 
