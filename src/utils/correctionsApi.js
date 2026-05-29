@@ -305,6 +305,20 @@ export async function applyCreationRequest(supabase, { correction, items, client
   if (!supabase) throw new Error('Supabase indisponível');
 
   for (const item of items) {
+    // deletion_request: proposed is null - delete the log entirely
+    if (!item.proposed || (item.proposed && !item.proposed.startTime && !item.proposed.endTime)) {
+      if (item.before && item.worker_id && item.date) {
+        const { error } = await supabase
+          .from('logs')
+          .delete()
+          .eq('workerId', item.worker_id)
+          .eq('date', item.date);
+        if (error) throw error;
+      }
+      continue;
+    }
+
+    // creation_request or edit: update or insert log
     let existing = null;
     if (item.before) {
       const { data } = await supabase
