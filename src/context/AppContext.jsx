@@ -203,6 +203,7 @@ export const AppProvider = ({ children }) => {
               ...(data.gemini_api_key !== undefined && { geminiApiKey: data.gemini_api_key }),
               ...(data.tolerancia_valido != null && { toleranciaValido: Number(data.tolerancia_valido) }),
               ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
+              ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
           }
@@ -546,6 +547,7 @@ export const AppProvider = ({ children }) => {
       gemini_api_key: newSettings.geminiApiKey ?? '',
       tolerancia_valido: newSettings.toleranciaValido ?? 0.77,
       tolerancia_aviso:  newSettings.toleranciaAviso  ?? 10,
+      minute_interval: newSettings.minuteInterval ?? 30,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabaseInstance

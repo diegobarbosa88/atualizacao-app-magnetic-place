@@ -453,8 +453,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             const matchClientId = String(n.target_client_id) === String(effectiveClientId);
             const isActive = n.is_active === true;
             const notDismissed = !dismissedNotifs.includes(n.id);
+            const isWorkerSubmission = n.payload?.kind === 'submitted';
 
-            return matchTarget && matchClientId && isActive && notDismissed;
+            return matchTarget && matchClientId && isActive && notDismissed && !isWorkerSubmission;
         });
 
         return filtered;
