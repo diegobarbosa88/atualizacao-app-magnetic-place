@@ -77,14 +77,15 @@ export async function submitCorrection(supabase, payload) {
   }
 
   // Thin notification pointer (no payload duplication)
-  const typeLabel = (payload.type || 'quick') === 'precision' ? 'Precisão' : 'Rápido';
+  const typeLabel = (payload.type || 'quick') === 'precision' ? 'Precisão' : (payload.type === 'creation_request' ? 'Criação' : 'Rápido');
   const msgRaw = payload.type === 'precision'
     ? `${items.length} alteração(ões) submetida(s).${payload.justification ? '\n\n' + payload.justification : ''}`
     : (payload.justification || 'Nova correção submetida.');
   const msg = msgRaw.length > 220 ? msgRaw.slice(0, 220) + '…' : msgRaw;
+  const notifTitle = payload.type === 'creation_request' ? 'Pedido de Registo' : 'Pedido de Correção';
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
-    title: `Pedido de Correção · ${payload.month} · ${typeLabel}`,
+    title: `${notifTitle} · ${payload.month} · ${typeLabel}`,
     message: msg,
     type: 'warning',
     target_type: 'admin',
@@ -99,7 +100,7 @@ export async function submitCorrection(supabase, payload) {
     safeEmail({
       to: payload.adminEmail,
       name: 'Admin',
-      title: `Pedido de Correção · ${payload.month} · ${typeLabel}`,
+      title: `${notifTitle} · ${payload.month} · ${typeLabel}`,
       message: `Cliente ${payload.clientName || payload.clientId} submeteu uma correção.\n\n${msg}`,
       link: buildAdminLink(payload.portalBase),
     });
@@ -296,6 +297,76 @@ export async function markResolved(supabase, { correctionId, clientId, month, no
       title: `Correção Resolvida · ${month}`,
       message: resolvedMsg,
       link: buildClientLink(clientId, month, portalBase),
+    });
+  }
+}
+
+export async function applyCreationRequest(supabase, { correction, items, clientName, clientEmail, portalBase }) {
+  if (!supabase) throw new Error('Supabase indisponível');
+
+  for (const item of items) {
+    let existing = null;
+    if (item.before) {
+      const { data } = await supabase
+        .from('logs')
+        .select('*')
+        .eq('workerId', item.worker_id)
+        .eq('date', item.date)
+        .limit(1)
+        .maybeSingle();
+      existing = data;
+    }
+
+    if (item.before && existing) {
+      const { error } = await supabase.from('logs').update({
+        startTime: item.proposed?.startTime || null,
+        endTime: item.proposed?.endTime || null,
+        breakStart: item.proposed?.breakStart || null,
+        breakEnd: item.proposed?.breakEnd || null,
+      }).eq('id', existing.id);
+      if (error) throw error;
+    } else if (!item.before && item.proposed) {
+      const logId = newId('l');
+      const { error } = await supabase.from('logs').insert({
+        id: logId,
+        workerId: String(item.worker_id),
+        clientId: String(correction.client_id),
+        date: item.date,
+        startTime: item.proposed.startTime,
+        endTime: item.proposed.endTime,
+        breakStart: item.proposed.breakStart,
+        breakEnd: item.proposed.breakEnd,
+      });
+      if (error) throw error;
+    }
+  }
+
+  await supabase.from('corrections').update({
+    status: 'applied',
+    reviewed_at: new Date().toISOString(),
+  }).eq('id', correction.id);
+
+  const msg = `O seu pedido de registo foi aprovado.`;
+  await supabase.from('app_notifications').insert({
+    id: newId('notif'),
+    title: `Pedido de Registo Aprovado: ${clientName || ''}`.trim(),
+    message: msg,
+    type: 'success',
+    target_type: 'client',
+    target_client_id: String(correction.client_id),
+    payload: { correction_id: correction.id, kind: 'applied' },
+    is_active: true,
+    is_dismissible: true,
+    created_at: new Date().toISOString(),
+  });
+
+  if (clientEmail) {
+    safeEmail({
+      to: clientEmail,
+      name: clientName,
+      title: `Pedido de Registo Aprovado · ${correction.month}`,
+      message: msg,
+      link: buildClientLink(correction.client_id, correction.month, portalBase),
     });
   }
 }

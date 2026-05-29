@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff
 } from 'lucide-react';
 import { getCurrentPosition } from '../../utils/geoUtils';
 
@@ -170,6 +170,17 @@ const ClientManagerContent = () => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Mail size={10} /> E-mail de Contato</label>
                     <input type="email" value={clientForm.email || ''} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="email@exemplo.pt" />
                   </div>
+                  <div className="space-y-1 flex items-center justify-end">
+                    <label className="text-[10px] font-black text-amber-600 uppercase tracking-wider ml-1 flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={clientForm.triggers_limited_mode || false}
+                        onChange={e => setClientForm({ ...clientForm, triggers_limited_mode: e.target.checked })}
+                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                      />
+                      Ativa modo limitado para workers
+                    </label>
+                  </div>
                   <div className="space-y-1 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><MapPin size={10} /> Morada</label>
                     <input type="text" value={clientForm.morada || ''} onChange={e => setClientForm({ ...clientForm, morada: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Morada completa" />
@@ -326,6 +337,11 @@ const ClientManagerContent = () => {
               <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
                 <div className="flex items-center gap-1.5"><MapPin size={10} /> {c.morada || 'Sem morada'}</div>
                 <div className="flex items-center gap-1.5"><Euro size={10} /> {c.valorHora ? `${c.valorHora}€/h` : 'N/A'}</div>
+                {c.triggers_limited_mode && (
+                  <div className="flex items-center gap-1.5 text-amber-600 font-black mt-1">
+                    <ShieldOff size={10} /> Modo Limitado
+                  </div>
+                )}
               </div>
             </div>
           ))}

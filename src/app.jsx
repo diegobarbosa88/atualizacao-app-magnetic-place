@@ -64,6 +64,7 @@ export default function App() {
 
   // WR-01 fix: Use state for baseVersion instead of closure variable to properly detect updates
   const [currentVersion, setCurrentVersion] = useState(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
   useEffect(() => {
     const check = async () => {
       try {

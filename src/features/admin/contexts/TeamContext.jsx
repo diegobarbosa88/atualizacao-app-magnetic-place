@@ -55,7 +55,8 @@ const INITIAL_WORKER_FORM = {
   defaultClientId: '', defaultScheduleId: '', tel: '', email: '', valorHora: '',
   profissao: '', nis: '', nif: '', iban: '', status: 'ativo',
   address: '', dni: '', isAdmin: false,
-  dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0]
+  dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0],
+  limited_entry_mode: false
 };
 
 export const TeamProvider = ({ children }) => {
@@ -97,11 +98,12 @@ export const TeamProvider = ({ children }) => {
     }
     // 11-05: Salvar histórico de emprego
     await saveEmploymentHistory(saveToDb, id, workerForm.dataInicio, workerForm.dataFim);
-    const { dataAlteracao, ...restForm } = workerForm;
+    const { dataAlteracao, limited_entry_mode, ...restForm } = workerForm;
     const workerToSave = {
       ...restForm,
       id,
-      status: workerForm.dataFim ? 'inativo' : 'ativo'
+      status: workerForm.dataFim ? 'inativo' : 'ativo',
+      limited_entry_mode: workerForm.limited_entry_mode || false
     };
     await saveToDb('workers', id, workerToSave);
     setIsAddingInTab(false);

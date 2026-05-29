@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle, LayoutList } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle, LayoutList, FileText } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import {
   markUnderReview,
@@ -8,6 +8,7 @@ import {
   rejectCorrection,
   applyAdminDraftToQuick,
   markResolved,
+  applyCreationRequest,
 } from '../../../utils/correctionsApi';
 import { calculateDuration } from '../../../utils/formatUtils';
 import TimeTextInput from '../../../components/common/TimeTextInput';
@@ -18,6 +19,12 @@ const STATUS_LABEL = {
   under_review: { label: 'Em Revisão', cls: 'bg-indigo-100 text-indigo-700' },
   applied: { label: 'Aplicado', cls: 'bg-emerald-100 text-emerald-700' },
   rejected: { label: 'Rejeitado', cls: 'bg-rose-100 text-rose-700' },
+};
+
+const TYPE_LABEL = {
+  quick: { label: 'Rápido', cls: 'bg-blue-100 text-blue-700' },
+  precision: { label: 'Precisão', cls: 'bg-purple-100 text-purple-700' },
+  creation_request: { label: 'Criação', cls: 'bg-amber-100 text-amber-700' },
 };
 
 const ITEM_STATUS = {
@@ -363,6 +370,27 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
     }
   };
 
+  const onApproveCreationRequest = async () => {
+    if (!confirm('Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.')) return;
+    setBusy(true);
+    try {
+      await applyCreationRequest(supabase, { correction, items, logs, clientName, clientEmail, portalBase: window.location.origin });
+      setCorrections((prev) =>
+        prev.map((c) =>
+          c.id === correction.id
+            ? { ...c, status: 'applied', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id || null }
+            : c
+        )
+      );
+      alert('Pedido aprovado. Relatório atualizado.');
+      onBack();
+    } catch (e) {
+      alert('Erro ao aprovar: ' + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const onReject = async () => {
     const reason = prompt('Motivo da rejeição (será enviado ao cliente):');
     if (reason === null) return;
@@ -405,7 +433,7 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
         <div className="flex items-start justify-between flex-wrap gap-4">
           <div>
             <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{clientName}</h2>
-            <p className="text-sm text-slate-500 font-medium mt-1">Mês {correction.month} • Tipo {correction.type}</p>
+            <p className="text-sm text-slate-500 font-medium mt-1">Mês {correction.month} • Tipo {TYPE_LABEL[correction.type]?.label || correction.type}</p>
             <span className={`mt-2 inline-block text-[10px] font-black px-2 py-1 rounded-md ${STATUS_LABEL[correction.status]?.cls}`}>{STATUS_LABEL[correction.status]?.label}</span>
           </div>
           <div className="text-right flex gap-6">
@@ -501,12 +529,79 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
             <div className="bg-white rounded-2xl border border-slate-100 p-6 text-sm text-slate-500">
               {correction.type === 'quick'
                 ? 'Correção rápida sem alterações aplicadas (apenas mensagem do cliente).'
+                : correction.type === 'creation_request'
+                ? 'Pedido de criação de registo.'
                 : 'Sem items detalhados.'}
             </div>
           )}
           {items.map((it) => (
             <ItemRow key={it.id} item={it} supabase={supabase} disabled={true} setCorrectionItems={setCorrectionItems} />
           ))}
+        </div>
+      )}
+
+      {correction.type === 'creation_request' && !isClosed && items.length > 0 && (
+        <div className="bg-amber-50 rounded-3xl border-2 border-amber-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+              <FileText size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pedido de Registo</p>
+              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+            </div>
+          </div>
+          {items.map(it => (
+            <div key={it.id} className="bg-white rounded-xl p-4 mb-3 border border-amber-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">{it.worker_name} • {it.date}</p>
+              {it.before && (
+                <div className="mb-2">
+                  <p className="text-[9px] font-black text-rose-500 uppercase mb-1">Original:</p>
+                  <div className="flex gap-4 text-xs font-bold text-slate-600">
+                    <span>Entrada: {it.before.startTime || '--:--'}</span>
+                    <span>Saída: {it.before.endTime || '--:--'}</span>
+                    {it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}
+                  </div>
+                </div>
+              )}
+              {it.proposed && (
+                <div>
+                  <p className="text-[9px] font-black text-emerald-600 uppercase mb-1">Proposto:</p>
+                  <div className="flex gap-4 text-xs font-bold text-slate-800">
+                    <span>Entrada: {it.proposed.startTime || '--:--'}</span>
+                    <span>Saída: {it.proposed.endTime || '--:--'}</span>
+                    {it.proposed.breakStart && <span>Pausa: {it.proposed.breakStart} - {it.proposed.breakEnd}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {correction.justification && (
+            <p className="text-sm text-slate-600 italic border-l-4 border-amber-200 pl-3 mt-3">"{correction.justification}"</p>
+          )}
+          <div className="flex gap-2 mt-4 pt-4 border-t border-amber-200">
+            <button onClick={onApproveCreationRequest} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aprovar</button>
+            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+          </div>
+        </div>
+      )}
+
+      {correction.type === 'creation_request' && !isClosed && items.length === 0 && (
+        <div className="bg-amber-50 rounded-3xl border-2 border-amber-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+              <Plus size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Pedido de Criação</p>
+              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
+          <div className="flex gap-2 mt-4 pt-4 border-t border-amber-200">
+            <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Aprovar Criação</button>
+            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Rejeitar</button>
+          </div>
         </div>
       )}
     </div>
@@ -626,7 +721,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
                   <span className="font-black text-slate-800">{client?.name || c.client_id}</span>
                   <span className="text-xs font-mono text-slate-400">{c.month}</span>
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${STATUS_LABEL[c.status]?.cls}`}>{STATUS_LABEL[c.status]?.label}</span>
-                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-slate-100 text-slate-500">{c.type}</span>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${TYPE_LABEL[c.type]?.cls || 'bg-slate-100 text-slate-500'}`}>{TYPE_LABEL[c.type]?.label || c.type}</span>
                 </div>
                 {c.type === 'quick' ? (
                   <p className="text-xs text-slate-600 mt-1 italic line-clamp-2">"{(c.justification || '(sem texto)').slice(0, 120)}{(c.justification || '').length > 120 ? '…' : ''}"</p>

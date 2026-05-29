@@ -237,7 +237,7 @@ const TeamManagerContent = ({ onLogin }) => {
             <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Fechar' : 'Novo'}</button>
+          <button onClick={() => { setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0], limited_entry_mode: false }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Fechar' : 'Novo'}</button>
         </div>
       </div>
 
@@ -294,6 +294,15 @@ const TeamManagerContent = ({ onLogin }) => {
                       <span>Admin</span>
                       <div className={`w-8 h-4 rounded-full transition-all relative ${workerForm.isAdmin ? 'bg-indigo-500' : 'bg-slate-200'}`}>
                         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${workerForm.isAdmin ? 'left-4' : 'left-0.5'}`} />
+                      </div>
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black text-amber-600 uppercase tracking-wider ml-1 flex items-center gap-1"><ShieldOff size={10} /> Modo Limitado</label>
+                    <button type="button" onClick={() => setWorkerForm({ ...workerForm, limited_entry_mode: !workerForm.limited_entry_mode })} className={`w-full flex items-center justify-between p-2.5 sm:p-3 rounded-lg sm:rounded-xl border font-bold text-xs sm:text-sm transition-all ${workerForm.limited_entry_mode ? 'bg-amber-50 border-amber-300 text-amber-700' : 'bg-white border-slate-200 text-slate-500'}`}>
+                      <span>Pedido de Registo</span>
+                      <div className={`w-8 h-4 rounded-full transition-all relative ${workerForm.limited_entry_mode ? 'bg-amber-500' : 'bg-slate-200'}`}>
+                        <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-all ${workerForm.limited_entry_mode ? 'left-4' : 'left-0.5'}`} />
                       </div>
                     </button>
                   </div>
@@ -503,6 +512,7 @@ const TeamManagerContent = ({ onLogin }) => {
               <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor/H</th>
               <th onClick={() => setWorkersSort(prev => ({ key: 'status', direction: prev.key === 'status' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Acesso {workersSort.key === 'status' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="text-left px-4 py-3 text-[10px] font-black text-amber-400 uppercase tracking-widest">Pedido Registo</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
             </tr></thead>
             <tbody>
@@ -522,6 +532,15 @@ const TeamManagerContent = ({ onLogin }) => {
                       className={`p-1.5 rounded-lg transition-all ${w.status === 'inativo' ? 'text-rose-400 hover:bg-rose-50' : 'text-emerald-500 hover:bg-emerald-50'}`}
                     >
                       {w.status === 'inativo' ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => saveToDb('workers', w.id, { ...w, limited_entry_mode: !w.limited_entry_mode })}
+                      title={w.limited_entry_mode ? 'Modo limitado ativo — clique para desativar' : 'Modo livre — clique para ativar modo limitado'}
+                      className={`p-1.5 rounded-lg transition-all ${w.limited_entry_mode ? 'text-amber-500 hover:bg-amber-50' : 'text-slate-300 hover:bg-slate-100'}`}
+                    >
+                      {w.limited_entry_mode ? <ShieldOff size={16} /> : <CheckCircle size={16} />}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-right">

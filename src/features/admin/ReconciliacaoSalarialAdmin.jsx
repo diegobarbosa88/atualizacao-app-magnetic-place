@@ -70,10 +70,10 @@ function EmployeeCard({ employee }) {
 
       {open && (
         <div className="divide-y divide-slate-100 bg-slate-50">
-          {employee.months.map(m => {
+          {employee.months.map((m, index) => {
             const [ano, mm] = m.month.split('-');
             return (
-              <div key={m.month} className="px-4 py-3">
+              <div key={`${m.month}-${index}`} className="px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
