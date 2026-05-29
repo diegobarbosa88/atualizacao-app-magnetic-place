@@ -47,8 +47,12 @@ const ValidationPortal = ({
     currentUser,
     correctionNotifications,
     clientApprovals,
-    correcoesCorrections
+    correcoesCorrections,
+    workerChangeRequests
   } = useApp();
+
+  const pendingWorkerSubmissionsCount = (workerChangeRequests || []).filter(r => r.status === 'pending').length;
+  const workerSubmissionsPending = (correcoesCorrections || []).filter(c => (c.type === 'creation_request' || c.type === 'deletion_request') && (c.status === 'submitted' || c.status === 'under_review')).length;
 
   const sortedWorkers = useMemo(() => {
     return [...workers].map(w => {
@@ -93,7 +97,7 @@ const ValidationPortal = ({
         {[
           { id: 'envios', label: 'Envios', icon: Mail },
           { id: 'colaboradores', label: 'Equipa', icon: UserCheck },
-          { id: 'correcoes', label: 'Correções', icon: AlertTriangle, count: pendingCorrectionsCount }
+          { id: 'correcoes', label: 'Correções', icon: AlertTriangle, count: pendingCorrectionsCount + workerSubmissionsPending }
         ].map(tab => (
           <button
             key={tab.id}

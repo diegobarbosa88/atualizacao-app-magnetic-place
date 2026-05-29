@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Megaphone, Bell, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
 
 const SYSTEM_PATTERNS = [
   'Pedido de Correção',
@@ -13,6 +14,7 @@ const SYSTEM_PATTERNS = [
 ];
 
 const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete, supabase }) => {
+  const { currentUser } = useApp();
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState('info');
@@ -20,8 +22,16 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
   const [isDismissible, setIsDismissible] = useState(true);
   const [selectedWorkers, setSelectedWorkers] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [showViewDetails, setShowViewDetails] = useState(null); // ID do aviso para ver detalhes
-  const [viewDetailsTab, setViewDetailsTab] = useState('viewed'); // 'viewed' | 'dismissed'
+  const [showViewDetails, setShowViewDetails] = useState(null);
+  const [viewDetailsTab, setViewDetailsTab] = useState('viewed');
+  const [dismissedNotifs, setDismissedNotifs] = useState([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('dismissed_admin_notifs');
+      if (stored) setDismissedNotifs(JSON.parse(stored));
+    } catch {}
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -34,9 +44,12 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
       .then(({ error }) => { if (error) console.warn('Cleanup notifs:', error); });
   }, [supabase]);
 
-  const manualNotifications = appNotifications.filter(n =>
-    !SYSTEM_PATTERNS.some(p => n.title?.includes(p))
-  );
+  const manualNotifications = appNotifications.filter(n => {
+    if (SYSTEM_PATTERNS.some(p => n.title?.includes(p))) return false;
+    if ((n.read_by_admin_ids || []).includes(currentUser?.id)) return false;
+    if (dismissedNotifs.includes(n.id)) return false;
+    return true;
+  });
 
   const handleAdd = async () => {
     if (!title || !message) return alert('Preencha o título e a mensagem!');

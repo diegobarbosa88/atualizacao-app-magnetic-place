@@ -683,6 +683,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
 
   const workerOpenCount = workerCorrections.filter(c => c.status === 'submitted' || c.status === 'under_review').length;
   const clientOpenCount = clientCorrections.filter(c => c.status === 'submitted' || c.status === 'under_review').length;
+  const totalOpenCount = workerOpenCount + clientOpenCount;
 
   const handleWorkerApprove = async (correction) => {
     if (!supabase) return;
@@ -781,11 +782,19 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
                 const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
                 const beforeHours = item.before?.startTime ? calculateDuration(item.before.startTime, item.before.endTime, item.before.breakStart, item.before.breakEnd) : null;
                 const proposedHours = item.proposed?.startTime ? calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd) : null;
+                const delta = item.proposed?.startTime && beforeHours !== null ? Number((proposedHours - beforeHours).toFixed(2)) : null;
                 return (
                   <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                     <div className="flex justify-between items-center mb-2">
                       <span className="font-bold text-slate-600 text-xs">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                      <div className="flex items-center gap-2">
+                        {delta !== null && (
+                          <span className={`text-[10px] font-black px-2 py-1 rounded-lg ${delta > 0 ? 'bg-emerald-100 text-emerald-700' : delta < 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-500'}`}>
+                            Δ {delta > 0 ? '+' : ''}{delta}h
+                          </span>
+                        )}
+                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between gap-4 text-xs">
                       <div>
@@ -845,7 +854,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
 
       <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
         {[
-          ['open', AlertCircle, 'text-amber-500', counts.open],
+          ['open', AlertCircle, 'text-amber-500', totalOpenCount],
           ['applied', CheckCircle, 'text-emerald-500', counts.applied],
           ['rejected', XCircle, 'text-rose-500', counts.rejected],
           ['all', LayoutList, 'text-slate-500', null],
