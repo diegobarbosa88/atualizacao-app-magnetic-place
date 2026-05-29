@@ -1405,6 +1405,9 @@ async function runAutoMatch(unresolved, rid, alsArr, clientList, curInternos, cu
 if (toInsertNcs.length > 0) {
       const { data } = await sb.from('entrada_nota_credito_links').upsert(toInsertNcs, { onConflict: 'run_id,tx_key' }).select('tx_key, client_id, period, notas');
       if (data) {
+        for (const nc of data) {
+          await sb.from('faturas').update({ status: 'PAGO' }).eq('id', nc.client_id);
+        }
         const tagged = data.map(d => ({ ...d, auto_matched: true }));
         setNcs(prev => [...prev, ...data.filter(d => !prev.some(p => p.tx_key === d.tx_key))]);
         count += data.length;
@@ -2004,6 +2007,8 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
         period: previousMonth(ncManualModal.data),
       });
     }
+    await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', ncManualFaturaId);
+    setFaturasData(prev => prev.map(f => f.id === ncManualFaturaId ? { ...f, status: 'PAGO' } : f));
     const { data: refreshed } = await supabase
       .from('entrada_nota_credito_links')
       .select('id, tx_key, client_id, period')
@@ -2630,7 +2635,7 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
           {comClienteCount > 0 && <span className="text-emerald-600">{comClienteCount} Com Cliente/Fatura</span>}
           {comReciboCount > 0 && <><span>·</span><span className="text-teal-600">{comReciboCount} Com Recibo</span></>}
           {comFaturaCount > 0 && <><span>·</span><span className="text-orange-600">{comFaturaCount} Com Fatura Doc</span></>}
-          {notaCreditoCount > 0 && <><span>·</span><span className="text-blue-600">{notaCreditoCount} Cliente/Fatura</span></>}
+          {notaCreditoCount > 0 && <><span>·</span><span className="text-blue-600">{notaCreditoCount} Com Nota de Crédito</span></>}
           {internoCount > 0 && <><span>·</span><span className="text-purple-600">{internoCount} Interno</span></>}
           {impostoCount > 0 && <><span>·</span><span className="text-amber-600">{impostoCount} Imposto</span></>}
           {justCount > 0 && <><span>·</span><span className="text-violet-600">{justCount} Justificados</span></>}
