@@ -2000,12 +2000,15 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     if (existing) {
       await supabase.from('entrada_nota_credito_links').update({ client_id: ncManualFaturaId }).eq('id', existing.id);
     } else {
-      await supabase.from('entrada_nota_credito_links').insert({
+      const { error: ncError } = await supabase.from('entrada_nota_credito_links').upsert({
         run_id: effectiveRunId,
         tx_key: key,
         client_id: ncManualFaturaId,
         period: previousMonth(ncManualModal.data),
-      });
+      }, { onConflict: 'run_id,tx_key' });
+      if (ncError && ncError.code !== '23505') {
+        console.error('[handleSaveNcManual] nc insert failed:', ncError);
+      }
     }
     const { error: faturaError } = await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', ncManualFaturaId);
     if (faturaError) {
