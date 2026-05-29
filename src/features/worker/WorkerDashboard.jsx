@@ -25,6 +25,7 @@ import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import WorkerDocuments from '../../components/common/WorkerDocuments';
 import WorkerProfile from './WorkerProfile';
+import RequestEntryCard from '../../components/worker/RequestEntryCard';
 
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
@@ -72,6 +73,16 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [geoSuggestionDismissed, setGeoSuggestionDismissed] = useState(false);
   const [geoActionLoading, setGeoActionLoading] = useState(false);
   const [now, setNow] = useState(() => new Date());
+
+  const isLimitedWorker = useMemo(() => {
+    if (!currentUser) return false;
+    if (currentUser.limited_entry_mode) return true;
+    if (currentUser.assignedClients?.some(cid => {
+      const client = clients.find(c => c.id === cid);
+      return client?.triggers_limited_mode === true;
+    })) return true;
+    return false;
+  }, [currentUser, clients]);
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(t);
@@ -91,8 +102,10 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           if (!ok) { setGeoLoading(false); return; }
         }
         enriched = { ...formData, check_in_lat: lat, check_in_lng: lng, geo_verified: within };
-      } catch {
-        // GPS indisponível — registo sem verificação
+      } catch (err) {
+        // WR-07 fix: Log GPS errors and provide user feedback when geolocation fails
+        console.warn('[WorkerDashboard] GPS unavailable:', err.message);
+        setGeoError('Localização indisponível. Registo guardado sem verificação GPS.');
       } finally {
         setGeoLoading(false);
       }
@@ -663,7 +676,19 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 <span>{successMsg}</span>
               </div>
             )}
-            <EntryForm
+            {isLimitedWorker ? (
+              <RequestEntryCard
+                currentUser={currentUser}
+                logs={logs}
+                clients={clients}
+                monthLogs={monthLogs}
+                onSuccess={() => {
+                  setSuccessMsg('Pedido submetido com sucesso!');
+                  setTimeout(() => setSuccessMsg(''), 6000);
+                }}
+              />
+            ) : (
+              <EntryForm
                 data={mainFormData}
                 clients={clients}
                 assignedClients={currentUser?.assignedClients}
@@ -683,6 +708,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 systemSettings={systemSettings}
                 title="Novo Registo de Atividade"
               />
+            )}
           </div>
         )}
 
@@ -734,11 +760,11 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         )}
                       </div>
                       <div className="flex justify-end items-center gap-2">
-                        {!myApproval && !isDayBeforeStart && (
-                          <>
+                        {(!myApproval && !isDayBeforeStart && !isLimitedWorker) && (
+                          <div className="flex gap-2">
                             <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Zap size={16} /></button>
                             <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
-                          </>
+                          </div>
                         )}
                         {isDayBeforeStart && (
                           <span className="text-[10px] text-slate-300 font-bold">Indisponível</span>
@@ -768,7 +794,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                 </div>
                                 <div className="flex flex-row items-center justify-between sm:justify-end gap-4 sm:border-l sm:pl-4 border-slate-100 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
                                   <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd))}</span>
-                                  {!myApproval && (
+                                  {!myApproval && !isLimitedWorker && (
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
                                   )}
                                 </div>
@@ -779,20 +805,20 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-4 bg-white rounded-2xl border border-dashed border-slate-200">Não existem tarefas detalhadas para este dia.</p>
                         )}
 
-                        {isCurrentInline && (
-                          <div className="mt-4 pt-4 border-t border-slate-100">
-                            <EntryForm
-                              isInline
-                              data={inlineFormData}
-                              clients={clients}
-                              assignedClients={currentUser?.assignedClients}
-                              onChange={setInlineFormData}
-                              onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
-                              onCancel={() => setInlineEditingDate(null)}
-                              systemSettings={systemSettings}
-                            />
-                          </div>
-                        )}
+{!isLimitedWorker && isCurrentInline && (
+                           <div className="mt-4 pt-4 border-t border-slate-100">
+                             <EntryForm
+                               isInline
+                               data={inlineFormData}
+                               clients={clients}
+                               assignedClients={currentUser?.assignedClients}
+                               onChange={setInlineFormData}
+                               onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
+                               onCancel={() => setInlineEditingDate(null)}
+                               systemSettings={systemSettings}
+                             />
+                           </div>
+                         )}
                       </div>
                     </div>
                   )}
