@@ -284,24 +284,25 @@ export default function App() {
   const handleSaveEntry = (formData, isMain = false, inlineDate = null, onResetMainForm = null) => {
     if (!formData.clientId || !formData.startTime || !formData.endTime) return;
     const interval = systemSettings?.minuteInterval || 30;
-    const roundedStart = roundTimeToIntervalTimeUp(formData.startTime, interval);
-    const roundedEnd = roundTimeToIntervalTimeDown(formData.endTime, interval);
-    const roundedBreakStart = formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, interval) : formData.breakStart;
-    const roundedBreakEnd = formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, interval) : formData.breakEnd;
-    const hours = calculateDuration(roundedStart, roundedEnd, roundedBreakStart, roundedBreakEnd);
+    const hours = calculateDuration(
+      roundTimeToIntervalTimeUp(formData.startTime, interval),
+      roundTimeToIntervalTimeDown(formData.endTime, interval),
+      formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, interval) : null,
+      formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, interval) : null
+    );
     const dateToSave = isMain ? formData.date : inlineDate;
     const wId = (view === 'admin' && auditWorkerId) ? auditWorkerId : currentUser.id;
     const logId = formData.id || `l${Date.now()}`;
     const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m); };
-    const newStart = toMins(roundedStart);
-    const newEnd = toMins(roundedEnd);
+    const newStart = toMins(formData.startTime);
+    const newEnd = toMins(formData.endTime);
     const existingLogs = logs.filter(l => String(l.workerId) === String(wId) && l.date === dateToSave && String(l.clientId) === String(formData.clientId) && l.id !== logId);
     for (const log of existingLogs) {
       const existingStart = toMins(log.startTime);
       const existingEnd = toMins(log.endTime);
       if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
     }
-    saveToDb('logs', logId, { ...formData, startTime: roundedStart, endTime: roundedEnd, breakStart: roundedBreakStart, breakEnd: roundedBreakEnd, date: dateToSave, hours, workerId: wId, id: logId });
+    saveToDb('logs', logId, { ...formData, startTime: formData.startTime, endTime: formData.endTime, breakStart: formData.breakStart, breakEnd: formData.breakEnd, date: dateToSave, hours, workerId: wId, id: logId });
     if (isMain && onResetMainForm) { const resetClientId = view === 'worker' ? (currentUser.defaultClientId || '') : ''; onResetMainForm(resetClientId); }
   };
 

@@ -156,24 +156,18 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   }, [currentUser?.id, logs.length]);
 
   const nowTimeStrForEntry = () => {
-    const interval = systemSettings?.minuteInterval || 30;
-    const now = new Date();
-    const totalMinutes = now.getHours() * 60 + now.getMinutes();
-    const roundedMinutes = Math.ceil(totalMinutes / interval) * interval;
-    const hours = Math.floor(roundedMinutes / 60) % 24;
-    const minutes = roundedMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-  };
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
 
   const nowTimeStrForExit = () => {
-    const interval = systemSettings?.minuteInterval || 30;
-    const now = new Date();
-    const totalMinutes = now.getHours() * 60 + now.getMinutes();
-    const roundedMinutes = Math.floor(totalMinutes / interval) * interval;
-    const hours = Math.floor(roundedMinutes / 60) % 24;
-    const minutes = roundedMinutes % 60;
-    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-  };
+  const now = new Date();
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
 
   const nowTimeStr = nowTimeStrForEntry; // backwards compat if needed
 
@@ -215,9 +209,14 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       } else {
         const existingLog = logs.find(l => l.id === geoSuggestion.logId);
         if (existingLog) {
+          const interval = systemSettings?.minuteInterval || 30;
+          const roundedStart = roundTimeToIntervalTimeUp(existingLog.startTime, interval);
+          const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
+          const hours = calculateDuration(roundedStart, roundedEnd, existingLog.breakStart, existingLog.breakEnd);
           await saveToDb('logs', existingLog.id, {
             ...existingLog,
             endTime: exitTime,
+            hours,
             check_out_lat: lat,
             check_out_lng: lng,
           });
@@ -249,14 +248,20 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     setGeoActionLoading(true);
     try {
       const pos = await getGpsSilent();
+      const exitTime = nowTimeStrForExit();
+      const interval = systemSettings?.minuteInterval || 30;
+      const roundedStart = roundTimeToIntervalTimeUp(todayOpenLog.startTime, interval);
+      const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
+      const hours = calculateDuration(roundedStart, roundedEnd, todayOpenLog.breakStart, todayOpenLog.breakEnd);
       await saveToDb('logs', todayOpenLog.id, {
         ...todayOpenLog,
-        endTime: nowTimeStrForExit(),
+        endTime: exitTime,
+        hours,
         check_out_lat: pos?.lat ?? null,
         check_out_lng: pos?.lng ?? null,
       });
       setGeoSuggestion(null);
-      setGeoSuggestionDismissed(false); // permite nova entrada mais tarde
+      setGeoSuggestionDismissed(false);
     } finally {
       setGeoActionLoading(false);
     }
