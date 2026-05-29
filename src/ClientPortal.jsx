@@ -438,6 +438,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }, []);
 
     const [dismissedNotifs, setDismissedNotifs] = useState([]);
+    const [expandedCards, setExpandedCards] = useState({});
     useEffect(() => {
         if (!effectiveClientId) return;
         try {
@@ -453,12 +454,35 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             const matchClientId = String(n.target_client_id) === String(effectiveClientId);
             const isActive = n.is_active === true;
             const notDismissed = !dismissedNotifs.includes(n.id);
+
+            return matchTarget && matchClientId && isActive && notDismissed;
+        });
+
+        const workerSubmissions = appNotifications.filter(n => {
+            const matchTarget = n.target_type === 'client';
+            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
+            const isActive = n.is_active === true;
+            const notDismissed = !dismissedNotifs.includes(n.id);
             const isWorkerSubmission = n.payload?.kind === 'submitted';
 
-            return matchTarget && matchClientId && isActive && notDismissed && !isWorkerSubmission;
+            return matchTarget && matchClientId && isActive && notDismissed && isWorkerSubmission;
         });
 
         return filtered;
+    }, [appNotifications, effectiveClientId, dismissedNotifs]);
+
+    const workerSubmissions = useMemo(() => {
+        if (!appNotifications || !effectiveClientId) return [];
+
+        return appNotifications.filter(n => {
+            const matchTarget = n.target_type === 'client';
+            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
+            const isActive = n.is_active === true;
+            const notDismissed = !dismissedNotifs.includes(n.id);
+            const isWorkerSubmission = n.payload?.kind === 'submitted';
+
+            return matchTarget && matchClientId && isActive && notDismissed && isWorkerSubmission;
+        });
     }, [appNotifications, effectiveClientId, dismissedNotifs]);
 
     const handleDismissNotif = (id) => {
@@ -2530,86 +2554,70 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                     )}
 
-                    {/* Pedidos de criação/correção de registos - com botões Aprovar/Rejeitar */}
-                    {myNotifications.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).length > 0 && (
-                        <div className="mb-8 space-y-4">
-                            {myNotifications.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).map(notif => {
+                    {workerSubmissions.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).length > 0 && (
+                        <div className="mb-8 space-y-3">
+                            {workerSubmissions.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).map(notif => {
                                 const correctionId = notif.payload?.correction_id;
                                 const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
                                 return (
-                                <div key={notif.id} className="relative overflow-hidden bg-white border border-emerald-100 rounded-[2rem] shadow-xl shadow-emerald-100/30 animate-fade-in">
-                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600"></div>
-                                    <div className="p-6 md:p-8">
-                                        <div className="flex items-start gap-4 md:gap-6">
-                                            <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-600 shrink-0 hidden sm:block">
-                                                <Clock size={24} />
+                                <div key={notif.id} className="bg-white border border-emerald-200 rounded-2xl shadow-sm overflow-hidden">
+                                    <button
+                                        onClick={() => setExpandedCards(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                        className="w-full flex items-center justify-between p-4 hover:bg-emerald-50/50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600">
+                                                <Clock size={16} />
                                             </div>
-                                            <div className="flex-1">
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{notif.title}</h3>
-                                                    <button onClick={() => handleDismissNotif(notif.id)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
-                                                        <X size={18} />
-                                                    </button>
-                                                </div>
-                                                <div className="text-slate-600 text-sm leading-relaxed mb-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                                                    <pre className="whitespace-pre-wrap font-sans">{notif.message}</pre>
-                                                </div>
-                                                {items.length > 0 && (
-                                                    <div className="mb-6 space-y-3">
-                                                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Detalhes do Pedido</h4>
-                                                        {items.map(item => {
-                                                            const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
-                                                            return (
-                                                                <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                                                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-50">
-                                                                        <span className="font-black text-slate-700 text-sm">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
-                                                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">{item.date}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center justify-between gap-4">
-                                                                        <div className="flex flex-col">
-                                                                            <span className="text-[8px] text-slate-400 font-bold uppercase">Horário Original</span>
-                                                                            <span className="text-xs text-slate-500 font-medium">
-                                                                                {item.before ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}
-                                                                            </span>
-                                                                            <span className="text-[8px] text-slate-400 font-bold uppercase mt-1">Pausa Original</span>
-                                                                            <span className="text-xs text-slate-400">
-                                                                                {item.before?.breakStart && item.before?.breakEnd ? `${item.before.breakStart}-${item.before.breakEnd}` : 'Sem pausa'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="text-slate-300 text-xl font-bold">→</div>
-                                                                        <div className="flex flex-col items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
-                                                                            <span className="text-[8px] text-emerald-600 font-bold uppercase">Proposto</span>
-                                                                            <span className="text-sm text-emerald-700 font-black">
-                                                                                {item.proposed ? `${item.proposed.startTime}-${item.proposed.endTime}` : 'N/A'}
-                                                                            </span>
-                                                                            <span className="text-[8px] text-emerald-500 font-bold uppercase mt-1">Pausa</span>
-                                                                            <span className="text-xs text-emerald-600">
-                                                                                {item.proposed?.breakStart && item.proposed?.breakEnd ? `${item.proposed.breakStart}-${item.proposed.breakEnd}` : 'Sem pausa'}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                                <div className="flex items-center gap-4">
-                                                    <button
-                                                        onClick={() => handleApproveCreationRequest(notif)}
-                                                        className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
-                                                    >
-                                                        <CheckCircle size={14} /> Aprovar
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRejectCreationRequest(notif)}
-                                                        className="bg-rose-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all active:scale-95"
-                                                    >
-                                                        Rejeitar
-                                                    </button>
-                                                </div>
+                                            <div className="text-left">
+                                                <span className="font-bold text-slate-700 text-sm">{notif.title}</span>
+                                                <span className="text-xs text-slate-400 ml-2">({items.length} pedido{items.length > 1 ? 's' : ''})</span>
                                             </div>
                                         </div>
-                                    </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleApproveCreationRequest(notif); }}
+                                                className="bg-emerald-600 text-white px-4 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-colors"
+                                            >
+                                                Aprovar
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleRejectCreationRequest(notif); }}
+                                                className="bg-rose-500 text-white px-3 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-600 transition-colors"
+                                            >
+                                                Rejeitar
+                                            </button>
+                                            <ChevronDown size={16} className={`text-slate-400 transition-transform ${expandedCards[notif.id] ? 'rotate-180' : ''}`} />
+                                        </div>
+                                    </button>
+                                    {expandedCards[notif.id] && (
+                                        <div className="px-4 pb-4 border-t border-emerald-100">
+                                            <div className="pt-4 space-y-2">
+                                                {items.map(item => {
+                                                    const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
+                                                    return (
+                                                        <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                            <div className="flex justify-between items-center mb-2">
+                                                                <span className="font-bold text-slate-600 text-xs">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
+                                                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-4 text-xs">
+                                                                <div>
+                                                                    <span className="text-slate-400 font-bold uppercase text-[9px]">Original</span>
+                                                                    <p className="text-slate-500">{item.before ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}</p>
+                                                                </div>
+                                                                <div className="text-emerald-600 font-bold">→</div>
+                                                                <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                                                                    <span className="text-[9px] text-emerald-600 font-bold uppercase">Proposto</span>
+                                                                    <p className="text-emerald-700 font-bold">{item.proposed ? `${item.proposed.startTime}-${item.proposed.endTime}` : 'N/A'}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 );
                             })}
