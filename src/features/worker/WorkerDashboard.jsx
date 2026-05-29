@@ -106,9 +106,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         }
         enriched = { ...formData, check_in_lat: lat, check_in_lng: lng, geo_verified: within };
       } catch (err) {
-        // WR-07 fix: Log GPS errors and provide user feedback when geolocation fails
         console.warn('[WorkerDashboard] GPS unavailable:', err.message);
-        setGeoError('Localização indisponível. Registo guardado sem verificação GPS.');
       } finally {
         setGeoLoading(false);
       }
