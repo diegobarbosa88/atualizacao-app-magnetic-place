@@ -604,6 +604,61 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
           </div>
         </div>
       )}
+
+      {correction.type === 'deletion_request' && !isClosed && items.length > 0 && (
+        <div className="bg-rose-50 rounded-3xl border-2 border-rose-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Pedido de Eliminação</p>
+              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+            </div>
+          </div>
+          {items.map(it => (
+            <div key={it.id} className="bg-white rounded-xl p-4 mb-3 border border-rose-100">
+              <p className="text-[10px] font-black text-slate-400 uppercase mb-2">{it.worker_name} • {it.date}</p>
+              {it.before && (
+                <div className="mb-2">
+                  <p className="text-[9px] font-black text-rose-500 uppercase mb-1">A eliminar:</p>
+                  <div className="flex gap-4 text-xs font-bold text-slate-800">
+                    <span>Entrada: {it.before.startTime || '--:--'}</span>
+                    <span>Saída: {it.before.endTime || '--:--'}</span>
+                    {it.before.breakStart && <span>Pausa: {it.before.breakStart} - {it.before.breakEnd}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {correction.justification && (
+            <p className="text-sm text-slate-600 italic border-l-4 border-rose-200 pl-3 mt-3">"{correction.justification}"</p>
+          )}
+          <div className="flex gap-2 mt-4 pt-4 border-t border-rose-200">
+            <button onClick={onApproveCreationRequest} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Confirmar Eliminação</button>
+            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-colors disabled:opacity-50">Cancelar</button>
+          </div>
+        </div>
+      )}
+
+      {correction.type === 'deletion_request' && !isClosed && items.length === 0 && (
+        <div className="bg-rose-50 rounded-3xl border-2 border-rose-200 p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-rose-100 text-rose-600 rounded-xl flex items-center justify-center">
+              <Trash2 size={20} />
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest">Pedido de Eliminação</p>
+              <p className="text-xs text-slate-500">{clientName} • {correction.submitted_at?.slice(0, 16).replace('T', ' ')}</p>
+            </div>
+          </div>
+          <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap">{correction.justification || '(sem descrição)'}</p>
+          <div className="flex gap-2 mt-4 pt-4 border-t border-rose-200">
+            <button onClick={onMarkResolved} disabled={busy} className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50">Confirmar Eliminação</button>
+            <button onClick={onReject} disabled={busy} className="px-4 py-2.5 bg-slate-200 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-300 transition-colors disabled:opacity-50">Cancelar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
