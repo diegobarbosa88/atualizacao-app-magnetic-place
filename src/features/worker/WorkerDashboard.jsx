@@ -113,7 +113,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         setGeoLoading(false);
       }
     }
-    handleSaveEntry(enriched, isMain, ds);
+    handleSaveEntry(enriched, isMain, ds, (resetClientId) => {
+      setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: resetClientId || currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
+    });
   };
 
   // Sugestão de entrada/saída ao abrir o portal

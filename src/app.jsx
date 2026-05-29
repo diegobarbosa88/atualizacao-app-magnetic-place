@@ -281,7 +281,7 @@ export default function App() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleSaveEntry = (formData, isMain = false, inlineDate = null) => {
+  const handleSaveEntry = (formData, isMain = false, inlineDate = null, onResetMainForm = null) => {
     if (!formData.clientId || !formData.startTime || !formData.endTime) return;
     const interval = systemSettings?.minuteInterval || 30;
     const roundedStart = roundTimeToIntervalTimeUp(formData.startTime, interval);
@@ -302,7 +302,7 @@ export default function App() {
       if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
     }
     saveToDb('logs', logId, { ...formData, startTime: roundedStart, endTime: roundedEnd, breakStart: roundedBreakStart, breakEnd: roundedBreakEnd, date: dateToSave, hours, workerId: wId, id: logId });
-    if (isMain) { const resetClientId = view === 'worker' ? (currentUser.defaultClientId || '') : ''; setMainFormData(prev => ({ ...prev, description: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', clientId: resetClientId })); }
+    if (isMain && onResetMainForm) { const resetClientId = view === 'worker' ? (currentUser.defaultClientId || '') : ''; onResetMainForm(resetClientId); }
   };
 
   const handleApproveMonth = (workerId) => { const monthStr = toISODateLocal(currentMonth).substring(0, 7); const id = "appr_" + workerId + "_" + monthStr; saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() }); };
