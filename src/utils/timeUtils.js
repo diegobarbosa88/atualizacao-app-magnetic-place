@@ -33,3 +33,34 @@ export const formatDiff = (decimal) => {
   const sign = decimal > 0 ? '+' : '';
   return `${sign}${decimal.toFixed(2)}h`;
 };
+
+/**
+ * Rounds current time to the nearest interval (in minutes).
+ * @param {number} intervalMinutes - Interval to round to (e.g., 5, 15, 30, 60)
+ * @returns {string} - Time string in "HH:MM" format
+ */
+export const roundTimeToInterval = (intervalMinutes = 30) => {
+  const now = new Date();
+  const totalMinutes = now.getHours() * 60 + now.getMinutes();
+  const roundedMinutes = Math.round(totalMinutes / intervalMinutes) * intervalMinutes;
+  const hours = Math.floor(roundedMinutes / 60) % 24;
+  const minutes = roundedMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+/**
+ * Rounds a given time string "HH:MM" to the nearest interval.
+ * @param {string} timeStr - Time string in "HH:MM" format
+ * @param {number} intervalMinutes - Interval to round to (e.g., 5, 15, 30, 60)
+ * @returns {string} - Rounded time string in "HH:MM" format
+ */
+export const roundTimeToIntervalTime = (timeStr, intervalMinutes = 30) => {
+  if (!timeStr || timeStr === '--:--' || !timeStr.includes(':')) return timeStr;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const totalMinutes = h * 60 + m;
+  const roundedMinutes = Math.round(totalMinutes / intervalMinutes) * intervalMinutes;
+  const hours = Math.floor(roundedMinutes / 60) % 24;
+  const minutes = roundedMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};

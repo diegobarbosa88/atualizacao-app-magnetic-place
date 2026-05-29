@@ -27,6 +27,7 @@ import {
 import {
   formatHours, formatCurrency, calculateDuration
 } from './utils/formatUtils';
+import { roundTimeToInterval, roundTimeToIntervalTime } from './utils/timeUtils';
 import { sendNotificationEmail } from './utils/emailUtils';
 
 const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/';
@@ -282,20 +283,25 @@ export default function App() {
 
   const handleSaveEntry = (formData, isMain = false, inlineDate = null) => {
     if (!formData.clientId || !formData.startTime || !formData.endTime) return;
-    const hours = calculateDuration(formData.startTime, formData.endTime, formData.breakStart, formData.breakEnd);
+    const interval = systemSettings?.minuteInterval || 30;
+    const roundedStart = roundTimeToIntervalTime(formData.startTime, interval);
+    const roundedEnd = roundTimeToIntervalTime(formData.endTime, interval);
+    const roundedBreakStart = formData.breakStart ? roundTimeToIntervalTime(formData.breakStart, interval) : formData.breakStart;
+    const roundedBreakEnd = formData.breakEnd ? roundTimeToIntervalTime(formData.breakEnd, interval) : formData.breakEnd;
+    const hours = calculateDuration(roundedStart, roundedEnd, roundedBreakStart, roundedBreakEnd);
     const dateToSave = isMain ? formData.date : inlineDate;
     const wId = (view === 'admin' && auditWorkerId) ? auditWorkerId : currentUser.id;
     const logId = formData.id || `l${Date.now()}`;
     const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m); };
-    const newStart = toMins(formData.startTime);
-    const newEnd = toMins(formData.endTime);
+    const newStart = toMins(roundedStart);
+    const newEnd = toMins(roundedEnd);
     const existingLogs = logs.filter(l => String(l.workerId) === String(wId) && l.date === dateToSave && String(l.clientId) === String(formData.clientId) && l.id !== logId);
     for (const log of existingLogs) {
       const existingStart = toMins(log.startTime);
       const existingEnd = toMins(log.endTime);
       if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
     }
-    saveToDb('logs', logId, { ...formData, date: dateToSave, hours, workerId: wId, id: logId });
+    saveToDb('logs', logId, { ...formData, startTime: roundedStart, endTime: roundedEnd, breakStart: roundedBreakStart, breakEnd: roundedBreakEnd, date: dateToSave, hours, workerId: wId, id: logId });
     if (isMain) { const resetClientId = view === 'worker' ? (currentUser.defaultClientId || '') : ''; setMainFormData(prev => ({ ...prev, description: '', startTime: '', breakStart: '', breakEnd: '', endTime: '', clientId: resetClientId })); }
   };
 

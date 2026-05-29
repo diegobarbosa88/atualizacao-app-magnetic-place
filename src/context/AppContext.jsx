@@ -22,6 +22,7 @@ export const AppProvider = ({ children }) => {
       geminiApiKey: '',
       toleranciaValido: 0.77,
       toleranciaAviso: 10,
+      minuteInterval: 30,  // Arredondamento de registos de tempo (5, 10, 15, 30, 60)
     };
     const saved = localStorage.getItem('magnetic_settings');
     if (saved) {

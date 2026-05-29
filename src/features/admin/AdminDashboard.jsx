@@ -1388,6 +1388,23 @@ function AdminDashboard(props) {
                         <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-all ${systemSettings.darkMode ? 'translate-x-6' : 'translate-x-0'}`} />
                       </button>
                     </div>
+                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                      <div>
+                        <p className="text-sm font-bold text-slate-700">Intervalo de Arredondamento</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Arredonda horários a cada {systemSettings.minuteInterval || 30} min</p>
+                      </div>
+                      <select
+                        value={systemSettings.minuteInterval || 30}
+                        onChange={(e) => updateSetting('minuteInterval', Number(e.target.value))}
+                        className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold shadow-sm"
+                      >
+                        <option value={5}>5 min</option>
+                        <option value={10}>10 min</option>
+                        <option value={15}>15 min</option>
+                        <option value={30}>30 min</option>
+                        <option value={60}>60 min</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 

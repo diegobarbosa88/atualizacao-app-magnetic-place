@@ -3,10 +3,10 @@ import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronD
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 
-const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess }) => {
+const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false }) => {
   const { supabase, saveToDb } = useApp();
-  const [collapsed, setCollapsed] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(toISODateLocal(new Date()));
+  const [collapsed, setCollapsed] = useState(!isInline);
+  const [selectedDate, setSelectedDate] = useState(initialDate || toISODateLocal(new Date()));
   const [formData, setFormData] = useState({
     clientId: currentUser?.defaultClientId || '',
     startTime: '',
@@ -17,6 +17,23 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess }) 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+
+  useMemo(() => {
+    if (initialDate) {
+      setSelectedDate(initialDate);
+      const log = monthLogs?.find(l => l.date === initialDate && l.workerId === currentUser?.id);
+      if (log) {
+        setFormData({
+          clientId: log.clientId || '',
+          startTime: log.startTime || '',
+          breakStart: log.breakStart || '',
+          breakEnd: log.breakEnd || '',
+          endTime: log.endTime || '',
+          description: log.description || ''
+        });
+      }
+    }
+  }, [initialDate]);
 
   const dayLog = useMemo(() => {
     if (!selectedDate || !monthLogs) return null;
@@ -158,6 +175,20 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess }) 
   };
 
   if (submitted) {
+    if (isInline) {
+      return (
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-4 text-center">
+          <CheckCircle size={24} className="text-emerald-600 mx-auto mb-2" />
+          <p className="text-sm font-bold text-emerald-700">Pedido submetido!</p>
+          <button
+            onClick={() => setSubmitted(false)}
+            className="mt-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all"
+          >
+            Novo Pedido
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="bg-white rounded-3xl sm:rounded-[2.5rem] p-5 sm:p-8 shadow-2xl border border-indigo-50/50 animate-in fade-in zoom-in-95 duration-300 w-full text-slate-900 my-2">
         <div className="text-center py-4">
@@ -178,24 +209,26 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess }) 
   }
 
   return (
-    <div className="bg-white rounded-3xl sm:rounded-[2.5rem] shadow-2xl border border-amber-100/50 overflow-hidden animate-in fade-in zoom-in-95 duration-300 w-full text-slate-900 my-2">
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
-      >
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-100 rounded-xl text-amber-600">
-            <FileText size={20} />
+    <div className={`bg-white rounded-3xl sm:rounded-[2.5rem] shadow-2xl border border-amber-100/50 overflow-hidden animate-in fade-in zoom-in-95 duration-300 w-full text-slate-900 ${isInline ? '' : 'my-2'}`}>
+      {!isInline && (
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 rounded-xl text-amber-600">
+              <FileText size={20} />
+            </div>
+            <div>
+              <h3 className="font-black text-base uppercase tracking-tight text-slate-800">Solicitar Registo</h3>
+              <p className="text-[10px] text-slate-400 font-bold">Pedidos requerem aprovação</p>
+            </div>
           </div>
-          <div>
-            <h3 className="font-black text-base uppercase tracking-tight text-slate-800">Solicitar Registo</h3>
-            <p className="text-[10px] text-slate-400 font-bold">Pedidos requerem aprovação</p>
-          </div>
-        </div>
-        {collapsed ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronUp size={20} className="text-slate-400" />}
-      </button>
+          {collapsed ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronUp size={20} className="text-slate-400" />}
+        </button>
+      )}
 
-      {!collapsed && (
+      {(isInline || !collapsed) && (
         <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-slate-100 pt-4 space-y-4">
           <div className="space-y-1">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">

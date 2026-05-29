@@ -19,6 +19,7 @@ import {
   calculateExpectedMonthlyHours,
   getScheduleForDay
 } from '../../utils/formatUtils';
+import { roundTimeToInterval } from '../../utils/timeUtils';
 
 import { getCurrentPosition, isWithinGeofence, distanceMeters } from '../../utils/geoUtils';
 import CompanyLogo from '../../components/common/CompanyLogo';
@@ -153,8 +154,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   }, [currentUser?.id, logs.length]);
 
   const nowTimeStr = () => {
-    const d = new Date();
-    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const interval = systemSettings?.minuteInterval || 30;
+    return roundTimeToInterval(interval);
   };
 
   const handleConfirmGeoSuggestion = async () => {
@@ -766,6 +767,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                             <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
                           </div>
                         )}
+                        {isLimitedWorker && (
+                          <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
+                        )}
                         {isDayBeforeStart && (
                           <span className="text-[10px] text-slate-300 font-bold">Indisponível</span>
                         )}
@@ -779,7 +783,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   {isExpanded && (
                     <div className="p-4 md:px-12 md:py-8 bg-slate-50/50 border-b border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="space-y-4">
-                        {dayLogs.length > 0 ? (
+                        {dayLogs.length > 0 && (
                           <div className="space-y-3">
                             {dayLogs.map(log => (
                               <div key={log.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm w-full">
@@ -797,43 +801,60 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                   {!myApproval && !isLimitedWorker && (
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
                                   )}
+                                  {isLimitedWorker && (
+                                    <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                                  )}
                                 </div>
                               </div>
                             ))}
                           </div>
-                        ) : (
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center py-4 bg-white rounded-2xl border border-dashed border-slate-200">Não existem tarefas detalhadas para este dia.</p>
                         )}
+                        {isLimitedWorker && isCurrentInline && (
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                              <RequestEntryCard
+                                currentUser={currentUser}
+                                logs={logs}
+                                clients={clients}
+                                monthLogs={monthLogs}
+                                initialDate={ds}
+                                isInline={true}
+                                onSuccess={() => {
+                                  setInlineEditingDate(null);
+                                  setSuccessMsg('Pedido submetido com sucesso!');
+                                  setTimeout(() => setSuccessMsg(''), 6000);
+                                }}
+                              />
+                            </div>
+                          )}
 
-{!isLimitedWorker && isCurrentInline && (
-                           <div className="mt-4 pt-4 border-t border-slate-100">
-                             <EntryForm
-                               isInline
-                               data={inlineFormData}
-                               clients={clients}
-                               assignedClients={currentUser?.assignedClients}
-                               onChange={setInlineFormData}
-                               onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
-                               onCancel={() => setInlineEditingDate(null)}
-                               systemSettings={systemSettings}
-                             />
-                           </div>
-                         )}
+                          {!isLimitedWorker && isCurrentInline && (
+                            <div className="mt-4 pt-4 border-t border-slate-100">
+                              <EntryForm
+                                isInline
+                                data={inlineFormData}
+                                clients={clients}
+                                assignedClients={currentUser?.assignedClients}
+                                onChange={setInlineFormData}
+                                onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
+                                onCancel={() => setInlineEditingDate(null)}
+                                systemSettings={systemSettings}
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </React.Fragment>
-              );
-            })}
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
-        </div>
 
-        <div id="secao-documentos">
-          <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
-        </div>
-        </>)}
+          <div id="secao-documentos">
+            <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
+          </div>
+          </>)}
       </main>
-
     </div>
   );
 };
