@@ -123,17 +123,24 @@ function AdminDashboard(props) {
   const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n => !isViewed(n)).length;
   const unreadCount = appNotifications.filter(n => !isRead(n)).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
 
-  // Marcar notificação como lida — otimista imediato + Supabase async
+  // WR-04 fix: Add error handling and revert optimistic update on failure
   const markNotifRead = async (id) => {
+    const previousState = optimisticReadIds;
     setOptimisticReadIds(prev => new Set([...prev, id]));
-    if (!currentUser?.id || !supabase) return;
-    const notif = appNotifications.find(n => n.id === id);
-    if (!notif) return;
-    const current = notif.read_by_admin_ids || [];
-    if (current.includes(currentUser.id)) return;
-    await supabase.from('app_notifications')
-      .update({ read_by_admin_ids: [...current, currentUser.id] })
-      .eq('id', id);
+    try {
+      if (!currentUser?.id || !supabase) return;
+      const notif = appNotifications.find(n => n.id === id);
+      if (!notif) return;
+      const current = notif.read_by_admin_ids || [];
+      if (current.includes(currentUser.id)) return;
+      await supabase.from('app_notifications')
+        .update({ read_by_admin_ids: [...current, currentUser.id] })
+        .eq('id', id);
+    } catch (err) {
+      // Revert optimistic update on failure
+      setOptimisticReadIds(previousState);
+      console.error('Failed to mark notification as read:', err);
+    }
   };
 
   // Marcar correções como vistas — otimista imediato + Supabase async
