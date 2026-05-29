@@ -586,40 +586,49 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
         try {
             for (const item of items) {
-                let existing = null;
-                if (item.before) {
-                    const { data } = await supabase
+                if (correction.type === 'deletion_request') {
+                    const { error: delError } = await supabase
                         .from('logs')
-                        .select('*')
+                        .delete()
                         .eq('workerId', item.worker_id)
-                        .eq('date', item.date)
-                        .limit(1)
-                        .maybeSingle();
-                    existing = data;
-                }
+                        .eq('date', item.date);
+                    if (delError) throw delError;
+                } else {
+                    let existing = null;
+                    if (item.before) {
+                        const { data } = await supabase
+                            .from('logs')
+                            .select('*')
+                            .eq('workerId', item.worker_id)
+                            .eq('date', item.date)
+                            .limit(1)
+                            .maybeSingle();
+                        existing = data;
+                    }
 
-                if (item.before && existing) {
-                    const { error } = await supabase.from('logs').update({
-                        startTime: item.proposed?.startTime || null,
-                        endTime: item.proposed?.endTime || null,
-                        breakStart: item.proposed?.breakStart || null,
-                        breakEnd: item.proposed?.breakEnd || null,
-                    }).eq('id', existing.id);
-                    if (error) throw error;
-                } else if (!item.before && item.proposed) {
-                    // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs
-                    const logId = `log_${crypto.randomUUID()}`;
-                    const { error } = await supabase.from('logs').insert({
-                        id: logId,
-                        workerId: String(item.worker_id),
-                        clientId: String(effectiveClientId),
-                        date: item.date,
-                        startTime: item.proposed.startTime,
-                        endTime: item.proposed.endTime,
-                        breakStart: item.proposed.breakStart,
-                        breakEnd: item.proposed.breakEnd,
-                    });
-                    if (error) throw error;
+                    if (item.before && existing) {
+                        const { error } = await supabase.from('logs').update({
+                            startTime: item.proposed?.startTime || null,
+                            endTime: item.proposed?.endTime || null,
+                            breakStart: item.proposed?.breakStart || null,
+                            breakEnd: item.proposed?.breakEnd || null,
+                        }).eq('id', existing.id);
+                        if (error) throw error;
+                    } else if (!item.before && item.proposed) {
+                        // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs
+                        const logId = `log_${crypto.randomUUID()}`;
+                        const { error } = await supabase.from('logs').insert({
+                            id: logId,
+                            workerId: String(item.worker_id),
+                            clientId: String(effectiveClientId),
+                            date: item.date,
+                            startTime: item.proposed.startTime,
+                            endTime: item.proposed.endTime,
+                            breakStart: item.proposed.breakStart,
+                            breakEnd: item.proposed.breakEnd,
+                        });
+                        if (error) throw error;
+                    }
                 }
 
                 await supabase.from('correction_items').update({ item_status: 'accepted' }).eq('id', item.id);
@@ -657,7 +666,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 const updated = [...prev];
                 for (const item of items) {
                     const existingIdx = updated.findIndex(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
-                    if (existingIdx >= 0 && item.proposed) {
+                    if (correction.type === 'deletion_request') {
+                        if (existingIdx >= 0) updated.splice(existingIdx, 1);
+                    } else if (existingIdx >= 0 && item.proposed) {
                         updated[existingIdx] = { ...updated[existingIdx], ...item.proposed };
                     } else if (!item.before && item.proposed) {
                         updated.push({
@@ -673,7 +684,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 return updated;
             });
 
-            alert("Pedido aprovado! Relatório atualizado.");
+            alert(correction.type === 'deletion_request' ? "Pedido aprovado! Registo eliminado." : "Pedido aprovado! Relatório atualizado.");
         } catch (error) {
             console.error("Erro ao aprovar pedido:", error);
             alert("Ocorreu um erro ao aprovar o pedido. Por favor, tente novamente.");

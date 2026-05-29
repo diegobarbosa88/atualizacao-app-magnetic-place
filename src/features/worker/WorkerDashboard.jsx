@@ -59,6 +59,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     pendingApprovals,
     handleDismissNotif,
     handleOpenInlineForm,
+    handleOpenInlineFormDelete,
     handleQuickRegister,
     setDefaultSchedule,
     handleSaveEntry,
@@ -74,6 +75,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [geoSuggestionDismissed, setGeoSuggestionDismissed] = useState(false);
   const [geoActionLoading, setGeoActionLoading] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { date, logId }
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -822,7 +824,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                   {isLimitedWorker && (
                                     <div className="flex gap-1">
                                       <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
-                                      <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
+                                      <button onClick={() => { setDeleteConfirm({ date: ds, logId: log.id }); }} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                                     </div>
                                   )}
                                 </div>
@@ -874,6 +876,85 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
           <div id="secao-documentos">
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
           </div>
+
+          {deleteConfirm && (
+            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                <h3 className="text-lg font-black text-slate-800 mb-2">Confirmar pedido de exclusão</h3>
+                <p className="text-sm text-slate-600 mb-6">Ao confirmar, será enviado um pedido para eliminar o registo de <strong>{deleteConfirm.date}</strong>. O administrador analisará o pedido.</p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setDeleteConfirm(null)}
+                    className="flex-1 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase hover:bg-slate-300 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={async () => {
+                      const log = logs.find(l => l.id === deleteConfirm.logId);
+                      if (!log) { setDeleteConfirm(null); return; }
+                      const correctionId = `corr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                      const now = new Date().toISOString();
+                      try {
+                        await saveToDb('corrections', correctionId, {
+                          id: correctionId,
+                          client_id: String(log.clientId),
+                          month: deleteConfirm.date.substring(0, 7),
+                          type: 'deletion_request',
+                          status: 'submitted',
+                          submitted_at: now,
+                          submitted_by: String(currentUser?.id),
+                          justification: `Pedido de eliminação do registo de ${deleteConfirm.date}`
+                        });
+                        const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+                        await saveToDb('correction_items', itemId, {
+                          id: itemId,
+                          correction_id: correctionId,
+                          worker_id: String(currentUser?.id),
+                          worker_name: currentUser?.name,
+                          date: deleteConfirm.date,
+                          before: { startTime: log.startTime, endTime: log.endTime, breakStart: log.breakStart, breakEnd: log.breakEnd },
+                          proposed: null,
+                          final: null,
+                          item_status: 'pending',
+                        });
+                        await saveToDb('app_notifications', `notif_${Date.now()}`, {
+                          title: `Pedido de Eliminação · ${currentUser?.name}`,
+                          message: `${currentUser?.name} solicitou eliminação do registo de ${deleteConfirm.date}`,
+                          type: 'warning',
+                          target_type: 'admin',
+                          target_client_id: String(log.clientId),
+                          payload: { correction_id: correctionId, kind: 'submitted' },
+                          is_active: true,
+                          is_dismissible: true,
+                          created_at: now,
+                        });
+                        await saveToDb('app_notifications', `notif_${Date.now()}_client`, {
+                          title: `Pedido de Eliminação · ${currentUser?.name}`,
+                          message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${deleteConfirm.date}.`,
+                          type: 'info',
+                          target_type: 'client',
+                          target_client_id: String(log.clientId),
+                          payload: { correction_id: correctionId, kind: 'submitted' },
+                          is_active: true,
+                          is_dismissible: true,
+                          created_at: now,
+                        });
+                        setDeleteConfirm(null);
+                        setSuccessMsg('Pedido de exclusão submetido!');
+                        setTimeout(() => setSuccessMsg(''), 4000);
+                      } catch (err) {
+                        alert('Erro ao submeter pedido: ' + err.message);
+                      }
+                    }}
+                    className="flex-1 py-2.5 bg-rose-600 text-white rounded-xl font-bold text-sm uppercase hover:bg-rose-700 transition-colors"
+                  >
+                    Confirmar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           </>)}
       </main>
     </div>

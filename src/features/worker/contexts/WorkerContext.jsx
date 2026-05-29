@@ -156,6 +156,14 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     });
   }, [expandedDays, currentUser]);
 
+  const handleOpenInlineFormDelete = useCallback((ds) => {
+    if (!expandedDays.includes(ds)) setExpandedDays(prev => [...prev, ds]);
+    setInlineEditingDate(ds);
+    setInlineFormData({
+      id: null, date: ds, clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '', _deleteMode: true
+    });
+  }, [expandedDays, currentUser]);
+
   const handleQuickRegister = useCallback((ds) => {
     const s = schedules.find(s => s.id === currentUser?.defaultScheduleId) || myPersonals.find(p => p.id === currentUser?.defaultScheduleId);
     if (!currentUser?.defaultClientId || !s) {
@@ -226,6 +234,7 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     // Handlers
     handleDismissNotif,
     handleOpenInlineForm,
+    handleOpenInlineFormDelete,
     handleQuickRegister,
     savePersonalSchedule,
     setDefaultSchedule,

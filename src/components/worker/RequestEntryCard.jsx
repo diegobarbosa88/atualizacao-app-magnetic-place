@@ -1,10 +1,10 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 
-const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false }) => {
+const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval } = useApp();
   const [collapsed, setCollapsed] = useState(!isInline);
   const [selectedDate, setSelectedDate] = useState(initialDate || toISODateLocal(new Date()));
@@ -19,6 +19,12 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [requestDelete, setRequestDelete] = useState(false);
+
+  useEffect(() => {
+    if (openInDeleteMode && existingLog) {
+      setRequestDelete(true);
+    }
+  }, [openInDeleteMode]);
 
   useMemo(() => {
     if (initialDate) {
