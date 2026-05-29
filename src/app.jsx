@@ -62,16 +62,16 @@ export default function App() {
     link.href = 'MAGNETIC (3).png';
   }, []);
 
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+  // WR-01 fix: Use state for baseVersion instead of closure variable to properly detect updates
+  const [currentVersion, setCurrentVersion] = useState(null);
   useEffect(() => {
-    let baseVersion = null;
     const check = async () => {
       try {
         const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' });
         const { version } = await res.json();
-        if (baseVersion === null) {
-          baseVersion = version;
-        } else if (version !== baseVersion) {
+        if (currentVersion === null) {
+          setCurrentVersion(version);
+        } else if (version !== currentVersion) {
           setUpdateAvailable(true);
         }
       } catch {}
@@ -79,7 +79,7 @@ export default function App() {
     check();
     const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentVersion]);
   useEffect(() => {
     if (!updateAvailable) return;
     const t = setTimeout(() => setUpdateAvailable(false), 7000);
