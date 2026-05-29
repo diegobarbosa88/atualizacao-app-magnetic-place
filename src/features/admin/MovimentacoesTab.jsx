@@ -2007,8 +2007,12 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
         period: previousMonth(ncManualModal.data),
       });
     }
-    await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', ncManualFaturaId);
-    setFaturasData(prev => prev.map(f => f.id === ncManualFaturaId ? { ...f, status: 'PAGO' } : f));
+    const { error: faturaError } = await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', ncManualFaturaId);
+    if (faturaError) {
+      console.error('[handleSaveNcManual] fatura update failed:', faturaError);
+    } else {
+      setFaturasData(prev => prev.map(f => f.id === ncManualFaturaId ? { ...f, status: 'PAGO' } : f));
+    }
     const { data: refreshed } = await supabase
       .from('entrada_nota_credito_links')
       .select('id, tx_key, client_id, period')
