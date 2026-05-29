@@ -128,7 +128,12 @@ function AdminDashboard(props) {
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
-  const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n => !isViewed(n)).length;
+  const pendingClientCorrectionsCount = (correctionNotifications || []).length;
+  const pendingWorkerCorrectionsCount = (corrections || []).filter(c =>
+    (c.type === 'creation_request' || c.type === 'deletion_request') &&
+    (c.status === 'submitted' || c.status === 'under_review')
+  ).length;
+  const totalPendingCorrections = pendingClientCorrectionsCount + pendingWorkerCorrectionsCount;
   const workerSubmissionUnread = (appNotifications || []).filter(n => {
     if (n.target_type !== 'admin') return false;
     if (n.payload?.kind !== 'submitted') return false;
@@ -136,7 +141,7 @@ function AdminDashboard(props) {
     if (dismissedAdminNotifs.includes(n.id)) return false;
     return true;
   }).length;
-  const unreadCount = workerSubmissionUnread + pendingChangeRequestsCount + unviewedCorrectionsCount;
+  const unreadCount = workerSubmissionUnread + pendingChangeRequestsCount;
 
   const handleDismissAdminNotif = useCallback((id) => {
     setDismissedAdminNotifs(prev => {
@@ -552,9 +557,9 @@ function AdminDashboard(props) {
           <div className="flex-1 flex justify-center w-full md:w-auto">
             <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
               {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'documentos', 'costs', 'settings'].map(t => (
-                <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && (unviewedCorrectionsCount + workerSubmissionUnread) > 0 ? 'animate-pulse' : ''}`}>
+                <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && totalPendingCorrections > 0 ? 'animate-pulse' : ''}`}>
                   {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
-                    <span className="flex items-center gap-1">Portal Validação {(unviewedCorrectionsCount + workerSubmissionUnread) > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unviewedCorrectionsCount + workerSubmissionUnread}</span>}</span>
+                    <span className="flex items-center gap-1">Portal Validação {totalPendingCorrections > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{totalPendingCorrections}</span>}</span>
                   ) : t === 'schedules' ? 'Horários' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : <Settings size={14} />}
                 </button>
               ))}

@@ -53,6 +53,8 @@ const ValidationPortal = ({
 
   const pendingWorkerSubmissionsCount = (workerChangeRequests || []).filter(r => r.status === 'pending').length;
   const workerSubmissionsPending = (correcoesCorrections || []).filter(c => (c.type === 'creation_request' || c.type === 'deletion_request') && (c.status === 'submitted' || c.status === 'under_review')).length;
+  const clientCorrectionsPending = (correcoesCorrections || []).filter(c => c.type !== 'creation_request' && c.type !== 'deletion_request' && (c.status === 'submitted' || c.status === 'under_review')).length;
+  const totalCorrectionsPending = workerSubmissionsPending + clientCorrectionsPending;
 
   const sortedWorkers = useMemo(() => {
     return [...workers].map(w => {
@@ -70,7 +72,6 @@ const ValidationPortal = ({
     });
   }, [workers, logs, portalMonthStr, approvals, portalWorkersSort]);
 
-  const pendingCorrectionsCount = (correctionNotifications || []).filter(c => c.status === 'pending').length;
   const [portalView, setPortalView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
   const fmtH = (h) => `${Number.isInteger(h) ? h : h.toFixed(1)}H`;
 
@@ -97,7 +98,7 @@ const ValidationPortal = ({
         {[
           { id: 'envios', label: 'Envios', icon: Mail },
           { id: 'colaboradores', label: 'Equipa', icon: UserCheck },
-          { id: 'correcoes', label: 'Correções', icon: AlertTriangle, count: pendingCorrectionsCount + workerSubmissionsPending }
+          { id: 'correcoes', label: 'Correções', icon: AlertTriangle, count: totalCorrectionsPending }
         ].map(tab => (
           <button
             key={tab.id}
@@ -106,7 +107,7 @@ const ValidationPortal = ({
           >
             <tab.icon size={12} />
             <span className="text-[9px] sm:text-[10px]">{tab.label}</span>
-            {tab.count > 0 && <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] w-4 h-4 flex items-center justify-center rounded-full">{tab.count}</span>}
+            {tab.count > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] w-4 h-4 flex items-center justify-center rounded-full">{tab.count}</span>}
           </button>
         ))}
         </div>
