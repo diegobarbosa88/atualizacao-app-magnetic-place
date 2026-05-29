@@ -127,7 +127,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         id: `notif_${Date.now()}`,
         title: `Pedido de Eliminação · ${currentUser?.name}`,
         message: `${currentUser?.name} solicitou eliminação do registo de ${selectedDate}`,
-        type: 'warning',
+        type: 'danger',
         target_type: 'admin',
         target_client_id: String(existingLog.clientId),
         payload: { correction_id: correctionId, kind: 'submitted' },

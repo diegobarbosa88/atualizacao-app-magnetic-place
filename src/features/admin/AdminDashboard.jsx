@@ -661,6 +661,8 @@ function AdminDashboard(props) {
                 ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Urgente' }
                 : notif.type === 'warning'
                 ? { hover: 'hover:bg-yellow-50', icon: 'bg-yellow-100 text-yellow-600', label: 'text-yellow-500', tag: 'Aviso' }
+                : notif.type === 'danger'
+                ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Eliminar' }
                 : notif.type === 'success'
                 ? { hover: 'hover:bg-emerald-50', icon: 'bg-emerald-100 text-emerald-600', label: 'text-emerald-500', tag: 'Sucesso' }
                 : { hover: 'hover:bg-indigo-50', icon: 'bg-indigo-100 text-indigo-600', label: 'text-indigo-500', tag: 'Informação' };
@@ -679,7 +681,7 @@ function AdminDashboard(props) {
                   setShowNotifDropdown(false);
                 }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3 ${badge.resolved ? 'opacity-60' : ''}`}>
                   <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${styles.icon}`}>
-                    <Bell size={14} />
+                    {notif.type === 'danger' ? <Trash2 size={14} /> : <Bell size={14} />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className={`text-[8px] font-black uppercase tracking-widest ${styles.label} block`}>{styles.tag}</span>
