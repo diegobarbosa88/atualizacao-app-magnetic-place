@@ -2,9 +2,10 @@ import { useState, useMemo } from 'react';
 import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
+import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false }) => {
-  const { supabase, saveToDb } = useApp();
+  const { supabase, saveToDb, minuteInterval } = useApp();
   const [collapsed, setCollapsed] = useState(!isInline);
   const [selectedDate, setSelectedDate] = useState(initialDate || toISODateLocal(new Date()));
   const [formData, setFormData] = useState({
@@ -198,10 +199,10 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           breakEnd: existingLog.breakEnd,
         } : null,
         proposed: {
-          startTime: formData.startTime,
-          endTime: formData.endTime,
-          breakStart: formData.breakStart,
-          breakEnd: formData.breakEnd,
+          startTime: roundTimeToIntervalTimeUp(formData.startTime, minuteInterval || 30),
+          endTime: roundTimeToIntervalTimeDown(formData.endTime, minuteInterval || 30),
+          breakStart: formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, minuteInterval || 30) : null,
+          breakEnd: formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, minuteInterval || 30) : null,
         },
         final: null,
         item_status: 'pending',

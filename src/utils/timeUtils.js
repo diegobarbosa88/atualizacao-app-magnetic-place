@@ -64,3 +64,37 @@ export const roundTimeToIntervalTime = (timeStr, intervalMinutes = 30) => {
   const minutes = roundedMinutes % 60;
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 };
+
+/**
+ * Rounds a given time string "HH:MM" DOWN to the nearest interval (for exit times).
+ * @param {string} timeStr - Time string in "HH:MM" format
+ * @param {number} intervalMinutes - Interval to round to (e.g., 5, 15, 30, 60)
+ * @returns {string} - Rounded time string in "HH:MM" format
+ */
+export const roundTimeToIntervalTimeDown = (timeStr, intervalMinutes = 30) => {
+  if (!timeStr || timeStr === '--:--' || !timeStr.includes(':')) return timeStr;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const totalMinutes = h * 60 + m;
+  const roundedMinutes = Math.floor(totalMinutes / intervalMinutes) * intervalMinutes;
+  const hours = Math.floor(roundedMinutes / 60) % 24;
+  const minutes = roundedMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};
+
+/**
+ * Rounds a given time string "HH:MM" UP to the nearest interval (for entry times).
+ * @param {string} timeStr - Time string in "HH:MM" format
+ * @param {number} intervalMinutes - Interval to round to (e.g., 5, 15, 30, 60)
+ * @returns {string} - Rounded time string in "HH:MM" format
+ */
+export const roundTimeToIntervalTimeUp = (timeStr, intervalMinutes = 30) => {
+  if (!timeStr || timeStr === '--:--' || !timeStr.includes(':')) return timeStr;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const totalMinutes = h * 60 + m;
+  const roundedMinutes = Math.ceil(totalMinutes / intervalMinutes) * intervalMinutes;
+  const hours = Math.floor(roundedMinutes / 60) % 24;
+  const minutes = roundedMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+};

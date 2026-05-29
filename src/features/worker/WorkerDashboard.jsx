@@ -19,7 +19,7 @@ import {
   calculateExpectedMonthlyHours,
   getScheduleForDay
 } from '../../utils/formatUtils';
-import { roundTimeToInterval } from '../../utils/timeUtils';
+import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 
 import { getCurrentPosition, isWithinGeofence, distanceMeters } from '../../utils/geoUtils';
 import CompanyLogo from '../../components/common/CompanyLogo';
@@ -153,15 +153,33 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     }
   }, [currentUser?.id, logs.length]);
 
-  const nowTimeStr = () => {
+  const nowTimeStrForEntry = () => {
     const interval = systemSettings?.minuteInterval || 30;
-    return roundTimeToInterval(interval);
+    const now = new Date();
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const roundedMinutes = Math.ceil(totalMinutes / interval) * interval;
+    const hours = Math.floor(roundedMinutes / 60) % 24;
+    const minutes = roundedMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
+
+  const nowTimeStrForExit = () => {
+    const interval = systemSettings?.minuteInterval || 30;
+    const now = new Date();
+    const totalMinutes = now.getHours() * 60 + now.getMinutes();
+    const roundedMinutes = Math.floor(totalMinutes / interval) * interval;
+    const hours = Math.floor(roundedMinutes / 60) % 24;
+    const minutes = roundedMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  const nowTimeStr = nowTimeStrForEntry; // backwards compat if needed
 
   const handleConfirmGeoSuggestion = async () => {
     if (!geoSuggestion || !currentUser) return;
     setGeoActionLoading(true);
-    const timeStr = nowTimeStr();
+    const entryTime = nowTimeStrForEntry();
+    const exitTime = nowTimeStrForExit();
     const today = new Date().toLocaleDateString('en-CA');
 
     try {
@@ -182,7 +200,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           date: today,
           workerId: currentUser.id,
           clientId: currentUser.defaultClientId,
-          startTime: timeStr,
+          startTime: entryTime,
           endTime: null,
           breakStart: null,
           breakEnd: null,
@@ -197,7 +215,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         if (existingLog) {
           await saveToDb('logs', existingLog.id, {
             ...existingLog,
-            endTime: timeStr,
+            endTime: exitTime,
             check_out_lat: lat,
             check_out_lng: lng,
           });
@@ -216,7 +234,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
 
   const handleRegistarPausa = async (tipo) => {
     if (!todayOpenLog) return;
-    const timeStr = nowTimeStr();
+    const timeStr = tipo === 'inicio' ? nowTimeStrForEntry() : nowTimeStrForExit();
     const pos = await getGpsSilent();
     const updates = tipo === 'inicio'
       ? { breakStart: timeStr, break_start_lat: pos?.lat ?? null, break_start_lng: pos?.lng ?? null }
@@ -231,7 +249,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       const pos = await getGpsSilent();
       await saveToDb('logs', todayOpenLog.id, {
         ...todayOpenLog,
-        endTime: nowTimeStr(),
+        endTime: nowTimeStrForExit(),
         check_out_lat: pos?.lat ?? null,
         check_out_lng: pos?.lng ?? null,
       });
@@ -804,7 +822,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                   {isLimitedWorker && (
                                     <div className="flex gap-1">
                                       <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
-                                      <button onClick={() => { handleDelete('logs', log.id); }} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
+                                      <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                                     </div>
                                   )}
                                 </div>

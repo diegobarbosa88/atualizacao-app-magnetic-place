@@ -2627,21 +2627,41 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                             <div className="pt-4 space-y-2">
                                                 {items.map(item => {
                                                     const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
+                                                    const beforeHours = item.before?.startTime ? calculateHoursDiff(item.before.startTime, item.before.endTime, item.before.breakStart, item.before.breakEnd) : null;
+                                                    const proposedHours = item.proposed?.startTime ? calculateHoursDiff(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd) : null;
+                                                    const diffHours = (proposedHours !== null && beforeHours !== null) ? (proposedHours - beforeHours).toFixed(2) : null;
+                                                    const isPositive = diffHours !== null && parseFloat(diffHours) >= 0;
                                                     return (
                                                         <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                                                             <div className="flex justify-between items-center mb-2">
                                                                 <span className="font-bold text-slate-600 text-xs">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
-                                                                <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                                                                </div>
                                                             </div>
                                                             <div className="flex items-center justify-between gap-4 text-xs">
                                                                 <div>
                                                                     <span className="text-slate-400 font-bold uppercase text-[9px]">Original</span>
-                                                                    <p className="text-slate-500">{item.before ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}</p>
+                                                                    <p className="text-slate-500">{
+                                                                    item.before?.startTime && item.before?.endTime
+                                                                        ? `${item.before.startTime}-${item.before.endTime}`
+                                                                        : 'Sem registo'
+                                                                }</p>
+                                                                    {beforeHours !== null && (
+                                                                        <span className="text-[10px] text-slate-400">({beforeHours}h)</span>
+                                                                    )}
                                                                 </div>
                                                                 <div className="text-emerald-600 font-bold">→</div>
                                                                 <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
                                                                     <span className="text-[9px] text-emerald-600 font-bold uppercase">Proposto</span>
-                                                                    <p className="text-emerald-700 font-bold">{item.proposed ? `${item.proposed.startTime}-${item.proposed.endTime}` : 'N/A'}</p>
+                                                                    <p className="text-emerald-700 font-bold">{
+                                                                            item.proposed?.startTime && item.proposed?.endTime
+                                                                                ? `${item.proposed.startTime}-${item.proposed.endTime}`
+                                                                                : 'N/A'
+                                                                        }</p>
+                                                                    {proposedHours !== null && (
+                                                                        <span className="text-[10px] text-emerald-600">({proposedHours}h)</span>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>

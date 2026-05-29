@@ -27,7 +27,7 @@ import {
 import {
   formatHours, formatCurrency, calculateDuration
 } from './utils/formatUtils';
-import { roundTimeToInterval, roundTimeToIntervalTime } from './utils/timeUtils';
+import { roundTimeToInterval, roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from './utils/timeUtils';
 import { sendNotificationEmail } from './utils/emailUtils';
 
 const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/';
@@ -284,10 +284,10 @@ export default function App() {
   const handleSaveEntry = (formData, isMain = false, inlineDate = null) => {
     if (!formData.clientId || !formData.startTime || !formData.endTime) return;
     const interval = systemSettings?.minuteInterval || 30;
-    const roundedStart = roundTimeToIntervalTime(formData.startTime, interval);
-    const roundedEnd = roundTimeToIntervalTime(formData.endTime, interval);
-    const roundedBreakStart = formData.breakStart ? roundTimeToIntervalTime(formData.breakStart, interval) : formData.breakStart;
-    const roundedBreakEnd = formData.breakEnd ? roundTimeToIntervalTime(formData.breakEnd, interval) : formData.breakEnd;
+    const roundedStart = roundTimeToIntervalTimeUp(formData.startTime, interval);
+    const roundedEnd = roundTimeToIntervalTimeDown(formData.endTime, interval);
+    const roundedBreakStart = formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, interval) : formData.breakStart;
+    const roundedBreakEnd = formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, interval) : formData.breakEnd;
     const hours = calculateDuration(roundedStart, roundedEnd, roundedBreakStart, roundedBreakEnd);
     const dateToSave = isMain ? formData.date : inlineDate;
     const wId = (view === 'admin' && auditWorkerId) ? auditWorkerId : currentUser.id;
