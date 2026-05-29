@@ -471,19 +471,37 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return filtered;
     }, [appNotifications, effectiveClientId, dismissedNotifs]);
 
-    const workerSubmissions = useMemo(() => {
+    const workerSubmissionsResolved = useMemo(() => {
         if (!appNotifications || !effectiveClientId) return [];
-
         return appNotifications.filter(n => {
             const matchTarget = n.target_type === 'client';
             const matchClientId = String(n.target_client_id) === String(effectiveClientId);
             const isActive = n.is_active === true;
             const notDismissed = !dismissedNotifs.includes(n.id);
             const isWorkerSubmission = n.payload?.kind === 'submitted';
-
-            return matchTarget && matchClientId && isActive && notDismissed && isWorkerSubmission;
+            if (!isWorkerSubmission) return false;
+            const correctionId = n.payload?.correction_id;
+            const correction = corrections?.find(c => c.id === correctionId);
+            if (!correction || correction.status === 'submitted') return false;
+            return matchTarget && matchClientId && isActive && notDismissed;
         });
-    }, [appNotifications, effectiveClientId, dismissedNotifs]);
+    }, [appNotifications, effectiveClientId, dismissedNotifs, corrections]);
+
+    const workerSubmissionsPending = useMemo(() => {
+        if (!appNotifications || !effectiveClientId) return [];
+        return appNotifications.filter(n => {
+            const matchTarget = n.target_type === 'client';
+            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
+            const isActive = n.is_active === true;
+            const notDismissed = !dismissedNotifs.includes(n.id);
+            const isWorkerSubmission = n.payload?.kind === 'submitted';
+            if (!isWorkerSubmission) return false;
+            const correctionId = n.payload?.correction_id;
+            const correction = corrections?.find(c => c.id === correctionId);
+            if (!correction || correction.status !== 'submitted') return false;
+            return matchTarget && matchClientId && isActive && notDismissed;
+        });
+    }, [appNotifications, effectiveClientId, dismissedNotifs, corrections]);
 
     const handleDismissNotif = (id) => {
         setDismissedNotifs(prev => {
@@ -2597,9 +2615,86 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         </div>
                     )}
 
-                    {workerSubmissions.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).length > 0 && (
+                    {workerSubmissionsResolved.length > 0 && (
                         <div className="mb-8 space-y-3">
-                            {workerSubmissions.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).map(notif => {
+                            {workerSubmissionsResolved.map(notif => {
+                                const correctionId = notif.payload?.correction_id;
+                                const correction = corrections?.find(c => c.id === correctionId);
+                                const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
+                                const isApproved = correction?.status === 'applied';
+                                const isExpanded = expandedCards[notif.id];
+                                return (
+                                    <div key={notif.id} className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                                        <button
+                                            onClick={() => setExpandedCards(prev => ({ ...prev, [notif.id]: !prev[notif.id] }))}
+                                            className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-xl ${isApproved ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                                                    <Clock size={16} />
+                                                </div>
+                                                <div className="text-left">
+                                                    <span className="font-bold text-slate-700 text-sm">{notif.title}</span>
+                                                    <span className="text-xs text-slate-400 ml-2">({items.length} pedido{items.length > 1 ? 's' : ''})</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl ${
+                                                    isApproved ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                                                }`}>
+                                                    {isApproved ? '✅ Aprovado' : '❌ Rejeitado'}
+                                                </span>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDismissNotif(notif.id); }} className="p-1 text-slate-400 hover:text-slate-600">
+                                                    <X size={16} />
+                                                </button>
+                                                <ChevronDown size={16} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                            </div>
+                                        </button>
+                                        {isExpanded && (
+                                            <div className="px-4 pb-4 border-t border-slate-100">
+                                                <div className="pt-4 space-y-2">
+                                                    {items.map(item => {
+                                                        const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
+                                                        const beforeHours = item.before?.startTime ? calculateHoursDiff(item.before.startTime, item.before.endTime, item.before.breakStart, item.before.breakEnd) : null;
+                                                        const proposedHours = item.proposed?.startTime ? calculateHoursDiff(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd) : null;
+                                                        return (
+                                                            <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                                                                <div className="flex justify-between items-center mb-2">
+                                                                    <span className="font-bold text-slate-600 text-xs">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
+                                                                    <span className="text-xs font-bold text-slate-500 bg-white px-2 py-0.5 rounded-lg">{item.date}</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between gap-4 text-xs">
+                                                                    <div>
+                                                                        <span className="text-slate-400 font-bold uppercase text-[9px]">Original</span>
+                                                                        <p className="text-slate-500">{item.before?.startTime && item.before?.endTime ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}</p>
+                                                                        {beforeHours !== null && <span className="text-[10px] text-slate-400">({beforeHours}h)</span>}
+                                                                    </div>
+                                                                    {item.proposed?.startTime && (
+                                                                        <>
+                                                                            <div className="text-emerald-600 font-bold">→</div>
+                                                                            <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                                                                                <span className="text-[9px] text-emerald-600 font-bold uppercase">Proposto</span>
+                                                                                <p className="text-emerald-700 font-bold">{`${item.proposed.startTime}-${item.proposed.endTime}`}</p>
+                                                                                {proposedHours !== null && <span className="text-[10px] text-emerald-600">({proposedHours}h)</span>}
+                                                                            </div>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {workerSubmissionsPending.length > 0 && (
+                        <div className="mb-8 space-y-3">
+                            {workerSubmissionsPending.map(notif => {
                                 const correctionId = notif.payload?.correction_id;
                                 const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
                                 return (

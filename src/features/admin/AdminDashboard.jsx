@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
@@ -11,7 +11,7 @@ import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
   Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users, Download,
-  X, ChevronLeft, ChevronRight, LogOut, Zap, Plus, Trash2, Unlock,
+  X, ChevronLeft, ChevronRight, ChevronDown, LogOut, Zap, Plus, Trash2, Unlock,
   Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2, PenTool, UserPlus, ShieldCheck, ShieldOff, Bell
 } from 'lucide-react';
 import TeamManager from './TeamManager';
@@ -66,7 +66,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+  const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, corrections, correctionItems, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
   const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
 
   const notificacoesDeCorrecao = correctionNotifications;
@@ -118,10 +118,50 @@ function AdminDashboard(props) {
   const isRead = (n) => (n.read_by_admin_ids || []).includes(currentUser?.id) || optimisticReadIds.has(n.id);
   const isViewed = (n) => (n.viewed_by_admin_ids || []).includes(currentUser?.id) || optimisticViewedCorrIds.has(n.id);
 
+  const [dismissedAdminNotifs, setDismissedAdminNotifs] = useState([]);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('dismissed_admin_notifs');
+      if (stored) setDismissedAdminNotifs(JSON.parse(stored));
+    } catch {}
+  }, []);
+
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
   const unviewedCorrectionsCount = notificacoesDeCorrecao.filter(n => !isViewed(n)).length;
-  const unreadCount = appNotifications.filter(n => !isRead(n)).length + pendingChangeRequestsCount + unviewedCorrectionsCount;
+  const workerSubmissionUnread = (appNotifications || []).filter(n => {
+    if (n.target_type !== 'admin') return false;
+    if (n.payload?.kind !== 'submitted') return false;
+    if (isRead(n)) return false;
+    if (dismissedAdminNotifs.includes(n.id)) return false;
+    return true;
+  }).length;
+  const unreadCount = workerSubmissionUnread + pendingChangeRequestsCount + unviewedCorrectionsCount;
+
+  const handleDismissAdminNotif = useCallback((id) => {
+    setDismissedAdminNotifs(prev => {
+      if (prev.includes(id)) return prev;
+      const updated = [...prev, id];
+      localStorage.setItem('dismissed_admin_notifs', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  const [expandedCards, setExpandedCards] = useState({});
+
+  const getNotificationBadge = (notif) => {
+    if (notif.payload?.kind === 'submitted') {
+      const corr = corrections?.find(c => c.id === notif.payload?.correction_id);
+      if (corr && corr.status && corr.status !== 'submitted' && corr.status !== 'under_review') {
+        return {
+          resolved: true,
+          status: corr.status,
+          label: corr.status === 'applied' ? '✅ Aprovado' : '❌ Rejeitado'
+        };
+      }
+    }
+    return { resolved: false };
+  };
 
   // WR-04 fix: Add error handling and revert optimistic update on failure
   const markNotifRead = async (id) => {
@@ -568,8 +608,50 @@ function AdminDashboard(props) {
                 </button>
               );
             })}
+
+            {/* Worker submissions - clica e vai direto para o portal */}
+            {(() => {
+              const seenCorrIds = new Set();
+              const workerNotifs = appNotifications.filter(n => {
+                if (isRead(n)) return false;
+                if (dismissedAdminNotifs.includes(n.id)) return false;
+                if (n.target_type !== 'admin') return false;
+                if (n.payload?.kind !== 'submitted') return false;
+                const cid = n.payload?.correction_id;
+                if (!cid) return false;
+                if (seenCorrIds.has(cid)) return false;
+                seenCorrIds.add(cid);
+                return true;
+              });
+              if (workerNotifs.length === 0) return null;
+              return (
+                <button
+                  onClick={() => {
+                    workerNotifs.forEach(n => markNotifRead(n.id));
+                    setActiveTab('portal_validacao');
+                    setPortalSubTab('correcoes');
+                    setShowNotifDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-emerald-50 transition-colors flex items-start gap-3"
+                >
+                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600 shrink-0 mt-0.5"><Clock size={14} /></div>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 block">Pedidos de Workers</span>
+                    <p className="text-xs font-black text-slate-800 truncate">{workerNotifs.length} pedido{workerNotifs.length > 1 ? 's' : ''} pendente{workerNotifs.length > 1 ? 's' : ''}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">Clica para ver no Portal de Validação</p>
+                  </div>
+                </button>
+              );
+            })()}
+
             {/* Notificações gerais — cor por tipo */}
-            {appNotifications.filter(n => !isRead(n)).map(notif => {
+            {appNotifications.filter(n => {
+              if (isRead(n)) return false;
+              if (dismissedAdminNotifs.includes(n.id)) return false;
+              if (n.payload?.kind === 'submitted') return false;
+              return true;
+            }).map(notif => {
+              const badge = getNotificationBadge(notif);
               const styles = notif.type === 'urgent'
                 ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Urgente' }
                 : notif.type === 'warning'
@@ -579,6 +661,7 @@ function AdminDashboard(props) {
                 : { hover: 'hover:bg-indigo-50', icon: 'bg-indigo-100 text-indigo-600', label: 'text-indigo-500', tag: 'Informação' };
               return (
                 <button key={notif.id} onClick={() => {
+                  if (badge.resolved) { handleDismissAdminNotif(notif.id); return; }
                   markNotifRead(notif.id);
                   const corrId = notif.payload?.correction_id || notif.payload?.correcao_id;
                   if (corrId) {
@@ -589,15 +672,29 @@ function AdminDashboard(props) {
                     setActiveTab('notificacoes');
                   }
                   setShowNotifDropdown(false);
-                }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3`}>
+                }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3 ${badge.resolved ? 'opacity-60' : ''}`}>
                   <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${styles.icon}`}>
                     <Bell size={14} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <span className={`text-[8px] font-black uppercase tracking-widest ${styles.label} block`}>{styles.tag}</span>
                     <p className="text-xs font-black text-slate-800 truncate">{notif.title}</p>
-                    <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>
+                    {badge.resolved && (
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded mt-1 inline-block ${
+                        badge.status === 'applied' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
+                      }`}>
+                        {badge.label}
+                      </span>
+                    )}
+                    {!badge.resolved && <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>}
                   </div>
+                  {badge.resolved ? (
+                    <button onClick={(e) => { e.stopPropagation(); handleDismissAdminNotif(notif.id); }} className="p-1 text-slate-400 hover:text-slate-600 shrink-0">
+                      <X size={14} />
+                    </button>
+                  ) : (
+                    <ChevronRight size={14} className="text-slate-300 shrink-0 mt-1" />
+                  )}
                 </button>
               );
             })}

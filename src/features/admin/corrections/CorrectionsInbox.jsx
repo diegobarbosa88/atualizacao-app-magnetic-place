@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle, LayoutList, FileText } from 'lucide-react';
+import { CheckCircle, AlertCircle, XCircle, Edit2, ChevronLeft, Clock, Plus, Trash2, Pencil, MessageCircle, LayoutList, FileText, Users, Building2, ChevronDown, X } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import {
   markUnderReview,
@@ -609,9 +609,11 @@ const CorrectionDetail = ({ correction, items, onBack }) => {
 };
 
 const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
-  const { corrections, correctionItems, clients } = useApp();
+  const { corrections, correctionItems, clients, workers, supabase, currentUser, setCorrections } = useApp();
   const [selectedId, setSelectedId] = useState(initialCorrectionId || null);
   const [filter, setFilter] = useState('open');
+  const [sourceFilter, setSourceFilter] = useState('workers');
+  const [expandedCards, setExpandedCards] = useState({});
 
   // Consumir initialCorrectionId uma vez ao montar/mudar
   React.useEffect(() => {
@@ -621,9 +623,23 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
     }
   }, [initialCorrectionId]);
 
-  const sorted = useMemo(() => {
-    return [...(corrections || [])].sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
+  const workerCorrections = useMemo(() => {
+    return [...(corrections || [])]
+      .filter(c => c.type === 'creation_request' || c.type === 'deletion_request')
+      .sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
   }, [corrections]);
+
+  const clientCorrections = useMemo(() => {
+    return [...(corrections || [])]
+      .filter(c => c.type !== 'creation_request' && c.type !== 'deletion_request')
+      .sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
+  }, [corrections]);
+
+  const sourceFiltered = sourceFilter === 'workers' ? workerCorrections : clientCorrections;
+
+  const sorted = useMemo(() => {
+    return [...sourceFiltered].sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || ''));
+  }, [sourceFiltered]);
 
   const filtered = useMemo(() => {
     if (filter === 'open') return sorted.filter((c) => c.status === 'submitted' || c.status === 'under_review');
@@ -665,12 +681,167 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
     rejected: sorted.filter((c) => c.status === 'rejected').length,
   };
 
+  const workerOpenCount = workerCorrections.filter(c => c.status === 'submitted' || c.status === 'under_review').length;
+  const clientOpenCount = clientCorrections.filter(c => c.status === 'submitted' || c.status === 'under_review').length;
+
+  const handleWorkerApprove = async (correction) => {
+    if (!supabase) return;
+    if (!confirm('Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.')) return;
+    try {
+      const client = clients.find(cl => String(cl.id) === String(correction.client_id));
+      await applyCreationRequest(supabase, {
+        correction,
+        items: itemsByCorrection.get(correction.id) || [],
+        logs: [],
+        clientName: client?.name,
+        clientEmail: client?.email,
+        portalBase: window.location.origin,
+      });
+      setCorrections(prev => prev.map(c => c.id === correction.id ? { ...c, status: 'applied' } : c));
+      alert('Pedido aprovado. Relatório atualizado.');
+    } catch (e) {
+      alert('Erro ao aprovar: ' + e.message);
+    }
+  };
+
+  const handleWorkerReject = async (correction) => {
+    if (!supabase) return;
+    const reason = prompt('Motivo da rejeição (será enviado ao cliente):');
+    if (reason === null) return;
+    try {
+      const client = clients.find(cl => String(cl.id) === String(correction.client_id));
+      await rejectCorrection(supabase, {
+        correctionId: correction.id,
+        clientId: correction.client_id,
+        month: correction.month,
+        reason,
+        reviewer: currentUser?.id,
+        clientName: client?.name,
+        clientEmail: client?.email,
+        portalBase: window.location.origin,
+      });
+      setCorrections(prev => prev.map(c => c.id === correction.id ? { ...c, status: 'rejected' } : c));
+      alert('Pedido rejeitado. Cliente notificado.');
+    } catch (e) {
+      alert('Erro ao rejeitar: ' + e.message);
+    }
+  };
+
+  const renderWorkerCard = (c) => {
+    const client = clients.find(cl => String(cl.id) === String(c.client_id));
+    const items = itemsByCorrection.get(c.id) || [];
+    const isPending = c.status === 'submitted' || c.status === 'under_review';
+    const isResolved = c.status === 'applied' || c.status === 'rejected';
+    const isExpanded = expandedCards[c.id];
+
+    return (
+      <div key={c.id} className={`bg-white border rounded-2xl overflow-hidden ${isPending ? 'border-emerald-200 shadow-sm' : 'border-slate-200'}`}>
+        <button
+          onClick={() => setExpandedCards(prev => ({ ...prev, [c.id]: !prev[c.id] }))}
+          className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl ${isResolved ? (c.status === 'applied' ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600') : 'bg-emerald-100 text-emerald-600'}`}>
+              <Clock size={16} />
+            </div>
+            <div className="text-left">
+              <span className="font-bold text-slate-700 text-sm">{client?.name || 'Cliente'}</span>
+              <span className="text-xs text-slate-400 ml-2">({items.length} pedido{items.length > 1 ? 's' : ''})</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {isResolved && (
+              <span className={`text-[10px] font-black px-3 py-1.5 rounded-xl ${c.status === 'applied' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                {c.status === 'applied' ? '✅ Aprovado' : '❌ Rejeitado'}
+              </span>
+            )}
+            {isPending && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleWorkerApprove(c); }}
+                  className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase hover:bg-emerald-700 transition-colors"
+                >
+                  Aprovar
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleWorkerReject(c); }}
+                  className="bg-rose-500 text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase hover:bg-rose-600 transition-colors"
+                >
+                  Rejeitar
+                </button>
+              </>
+            )}
+            <ChevronDown size={16} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+          </div>
+        </button>
+        {isExpanded && (
+          <div className="px-4 pb-4 border-t border-slate-100">
+            <div className="pt-4 space-y-2">
+              {items.map(item => {
+                const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
+                const beforeHours = item.before?.startTime ? calculateDuration(item.before.startTime, item.before.endTime, item.before.breakStart, item.before.breakEnd) : null;
+                const proposedHours = item.proposed?.startTime ? calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd) : null;
+                return (
+                  <div key={item.id} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="font-bold text-slate-600 text-xs">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">{item.date}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 font-bold uppercase text-[9px]">Original</span>
+                        <p className="text-slate-500">{item.before?.startTime && item.before?.endTime ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}</p>
+                        {beforeHours !== null && <span className="text-[10px] text-slate-400">({beforeHours}h)</span>}
+                      </div>
+                      {item.proposed?.startTime && (
+                        <>
+                          <div className="text-emerald-600 font-bold">→</div>
+                          <div className="bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
+                            <span className="text-[9px] text-emerald-600 font-bold uppercase">Proposto</span>
+                            <p className="text-emerald-700 font-bold">{`${item.proposed.startTime}-${item.proposed.endTime}`}</p>
+                            {proposedHours !== null && <span className="text-[10px] text-emerald-600">({proposedHours}h)</span>}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 md:p-8 bg-slate-50 min-h-screen">
       <header className="mb-8 flex items-center gap-3">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><AlertCircle size={20} /></div>
         <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Inbox de Correções</h3>
       </header>
+
+      {/* Source sub-tiles: Workers | Clients */}
+      <div className="flex gap-2 mb-4">
+        <button
+          onClick={() => { setSourceFilter('workers'); setExpandedCards({}); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'workers' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-300'}`}
+        >
+          <Users size={14} /> Workers
+          {workerOpenCount > 0 && (
+            <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{workerOpenCount}</span>
+          )}
+        </button>
+        <button
+          onClick={() => { setSourceFilter('clients'); setExpandedCards({}); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'clients' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}
+        >
+          <Building2 size={14} /> Clientes
+          {clientOpenCount > 0 && (
+            <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{clientOpenCount}</span>
+          )}
+        </button>
+      </div>
 
       <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
         {[
@@ -703,39 +874,43 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
             <p className="text-slate-400 text-sm font-medium">Sem correções neste filtro.</p>
           </div>
         )}
-        {filtered.map((c) => {
-          const client = clients.find((cl) => String(cl.id) === String(c.client_id));
-          const items = itemsByCorrection.get(c.id) || [];
-          const pending = items.filter((i) => i.item_status === 'pending').length;
-          return (
-            <button
-              key={c.id}
-              onClick={() => setSelectedId(c.id)}
-              className="bg-white border border-slate-100 rounded-2xl p-5 text-left hover:shadow-md transition-all flex items-center gap-4"
-            >
-              <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center">
-                <Clock size={20} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-black text-slate-800">{client?.name || c.client_id}</span>
-                  <span className="text-xs font-mono text-slate-400">{c.month}</span>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${STATUS_LABEL[c.status]?.cls}`}>{STATUS_LABEL[c.status]?.label}</span>
-                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${TYPE_LABEL[c.type]?.cls || 'bg-slate-100 text-slate-500'}`}>{TYPE_LABEL[c.type]?.label || c.type}</span>
+        {sourceFilter === 'workers' ? (
+          filtered.map(c => renderWorkerCard(c))
+        ) : (
+          filtered.map((c) => {
+            const client = clients.find((cl) => String(cl.id) === String(c.client_id));
+            const items = itemsByCorrection.get(c.id) || [];
+            const pending = items.filter((i) => i.item_status === 'pending').length;
+            return (
+              <button
+                key={c.id}
+                onClick={() => setSelectedId(c.id)}
+                className="bg-white border border-slate-100 rounded-2xl p-5 text-left hover:shadow-md transition-all flex items-center gap-4"
+              >
+                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-xl flex items-center justify-center">
+                  <Clock size={20} />
                 </div>
-                {c.type === 'quick' ? (
-                  <p className="text-xs text-slate-600 mt-1 italic line-clamp-2">"{(c.justification || '(sem texto)').slice(0, 120)}{(c.justification || '').length > 120 ? '…' : ''}"</p>
-                ) : (
-                  <p className="text-xs text-slate-500 mt-1">{items.length} item(s) • {pending} pendente(s)</p>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Submetido</p>
-                <p className="text-xs font-mono text-slate-600">{c.submitted_at?.slice(0, 10) || '—'}</p>
-              </div>
-            </button>
-          );
-        })}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-black text-slate-800">{client?.name || c.client_id}</span>
+                    <span className="text-xs font-mono text-slate-400">{c.month}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${STATUS_LABEL[c.status]?.cls}`}>{STATUS_LABEL[c.status]?.label}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-md ${TYPE_LABEL[c.type]?.cls || 'bg-slate-100 text-slate-500'}`}>{TYPE_LABEL[c.type]?.label || c.type}</span>
+                  </div>
+                  {c.type === 'quick' ? (
+                    <p className="text-xs text-slate-600 mt-1 italic line-clamp-2">"{(c.justification || '(sem texto)').slice(0, 120)}{(c.justification || '').length > 120 ? '…' : ''}"</p>
+                  ) : (
+                    <p className="text-xs text-slate-500 mt-1">{items.length} item(s) • {pending} pendente(s)</p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Submetido</p>
+                  <p className="text-xs font-mono text-slate-600">{c.submitted_at?.slice(0, 10) || '—'}</p>
+                </div>
+              </button>
+            );
+          })
+        )}
       </div>
     </div>
   );
