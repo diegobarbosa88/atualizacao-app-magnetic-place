@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar, Activity } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar, Activity, Clock } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -197,7 +197,7 @@ const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
 };
 
 export default function ClientPortal({ clients, workers, logs: initialLogs, saveToDb, initialClientId, initialMonth, initialTokenClientId, renderReport, systemSettings, appNotifications, clientApprovals, supabase }) {
-    const { companySignature } = useApp();
+    const { companySignature, corrections, correctionItems } = useApp();
     const [logs, setLogs] = useState(initialLogs || []);
     const [currentView, setCurrentView] = useState('inicio');
     const [expandedWorkers, setExpandedWorkers] = useState([]);
@@ -403,8 +403,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             return;
         }
 
+        // CR-05 fix: Use unique channel name per client to prevent subscription collisions
+        const channelName = `client-portal-logs-${initialClientId}`;
         const channel = supabase
-            .channel('client-portal-logs')
+            .channel(channelName)
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
@@ -444,11 +446,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }, [effectiveClientId]);
 
     const myNotifications = useMemo(() => {
-        if (!appNotifications || !initialClientId) return [];
+        if (!appNotifications || !effectiveClientId) return [];
 
         const filtered = appNotifications.filter(n => {
             const matchTarget = n.target_type === 'client';
-            const matchClientId = String(n.target_client_id) === String(initialClientId);
+            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
             const isActive = n.is_active === true;
             const notDismissed = !dismissedNotifs.includes(n.id);
 
@@ -456,13 +458,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         });
 
         return filtered;
-    }, [appNotifications, initialClientId, dismissedNotifs]);
+    }, [appNotifications, effectiveClientId, dismissedNotifs]);
 
     const handleDismissNotif = (id) => {
         setDismissedNotifs(prev => {
             if (prev.includes(id)) return prev;
             const updated = [...prev, id];
-            localStorage.setItem(`dismissed_client_notifs_${initialClientId}`, JSON.stringify(updated));
+            localStorage.setItem(`dismissed_client_notifs_${effectiveClientId}`, JSON.stringify(updated));
             return updated;
         });
     };
@@ -504,7 +506,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     if (originalLog) {
                         updates.push({ id: originalLog.id, data: { ...originalLog, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours } });
                     } else {
-                        const newLogId = `log_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+                        // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs instead of Date.now() + Math.random()
+                        const newLogId = `log_${crypto.randomUUID()}`;
                         inserts.push({ id: newLogId, data: { id: newLogId, date: targetDate, workerId: targetWorkerId, clientId: targetClientId, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours, created_at: new Date().toISOString() } });
                     }
                 }
@@ -540,6 +543,131 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         }
     }, [clientData, clientSession, supabase, logs, initialClientId, saveToDb]);
 
+    const handleApproveCreationRequest = useCallback(async (notif) => {
+        const correctionId = notif.payload?.correction_id;
+        if (!correctionId) {
+            alert("Erro: ID do pedido não encontrado.");
+            return;
+        }
+
+        const correction = corrections?.find(c => c.id === correctionId);
+        const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
+        if (!correction) {
+            alert("Erro: Pedido não encontrado.");
+            return;
+        }
+
+        if (!confirm("Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.")) return;
+
+        try {
+            for (const item of items) {
+                let existing = null;
+                if (item.before) {
+                    const { data } = await supabase
+                        .from('logs')
+                        .select('*')
+                        .eq('workerId', item.worker_id)
+                        .eq('date', item.date)
+                        .limit(1)
+                        .maybeSingle();
+                    existing = data;
+                }
+
+                if (item.before && existing) {
+                    const { error } = await supabase.from('logs').update({
+                        startTime: item.proposed?.startTime || null,
+                        endTime: item.proposed?.endTime || null,
+                        breakStart: item.proposed?.breakStart || null,
+                        breakEnd: item.proposed?.breakEnd || null,
+                    }).eq('id', existing.id);
+                    if (error) throw error;
+                } else if (!item.before && item.proposed) {
+                    // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs
+                    const logId = `log_${crypto.randomUUID()}`;
+                    const { error } = await supabase.from('logs').insert({
+                        id: logId,
+                        workerId: String(item.worker_id),
+                        clientId: String(effectiveClientId),
+                        date: item.date,
+                        startTime: item.proposed.startTime,
+                        endTime: item.proposed.endTime,
+                        breakStart: item.proposed.breakStart,
+                        breakEnd: item.proposed.breakEnd,
+                    });
+                    if (error) throw error;
+                }
+
+                await supabase.from('correction_items').update({ item_status: 'accepted' }).eq('id', item.id);
+            }
+
+            await supabase.from('corrections').update({ status: 'applied' }).eq('id', correctionId);
+
+            const adminNotifId = `accp_cr_${notif.id}_${Date.now()}`;
+            await saveToDb('app_notifications', adminNotifId, {
+                title: `✅ Pedido de Registo Aprovado: ${clientData?.name || 'Cliente'}`,
+                message: `O cliente ACEITOU o pedido de registo para ${correction.month}. Os registos foram atualizados.`,
+                type: 'success',
+                target_type: 'admin',
+                created_at: new Date().toISOString(),
+                is_active: true
+            });
+
+            handleDismissNotif(notif.id);
+            setLogs(prev => {
+                const updated = [...prev];
+                for (const item of items) {
+                    const existingIdx = updated.findIndex(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
+                    if (existingIdx >= 0 && item.proposed) {
+                        updated[existingIdx] = { ...updated[existingIdx], ...item.proposed };
+                    } else if (!item.before && item.proposed) {
+                        updated.push({
+                            // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs
+                            id: `log_${crypto.randomUUID()}`,
+                            workerId: item.worker_id,
+                            clientId: effectiveClientId,
+                            date: item.date,
+                            ...item.proposed
+                        });
+                    }
+                }
+                return updated;
+            });
+
+            alert("Pedido aprovado! Relatório atualizado.");
+        } catch (error) {
+            console.error("Erro ao aprovar pedido:", error);
+            alert("Ocorreu um erro ao aprovar o pedido. Por favor, tente novamente.");
+        }
+    }, [corrections, correctionItems, supabase, effectiveClientId, saveToDb, handleDismissNotif]);
+
+    const handleRejectCreationRequest = useCallback(async (notif) => {
+        const correctionId = notif.payload?.correction_id;
+        if (!correctionId) return;
+
+        const reason = prompt("Motivo da rejeição (opcional):");
+        if (reason === null) return;
+
+        try {
+            await supabase.from('corrections').update({ status: 'rejected' }).eq('id', correctionId);
+
+            const adminNotifId = `rej_cr_${notif.id}_${Date.now()}`;
+            await saveToDb('app_notifications', adminNotifId, {
+                title: `❌ Pedido de Registo Rejeitado: ${clientData?.name || 'Cliente'}`,
+                message: `O cliente REJEITOU o pedido de registo${reason ? `. Motivo: ${reason}` : ''}.`,
+                type: 'error',
+                target_type: 'admin',
+                created_at: new Date().toISOString(),
+                is_active: true
+            });
+
+            handleDismissNotif(notif.id);
+            alert("Pedido rejeitado.");
+        } catch (error) {
+            console.error("Erro ao rejeitar pedido:", error);
+            alert("Ocorreu um erro ao rejeitar o pedido.");
+        }
+    }, [supabase, saveToDb, handleDismissNotif]);
+
     const availableMonths = useMemo(() => {
         if (!effectiveClientId) return [];
         return [...new Set(
@@ -551,13 +679,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         )].sort((a, b) => b.localeCompare(a));
     }, [logs, effectiveClientId]);
 
-    // Após login via formulário, selecionar automaticamente o mês mais recente disponível
-    // (tem de estar DEPOIS da declaração de availableMonths para evitar TDZ)
+    // WR-10 fix: Remove selectedMonth from dependency array to prevent potential re-render loop
+    // (selectedMonth is set inside the effect, not read)
     useEffect(() => {
         if (!selectedMonth && effectiveClientId && availableMonths.length > 0) {
             setSelectedMonth(availableMonths[0]);
         }
-    }, [effectiveClientId, availableMonths, selectedMonth]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [effectiveClientId, availableMonths]);
 
     const originalWorkersData = useMemo(() => {
         if (!effectiveClientId || !selectedMonth) return [];
@@ -2130,40 +2259,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     return (
         <div className={`min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-200 font-sans ${printingWorker ? 'pb-0 bg-white' : 'pb-20'}`}>
-            {/* Banner fixo no topo — igual ao do trabalhador */}
-            {!printingWorker && myNotifications.length > 0 && (
-                <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
-                    {myNotifications.map(notif => (
-                        <div key={notif.id} className="pointer-events-auto animate-in slide-in-from-top-4 duration-700">
-                            <div className={`rounded-[2rem] p-0.5 shadow-2xl ${
-                                notif.type === 'error' ? 'bg-gradient-to-br from-rose-500 to-red-600' :
-                                notif.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' :
-                                notif.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-600' :
-                                'bg-gradient-to-br from-indigo-500 to-violet-600'
-                            }`}>
-                                <div className="bg-white/95 backdrop-blur-md rounded-[1.95rem] p-4 shadow-inner">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`p-2.5 rounded-2xl shrink-0 ${
-                                            notif.type === 'error' ? 'bg-rose-50 text-rose-600' :
-                                            notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' :
-                                            notif.type === 'warning' ? 'bg-amber-50 text-amber-600' :
-                                            'bg-indigo-50 text-indigo-600'
-                                        }`}>
-                                            {notif.type === 'error' ? <AlertCircle size={20} /> : <Bell size={20} />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{notif.title}</h3>
-                                            <p className="text-[10px] font-bold text-slate-500 mt-0.5 leading-tight line-clamp-1">{notif.message}</p>
-                                        </div>
-                                        <button onClick={() => handleDismissNotif(notif.id)} className="p-1.5 text-slate-300 hover:text-slate-600 transition-all hover:bg-slate-50 rounded-xl shrink-0"><X size={18} /></button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-</div>
-            )}
-
             {/* Header Magnetic Place */}
             {!printingWorker && <Header showActions={selectedTab === 'dashboard'} />}
 
@@ -2402,6 +2497,21 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                                                 {t('ignore_notif')}
                                                             </button>
                                                         </>
+                                                    ) : notif.payload?.kind === 'submitted' && notif.payload?.correction_id ? (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleApproveCreationRequest(notif)}
+                                                                className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
+                                                            >
+                                                                <CheckCircle size={14} /> Aprovar
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRejectCreationRequest(notif)}
+                                                                className="bg-rose-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all active:scale-95"
+                                                            >
+                                                                Rejeitar
+                                                            </button>
+                                                        </>
                                                     ) : (
                                                         <button
                                                             onClick={() => handleDismissNotif(notif.id)}
@@ -2416,6 +2526,92 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {/* Pedidos de criação/correção de registos - com botões Aprovar/Rejeitar */}
+                    {myNotifications.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).length > 0 && (
+                        <div className="mb-8 space-y-4">
+                            {myNotifications.filter(n => n.payload?.kind === 'submitted' && n.payload?.correction_id).map(notif => {
+                                const correctionId = notif.payload?.correction_id;
+                                const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
+                                return (
+                                <div key={notif.id} className="relative overflow-hidden bg-white border border-emerald-100 rounded-[2rem] shadow-xl shadow-emerald-100/30 animate-fade-in">
+                                    <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600"></div>
+                                    <div className="p-6 md:p-8">
+                                        <div className="flex items-start gap-4 md:gap-6">
+                                            <div className="bg-emerald-50 p-4 rounded-2xl text-emerald-600 shrink-0 hidden sm:block">
+                                                <Clock size={24} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight">{notif.title}</h3>
+                                                    <button onClick={() => handleDismissNotif(notif.id)} className="p-2 hover:bg-slate-100 rounded-xl text-slate-400 transition-colors">
+                                                        <X size={18} />
+                                                    </button>
+                                                </div>
+                                                <div className="text-slate-600 text-sm leading-relaxed mb-6 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                                                    <pre className="whitespace-pre-wrap font-sans">{notif.message}</pre>
+                                                </div>
+                                                {items.length > 0 && (
+                                                    <div className="mb-6 space-y-3">
+                                                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Detalhes do Pedido</h4>
+                                                        {items.map(item => {
+                                                            const workerObj = workers.find(w => String(w.id) === String(item.worker_id));
+                                                            return (
+                                                                <div key={item.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                                                                    <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-50">
+                                                                        <span className="font-black text-slate-700 text-sm">{item.worker_name || workerObj?.name || 'Trabalhador'}</span>
+                                                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">{item.date}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center justify-between gap-4">
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-[8px] text-slate-400 font-bold uppercase">Horário Original</span>
+                                                                            <span className="text-xs text-slate-500 font-medium">
+                                                                                {item.before ? `${item.before.startTime}-${item.before.endTime}` : 'Sem registo'}
+                                                                            </span>
+                                                                            <span className="text-[8px] text-slate-400 font-bold uppercase mt-1">Pausa Original</span>
+                                                                            <span className="text-xs text-slate-400">
+                                                                                {item.before?.breakStart && item.before?.breakEnd ? `${item.before.breakStart}-${item.before.breakEnd}` : 'Sem pausa'}
+                                                                            </span>
+                                                                        </div>
+                                                                        <div className="text-slate-300 text-xl font-bold">→</div>
+                                                                        <div className="flex flex-col items-center bg-emerald-50 px-3 py-2 rounded-xl border border-emerald-100">
+                                                                            <span className="text-[8px] text-emerald-600 font-bold uppercase">Proposto</span>
+                                                                            <span className="text-sm text-emerald-700 font-black">
+                                                                                {item.proposed ? `${item.proposed.startTime}-${item.proposed.endTime}` : 'N/A'}
+                                                                            </span>
+                                                                            <span className="text-[8px] text-emerald-500 font-bold uppercase mt-1">Pausa</span>
+                                                                            <span className="text-xs text-emerald-600">
+                                                                                {item.proposed?.breakStart && item.proposed?.breakEnd ? `${item.proposed.breakStart}-${item.proposed.breakEnd}` : 'Sem pausa'}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                                <div className="flex items-center gap-4">
+                                                    <button
+                                                        onClick={() => handleApproveCreationRequest(notif)}
+                                                        className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 active:scale-95 flex items-center gap-2"
+                                                    >
+                                                        <CheckCircle size={14} /> Aprovar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleRejectCreationRequest(notif)}
+                                                        className="bg-rose-600 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-700 transition-all active:scale-95"
+                                                    >
+                                                        Rejeitar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                );
+                            })}
                         </div>
                     )}
 
