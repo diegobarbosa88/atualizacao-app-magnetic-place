@@ -802,7 +802,10 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
                                   )}
                                   {isLimitedWorker && (
-                                    <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                                    <div className="flex gap-1">
+                                      <button onClick={() => { handleOpenInlineForm(ds); }} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                                      <button onClick={() => { handleDelete('logs', log.id); }} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
+                                    </div>
                                   )}
                                 </div>
                               </div>

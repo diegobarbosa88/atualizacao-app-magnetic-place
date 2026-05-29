@@ -637,6 +637,21 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 is_active: true
             });
 
+            for (const item of items) {
+                if (item.worker_id) {
+                    const workerNotifId = `accp_wr_${item.id}_${Date.now()}`;
+                    await saveToDb('app_notifications', workerNotifId, {
+                        title: '✅ Pedido de Registo Aprovado',
+                        message: `O seu pedido de ${item.date} foi aprovado pelo cliente.`,
+                        type: 'success',
+                        target_type: 'worker',
+                        target_worker_id: String(item.worker_id),
+                        created_at: new Date().toISOString(),
+                        is_active: true
+                    });
+                }
+            }
+
             handleDismissNotif(notif.id);
             setLogs(prev => {
                 const updated = [...prev];
@@ -669,6 +684,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const correctionId = notif.payload?.correction_id;
         if (!correctionId) return;
 
+        const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
         const reason = prompt("Motivo da rejeição (opcional):");
         if (reason === null) return;
 
@@ -685,13 +701,29 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 is_active: true
             });
 
+            const rejectionMsg = reason ? ` Motivo: ${reason}` : '';
+            for (const item of items) {
+                if (item.worker_id) {
+                    const workerNotifId = `rej_wr_${item.id}_${Date.now()}`;
+                    await saveToDb('app_notifications', workerNotifId, {
+                        title: '❌ Pedido de Registo Rejeitado',
+                        message: `O seu pedido de ${item.date} foi rejeitado pelo cliente.${rejectionMsg}`,
+                        type: 'error',
+                        target_type: 'worker',
+                        target_worker_id: String(item.worker_id),
+                        created_at: new Date().toISOString(),
+                        is_active: true
+                    });
+                }
+            }
+
             handleDismissNotif(notif.id);
             alert("Pedido rejeitado.");
         } catch (error) {
             console.error("Erro ao rejeitar pedido:", error);
             alert("Ocorreu um erro ao rejeitar o pedido.");
         }
-    }, [supabase, saveToDb, handleDismissNotif]);
+    }, [supabase, saveToDb, handleDismissNotif, correctionItems]);
 
     const availableMonths = useMemo(() => {
         if (!effectiveClientId) return [];

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2 } from 'lucide-react';
+import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 
@@ -17,6 +17,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [requestDelete, setRequestDelete] = useState(false);
 
   useMemo(() => {
     if (initialDate) {
@@ -69,6 +70,85 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         endTime: '',
         description: ''
       });
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!supabase || !selectedDate || !existingLog) return;
+
+    setIsSubmitting(true);
+    try {
+      const correctionId = `corr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const now = new Date().toISOString();
+
+      const correction = {
+        id: correctionId,
+        client_id: String(existingLog.clientId),
+        month: selectedDate.substring(0, 7),
+        type: 'deletion_request',
+        status: 'submitted',
+        submitted_at: now,
+        submitted_by: String(currentUser?.id),
+        justification: `Pedido de eliminação do registo de ${selectedDate}`
+      };
+
+      const { error: e1 } = await supabase.from('corrections').insert(correction);
+      if (e1) throw e1;
+
+      const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const item = {
+        id: itemId,
+        correction_id: correctionId,
+        worker_id: String(currentUser?.id),
+        worker_name: currentUser?.name,
+        date: selectedDate,
+        before: {
+          startTime: existingLog.startTime,
+          endTime: existingLog.endTime,
+          breakStart: existingLog.breakStart,
+          breakEnd: existingLog.breakEnd,
+        },
+        proposed: null,
+        final: null,
+        item_status: 'pending',
+      };
+
+      const { error: e2 } = await supabase.from('correction_items').insert(item);
+      if (e2) throw e2;
+
+      await supabase.from('app_notifications').insert({
+        id: `notif_${Date.now()}`,
+        title: `Pedido de Eliminação · ${currentUser?.name}`,
+        message: `${currentUser?.name} solicitou eliminação do registo de ${selectedDate}`,
+        type: 'warning',
+        target_type: 'admin',
+        target_client_id: String(existingLog.clientId),
+        payload: { correction_id: correctionId, kind: 'submitted' },
+        is_active: true,
+        is_dismissible: true,
+        created_at: now,
+      });
+
+      await supabase.from('app_notifications').insert({
+        id: `notif_${Date.now()}_client`,
+        title: `Pedido de Eliminação · ${currentUser?.name}`,
+        message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${selectedDate}.`,
+        type: 'info',
+        target_type: 'client',
+        target_client_id: String(existingLog.clientId),
+        payload: { correction_id: correctionId, kind: 'submitted' },
+        is_active: true,
+        is_dismissible: true,
+        created_at: now,
+      });
+
+      setRequestDelete(false);
+      setSubmitted(true);
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      alert('Erro ao submeter pedido: ' + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -181,7 +261,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           <CheckCircle size={24} className="text-emerald-600 mx-auto mb-2" />
           <p className="text-sm font-bold text-emerald-700">Pedido submetido!</p>
           <button
-            onClick={() => setSubmitted(false)}
+            onClick={() => { setSubmitted(false); setRequestDelete(false); }}
             className="mt-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-black text-xs uppercase hover:bg-emerald-700 transition-all"
           >
             Novo Pedido
@@ -198,7 +278,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           <h3 className="text-lg font-black text-slate-800 mb-1">Pedido Enviado</h3>
           <p className="text-xs text-slate-500 mb-3">Aguarde aprovação do administrador.</p>
           <button
-            onClick={() => setSubmitted(false)}
+            onClick={() => { setSubmitted(false); setRequestDelete(false); }}
             className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase hover:bg-indigo-700 transition-all"
           >
             Novo Pedido
@@ -344,14 +424,51 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
             </div>
           )}
 
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !formData.clientId || !formData.startTime || !formData.endTime}
-            className="w-full bg-emerald-600 text-white py-3 rounded-xl shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-          >
-            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            {isSubmitting ? 'A Submeter...' : 'Submeter Pedido'}
-          </button>
+          {existingLog && !requestDelete && (
+            <button
+              onClick={() => setRequestDelete(true)}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-200 font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-all"
+            >
+              <Trash2 size={14} />
+              Solicitar Exclusão
+            </button>
+          )}
+
+          {requestDelete && (
+            <div className="bg-rose-50/50 rounded-xl p-4 border border-rose-200 space-y-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Trash2 size={16} className="text-rose-600" />
+                <span className="text-xs font-black text-rose-600 uppercase tracking-widest">Confirmar pedido de exclusão</span>
+              </div>
+              <p className="text-xs text-slate-600">Ao confirmar, será enviado um pedido para eliminar o registo de <strong>{selectedDate}</strong>. O administrador analisará o pedido.</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setRequestDelete(false)}
+                  className="flex-1 py-2 bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-300 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleDeleteRequest}
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 bg-rose-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-rose-700 transition-all disabled:opacity-50"
+                >
+                  {isSubmitting ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Confirmar'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!requestDelete && (
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !formData.clientId || !formData.startTime || !formData.endTime}
+              className="w-full bg-emerald-600 text-white py-3 rounded-xl shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+            >
+              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+              {isSubmitting ? 'A Submeter...' : 'Submeter Pedido'}
+            </button>
+          )}
         </div>
       )}
     </div>
