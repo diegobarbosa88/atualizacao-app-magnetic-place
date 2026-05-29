@@ -61,6 +61,11 @@ async function tryEmbedImage(pdfDoc, bytes) {
   }
 }
 
+// WR-11 fix: Basic sanitization for PDF text to prevent malformed data issues
+function sanitizePdfText(str) {
+  return String(str || 'N/D').replace(/[^\x20-\x7E\s]/g, '').substring(0, 100);
+}
+
 export async function addSignatureProtocolPage(pdfInput, {
   workerName = 'Trabalhador',
   signatureDataUrl,
@@ -722,12 +727,12 @@ function drawAdminStamp(page, {
   }
 
   // IP
-  page.drawText(`IP ${String(ip || 'N/D')}`, { x: detailX, y: dY, size: 5.5, font: courier, color: SLATE_500 });
+  page.drawText(`IP ${sanitizePdfText(ip)}`, { x: detailX, y: dY, size: 5.5, font: courier, color: SLATE_500 });
   dY -= 8;
 
   // ID
   if (id) {
-    page.drawText(`ID: ${String(id)}`, { x: detailX, y: dY, size: 5, font: helvBold, color: INDIGO });
+    page.drawText(`ID: ${sanitizePdfText(id)}`, { x: detailX, y: dY, size: 5, font: helvBold, color: INDIGO });
   }
 }
 
