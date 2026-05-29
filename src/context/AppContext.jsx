@@ -13,7 +13,7 @@ export const AppProvider = ({ children }) => {
   // --- SYSTEM SETTINGS ---
   const [systemSettings, setSystemSettings] = useState(() => {
     const defaults = {
-      adminPassword: '',
+      adminPassword: null,  // Must be set before admin can login (CR-01 fix)
       companyName: 'MAGNETIC PLACE',
       companyAddress: '',
       companyNif: '',

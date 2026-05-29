@@ -45,7 +45,16 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (user.trim().toLowerCase() === 'admin' && pass.trim() === systemSettings.adminPassword) {
+    if (user.trim().toLowerCase() === 'admin') {
+      // CR-01 fix: Require adminPassword to be set before allowing admin login
+      if (!systemSettings.adminPassword) {
+        setError('Sistema não configurado. Contacte o administrador.');
+        return;
+      }
+      if (pass.trim() !== systemSettings.adminPassword) {
+        setError('Senha incorreta.');
+        return;
+      }
       onLogin('admin');
       return;
     }
@@ -181,11 +190,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
         </form>
       </div>
 
-      <style dangerouslySetInnerHTML={{
-        __html: `
-        @keyframes bounce-subtle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
-        .animate-bounce-subtle { animation: bounce-subtle 3s infinite ease-in-out; }
-      `}} />
+      
     </div>
   );
 };
