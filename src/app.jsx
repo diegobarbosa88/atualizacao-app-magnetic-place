@@ -207,7 +207,7 @@ export default function App() {
   const handleDisparoEmail = async () => {
     if (!clienteSelecionado) return;
     setIsSendingEmail(true);
-    const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
+    const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`;
     const modalLinkUnico = `${CLIENT_PORTAL_URL}?client=${toClientLinkId(clienteSelecionado.id)}&month=${monthStr}`;
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0));
     const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
@@ -217,7 +217,7 @@ export default function App() {
       const templateParams = {
         to_email: clienteSelecionado.email || 'contato@cliente.pt',
         to_name: clienteSelecionado.name,
-        mes_referencia: portalMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+        mes_referencia: currentMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
         total_horas: totalHoras,
         link_unico: modalLinkUnico
       };
@@ -445,7 +445,7 @@ export default function App() {
                   <div className="flex justify-center mb-4 sm:mb-8 pb-4 sm:pb-6 border-b-2 border-slate-50"><img src="/MAGNETIC (3).png" alt="Logo" className="h-8 sm:h-10 object-contain" /></div>
                   <h4 className="font-black text-base sm:text-lg text-slate-800 mb-3">Olá {clienteSelecionado.name},</h4>
                   <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4">Os relatórios de serviço referentes ao período de <strong className="font-black text-indigo-700">{currentMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</strong> já estão disponíveis para a sua revisão e aprovação.</p>
-                  <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-4"><p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Total Registado</p><p className="text-xl sm:text-2xl font-black text-indigo-700">{formatHours(logs.filter(l => l.clientId === clienteSelecionado.id).reduce((acc, l) => acc + l.hours, 0))} <span className="text-sm sm:text-base font-bold">horas</span></p></div>
+                  <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-4"><p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Total Registado</p><p className="text-xl sm:text-2xl font-black text-indigo-700">{formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0))} <span className="text-sm sm:text-base font-bold">horas</span></p></div>
                   <p className="text-slate-500 text-xs leading-relaxed mb-4">Para rever em detalhe as datas, horas, e trabalhadores associados a este período, por favor utilize o botão abaixo:</p>
                   <div className="text-center mb-4"><div className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200">Aceder ao Portal de Validação</div></div>
                   <div className="pt-4 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Equipa Magnetic Place</p></div>
