@@ -775,7 +775,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }, [effectiveClientId, availableMonths]);
 
     const originalWorkersData = useMemo(() => {
-        if (!effectiveClientId || !selectedMonth) return [];
+        if (!effectiveClientId || !selectedMonth || selectedMonth.length < 7) return [];
         const clientLogs = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date && l.date.substring(0, 7) === selectedMonth);
         const workerIds = [...new Set(clientLogs.map(l => l.workerId))];
 
@@ -794,7 +794,9 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         }).sort((a, b) => a.name.localeCompare(b.name));
     }, [logs, workers, effectiveClientId, selectedMonth]);
 
-    const originalTotal = parseFloat(originalWorkersData.reduce((acc, curr) => acc + curr.totalHours, 0).toFixed(2));
+    const originalTotal = selectedMonth && selectedMonth.length >= 7
+        ? parseFloat(originalWorkersData.reduce((acc, curr) => acc + curr.totalHours, 0).toFixed(2))
+        : 0;
     const draftTotal = parseFloat(draftData.reduce((acc, curr) => acc + (Number(curr.editedTotalHours) || 0), 0).toFixed(2));
 
     const downloadFile = (filename, content) => {
