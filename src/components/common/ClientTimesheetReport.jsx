@@ -103,7 +103,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           client: uClient,
           worker: uWorker,
           logs: unitLogs,
-          totalHours: unitLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
+          totalHours: unitLogs.reduce((acc, l) => acc + (l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0),
           id: pair
         };
       }).filter(Boolean);
@@ -117,7 +117,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           client,
           worker: workers.find(w => w.id === wId),
           logs: unitLogs,
-          totalHours: unitLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
+          totalHours: unitLogs.reduce((acc, l) => acc + (l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0),
           id: wId
         };
       });
@@ -129,7 +129,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
           client,
           worker: workers.find(w => w.id === workerId),
           logs: specificLogs,
-          totalHours: specificLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0),
+          totalHours: specificLogs.reduce((acc, l) => acc + (l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0),
           id: workerId
         }];
       }
@@ -140,7 +140,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
       const clientBreakdowns = clientIds.map(cId => {
         const cLogs = workerLogs.filter(l => l.clientId === cId);
         const cName = clients.find(c => c.id === cId)?.name || '';
-        const cHours = cLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+        const cHours = cLogs.reduce((acc, l) => acc + (l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0);
         return { clientId: cId, clientName: cName, hours: cHours };
       });
       const workerTotal = clientBreakdowns.reduce((acc, c) => acc + c.hours, 0);
@@ -566,7 +566,7 @@ for (let p = 0; p < correctedTotalPages; p++) {
                     const isClearedDay =
                       (log.startTime == null && log.endTime == null) ||
                       (isClearedPattern(log.startTime) && isClearedPattern(log.endTime));
-                    const logHours = isClearedDay ? 0 : calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+                    const logHours = isClearedDay ? 0 : (log.hours ?? calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd));
                     if (!isClearedDay) {
                       weekPerformed += logHours;
                     }

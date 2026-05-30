@@ -6,8 +6,6 @@ import {
   getLastBusinessDayOfMonth
 } from '../../../utils/dateUtils';
 import {
-  formatHours,
-  calculateDuration,
   calculateExpectedMonthlyHours,
   getScheduleForDay
 } from '../../../utils/formatUtils';
@@ -66,8 +64,8 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
   // Computed values
   const todayStr = toISODateLocal(new Date());
   const monthLogs = logs?.filter(l => l.workerId === currentUser?.id && isSameMonth(l.date, currentMonth)) || [];
-  const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + calculateDuration(b.startTime, b.endTime, b.breakStart, b.breakEnd), 0);
-  const totalMonthHours = monthLogs.reduce((acc, curr) => acc + calculateDuration(curr.startTime, curr.endTime, curr.breakStart, curr.breakEnd), 0);
+  const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + (b.hours || 0), 0);
+  const totalMonthHours = monthLogs.reduce((acc, curr) => acc + (curr.hours || 0), 0);
 
   const activeWorkerSchedule = schedules.find(s => s.id === currentUser?.defaultScheduleId) || personalSchedules.find(p => p.id === currentUser?.defaultScheduleId);
   const expectedHours = activeWorkerSchedule ? calculateExpectedMonthlyHours(activeWorkerSchedule, currentMonth) : 0;

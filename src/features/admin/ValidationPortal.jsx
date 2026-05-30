@@ -60,7 +60,7 @@ const ValidationPortal = ({
     return [...workers].map(w => {
       const totalHours = logs
         .filter(l => l.workerId === w.id && l.date?.substring(0, 7) === portalMonthStr)
-        .reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+        .reduce((acc, l) => acc + (l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0);
       const approval = approvals.find(a => a.workerId === w.id && a.month === portalMonthStr);
       return { ...w, totalHours, isApproved: !!approval, approval };
     }).sort((a, b) => {

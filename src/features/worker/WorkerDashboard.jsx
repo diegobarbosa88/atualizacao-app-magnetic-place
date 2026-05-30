@@ -747,7 +747,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <div className="divide-y divide-slate-100">
             {daysList.map(ds => {
               const dayLogs = monthLogs.filter(l => l.date === ds);
-              const dayTotalTotal = dayLogs.reduce((acc, l) => acc + calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+              const dayTotalTotal = dayLogs.reduce((acc, l) => acc + (l.hours || 0), 0);
               const isCurrentInline = inlineEditingDate === ds;
               const isExpanded = expandedDays.includes(ds);
               const dObj = new Date(ds);
@@ -822,7 +822,7 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                                   )}
                                 </div>
                                 <div className="flex flex-row items-center justify-between sm:justify-end gap-4 sm:border-l sm:pl-4 border-slate-100 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
-                                  <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(calculateDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd))}</span>
+                                  <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
                                   {!myApproval && !isLimitedWorker && (
                                     <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
                                   )}
