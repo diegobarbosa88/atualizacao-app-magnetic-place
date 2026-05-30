@@ -784,7 +784,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             const wLogs = clientLogs.filter(l => l.workerId === wId).sort((a, b) => a.date.localeCompare(b.date));
             let total = 0;
             const dailyRecords = wLogs.map(log => {
-                const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+                const h = log.hours ?? calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
                 const dayObj = new Date(log.date);
                 const dayStr = `${String(dayObj.getDate()).padStart(2, '0')}/${String(dayObj.getMonth() + 1).padStart(2, '0')} (${dayObj.toLocaleDateString('pt-PT', { weekday: 'short' }).substring(0, 3)})`;
                 total += h;
@@ -1270,7 +1270,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                 const thisClient = clients?.find(c => String(c.id) === String(effectiveClientId));
 
                 const renderCalLogLine = (log) => {
-                    const h = calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+                    const h = log.hours ?? calculateHoursDiff(log.startTime, log.endTime, log.breakStart, log.breakEnd);
                     const isOpen = log.startTime && !log.endTime;
                     const inBreak = isOpen && log.breakStart && !log.breakEnd;
                     const worker = [...workers, ...fakeWorkers].find(w => String(w.id) === String(log.workerId || log.worker_id));
@@ -1361,7 +1361,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                     const dateStr = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
                                     const dayLogs = logsByDate[dateStr] || [];
                                     const hasLogs = dayLogs.length > 0;
-                                    const dayTotal = dayLogs.reduce((acc, l) => acc + calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd), 0);
+                                    const dayTotal = dayLogs.reduce((acc, l) => acc + (l.hours ?? calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0);
                                     const isToday = dateStr === calTodayStr;
                                     const isSelected = calSelectedDay === dateStr;
                                     const hasOpen = dayLogs.some(l => l.startTime && !l.endTime);
@@ -1825,8 +1825,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                         title: `Divergência Reportada: ${clientData.name}`,
                                         message: correcoesTexto,
                                         status: 'pending',
+                                        type: 'quick',
+                                        justification: reportJustification,
                                         client_id: initialClientId,
                                         month: initialMonth,
+                                        submitted_at: new Date().toISOString(),
                                         payload: { changes: fullMonthSnapshot, isFullMonth: true, reportType: 'quick' },
                                         created_at: new Date().toISOString()
                                     };
@@ -2011,7 +2014,133 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             dailyRecords: w.dailyRecords.map(d => ({ ...d, date: d.rawDate || d.date }))
         }));
 
+        const correcaoId = `correcao_${initialClientId}_${initialMonth}_precision`;
         const notifId = `notif_corr_${initialClientId}_${initialMonth}_precision`;
+
+        const correctionItems = [];
+        for (const worker of draftData) {
+            for (const day of worker.dailyRecords) {
+                const rawDate = day.rawDate;
+                const origEntry = day.entry === '--:--' ? '' : (day.entry || '');
+                const origExit  = day.exit  === '--:--' ? '' : (day.exit  || '');
+                const origBreakStart = day.breakStart || '';
+                const origBreakEnd   = day.breakEnd   || '';
+
+                const hasOrig = !!(origEntry || origExit);
+                const hasEdited = !!(day.editedEntry || day.editedExit || day.editedBreakStart || day.editedBreakEnd);
+                if (!hasOrig && !hasEdited) continue;
+
+                const wasEmpty = !origEntry && !origExit;
+                const isEmpty  = !day.editedEntry && !day.editedExit;
+
+                const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+                if (wasEmpty && !isEmpty) {
+                    correctionItems.push({
+                        id: itemId,
+                        workerId: worker.id,
+                        workerName: worker.name,
+                        date: rawDate,
+                        before: null,
+                        proposed: {
+                            startTime:  day.editedEntry  || null,
+                            endTime:    day.editedExit    || null,
+                            breakStart: day.editedBreakStart || null,
+                            breakEnd:   day.editedBreakEnd   || null,
+                            hours: day.editedHours || 0,
+                        },
+                    });
+                } else if (!wasEmpty && isEmpty) {
+                    const origLog = logs.find(l =>
+                        String(l.workerId) === String(worker.id) && l.date === rawDate
+                    );
+                    correctionItems.push({
+                        id: itemId,
+                        workerId: worker.id,
+                        workerName: worker.name,
+                        date: rawDate,
+                        before: origLog ? {
+                            startTime:  origLog.startTime  || null,
+                            endTime:    origLog.endTime    || null,
+                            breakStart: origLog.breakStart || null,
+                            breakEnd:   origLog.breakEnd   || null,
+                            hours:      origLog.hours      || 0,
+                        } : {
+                            startTime: origEntry || null, endTime: origExit || null,
+                            breakStart: origBreakStart || null, breakEnd: origBreakEnd || null,
+                            hours: day.hours || 0,
+                        },
+                        proposed: {
+                            startTime: null, endTime: null,
+                            breakStart: null, breakEnd: null, hours: 0,
+                        },
+                    });
+                } else if (
+                    day.editedEntry !== origEntry ||
+                    day.editedExit   !== origExit ||
+                    day.editedBreakStart !== origBreakStart ||
+                    day.editedBreakEnd   !== origBreakEnd
+                ) {
+                    const origLog = logs.find(l =>
+                        String(l.workerId) === String(worker.id) && l.date === rawDate
+                    );
+                    correctionItems.push({
+                        id: itemId,
+                        workerId: worker.id,
+                        workerName: worker.name,
+                        date: rawDate,
+                        before: origLog ? {
+                            startTime:  origLog.startTime  || null,
+                            endTime:    origLog.endTime    || null,
+                            breakStart: origLog.breakStart || null,
+                            breakEnd:   origLog.breakEnd   || null,
+                            hours:      origLog.hours      || 0,
+                        } : {
+                            startTime: origEntry || null, endTime: origExit || null,
+                            breakStart: origBreakStart || null, breakEnd: origBreakEnd || null,
+                            hours: day.hours || 0,
+                        },
+                        proposed: {
+                            startTime:  day.editedEntry  || null,
+                            endTime:    day.editedExit    || null,
+                            breakStart: day.editedBreakStart || null,
+                            breakEnd:   day.editedBreakEnd   || null,
+                            hours: day.editedHours || 0,
+                        },
+                    });
+                }
+            }
+        }
+
+        const correcaoRecord = {
+            id: correcaoId,
+            title: `Pedido de Correção: ${clientData.name}`,
+            message: correcoesTexto,
+            status: 'submitted',
+            type: 'precision',
+            justification: reportJustification,
+            client_id: initialClientId,
+            month: initialMonth,
+            submitted_at: new Date().toISOString(),
+            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
+            created_at: new Date().toISOString()
+        };
+        await saveToDb('corrections', correcaoId, correcaoRecord);
+
+        for (const item of correctionItems) {
+            await saveToDb('correction_items', item.id, {
+                id: item.id,
+                correction_id: correcaoId,
+                worker_id: String(item.workerId),
+                worker_name: item.workerName,
+                date: item.date,
+                before: item.before,
+                proposed: item.proposed,
+                final: null,
+                item_status: 'pending',
+            });
+        }
+
         const newNotif = {
             id: notifId,
             title: `Pedido de Correção: ${clientData.name}`,
@@ -2020,29 +2149,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             target_type: 'admin',
             target_client_id: initialClientId,
             target_worker_ids: [],
-            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
+            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision', correcao_id: correcaoId },
             is_dismissible: true,
             is_active: true,
             created_at: new Date().toISOString()
         };
-        const correcaoId = `correcao_${initialClientId}_${initialMonth}_precision`;
-        const correcaoRecord = {
-            id: correcaoId,
-            title: `Pedido de Correção: ${clientData.name}`,
-            message: correcoesTexto,
-            status: 'pending',
-            client_id: initialClientId,
-            month: initialMonth,
-            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
-            created_at: new Date().toISOString()
-        };
-        await saveToDb('corrections', correcaoId, correcaoRecord);
-
-        const newNotifWithCorrecaoId = {
-            ...newNotif,
-            payload: { ...newNotif.payload, correcao_id: correcaoId }
-        };
-        await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
+        await saveToDb('app_notifications', notifId, newNotif);
 
         goToView('sucesso_reporte');
     };
