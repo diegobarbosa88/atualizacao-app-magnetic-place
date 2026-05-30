@@ -535,19 +535,21 @@ function AdminDashboard(props) {
         const prevLogs = filterByDay(logs.filter(l => l.workerId === w.id), prevMonth);
         const currHours = currLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
         const prevHours = prevLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
-        const percent = prevHours > 0 ? Number((currHours / prevHours * 100).toFixed(1)) : null;
+        const ratioPct = prevHours > 0 ? Number((currHours / prevHours * 100).toFixed(1)) : null;
+        const diffPct = prevHours > 0 ? Number(((currHours - prevHours) / prevHours * 100).toFixed(1)) : null;
         return {
           id: w.id,
           name: w.name,
           registered: currHours,
           prevRegistered: prevHours,
           expected: getWorkerExpectedHours(w.id),
-          percent,
+          ratioPct,
+          diffPct,
           isOver: currHours >= prevHours && prevHours > 0
         };
       })
       .filter(w => w.registered > 0 || w.prevRegistered > 0)
-      .sort((a, b) => (b.percent || 0) - (a.percent || 0));
+      .sort((a, b) => (b.ratioPct || 0) - (a.ratioPct || 0));
   }, [workers, logs, schedules, currentMonth, todayDay]);
 
   // Area chart data - daily revenue
@@ -1274,9 +1276,9 @@ function AdminDashboard(props) {
                           <span className="text-sm font-bold text-slate-700 truncate">{w.name}</span>
                           <div className="flex items-center gap-3 shrink-0">
                             <span className="text-[10px] font-black text-slate-400">{formatHours(w.registered)} / {formatHours(w.prevRegistered)}</span>
-                            {w.percent !== null ? (
+                            {w.diffPct !== null ? (
                               <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                {w.isOver ? '▲' : '▼'} {Math.abs(w.percent)}%
+                                {w.isOver ? '▲' : '▼'} {Math.abs(w.diffPct)}%
                               </span>
                             ) : (
                               <span className="text-[10px] font-black text-slate-400 px-2 py-1">—</span>
@@ -1286,7 +1288,7 @@ function AdminDashboard(props) {
                         <div className="w-full bg-slate-100 rounded-full h-2">
                           <div
                             className={`h-2 rounded-full transition-all duration-500 ${w.isOver ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                            style={{ width: `${Math.min(100, w.percent || 0)}%` }}
+                            style={{ width: `${Math.min(100, w.ratioPct || 0)}%` }}
                           />
                         </div>
                       </div>
