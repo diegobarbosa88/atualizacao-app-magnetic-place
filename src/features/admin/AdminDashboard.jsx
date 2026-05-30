@@ -78,6 +78,9 @@ function AdminDashboard(props) {
   const [badgeTotals, setBadgeTotals] = useState({
     cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0
   });
+  const [prevBadgeTotals, setPrevBadgeTotals] = useState({
+    cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0
+  });
   const [badgeDetails, setBadgeDetails] = useState([]);
   const [expandedItems, setExpandedItems] = useState([]);
   const [detailsPage, setDetailsPage] = useState(1);
@@ -268,6 +271,124 @@ function AdminDashboard(props) {
 
         setBadgeTotals(totals);
         setBadgeDetails(details);
+      });
+  }, [supabase, currentMonth]);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const prevMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
+    const prevMonthStr = prevMonthDate.getFullYear() + '-' + String(prevMonthDate.getMonth() + 1).padStart(2, '0');
+
+    supabase
+      .from('reconciliation_runs')
+      .select('id, transactions_json')
+      .then(async ({ data: runs }) => {
+        if (!runs?.length) {
+          setPrevBadgeTotals({ cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 });
+          return;
+        }
+
+        const runIds = runs.map(r => r.id);
+
+        const [pags, rls, fatLinks, ints, imps, justs, allClients] = await Promise.all([
+          supabase.from('faturacao_clientes_pagamentos').select('tx_key, valor_pago, client_id').in('run_id', runIds),
+          supabase.from('movimentacao_recibo_links').select('tx_key, worker_name').in('run_id', runIds),
+          supabase.from('fatura_pagamento_links').select('tx_key, fatura_id').in('run_id', runIds),
+          supabase.from('entrada_internos').select('tx_key').in('run_id', runIds),
+          supabase.from('entrada_impostos').select('tx_key').in('run_id', runIds),
+          supabase.from('entrada_justifications').select('tx_key, justification').in('run_id', runIds),
+          supabase.from('clients').select('id, name')
+        ]);
+
+        const faturaIds = (fatLinks.data || []).map(f => f.fatura_id).filter(Boolean);
+        let allFaturas = { data: [] };
+        if (faturaIds.length > 0 && faturaIds.length <= 100) {
+          try {
+            allFaturas = await supabase.from('faturas').select('id, dados').in('id', faturaIds);
+          } catch (e) {
+            console.warn('Erro ao carregar faturas:', e);
+          }
+        }
+
+        const mapCliente = {};
+        const mapClienteNome = {};
+        (pags.data || []).forEach(p => { 
+          mapCliente[p.tx_key] = Number(p.valor_pago) || 0;
+          mapClienteNome[p.tx_key] = p.client_id;
+        });
+
+        const mapReciboNome = {};
+        (rls.data || []).forEach(r => { mapReciboNome[r.tx_key] = r.worker_name; });
+
+        const mapFaturaId = {};
+        (fatLinks.data || []).forEach(f => { 
+          mapFaturaId[f.tx_key] = f.fatura_id;
+        });
+
+        const mapFaturaDetails = {};
+        (allFaturas.data || []).forEach(fat => {
+          mapFaturaDetails[fat.id] = {
+            fornecedor: fat.dados?.fornecedor || fat.dados?.entidade || '—'
+          };
+        });
+
+        const mapJustificacao = {};
+        (justs.data || []).forEach(j => { mapJustificacao[j.tx_key] = j.justification; });
+
+        const clientNames = {};
+        (allClients.data || []).forEach(c => { clientNames[c.id] = c.name; });
+
+        const setRecibo = new Set((rls.data || []).map(r => r.tx_key));
+        const setFatura = new Set((fatLinks.data || []).map(f => f.tx_key));
+        const setInterno = new Set((ints.data || []).map(i => i.tx_key));
+        const setImposto = new Set((imps.data || []).map(i => i.tx_key));
+        const setJustificado = new Set((justs.data || []).map(j => j.tx_key));
+
+        const totals = { cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 };
+
+        runs.forEach(run => {
+          let txs = run.transactions_json;
+          if (typeof txs === 'string') {
+            try { txs = JSON.parse(txs || '[]'); } catch { txs = []; }
+          }
+          if (!Array.isArray(txs)) txs = [];
+
+          txs.forEach(tx => {
+            if (!tx.data?.startsWith(prevMonthStr)) return;
+
+            const key = `${tx.data}|${tx.descricao}|${tx.valor}`;
+            const valor = Math.abs(Number(tx.valor) || 0);
+
+            if (setInterno.has(key)) return;
+
+            let badge = null;
+            if (mapCliente[key]) {
+              badge = 'cliente';
+              totals.cliente += valor;
+            } else if (setRecibo.has(key)) {
+              badge = 'recibo';
+              totals.recibo += valor;
+            } else if (setFatura.has(key)) {
+              badge = 'fatura';
+              totals.fatura += valor;
+            } else if (setImposto.has(key)) {
+              badge = 'imposto';
+              totals.imposto += valor;
+            } else if (setJustificado.has(key)) {
+              badge = 'justificado';
+              totals.justificado += valor;
+            }
+
+            if (tx.tipo === 'credito') {
+              totals.receitas += valor;
+            } else {
+              totals.despesas += valor;
+            }
+          });
+        });
+
+        setPrevBadgeTotals(totals);
       });
   }, [supabase, currentMonth]);
 
@@ -572,17 +693,17 @@ function AdminDashboard(props) {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [logs, adminStats]);
 
-  // Pie chart data - todas sub-categorias com cores distintas
+  // Pie chart data - todas as sub-categorias (badges) dentro de Receitas e Despesa
   const pieData = [
-    { name: 'Rec. Cliente', tipo: 'credito', badgeKey: 'cliente', color: '#059669' },
-    { name: 'Rec. Recibo', tipo: 'credito', badgeKey: 'recibo', color: '#0891b2' },
-    { name: 'Rec. Fatura', tipo: 'credito', badgeKey: 'fatura', color: '#7c3aed' },
-    { name: 'Rec. Justif.', tipo: 'credito', badgeKey: 'justificado', color: '#a855f7' },
-    { name: 'Desp. Cliente', tipo: 'debito', badgeKey: 'cliente', color: '#dc2626' },
-    { name: 'Desp. Recibo', tipo: 'debito', badgeKey: 'recibo', color: '#0891b2' },
-    { name: 'Desp. Fatura', tipo: 'debito', badgeKey: 'fatura', color: '#7c3aed' },
-    { name: 'Desp. Imposto', tipo: 'debito', badgeKey: 'imposto', color: '#ef4444' },
-    { name: 'Desp. Justif.', tipo: 'debito', badgeKey: 'justificado', color: '#a855f7' }
+    { name: 'R. Cliente', tipo: 'credito', badgeKey: 'cliente', color: '#22c55e' },
+    { name: 'R. Recibo', tipo: 'credito', badgeKey: 'recibo', color: '#16a34a' },
+    { name: 'R. Fatura', tipo: 'credito', badgeKey: 'fatura', color: '#15803d' },
+    { name: 'R. Justif.', tipo: 'credito', badgeKey: 'justificado', color: '#166534' },
+    { name: 'D. Cliente', tipo: 'debito', badgeKey: 'cliente', color: '#ef4444' },
+    { name: 'D. Recibo', tipo: 'debito', badgeKey: 'recibo', color: '#dc2626' },
+    { name: 'D. Fatura', tipo: 'debito', badgeKey: 'fatura', color: '#b91c1c' },
+    { name: 'D. Imposto', tipo: 'debito', badgeKey: 'imposto', color: '#991b1b' },
+    { name: 'D. Justif.', tipo: 'debito', badgeKey: 'justificado', color: '#7f1d1d' }
   ].map(item => {
     const items = badgeDetails.filter(t => t.badge === item.badgeKey && t.tipo === item.tipo);
     const value = items.reduce((sum, t) => sum + t.valor, 0);
@@ -1138,8 +1259,6 @@ function AdminDashboard(props) {
                             dataKey="value"
                             startAngle={90}
                             endAngle={-270}
-                            label={({ name, value, percent }) => `${name}\n${(percent * 100).toFixed(0)}%`}
-                            labelLine={false}
                           >
                             {pieData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} stroke="white" strokeWidth={2} />
@@ -1148,47 +1267,40 @@ function AdminDashboard(props) {
                           <Tooltip formatter={(value, name) => formatCurrency(value)} />
                         </PieChart>
                       </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1">
-                        <span className="text-[10px] font-black text-emerald-600">↑ {formatCurrency(badgeTotals.receitas)}</span>
-                        <span className="text-lg font-black text-slate-800">{formatCurrency(resultado)}</span>
-                        <span className="text-[10px] font-black text-rose-600">↓ {formatCurrency(badgeTotals.despesas)}</span>
-                      </div>
                     </div>
                   ) : null}
 <div className="space-y-3 mt-4">
-                    {pieData.map((item) => {
-                      const isExpanded = expandedItems.includes(item.name);
-                      const subCats = item.tipo === 'credito' ? subCategoriasCredito : subCategoriasDebito;
-                      const subCatsWithValues = subCats.map(sub => {
-                        const items = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
-                        const value = items.reduce((sum, t) => sum + t.valor, 0);
-                        return { ...sub, value };
-                      }).filter(sub => sub.value > 0);
+                    {['Receitas', 'Despesa'].map(tipoNome => {
+                      const tipoKey = tipoNome === 'Receitas' ? 'credito' : 'debito';
+                      const itemData = pieData.filter(p => p.tipo === tipoKey);
+                      const totalValue = tipoKey === 'credito' ? badgeTotals.receitas : badgeTotals.despesas;
+                      const isExpanded = expandedItems.includes(tipoNome);
+                      const subCats = tipoKey === 'credito' ? subCategoriasCredito : subCategoriasDebito;
 
                       return (
-                        <div key={item.name}>
+                        <div key={tipoNome}>
                           <div
                             onClick={() => {
-                              setExpandedItems(prev => isExpanded ? prev.filter(i => i !== item.name) : [...prev, item.name]);
+                              setExpandedItems(prev => isExpanded ? prev.filter(i => i !== tipoNome) : [...prev, tipoNome]);
                               setDetailsPage(1);
                             }}
                             className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
                           >
                             <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                              <span className="text-sm font-bold text-slate-700">{item.name}</span>
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tipoKey === 'credito' ? '#22c55e' : '#ef4444' }} />
+                              <span className="text-sm font-bold text-slate-700">{tipoNome}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-slate-800">{formatCurrency(item.value)}</span>
+                              <span className="text-sm font-black text-slate-800">{formatCurrency(totalValue)}</span>
                               <ChevronDown size={14} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                             </div>
                           </div>
 
-                          {isExpanded && (
+                          {isExpanded && itemData.length > 0 && (
                             <div className="mt-2 pl-4 border-l-2 border-slate-200 space-y-2">
-                              {subCatsWithValues.map((sub) => {
-                                const isSubExpanded = expandedItems.includes(`${item.name}-${sub.name}`);
-                                const subBadgeItems = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
+                              {itemData.map(sub => {
+                                const isSubExpanded = expandedItems.includes(`${tipoNome}-${sub.name}`);
+                                const subBadgeItems = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === tipoKey);
                                 const totalPages = Math.ceil(subBadgeItems.length / 10);
                                 const paginatedItems = subBadgeItems
                                   .sort((a, b) => new Date(b.date) - new Date(a.date))
@@ -1199,7 +1311,7 @@ function AdminDashboard(props) {
                                     <div
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        const key = `${item.name}-${sub.name}`;
+                                        const key = `${tipoNome}-${sub.name}`;
                                         setExpandedItems(prev => isSubExpanded ? prev.filter(i => i !== key) : [...prev, key]);
                                         setDetailsPage(1);
                                       }}
@@ -1269,7 +1381,7 @@ function AdminDashboard(props) {
                           )}
                         </div>
                       );
-})}
+                    })}
                   </div>
                   <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
                     <span className="text-sm font-black text-slate-700">Resultado</span>
