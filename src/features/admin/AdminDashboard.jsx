@@ -573,11 +573,22 @@ function AdminDashboard(props) {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [logs, adminStats]);
 
-  // Pie chart data - apenas Receitas e Despesa
+  // Pie chart data - todas sub-categorias com cores distintas
   const pieData = [
-    { name: 'Receitas', tipo: 'credito', value: badgeTotals.receitas, color: '#10b981' },
-    { name: 'Despesa', tipo: 'debito', value: badgeTotals.despesas, color: '#f43f5e' }
-  ].filter(p => p.value > 0);
+    { name: 'Rec. Cliente', tipo: 'credito', badgeKey: 'cliente', color: '#059669' },
+    { name: 'Rec. Recibo', tipo: 'credito', badgeKey: 'recibo', color: '#0891b2' },
+    { name: 'Rec. Fatura', tipo: 'credito', badgeKey: 'fatura', color: '#7c3aed' },
+    { name: 'Rec. Justif.', tipo: 'credito', badgeKey: 'justificado', color: '#a855f7' },
+    { name: 'Desp. Cliente', tipo: 'debito', badgeKey: 'cliente', color: '#dc2626' },
+    { name: 'Desp. Recibo', tipo: 'debito', badgeKey: 'recibo', color: '#0891b2' },
+    { name: 'Desp. Fatura', tipo: 'debito', badgeKey: 'fatura', color: '#7c3aed' },
+    { name: 'Desp. Imposto', tipo: 'debito', badgeKey: 'imposto', color: '#ef4444' },
+    { name: 'Desp. Justif.', tipo: 'debito', badgeKey: 'justificado', color: '#a855f7' }
+  ].map(item => {
+    const items = badgeDetails.filter(t => t.badge === item.badgeKey && t.tipo === item.tipo);
+    const value = items.reduce((sum, t) => sum + t.valor, 0);
+    return { ...item, value };
+  }).filter(p => p.value > 0);
 
   // Sub-categorias por tipo
   const subCategoriasCredito = [
@@ -1124,16 +1135,18 @@ function AdminDashboard(props) {
                             cy="50%"
                             innerRadius={70}
                             outerRadius={105}
-                            paddingAngle={3}
+                            paddingAngle={2}
                             dataKey="value"
                             startAngle={90}
                             endAngle={-270}
+                            label={({ name, value, percent }) => `${name}\n${(percent * 100).toFixed(0)}%`}
+                            labelLine={false}
                           >
                             {pieData.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.color} stroke="white" strokeWidth={2} />
                             ))}
                           </Pie>
-                          <Tooltip formatter={(value) => formatCurrency(value)} />
+                          <Tooltip formatter={(value, name) => formatCurrency(value)} />
                         </PieChart>
                       </ResponsiveContainer>
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1">
@@ -1143,15 +1156,14 @@ function AdminDashboard(props) {
                       </div>
                     </div>
                   ) : null}
-                  <div className="space-y-3 mt-4">
+<div className="space-y-3 mt-4">
                     {pieData.map((item) => {
                       const isExpanded = expandedItems.includes(item.name);
-                      const subCats = item.tipo === 'credito' ? subCategoriasCredito : subCategoriasDebito;
-                      const subCatsWithValues = subCats.map(sub => {
-                        const items = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
-                        const value = items.reduce((sum, t) => sum + t.valor, 0);
-                        return { ...sub, value };
-                      }).filter(sub => sub.value > 0);
+                      const txItems = badgeDetails.filter(t => t.badge === item.badgeKey && t.tipo === item.tipo);
+                      const totalPages = Math.ceil(txItems.length / 10);
+                      const paginatedItems = txItems
+                        .sort((a, b) => new Date(b.date) - new Date(a.date))
+                        .slice((detailsPage - 1) * 10, detailsPage * 10);
 
                       return (
                         <div key={item.name}>
@@ -1166,6 +1178,63 @@ function AdminDashboard(props) {
                               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                               <span className="text-sm font-bold text-slate-700">{item.name}</span>
                             </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-black text-slate-800">{formatCurrency(item.value)}</span>
+                              <ChevronDown size={14} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="mt-2 pl-4 border-l-2 border-slate-200">
+                              <table className="w-full text-[11px]">
+                                <thead>
+                                  <tr className="text-[9px] font-black uppercase text-slate-400">
+                                    <th className="text-left py-1 pr-4">Data</th>
+                                    <th className="text-left py-1 pr-4">Descrição</th>
+                                    <th className="text-right py-1 pr-4">Valor</th>
+                                    <th className="text-right py-1">Detalhe</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {txItems.length === 0 ? (
+                                    <tr><td colSpan="4" className="text-xs text-slate-400 py-2 text-center">Sem dados</td></tr>
+                                  ) : (
+                                    paginatedItems.map((tx, idx) => (
+                                      <tr key={idx} className="hover:bg-slate-50">
+                                        <td className="py-1.5 pr-4 font-mono text-slate-500 whitespace-nowrap">{tx.date}</td>
+                                        <td className="py-1.5 pr-4 text-slate-600 truncate max-w-[150px]" title={tx.descricao}>{tx.descricao}</td>
+                                        <td className={`py-1.5 pr-4 text-right font-bold whitespace-nowrap ${tx.tipo === 'credito' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                          {formatCurrency(tx.valor)}
+                                        </td>
+                                        <td className="py-1.5 text-right text-slate-400 truncate max-w-[100px]" title={tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}>
+                                          {tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  )}
+                                </tbody>
+                              </table>
+                              {totalPages > 1 && (
+                                <div className="flex justify-center gap-1 pt-2">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.max(1, p - 1)); }}
+                                    disabled={detailsPage === 1}
+                                    className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                  >‹</button>
+                                  <span className="px-2 py-1 text-xs font-bold text-slate-500">{detailsPage}/{totalPages}</span>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.min(totalPages, p + 1)); }}
+                                    disabled={detailsPage === totalPages}
+                                    className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                  >›</button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-black text-slate-800">{formatCurrency(item.value)}</span>
                               <ChevronDown size={14} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
