@@ -334,16 +334,31 @@ export default function SalariosTab({ month }) {
   // ── Relatórios ──────────────────────────────────────────────────────────────
   const buildRows = () => {
     if (!employeesFiltered || employeesFiltered.length === 0) return [];
-    return employeesFiltered.flatMap(emp =>
-      emp.months.map(m => {
-        const justEntry = justificacoes.find(j => j.employee_name === emp.employee_name && j.month === m.month);
-        const status = m.status === 'Match Exato' ? 'Match Exato' : justEntry ? 'Justificado' : 'Saldo Pendente';
-        const difLabel = Math.abs(m.balance) > tolerancia
-          ? (m.balance > 0 ? `Pagou ${fmtEur(m.balance)} a menos` : `Pagou ${fmtEur(Math.abs(m.balance))} a mais`)
-          : '';
-        return [emp.employee_name, fmtMes(m.month), fmtEur(m.expected_amount), fmtEur(m.total_paid), difLabel, status, justEntry?.justification || ''];
-      })
-    );
+    const allMonths = [...new Set(employeesFiltered.flatMap(e => e.months.map(m => m.month)))].sort();
+    const result = [];
+    for (const mes of allMonths) {
+      let monthExpected = 0;
+      let monthPaid = 0;
+      for (const emp of employeesFiltered) {
+        const empMonthRows = emp.months.filter(m => m.month === mes);
+        for (const m of empMonthRows) {
+          const justEntry = justificacoes.find(j => j.employee_name === emp.employee_name && j.month === m.month);
+          const status = m.status === 'Match Exato' ? 'Match Exato' : justEntry ? 'Justificado' : 'Saldo Pendente';
+          const difLabel = Math.abs(m.balance) > tolerancia
+            ? (m.balance > 0 ? `Pagou ${fmtEur(m.balance)} a menos` : `Pagou ${fmtEur(Math.abs(m.balance))} a mais`)
+            : '';
+          result.push([emp.employee_name, fmtMes(m.month), fmtEur(m.expected_amount), fmtEur(m.total_paid), difLabel, status, justEntry?.justification || '']);
+          monthExpected += m.expected_amount;
+          monthPaid += m.total_paid;
+        }
+      }
+      const monthBalance = monthExpected - monthPaid;
+      const monthDiffLabel = Math.abs(monthBalance) > tolerancia
+        ? (monthBalance > 0 ? `Pagou ${fmtEur(monthBalance)} a menos` : `Pagou ${fmtEur(Math.abs(monthBalance))} a mais`)
+        : '';
+      result.push(['Subtotal', fmtMes(mes), fmtEur(monthExpected), fmtEur(monthPaid), monthDiffLabel, '', '']);
+    }
+    return result;
   };
 
   const handleExportCsv = () => {
@@ -381,6 +396,12 @@ export default function SalariosTab({ month }) {
       alternateRowStyles: { fillColor: [248, 250, 252] },
       columnStyles: { 6: { cellWidth: 55 } },
       didParseCell: (data) => {
+        if (data.section === 'body' && data.column.index === 0 && data.cell.raw === 'Subtotal') {
+          data.cell.styles.fillColor = [240, 240, 240];
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [50, 50, 50];
+          return;
+        }
         if (data.section === 'body' && data.column.index === 5) {
           const v = data.cell.raw;
           if (v === 'Match Exato' || v === 'Justificado') data.cell.styles.textColor = [5, 150, 105];
