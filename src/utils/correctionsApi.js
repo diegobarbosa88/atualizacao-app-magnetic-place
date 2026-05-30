@@ -201,7 +201,7 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
 
   const { error: e3 } = await supabase
     .from('corrections')
-    .delete()
+    .update({ status: 'applied' })
     .eq('id', correction.id);
   if (e3) throw e3;
 
