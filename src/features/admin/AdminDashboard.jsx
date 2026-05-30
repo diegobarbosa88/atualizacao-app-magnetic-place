@@ -1116,14 +1116,14 @@ function AdminDashboard(props) {
                   </div>
                   {pieData.some(p => p.value > 0) ? (
                     <div className="relative flex items-center justify-center">
-                      <ResponsiveContainer width="100%" height={220}>
+                      <ResponsiveContainer width="100%" height={260}>
                         <PieChart>
                           <Pie
                             data={pieData}
                             cx="50%"
                             cy="50%"
-                            innerRadius={65}
-                            outerRadius={95}
+                            innerRadius={70}
+                            outerRadius={105}
                             paddingAngle={3}
                             dataKey="value"
                             startAngle={90}
@@ -1136,12 +1136,10 @@ function AdminDashboard(props) {
                           <Tooltip formatter={(value) => formatCurrency(value)} />
                         </PieChart>
                       </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total</span>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-1">
+                        <span className="text-[10px] font-black text-emerald-600">↑ {formatCurrency(badgeTotals.receitas)}</span>
                         <span className="text-lg font-black text-slate-800">{formatCurrency(resultado)}</span>
-                        <span className={`text-[10px] font-bold ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {resultado >= 0 ? 'Lucro' : 'Prejuízo'}
-                        </span>
+                        <span className="text-[10px] font-black text-rose-600">↓ {formatCurrency(badgeTotals.despesas)}</span>
                       </div>
                     </div>
                   ) : null}
