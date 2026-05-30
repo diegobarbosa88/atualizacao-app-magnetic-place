@@ -1159,11 +1159,12 @@ function AdminDashboard(props) {
 <div className="space-y-3 mt-4">
                     {pieData.map((item) => {
                       const isExpanded = expandedItems.includes(item.name);
-                      const txItems = badgeDetails.filter(t => t.badge === item.badgeKey && t.tipo === item.tipo);
-                      const totalPages = Math.ceil(txItems.length / 10);
-                      const paginatedItems = txItems
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                        .slice((detailsPage - 1) * 10, detailsPage * 10);
+                      const subCats = item.tipo === 'credito' ? subCategoriasCredito : subCategoriasDebito;
+                      const subCatsWithValues = subCats.map(sub => {
+                        const items = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
+                        const value = items.reduce((sum, t) => sum + t.valor, 0);
+                        return { ...sub, value };
+                      }).filter(sub => sub.value > 0);
 
                       return (
                         <div key={item.name}>
@@ -1185,50 +1186,86 @@ function AdminDashboard(props) {
                           </div>
 
                           {isExpanded && (
-                            <div className="mt-2 pl-4 border-l-2 border-slate-200">
-                              <table className="w-full text-[11px]">
-                                <thead>
-                                  <tr className="text-[9px] font-black uppercase text-slate-400">
-                                    <th className="text-left py-1 pr-4">Data</th>
-                                    <th className="text-left py-1 pr-4">Descrição</th>
-                                    <th className="text-right py-1 pr-4">Valor</th>
-                                    <th className="text-right py-1">Detalhe</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {txItems.length === 0 ? (
-                                    <tr><td colSpan="4" className="text-xs text-slate-400 py-2 text-center">Sem dados</td></tr>
-                                  ) : (
-                                    paginatedItems.map((tx, idx) => (
-                                      <tr key={idx} className="hover:bg-slate-50">
-                                        <td className="py-1.5 pr-4 font-mono text-slate-500 whitespace-nowrap">{tx.date}</td>
-                                        <td className="py-1.5 pr-4 text-slate-600 truncate max-w-[150px]" title={tx.descricao}>{tx.descricao}</td>
-                                        <td className={`py-1.5 pr-4 text-right font-bold whitespace-nowrap ${tx.tipo === 'credito' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                          {formatCurrency(tx.valor)}
-                                        </td>
-                                        <td className="py-1.5 text-right text-slate-400 truncate max-w-[100px]" title={tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}>
-                                          {tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}
-                                        </td>
-                                      </tr>
-                                    ))
-                                  )}
-                                </tbody>
-                              </table>
-                              {totalPages > 1 && (
-                                <div className="flex justify-center gap-1 pt-2">
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.max(1, p - 1)); }}
-                                    disabled={detailsPage === 1}
-                                    className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
-                                  >‹</button>
-                                  <span className="px-2 py-1 text-xs font-bold text-slate-500">{detailsPage}/{totalPages}</span>
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.min(totalPages, p + 1)); }}
-                                    disabled={detailsPage === totalPages}
-                                    className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
-                                  >›</button>
-                                </div>
-                              )}
+                            <div className="mt-2 pl-4 border-l-2 border-slate-200 space-y-2">
+                              {subCatsWithValues.map((sub) => {
+                                const isSubExpanded = expandedItems.includes(`${item.name}-${sub.name}`);
+                                const subBadgeItems = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
+                                const totalPages = Math.ceil(subBadgeItems.length / 10);
+                                const paginatedItems = subBadgeItems
+                                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                  .slice((detailsPage - 1) * 10, detailsPage * 10);
+
+                                return (
+                                  <div key={sub.name}>
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const key = `${item.name}-${sub.name}`;
+                                        setExpandedItems(prev => isSubExpanded ? prev.filter(i => i !== key) : [...prev, key]);
+                                        setDetailsPage(1);
+                                      }}
+                                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
+                                        <span className="text-xs font-bold text-slate-600">{sub.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-black text-slate-700">{formatCurrency(sub.value)}</span>
+                                        <ChevronDown size={12} className={`text-slate-400 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
+                                      </div>
+                                    </div>
+
+                                    {isSubExpanded && (
+                                      <div className="mt-1 pl-4 border-l border-slate-100">
+                                        <table className="w-full text-[11px]">
+                                          <thead>
+                                            <tr className="text-[9px] font-black uppercase text-slate-400">
+                                              <th className="text-left py-1 pr-4">Data</th>
+                                              <th className="text-left py-1 pr-4">Descrição</th>
+                                              <th className="text-right py-1 pr-4">Valor</th>
+                                              <th className="text-right py-1">Detalhe</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {subBadgeItems.length === 0 ? (
+                                              <tr><td colSpan="4" className="text-xs text-slate-400 py-2 text-center">Sem dados</td></tr>
+                                            ) : (
+                                              paginatedItems.map((tx, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50">
+                                                  <td className="py-1.5 pr-4 font-mono text-slate-500 whitespace-nowrap">{tx.date}</td>
+                                                  <td className="py-1.5 pr-4 text-slate-600 truncate max-w-[150px]" title={tx.descricao}>{tx.descricao}</td>
+                                                  <td className={`py-1.5 pr-4 text-right font-bold whitespace-nowrap ${tx.tipo === 'credito' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {formatCurrency(tx.valor)}
+                                                  </td>
+                                                  <td className="py-1.5 text-right text-slate-400 truncate max-w-[100px]" title={tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}>
+                                                    {tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}
+                                                  </td>
+                                                </tr>
+                                              ))
+                                            )}
+                                          </tbody>
+                                        </table>
+                                        {totalPages > 1 && (
+                                          <div className="flex justify-center gap-1 pt-2">
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.max(1, p - 1)); }}
+                                              disabled={detailsPage === 1}
+                                              className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                            >‹</button>
+                                            <span className="px-2 py-1 text-xs font-bold text-slate-500">{detailsPage}/{totalPages}</span>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.min(totalPages, p + 1)); }}
+                                              disabled={detailsPage === totalPages}
+                                              className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                            >›</button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
