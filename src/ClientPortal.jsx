@@ -13,7 +13,7 @@ const TRANSLATIONS = {
         panel_title_1: 'Painel',
         panel_title_2: 'do\nCliente',
         tagline: 'Consulte horas · Valide períodos',
-        welcome: 'Bem-vindo',
+welcome: 'Bem-vindo',
         sign_in_1: 'Iniciar',
         sign_in_2: 'sessão',
         sign_in_desc: 'Introduza o seu NIF e email para aceder à sua área.',
@@ -70,10 +70,10 @@ const TRANSLATIONS = {
         quick_msg_desc: 'Explique o erro por texto. Ideal para problemas gerais ou quando não quer editar horas manualmente.',
         precision_adj: 'Ajuste de Precisão',
         precision_adj_desc: 'Altere os horários de entrada e saída colaborador a colaborador. Ideal para correções exatas.',
-        choose_this: 'Escolher este método',
+        choose_this: 'Elegir este método',
         back_start: 'Voltar para o Início',
         describe_divergence: 'Descreva a divergência',
-        describe_desc: 'Explique de forma clara o que está incorreto no relatório. O administrador irá analisar e entrar em contacto se necessário.',
+        describe_desc: 'Explique de forma clara o que está incorreto no relatório. O administrador irá analisar e entrará em contacto se necessário.',
         describe_placeholder: 'Ex: O colaborador João Silva não esteve presente no dia 15...',
         send_admin: 'Enviar Mensagem ao Admin',
         change_method: 'Alterar Método',
@@ -91,6 +91,7 @@ const TRANSLATIONS = {
         notifications: 'Notificações',
         no_notifications: 'Nenhuma notificação',
         on_duty_since: 'Em serviço desde',
+        dashboard_desc: 'Acompanhe o desempenho da sua equipa, valide períodos de trabalho e consulte relatórios de forma rápida e segura.',
     },
     es: {
         restricted_area: 'Área Reservada',
@@ -175,6 +176,7 @@ const TRANSLATIONS = {
         notifications: 'Notificaciones',
         no_notifications: 'Sin notificaciones',
         on_duty_since: 'En servicio desde',
+dashboard_desc: 'Acompañe el rendimiento de su equipo, valide períodos de trabajo y consulte informes de forma rápida y segura.',
     }
 };
 
@@ -517,7 +519,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         if (!monthStr || monthStr.length !== 7) return monthStr;
         const [y, m] = monthStr.split('-');
         const d = new Date(y, m - 1);
-        return d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
+        return d.toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' });
     };
 
     const clientData = useMemo(() => {
@@ -1149,7 +1151,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <span className="text-zinc-400 font-light">{t('hello')},</span> {clientObj.name}
                         </div>
                         <div className="mt-3 text-zinc-500 text-xs leading-relaxed max-w-md">
-                            Acompanhe o desempenho da sua equipa, valide períodos de trabalho e consulte relatórios de forma rápida e segura.
+                            t('dashboard_desc')
                         </div>
                     </div>
                     <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 ml-auto">
@@ -1521,7 +1523,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         <span className="text-zinc-400 font-light">{t('hello')},</span> {clientObj.name}
                     </div>
                     <div className="mt-3 text-zinc-500 text-xs leading-relaxed max-w-md">
-                        Acompanhe o desempenho da sua equipa, valide períodos de trabalho e consulte relatórios de forma rápida e segura.
+                        t('dashboard_desc')
                     </div>
                 </div>
             </div>
