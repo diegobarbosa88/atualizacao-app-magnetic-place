@@ -1151,7 +1151,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                             <span className="text-zinc-400 font-light">{t('hello')},</span> {clientObj.name}
                         </div>
                         <div className="mt-3 text-zinc-500 text-xs leading-relaxed max-w-md">
-                            t('dashboard_desc')
+                            {t('dashboard_desc')}
                         </div>
                     </div>
                     <div className="flex flex-col items-start lg:items-end gap-3 shrink-0 ml-auto">
@@ -1523,7 +1523,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         <span className="text-zinc-400 font-light">{t('hello')},</span> {clientObj.name}
                     </div>
                     <div className="mt-3 text-zinc-500 text-xs leading-relaxed max-w-md">
-                        t('dashboard_desc')
+                        {t('dashboard_desc')}
                     </div>
                 </div>
             </div>
