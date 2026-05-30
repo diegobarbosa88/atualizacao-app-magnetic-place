@@ -1115,24 +1115,35 @@ function AdminDashboard(props) {
                     <h3 className="font-black text-lg text-slate-800">Resumo Financeiro</h3>
                   </div>
                   {pieData.some(p => p.value > 0) ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={90}
-                          paddingAngle={2}
-                          dataKey="value"
-                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip formatter={(value) => formatCurrency(value)} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <div className="relative flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={65}
+                            outerRadius={95}
+                            paddingAngle={3}
+                            dataKey="value"
+                            startAngle={90}
+                            endAngle={-270}
+                          >
+                            {pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} stroke="white" strokeWidth={2} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value) => formatCurrency(value)} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total</span>
+                        <span className="text-lg font-black text-slate-800">{formatCurrency(resultado)}</span>
+                        <span className={`text-[10px] font-bold ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {resultado >= 0 ? 'Lucro' : 'Prejuízo'}
+                        </span>
+                      </div>
+                    </div>
                   ) : null}
                   <div className="space-y-3 mt-4">
                     {pieData.map((item) => {
