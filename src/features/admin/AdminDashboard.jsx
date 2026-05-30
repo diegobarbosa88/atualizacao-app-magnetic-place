@@ -75,6 +75,12 @@ function AdminDashboard(props) {
 
   const [adminFormMode, setAdminFormMode] = useState(null); // null | 'new' | 'existing' | 'edit'
   const [adminForm, setAdminForm] = useState({ id: null, name: '', nif: '', selectedWorkerId: '' });
+  const [badgeTotals, setBadgeTotals] = useState({
+    cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0
+  });
+  const [badgeDetails, setBadgeDetails] = useState([]);
+  const [expandedItems, setExpandedItems] = useState([]);
+  const [detailsPage, setDetailsPage] = useState(1);
 
   const nonAdminWorkers = workers.filter(w => !w.isAdmin);
 
@@ -130,6 +136,142 @@ function AdminDashboard(props) {
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
   const pendingClientCorrectionsCount = (correctionNotifications || []).length;
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    const monthStr = currentMonth.getFullYear() + '-' + String(currentMonth.getMonth() + 1).padStart(2, '0');
+
+    supabase
+      .from('reconciliation_runs')
+      .select('id, transactions_json')
+      .then(async ({ data: runs }) => {
+        if (!runs?.length) {
+          setBadgeTotals({ cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 });
+          setBadgeDetails([]);
+          return;
+        }
+
+        const runIds = runs.map(r => r.id);
+
+        const [pags, rls, fatLinks, ints, imps, justs, allClients] = await Promise.all([
+          supabase.from('faturacao_clientes_pagamentos').select('tx_key, valor_pago, client_id').in('run_id', runIds),
+          supabase.from('movimentacao_recibo_links').select('tx_key, worker_name').in('run_id', runIds),
+          supabase.from('fatura_pagamento_links').select('tx_key, fatura_id').in('run_id', runIds),
+          supabase.from('entrada_internos').select('tx_key').in('run_id', runIds),
+          supabase.from('entrada_impostos').select('tx_key').in('run_id', runIds),
+          supabase.from('entrada_justifications').select('tx_key, justification').in('run_id', runIds),
+          supabase.from('clients').select('id, name')
+        ]);
+
+        const faturaIds = (fatLinks.data || []).map(f => f.fatura_id).filter(Boolean);
+        let allFaturas = { data: [] };
+        if (faturaIds.length > 0 && faturaIds.length <= 100) {
+          try {
+            allFaturas = await supabase.from('faturas').select('id, dados').in('id', faturaIds);
+          } catch (e) {
+            console.warn('Erro ao carregar faturas:', e);
+          }
+        }
+
+        const mapCliente = {};
+        const mapClienteNome = {};
+        (pags.data || []).forEach(p => { 
+          mapCliente[p.tx_key] = Number(p.valor_pago) || 0;
+          mapClienteNome[p.tx_key] = p.client_id;
+        });
+
+        const mapReciboNome = {};
+        (rls.data || []).forEach(r => { mapReciboNome[r.tx_key] = r.worker_name; });
+
+        const mapFaturaId = {};
+        (fatLinks.data || []).forEach(f => { 
+          mapFaturaId[f.tx_key] = f.fatura_id;
+        });
+
+        const mapFaturaDetails = {};
+        (allFaturas.data || []).forEach(fat => {
+          mapFaturaDetails[fat.id] = {
+            fornecedor: fat.dados?.fornecedor || fat.dados?.entidade || '—'
+          };
+        });
+
+        const mapJustificacao = {};
+        (justs.data || []).forEach(j => { mapJustificacao[j.tx_key] = j.justification; });
+
+        const clientNames = {};
+        (allClients.data || []).forEach(c => { clientNames[c.id] = c.name; });
+
+        const setRecibo = new Set((rls.data || []).map(r => r.tx_key));
+        const setFatura = new Set((fatLinks.data || []).map(f => f.tx_key));
+        const setInterno = new Set((ints.data || []).map(i => i.tx_key));
+        const setImposto = new Set((imps.data || []).map(i => i.tx_key));
+        const setJustificado = new Set((justs.data || []).map(j => j.tx_key));
+
+        const totals = { cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 };
+        const details = [];
+
+        runs.forEach(run => {
+          let txs = run.transactions_json;
+          if (typeof txs === 'string') {
+            try { txs = JSON.parse(txs || '[]'); } catch { txs = []; }
+          }
+          if (!Array.isArray(txs)) txs = [];
+
+          txs.forEach(tx => {
+            if (!tx.data?.startsWith(monthStr)) return;
+
+            const key = `${tx.data}|${tx.descricao}|${tx.valor}`;
+            const valor = Math.abs(Number(tx.valor) || 0);
+
+            if (setInterno.has(key)) return;
+
+            let badge = null;
+            if (mapCliente[key]) {
+              badge = 'cliente';
+              totals.cliente += valor;
+            } else if (setRecibo.has(key)) {
+              badge = 'recibo';
+              totals.recibo += valor;
+            } else if (setFatura.has(key)) {
+              badge = 'fatura';
+              totals.fatura += valor;
+            } else if (setImposto.has(key)) {
+              badge = 'imposto';
+              totals.imposto += valor;
+            } else if (setJustificado.has(key)) {
+              badge = 'justificado';
+              totals.justificado += valor;
+            }
+
+            if (tx.tipo === 'credito') {
+              totals.receitas += valor;
+            } else {
+              totals.despesas += valor;
+            }
+
+            const detail = {
+              date: tx.data,
+              descricao: tx.descricao || '',
+              valor,
+              tipo: tx.tipo,
+              badge,
+              clienteNome: mapClienteNome[key] ? clientNames[mapClienteNome[key]] || mapClienteNome[key] : null,
+              workerName: mapReciboNome[key] || null,
+              faturaFornecedor: mapFaturaDetails[mapFaturaId[key]]?.fornecedor || null,
+              faturaFornecedor: mapFaturaDetails[mapFaturaId[key]]?.fornecedor || null,
+              justificacao: mapJustificacao[key] || null
+            };
+
+            if (badge) details.push(detail);
+          });
+        });
+
+        setBadgeTotals(totals);
+        setBadgeDetails(details);
+      });
+  }, [supabase, currentMonth]);
+
   const pendingWorkerCorrectionsCount = (corrections || []).filter(c =>
     (c.type === 'creation_request' || c.type === 'deletion_request') &&
     (c.status === 'submitted' || c.status === 'under_review')
@@ -427,11 +569,28 @@ function AdminDashboard(props) {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [logs, adminStats]);
 
-  // Pie chart data
+  // Pie chart data - apenas Receitas e Despesa
   const pieData = [
-    { name: 'Operacionais', value: adminStats.expectedCosts, color: '#6366f1' },
-    { name: 'Fixos', value: adminStats.monthlyExpenses, color: '#f43f5e' }
+    { name: 'Receitas', tipo: 'credito', value: badgeTotals.receitas, color: '#10b981' },
+    { name: 'Despesa', tipo: 'debito', value: badgeTotals.despesas, color: '#f43f5e' }
+  ].filter(p => p.value > 0);
+
+  // Sub-categorias por tipo
+  const subCategoriasCredito = [
+    { name: 'Com Cliente', badgeKey: 'cliente', color: '#f43f5e' },
+    { name: 'Com Recibo', badgeKey: 'recibo', color: '#14b8a6' },
+    { name: 'Com Fatura', badgeKey: 'fatura', color: '#a855f7' },
+    { name: 'Justificado', badgeKey: 'justificado', color: '#8b5cf6' }
   ];
+  const subCategoriasDebito = [
+    { name: 'Com Cliente', badgeKey: 'cliente', color: '#f43f5e' },
+    { name: 'Com Recibo', badgeKey: 'recibo', color: '#14b8a6' },
+    { name: 'Com Fatura', badgeKey: 'fatura', color: '#a855f7' },
+    { name: 'Imposto', badgeKey: 'imposto', color: '#ef4444' },
+    { name: 'Justificado', badgeKey: 'justificado', color: '#8b5cf6' }
+  ];
+
+  const resultado = badgeTotals.receitas - badgeTotals.despesas;
 
   // Top clientes com comparação proporcional vs mês anterior
   const topClientsWithPrev = useMemo(() => {
@@ -912,15 +1071,15 @@ function AdminDashboard(props) {
               </div>
 
               {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-                {/* Area Chart - 2/3 */}
-                <div className="lg:col-span-2 bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+                {/* Area Chart - 1/2 */}
+                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><TrendingUp size={20} /></div>
                     <h3 className="font-black text-lg text-slate-800">Fluxo de Faturamento Diário</h3>
                   </div>
                   {areaData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={220}>
                       <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
@@ -945,23 +1104,23 @@ function AdminDashboard(props) {
                   )}
                 </div>
 
-                {/* Pie Chart - 1/3 */}
+                {/* Pie Chart - 1/2 */}
                 <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-rose-50 p-2 rounded-xl text-rose-600"><TrendingDown size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Composição de Gastos</h3>
+                    <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Wallet size={20} /></div>
+                    <h3 className="font-black text-lg text-slate-800">Resumo Financeiro</h3>
                   </div>
-                  {pieData[0].value + pieData[1].value > 0 ? (
-                    <ResponsiveContainer width="100%" height={200}>
+                  {pieData.some(p => p.value > 0) ? (
+                    <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
                         <Pie
                           data={pieData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
-                          paddingAngle={5}
+                          outerRadius={90}
+                          paddingAngle={2}
                           dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         >
                           {pieData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -972,15 +1131,129 @@ function AdminDashboard(props) {
                     </ResponsiveContainer>
                   ) : null}
                   <div className="space-y-3 mt-4">
-                    {pieData.map((item, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                          <span className="text-xs font-bold text-slate-600">{item.name}</span>
+                    {pieData.map((item) => {
+                      const isExpanded = expandedItems.includes(item.name);
+                      const subCats = item.tipo === 'credito' ? subCategoriasCredito : subCategoriasDebito;
+                      const subCatsWithValues = subCats.map(sub => {
+                        const items = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
+                        const value = items.reduce((sum, t) => sum + t.valor, 0);
+                        return { ...sub, value };
+                      }).filter(sub => sub.value > 0);
+
+                      return (
+                        <div key={item.name}>
+                          <div
+                            onClick={() => {
+                              setExpandedItems(prev => isExpanded ? prev.filter(i => i !== item.name) : [...prev, item.name]);
+                              setDetailsPage(1);
+                            }}
+                            className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                              <span className="text-sm font-bold text-slate-700">{item.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-black text-slate-800">{formatCurrency(item.value)}</span>
+                              <ChevronDown size={14} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="mt-2 pl-4 border-l-2 border-slate-200 space-y-2">
+                              {subCatsWithValues.map((sub) => {
+                                const isSubExpanded = expandedItems.includes(`${item.name}-${sub.name}`);
+                                const subBadgeItems = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === item.tipo);
+                                const totalPages = Math.ceil(subBadgeItems.length / 10);
+                                const paginatedItems = subBadgeItems
+                                  .sort((a, b) => new Date(b.date) - new Date(a.date))
+                                  .slice((detailsPage - 1) * 10, detailsPage * 10);
+
+                                return (
+                                  <div key={sub.name}>
+                                    <div
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const key = `${item.name}-${sub.name}`;
+                                        setExpandedItems(prev => isSubExpanded ? prev.filter(i => i !== key) : [...prev, key]);
+                                        setDetailsPage(1);
+                                      }}
+                                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
+                                        <span className="text-xs font-bold text-slate-600">{sub.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-black text-slate-700">{formatCurrency(sub.value)}</span>
+                                        <ChevronDown size={12} className={`text-slate-400 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
+                                      </div>
+                                    </div>
+
+                                    {isSubExpanded && (
+                                      <div className="mt-1 pl-4 border-l border-slate-100">
+                                        <table className="w-full text-[11px]">
+                                          <thead>
+                                            <tr className="text-[9px] font-black uppercase text-slate-400">
+                                              <th className="text-left py-1 pr-4">Data</th>
+                                              <th className="text-left py-1 pr-4">Descrição</th>
+                                              <th className="text-right py-1 pr-4">Valor</th>
+                                              <th className="text-right py-1">Detalhe</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {subBadgeItems.length === 0 ? (
+                                              <tr><td colSpan="4" className="text-xs text-slate-400 py-2 text-center">Sem dados</td></tr>
+                                            ) : (
+                                              paginatedItems.map((tx, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50">
+                                                  <td className="py-1.5 pr-4 font-mono text-slate-500 whitespace-nowrap">{tx.date}</td>
+                                                  <td className="py-1.5 pr-4 text-slate-600 truncate max-w-[150px]" title={tx.descricao}>{tx.descricao}</td>
+                                                  <td className={`py-1.5 pr-4 text-right font-bold whitespace-nowrap ${tx.tipo === 'credito' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                                    {formatCurrency(tx.valor)}
+                                                  </td>
+                                                  <td className="py-1.5 text-right text-slate-400 truncate max-w-[100px]" title={tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}>
+                                                    {tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}
+                                                  </td>
+                                                </tr>
+                                              ))
+                                            )}
+                                          </tbody>
+                                        </table>
+                                        {totalPages > 1 && (
+                                          <div className="flex justify-center gap-1 pt-2">
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.max(1, p - 1)); }}
+                                              disabled={detailsPage === 1}
+                                              className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                            >‹</button>
+                                            <span className="px-2 py-1 text-xs font-bold text-slate-500">{detailsPage}/{totalPages}</span>
+                                            <button
+                                              onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.min(totalPages, p + 1)); }}
+                                              disabled={detailsPage >= totalPages}
+                                              className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
+                                            >›</button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {subCatsWithValues.length === 0 && (
+                                <div className="text-xs text-slate-400 px-2 py-2">Sem dados</div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <span className="text-xs font-black text-slate-800">{formatCurrency(item.value)}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                    <span className="text-sm font-black text-slate-700">Resultado</span>
+                    <span className={`text-sm font-black ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {formatCurrency(resultado)}
+                    </span>
                   </div>
                 </div>
               </div>
