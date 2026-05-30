@@ -342,7 +342,11 @@ export const AppProvider = ({ children }) => {
     else if (colName === 'approvals') updateState(setApprovals);
     else if (colName === 'client_approvals') updateState(setClientApprovals);
     else if (colName === 'app_notifications') prependState(setAppNotifications);
-    else if (colName === 'correcoes' || colName === 'corrections') prependState(setCorrecoesCorrections);
+    else if (colName === 'correcoes' || colName === 'corrections') { 
+      prependState(setCorrecoesCorrections);
+      prependState(setCorrections);
+    }
+    else if (colName === 'correction_items') prependState(setCorrectionItems);
     else if (colName === 'documents' || colName === 'documentos') updateState(setDocuments);
 
     // Supabase Persistence
@@ -398,6 +402,14 @@ export const AppProvider = ({ children }) => {
     if (tableName === 'app_notifications') {
       if (!('viewed_by_ids' in payload)) payload.viewed_by_ids = null;
       if (!('dismissed_by_ids' in payload)) payload.dismissed_by_ids = [];
+    }
+
+    // correction_items: preservar objetos nested (before, proposed, final)
+    // e usar os nomes de campo tal como vêm (worker_id, correction_id, etc.)
+    if (tableName === 'correction_items') {
+      const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
+      if (error) console.error(`Erro ao gravar em ${tableName}:`, error);
+      return;
     }
 
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
