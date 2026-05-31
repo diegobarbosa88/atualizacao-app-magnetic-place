@@ -81,6 +81,7 @@ function AdminDashboard(props) {
   const [prevBadgeTotals, setPrevBadgeTotals] = useState({
     cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0
   });
+  const [ytdTotals, setYtdTotals] = useState({ receitas: 0, despesas: 0 });
   const [badgeDetails, setBadgeDetails] = useState([]);
   const [expandedItems, setExpandedItems] = useState([]);
   const [detailsPage, setDetailsPage] = useState(1);
@@ -271,6 +272,30 @@ function AdminDashboard(props) {
 
         setBadgeTotals(totals);
         setBadgeDetails(details);
+
+        // Calculate YTD (year-to-date) from January 1st
+        const yearStr = currentMonth.getFullYear().toString();
+        const ytdTotals = { receitas: 0, despesas: 0 };
+        runs.forEach(run => {
+          let txs = run.transactions_json;
+          if (typeof txs === 'string') {
+            try { txs = JSON.parse(txs || '[]'); } catch { txs = []; }
+          }
+          if (!Array.isArray(txs)) txs = [];
+
+          txs.forEach(tx => {
+            if (!tx.data?.startsWith(yearStr)) return;
+            if (setInterno.has(`${tx.data}|${tx.descricao}|${tx.valor}`)) return;
+
+            const valor = Math.abs(Number(tx.valor) || 0);
+            if (tx.tipo === 'credito') {
+              ytdTotals.receitas += valor;
+            } else {
+              ytdTotals.despesas += valor;
+            }
+          });
+        });
+        setYtdTotals(ytdTotals);
       });
   }, [supabase, currentMonth]);
 
@@ -1267,6 +1292,12 @@ function AdminDashboard(props) {
                           <Tooltip formatter={(value, name) => formatCurrency(value)} />
                         </PieChart>
                       </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-[9px] font-black text-slate-400 uppercase">{currentMonth.getFullYear()}</span>
+                        <span className={`text-lg font-black ${ytdTotals.receitas - ytdTotals.despesas >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                          {formatCurrency(ytdTotals.receitas - ytdTotals.despesas)}
+                        </span>
+                      </div>
                     </div>
                   ) : null}
 <div className="space-y-3 mt-4">
