@@ -337,6 +337,7 @@ export async function applyCreationRequest(supabase, { correction, items, client
         endTime: item.proposed?.endTime || null,
         breakStart: item.proposed?.breakStart || null,
         breakEnd: item.proposed?.breakEnd || null,
+        hours: calculateDuration(item.proposed?.startTime, item.proposed?.endTime, item.proposed?.breakStart, item.proposed?.breakEnd),
       }).eq('id', existing.id);
       if (error) throw error;
     } else if (!item.before && item.proposed) {
@@ -350,6 +351,7 @@ export async function applyCreationRequest(supabase, { correction, items, client
         endTime: item.proposed.endTime,
         breakStart: item.proposed.breakStart,
         breakEnd: item.proposed.breakEnd,
+        hours: calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
       });
       if (error) throw error;
     }
