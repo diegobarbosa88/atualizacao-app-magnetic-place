@@ -97,8 +97,10 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
       sucesso: false,
       valido: false,
       abonosExtraidos: null,
-      descontosExtraidos: null,
+      ssExtraido: null,
+      irsExtraido: null,
       liquidoExtraido: null,
+      ajudasCustoExtraido: null,
       divergencia: null,
       mensagem: 'Documento não reconhecido: frase "Emitido por TOConline" não encontrada.',
     };
@@ -117,6 +119,7 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
       ssExtraido: null,
       irsExtraido: null,
       liquidoExtraido: null,
+      ajudasCustoExtraido: null,
       divergencia: null,
       mensagem: 'Não foi possível extrair os totais do recibo. Verifique o formato do PDF.',
       _textoExtraido: text,
@@ -155,6 +158,9 @@ const liquidoCalculado = (brutoPlataforma && brutoPlataforma > 0)
   const divStr  = divergenciaAbs != null ? divergenciaAbs.toFixed(2) : null;
   const calcStr = liquidoCalculado != null ? liquidoCalculado.toFixed(2) : null;
 
+  const ajudasCustoLinha = text.match(/Ajudas de Custo.*?([\d.,]+)€/s)?.[0] ?? '';
+  const ajudasCustoExtraido = ultimoEuroDaLinha(ajudasCustoLinha);
+
   return {
     sucesso: true,
     valido:  validoRaw,
@@ -163,6 +169,7 @@ const liquidoCalculado = (brutoPlataforma && brutoPlataforma > 0)
     ssExtraido,
     irsExtraido,
     liquidoExtraido,
+    ajudasCustoExtraido,
     divergencia:      validoRaw ? 0 : parseFloat(divStr ?? '0'),
     divergenciaSinal,
     mensagem: !temBasePlataforma
@@ -181,15 +188,18 @@ export async function validarReciboTOConline(file, brutoPlataforma) {
   try {
     const text = await extrairTextoPdf(file);
     return parseReciboTOConline(text, brutoPlataforma);
-  } catch (err) {
+} catch (err) {
     return {
       sucesso: false,
       valido: false,
       abonosExtraidos: null,
-      descontosExtraidos: null,
+      ssExtraido: null,
+      irsExtraido: null,
       liquidoExtraido: null,
+      ajudasCustoExtraido: null,
       divergencia: null,
-      mensagem: `Erro técnico: ${err.message}`,
+      mensagem: err.message,
+      _textoExtraido: null,
     };
   }
 }

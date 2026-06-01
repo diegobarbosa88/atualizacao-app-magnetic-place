@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2, Scissors, Upload, TriangleAlert } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { CheckCircle, XCircle, AlertCircle, AlertTriangle, Loader2, ReceiptText, Files, Save, FileDown, History, RefreshCw, ChevronRight, Settings, Coins, Trash2, Scissors, Upload, TriangleAlert, Download, X } from 'lucide-react';
 import {
   extrairPaginasPdf,
   extrairMetadadosTOConline,
@@ -147,15 +149,16 @@ function estadoStringToFlags(estado) {
 async function guardarValidacao(r, extra = {}) {
   const db = window.supabaseInstance;
   if (!db) throw new Error('Supabase não disponível');
-  const { error } = await db.from('receipt_validations').insert({
+const { error } = await db.from('receipt_validations').insert({
     worker_id:        extra.worker?.id   ?? r.worker?.id   ?? null,
     worker_name:      extra.worker?.name ?? r.worker?.name ?? r.nomeExtraido ?? null,
     mes:              extra.mes  ?? r.mes  ?? null,
-bruto_plataforma: extra.bruto ?? r.bruto ?? null,
+    bruto_plataforma: extra.bruto ?? r.bruto ?? null,
     abonos_extraidos: r.abonosExtraidos ?? null,
     ss_extraido:      r.ssExtraido      ?? null,
     irs_extraido:     r.irsExtraido     ?? null,
     liquido_extraido: r.liquidoExtraido ?? null,
+    ajudas_custo_extraidas: r.ajudasCustoExtraido ?? null,
     divergencia:      r.divergencia     ?? null,
     estado:           !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido',
     mensagem:         r.mensagem ?? null,
@@ -1020,7 +1023,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
       {/* Sub-tabela expandida */}
       {aberto && (
         <tr>
-          <td colSpan={3} className="px-0 py-0">
+          <td colSpan={8} className="px-0 py-0">
             <div className="mx-4 mb-3 rounded-xl border border-slate-100 overflow-hidden">
               <table className="w-full text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100">
@@ -1031,7 +1034,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Bruto PDF</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">SS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">IRS</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas de Custo</th>
                     <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
                   </tr>
                 </thead>
@@ -1044,7 +1047,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                       <td className="px-3 py-2.5 text-right font-bold text-indigo-700">{r.bruto_extraido != null ? `${Number(r.bruto_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right text-emerald-600 font-bold">{r.ajudas_custo_extraidas != null ? `${Number(r.ajudas_custo_extraidas).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-2">
                           <EstadoPicker atual={r.estado} onChange={(novo) => onAlterarEstado(r.id, novo)} size={14} />
@@ -1089,11 +1092,35 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
   );
 }
 
-const ModoHistorico = ({ workers, saveToDb }) => {
+const ModoHistorico = ({ workers, saveToDb, systemSettings }) => {
   const [registos, setRegistos] = useState([]);
   const [carregando, setCarregando] = useState(false);
   const [filtroWorker, setFiltroWorker] = useState('');
   const [filtroMes, setFiltroMes] = useState('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportFilters, setExportFilters] = useState({
+    ano: '',
+    mes: '',
+    workerId: '',
+  });
+
+  const fmtEur = (v) => (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  const fmtMes = (m) => {
+    if (!m) return '';
+    const [year, month] = m.split('-');
+    return `${MESES_PT[parseInt(month) - 1]} ${year}`;
+  };
+
+  const years = useMemo(() => {
+    const ys = [...new Set(registos.map(r => r.mes?.split('-')[0]).filter(Boolean))];
+    return ys.sort((a, b) => b - a);
+  }, [registos]);
+
+  const availableMonths = useMemo(() => {
+    if (!exportFilters.ano) return mesesDisponiveis;
+    return mesesDisponiveis.filter(m => m.value.startsWith(exportFilters.ano));
+  }, [exportFilters.ano]);
 
   const carregar = useCallback(async () => {
     const db = window.supabaseInstance;
@@ -1204,6 +1231,181 @@ const ModoHistorico = ({ workers, saveToDb }) => {
   });
   const sessoes = agruparPorSessao(registosFiltrados);
 
+  const handleExportPdf = () => {
+    const filters = exportFilters;
+    let data = registosFiltrados;
+    if (filters.ano) data = data.filter(r => r.mes?.startsWith(filters.ano));
+    if (filters.mes) data = data.filter(r => r.mes === filters.mes);
+    if (filters.workerId) data = data.filter(r => r.worker_id === filters.workerId);
+    if (!data.length) return;
+
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 15;
+    let yPos = margin;
+
+    try {
+      const logoUrl = '/MAGNETIC (3).png';
+      doc.addImage(logoUrl, 'PNG', margin, yPos, 25, 25);
+    } catch (e) { console.warn('Logo não carregado:', e); }
+
+    doc.setFontSize(18);
+    doc.setTextColor(30);
+    doc.text('Relatório de Recibos Validados', margin + 30, yPos + 8);
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} — ${data.length} registo(s)`, margin + 30, yPos + 16);
+    yPos += 28;
+
+    const filterLabel = [
+      filters.ano ? `Ano: ${filters.ano}` : '',
+      filters.mes ? `Mês: ${fmtMes(filters.mes)}` : '',
+      filters.workerId ? `Trabalhador: ${workers.find(w => w.id === filters.workerId)?.name ?? filters.workerId}` : '',
+    ].filter(Boolean).join(' | ');
+    if (filterLabel) {
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text(`Filtros: ${filterLabel}`, margin, yPos);
+      yPos += 6;
+    }
+
+    const byWorker = {};
+    data.forEach(r => {
+      const key = r.worker_name ?? 'Desconhecido';
+      if (!byWorker[key]) byWorker[key] = { bruto: 0, ss: 0, irs: 0, ajudas: 0, liquido: 0, count: 0 };
+      byWorker[key].bruto  += Number(r.bruto_plataforma) || 0;
+      byWorker[key].ss     += Number(r.ss_extraido) || 0;
+      byWorker[key].irs    += Number(r.irs_extraido) || 0;
+      byWorker[key].ajudas += Number(r.ajudas_custo_extraidas) || 0;
+      byWorker[key].liquido += Number(r.liquido_extraido) || 0;
+      byWorker[key].count++;
+    });
+
+    const workerRows = Object.entries(byWorker).sort((a, b) => b[1].bruto - a[1].bruto);
+    const workerTable = workerRows.map(([name, w]) => [
+      name, w.count, fmtEur(w.bruto), fmtEur(w.ss), fmtEur(w.irs), fmtEur(w.ajudas), fmtEur(w.liquido)
+    ]);
+    const totalBruto = data.reduce((s, r) => s + (Number(r.bruto_plataforma) || 0), 0);
+    const totalSS = data.reduce((s, r) => s + (Number(r.ss_extraido) || 0), 0);
+    const totalIRS = data.reduce((s, r) => s + (Number(r.irs_extraido) || 0), 0);
+    const totalAjudas = data.reduce((s, r) => s + (Number(r.ajudas_custo_extraidas) || 0), 0);
+    const totalLiquido = data.reduce((s, r) => s + (Number(r.liquido_extraido) || 0), 0);
+    const totalsRow = ['TOTAL', data.length, fmtEur(totalBruto), fmtEur(totalSS), fmtEur(totalIRS), fmtEur(totalAjudas), fmtEur(totalLiquido)];
+
+    doc.setFontSize(11);
+    doc.setTextColor(30);
+    doc.text('Totais por Trabalhador', margin, yPos);
+    yPos += 4;
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Trabalhador', 'Recibos', 'Bruto', 'SS', 'IRS', 'Ajudas Custo', 'Líquido']],
+      body: [...workerTable, totalsRow],
+      styles: { fontSize: 7, cellPadding: 1.2 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: margin, right: margin },
+      columnStyles: { 0: { cellWidth: 45 }, 1: { cellWidth: 15, halign: 'center' }, 2: { cellWidth: 25, halign: 'right' }, 3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 22, halign: 'right' }, 5: { cellWidth: 25, halign: 'right' }, 6: { cellWidth: 25, halign: 'right' } },
+      didParseCell: (d) => {
+        if (d.section === 'body' && d.row.index === workerTable.length) {
+          d.cell.styles.fillColor = [220, 220, 255];
+          d.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    yPos = doc.lastAutoTable?.finalY + 10;
+
+    if (yPos > pageHeight - 60) { doc.addPage(); yPos = margin; }
+
+    doc.setFontSize(11);
+    doc.setTextColor(30);
+    doc.text('Resumo Mensal', margin, yPos);
+    yPos += 4;
+
+    const byMonth = {};
+    data.forEach(r => {
+      const m = r.mes || 'Sem mês';
+      if (!byMonth[m]) byMonth[m] = { count: 0, bruto: 0, ss: 0, irs: 0, ajudas: 0, liquido: 0 };
+      byMonth[m].count++;
+      byMonth[m].bruto  += Number(r.bruto_plataforma) || 0;
+      byMonth[m].ss     += Number(r.ss_extraido) || 0;
+      byMonth[m].irs    += Number(r.irs_extraido) || 0;
+      byMonth[m].ajudas += Number(r.ajudas_custo_extraidas) || 0;
+      byMonth[m].liquido += Number(r.liquido_extraido) || 0;
+    });
+
+    const monthRows = Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0]));
+    const monthTable = monthRows.map(([mes, m]) => [
+      fmtMes(mes), m.count, fmtEur(m.bruto), fmtEur(m.ss), fmtEur(m.irs), fmtEur(m.ajudas), fmtEur(m.liquido)
+    ]);
+    const totalRowMonth = ['TOTAL', data.length, fmtEur(totalBruto), fmtEur(totalSS), fmtEur(totalIRS), fmtEur(totalAjudas), fmtEur(totalLiquido)];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Mês', 'Recibos', 'Bruto', 'SS', 'IRS', 'Ajudas Custo', 'Líquido']],
+      body: [...monthTable, totalRowMonth],
+      styles: { fontSize: 7, cellPadding: 1.2 },
+      headStyles: { fillColor: [16, 185, 129], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: margin, right: margin },
+      columnStyles: { 0: { cellWidth: 35 }, 1: { cellWidth: 15, halign: 'center' }, 2: { cellWidth: 25, halign: 'right' }, 3: { cellWidth: 22, halign: 'right' }, 4: { cellWidth: 22, halign: 'right' }, 5: { cellWidth: 25, halign: 'right' }, 6: { cellWidth: 25, halign: 'right' } },
+      didParseCell: (d) => {
+        if (d.section === 'body' && d.row.index === monthTable.length) {
+          d.cell.styles.fillColor = [220, 255, 220];
+          d.cell.styles.fontStyle = 'bold';
+        }
+      },
+    });
+    yPos = doc.lastAutoTable?.finalY + 10;
+
+    if (yPos > pageHeight - 50) { doc.addPage(); yPos = margin; }
+
+    doc.setFontSize(11);
+    doc.setTextColor(30);
+    doc.text('Resumo do Período', margin, yPos);
+    yPos += 6;
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [['Indicador', 'Valor']],
+      body: [
+        ['Total Bruto', fmtEur(totalBruto)],
+        ['Total SS (Funcionário)', fmtEur(totalSS)],
+        ['Total IRS', fmtEur(totalIRS)],
+        ['Total Ajudas de Custo', fmtEur(totalAjudas)],
+        ['Total Líquido Pago', fmtEur(totalLiquido)],
+        ['Total SS (Empresa - 23.75/11)', fmtEur(totalSS * (23.75 / 11))],
+        ['Custo Total (SS Empresa + IRS)', fmtEur(totalSS * (23.75 / 11) + totalIRS)],
+      ],
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: margin, right: margin },
+      columnStyles: { 0: { cellWidth: 80 }, 1: { cellWidth: 40, halign: 'right' } },
+    });
+
+    doc.save(`recibos_relatorio_${new Date().toISOString().slice(0, 10)}.pdf`);
+    setShowExportModal(false);
+  };
+
+  const handleExportCsv = () => {
+    const filters = exportFilters;
+    let data = registosFiltrados;
+    if (filters.ano) data = data.filter(r => r.mes?.startsWith(filters.ano));
+    if (filters.mes) data = data.filter(r => r.mes === filters.mes);
+    if (filters.workerId) data = data.filter(r => r.worker_id === filters.workerId);
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Trabalhador', 'Mês', 'Bruto Platform', 'SS', 'IRS', 'Ajudas Custo', 'Líquido', 'Estado', 'Origem', 'Session ID'].map(esc).join(';');
+    const rows = data.map(r => [esc(r.worker_name ?? ''), esc(r.mes ?? ''), esc(r.bruto_plataforma ?? ''), esc(r.ss_extraido ?? ''), esc(r.irs_extraido ?? ''), esc(r.ajudas_custo_extraidas ?? ''), esc(r.liquido_extraido ?? ''), esc(r.estado ?? ''), esc(r.origem ?? ''), esc(r.session_id ?? '')].join(';'));
+    const blob = new Blob(['\uFEFF' + [header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `recibos_relatorio_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    setShowExportModal(false);
+  };
+
   return (
     <div className="space-y-4">
       {/* Filtros */}
@@ -1224,6 +1426,24 @@ const ModoHistorico = ({ workers, saveToDb }) => {
           className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all disabled:opacity-40">
           <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
         </button>
+        <div className="relative">
+          <button onClick={() => setShowExportMenu(o => !o)}
+            className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600 hover:bg-indigo-100 transition-all">
+            <Download size={15} />
+          </button>
+          {showExportMenu && (
+            <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-50 overflow-hidden">
+              <button onClick={() => { setShowExportModal(true); setShowExportMenu(false); }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap">
+                <FileDown size={14} /> Exportar PDF
+              </button>
+              <button onClick={() => { setShowExportModal(true); setShowExportMenu(false); }}
+                className="flex items-center gap-2 w-full px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-slate-50 whitespace-nowrap">
+                <FileDown size={14} /> Exportar CSV
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {carregando && (
@@ -1262,9 +1482,68 @@ const ModoHistorico = ({ workers, saveToDb }) => {
           </table>
         </div>
       )}
+      <ModoHistoricoExportModal show={showExportModal} onClose={() => setShowExportModal(false)} onExportPdf={handleExportPdf} onExportCsv={handleExportCsv} exportFilters={exportFilters} setExportFilters={setExportFilters} years={years} availableMonths={availableMonths} workers={workers} />
     </div>
   );
 };
+
+export function ModoHistoricoExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, setExportFilters, years, availableMonths, workers }) {
+  if (!show) return null;
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[100]">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-black text-slate-800">Exportar Relatório</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Ano</label>
+            <select value={exportFilters.ano} onChange={e => setExportFilters(f => ({ ...f, ano: e.target.value, mes: '' }))}
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">Todos os anos</option>
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Mês</label>
+            <select value={exportFilters.mes} onChange={e => setExportFilters(f => ({ ...f, mes: e.target.value }))}
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">Todos os meses</option>
+              {availableMonths.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-500 mb-1">Trabalhador</label>
+            <select value={exportFilters.workerId} onChange={e => setExportFilters(f => ({ ...f, workerId: e.target.value }))}
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="">Todos os trabalhadores</option>
+              {workers.filter(w => !w.isAdmin).sort((a,b) => a.name.localeCompare(b.name)).map(w => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="flex gap-2 pt-2">
+          <button onClick={onExportPdf}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors">
+            <FileDown size={14} /> PDF
+          </button>
+          <button onClick={onExportCsv}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors">
+            <FileDown size={14} /> CSV
+          </button>
+          <button onClick={onClose}
+            className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Modo Bursting ────────────────────────────────────────────────────────────
 const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
@@ -1889,7 +2168,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
       </div>
 
       {modo === 'validar'    && <ModoLote       workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
-      {modo === 'historico'  && <ModoHistorico  workers={workers} saveToDb={saveToDb} />}
+      {modo === 'historico'  && <ModoHistorico  workers={workers} saveToDb={saveToDb} systemSettings={systemSettings} />}
       {modo === 'burst'      && <ModoBursting   workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} />}
       {modo === 'documentos' && <ModoDocumentos workers={workers} />}
     </div>
