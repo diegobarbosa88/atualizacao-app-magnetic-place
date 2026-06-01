@@ -27,7 +27,7 @@ const buildLogShape = ({ startTime, endTime, breakStart, breakEnd, hours }) => (
   endTime: normalizeTime(endTime),
   breakStart: normalizeTime(breakStart),
   breakEnd: normalizeTime(breakEnd),
-  hours: hours ?? calculateDuration(startTime, endTime, breakStart, breakEnd),
+  hours: calculateDuration(normalizeTime(startTime), normalizeTime(endTime), normalizeTime(breakStart), normalizeTime(breakEnd)),
 });
 
 /**
@@ -166,7 +166,7 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
           endTime: normalizeTime(final.endTime),
           breakStart: normalizeTime(final.breakStart),
           breakEnd: normalizeTime(final.breakEnd),
-          hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
+          hours: calculateDuration(normalizeTime(final.startTime), normalizeTime(final.endTime), normalizeTime(final.breakStart), normalizeTime(final.breakEnd)),
         }, { onConflict: 'id' });
         if (error) throw error;
       } else if (final.startTime && final.endTime && it.date) {
@@ -180,7 +180,7 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
           endTime: normalizeTime(final.endTime),
           breakStart: normalizeTime(final.breakStart),
           breakEnd: normalizeTime(final.breakEnd),
-          hours: final.hours ?? calculateDuration(final.startTime, final.endTime, final.breakStart, final.breakEnd),
+          hours: calculateDuration(normalizeTime(final.startTime), normalizeTime(final.endTime), normalizeTime(final.breakStart), normalizeTime(final.breakEnd)),
         });
         if (error) throw error;
       }
