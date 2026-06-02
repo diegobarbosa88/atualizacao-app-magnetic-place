@@ -119,8 +119,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   // Sugestão de entrada/saída ao abrir o portal
   useEffect(() => {
     if (!currentUser || geoSuggestionDismissed) return;
-    // Mostrar card para workers limitados OU com gps_enabled
-    if (currentUser.gps_enabled !== true && !isLimitedWorker) return;
     const client = clients.find(c => c.id === currentUser.defaultClientId);
     if (!client) return;
 
@@ -131,6 +129,19 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       String(l.clientId) === String(currentUser.defaultClientId)
     );
     const openLog = todayWorkerLogs.find(l => l.startTime && !l.endTime);
+
+    // Para limitados sem GPS - definir geoSuggestion imediatamente sem esperar GPS
+    if (isLimitedWorker && currentUser.gps_enabled !== true) {
+      if (openLog) {
+        setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
+      } else {
+        setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
+      }
+      return;
+    }
+
+    // Para workers com GPS ou não limitados - lógica existente
+    if (currentUser.gps_enabled !== true) return;
 
     // Mostrar card imediatamente (sem GPS)
     if (openLog) {
@@ -153,7 +164,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         })
         .catch(() => {}); // GPS indisponível — card fica sem info de distância
     }
-  }, [currentUser?.id, logs.length]);
+  }, [currentUser?.id, logs.length, isLimitedWorker, currentUser?.gps_enabled]);
 
   const nowTimeStrForEntry = () => {
   const now = new Date();
@@ -645,7 +656,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         )}
 
         {/* CARD ENTRADA / SAÍDA — só aparece se não há já um log em aberto (nesse caso o card "Em serviço" trata de tudo) */}
-        {(gpsCheckInEnabled || isLimitedWorker) && geoSuggestion && !geoSuggestionDismissed && !todayOpenLog && (
+        {geoSuggestion && !geoSuggestionDismissed && !todayOpenLog && (
           <div className={`mb-6 rounded-[2rem] border shadow-xl overflow-hidden animate-in slide-in-from-top-4 duration-500 ${geoSuggestion.within === false ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
             <div className="p-6 flex flex-col md:flex-row items-center gap-5">
               <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-sm ${geoSuggestion.within === false ? 'bg-amber-400 text-white' : 'bg-emerald-500 text-white'}`}>
