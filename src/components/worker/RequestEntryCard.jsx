@@ -3,6 +3,7 @@ import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronD
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
+import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval } = useApp();
@@ -136,18 +137,20 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         created_at: now,
       });
 
-      await supabase.from('app_notifications').insert({
-        id: `notif_${Date.now()}_client`,
-        title: `Pedido de Eliminação · ${currentUser?.name}`,
-        message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${selectedDate}.`,
-        type: 'info',
-        target_type: 'client',
-        target_client_id: String(existingLog.clientId),
-        payload: { correction_id: correctionId, kind: 'submitted' },
-        is_active: true,
-        is_dismissible: true,
-        created_at: now,
-      });
+      if (!DISABLE_CLIENT_NOTIFICATIONS) {
+        await supabase.from('app_notifications').insert({
+          id: `notif_${Date.now()}_client`,
+          title: `Pedido de Eliminação · ${currentUser?.name}`,
+          message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${selectedDate}.`,
+          type: 'info',
+          target_type: 'client',
+          target_client_id: String(existingLog.clientId),
+          payload: { correction_id: correctionId, kind: 'submitted' },
+          is_active: true,
+          is_dismissible: true,
+          created_at: now,
+        });
+      }
 
       setRequestDelete(false);
       setSubmitted(true);
@@ -230,18 +233,20 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         created_at: now,
       });
 
-      await supabase.from('app_notifications').insert({
-        id: `notif_${Date.now()}_client`,
-        title: `Pedido de Registo · ${currentUser?.name}`,
-        message: `O Trabalhador ${currentUser?.name} solicitou ${existingLog ? 'correção' : 'criação'} de registo para ${selectedDate}.`,
-        type: 'info',
-        target_type: 'client',
-        target_client_id: String(formData.clientId),
-        payload: { correction_id: correctionId, kind: 'submitted' },
-        is_active: true,
-        is_dismissible: true,
-        created_at: now,
-      });
+      if (!DISABLE_CLIENT_NOTIFICATIONS) {
+        await supabase.from('app_notifications').insert({
+          id: `notif_${Date.now()}_client`,
+          title: `Pedido de Registo · ${currentUser?.name}`,
+          message: `O Trabalhador ${currentUser?.name} solicitou ${existingLog ? 'correção' : 'criação'} de registo para ${selectedDate}.`,
+          type: 'info',
+          target_type: 'client',
+          target_client_id: String(formData.clientId),
+          payload: { correction_id: correctionId, kind: 'submitted' },
+          is_active: true,
+          is_dismissible: true,
+          created_at: now,
+        });
+      }
 
       setSubmitted(true);
       setCollapsed(true);

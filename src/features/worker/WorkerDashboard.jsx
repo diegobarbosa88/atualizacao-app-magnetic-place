@@ -27,6 +27,7 @@ import EntryForm from '../../components/common/EntryForm';
 import WorkerDocuments from '../../components/common/WorkerDocuments';
 import WorkerProfile from './WorkerProfile';
 import RequestEntryCard from '../../components/worker/RequestEntryCard';
+import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
@@ -958,17 +959,19 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                           is_dismissible: true,
                           created_at: now,
                         });
-                        await saveToDb('app_notifications', `notif_${Date.now()}_client`, {
-                          title: `Pedido de Eliminação · ${currentUser?.name}`,
-                          message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${deleteConfirm.date}.`,
-                          type: 'info',
-                          target_type: 'client',
-                          target_client_id: String(log.clientId),
-                          payload: { correction_id: correctionId, kind: 'submitted' },
-                          is_active: true,
-                          is_dismissible: true,
-                          created_at: now,
-                        });
+                        if (!DISABLE_CLIENT_NOTIFICATIONS) {
+                          await saveToDb('app_notifications', `notif_${Date.now()}_client`, {
+                            title: `Pedido de Eliminação · ${currentUser?.name}`,
+                            message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${deleteConfirm.date}.`,
+                            type: 'info',
+                            target_type: 'client',
+                            target_client_id: String(log.clientId),
+                            payload: { correction_id: correctionId, kind: 'submitted' },
+                            is_active: true,
+                            is_dismissible: true,
+                            created_at: now,
+                          });
+                        }
                         setDeleteConfirm(null);
                         setSuccessMsg('Pedido de exclusão submetido!');
                         setTimeout(() => setSuccessMsg(''), 4000);

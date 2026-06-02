@@ -28,6 +28,7 @@ import {
   formatHours, formatCurrency, calculateDuration
 } from './utils/formatUtils';
 import { roundTimeToInterval, roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from './utils/timeUtils';
+import { DISABLE_CLIENT_NOTIFICATIONS } from './config';
 import { sendNotificationEmail } from './utils/emailUtils';
 
 const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/';
@@ -267,8 +268,10 @@ export default function App() {
       const yearMatch = monthFromMsg.match(/\d{4}/);
       if (monthIdx >= 0 && yearMatch) rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`;
     }
-    await saveToDb('app_notifications', rejectNotifId, fbNotifData);
-    if (targetClient?.email) await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth);
+    if (!DISABLE_CLIENT_NOTIFICATIONS) {
+      await saveToDb('app_notifications', rejectNotifId, fbNotifData);
+      if (targetClient?.email) await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth);
+    }
     if (rejeitarNotif.payload?.correcao_id) {
       const existingCorrecao = correcoesCorrections.find(c => c.id === rejeitarNotif.payload.correcao_id);
       if (existingCorrecao) await saveToDb('corrections', rejeitarNotif.payload.correcao_id, { ...existingCorrecao, status: 'rejected' });

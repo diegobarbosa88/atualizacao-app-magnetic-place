@@ -3,6 +3,7 @@
 
 import { calculateDuration } from './formatUtils';
 import { sendValidationEmail } from './emailUtils';
+import { DISABLE_CLIENT_NOTIFICATIONS } from '../config';
 
 const safeEmail = (args) => sendValidationEmail(args).catch((e) => console.warn('email error', e));
 
@@ -205,20 +206,22 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
     .eq('id', correction.id);
   if (e3) throw e3;
 
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
-    title: `Correção Aplicada: ${clientName || ''}`.trim(),
-    message: `A sua correção para ${correction.month} foi aplicada.`,
-    type: 'success',
-    target_type: 'client',
-    target_client_id: String(correction.client_id),
-    payload: { correction_id: correction.id, kind: 'applied' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: new Date().toISOString(),
-  });
+  if (!DISABLE_CLIENT_NOTIFICATIONS) {
+    await supabase.from('app_notifications').insert({
+      id: newId('notif'),
+      title: `Correção Aplicada: ${clientName || ''}`.trim(),
+      message: `A sua correção para ${correction.month} foi aplicada.`,
+      type: 'success',
+      target_type: 'client',
+      target_client_id: String(correction.client_id),
+      payload: { correction_id: correction.id, kind: 'applied' },
+      is_active: true,
+      is_dismissible: true,
+      created_at: new Date().toISOString(),
+    });
+  }
 
-  if (clientEmail) {
+  if (clientEmail && !DISABLE_CLIENT_NOTIFICATIONS) {
     safeEmail({
       to: clientEmail,
       name: clientName,
@@ -277,20 +280,22 @@ export async function markResolved(supabase, { correctionId, clientId, month, no
   const resolvedMsg = note
     ? `O administrador analisou o seu pedido (${month}).\n\n${note}`
     : `O administrador analisou o seu pedido para ${month}.`;
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
-    title: `Correção Resolvida: ${clientName || ''}`.trim(),
-    message: resolvedMsg,
-    type: 'success',
-    target_type: 'client',
-    target_client_id: String(clientId),
-    payload: { correction_id: correctionId, kind: 'resolved' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: new Date().toISOString(),
-  });
+  if (!DISABLE_CLIENT_NOTIFICATIONS) {
+    await supabase.from('app_notifications').insert({
+      id: newId('notif'),
+      title: `Correção Resolvida: ${clientName || ''}`.trim(),
+      message: resolvedMsg,
+      type: 'success',
+      target_type: 'client',
+      target_client_id: String(clientId),
+      payload: { correction_id: correctionId, kind: 'resolved' },
+      is_active: true,
+      is_dismissible: true,
+      created_at: new Date().toISOString(),
+    });
+  }
 
-  if (clientEmail) {
+  if (clientEmail && !DISABLE_CLIENT_NOTIFICATIONS) {
     safeEmail({
       to: clientEmail,
       name: clientName,
@@ -363,20 +368,22 @@ export async function applyCreationRequest(supabase, { correction, items, client
   }).eq('id', correction.id);
 
   const msg = `O seu pedido de registo foi aprovado.`;
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
-    title: `Pedido de Registo Aprovado: ${clientName || ''}`.trim(),
-    message: msg,
-    type: 'success',
-    target_type: 'client',
-    target_client_id: String(correction.client_id),
-    payload: { correction_id: correction.id, kind: 'applied' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: new Date().toISOString(),
-  });
+  if (!DISABLE_CLIENT_NOTIFICATIONS) {
+    await supabase.from('app_notifications').insert({
+      id: newId('notif'),
+      title: `Pedido de Registo Aprovado: ${clientName || ''}`.trim(),
+      message: msg,
+      type: 'success',
+      target_type: 'client',
+      target_client_id: String(correction.client_id),
+      payload: { correction_id: correction.id, kind: 'applied' },
+      is_active: true,
+      is_dismissible: true,
+      created_at: new Date().toISOString(),
+    });
+  }
 
-  if (clientEmail) {
+  if (clientEmail && !DISABLE_CLIENT_NOTIFICATIONS) {
     safeEmail({
       to: clientEmail,
       name: clientName,
@@ -400,20 +407,22 @@ export async function rejectCorrection(supabase, { correctionId, clientId, month
   if (error) throw error;
 
   const rejectMsg = reason ? `Motivo: ${reason}` : `A sua correção para ${month} foi rejeitada.`;
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
-    title: `Correção Rejeitada: ${clientName || ''}`.trim(),
-    message: rejectMsg,
-    type: 'error',
-    target_type: 'client',
-    target_client_id: String(clientId),
-    payload: { correction_id: correctionId, kind: 'rejected' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: new Date().toISOString(),
-  });
+  if (!DISABLE_CLIENT_NOTIFICATIONS) {
+    await supabase.from('app_notifications').insert({
+      id: newId('notif'),
+      title: `Correção Rejeitada: ${clientName || ''}`.trim(),
+      message: rejectMsg,
+      type: 'error',
+      target_type: 'client',
+      target_client_id: String(clientId),
+      payload: { correction_id: correctionId, kind: 'rejected' },
+      is_active: true,
+      is_dismissible: true,
+      created_at: new Date().toISOString(),
+    });
+  }
 
-  if (clientEmail) {
+  if (clientEmail && !DISABLE_CLIENT_NOTIFICATIONS) {
     safeEmail({
       to: clientEmail,
       name: clientName,
