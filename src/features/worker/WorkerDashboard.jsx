@@ -166,18 +166,31 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     }
   }, [currentUser?.id, logs.length, isLimitedWorker, currentUser?.gps_enabled]);
 
+const getClientTime = (clientId) => {
+    const client = clients.find(c => c.id === clientId);
+    const tz = client?.timezone || 'Europe/Madrid';
+    const now = new Date();
+    const time = now.toLocaleTimeString('pt-PT', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+    const date = now.toLocaleDateString('en-CA', { timeZone: tz });
+    return { time, date };
+  };
+
   const nowTimeStrForEntry = () => {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-};
+    const clientId = currentUser?.defaultClientId;
+    if (!clientId) {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+    return getClientTime(clientId).time;
+  };
 
   const nowTimeStrForExit = () => {
-  const now = new Date();
-  const hours = now.getHours();
-  const minutes = now.getMinutes();
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    const clientId = currentUser?.defaultClientId;
+    if (!clientId) {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+    return getClientTime(clientId).time;
 };
 
   const nowTimeStr = nowTimeStrForEntry; // backwards compat if needed

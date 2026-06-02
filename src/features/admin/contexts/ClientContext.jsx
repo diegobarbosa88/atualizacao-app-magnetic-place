@@ -17,7 +17,7 @@ const saveClientValorHoraHistory = async (clients, saveToDb, clientId, valorNovo
 };
 
 const INITIAL_CLIENT_FORM = {
-  id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0], triggers_limited_mode: false
+  id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0], triggers_limited_mode: false, timezone: 'Europe/Madrid'
 };
 
 export const ClientProvider = ({ children }) => {
@@ -56,8 +56,8 @@ export const ClientProvider = ({ children }) => {
         }
       }
     }
-    const { dataAlteracao, triggers_limited_mode, ...restForm } = clientForm;
-    await saveToDb('clients', id, { ...restForm, id, triggers_limited_mode: triggers_limited_mode || false });
+    const { dataAlteracao, triggers_limited_mode, timezone, ...restForm } = clientForm;
+    await saveToDb('clients', id, { ...restForm, id, triggers_limited_mode: triggers_limited_mode || false, timezone: timezone || 'Europe/Madrid' });
     setIsAddingInTab(false);
     setClientForm(INITIAL_CLIENT_FORM);
   }, [clientForm, saveToDb, clients]);

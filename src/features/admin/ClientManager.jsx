@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock
 } from 'lucide-react';
 import { getCurrentPosition } from '../../utils/geoUtils';
 
@@ -180,6 +180,21 @@ const ClientManagerContent = () => {
                       />
                       Ativa modo limitado para workers
                     </label>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Clock size={10} /> Fuso Horário</label>
+                    <select
+                      value={clientForm.timezone || 'Europe/Madrid'}
+                      onChange={e => setClientForm({ ...clientForm, timezone: e.target.value })}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
+                    >
+                      {typeof Intl !== 'undefined' && Intl.supportedValuesOf ? 
+                        Intl.supportedValuesOf('timeZone').map(tz => (
+                          <option key={tz} value={tz}>{tz}</option>
+                        )) : (
+                        <option value="Europe/Madrid">Europe/Madrid</option>
+                      )}
+                    </select>
                   </div>
                   <div className="space-y-1 md:col-span-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><MapPin size={10} /> Morada</label>
