@@ -6,7 +6,7 @@ import { parseCorrectionMessage } from '../utils/notifParser';
 import { sendNotificationEmail } from '../utils/emailUtils';
 import { calculateDuration } from '../utils/formatUtils';
 import { CheckCircle, AlertCircle, ChevronDown } from 'lucide-react';
-import { DISABLE_CLIENT_NOTIFICATIONS } from '../config';
+import { DISABLE_CLIENT_NOTIFICATIONS, shouldSendNotification } from '../config';
 
 const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelete, clients, logs, currentUser, correcoesCorrections }) => {
   const [expandedSections, setExpandedSections] = useState({ quick: true, precision: true });
@@ -108,7 +108,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
         }
       }
 
-      if (!DISABLE_CLIENT_NOTIFICATIONS) {
+      if (shouldSendNotification('correcao_aplicada', 'db', globalThis.__notificationPreferences)) {
         const appliedNotifId = "applied_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
         const appliedNotifData = {
           id: appliedNotifId,
@@ -122,17 +122,17 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           payload: { type: 'correcao_aplicada', correcao_id: correcaoId }
         };
         await saveToDb('app_notifications', appliedNotifId, appliedNotifData);
+      }
 
-        if (client?.email) {
-          await sendNotificationEmail(
-            client.email, 
-            client.name, 
-            appliedNotifData.title, 
-            appliedNotifData.message, 
-            clientId, 
-            month
-          );
-        }
+      if (client?.email && shouldSendNotification('correcao_aplicada', 'email', globalThis.__notificationPreferences)) {
+        await sendNotificationEmail(
+          client.email, 
+          client.name, 
+          `Correção Aplicada: ${notification.parsedData?.clientName || client?.name || 'Cliente'}`, 
+          `A sua correção referente ao período de ${month} foi aplicada e os valores foram atualizados no relatório.\n\nPode consultar o portal para verificar as alterações.`, 
+          clientId, 
+          month
+        );
       }
 
       await handleDelete('app_notifications', notification.id);
@@ -161,7 +161,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
         }
       }
 
-      if (!DISABLE_CLIENT_NOTIFICATIONS) {
+      if (shouldSendNotification('correcao_rejeitada', 'db', globalThis.__notificationPreferences)) {
         const rejectNotifId = "reject_" + Date.now();
         const rejectNotifData = {
           id: rejectNotifId,
@@ -175,17 +175,17 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           payload: { type: 'correcao_rejeitada', correcao_id: correcaoId }
         };
         await saveToDb('app_notifications', rejectNotifId, rejectNotifData);
+      }
 
-        if (client?.email) {
-          await sendNotificationEmail(
-            client.email, 
-            client.name, 
-            rejectNotifData.title, 
-            rejectNotifData.message, 
-            clientId, 
-            month
-          );
-        }
+      if (client?.email && shouldSendNotification('correcao_rejeitada', 'email', globalThis.__notificationPreferences)) {
+        await sendNotificationEmail(
+          client.email, 
+          client.name, 
+          `Correção Rejeitada: ${notification.parsedData?.clientName || client?.name || 'Cliente'}`, 
+          `A sua correção referente ao período de ${month} foi rejeitada pelo administrador.\n\nPor favor, aceda ao portal para submeter uma nova correção.`, 
+          clientId, 
+          month
+        );
       }
 
       await handleDelete('app_notifications', notification.id);
@@ -272,7 +272,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
         }
       }
 
-      if (!DISABLE_CLIENT_NOTIFICATIONS) {
+      if (shouldSendNotification('correcao_aplicada_precision', 'db', globalThis.__notificationPreferences)) {
         const appliedNotifId = "applied_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
         const appliedNotifData = {
           id: appliedNotifId,
@@ -286,17 +286,17 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           payload: { type: 'correcao_aplicada', correcao_id: correcaoId }
         };
         await saveToDb('app_notifications', appliedNotifId, appliedNotifData);
+      }
 
-        if (client?.email) {
-          await sendNotificationEmail(
-            client.email,
-            client.name,
-            appliedNotifData.title,
-            appliedNotifData.message,
-            clientId,
-            month
-          );
-        }
+      if (client?.email && shouldSendNotification('correcao_aplicada_precision', 'email', globalThis.__notificationPreferences)) {
+        await sendNotificationEmail(
+          client.email,
+          client.name,
+          `Correção de Precisão Aplicada: ${notification.parsedData?.clientName || client?.name || 'Cliente'}`,
+          `As suas correções de precisão para ${month} foram aplicadas e os valores foram atualizados no relatório.\n\nPode consultar o portal para verificar as alterações.`,
+          clientId,
+          month
+        );
       }
 
       await handleDelete('app_notifications', notification.id);

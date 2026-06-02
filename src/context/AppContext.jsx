@@ -94,6 +94,19 @@ export const AppProvider = ({ children }) => {
   const [isDbReady, setIsDbReady] = useState(false);
   const [gmailQueryConfig, setGmailQueryConfig] = useState(null);
 
+  // Client notification preferences (granular control per notification type)
+  const [notificationPreferences, setNotificationPreferences] = useState({
+    correction_applied: { db: false, email: false },
+    correction_resolved: { db: false, email: false },
+    creation_request_approved: { db: false, email: false },
+    correction_rejected: { db: false, email: false },
+    correcao_aplicada: { db: false, email: false },
+    correcao_aplicada_precision: { db: false, email: false },
+    correcao_rejeitada: { db: false, email: false },
+    reporte_divergencia_rejeitado: { db: false, email: false },
+    validacao_anulada: { db: false, email: false },
+  });
+
   // Company-wide settings persisted on Supabase (admin/responsible signature)
   const [companySignature, setCompanySignatureState] = useState({
     responsibleName: '',
@@ -206,6 +219,7 @@ export const AppProvider = ({ children }) => {
               ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
+            if (data.notification_preferences) setNotificationPreferences(data.notification_preferences);
           }
         })(),
       ]);
@@ -422,6 +436,25 @@ export const AppProvider = ({ children }) => {
     await saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() });
   };
 
+  // Update notification preferences in Supabase
+  const updateNotificationPreferences = async (newPrefs) => {
+    setNotificationPreferences(newPrefs);
+    // Sync to global for cross-module access
+    globalThis.__notificationPreferences = newPrefs;
+    if (supabaseInstance) {
+      const { error } = await supabaseInstance
+        .from('system_settings')
+        .update({ notification_preferences: newPrefs })
+        .eq('id', 1);
+      if (error) console.error('Erro ao guardar preferências de notificação:', error);
+    }
+  };
+
+  // Sync notificationPreferences to global on mount
+  useEffect(() => {
+    globalThis.__notificationPreferences = notificationPreferences;
+  }, [notificationPreferences]);
+
   const handleDelete = async (colName, id) => {
     // Local state updates
     const filterState = (setter) => setter(prev => prev.filter(x => x.id !== id));
@@ -596,7 +629,8 @@ export const AppProvider = ({ children }) => {
     saveToDb,
     handleDelete,
     handleApproveMonth,
-    supabase: supabaseInstance
+    supabase: supabaseInstance,
+    notificationPreferences, updateNotificationPreferences
   };
 
   return (

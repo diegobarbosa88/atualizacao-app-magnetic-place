@@ -2,14 +2,15 @@ import React, { useMemo, useState } from 'react';
 import {
   CheckCircle, Search, UserCheck, RotateCcw, ShieldCheck,
   AlertTriangle, Link, Calendar, ChevronLeft, ChevronRight,
-  Mail, Copy, Download, LayoutGrid, LayoutList
+  Mail, Copy, Download, LayoutGrid, LayoutList, Settings
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useValidationPortal } from './contexts/ValidationPortalContext';
 import { formatHours, calculateDuration } from '../../utils/formatUtils';
 import { sendValidationEmail } from '../../utils/emailUtils';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
-import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
+import NotificationPreferences from '../../components/admin/NotificationPreferences';
+import { DISABLE_CLIENT_NOTIFICATIONS, shouldSendNotification } from '../../config';
 
 const toClientLinkId = (id) => {
   if (!id) return null;
@@ -26,6 +27,7 @@ const ValidationPortal = ({
   initialCorrectionId,
   onCorrectionNavigated
 }) => {
+  const [showNotifPrefs, setShowNotifPrefs] = useState(false);
   // From local context (ValidationPortal state)
   const {
     portalSubTab, setPortalSubTab,
@@ -49,7 +51,9 @@ const ValidationPortal = ({
     correctionNotifications,
     clientApprovals,
     correcoesCorrections,
-    workerChangeRequests
+    workerChangeRequests,
+    notificationPreferences,
+    updateNotificationPreferences
   } = useApp();
 
   const pendingWorkerSubmissionsCount = (workerChangeRequests || []).filter(r => r.status === 'pending').length;
@@ -82,6 +86,15 @@ const ValidationPortal = ({
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><ShieldCheck size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Portal de Validação</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowNotifPrefs(true)}
+            className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all"
+            title="Preferências de Notificações"
+          >
+            <Settings size={16} />
+          </button>
         </div>
         <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-xl shadow-sm border border-slate-100">
           <button onClick={() => setPortalMonth(new Date(portalMonth.getFullYear(), portalMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all text-slate-400"><ChevronLeft size={15} /></button>
@@ -213,7 +226,7 @@ const ValidationPortal = ({
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
-                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && !DISABLE_CLIENT_NOTIFICATIONS) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
+                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
                       <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100"><Download size={12} /> Relatório</button>
                     </>
                   ) : (
@@ -311,7 +324,14 @@ const ValidationPortal = ({
         </div>
       )}
 
-      </div>
+      {/* Notification Preferences Modal */}
+      <NotificationPreferences
+        isOpen={showNotifPrefs}
+        onClose={() => setShowNotifPrefs(false)}
+        preferences={notificationPreferences}
+        onSave={updateNotificationPreferences}
+      />
+    </div>
   );
 };
 
