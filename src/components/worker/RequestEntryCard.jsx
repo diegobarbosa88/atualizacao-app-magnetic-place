@@ -6,7 +6,7 @@ import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../ut
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false, openInDeleteMode = false }) => {
-  const { supabase, saveToDb, minuteInterval } = useApp();
+  const { supabase, saveToDb, minuteInterval, systemSettings } = useApp();
   const [collapsed, setCollapsed] = useState(!isInline);
   const [selectedDate, setSelectedDate] = useState(initialDate || toISODateLocal(new Date()));
   const [formData, setFormData] = useState({
@@ -208,9 +208,9 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           breakEnd: existingLog.breakEnd,
         } : null,
         proposed: {
-          startTime: roundTimeToIntervalTimeUp(formData.startTime, minuteInterval || 30),
+          startTime: roundTimeToIntervalTimeUp(formData.startTime, minuteInterval || 30, systemSettings?.entryToleranceMinutes || 0),
           endTime: roundTimeToIntervalTimeDown(formData.endTime, minuteInterval || 30),
-          breakStart: formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, minuteInterval || 30) : null,
+          breakStart: formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, minuteInterval || 30, systemSettings?.entryToleranceMinutes || 0) : null,
           breakEnd: formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, minuteInterval || 30) : null,
         },
         final: null,

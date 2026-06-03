@@ -1,9 +1,10 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
+import { Routes, Route, Navigate, useSearchParams, useNavigate } from 'react-router-dom';
 import './App.css';
 import {
-  AlertCircle, CheckCircle, ChevronLeft, ChevronRight, LogOut, Mail,
-  Megaphone, Plus, Sparkles, Loader2, Send, X, XCircle, BarChart3,
-  Settings, AlertTriangle, Clock, TrendingUp, TrendingDown, Wallet,
+  AlertCircle, CheckCircle, LogOut, Mail,
+  Megaphone, Loader2, Send, X, XCircle, BarChart3,
+  AlertTriangle, Clock, TrendingUp, TrendingDown, Wallet,
   FileText, LayoutGrid, Activity, History, Trophy, Building2, Palette,
   Lock, UserCircle, Upload, Bell, Star
 } from 'lucide-react';
@@ -11,7 +12,8 @@ import emailjs from '@emailjs/browser';
 import { useApp } from './context/AppContext';
 import ClientPortal from './ClientPortal.jsx';
 import { WorkerDashboard } from './features/worker';
-import AdminDashboard from './features/admin/AdminDashboard';
+import AdminLayout from './features/admin/AdminLayout';
+import { AdminDataProvider } from './features/admin/context/AdminDataProvider';
 import FinancialReportOverlay from './features/admin/FinancialReportOverlay';
 import DocumentsAdmin from './features/admin/DocumentsAdmin';
 import NotificationsAdmin from './features/admin/NotificationsAdmin';
@@ -21,6 +23,16 @@ import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
 import VerificationPortal from './components/common/VerificationPortal';
+import AdminOverview from './features/admin/AdminOverview';
+import AdminTeam from './features/admin/AdminTeam';
+import AdminClients from './features/admin/AdminClients';
+import AdminValidationPortal from './features/admin/AdminValidationPortal';
+import AdminSchedules from './features/admin/AdminSchedules';
+import AdminReports from './features/admin/AdminReports';
+import AdminDocuments from './features/admin/AdminDocuments';
+import AdminCosts from './features/admin/AdminCosts';
+import AdminNotifications from './features/admin/AdminNotifications';
+import AdminSettings from './features/admin/AdminSettings';
 import {
   toISODateLocal, isSameMonth
 } from './utils/dateUtils';
@@ -33,7 +45,6 @@ import { sendNotificationEmail } from './utils/emailUtils';
 
 const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/';
 
-// --- App Principal ---
 export default function App() {
   const {
     systemSettings, setSystemSettings,
@@ -65,7 +76,6 @@ export default function App() {
     link.href = 'MAGNETIC (3).png';
   }, []);
 
-  // WR-01 fix: Use state for baseVersion instead of closure variable to properly detect updates
   const [currentVersion, setCurrentVersion] = useState(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   useEffect(() => {
@@ -84,13 +94,13 @@ export default function App() {
     const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
   }, [currentVersion]);
+
   useEffect(() => {
     if (!updateAvailable) return;
     const t = setTimeout(() => setUpdateAvailable(false), 7000);
     return () => clearTimeout(t);
   }, [updateAvailable]);
 
-  const [activeTab, setActiveTab] = useState('overview');
   const [portalMonth, setPortalMonth] = useState(new Date());
   const [portalSubTab, setPortalSubTab] = useState('envios');
   const [printingReport, setPrintingReport] = useState(null);
@@ -166,20 +176,9 @@ export default function App() {
     })).catch(err => console.warn('[notifications] Falha ao marcar como vistas:', err));
   }, [currentUser?.id, myNotifications, supabase]);
 
-  useEffect(() => {
-    if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
-      const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
-      if (toDismiss.length > 0) {
-        toDismiss.forEach(n => handleDismissNotif(n.id));
-      }
-    }
-  }, [activeTab, portalSubTab, myNotifications, currentUser?.role]);
-
   const handleBannerClick = (notif) => {
     handleDismissNotif(notif.id);
     if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
-      setActiveTab('portal_validacao');
-      setPortalSubTab('correcoes');
       setView('admin');
     }
   };
@@ -290,10 +289,11 @@ export default function App() {
   const handleSaveEntry = (formData, isMain = false, inlineDate = null, onResetMainForm = null) => {
     if (!formData.clientId || !formData.startTime || !formData.endTime) return;
     const interval = systemSettings?.minuteInterval || 30;
+    const tolerance = systemSettings?.entryToleranceMinutes || 0;
     const hours = calculateDuration(
-      roundTimeToIntervalTimeUp(formData.startTime, interval),
+      roundTimeToIntervalTimeUp(formData.startTime, interval, tolerance),
       roundTimeToIntervalTimeDown(formData.endTime, interval),
-      formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, interval) : null,
+      formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, interval, tolerance) : null,
       formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, interval) : null
     );
     const dateToSave = isMain ? formData.date : inlineDate;
@@ -321,16 +321,137 @@ export default function App() {
   const urlVerifyId = urlParams.get('id');
   const urlToken = urlParams.get('token');
 
-  // Resolver clientId a partir do token (links públicos sem login)
   const tokenResolvedClientId = urlToken
     ? (clients.find(c => c.share_token === urlToken)?.id || null)
     : null;
   const resolvedClientId = tokenResolvedClientId || urlClient || null;
 
-  // Portal público de verificação de assinaturas (não requer login)
   if (urlView === 'verify' && urlVerifyId) {
     return <VerificationPortal signatureId={urlVerifyId} />;
   }
+
+  const adminContextValue = {
+    app: { handleLogin, setShowFinReport },
+    logs, workers, clients,
+    systemSettings,
+    documents, setDocuments,
+    correctionNotifications,
+    appNotifications,
+    workerChangeRequests: [],
+    corrections: correcoesCorrections,
+    correctionItems: [],
+    saveToDb,
+    setSystemSettings,
+    saveSystemSettings: () => {},
+    supabase,
+    companySignature: null,
+    saveCompanySignature: () => {},
+    stampStyle: null,
+    setStampStyle: () => {},
+    approvals,
+    clientApprovals,
+    onLogout: handleLogout,
+    handleDelete,
+    currentUser,
+    currentMonth,
+    setCurrentMonth,
+    portalSubTab,
+    setPortalSubTab,
+    portalMonth,
+    setPortalMonth,
+    selectedCorrectionId: null,
+    setSelectedCorrectionId: () => {},
+    showRecalcModal: false,
+    setShowRecalcModal: () => {},
+    recalcProgress: { current: 0, total: 0, done: false },
+    setRecalcProgress: () => {},
+    reportFilter: { clientId: '', workerId: '', month: toISODateLocal(new Date()).substring(0, 7) },
+    setReportFilter: () => {},
+    printingReport,
+    setPrintingReport,
+    reportHistory: [],
+    setReportHistory: () => {},
+    optimisticReadIds: new Set(),
+    setOptimisticReadIds: () => {},
+    optimisticViewedCorrIds: new Set(),
+    setOptimisticViewedCorrIds: () => {},
+    dismissedAdminNotifs: [],
+    setDismissedAdminNotifs: () => {},
+    isRead: () => false,
+    isViewed: () => false,
+    pendingChangeRequests: [],
+    pendingClientCorrectionsCount: correctionNotifications.length,
+    pendingWorkerCorrectionsCount: 0,
+    totalPendingCorrections: correctionNotifications.length,
+    workerSubmissionUnread: 0,
+    unreadCount: correctionNotifications.length,
+    markNotifRead: () => {},
+    markCorrectionsViewed: () => {},
+    handleDismissAdminNotif: () => {},
+    getNotificationBadge: () => ({ resolved: false }),
+    activeReportsCount: 0,
+    activeClientsCount: clients.length,
+    activeWorkersCount: workers.filter(w => w.is_active !== false).length,
+    adminStats: { totalHours: 0, expectedRevenue: 0, expectedCosts: 0, netProfit: 0, monthlyExpenses: 0 },
+    schedules: [],
+    expenses: [],
+nonAdminWorkers: workers.filter(w => !w.isAdmin)
+  };
+
+  const renderAppContent = () => {
+    if (view === 'login') {
+      return <LoginView workers={workers} onLogin={handleLogin} systemSettings={systemSettings} setSystemSettings={setSystemSettings} />;
+    }
+    if (view === 'worker') {
+      return <WorkerDashboard {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }} />;
+    }
+    if (view === 'client_portal') {
+      return (
+        <ClientPortal
+          clients={clients}
+          workers={workers}
+          logs={logs}
+          saveToDb={saveToDb}
+          initialClientId={resolvedClientId}
+          initialMonth={urlMonth}
+          initialTokenClientId={tokenResolvedClientId}
+          systemSettings={systemSettings}
+          appNotifications={appNotifications}
+          clientApprovals={clientApprovals}
+          supabase={supabase}
+          renderReport={(workerId, isGlobal, portalLogs, portalClientId, portalMonth) => (
+            <ClientTimesheetReport
+              data={{ client: clients.find(c => String(c.id) === String(portalClientId || resolvedClientId)), logs: portalLogs || logs, workers, clients, month: portalMonth || urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
+              isEmbedded={true}
+              hideActions={true}
+              onBack={() => { }}
+            />
+          )}
+        />
+      );
+    }
+    if (view === 'admin') {
+      return (
+        <AdminDataProvider value={adminContextValue}>
+          <Routes>
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverview />} />
+              <Route path="team" element={<AdminTeam />} />
+              <Route path="clients" element={<AdminClients />} />
+              <Route path="portal_validacao" element={<AdminValidationPortal />} />
+              <Route path="schedules" element={<AdminSchedules />} />
+              <Route path="reports" element={<AdminReports />} />
+              <Route path="documentos" element={<AdminDocuments />} />
+              <Route path="costs" element={<AdminCosts />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="notificacoes" element={<AdminNotifications />} />
+            </Route>
+          </Routes>
+        </AdminDataProvider>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="text-slate-900 bg-slate-50 min-h-screen font-sans">
@@ -367,72 +488,10 @@ export default function App() {
           ))}
         </div>
       )}
-      {view === 'login' && <LoginView workers={workers} onLogin={handleLogin} systemSettings={systemSettings} setSystemSettings={setSystemSettings} />}
-      {view === 'admin' && (
-        <AdminDashboard
-          onLogout={handleLogout}
-          onLogin={handleLogin}
-          currentUser={currentUser}
-          currentMonth={currentMonth}
-          setCurrentMonth={setCurrentMonth}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          auditWorkerId={auditWorkerId}
-          setAuditWorkerId={setAuditWorkerId}
-          setShowFinReport={setShowFinReport}
-          logs={logs}
-          handleSaveEntry={handleSaveEntry}
-          printingReport={printingReport}
-          setPrintingReport={setPrintingReport}
-          handleDelete={handleDelete}
-          approvals={approvals}
-          clientApprovals={clientApprovals}
-          systemSettings={systemSettings}
-          documents={documents}
-          setDocuments={setDocuments}
-          correctionNotifications={correctionNotifications}
-          setClienteSelecionado={setClienteSelecionado}
-          setModalEmailAberto={setModalEmailAberto}
-          portalSubTab={portalSubTab}
-          setPortalSubTab={setPortalSubTab}
-          portalMonth={portalMonth}
-          setPortalMonth={setPortalMonth}
-          setModalRejeitarAberto={setModalRejeitarAberto}
-          setRejeitarMotivo={setRejeitarMotivo}
-          setRejeitarNotif={setRejeitarNotif}
-        />
-      )}
-      {view === 'worker' && (
-        <WorkerDashboard
-          {...{ onLogout: handleLogout, onLogin: handleLogin, currentUser, setCurrentUser, currentMonth, setCurrentMonth, logs, clients, handleSaveEntry, saveToDb, handleDelete, approvals, handleApproveMonth, systemSettings, documents, appNotifications }}
-        />
-      )}
-      {view === 'client_portal' && (
-        <ClientPortal
-          clients={clients}
-          workers={workers}
-          logs={logs}
-          saveToDb={saveToDb}
-          initialClientId={resolvedClientId}
-          initialMonth={urlMonth}
-          initialTokenClientId={tokenResolvedClientId}
-          systemSettings={systemSettings}
-          appNotifications={appNotifications}
-          clientApprovals={clientApprovals}
-          supabase={supabase}
-          renderReport={(workerId, isGlobal, portalLogs, portalClientId, portalMonth) => (
-            <ClientTimesheetReport
-              data={{ client: clients.find(c => String(c.id) === String(portalClientId || resolvedClientId)), logs: portalLogs || logs, workers, clients, month: portalMonth || urlMonth, workerId, isGlobal: isGlobal && !workerId, clientApprovals }}
-              isEmbedded={true}
-              hideActions={true}
-              onBack={() => { }}
-            />
-          )}
-        />
-      )}
+      {renderAppContent()}
       {showFinReport && <FinancialReportOverlay {...{ logs, workers, clients, expenses, finFilter, setFinFilter, setShowFinReport }} />}
       {modalEmailAberto && clienteSelecionado && (() => {
-const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
+        const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`;
         const modalLinkUnico = `${window.location.origin}${window.location.pathname}?client=${toClientLinkId(clienteSelecionado.id)}&month=${monthStr}`;
         return (
           <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">

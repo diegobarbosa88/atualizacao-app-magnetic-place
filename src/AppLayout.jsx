@@ -1,0 +1,512 @@
+import React, { useState, useMemo, useEffect } from 'react'
+import './App.css'
+import {
+  AlertCircle, CheckCircle, LogOut, Mail,
+  Megaphone, Loader2, Send, X, XCircle,
+  Settings, BarChart3,
+  FileText, LayoutGrid, Activity, History, Trophy, Building2, Palette,
+  Lock, UserCircle, Upload, Bell, Star, ChevronLeft, ChevronRight,
+  Plus, Sparkles, TrendingUp, TrendingDown, Wallet, Clock
+} from 'lucide-react'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import emailjs from '@emailjs/browser'
+import { useApp } from './context/AppContext'
+import {
+  toISODateLocal, isSameMonth
+} from './utils/dateUtils'
+import {
+  formatHours, formatCurrency, calculateDuration
+} from './utils/formatUtils'
+import { roundTimeToInterval, roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from './utils/timeUtils'
+import { shouldSendNotification } from './config'
+import { sendNotificationEmail } from './utils/emailUtils'
+
+const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/'
+
+// --- AppLayout (novo componente de Layout) ---
+export default function AppLayout() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  const {
+    systemSettings, setSystemSettings,
+    currentUser, setCurrentUser,
+    currentMonth, setCurrentMonth,
+    clients, setClients, workers,
+    logs,
+    expenses,
+    correcoesCorrections,
+    approvals,
+    documents, setDocuments,
+    clientApprovals,
+    appNotifications,
+    saveToDb,
+    handleDelete,
+    supabase,
+    notificationPreferences
+  } = useApp()
+
+  useEffect(() => {
+    document.title = "Magnetic Place | Gestão"
+    const link = document.querySelector("link[rel~='icon']") || document.createElement('link')
+    link.rel = 'icon'
+    link.href = 'MAGNETIC (3).png'
+    if (!document.querySelector("link[rel~='icon']")) document.head.appendChild(link)
+  }, [])
+
+  // Version checking
+  const [currentVersion, setCurrentVersion] = useState(null)
+  const [updateAvailable, setUpdateAvailable] = useState(false)
+  useEffect(() => {
+    const check = async () => {
+      try {
+        const res = await fetch('/version.json?t=' + Date.now(), { cache: 'no-store' })
+        const { version } = await res.json()
+        if (currentVersion === null) setCurrentVersion(version)
+        else if (version !== currentVersion) setUpdateAvailable(true)
+      } catch {}
+    }
+    check()
+    const interval = setInterval(check, 60 * 1000)
+    return () => clearInterval(interval)
+  }, [currentVersion])
+
+  useEffect(() => {
+    if (!updateAvailable) return
+    const t = setTimeout(() => setUpdateAvailable(false), 7000)
+    return () => clearTimeout(t)
+  }, [updateAvailable])
+
+  // UI State (needed for modals/toasts - kept in layout scope)
+  const [activeTab, setActiveTab] = useState('overview')
+  const [portalMonth, setPortalMonth] = useState(new Date())
+  const [portalSubTab, setPortalSubTab] = useState('envios')
+  const [printingReport, setPrintingReport] = useState(null)
+  const [clienteSelecionado, setClienteSelecionado] = useState(null)
+  const [modalEmailAberto, setModalEmailAberto] = useState(false)
+  const [toastMessage, setToastMessage] = useState(null)
+  const [isSendingEmail, setIsSendingEmail] = useState(false)
+  const [modalRejeitarAberto, setModalRejeitarAberto] = useState(false)
+  const [rejeitarMotivo, setRejeitarMotivo] = useState('')
+  const [rejeitarNotif, setRejeitarNotif] = useState(null)
+  const [auditWorkerId, setAuditWorkerId] = useState(null)
+  const [showFinReport, setShowFinReport] = useState(false)
+  const [finFilter, setFinFilter] = useState({ start: toISODateLocal(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), end: toISODateLocal(new Date()) })
+
+  // Notifications
+  const [dismissedNotifs, setDismissedNotifs] = useState(() => {
+    const uid = currentUser?.id
+    if (!uid) return []
+    try { return JSON.parse(localStorage.getItem(`dismissed_notifs_${uid}`) || '[]') }
+    catch { return [] }
+  })
+
+  useEffect(() => {
+    if (!currentUser?.id) return
+    try {
+      const stored = JSON.parse(localStorage.getItem(`dismissed_notifs_${currentUser.id}`) || '[]')
+      setDismissedNotifs(stored)
+    } catch { setDismissedNotifs([]) }
+  }, [currentUser?.id])
+
+  const myNotifications = useMemo(() => {
+    if (!currentUser || !appNotifications) return []
+    return appNotifications.filter(n =>
+      n.is_active &&
+      (n.target_type === 'all' ||
+        (currentUser.role === 'admin' && n.target_type === 'admin') ||
+        (currentUser.role !== 'admin' && n.target_worker_ids && n.target_worker_ids.includes(currentUser.id))) &&
+      !dismissedNotifs.includes(n.id) &&
+      !(n.dismissed_by_ids || []).includes(currentUser.id)
+    )
+  }, [appNotifications, currentUser, dismissedNotifs])
+
+  const correctionNotifications = useMemo(() => {
+    return correcoesCorrections.filter(c => c.status === 'pending')
+  }, [correcoesCorrections])
+
+  const handleDismissNotif = async (id) => {
+    setDismissedNotifs(prev => {
+      if (prev.includes(id)) return prev
+      const updated = [...prev, id]
+      if (currentUser) localStorage.setItem(`dismissed_notifs_${currentUser.id}`, JSON.stringify(updated))
+      return updated
+    })
+    const notif = appNotifications?.find(n => n.id === id)
+    if (notif && supabase && currentUser) {
+      const dismissedIds = notif.dismissed_by_ids || []
+      if (!dismissedIds.includes(currentUser.id)) {
+        await supabase.from('app_notifications').update({ dismissed_by_ids: [...dismissedIds, currentUser.id] }).eq('id', id)
+      }
+    }
+  }
+
+  useEffect(() => {
+    if (!currentUser || !myNotifications.length) return
+    Promise.all(myNotifications.map(async (notif) => {
+      const viewedIds = notif.viewed_by_ids || []
+      if (!viewedIds.includes(currentUser.id)) {
+        if (supabase) await supabase.from('app_notifications').update({ viewed_by_ids: [...viewedIds, currentUser.id] }).eq('id', notif.id)
+      }
+    })).catch(err => console.warn('[notifications] Falha ao marcar como vistas:', err))
+  }, [currentUser?.id, myNotifications, supabase])
+
+  useEffect(() => {
+    if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
+      const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'))
+      if (toDismiss.length > 0) toDismiss.forEach(n => handleDismissNotif(n.id))
+    }
+  }, [activeTab, portalSubTab, myNotifications, currentUser?.role])
+
+  // Navigation handlers
+  const handleLogin = (role, user = null) => {
+    const userData = user || { id: 'admin_system', name: 'Admin', role: 'admin' }
+    setCurrentUser(userData)
+    localStorage.setItem('magnetic_view', role)
+    localStorage.setItem('magnetic_user', JSON.stringify(userData))
+    navigate('/' + role)
+  }
+
+  const handleLogout = () => {
+    setCurrentUser(null)
+    localStorage.removeItem('magnetic_view')
+    localStorage.removeItem('magnetic_user')
+    navigate('/login')
+  }
+
+  const handleBannerClick = (notif) => {
+    handleDismissNotif(notif.id)
+    if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
+      navigate('/admin?tab=correcoes')
+    }
+  }
+
+  const toClientLinkId = (id) => {
+    if (!id) return null
+    if (id.startsWith('c')) return id
+    if (id.startsWith('client_')) return 'c' + id.replace('client_', '')
+    return 'c' + id
+  }
+
+  // Route protection
+  useEffect(() => {
+    const publicPaths = ['/login', '/verify', '/client']
+    const isPublic = publicPaths.some(p => location.pathname.startsWith(p))
+
+    if (!currentUser && !isPublic) {
+      navigate('/login', { replace: true })
+    } else if (currentUser && location.pathname === '/login') {
+      navigate('/' + currentUser.role, { replace: true })
+    }
+  }, [currentUser, location.pathname, navigate])
+
+  // Business logic - handleDisparoEmail
+  const handleDisparoEmail = async () => {
+    if (!clienteSelecionado) return
+    setIsSendingEmail(true)
+    const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`
+    const modalLinkUnico = `${CLIENT_PORTAL_URL}?client=${toClientLinkId(clienteSelecionado.id)}&month=${monthStr}`
+    const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0))
+    const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
+    const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_PORTAL
+    const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+    try {
+      const templateParams = {
+        to_email: clienteSelecionado.email || 'contato@cliente.pt',
+        to_name: clienteSelecionado.name,
+        mes_referencia: portalMonth.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }),
+        total_horas: totalHoras,
+        link_unico: modalLinkUnico
+      }
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_PUBLIC_KEY)
+      const updatedClient = { ...clienteSelecionado, status_email: `enviado_${monthStr}` }
+      saveToDb('clients', updatedClient.id, updatedClient)
+      setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c))
+      setToastMessage('E-mail enviado com sucesso!')
+      setTimeout(() => setToastMessage(null), 4000)
+    } catch (error) {
+      console.error('Falha no envio do e-mail:', error)
+      alert('Houve um erro a enviar o e-mail pela API. Verifique a consola.')
+    } finally {
+      setIsSendingEmail(false)
+      setModalEmailAberto(false)
+      setClienteSelecionado(null)
+    }
+  }
+
+  // Business logic - handleConfirmarRejeicao
+  const handleConfirmarRejeicao = async () => {
+    if (!rejeitarNotif) return
+    if (rejeitarMotivo.trim().length < 10) { alert('Por favor, insira um motivo com pelo menos 10 caracteres.'); return }
+    const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id))
+    let rawTargetMonth = rejeitarNotif.payload?.month || ''
+    if (rawTargetMonth && !rawTargetMonth.match(/^\d{4}-\d{2}$/)) {
+      const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+      const lowerMonth = rawTargetMonth.toLowerCase()
+      const monthIdx = months.findIndex(m => lowerMonth.includes(m))
+      const yearMatch = rawTargetMonth.match(/\d{4}/)
+      if (monthIdx >= 0 && yearMatch) rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`
+    }
+    const monthLabel = (rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || rawTargetMonth || '').trim()
+    const rejectNotifId = `reject_${rejeitarNotif.target_client_id}_${rawTargetMonth || Date.now()}`
+    const fbNotifData = {
+      id: rejectNotifId,
+      title: `Reporte de Divergência Rejeitado: ${monthLabel || rawTargetMonth || ''}`,
+      message: `O seu reporte de divergência referente ao período de ${monthLabel || rawTargetMonth || ''} foi rejeitado pelo administrador.\n\nMotivo: ${rejeitarMotivo.trim()}\n\nPor favor, aceda ao portal para rever e submeter um novo reporte caso necessário.`,
+      type: 'error', target_type: 'client', target_client_id: String(rejeitarNotif.target_client_id),
+      created_at: new Date().toISOString(), is_active: true,
+      payload: { type: 'correcao_rejeitada', motivo: rejeitarMotivo.trim() }
+    }
+    const monthFromMsg = rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || ''
+    if (!rawTargetMonth && monthFromMsg) {
+      const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
+      const lowerMonth = monthFromMsg.toLowerCase()
+      const monthIdx = months.findIndex(m => lowerMonth.includes(m))
+      const yearMatch = monthFromMsg.match(/\d{4}/)
+      if (monthIdx >= 0 && yearMatch) rawTargetMonth = `${yearMatch[0]}-${String(monthIdx + 1).padStart(2, '0')}`
+    }
+    if (shouldSendNotification('reporte_divergencia_rejeitado', 'db', notificationPreferences)) {
+      await saveToDb('app_notifications', rejectNotifId, fbNotifData)
+    }
+    if (targetClient?.email && shouldSendNotification('reporte_divergencia_rejeitado', 'email', notificationPreferences)) {
+      await sendNotificationEmail(targetClient.email, targetClient.name, fbNotifData.title, fbNotifData.message, rejeitarNotif.target_client_id, rawTargetMonth)
+    }
+    if (rejeitarNotif.payload?.correcao_id) {
+      const existingCorrecao = correcoesCorrections.find(c => c.id === rejeitarNotif.payload.correcao_id)
+      if (existingCorrecao) await saveToDb('corrections', rejeitarNotif.payload.correcao_id, { ...existingCorrecao, status: 'rejected' })
+    }
+    await handleDelete('app_notifications', rejeitarNotif.id)
+    setModalRejeitarAberto(false)
+    setRejeitarMotivo('')
+    setRejeitarNotif(null)
+    setToastMessage('Correção rejeitada e cliente notificado!')
+    setTimeout(() => setToastMessage(null), 4000)
+  }
+
+  // Entry saving
+  const handleSaveEntry = (formData, isMain = false, inlineDate = null, onResetMainForm = null) => {
+    if (!formData.clientId || !formData.startTime || !formData.endTime) return
+    const interval = systemSettings?.minuteInterval || 30
+    const tolerance = systemSettings?.entryToleranceMinutes || 0
+    const hours = calculateDuration(
+      roundTimeToIntervalTimeUp(formData.startTime, interval, tolerance),
+      roundTimeToIntervalTimeDown(formData.endTime, interval),
+      formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, interval, tolerance) : null,
+      formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, interval) : null
+    )
+    const dateToSave = isMain ? formData.date : inlineDate
+    const wId = auditWorkerId ? auditWorkerId : currentUser.id
+    const logId = formData.id || `l${Date.now()}`
+    const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m) }
+    const newStart = toMins(formData.startTime)
+    const newEnd = toMins(formData.endTime)
+    const existingLogs = logs.filter(l => String(l.workerId) === String(wId) && l.date === dateToSave && String(l.clientId) === String(formData.clientId) && l.id !== logId)
+    for (const log of existingLogs) {
+      const existingStart = toMins(log.startTime)
+      const existingEnd = toMins(log.endTime)
+      if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return }
+    }
+    saveToDb('logs', logId, { ...formData, startTime: formData.startTime, endTime: formData.endTime, breakStart: formData.breakStart, breakEnd: formData.breakEnd, date: dateToSave, hours, workerId: wId, id: logId })
+    if (isMain && onResetMainForm) { const resetClientId = currentUser.role === 'worker' ? (currentUser.defaultClientId || '') : ''; onResetMainForm(resetClientId) }
+  }
+
+  const handleApproveMonth = (workerId) => {
+    const monthStr = toISODateLocal(currentMonth).substring(0, 7)
+    const id = "appr_" + workerId + "_" + monthStr
+    saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() })
+  }
+
+  // Expose context for child routes via Outlet
+  const layoutContext = {
+    // Navigation
+    handleLogin,
+    handleLogout,
+    handleBannerClick,
+    // UI state setters
+    setActiveTab, setPortalSubTab, setShowFinReport, setFinFilter,
+    // Business logic
+    handleDisparoEmail, handleConfirmarRejeicao, handleSaveEntry, handleApproveMonth,
+    // Modal state
+    activeTab, portalSubTab,
+    showFinReport, finFilter,
+    // Props for AdminDashboard
+    onLogout: handleLogout,
+    onLogin: handleLogin,
+    currentUser,
+    currentMonth,
+    setCurrentMonth,
+    auditWorkerId,
+    setAuditWorkerId,
+    logs,
+    printingReport,
+    setPrintingReport,
+    handleDelete,
+    approvals,
+    clientApprovals,
+    systemSettings,
+    documents,
+    setDocuments,
+    correctionNotifications,
+    setClienteSelecionado,
+    setModalEmailAberto,
+    setModalRejeitarAberto,
+    setRejeitarMotivo,
+    setRejeitarNotif,
+    portalMonth,
+    setPortalMonth,
+    // Worker props
+    setCurrentUser,
+    // Client portal props
+    clients,
+    workers,
+    appNotifications,
+    supabase
+  }
+
+  return (
+    <div className="text-slate-900 bg-slate-50 min-h-screen font-sans">
+      {updateAvailable && (
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-indigo-600 text-white px-4 py-3 flex items-center justify-between gap-3 shadow-lg">
+          <p className="text-sm font-bold">Nova versão disponível</p>
+          <button
+            onClick={() => window.location.reload(true)}
+            className="px-4 py-1.5 bg-white text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-50 transition-all shrink-0"
+          >
+            Atualizar
+          </button>
+        </div>
+      )}
+      {currentUser && myNotifications.length > 0 && (
+        <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
+          {myNotifications.map(notif => (
+            <div key={notif.id} onClick={() => handleBannerClick(notif)} className={`pointer-events-auto animate-in slide-in-from-top-4 duration-700 ${notif.title?.includes('Pedido de Correção') ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all' : ''}`}>
+              <div className={`rounded-[2rem] p-0.5 shadow-2xl ${notif.type === 'urgent' ? 'bg-gradient-to-br from-rose-500 to-red-600' : notif.type === 'warning' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : notif.type === 'success' ? 'bg-gradient-to-br from-emerald-500 to-teal-600' : 'bg-gradient-to-br from-indigo-500 to-violet-600'}`}>
+                <div className="bg-white/95 backdrop-blur-md rounded-[1.95rem] p-4 shadow-inner">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-2.5 rounded-2xl ${notif.type === 'urgent' ? 'bg-rose-50 text-rose-600' : notif.type === 'warning' ? 'bg-amber-50 text-amber-600' : notif.type === 'success' ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                      {notif.type === 'urgent' ? <AlertCircle size={20} /> : <Megaphone size={20} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-xs font-black text-slate-800 uppercase tracking-tight truncate">{notif.title}</h3>
+                      <p className="text-[10px] font-bold text-slate-500 mt-0.5 leading-tight line-clamp-1">{notif.title.includes('Pedido de Correção') ? notif.message.split('\n')[0] : notif.message}</p>
+                    </div>
+                    {notif.is_dismissible && <button onClick={(e) => { e.stopPropagation(); handleDismissNotif(notif.id) }} className="p-1.5 text-slate-300 hover:text-slate-600 transition-all hover:bg-slate-50 rounded-xl"><X size={18} /></button>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <Outlet context={layoutContext} />
+      {modalEmailAberto && clienteSelecionado && (
+        <EmailModal
+          clienteSelecionado={clienteSelecionado}
+          portalMonth={portalMonth}
+          logs={logs}
+          setModalEmailAberto={setModalEmailAberto}
+          isSendingEmail={isSendingEmail}
+          handleDisparoEmail={handleDisparoEmail}
+        />
+      )}
+      {modalRejeitarAberto && rejeitarNotif && (
+        <RejeitarModal
+          rejeitarNotif={rejeitarNotif}
+          rejeitarMotivo={rejeitarMotivo}
+          setRejeitarMotivo={setRejeitarMotivo}
+          setModalRejeitarAberto={setModalRejeitarAberto}
+          clients={clients}
+          handleConfirmarRejeicao={handleConfirmarRejeicao}
+        />
+      )}
+      {toastMessage && (
+        <div className="fixed top-6 right-6 z-[300] animate-in slide-in-from-right fade-in duration-300">
+          <div className="bg-emerald-600 text-white px-6 py-4 rounded-2xl shadow-xl flex items-center gap-3 font-bold text-sm"><CheckCircle size={20} className="text-emerald-200" />{toastMessage}</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --- Sub-components for modals ---
+
+function EmailModal({ clienteSelecionado, portalMonth, logs, setModalEmailAberto, isSendingEmail, handleDisparoEmail }) {
+  const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`
+  const toClientLinkId = (id) => {
+    if (!id) return null
+    if (id.startsWith('c')) return id
+    if (id.startsWith('client_')) return 'c' + id.replace('client_', '')
+    return 'c' + id
+  }
+  const modalLinkUnico = `${window.location.origin}${window.location.pathname}?client=${toClientLinkId(clienteSelecionado.id)}&month=${monthStr}`
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-indigo-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-slate-100 shrink-0">
+          <h3 className="font-black text-sm sm:text-base text-slate-800 flex items-center gap-2"><Mail size={18} className="text-indigo-600 shrink-0" /> <span className="truncate">E-mail para {clienteSelecionado.name}</span></h3>
+          <button onClick={() => setModalEmailAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"><X size={18} /></button>
+        </div>
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3 overflow-y-auto flex-1 min-h-0">
+          <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm space-y-2">
+            <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">De:</span><span className="font-medium text-slate-700 text-xs truncate">nao-responder@magneticplace.pt</span></div>
+            <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Para:</span><span className="font-bold text-indigo-700 text-xs truncate">{clienteSelecionado.email || 'cliente@exemplo.pt'}</span></div>
+            <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Assunto:</span><span className="font-medium text-slate-700 text-xs leading-tight">Aprovação de Horas Magnetic Place - {portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</span></div>
+          </div>
+          <div className="bg-white rounded-2xl p-4 sm:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+            <div className="flex justify-center mb-4 sm:mb-8 pb-4 sm:pb-6 border-b-2 border-slate-50"><img src="/MAGNETIC (3).png" alt="Logo" className="h-8 sm:h-10 object-contain" /></div>
+            <h4 className="font-black text-base sm:text-lg text-slate-800 mb-3">Olá {clienteSelecionado.name},</h4>
+            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed mb-4">Os relatórios de serviço referentes ao período de <strong className="font-black text-indigo-700">{portalMonth.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</strong> já estão disponíveis para a sua revisão e aprovação.</p>
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 mb-4"><p className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.2em] mb-1">Total Registado</p><p className="text-xl sm:text-2xl font-black text-indigo-700">{formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0))} <span className="text-sm sm:text-base font-bold">horas</span></p></div>
+            <p className="text-slate-500 text-xs leading-relaxed mb-4">Para rever em detalhe as datas, horas, e trabalhadores associados a este período, por favor utilize o botão abaixo:</p>
+            <div className="text-center mb-4"><div className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-200">Aceder ao Portal de Validação</div></div>
+            <div className="pt-4 border-t border-slate-100 text-center"><p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Equipa Magnetic Place</p></div>
+          </div>
+        </div>
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-white shrink-0 rounded-b-[2rem]">
+          <button onClick={() => setModalEmailAberto(false)} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
+          <button onClick={handleDisparoEmail} disabled={isSendingEmail} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-indigo-600 hover:bg-indigo-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50">{isSendingEmail ? <><Loader2 size={16} className="animate-spin" /> A processar...</> : <><Send size={16} /> Confirmar e Disparar</>}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function RejeitarModal({ rejeitarNotif, rejeitarMotivo, setRejeitarMotivo, setModalRejeitarAberto, clients, handleConfirmarRejeicao }) {
+  const targetClient = clients.find(c => String(c.id) === String(rejeitarNotif.target_client_id))
+  const monthLabel = (rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || rejeitarNotif.payload?.month || '').trim()
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="bg-white rounded-t-[2rem] sm:rounded-[2rem] shadow-2xl border border-rose-100 w-full max-w-lg flex flex-col max-h-[92dvh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom-4 sm:zoom-in duration-300">
+        <div className="flex justify-between items-center px-4 sm:px-6 py-4 border-b border-rose-100 shrink-0">
+          <h3 className="font-black text-sm sm:text-base text-rose-600 flex items-center gap-2"><XCircle size={18} className="shrink-0" /> Rejeitar Correção</h3>
+          <button onClick={() => setModalRejeitarAberto(false)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"><X size={18} /></button>
+        </div>
+        <div className="px-4 sm:px-6 py-4 bg-slate-50 space-y-3 overflow-y-auto flex-1 min-h-0">
+          <div className="bg-white rounded-xl p-3 border border-slate-200 shadow-sm space-y-2">
+            <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Para:</span><span className="font-bold text-rose-700 text-xs truncate">{targetClient?.name || 'Cliente'}</span></div>
+            <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">E-mail:</span><span className="font-medium text-slate-700 text-xs truncate">{targetClient?.email || 'Não definido'}</span></div>
+            <div className="flex gap-2 text-sm"><span className="font-black text-slate-400 uppercase text-[10px] tracking-widest w-16 shrink-0">Período:</span><span className="font-medium text-slate-700 text-xs">{monthLabel || rejeitarNotif.payload?.month || ''}</span></div>
+          </div>
+          <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+            <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Motivo da Rejeição *</label>
+            <textarea value={rejeitarMotivo} onChange={e => setRejeitarMotivo(e.target.value)} placeholder="Descreva o motivo pelo qual esta correção está a ser rejeitada..." rows={4} className="w-full border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300 resize-none" />
+            <p className="text-[10px] text-slate-400 mt-2 text-right">{rejeitarMotivo.length} caracteres (mínimo 10)</p>
+          </div>
+          <div className="bg-rose-50 border border-rose-100 rounded-xl p-3">
+            <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest mb-2">Pré-visualização do E-mail</p>
+            <div className="bg-white rounded-lg p-3 text-sm space-y-2">
+              <p className="font-bold text-slate-800 text-xs">Assunto: Reporte de Divergência Rejeitado: {monthLabel || ''}</p>
+              <p className="text-slate-600 text-xs leading-relaxed">{rejeitarMotivo.trim().length >= 10 ? <>O seu reporte de divergência referente ao período de <strong>{monthLabel || ''}</strong> foi rejeitado pelo administrador.<br /><br /><strong>Motivo:</strong> {rejeitarMotivo.trim()}</> : <span className="text-amber-500">Aguarde... Insira o motivo da rejeição.</span>}</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-4 sm:px-6 py-4 border-t border-slate-100 flex justify-end gap-2 bg-white shrink-0 rounded-b-[2rem]">
+          <button onClick={() => setModalRejeitarAberto(false)} className="px-4 sm:px-6 py-2.5 rounded-xl font-bold text-xs uppercase text-slate-500 hover:bg-slate-100 transition-all border border-slate-200">Cancelar</button>
+          <button onClick={handleConfirmarRejeicao} disabled={rejeitarMotivo.trim().length < 10} className="px-4 sm:px-6 py-2.5 rounded-xl font-black text-xs uppercase text-white bg-rose-600 hover:bg-rose-700 transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"><XCircle size={16} /> Confirmar Rejeição</button>
+        </div>
+      </div>
+    </div>
+  )
+}

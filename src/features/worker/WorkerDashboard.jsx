@@ -235,7 +235,8 @@ const getClientTime = (clientId) => {
         const existingLog = logs.find(l => l.id === geoSuggestion.logId);
         if (existingLog) {
           const interval = systemSettings?.minuteInterval || 30;
-          const roundedStart = roundTimeToIntervalTimeUp(existingLog.startTime, interval);
+          const tolerance = systemSettings?.entryToleranceMinutes || 0;
+          const roundedStart = roundTimeToIntervalTimeUp(existingLog.startTime, interval, tolerance);
           const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
           const hours = calculateDuration(roundedStart, roundedEnd, existingLog.breakStart, existingLog.breakEnd);
           await saveToDb('logs', existingLog.id, {
@@ -275,7 +276,8 @@ const getClientTime = (clientId) => {
       const pos = await getGpsSilent();
       const exitTime = nowTimeStrForExit();
       const interval = systemSettings?.minuteInterval || 30;
-      const roundedStart = roundTimeToIntervalTimeUp(todayOpenLog.startTime, interval);
+      const tolerance = systemSettings?.entryToleranceMinutes || 0;
+      const roundedStart = roundTimeToIntervalTimeUp(todayOpenLog.startTime, interval, tolerance);
       const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
       const hours = calculateDuration(roundedStart, roundedEnd, todayOpenLog.breakStart, todayOpenLog.breakEnd);
       await saveToDb('logs', todayOpenLog.id, {
