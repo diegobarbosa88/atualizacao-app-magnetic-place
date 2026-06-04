@@ -23,6 +23,7 @@ export const AppProvider = ({ children }) => {
       toleranciaValido: 0.77,
       toleranciaAviso: 10,
       minuteInterval: 30,  // Arredondamento de registos de tempo (5, 10, 15, 30, 60)
+      entryToleranceMinutes: 10,  // Tolerância (min) para arredondar entradas para baixo (0 desativa)
     };
     const saved = localStorage.getItem('magnetic_settings');
     if (saved) {
@@ -217,6 +218,7 @@ export const AppProvider = ({ children }) => {
               ...(data.tolerancia_valido != null && { toleranciaValido: Number(data.tolerancia_valido) }),
               ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
               ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),
+              ...(data.entry_tolerance_minutes != null && { entryToleranceMinutes: Number(data.entry_tolerance_minutes) }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
             if (data.notification_preferences) setNotificationPreferences(data.notification_preferences);
@@ -455,6 +457,18 @@ export const AppProvider = ({ children }) => {
     globalThis.__notificationPreferences = notificationPreferences;
   }, [notificationPreferences]);
 
+  // Sincroniza currentUser com dados frescos do Supabase sempre que workers actualiza
+  useEffect(() => {
+    if (!currentUser || workers.length === 0) return;
+    const fresh = workers.find(w => w.id === currentUser.id);
+    if (!fresh) return;
+    setCurrentUser(prev => {
+      const merged = { ...prev, ...fresh };
+      try { localStorage.setItem('magnetic_user', JSON.stringify(merged)); } catch { /* ignore */ }
+      return merged;
+    });
+  }, [workers]);
+
   const handleDelete = async (colName, id) => {
     // Local state updates
     const filterState = (setter) => setter(prev => prev.filter(x => x.id !== id));
@@ -593,6 +607,7 @@ export const AppProvider = ({ children }) => {
       tolerancia_valido: newSettings.toleranciaValido ?? 0.77,
       tolerancia_aviso:  newSettings.toleranciaAviso  ?? 10,
       minute_interval: newSettings.minuteInterval ?? 30,
+      entry_tolerance_minutes: newSettings.entryToleranceMinutes ?? 10,
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabaseInstance

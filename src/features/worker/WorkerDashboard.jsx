@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext';
 import {
   Clock, ChevronLeft, ChevronRight, Calendar, CheckCircle,
   LogOut, LogIn, Timer, TrendingUp, Edit2, Save, Plus, Users,
-  AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Sparkles, Download, LayoutGrid, MapPin, Navigation
+  AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Sparkles, Download, LayoutGrid, MapPin, Navigation, X
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import {
@@ -28,6 +28,7 @@ import WorkerDocuments from '../../components/common/WorkerDocuments';
 import WorkerProfile from './WorkerProfile';
 import RequestEntryCard from '../../components/worker/RequestEntryCard';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
+import { submitCorrection } from '../../utils/correctionsApi';
 
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
@@ -69,7 +70,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     handleApproveMonth
   } = useWorker();
 
-  const { setCurrentUser, workerChangeRequests } = useApp();
+  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoSuggestion, setGeoSuggestion] = useState(null); // { type, within, dist, lat, lng, client, logId }
@@ -77,6 +78,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [geoActionLoading, setGeoActionLoading] = useState(false);
   const [now, setNow] = useState(() => new Date());
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { date, logId }
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [pendingCollapsed, setPendingCollapsed] = useState(true);
+  const [dismissedCorrectionIds, setDismissedCorrectionIds] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('wk_dismissed_corrections') || '[]')); }
+    catch { return new Set(); }
+  });
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -91,6 +98,62 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     const t = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(t);
   }, []);
+
+  // Safety net: refetch correctionItems periodicamente e ao focar a janela.
+  // O realtime do AppContext devia fazer isto, mas se a subscription falhar (RLS, drop, etc.)
+  // o card de pendentes fica preso. Re-fetch garante consistência.
+  useEffect(() => {
+    if (!supabase) return;
+    const refetch = async () => {
+      const { data, error } = await supabase.from('correction_items').select('*');
+      if (error) { console.warn('[WorkerDashboard] refetch correction_items falhou', error); return; }
+      if (Array.isArray(data)) setCorrectionItems(data);
+    };
+    const interval = setInterval(refetch, 30000);
+    const onFocus = () => { refetch(); };
+    window.addEventListener('focus', onFocus);
+    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };
+  }, [supabase, setCorrectionItems]);
+
+  const pendingItems = useMemo(() => {
+    const resolvedCorrectionIds = new Set(
+      (corrections || [])
+        .filter((c) => c.status === 'applied' || c.status === 'rejected')
+        .map((c) => c.id)
+    );
+    return (correctionItems || []).filter(
+      (i) =>
+        i.worker_id === currentUser?.id &&
+        i.item_status === 'pending' &&
+        !resolvedCorrectionIds.has(i.correction_id) &&
+        (i.date || '').startsWith(currentMonthStr)
+    );
+  }, [correctionItems, corrections, currentUser, currentMonthStr]);
+
+  const resolvedItems = useMemo(() => {
+    return (correctionItems || []).filter((i) => {
+      if (i.worker_id !== currentUser?.id) return false;
+      if (dismissedCorrectionIds.has(i.correction_id)) return false;
+      if (!(i.date || '').startsWith(currentMonthStr)) return false;
+      const corr = (corrections || []).find((c) => c.id === i.correction_id);
+      return corr && (corr.status === 'applied' || corr.status === 'rejected');
+    });
+  }, [correctionItems, corrections, currentUser, dismissedCorrectionIds, currentMonthStr]);
+
+  const dismissCorrection = (correctionId) => {
+    setDismissedCorrectionIds((prev) => {
+      const next = new Set(prev);
+      next.add(correctionId);
+      localStorage.setItem('wk_dismissed_corrections', JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const labelKind = (item) => {
+    if (!item.before || (!item.before.startTime && !item.before.endTime)) return '✚ Novo dia';
+    if (!item.proposed || (!item.proposed.startTime && !item.proposed.endTime)) return '✖ Remover dia';
+    return '✎ Ajuste';
+  };
 
   const handleSaveWithGeoCheck = async (formData, isMain, ds) => {
     const client = clients.find(c => c.id === formData.clientId);
@@ -117,9 +180,10 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     });
   };
 
-  // Sugestão de entrada/saída ao abrir o portal
+  // Sugestão de entrada/saída ao abrir o portal — só para workers limitados
   useEffect(() => {
     if (!currentUser || geoSuggestionDismissed) return;
+    if (!isLimitedWorker) return;
     const client = clients.find(c => c.id === currentUser.defaultClientId);
     if (!client) return;
 
@@ -235,7 +299,7 @@ const getClientTime = (clientId) => {
         const existingLog = logs.find(l => l.id === geoSuggestion.logId);
         if (existingLog) {
           const interval = systemSettings?.minuteInterval || 30;
-          const tolerance = systemSettings?.entryToleranceMinutes || 0;
+          const tolerance = systemSettings?.entryToleranceMinutes ?? 10;
           const roundedStart = roundTimeToIntervalTimeUp(existingLog.startTime, interval, tolerance);
           const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
           const hours = calculateDuration(roundedStart, roundedEnd, existingLog.breakStart, existingLog.breakEnd);
@@ -276,7 +340,7 @@ const getClientTime = (clientId) => {
       const pos = await getGpsSilent();
       const exitTime = nowTimeStrForExit();
       const interval = systemSettings?.minuteInterval || 30;
-      const tolerance = systemSettings?.entryToleranceMinutes || 0;
+      const tolerance = systemSettings?.entryToleranceMinutes ?? 10;
       const roundedStart = roundTimeToIntervalTimeUp(todayOpenLog.startTime, interval, tolerance);
       const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
       const hours = calculateDuration(roundedStart, roundedEnd, todayOpenLog.breakStart, todayOpenLog.breakEnd);
@@ -418,6 +482,121 @@ const getClientTime = (clientId) => {
         </div>
       </nav>
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
+        {(pendingItems.length > 0 || resolvedItems.length > 0) && (
+          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
+            <button
+              onClick={() => setPendingCollapsed(v => !v)}
+              className="w-full flex items-center justify-between gap-2 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-amber-600" />
+                <h3 className="text-sm font-black text-amber-700">
+                  {pendingItems.length > 0
+                    ? `Você tem ${pendingItems.length} pedido${pendingItems.length > 1 ? 's' : ''} pendente${pendingItems.length > 1 ? 's' : ''} de resposta`
+                    : 'Pedidos respondidos'}
+                </h3>
+              </div>
+              {pendingCollapsed
+                ? <ChevronDown size={16} className="text-amber-500 flex-shrink-0" />
+                : <ChevronUp size={16} className="text-amber-500 flex-shrink-0" />}
+            </button>
+            {!pendingCollapsed && (
+              <ul className="space-y-2 mt-3">
+                {pendingItems.map((item) => {
+                  const hasBefore = item.before && (item.before.startTime || item.before.endTime);
+                  const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
+                  const hasBreak = (t) => t && (t.breakStart || t.breakEnd);
+                  return (
+                    <li key={item.id} className="text-xs bg-white/70 rounded-xl p-3 border border-amber-100">
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span className="font-mono font-black text-amber-900">{item.date}</span>
+                        <span className="text-amber-400">·</span>
+                        <span className="font-black uppercase tracking-widest text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                          {labelKind(item)}
+                        </span>
+                      </div>
+                      {hasBefore && (
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
+                          <span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>
+                          {hasBreak(item.before) && (
+                            <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>
+                          )}
+                        </div>
+                      )}
+                      {hasProposed && (
+                        <div className="flex items-center gap-2 text-amber-800 font-bold">
+                          <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-amber-600">Solicitado</span>
+                          <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
+                          {hasBreak(item.proposed) && (
+                            <span className="text-amber-500 font-normal">· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>
+                          )}
+                        </div>
+                      )}
+                      {!hasBefore && !hasProposed && (
+                        <div className="text-slate-500 italic text-[11px]">Sem detalhes de horário</div>
+                      )}
+                    </li>
+                  );
+                })}
+                {resolvedItems.length > 0 && (() => {
+                  const byCorrectionId = resolvedItems.reduce((acc, item) => {
+                    if (!acc[item.correction_id]) acc[item.correction_id] = [];
+                    acc[item.correction_id].push(item);
+                    return acc;
+                  }, {});
+                  return Object.entries(byCorrectionId).map(([corrId, items]) => {
+                    const corr = (corrections || []).find((c) => c.id === corrId);
+                    const accepted = corr?.status === 'applied';
+                    return (
+                      <li key={corrId} className={`text-xs rounded-xl p-3 border ${accepted ? 'bg-emerald-50/80 border-emerald-200' : 'bg-rose-50/80 border-rose-200'}`}>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className={`font-black text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-md ${accepted ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                              {accepted ? '✓ Aceite' : '✕ Rejeitado'}
+                            </span>
+                            <span className={`font-mono font-black ${accepted ? 'text-emerald-900' : 'text-rose-900'}`}>{items[0]?.date}{items.length > 1 ? ` +${items.length - 1}` : ''}</span>
+                          </div>
+                          <button
+                            onClick={() => dismissCorrection(corrId)}
+                            className={`p-1 rounded-lg transition-colors ${accepted ? 'text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100' : 'text-rose-400 hover:text-rose-700 hover:bg-rose-100'}`}
+                            title="Fechar"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                        {items.map((item) => {
+                          const hasBefore = item.before && (item.before.startTime || item.before.endTime);
+                          const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
+                          const hasBreak = (t) => t && (t.breakStart || t.breakEnd);
+                          return (
+                            <div key={item.id} className="mt-1">
+                              {items.length > 1 && <span className="font-mono text-[10px] text-slate-400 mr-2">{item.date}</span>}
+                              {hasBefore && (
+                                <div className="flex items-center gap-2 text-slate-500">
+                                  <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
+                                  <span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>
+                                  {hasBreak(item.before) && <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}
+                                </div>
+                              )}
+                              {hasProposed && (
+                                <div className={`flex items-center gap-2 font-bold ${accepted ? 'text-emerald-800' : 'text-rose-800'}`}>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 ${accepted ? 'text-emerald-600' : 'text-rose-600'}`}>Solicitado</span>
+                                  <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
+                                  {hasBreak(item.proposed) && <span className={`font-normal ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </li>
+                    );
+                  });
+                })()}
+              </ul>
+            )}
+          </div>
+        )}
         {workerTab === 'perfil' && (
           <WorkerProfile
             worker={currentUser}
@@ -922,67 +1101,70 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
                     Cancelar
                   </button>
                   <button
-                    onClick={async () => {
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('[WorkerDashboard] Confirmar clicked', { deleteConfirm, logsCount: logs?.length, supabase: !!supabase });
+                      if (deleteSubmitting) return;
                       const log = logs.find(l => l.id === deleteConfirm.logId);
-                      if (!log) { setDeleteConfirm(null); return; }
-                      const correctionId = `corr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                      const now = new Date().toISOString();
+                      if (!log) {
+                        console.warn('[WorkerDashboard] log not found', deleteConfirm.logId);
+                        alert('Registo não encontrado. A fechar modal.');
+                        setDeleteConfirm(null);
+                        return;
+                      }
+                      if (!supabase) {
+                        alert('Sistema ainda não está pronto. Aguarde alguns segundos e tente novamente.');
+                        return;
+                      }
+                      const dup = (correctionItems || []).some((i) => {
+                        if (i.worker_id !== String(currentUser?.id)) return false;
+                        if (i.date !== deleteConfirm.date) return false;
+                        if (i.item_status !== 'pending') return false;
+                        const corr = (corrections || []).find((c) => c.id === i.correction_id);
+                        if (!corr) return false;
+                        if (corr.status === 'applied' || corr.status === 'rejected') return false;
+                        return corr.client_id === String(log.clientId);
+                      });
+                      if (dup) {
+                        alert('Já existe um pedido pendente para esta data e cliente. Aguarde resposta do administrador.');
+                        return;
+                      }
+                      setDeleteSubmitting(true);
                       try {
-                        await saveToDb('corrections', correctionId, {
-                          id: correctionId,
-                          client_id: String(log.clientId),
+                        await submitCorrection(supabase, {
+                          clientId: log.clientId,
                           month: deleteConfirm.date.substring(0, 7),
                           type: 'deletion_request',
-                          status: 'submitted',
-                          submitted_at: now,
-                          submitted_by: String(currentUser?.id),
-                          justification: `Pedido de eliminação do registo de ${deleteConfirm.date}`
+                          submittedBy: currentUser?.id,
+                          justification: `Pedido de eliminação do registo de ${deleteConfirm.date}`,
+                          items: [{
+                            workerId: currentUser?.id,
+                            workerName: currentUser?.name,
+                            date: deleteConfirm.date,
+                            before: {
+                              startTime: log.startTime,
+                              endTime: log.endTime,
+                              breakStart: log.breakStart,
+                              breakEnd: log.breakEnd,
+                            },
+                            proposed: null,
+                          }],
                         });
-                        const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-                        await saveToDb('correction_items', itemId, {
-                          id: itemId,
-                          correction_id: correctionId,
-                          worker_id: String(currentUser?.id),
-                          worker_name: currentUser?.name,
-                          date: deleteConfirm.date,
-                          before: { startTime: log.startTime, endTime: log.endTime, breakStart: log.breakStart, breakEnd: log.breakEnd },
-                          proposed: null,
-                          final: null,
-                          item_status: 'pending',
-                        });
-                        await saveToDb('app_notifications', `notif_${Date.now()}`, {
-                          title: `Pedido de Eliminação · ${currentUser?.name}`,
-                          message: `${currentUser?.name} solicitou eliminação do registo de ${deleteConfirm.date}`,
-                          type: 'warning',
-                          target_type: 'admin',
-                          target_client_id: String(log.clientId),
-                          payload: { correction_id: correctionId, kind: 'submitted' },
-                          is_active: true,
-                          is_dismissible: true,
-                          created_at: now,
-                        });
-                        if (!DISABLE_CLIENT_NOTIFICATIONS) {
-                          await saveToDb('app_notifications', `notif_${Date.now()}_client`, {
-                            title: `Pedido de Eliminação · ${currentUser?.name}`,
-                            message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${deleteConfirm.date}.`,
-                            type: 'info',
-                            target_type: 'client',
-                            target_client_id: String(log.clientId),
-                            payload: { correction_id: correctionId, kind: 'submitted' },
-                            is_active: true,
-                            is_dismissible: true,
-                            created_at: now,
-                          });
-                        }
                         setDeleteConfirm(null);
                         setSuccessMsg('Pedido de exclusão submetido!');
                         setTimeout(() => setSuccessMsg(''), 4000);
                       } catch (err) {
-                        alert('Erro ao submeter pedido: ' + err.message);
+                        console.error('[WorkerDashboard] submitCorrection error', err);
+                        alert('Erro ao submeter pedido: ' + (err?.message || err));
+                      } finally {
+                        setDeleteSubmitting(false);
                       }
                     }}
-                    className="flex-1 py-2.5 bg-rose-600 text-white rounded-xl font-bold text-sm uppercase hover:bg-rose-700 transition-colors"
+                    disabled={deleteSubmitting}
+                    className="flex-1 py-2.5 bg-rose-600 text-white rounded-xl font-bold text-sm uppercase hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
+                    {deleteSubmitting && <Loader2 size={14} className="animate-spin" />}
                     Confirmar
                   </button>
                 </div>
