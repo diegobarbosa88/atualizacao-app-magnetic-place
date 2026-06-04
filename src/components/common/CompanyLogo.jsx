@@ -1,6 +1,6 @@
 const CompanyLogo = ({ className = "h-8 w-8" }) => (
   <img
-    src="MAGNETIC (3).png"
+    src="/MAGNETIC (3).png"
     alt="Logo da Empresa"
     className={className}
     onError={(e) => {

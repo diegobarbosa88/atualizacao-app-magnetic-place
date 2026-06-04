@@ -254,6 +254,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const canvas = await html2canvas(clone, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: 794,
@@ -349,6 +350,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
         const canvas = await html2canvas(clone, {
           scale: 2,
           useCORS: true,
+          allowTaint: true,
           logging: false,
           backgroundColor: '#ffffff',
           windowWidth: 794,
