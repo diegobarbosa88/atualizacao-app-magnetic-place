@@ -10,7 +10,18 @@ export function useAdminData() {
   return ctx
 }
 
-export function AdminDataProvider({ children }) {
+export function AdminDataProvider({ children, value: externalValue }) {
+  if (externalValue) {
+    return (
+      <AdminDataContext.Provider value={externalValue}>
+        {children}
+      </AdminDataContext.Provider>
+    )
+  }
+  return <AdminDataProviderInternal>{children}</AdminDataProviderInternal>
+}
+
+function AdminDataProviderInternal({ children }) {
   const app = useApp()
   const {
     logs, workers, clients, adminStats, schedules, expenses,

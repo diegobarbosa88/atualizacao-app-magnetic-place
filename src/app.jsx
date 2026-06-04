@@ -46,6 +46,8 @@ import { sendNotificationEmail } from './utils/emailUtils';
 const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://painelcliente.magneticplace.pt/').split('?')[0] + '/';
 
 export default function App() {
+  const navigate = useNavigate();
+
   const {
     systemSettings, setSystemSettings,
     view, setView,
@@ -64,6 +66,14 @@ export default function App() {
     supabase,
     notificationPreferences
   } = useApp();
+
+  useEffect(() => {
+    if (view === 'admin' && !window.location.pathname.startsWith('/admin')) {
+      navigate('/admin', { replace: true });
+    } else if (view !== 'admin' && window.location.pathname.startsWith('/admin')) {
+      navigate('/', { replace: true });
+    }
+  }, [view]);
 
   useEffect(() => {
     document.title = "Magnetic Place | Gestão";
