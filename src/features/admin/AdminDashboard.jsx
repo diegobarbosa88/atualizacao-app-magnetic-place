@@ -556,16 +556,15 @@ function AdminDashboard(props) {
 
   const handleRecalcHours = useCallback(async () => {
     const interval = systemSettings?.minuteInterval || 30;
-    const tolerance = systemSettings?.entryToleranceMinutes || 0;
     const logsToFix = logs.filter(l => l.startTime && l.endTime);
     if (logsToFix.length === 0) { setRecalcProgress({ current: 0, total: 0, done: true }); return; }
     setRecalcProgress({ current: 0, total: logsToFix.length, done: false });
     let fixed = 0;
     for (let i = 0; i < logsToFix.length; i++) {
       const log = logsToFix[i];
-      const roundedStart = roundTimeToIntervalTimeUp(log.startTime, interval, tolerance);
+      const roundedStart = roundTimeToIntervalTimeUp(log.startTime, interval);
       const roundedEnd = roundTimeToIntervalTimeDown(log.endTime, interval);
-      const roundedBreakStart = log.breakStart ? roundTimeToIntervalTimeUp(log.breakStart, interval, tolerance) : null;
+      const roundedBreakStart = log.breakStart ? roundTimeToIntervalTimeUp(log.breakStart, interval) : null;
       const roundedBreakEnd = log.breakEnd ? roundTimeToIntervalTimeDown(log.breakEnd, interval) : null;
       const newHours = calculateDuration(roundedStart, roundedEnd, roundedBreakStart, roundedBreakEnd);
       await saveToDb('logs', log.id, { ...log, hours: newHours });
