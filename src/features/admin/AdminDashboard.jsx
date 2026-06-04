@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
@@ -35,8 +36,6 @@ function AdminDashboard(props) {
     currentUser,
     currentMonth,
     setCurrentMonth,
-    activeTab,
-    setActiveTab,
     auditWorkerId,
     setAuditWorkerId,
     setShowFinReport,
@@ -63,6 +62,11 @@ function AdminDashboard(props) {
   } = props;
 
   const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, corrections, correctionItems, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.replace(/^\/admin\/?/, '') || 'overview';
+  const setActiveTab = useCallback((tab) => navigate('/admin/' + tab), [navigate]);
 
   const notificacoesDeCorrecao = correctionNotifications;
 
