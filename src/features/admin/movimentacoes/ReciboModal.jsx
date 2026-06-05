@@ -59,8 +59,8 @@ export default function ReciboModal({ tx, receipts, onClose, onSave }) {
               <select value={mes} onChange={e => setMes(e.target.value)}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white">
                 <option value="">— Selecionar mês —</option>
-                {workerReceipts.map(r => (
-                  <option key={r.mes} value={r.mes}>
+                {workerReceipts.map((r, i) => (
+                  <option key={`${r.mes}-${i}`} value={r.mes}>
                     {fmtMes(r.mes)} — {fmtEur(r.liquido_extraido)}
                   </option>
                 ))}

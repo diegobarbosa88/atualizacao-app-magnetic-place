@@ -20,11 +20,14 @@ export default function MovMesCard({ mes, txs, pagamentos, justificacoes, intern
         >
           <div className="flex items-center gap-3">
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-            <button
+            <span
               onClick={e => { e.stopPropagation(); onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id); }}
-              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
               title="Clique para ver este mês num extrato específico"
-            >{fmtMes(mes)}</button>
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => e.key === 'Enter' && onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id)}
+            >{fmtMes(mes)}</span>
             <span className="text-[10px] text-slate-400">{txs.length} transacção(ões)</span>
           </div>
         <div className="flex items-center gap-3">
