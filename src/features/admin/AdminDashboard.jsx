@@ -349,6 +349,41 @@ function AdminDashboard(props) {
                 </button>
               );
             })}
+            {/* Client submissions via submitCorrection (new-format, status=submitted, not in correctionNotifications) */}
+            {(() => {
+              const seenClientCorrIds = new Set();
+              const clientSubmitNotifs = appNotifications.filter(n => {
+                if (isRead(n)) return false;
+                if (dismissedAdminNotifs.includes(n.id)) return false;
+                if (n.target_type !== 'admin') return false;
+                if (n.payload?.kind !== 'submitted') return false;
+                const cid = n.payload?.correction_id;
+                if (!cid) return false;
+                const corr = corrections?.find(c => c.id === cid);
+                if (!corr) return false;
+                // Only client correction types
+                if (corr.type === 'creation_request' || corr.type === 'deletion_request') return false;
+                if (seenClientCorrIds.has(cid)) return false;
+                seenClientCorrIds.add(cid);
+                return true;
+              });
+              return clientSubmitNotifs.map(n => {
+                const corrId = n.payload?.correction_id;
+                const corr = corrections?.find(c => c.id === corrId);
+                const client = clients.find(c => String(c.id) === String(corr?.client_id));
+                return (
+                  <button key={n.id} onClick={() => { markNotifRead(n.id); setSelectedCorrectionId(corrId); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
+                      <p className="text-xs font-black text-slate-800 truncate">{client?.name || corr?.client_id || 'Cliente'}</p>
+                      {corr?.month && <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
+                      {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                    </div>
+                  </button>
+                );
+              });
+            })()}
             {/* Worker submissions */}
             {(() => {
               const seenCorrIds = new Set();
@@ -359,15 +394,22 @@ function AdminDashboard(props) {
                 if (n.payload?.kind !== 'submitted') return false;
                 const cid = n.payload?.correction_id;
                 if (!cid) return false;
+                const corr = corrections?.find(c => c.id === cid);
+                // Only worker correction types
+                if (corr && corr.type !== 'creation_request' && corr.type !== 'deletion_request') return false;
                 if (seenCorrIds.has(cid)) return false;
                 seenCorrIds.add(cid);
                 return true;
               });
               return workerNotifs.map(n => {
                 const badge = getNotificationBadge(n);
-                const worker = workers.find(w => w.id === n.worker_id);
                 const corrId = n.payload?.correction_id;
                 const corr = corrections?.find(c => c.id === corrId);
+                // n.worker_id may be absent in older notifications; fall back to corr.submitted_by
+                const workerIdResolved = n.worker_id || corr?.submitted_by;
+                const worker = workers.find(w => String(w.id) === String(workerIdResolved));
+                // Extract worker name from notification title as last-resort fallback ("Pedido de Registo · Nome")
+                const workerNameFallback = n.title?.split('·').slice(-1)[0]?.trim() || 'Trabalhador';
                 const isExpanded = expandedCards[n.id];
                 return (
                   <div key={n.id} className={`px-4 py-3 ${badge.resolved ? 'bg-slate-50' : 'hover:bg-indigo-50'} transition-colors`}>
@@ -378,7 +420,7 @@ function AdminDashboard(props) {
                           <span className={`text-[8px] font-black uppercase tracking-widest block ${badge.resolved ? 'text-slate-400' : 'text-indigo-500'}`}>Submissão Trabalhador</span>
                           {badge.resolved && <span className="text-[8px] font-black text-slate-400">{badge.label}</span>}
                         </div>
-                        <p className="text-xs font-black text-slate-800 truncate">{worker?.name || 'Trabalhador'}</p>
+                        <p className="text-xs font-black text-slate-800 truncate">{worker?.name || workerNameFallback}</p>
                         {corr?.month && <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
                         {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                       </div>

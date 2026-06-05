@@ -116,6 +116,20 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     handleSubmitDeletion,
   } = useWorkerCorrections({ currentUser, correctionItems, setCorrectionItems, corrections, currentMonthStr, supabase, logs, setSuccessMsg });
 
+  // Map date → list of {item, corr} for current worker's correction requests this month
+  const dayRequestsByDate = useMemo(() => {
+    const map = {};
+    (correctionItems || []).forEach((item) => {
+      if (String(item.worker_id) !== String(currentUser?.id)) return;
+      if (!(item.date || '').startsWith(currentMonthStr)) return;
+      const corr = (corrections || []).find((c) => c.id === item.correction_id);
+      if (!corr) return;
+      if (!map[item.date]) map[item.date] = [];
+      map[item.date].push({ item, corr });
+    });
+    return map;
+  }, [correctionItems, corrections, currentUser?.id, currentMonthStr]);
+
   const [expandedSchedules, setExpandedSchedules] = useState(() =>
     currentUser?.defaultScheduleId ? new Set([currentUser.defaultScheduleId]) : new Set()
   );
@@ -624,15 +638,31 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         <span className="text-2xl font-black text-slate-800">{dObj.getDate()}</span>
                         <span className="text-[10px] uppercase font-bold text-slate-400">{['DOM','SEG','TER','QUA','QUI','SEX','SÁB'][dObj.getDay()]}</span>
                       </div>
-                      <div className="flex-1 flex items-center justify-between md:justify-start gap-4">
-                        {dayTotalTotal > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
-                            {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">• Detalhes</span>}
-                          </div>
-                        ) : (
-                          <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem registos</span>
-                        )}
+                      <div className="flex-1 flex flex-col items-start gap-1">
+                        <div className="flex items-center gap-2">
+                          {dayTotalTotal > 0 ? (
+                            <>
+                              <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
+                              {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">• Detalhes</span>}
+                            </>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem registos</span>
+                          )}
+                        </div>
+                        {(dayRequestsByDate[ds] || []).map(({ item, corr }) => {
+                          const isPending = corr.status === 'submitted' || corr.status === 'under_review';
+                          if (!isPending) return null; // resolvidos: não mostrar no worker
+                          const isDeletion = corr.type === 'deletion_request';
+                          const hasBefore = item.before && (item.before.startTime || item.before.endTime);
+                          const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
+                          const label = isDeletion ? 'Pedido de eliminação' : hasBefore ? 'Pedido de ajuste' : 'Pedido de registo';
+                          return (
+                            <span key={item.id} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">
+                              ⏳ {label}
+                              {hasProposed && <span className="font-mono ml-1">{item.proposed.startTime}–{item.proposed.endTime}</span>}
+                            </span>
+                          );
+                        })}
                       </div>
                       <div className="flex justify-end items-center gap-2">
                         {(!myApproval && !isDayBeforeStart && !isLimitedWorker) && (

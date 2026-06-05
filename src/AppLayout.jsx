@@ -191,7 +191,7 @@ export default function AppLayout() {
   // Route protection
   useEffect(() => {
     const publicPaths = ['/login', '/verify', '/client']
-    const isPublic = publicPaths.some(p => location.pathname.startsWith(p))
+    const isPublic = publicPaths.some(p => location.pathname.startsWith(p)) || new URLSearchParams(location.search).has('client')
 
     if (!currentUser && !isPublic) {
       navigate('/login', { replace: true })

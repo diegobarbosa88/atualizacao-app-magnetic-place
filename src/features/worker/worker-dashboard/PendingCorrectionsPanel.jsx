@@ -48,27 +48,18 @@ export default function PendingCorrectionsPanel({ pendingItems, resolvedItems, p
                     <span>Solicitado em <span className="font-mono">{fmtTs(corrObj.submitted_at)}</span></span>
                   </div>
                 )}
-                {hasBefore && (
-                  <div className="flex items-center gap-2 text-slate-500">
-                    <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
-                    <span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>
-                    {hasBreak(item.before) && (
-                      <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>
-                    )}
-                  </div>
-                )}
-                {hasProposed && (
-                  <div className="flex items-center gap-2 text-amber-800 font-bold">
-                    <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-amber-600">Solicitado</span>
-                    <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
-                    {hasBreak(item.proposed) && (
-                      <span className="text-amber-500 font-normal">· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>
-                    )}
-                  </div>
-                )}
-                {!hasBefore && !hasProposed && (
-                  <div className="text-slate-500 italic text-[11px]">Sem detalhes de horário</div>
-                )}
+                <div className="flex items-center gap-2 text-slate-500">
+                  <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
+                  {hasBefore
+                    ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
+                    : <span className="italic text-slate-300">Sem registo anterior</span>}
+                </div>
+                <div className="flex items-center gap-2 text-amber-800 font-bold">
+                  <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-amber-600">Solicitado</span>
+                  {hasProposed
+                    ? <><span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>{hasBreak(item.proposed) && <span className="text-amber-500 font-normal">· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}</>
+                    : <span className="italic text-rose-400 font-bold">Remover dia</span>}
+                </div>
               </li>
             );
           })}
@@ -117,20 +108,18 @@ export default function PendingCorrectionsPanel({ pendingItems, resolvedItems, p
                     return (
                       <div key={item.id} className="mt-1">
                         {items.length > 1 && <span className="font-mono text-[10px] text-slate-400 mr-2">{item.date}</span>}
-                        {hasBefore && (
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
-                            <span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>
-                            {hasBreak(item.before) && <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}
-                          </div>
-                        )}
-                        {hasProposed && (
-                          <div className={`flex items-center gap-2 font-bold ${accepted ? 'text-emerald-800' : 'text-rose-800'}`}>
-                            <span className={`text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 ${accepted ? 'text-emerald-600' : 'text-rose-600'}`}>Solicitado</span>
-                            <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
-                            {hasBreak(item.proposed) && <span className={`font-normal ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 text-slate-500">
+                          <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
+                          {hasBefore
+                            ? <><span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>{hasBreak(item.before) && <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}</>
+                            : <span className="italic text-slate-300">Sem registo anterior</span>}
+                        </div>
+                        <div className={`flex items-center gap-2 font-bold ${accepted ? 'text-emerald-800' : 'text-rose-800'}`}>
+                          <span className={`text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 ${accepted ? 'text-emerald-600' : 'text-rose-600'}`}>Solicitado</span>
+                          {hasProposed
+                            ? <><span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>{hasBreak(item.proposed) && <span className={`font-normal ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}</>
+                            : <span className={`italic font-bold ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>Remover dia</span>}
+                        </div>
                       </div>
                     );
                   })}

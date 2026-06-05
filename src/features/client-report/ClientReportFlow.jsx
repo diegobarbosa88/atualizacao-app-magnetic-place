@@ -602,9 +602,9 @@ export const StepPrecision = ({
 
 // ---------------------------------------------------------------------------
 
-const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
+const ClientReportFlow = ({ clientId, month, workers, logs, onClose, initialStep }) => {
   const { supabase, corrections, correctionItems, companySignature, clients } = useApp();
-  const [step, setStep] = useState('home'); // home | mode | quick | precision | success
+  const [step, setStep] = useState(initialStep || 'home'); // home | mode | quick | precision | success
   const [busy, setBusy] = useState(false);
   const clientObj = clients?.find((c) => String(c.id) === String(clientId));
 
@@ -650,8 +650,46 @@ const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
     );
   }
 
-  if (step === 'quick') return <StepQuick onBack={() => setStep('home')} busy={busy} onSubmit={(p) => handleSubmit(p, 'quick')} />;
-  if (step === 'precision') return <StepPrecision workers={workers} logs={logs} month={month} onBack={() => setStep('home')} busy={busy} onSubmit={(p) => handleSubmit(p, 'precision')} />;
+  if (step === 'mode') return (
+    <div className="max-w-2xl mx-auto py-6 animate-fade-in">
+      <button onClick={() => initialStep === 'mode' ? onClose?.() : setStep('home')} className="flex items-center gap-2 text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest mb-6">
+        <ChevronLeft size={14} /> Voltar
+      </button>
+      <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight mb-2">Tipo de reporte</h2>
+      <p className="text-slate-500 text-sm font-medium mb-8">Escolha como quer reportar a divergência deste mês.</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <button
+          onClick={() => setStep('quick')}
+          className="text-left p-6 bg-white border-2 border-indigo-200 hover:border-indigo-400 rounded-2xl transition-all group"
+        >
+          <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+            <MessageCircle size={24} />
+          </div>
+          <h3 className="text-lg font-black text-slate-800 mb-2">Mensagem Rápida</h3>
+          <p className="text-slate-500 text-sm font-medium leading-relaxed">Descreva o problema em texto livre. Ideal para quando não sabe os detalhes exatos dos horários.</p>
+          <div className="mt-4 flex items-center gap-1 text-indigo-600 font-black text-[10px] uppercase tracking-widest">
+            Escolher este <ChevronDown size={12} className="-rotate-90" />
+          </div>
+        </button>
+        <button
+          onClick={() => setStep('precision')}
+          className="text-left p-6 bg-white border-2 border-amber-200 hover:border-amber-400 rounded-2xl transition-all group"
+        >
+          <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center mb-4 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+            <Sparkles size={24} />
+          </div>
+          <h3 className="text-lg font-black text-slate-800 mb-2">Ajuste de Precisão</h3>
+          <p className="text-slate-500 text-sm font-medium leading-relaxed">Edite os horários diretamente no relatório. Ideal para correções específicas de horas e pausas.</p>
+          <div className="mt-4 flex items-center gap-1 text-amber-600 font-black text-[10px] uppercase tracking-widest">
+            Escolher este <ChevronDown size={12} className="-rotate-90" />
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+
+  if (step === 'quick') return <StepQuick onBack={() => setStep('mode')} busy={busy} onSubmit={(p) => handleSubmit(p, 'quick')} />;
+  if (step === 'precision') return <StepPrecision workers={workers} logs={logs} month={month} onBack={() => setStep('mode')} busy={busy} onSubmit={(p) => handleSubmit(p, 'precision')} />;
 
   // home: status + history + CTA
   return (
@@ -662,7 +700,7 @@ const ClientReportFlow = ({ clientId, month, workers, logs, onClose }) => {
           <div className="mt-2"><MonthStatusBadge corrections={thisMonthCorrections} /></div>
         </div>
         <button
-          onClick={() => setStep('precision')}
+          onClick={() => setStep('mode')}
           disabled={hasOpen}
           title={hasOpen ? 'Já existe uma correção em aberto para este mês' : ''}
           className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"

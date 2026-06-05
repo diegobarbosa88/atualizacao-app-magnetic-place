@@ -209,6 +209,7 @@ export default function App() {
     if (location.pathname === '/' || location.pathname === '') {
       if (view === 'admin') navigate('/admin/overview', { replace: true });
       else if (view === 'worker') navigate('/worker', { replace: true });
+      else if (view === 'client_portal') { /* permanece em / com ?client= */ }
       else navigate('/login', { replace: true });
     }
   }, []);

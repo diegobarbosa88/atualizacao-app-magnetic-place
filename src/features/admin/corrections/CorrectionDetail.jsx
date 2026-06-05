@@ -23,7 +23,8 @@ export default function CorrectionDetail({ correction, items, onBack }) {
   }, [workers, logs, correction.client_id, correction.month]);
 
   React.useEffect(() => {
-    if (correction.status === 'submitted' && supabase) {
+    const isWorkerType = correction.type === 'creation_request' || correction.type === 'deletion_request';
+    if (correction.status === 'submitted' && supabase && !isWorkerType) {
       markUnderReview(supabase, correction.id, currentUser?.id)
         .then(() => setCorrections((prev) => prev.map((c) => (c.id === correction.id ? { ...c, status: 'under_review' } : c))))
         .catch(() => {});
