@@ -1,32 +1,26 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-05T00:00:00.000Z",
+  "timestamp": "2026-06-05T23:35:00.000Z",
   "phase": null,
-  "phase_name": "Ad-hoc Refactoring — Split Large Files",
+  "phase_name": "Ad-hoc Refactoring — ClientPortal + SimpleReportFlow",
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Extract TRANSLATIONS + LoginView from ClientPortal.jsx", "status": "done", "commit": "42867e5"},
-    {"id": 2, "name": "Extract autoMatchEngine.js from MovimentacoesTab.jsx", "status": "done", "commit": "42867e5"},
-    {"id": 3, "name": "Remove duplicate utils from ReconciliacaoAdmin.jsx", "status": "done", "commit": "42867e5"},
-    {"id": 4, "name": "Fix browser console warnings", "status": "done", "commit": "7173409"},
-    {"id": 5, "name": "Refactor CostReports.jsx (1336→610 lines)", "status": "done", "commit": "a86c81f"},
-    {"id": 6, "name": "Refactor ReconciliacaoAdmin.jsx (2121→565 lines)", "status": "done", "commit": "9c2304b"}
+    {"id": 1, "name": "Refactor WorkerDashboard", "status": "done", "commit": "d3ba61a"},
+    {"id": 2, "name": "Refactor CorrectionsInbox", "status": "done", "commit": "eaf428a"},
+    {"id": 3, "name": "Refactor MovimentacoesTab", "status": "done", "commit": "76b0044"},
+    {"id": 4, "name": "ClientPortal dead-code + 6 módulos (2164→496 linhas)", "status": "done", "commit": "9a837c1"},
+    {"id": 5, "name": "Simplificar fluxo reporte cliente → SimpleReportView", "status": "done", "commit": "1a36e82"}
   ],
-  "remaining_tasks": [
-    {"id": 7, "name": "Refactor WorkerDashboard.jsx (~1188 lines)", "status": "pending"},
-    {"id": 8, "name": "Refactor MovimentacoesTab.jsx (~1789 lines)", "status": "pending"},
-    {"id": 9, "name": "Refactor CorrectionsInbox.jsx (~1115 lines)", "status": "pending"},
-    {"id": 10, "name": "Refactor pdfSigningService.js (~1150 lines)", "status": "pending"},
-    {"id": 11, "name": "Refactor ClientPortal.jsx (~2726 lines)", "status": "pending"}
-  ],
+  "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [],
-  "decisions": [
-    {"decision": "Target ~800 lines max per file", "rationale": "Agreed in earlier sessions", "phase": "ad-hoc"},
-    {"decision": "Pattern: JSX sections → child components; stateful actions → custom hook; pure utils → utils file", "rationale": "Validated in CostReports + ReconciliacaoAdmin refactors", "phase": "ad-hoc"},
-    {"decision": "Extract into subdirectory named after parent (e.g., reconciliacao/ for ReconciliacaoAdmin.jsx)", "rationale": "Consistent pattern", "phase": "ad-hoc"}
+  "human_actions_pending": [
+    {"action": "Testar SimpleReportView no browser", "context": "Novo fluxo não testado manualmente", "blocking": false}
   ],
-  "uncommitted_files": [".planning/STATE.md", "package.json", "package-lock.json", "public/version.json"],
-  "next_action": "Read src/features/worker/WorkerDashboard.jsx (1188 lines) — identify extractable JSX sections + pure utils. Then MovimentacoesTab.jsx (1789 lines).",
-  "context_notes": "Ad-hoc refactoring. No active GSD phase. Build fails due to missing public/index.html (pre-existing, unrelated). Pattern established: useXxxRun hook + JSX child components."
+  "decisions": [
+    {"decision": "SimpleReportView: submit direto, justificação obrigatória", "rationale": "Fluxo igual ao worker"},
+    {"decision": "useDraftReport: correctionMode/editingWorkerId removidos", "rationale": "Apenas necessários para o fluxo multi-step removido"}
+  ],
+  "uncommitted_files": [".planning/.continue-here.md", ".planning/STATE.md", "public/version.json"],
+  "next_action": "Testar SimpleReportView; depois /gsd-execute-phase 18 (Reconciliação Bancária)",
+  "context_notes": "Sessão de refactoring ad-hoc concluída. Branch: refatoracao-v2."
 }
