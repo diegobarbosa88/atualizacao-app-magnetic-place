@@ -1,6 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
-import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
 import { TRANSLATIONS } from './client-portal/translations';
 import LoginView from './client-portal/LoginView';
@@ -10,7 +8,7 @@ import { useDraftReport } from './client-portal/useDraftReport';
 import { useSignatureCanvas } from './client-portal/useSignatureCanvas';
 import DashboardView from './client-portal/DashboardView';
 import ValidarView from './client-portal/ValidarView';
-import ReverAlteracoesView from './client-portal/ReverAlteracoesView';
+import SimpleReportView from './client-portal/SimpleReportView';
 import CounterProposalCard from './client-portal/CounterProposalCard';
 import WorkerSubmissionsPanel from './client-portal/WorkerSubmissionsPanel';
 
@@ -293,8 +291,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const {
         draftData, setDraftData, draftTotal,
         reportJustification, setReportJustification,
-        correctionMode, setCorrectionMode,
-        editingWorkerId, setEditingWorkerId,
         startReport, handleTimeChange, generateCorrectionMessage, handlePrecisionConfirm,
     } = useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView });
 
@@ -401,48 +397,13 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         />
                     )}
 
-                    {currentView === 'editar_relatorio' && (
-                        <ClientReportFlow
-                            clientId={effectiveClientId}
-                            month={selectedMonth}
-                            initialStep="mode"
-                            workers={(() => {
-                                const ids = new Set(
-                                    logs
-                                        .filter(l => String(l.clientId) === String(effectiveClientId) && l.date && l.date.substring(0, 7) === selectedMonth)
-                                        .map(l => String(l.workerId))
-                                );
-                                return workers.filter(w => ids.has(String(w.id)));
-                            })()}
-                            logs={logs}
-                            onClose={() => goToView('inicio')}
-                        />
-                    )}
-
-                    {currentView === 'rever_alteracoes' && (
-                        <ReverAlteracoesView
-                            correctionMode={correctionMode} draftData={draftData} draftTotal={draftTotal}
-                            originalTotal={originalTotal} reportJustification={reportJustification}
-                            handlePrecisionConfirm={handlePrecisionConfirm} handleTimeChange={handleTimeChange}
-                            goToView={goToView} generateCorrectionMessage={generateCorrectionMessage}
-                            saveToDb={saveToDb} clientData={clientData}
-                            initialClientId={initialClientId} initialMonth={initialMonth}
-                        />
-                    )}
-
-                    {currentView === 'precision_review' && (
-                        <PrecisionReportReview
-                            draftData={draftData} originalTotal={originalTotal} draftTotal={draftTotal}
-                            reportJustification={reportJustification}
-                            onBack={() => goToView('rever_alteracoes')}
-                            onConfirm={handlePrecisionConfirm}
-                            onEditDay={handleTimeChange}
-                            onDeleteDay={(workerId, dayDate) => {
-                                handleTimeChange(workerId, dayDate, 'entry', '--:--');
-                                handleTimeChange(workerId, dayDate, 'exit', '--:--');
-                                handleTimeChange(workerId, dayDate, 'breakStart', '--:--');
-                                handleTimeChange(workerId, dayDate, 'breakEnd', '--:--');
-                            }}
+                    {currentView === 'relatorio_cliente' && (
+                        <SimpleReportView
+                            draftData={draftData} handleTimeChange={handleTimeChange}
+                            draftTotal={draftTotal} originalTotal={originalTotal}
+                            reportJustification={reportJustification} setReportJustification={setReportJustification}
+                            handlePrecisionConfirm={handlePrecisionConfirm}
+                            goToView={goToView} clientData={clientData} t={t}
                         />
                     )}
 

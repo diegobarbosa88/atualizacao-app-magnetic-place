@@ -19,8 +19,6 @@ const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
 export function useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView }) {
     const [draftData, setDraftData] = useState([]);
     const [reportJustification, setReportJustification] = useState('');
-    const [correctionMode, setCorrectionMode] = useState('triagem');
-    const [editingWorkerId, setEditingWorkerId] = useState(null);
 
     const draftTotal = parseFloat(draftData.reduce((acc, curr) => acc + (Number(curr.editedTotalHours) || 0), 0).toFixed(2));
 
@@ -52,9 +50,7 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
         });
         setDraftData(editableData);
         setReportJustification('');
-        setCorrectionMode('triagem');
-        setEditingWorkerId(null);
-        goToView('editar_relatorio');
+        goToView('relatorio_cliente');
     }, [originalWorkersData, selectedMonth, goToView]);
 
     const handleTimeChange = useCallback((workerId, dateStr, field, val) => {
@@ -174,8 +170,6 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
     return {
         draftData, setDraftData, draftTotal,
         reportJustification, setReportJustification,
-        correctionMode, setCorrectionMode,
-        editingWorkerId, setEditingWorkerId,
         startReport, handleTimeChange, generateCorrectionMessage, handlePrecisionConfirm,
     };
 }
