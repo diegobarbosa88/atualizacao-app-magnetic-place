@@ -8,6 +8,9 @@ import RelatorioModal from './RelatorioModal';
 import CsvMappingCard from './CsvMappingCard';
 import TagBadge from './TagBadge';
 import TipoBadge from './TipoBadge';
+import AssociacaoManualModal from './reconciliacao/AssociacaoManualModal';
+import OrfaoBancoModal from './reconciliacao/OrfaoBancoModal';
+import AssocClienteModal from './reconciliacao/AssocClienteModal';
 
 import { useApp } from '../../context/AppContext';
 
@@ -125,30 +128,22 @@ export default function ReconciliacaoAdmin() {
   const [confirmedOrphans, setConfirmedOrphans] = useState(new Set()); // índices confirmados órfãos
   const [orphanObservacoes, setOrphanObservacoes] = useState({}); // { [index]: string }
   const [pendingOrphanConfirm, setPendingOrphanConfirm] = useState(null); // { indices: number[] }
-  const [orphanObs, setOrphanObs] = useState('');
   const [bulkConfirmando, setBulkConfirmando] = useState(false);
   const [showRelatorio, setShowRelatorio] = useState(false);
   const [selHistorico, setSelHistorico] = useState(new Set());
   const [relatorioRuns, setRelatorioRuns] = useState(null);
   const [aliases, setAliases] = useState([]);
-  const [saveAlias, setSaveAlias] = useState(false);
   const [showAliases, setShowAliases] = useState(false);
   const [loadingMultiRel, setLoadingMultiRel] = useState(false);
 
   // ── Classificação de Órfãos ───────────────────────────────────────────────
   const [tags, setTags] = useState([]);
-  const [selectedTag, setSelectedTag] = useState(null);        // { id, nome, cor }
   const [orphanClassificacoes, setOrphanClassificacoes] = useState({}); // { [index]: { nome, cor } }
-  const [showNovaTag, setShowNovaTag] = useState(false);
-  const [novaTagNome, setNovaTagNome] = useState('');
-  const [novaTagCor, setNovaTagCor] = useState('indigo');
-  const [savingTag, setSavingTag] = useState(false);
 
   // ── Associação Manual ────────────────────────────────────────────────────
   const [pendingAssociacao, setPendingAssociacao] = useState(null); // { index, transacao }
   const [assocFaturas, setAssocFaturas] = useState([]);
   const [loadingAssoc, setLoadingAssoc] = useState(false);
-  const [assocSearch, setAssocSearch] = useState('');
 
   // ── Histórico ─────────────────────────────────────────────────────────────
   const [historico, setHistorico] = useState([]);
@@ -200,9 +195,7 @@ export default function ReconciliacaoAdmin() {
   };
 
   // ── Associação a Cliente (Faturação) ──────────────────────────────────────
-  const [assocClienteModal, setAssocClienteModal] = useState(null); // { section, index, tx, runId }
-  const [assocClienteId, setAssocClienteId] = useState('');
-  const [assocPeriodo, setAssocPeriodo] = useState('');
+  const [assocClienteModal, setAssocClienteModal] = useState(null); // { section, index, tx, runId, defaultPeriod }
   const [assocSaving, setAssocSaving] = useState(false);
   const [pagamentosLinks, setPagamentosLinks] = useState([]); // faturacao_clientes_pagamentos para o run actual
 
@@ -221,24 +214,20 @@ export default function ReconciliacaoAdmin() {
 
   const abrirAssociarCliente = (section, index, tx) => {
     const runId = runSelecionado?.id ?? resultado?.run_id;
-    const txDate = tx?.data || '';
-    const defaultPeriod = previousMonth(txDate);
-    setAssocClienteModal({ section, index, tx, runId });
-    setAssocClienteId('');
-    setAssocPeriodo(defaultPeriod);
+    const defaultPeriod = previousMonth(tx?.data || '');
+    setAssocClienteModal({ section, index, tx, runId, defaultPeriod });
   };
 
-  const salvarAssociacaoCliente = async () => {
-    if (!assocClienteModal || !assocClienteId || !assocPeriodo) return;
-    setAssocSaving(true);
-    const { section, index, tx, runId } = assocClienteModal;
+  const salvarAssociacaoCliente = async (modal, clienteId, periodo) => {
+    if (!modal || !clienteId || !periodo) return;
+    const { section, index, tx, runId } = modal;
     const existente = txLinkInfo(section, index);
     if (existente) {
       await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
     }
     await supabase.from('faturacao_clientes_pagamentos').insert({
-      client_id: assocClienteId,
-      period: assocPeriodo,
+      client_id: clienteId,
+      period: periodo,
       reconciliation_run_id: runId,
       transaction_section: section,
       transaction_index: index,
@@ -246,8 +235,6 @@ export default function ReconciliacaoAdmin() {
       valor_pago: Number(tx?.valor || 0),
     });
     await carregarPagamentosLinks(runId);
-    setAssocSaving(false);
-    setAssocClienteModal(null);
     if (section === 'orphan_bank') setActiveSubTab('matched');
   };
 
@@ -301,25 +288,19 @@ export default function ReconciliacaoAdmin() {
     if (data) setTags(data);
   };
 
-  const criarTag = async () => {
-    if (!novaTagNome.trim()) return;
-    setSavingTag(true);
+  const criarTag = async (nome, cor) => {
     try {
       const { data, error } = await supabase
         .from('reconciliation_classificacao_tags')
-        .insert({ nome: novaTagNome.trim(), cor: novaTagCor })
+        .insert({ nome, cor })
         .select('id, nome, cor')
         .single();
       if (error) throw error;
       setTags(prev => [...prev, data]);
-      setSelectedTag(data);
-      setShowNovaTag(false);
-      setNovaTagNome('');
-      setNovaTagCor('indigo');
+      return data;
     } catch (err) {
       alert(`Erro ao criar tag: ${err.message}`);
-    } finally {
-      setSavingTag(false);
+      return null;
     }
   };
 
@@ -838,15 +819,9 @@ export default function ReconciliacaoAdmin() {
   };
 
   // ── Confirmar movimento em Órfãos Banco — abre modal para observação ────────
-  const pedirObservacaoOrphan = (indices) => {
-    setPendingOrphanConfirm({ indices });
-    setOrphanObs('');
-    setSelectedTag(null);
-    setShowNovaTag(false);
-    setNovaTagNome('');
-  };
+  const pedirObservacaoOrphan = (indices) => setPendingOrphanConfirm({ indices });
 
-  const confirmarMovimento = async () => {
+  const confirmarMovimento = async ({ tag: selectedTag, obs: orphanObs }) => {
     if (!pendingOrphanConfirm) return;
     const { indices } = pendingOrphanConfirm;
     const idxSet = new Set(indices);
@@ -854,8 +829,6 @@ export default function ReconciliacaoAdmin() {
     const tag = selectedTag ? { nome: selectedTag.nome, cor: selectedTag.cor } : null;
 
     setPendingOrphanConfirm(null);
-    setOrphanObs('');
-    setSelectedTag(null);
     setSelOrphan(new Set());
 
     const runId = runSelecionado?.id ?? resultado?.run_id;
@@ -934,7 +907,7 @@ export default function ReconciliacaoAdmin() {
     }
   };
 
-  const confirmarAssociacaoManual = async (fatura) => {
+  const confirmarAssociacaoManual = async (fatura, saveAlias) => {
     if (!pendingAssociacao) return;
     const { index, transacao } = pendingAssociacao;
 
@@ -1016,7 +989,6 @@ export default function ReconciliacaoAdmin() {
         .single();
       if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => !(a.bank_name === bankName && a.system_entity === fatura.entidade))]);
     }
-    setSaveAlias(false);
     setPendingAssociacao(null);
   };
 
@@ -2166,328 +2138,35 @@ export default function ReconciliacaoAdmin() {
         )}
       </div>
 
-      {/* Modal — Associação Manual */}
       {pendingAssociacao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associar a Fatura</h3>
-              <p className="text-sm text-slate-700 mt-1 font-semibold">
-                €{Number(pendingAssociacao.transacao.valor).toFixed(2)} · {pendingAssociacao.transacao.data}
-              </p>
-              <p className="text-xs text-slate-500 truncate">{pendingAssociacao.transacao.descricao}</p>
-            </div>
-
-            <input
-              autoFocus
-              value={assocSearch}
-              onChange={e => setAssocSearch(e.target.value)}
-              placeholder="Filtrar por entidade, descrição ou valor..."
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            />
-
-            <div className="overflow-y-auto flex-1 space-y-2 pr-1">
-              {loadingAssoc && (
-                <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-400" /></div>
-              )}
-              {!loadingAssoc && (() => {
-                const q = assocSearch.toLowerCase();
-                const lista = assocFaturas.filter(f => {
-                  if (!q) return true;
-                  const v = String(f.valor ?? f.dados?.valor_total ?? '');
-                  const ent = (f.entidade || f.dados?.fornecedor || '').toLowerCase();
-                  const desc = (f.descricao || f.dados?.numero_fatura || f.filename || '').toLowerCase();
-                  return ent.includes(q) || desc.includes(q) || v.includes(q);
-                });
-                if (!lista.length) return <p className="text-center text-slate-400 py-6 text-sm">Nenhuma fatura encontrada.</p>;
-                return lista.map(f => {
-                  const valorF = f.valor ?? f.dados?.valor_total;
-                  const diff = Math.abs((valorF ?? 0) - pendingAssociacao.transacao.valor);
-                  const isClose = diff <= 0.01;
-                  return (
-                    <button
-                      key={f.id}
-                      onClick={() => confirmarAssociacaoManual(f)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all hover:border-indigo-400 hover:bg-indigo-50 ${isClose ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200'}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-700 truncate">
-                            {f.entidade || f.dados?.fornecedor || f.filename || '—'}
-                          </p>
-                          <p className="text-xs text-slate-500 truncate">
-                            {f.descricao || f.dados?.numero_fatura || f.dados?.fornecedor || '—'}
-                          </p>
-                          {f.data_documento && <p className="text-[10px] text-slate-400">{f.data_documento}</p>}
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className={`text-sm font-bold ${isClose ? 'text-emerald-700' : 'text-slate-700'}`}>
-                            €{Number(valorF ?? 0).toFixed(2)}
-                          </p>
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">{f.status || 'PENDENTE'}</span>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                });
-              })()}
-            </div>
-
-            <label className="flex items-center gap-2 cursor-pointer select-none px-1 pb-1">
-              <input type="checkbox" checked={saveAlias} onChange={e => setSaveAlias(e.target.checked)}
-                className="accent-indigo-600 w-4 h-4" />
-              <span className="text-xs text-slate-600">Guardar como alias (próximos matches automáticos)</span>
-            </label>
-
-            <button
-              onClick={() => { setPendingAssociacao(null); setSaveAlias(false); }}
-              className="w-full py-2 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
+        <AssociacaoManualModal
+          tx={pendingAssociacao.transacao}
+          txValor={pendingAssociacao.transacao.valor}
+          faturas={assocFaturas}
+          loading={loadingAssoc}
+          onClose={() => setPendingAssociacao(null)}
+          onSelect={(fatura, saveAlias) => confirmarAssociacaoManual(fatura, saveAlias)}
+        />
       )}
-
-      {/* Modal — Confirmar Órfão Banco */}
       {pendingOrphanConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div>
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                Confirmar Movimento
-                {pendingOrphanConfirm.indices.length > 1 && ` (${pendingOrphanConfirm.indices.length} movimentos)`}
-              </h3>
-              <p className="text-sm text-slate-500 mt-1">Classifique e/ou adicione uma observação para este movimento.</p>
-            </div>
-
-            {/* Classificação */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1">
-                <Tag size={10} /> Classificação
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {tags.map(tag => {
-                  const c = COR_MAP[tag.cor] || COR_MAP.gray;
-                  const isSelected = selectedTag?.id === tag.id;
-                  return (
-                    <button
-                      key={tag.id}
-                      onClick={() => setSelectedTag(isSelected ? null : tag)}
-                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ring-2 transition-all ${
-                        isSelected
-                          ? `${c.bg} ${c.text} ${c.ring}`
-                          : 'bg-slate-100 text-slate-500 ring-transparent hover:ring-slate-300 hover:bg-slate-200'
-                      }`}
-                    >
-                      {tag.nome}
-                    </button>
-                  );
-                })}
-
-                {/* Criar nova tag */}
-                {showNovaTag ? (
-                  <div className="flex items-center gap-2 w-full mt-1 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                    <input
-                      autoFocus
-                      value={novaTagNome}
-                      onChange={e => setNovaTagNome(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') criarTag(); if (e.key === 'Escape') { setShowNovaTag(false); setNovaTagNome(''); } }}
-                      placeholder="Nome da classificação..."
-                      className="flex-1 text-sm border border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    />
-                    <div className="flex items-center gap-1">
-                      {CORES_DISPONIVEIS.map(cor => (
-                        <button
-                          key={cor}
-                          onClick={() => setNovaTagCor(cor)}
-                          title={cor}
-                          className={`w-5 h-5 rounded-full ${COR_MAP[cor].dot} transition-all ${
-                            novaTagCor === cor ? 'ring-2 ring-offset-1 ring-slate-500 scale-110' : 'opacity-60 hover:opacity-100'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      onClick={criarTag}
-                      disabled={!novaTagNome.trim() || savingTag}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
-                    >
-                      {savingTag ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />} Criar
-                    </button>
-                    <button onClick={() => { setShowNovaTag(false); setNovaTagNome(''); }} className="text-slate-400 hover:text-slate-600">
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setShowNovaTag(true)}
-                    className="px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border border-dashed border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 transition-all flex items-center gap-1"
-                  >
-                    <Plus size={10} /> Nova
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Observação */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                Observação {!selectedTag && <span className="text-rose-400">*</span>}
-              </label>
-              <textarea
-                value={orphanObs}
-                onChange={e => setOrphanObs(e.target.value)}
-                placeholder="Ex: Pagamento de fornecedor por transferência direta, fatura pendente de envio..."
-                rows={3}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-              {!selectedTag && !orphanObs.trim() && (
-                <p className="text-[10px] text-slate-400">Seleccione uma classificação ou escreva uma observação.</p>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={confirmarMovimento}
-                disabled={!selectedTag && !orphanObs.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <CheckCircle size={12} /> Confirmar
-              </button>
-              <button
-                onClick={() => { setPendingOrphanConfirm(null); setOrphanObs(''); setSelectedTag(null); setShowNovaTag(false); setNovaTagNome(''); }}
-                className="px-4 py-2 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        <OrfaoBancoModal
+          indices={pendingOrphanConfirm.indices}
+          tags={tags}
+          onCreateTag={criarTag}
+          onClose={() => setPendingOrphanConfirm(null)}
+          onSave={confirmarMovimento}
+        />
       )}
-
-      {/* ── Gestão de Aliases ─────────────────────────────────────────── */}
-      {showAliases && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-violet-600">Aliases de Entidade</h3>
-              <button onClick={() => setShowAliases(false)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
-            </div>
-            <p className="text-xs text-slate-500">Liga o nome que aparece no banco ao nome da entidade no sistema. Usado para match automático em futuras importações.</p>
-
-            {/* Formulário de adição directa */}
-            <div className="bg-violet-50 rounded-2xl p-4 space-y-3">
-              <p className="text-[9px] font-black uppercase tracking-widest text-violet-500">Adicionar alias</p>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Nome no banco (ex: A&G Steel Building Sl)</label>
-                <input id="alias-bank" placeholder="Como aparece no extrato bancário"
-                  className="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Entidade no sistema</label>
-                <input id="alias-system" placeholder="Nome exacto da entidade no sistema"
-                  className="w-full mt-1 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300" />
-              </div>
-              <button onClick={async () => {
-                const bankName = document.getElementById('alias-bank')?.value?.trim();
-                const sysEntity = document.getElementById('alias-system')?.value?.trim();
-                if (!bankName || !sysEntity) return;
-                const { data: newAlias, error } = await supabase
-                  .from('reconciliacao_entity_aliases')
-                  .upsert({ bank_name: bankName, system_entity: sysEntity }, { onConflict: 'bank_name,system_entity' })
-                  .select().single();
-                if (!error && newAlias) {
-                  setAliases(prev => [newAlias, ...prev.filter(a => a.id !== newAlias.id)]);
-                  document.getElementById('alias-bank').value = '';
-                  document.getElementById('alias-system').value = '';
-                }
-              }} className="w-full py-2 bg-violet-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-violet-700 transition-all">
-                Guardar Alias
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {aliases.length === 0 && <p className="text-center text-slate-400 py-4 text-sm">Nenhum alias guardado.</p>}
-              {aliases.map(a => (
-                <div key={a.id} className="flex items-center gap-3 bg-slate-50 rounded-xl p-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-slate-700 truncate">{a.bank_name}</p>
-                    <p className="text-[10px] text-violet-600 font-black uppercase tracking-widest truncate">→ {a.system_entity}</p>
-                  </div>
-                  <button onClick={() => apagarAlias(a.id)} className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors flex-shrink-0">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal — Associar Pagamento a Cliente de Faturação */}
       {assocClienteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associar a Cliente</h3>
-                <p className="text-sm font-bold text-slate-800 mt-1">
-                  €{Number(assocClienteModal.tx?.valor || 0).toFixed(2)} · {assocClienteModal.tx?.data}
-                </p>
-                <p className="text-[10px] text-slate-400 truncate">{assocClienteModal.tx?.descricao}</p>
-              </div>
-              <button onClick={() => setAssocClienteModal(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all">
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</label>
-                <select
-                  value={assocClienteId}
-                  onChange={e => setAssocClienteId(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
-                >
-                  <option value="">Selecionar cliente...</option>
-                  {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período (AAAA-MM)</label>
-                <input
-                  type="month"
-                  value={assocPeriodo}
-                  onChange={e => setAssocPeriodo(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={salvarAssociacaoCliente}
-                disabled={!assocClienteId || !assocPeriodo || assocSaving}
-                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50"
-              >
-                {assocSaving ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
-                Associar
-              </button>
-              <button
-                onClick={() => setAssocClienteModal(null)}
-                className="px-4 py-2.5 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
-              >
-                Cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        <AssocClienteModal
+          modal={assocClienteModal}
+          clients={clients}
+          onClose={() => setAssocClienteModal(null)}
+          onSave={salvarAssociacaoCliente}
+        />
       )}
-
-      {showRelatorio && (relatorioRuns || displayData) && (
+      
+            {showRelatorio && (relatorioRuns || displayData) && (
         <RelatorioModal
           displayData={relatorioRuns ? null : displayData}
           filename={runSelecionado?.filename ?? resultado?.filename ?? 'extrato'}

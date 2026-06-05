@@ -4,8 +4,8 @@ import autoTable from 'jspdf-autotable';
 import {
   ChevronDown, ChevronUp,
   X, Loader2, Download, FileText, FileArchive, Undo2,
-  ArrowLeftRight, Link, Tag, Trash2, Zap, Plus, Receipt,
-  TrendingUp, TrendingDown, UserCheck, FileMinus, Percent,
+  Tag, Trash2, Zap, Plus,
+  TrendingUp, TrendingDown,
   RefreshCw, Upload,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
@@ -19,6 +19,14 @@ import {
 } from './movimentacoes/txUtils';
 import TxRow from './movimentacoes/TxRow';
 import MovMesCard from './movimentacoes/MovMesCard';
+import InternoModal from './movimentacoes/InternoModal';
+import ImpostoModal from './movimentacoes/ImpostoModal';
+import JustModal from './movimentacoes/JustModal';
+import FaturaModal from './movimentacoes/FaturaModal';
+import ReciboModal from './movimentacoes/ReciboModal';
+import NcModal from './movimentacoes/NcModal';
+import NcManualModal from './movimentacoes/NcManualModal';
+import AddAliasModal from './movimentacoes/AddAliasModal';
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
@@ -49,54 +57,17 @@ export default function MovimentacoesTab() {
   const [showAliases, setShowAliases] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'entradas' | 'saidas'
 
-  // Modal: fatura de fornecedor
+  // Modal state (apenas qual tx está aberta)
   const [faturaModal, setFaturaModal] = useState(null);
-  const [faturaSelId, setFaturaSelId] = useState('');
-  const [faturaSaving, setFaturaSaving] = useState(false);
-
-  // Modal: recibo de trabalhador
   const [reciboModal, setReciboModal] = useState(null);
-  const [reciboWorkerId, setReciboWorkerId] = useState('');
-  const [reciboWorkerName, setReciboWorkerName] = useState('');
-  const [reciboMes, setReciboMes] = useState('');
-  const [reciboSaving, setReciboSaving] = useState(false);
-
-  // Modal: cliente/fatura (usado para entradas E saídas)
   const [ncModal, setNcModal] = useState(null);
-  const [ncClientId, setNcClientId] = useState('');
-  const [ncPeriod, setNcPeriod] = useState('');
-  const [ncNotas, setNcNotas] = useState('');
-  const [ncSaveAlias, setNcSaveAlias] = useState(false);
-  const [ncAliasName, setNcAliasName] = useState('');
-  const [ncSaving, setNcSaving] = useState(false);
   const [ncManualModal, setNcManualModal] = useState(null);
-  const [ncManualFaturaId, setNcManualFaturaId] = useState('');
   const [ncManualLoading, setNcManualLoading] = useState(false);
   const [ncManualFaturas, setNcManualFaturas] = useState([]);
-
-  // Modal: interno
   const [internoModal, setInternoModal] = useState(null);
-  const [internoSaveAlias, setInternoSaveAlias] = useState(false);
-  const [internoAliasName, setInternoAliasName] = useState('');
-  const [internoSaving, setInternoSaving] = useState(false);
-
-  // Modal: imposto
   const [impostoModal, setImpostoModal] = useState(null);
-  const [impostoSaveAlias, setImpostoSaveAlias] = useState(false);
-  const [impostoAliasName, setImpostoAliasName] = useState('');
-  const [impostoSaving, setImpostoSaving] = useState(false);
-
-  // Modal: justificação
   const [justModal, setJustModal] = useState(null);
-  const [justText, setJustText] = useState('');
-  const [justSaving, setJustSaving] = useState(false);
-
-  // Modal: adicionar alias manualmente
   const [addAliasModal, setAddAliasModal] = useState(false);
-  const [addAliasName, setAddAliasName] = useState('');
-  const [addAliasResolucao, setAddAliasResolucao] = useState('interno');
-  const [addAliasClientId, setAddAliasClientId] = useState('');
-  const [addAliasSaving, setAddAliasSaving] = useState(false);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
@@ -1389,28 +1360,21 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
 
   // ── Acções: Interno ───────────────────────────────────────────────────────
 
-  const handleConfirmarInterno = async () => {
-    if (!internoModal) return;
-    const effectiveRunId = internoModal.run_id || runId;
+  const handleConfirmarInterno = async (tx, { saveAlias, aliasName }) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setInternoSaving(true);
-    const key = txKey(internoModal);
+    const key = txKey(tx);
     await supabase.from('entrada_internos').upsert({ run_id: effectiveRunId, tx_key: key }, { onConflict: 'run_id,tx_key' });
     setInternos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
 
-    if (internoSaveAlias && internoAliasName.trim()) {
+    if (saveAlias && aliasName.trim()) {
       const { data: newAlias } = await supabase
         .from('movimentacoes_aliases')
-        .upsert({ bank_name: internoAliasName.trim(), resolucao: 'interno', client_id: null }, { onConflict: 'bank_name' })
+        .upsert({ bank_name: aliasName.trim(), resolucao: 'interno', client_id: null }, { onConflict: 'bank_name' })
         .select('id, bank_name, resolucao, client_id')
         .single();
-      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== internoAliasName.trim())]);
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== aliasName.trim())]);
     }
-
-    setInternoSaving(false);
-    setInternoModal(null);
-    setInternoSaveAlias(false);
-    setInternoAliasName('');
   };
 
   const handleDesfazerInterno = async (tx) => {
@@ -1423,28 +1387,21 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
 
   // ── Acções: Imposto ───────────────────────────────────────────────────────────
 
-  const handleConfirmarImposto = async () => {
-    if (!impostoModal) return;
-    const effectiveRunId = impostoModal.run_id || runId;
+  const handleConfirmarImposto = async (tx, { saveAlias, aliasName }) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setImpostoSaving(true);
-    const key = txKey(impostoModal);
+    const key = txKey(tx);
     await supabase.from('entrada_impostos').upsert({ run_id: effectiveRunId, tx_key: key }, { onConflict: 'run_id,tx_key' });
     setImpostos(prev => [...prev.filter(i => i.tx_key !== key), { tx_key: key }]);
 
-    if (impostoSaveAlias && impostoAliasName.trim()) {
+    if (saveAlias && aliasName.trim()) {
       const { data: newAlias } = await supabase
         .from('movimentacoes_aliases')
-        .upsert({ bank_name: impostoAliasName.trim(), resolucao: 'imposto', client_id: null }, { onConflict: 'bank_name' })
+        .upsert({ bank_name: aliasName.trim(), resolucao: 'imposto', client_id: null }, { onConflict: 'bank_name' })
         .select('id, bank_name, resolucao, client_id')
         .single();
-      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== impostoAliasName.trim())]);
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== aliasName.trim())]);
     }
-
-    setImpostoSaving(false);
-    setImpostoModal(null);
-    setImpostoSaveAlias(false);
-    setImpostoAliasName('');
   };
 
   const handleDesfazerImposto = async (tx) => {
@@ -1457,30 +1414,21 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
 
   // ── Acções: Cliente / Fatura ──────────────────────────────────────────────
 
-  const handleOpenAcaoCliente = (tx) => {
-    const mes = (tx.data || '').substring(0, 7);
-    setNcModal(tx);
-    setNcClientId('');
-    setNcPeriod(mes);
-    setNcNotas('');
-    setNcSaveAlias(false);
-  };
+  const handleOpenAcaoCliente = (tx) => setNcModal(tx);
 
-  const handleSaveAcaoCliente = async () => {
-    if (!ncClientId || !ncPeriod || !ncModal) return;
-    const effectiveRunId = ncModal.run_id || runId;
+  const handleSaveAcaoCliente = async (tx, { clientId, period, notas, saveAlias, aliasName }) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setNcSaving(true);
-    const key = txKey(ncModal);
+    const key = txKey(tx);
     const existing = pagamentos.find(p => p.tx_key === key);
     if (existing) {
-      await supabase.from('faturacao_clientes_pagamentos').update({ client_id: ncClientId, period: ncPeriod }).eq('id', existing.id);
+      await supabase.from('faturacao_clientes_pagamentos').update({ client_id: clientId, period }).eq('id', existing.id);
     } else {
       await supabase.from('faturacao_clientes_pagamentos').insert({
         run_id: effectiveRunId,
         tx_key: key,
-        client_id: ncClientId,
-        period: ncPeriod,
+        client_id: clientId,
+        period,
       });
     }
     const { data: refreshed } = await supabase
@@ -1489,18 +1437,14 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
       .eq('run_id', effectiveRunId);
     setPagamentos(refreshed || []);
 
-    if (ncSaveAlias && ncAliasName.trim()) {
+    if (saveAlias && aliasName.trim()) {
       const { data: newAlias } = await supabase
         .from('movimentacoes_aliases')
-        .upsert({ bank_name: ncAliasName.trim(), resolucao: 'com_cliente', client_id: ncClientId }, { onConflict: 'bank_name' })
+        .upsert({ bank_name: aliasName.trim(), resolucao: 'com_cliente', client_id: clientId }, { onConflict: 'bank_name' })
         .select('id, bank_name, resolucao, client_id')
         .single();
-      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== ncAliasName.trim())]);
+      if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== aliasName.trim())]);
     }
-
-    setNcSaving(false);
-    setNcModal(null);
-    setNcAliasName('');
   };
 
   const handleDesfazerCliente = async (tx) => {
@@ -1531,50 +1475,43 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     setNcManualLoading(false);
   };
 
-  const handleSaveNcManual = async () => {
-    if (!ncManualFaturaId || !ncManualModal) return;
-    const effectiveRunId = ncManualModal.run_id || runId;
+  const handleSaveNcManual = async (tx, faturaId) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setNcSaving(true);
-    const key = txKey(ncManualModal);
+    const key = txKey(tx);
     const existing = notasCredito.find(n => n.tx_key === key);
     if (existing) {
-      await supabase.from('entrada_nota_credito_links').update({ client_id: ncManualFaturaId }).eq('id', existing.id);
+      await supabase.from('entrada_nota_credito_links').update({ client_id: faturaId }).eq('id', existing.id);
     } else {
       const { error: ncError } = await supabase.from('entrada_nota_credito_links').upsert({
         run_id: effectiveRunId,
         tx_key: key,
-        client_id: ncManualFaturaId,
-        period: previousMonth(ncManualModal.data),
+        client_id: faturaId,
+        period: previousMonth(tx.data),
       }, { onConflict: 'run_id,tx_key' });
       if (ncError && ncError.code !== '23505') {
         console.error('[handleSaveNcManual] nc insert failed:', ncError);
       }
     }
-    const { error: faturaError } = await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', ncManualFaturaId);
+    const { error: faturaError } = await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', faturaId);
     if (faturaError) {
       console.error('[handleSaveNcManual] fatura update failed:', faturaError);
     } else {
-      setFaturasData(prev => prev.map(f => f.id === ncManualFaturaId ? { ...f, status: 'PAGO' } : f));
+      setFaturasData(prev => prev.map(f => f.id === faturaId ? { ...f, status: 'PAGO' } : f));
     }
     const { data: refreshed } = await supabase
       .from('entrada_nota_credito_links')
       .select('id, tx_key, client_id, period')
       .eq('run_id', effectiveRunId);
     setNotasCredito(refreshed || []);
-    setNcSaving(false);
-    setNcManualModal(null);
-    setNcManualFaturaId('');
   };
 
   // ── Acções: Justificação ──────────────────────────────────────────────────
 
-  const handleSaveJustificacao = async () => {
-    if (!justText.trim() || !justModal) return;
-    const effectiveRunId = justModal.run_id || runId;
+  const handleSaveJustificacao = async (tx, justText) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setJustSaving(true);
-    const key = txKey(justModal);
+    const key = txKey(tx);
     const { data, error } = await supabase
       .from('entrada_justifications')
       .upsert({ run_id: effectiveRunId, tx_key: key, justification: justText.trim() }, { onConflict: 'run_id,tx_key' })
@@ -1583,9 +1520,6 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     if (!error && data) {
       setJustificacoes(prev => [...prev.filter(j => j.tx_key !== data.tx_key), data]);
     }
-    setJustSaving(false);
-    setJustModal(null);
-    setJustText('');
   };
 
   const handleRemoverJustificacao = async (tx) => {
@@ -1605,27 +1539,20 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
 
   // ── Acções: Recibo ────────────────────────────────────────────────────────
 
-  const handleOpenAcaoRecibo = (tx) => {
-    setReciboModal(tx);
-    setReciboWorkerId('');
-    setReciboWorkerName('');
-    setReciboMes(previousMonth(tx.data)); // recibo do mês anterior por defeito
-  };
+  const handleOpenAcaoRecibo = (tx) => setReciboModal(tx);
 
-  const handleSaveAcaoRecibo = async () => {
-    if (!reciboWorkerName || !reciboMes || !reciboModal) return;
-    const effectiveRunId = reciboModal.run_id || runId;
+  const handleSaveAcaoRecibo = async (tx, { workerName, workerId, mes }) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setReciboSaving(true);
-    const key = txKey(reciboModal);
+    const key = txKey(tx);
     const tipo = (() => {
-      const txDay = parseInt(reciboModal.data.split('-')[2]);
+      const txDay = parseInt(tx.data.split('-')[2]);
       return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento' : 'Liquidação';
     })();
     const { data, error } = await supabase
       .from('movimentacao_recibo_links')
       .upsert(
-        { run_id: effectiveRunId, tx_key: key, worker_id: reciboWorkerId || null, worker_name: reciboWorkerName, mes: reciboMes, tipo, auto_matched: false },
+        { run_id: effectiveRunId, tx_key: key, worker_id: workerId || null, worker_name: workerName, mes, tipo, auto_matched: false },
         { onConflict: 'run_id,tx_key' }
       )
       .select('tx_key, worker_id, worker_name, mes, tipo, auto_matched')
@@ -1633,8 +1560,6 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     if (!error && data) {
       setReciboLinks(prev => [...prev.filter(r => r.tx_key !== data.tx_key), data]);
     }
-    setReciboSaving(false);
-    setReciboModal(null);
   };
 
   const handleDesfazerRecibo = async (tx) => {
@@ -1647,17 +1572,12 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
 
   // ── Acções: Fatura ────────────────────────────────────────────────────────
 
-  const handleOpenAcaoFatura = (tx) => {
-    setFaturaModal(tx);
-    setFaturaSelId('');
-  };
+  const handleOpenAcaoFatura = (tx) => setFaturaModal(tx);
 
-  const handleSaveAcaoFatura = async () => {
-    if (!faturaSelId || !faturaModal) return;
-    const effectiveRunId = faturaModal.run_id || runId;
+  const handleSaveAcaoFatura = async (tx, faturaSelId) => {
+    const effectiveRunId = tx.run_id || runId;
     if (!effectiveRunId) return;
-    setFaturaSaving(true);
-    const key = txKey(faturaModal);
+    const key = txKey(tx);
     await supabase.from('fatura_pagamento_links').delete().eq('tx_key', key);
     const { data, error } = await supabase
       .from('fatura_pagamento_links')
@@ -1667,9 +1587,6 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     if (!error && data) {
       setFaturaLinks(prev => [...prev.filter(f => f.tx_key !== data.tx_key && f.fatura_id !== data.fatura_id), data]);
     }
-    setFaturaSaving(false);
-    setFaturaModal(null);
-    setFaturaSelId('');
   };
 
   const handleDesfazerFatura = async (tx) => {
@@ -1687,24 +1604,16 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
     setFaturaLinks(prev => prev.filter(f => f.tx_key !== key));
   };
 
-  const handleSaveNovoAlias = async () => {
-    if (!addAliasName.trim()) return;
-    if (addAliasResolucao === 'nota_credito' && !addAliasClientId) return;
-    setAddAliasSaving(true);
+  const handleSaveNovoAlias = async ({ aliasName, resolucao, clientId }) => {
     const { data: newAlias } = await supabase
       .from('movimentacoes_aliases')
       .upsert(
-        { bank_name: addAliasName.trim(), resolucao: addAliasResolucao, client_id: addAliasResolucao === 'nota_credito' ? addAliasClientId : null },
+        { bank_name: aliasName.trim(), resolucao, client_id: resolucao === 'nota_credito' ? clientId : null },
         { onConflict: 'bank_name' }
       )
       .select('id, bank_name, resolucao, client_id')
       .single();
-    if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== addAliasName.trim())]);
-    setAddAliasSaving(false);
-    setAddAliasModal(false);
-    setAddAliasName('');
-    setAddAliasResolucao('interno');
-    setAddAliasClientId('');
+    if (newAlias) setAliases(prev => [newAlias, ...prev.filter(a => a.bank_name !== aliasName.trim())]);
   };
 
   // ── Auto-confirmar todos os matches de um run ────────────────────────────
@@ -2293,417 +2202,14 @@ return { totCredito, totDebito, totImposto, totInterno, totFatura, totRecibo, to
           ))
       )}
 
-      {/* Modal: Interno */}
-      {internoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Marcar como Interno</h3>
-              <button onClick={() => setInternoModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-purple-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-1">Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(internoModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{internoModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{internoModal.descricao}</p>
-            </div>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={internoSaveAlias} onChange={e => {
-                setInternoSaveAlias(e.target.checked);
-                if (e.target.checked) setInternoAliasName(extractBankName(internoModal.descricao));
-              }} className="w-4 h-4 rounded accent-purple-600" />
-              <span className="text-[11px] font-bold text-slate-600">
-                Guardar alias <span className="font-normal text-slate-400">— reconhecer automaticamente em importações futuras</span>
-              </span>
-            </label>
-            {internoSaveAlias && (
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do alias</label>
-                <input type="text" value={internoAliasName} onChange={e => setInternoAliasName(e.target.value)}
-                  className="w-full border border-purple-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-purple-300 bg-purple-50" />
-              </div>
-            )}
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setInternoModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button disabled={internoSaving} onClick={handleConfirmarInterno}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {internoSaving ? <Loader2 size={13} className="animate-spin" /> : <ArrowLeftRight size={13} />} Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Pagamento Imposto */}
-      {impostoModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Pagamento Imposto</h3>
-              <button onClick={() => setImpostoModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-amber-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(impostoModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{impostoModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{impostoModal.descricao}</p>
-            </div>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={impostoSaveAlias} onChange={e => {
-                setImpostoSaveAlias(e.target.checked);
-                if (e.target.checked) setImpostoAliasName(extractBankName(impostoModal.descricao));
-              }} className="w-4 h-4 rounded accent-amber-600" />
-              <span className="text-[11px] font-bold text-slate-600">
-                Guardar alias <span className="font-normal text-slate-400">— reconhecer automaticamente em importações futuras</span>
-              </span>
-            </label>
-            {impostoSaveAlias && (
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do alias</label>
-                <input type="text" value={impostoAliasName} onChange={e => setImpostoAliasName(e.target.value)}
-                  className="w-full border border-amber-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-300 bg-amber-50" />
-              </div>
-            )}
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setImpostoModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button disabled={impostoSaving} onClick={handleConfirmarImposto}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {impostoSaving ? <Loader2 size={13} className="animate-spin" /> : <Percent size={13} />} Confirmar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Cliente / Fatura */}
-      {ncModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">
-                {ncModal.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a NC'}
-              </h3>
-              <button onClick={() => setNcModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className={`rounded-2xl px-4 py-3 ${ncModal.tipo === 'debito' ? 'bg-rose-50' : 'bg-blue-50'}`}>
-              <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${ncModal.tipo === 'debito' ? 'text-rose-600' : 'text-blue-600'}`}>Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(ncModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{ncModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{ncModal.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Cliente</label>
-                <select value={ncClientId} onChange={e => setNcClientId(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
-                  <option value="">— Selecionar cliente —</option>
-                  {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Mês de referência</label>
-                <input type="month" value={ncPeriod} onChange={e => setNcPeriod(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Notas (opcional)</label>
-                <input type="text" value={ncNotas} onChange={e => setNcNotas(e.target.value)}
-                  placeholder={ncModal.tipo === 'debito' ? 'Ex: Fatura nº 42, pagamento a fornecedor…' : 'Ex: Nota de crédito nº 42, pagamento parcial…'}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-              </div>
-              {ncModal.tipo === 'credito' && (
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input type="checkbox" checked={ncSaveAlias} onChange={e => {
-                    setNcSaveAlias(e.target.checked);
-                    if (e.target.checked) setNcAliasName(extractBankName(ncModal.descricao));
-                  }} className="w-4 h-4 rounded accent-blue-600" />
-                  <span className="text-[11px] font-bold text-slate-600">
-                    Guardar alias <span className="font-normal text-slate-400">— auto-match futuro para este remetente</span>
-                  </span>
-                </label>
-              )}
-              {ncSaveAlias && ncModal.tipo === 'credito' && (
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do alias</label>
-                  <input type="text" value={ncAliasName} onChange={e => setNcAliasName(e.target.value)}
-                    className="w-full border border-blue-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-blue-50" />
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setNcModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button disabled={!ncClientId || !ncPeriod || ncSaving} onClick={handleSaveAcaoCliente}
-                className={`flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 ${ncModal.tipo === 'debito' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                {ncSaving ? <Loader2 size={13} className="animate-spin" /> : ncModal.tipo === 'debito' ? <Receipt size={13} /> : <Link size={13} />}
-                {ncModal.tipo === 'debito' ? 'Ligar Fatura' : 'Ligar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: NC Manual */}
-      {ncManualModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Ligar a Nota de Crédito</h3>
-              <button onClick={() => setNcManualModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="rounded-2xl px-4 py-3 bg-indigo-50">
-              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(ncManualModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{ncManualModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{ncManualModal.descricao}</p>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Selecionar Fatura NC</label>
-              {ncManualLoading ? (
-                <p className="text-[11px] text-slate-400">A carregar...</p>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {ncManualFaturas.length === 0 && <p className="text-[11px] text-slate-400">Sem faturas NC disponíveis</p>}
-                  {ncManualFaturas.map(f => (
-                    <button key={f.id} onClick={() => setNcManualFaturaId(f.id)}
-                      className={`w-full text-left px-3 py-2 rounded-xl border transition-colors ${ncManualFaturaId === f.id ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:bg-slate-50'}`}>
-                      <p className="text-[11px] font-bold text-slate-700">{f.dados?.numero_fatura}</p>
-                      <p className="text-[10px] text-slate-500">{f.dados?.fornecedor}</p>
-                      <p className="text-[10px] font-bold text-slate-600">{fmtEur(parseFloat(f.dados?.valor_total) || 0)}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setNcManualModal(null)} className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">Cancelar</button>
-              <button disabled={!ncManualFaturaId || ncSaving} onClick={handleSaveNcManual}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {ncSaving ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />} Ligar NC
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Justificação */}
-      {justModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Justificar Transacção</h3>
-              <button onClick={() => { setJustModal(null); setJustText(''); }} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-amber-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(justModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{justModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{justModal.descricao}</p>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Justificação</label>
-              <textarea value={justText} onChange={e => setJustText(e.target.value)}
-                placeholder="Ex: Juro bancário, reembolso de despesa, transferência interna…"
-                rows={3}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none" />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => { setJustModal(null); setJustText(''); }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button disabled={!justText.trim() || justSaving} onClick={handleSaveJustificacao}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Fatura de fornecedor */}
-      {faturaModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Ligar a Fatura de Fornecedor</h3>
-              <button onClick={() => setFaturaModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-orange-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-orange-600 mb-1">Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(faturaModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{faturaModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{faturaModal.descricao}</p>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Fatura</label>
-              <select value={faturaSelId} onChange={e => setFaturaSelId(e.target.value)}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-300 bg-white">
-                <option value="">— Selecionar fatura —</option>
-                {faturasData.filter(f => f.status !== 'PAGO' && !faturaLinks.some(l => l.fatura_id === f.id))
-                  .sort((a, b) => (a.dados?.fornecedor || '').localeCompare(b.dados?.fornecedor || ''))
-                  .map(f => (
-                    <option key={f.id} value={f.id}>
-                      {f.dados?.fornecedor || 'Sem fornecedor'} · {f.dados?.numero_fatura || '—'} · {fmtEur(f.dados?.valor_total)}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setFaturaModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button disabled={!faturaSelId || faturaSaving} onClick={handleSaveAcaoFatura}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-orange-600 text-white hover:bg-orange-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {faturaSaving ? <Loader2 size={13} className="animate-spin" /> : <FileMinus size={13} />} Ligar Fatura
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Recibo de trabalhador */}
-      {reciboModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Ligar a Recibo de Trabalhador</h3>
-              <button onClick={() => setReciboModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-teal-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-teal-600 mb-1">Transacção</p>
-              <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(reciboModal.valor) || 0))}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{reciboModal.data}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5 break-all">{reciboModal.descricao}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Trabalhador</label>
-                <select
-                  value={reciboWorkerName}
-                  onChange={e => {
-                    const selected = e.target.value;
-                    setReciboWorkerName(selected);
-                    const workerReceipt = receipts.find(r => r.worker_name === selected);
-                    setReciboWorkerId(workerReceipt?.worker_id || '');
-                    // Pré-selecionar mês anterior (recibo de Abril pago em Maio)
-                    const prevM = previousMonth(reciboModal.data);
-                    const hasPrev = receipts.some(r => r.worker_name === selected && r.mes === prevM);
-                    setReciboMes(hasPrev ? prevM : (workerReceipt?.mes || ''));
-                  }}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
-                >
-                  <option value="">— Selecionar trabalhador —</option>
-                  {[...new Set(receipts.map(r => r.worker_name))].sort().map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-              {reciboWorkerName && (
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Mês do recibo</label>
-                  <select
-                    value={reciboMes}
-                    onChange={e => setReciboMes(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-teal-300 bg-white"
-                  >
-                    <option value="">— Selecionar mês —</option>
-                    {receipts
-                      .filter(r => r.worker_name === reciboWorkerName)
-                      .sort((a, b) => b.mes.localeCompare(a.mes))
-                      .map(r => (
-                        <option key={r.mes} value={r.mes}>
-                          {fmtMes(r.mes)} — {fmtEur(r.liquido_extraido)}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setReciboModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button
-                disabled={!reciboWorkerName || !reciboMes || reciboSaving}
-                onClick={handleSaveAcaoRecibo}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-teal-600 text-white hover:bg-teal-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {reciboSaving ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />} Ligar Recibo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal: Novo Alias */}
-      {addAliasModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Novo Alias</h3>
-              <button onClick={() => setAddAliasModal(false)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do banco/remetente</label>
-                <input type="text" value={addAliasName} onChange={e => setAddAliasName(e.target.value)}
-                  placeholder="Ex: EMPRESA EXEMPLO LDA"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Resolução</label>
-                <div className="flex gap-2">
-                  {[
-                    { val: 'interno',      label: 'Interno',  cfg: STATUS_CFG['Interno'] },
-                    { val: 'nota_credito', label: 'Cliente',  cfg: STATUS_CFG['Nota Crédito'] },
-                  ].map(({ val, label, cfg }) => (
-                    <button key={val} onClick={() => setAddAliasResolucao(val)}
-                      className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border-2 transition-all ${addAliasResolucao === val ? `border-current ${cfg.bg} ${cfg.text}` : 'border-slate-200 text-slate-400 hover:border-slate-300'}`}>
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {addAliasResolucao === 'nota_credito' && (
-                <div>
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Cliente</label>
-                  <select value={addAliasClientId} onChange={e => setAddAliasClientId(e.target.value)}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white">
-                    <option value="">— Selecionar cliente —</option>
-                    {(clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setAddAliasModal(false)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button
-                disabled={!addAliasName.trim() || (addAliasResolucao === 'nota_credito' && !addAliasClientId) || addAliasSaving}
-                onClick={handleSaveNovoAlias}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-                {addAliasSaving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {internoModal && <InternoModal tx={internoModal} onClose={() => setInternoModal(null)} onSave={handleConfirmarInterno} />}
+      {impostoModal && <ImpostoModal tx={impostoModal} onClose={() => setImpostoModal(null)} onSave={handleConfirmarImposto} />}
+      {justModal && <JustModal tx={justModal} onClose={() => setJustModal(null)} onSave={handleSaveJustificacao} />}
+      {faturaModal && <FaturaModal tx={faturaModal} faturasData={faturasData} faturaLinks={faturaLinks} onClose={() => setFaturaModal(null)} onSave={handleSaveAcaoFatura} />}
+      {reciboModal && <ReciboModal tx={reciboModal} receipts={receipts} onClose={() => setReciboModal(null)} onSave={handleSaveAcaoRecibo} />}
+      {ncModal && <NcModal tx={ncModal} clients={clients} onClose={() => setNcModal(null)} onSave={handleSaveAcaoCliente} />}
+      {ncManualModal && <NcManualModal tx={ncManualModal} faturas={ncManualFaturas} loading={ncManualLoading} onClose={() => setNcManualModal(null)} onSave={handleSaveNcManual} />}
+      {addAliasModal && <AddAliasModal clients={clients} onClose={() => setAddAliasModal(false)} onSave={handleSaveNovoAlias} />}
     </div>
   );
 }
