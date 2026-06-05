@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, Bell, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar, Activity, Clock } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, X, Sparkles, History, MessageCircle, CheckCircle, Edit2, Trash2, AlertCircle, MapPin, Navigation, LogOut, Mail, Hash, ArrowRight, ShieldCheck, LogIn, Coffee, PlayCircle, Calendar, Activity, Clock } from 'lucide-react';
 import PrecisionReportReview from './components/correcoes/PrecisionReportReview';
 import ClientReportFlow from './features/client-report/ClientReportFlow';
 import { useApp } from './context/AppContext';
@@ -8,6 +8,8 @@ import ValidationStamp from './components/common/ValidationStampWithQR';
 import { cropSignatureCanvas } from './utils/signatureCanvas';
 import { TRANSLATIONS } from './client-portal/translations';
 import LoginView from './client-portal/LoginView';
+import ClientPortalHeader from './client-portal/ClientPortalHeader';
+import { useClientNotifications } from './client-portal/useClientNotifications';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -74,7 +76,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [lang, setLang] = useState(() => localStorage.getItem('magnetic_lang') || 'pt');
     const t = (key) => (TRANSLATIONS[lang] || TRANSLATIONS.pt)[key] || key;
 
-    const effectiveClientId = initialTokenClientId || clientSession?.clientId || initialClientId || null;
+    const rawClientId = initialTokenClientId || clientSession?.clientId || initialClientId || null;
+    // Normaliza IDs no formato 'c123...' (link público) para 'client_123...' (formato interno)
+    const effectiveClientId = rawClientId?.startsWith('c') && !rawClientId.startsWith('client_')
+        ? 'client_' + rawClientId.slice(1)
+        : rawClientId;
 
     const todayStr = new Date().toLocaleDateString('en-CA');
     const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
@@ -268,81 +274,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             .catch(() => setClientIp('N/D'));
     }, []);
 
-    const [dismissedNotifs, setDismissedNotifs] = useState([]);
-    const [expandedCards, setExpandedCards] = useState({});
-    useEffect(() => {
-        if (!effectiveClientId) return;
-        try {
-            setDismissedNotifs(JSON.parse(localStorage.getItem(`dismissed_client_notifs_${effectiveClientId}`) || '[]'));
-        } catch { setDismissedNotifs([]); }
-    }, [effectiveClientId]);
-
-    const myNotifications = useMemo(() => {
-        if (!appNotifications || !effectiveClientId) return [];
-
-        const filtered = appNotifications.filter(n => {
-            const matchTarget = n.target_type === 'client';
-            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
-            const isActive = n.is_active === true;
-            const notDismissed = !dismissedNotifs.includes(n.id);
-
-            return matchTarget && matchClientId && isActive && notDismissed;
-        });
-
-        const workerSubmissions = appNotifications.filter(n => {
-            const matchTarget = n.target_type === 'client';
-            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
-            const isActive = n.is_active === true;
-            const notDismissed = !dismissedNotifs.includes(n.id);
-            const isWorkerSubmission = n.payload?.kind === 'submitted';
-
-            return matchTarget && matchClientId && isActive && notDismissed && isWorkerSubmission;
-        });
-
-        return filtered;
-    }, [appNotifications, effectiveClientId, dismissedNotifs]);
-
-    const workerSubmissionsResolved = useMemo(() => {
-        if (!appNotifications || !effectiveClientId) return [];
-        return appNotifications.filter(n => {
-            const matchTarget = n.target_type === 'client';
-            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
-            const isActive = n.is_active === true;
-            const notDismissed = !dismissedNotifs.includes(n.id);
-            const isWorkerSubmission = n.payload?.kind === 'submitted';
-            if (!isWorkerSubmission) return false;
-            const correctionId = n.payload?.correction_id;
-            const correction = corrections?.find(c => c.id === correctionId);
-            if (!correction || correction.status === 'submitted') return false;
-            return matchTarget && matchClientId && isActive && notDismissed;
-        });
-    }, [appNotifications, effectiveClientId, dismissedNotifs, corrections]);
-
-    const workerSubmissionsPending = useMemo(() => {
-        if (!appNotifications || !effectiveClientId) return [];
-        return appNotifications.filter(n => {
-            const matchTarget = n.target_type === 'client';
-            const matchClientId = String(n.target_client_id) === String(effectiveClientId);
-            const isActive = n.is_active === true;
-            const notDismissed = !dismissedNotifs.includes(n.id);
-            const isWorkerSubmission = n.payload?.kind === 'submitted';
-            if (!isWorkerSubmission) return false;
-            const correctionId = n.payload?.correction_id;
-            const correction = corrections?.find(c => c.id === correctionId);
-            if (!correction || correction.status !== 'submitted') return false;
-            return matchTarget && matchClientId && isActive && notDismissed;
-        });
-    }, [appNotifications, effectiveClientId, dismissedNotifs, corrections]);
-
-    const handleDismissNotif = (id) => {
-        setDismissedNotifs(prev => {
-            if (prev.includes(id)) return prev;
-            const updated = [...prev, id];
-            localStorage.setItem(`dismissed_client_notifs_${effectiveClientId}`, JSON.stringify(updated));
-            return updated;
-        });
-    };
-
     const clientObj = clients.find(c => c.id === effectiveClientId) || { name: 'Cliente Não Encontrado' };
     const getMonthName = (monthStr) => {
         if (!monthStr || monthStr.length !== 7) return monthStr;
@@ -350,240 +281,34 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         const d = new Date(y, m - 1);
         return d.toLocaleDateString(t('locale'), { month: 'long', year: 'numeric' });
     };
-
     const clientData = useMemo(() => {
         return { name: clientObj.name, period: getMonthName(selectedMonth) };
     }, [clientObj, selectedMonth]);
 
-    const handleAcceptContestation = useCallback(async (notif) => {
-        const changes = notif.payload?.changes;
-        if (!changes || !Array.isArray(changes)) {
-            alert("Erro: Não foi possível encontrar os dados da contra-proposta.");
-            return;
-        }
-
-        try {
-            const updates = [];
-            const inserts = [];
-            for (const w of changes) {
-                for (const d of w.dailyRecords) {
-                    const targetWorkerId = String(w.id);
-                    const targetClientId = String(initialClientId);
-                    const targetDate = d.date || d.dateLabel || d.rawDate;
-                    const originalLog = logs.find(l =>
-                        String(l.workerId || l.worker_id) === targetWorkerId &&
-                        l.date === targetDate &&
-                        String(l.clientId || l.client_id) === targetClientId
-                    );
-                    const entry = (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry);
-                    const exit  = (d.adminExit  || d.editedExit  || d.newExit)  === '--:--' ? null : (d.adminExit  || d.editedExit  || d.newExit);
-                    if (originalLog) {
-                        updates.push({ id: originalLog.id, data: { ...originalLog, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours } });
-                    } else {
-                        // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs instead of Date.now() + Math.random()
-                        const newLogId = `log_${crypto.randomUUID()}`;
-                        inserts.push({ id: newLogId, data: { id: newLogId, date: targetDate, workerId: targetWorkerId, clientId: targetClientId, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours, created_at: new Date().toISOString() } });
-                    }
-                }
-            }
-            await Promise.all([
-                ...updates.map(u => saveToDb('logs', u.id, u.data)),
-                ...inserts.map(i => saveToDb('logs', i.id, i.data)),
-            ]);
-            setLogs(prev => {
-                const updateMap = new Map(updates.map(u => [u.id, u.data]));
-                const updated = prev.map(l => updateMap.has(l.id) ? { ...l, ...updateMap.get(l.id) } : l);
-                return [...updated, ...inserts.map(i => i.data)];
-            });
-
-            const timestamp = Date.now();
-            const adminNotifId = `accp_${notif.id}_${timestamp}`;
-            await saveToDb('app_notifications', adminNotifId, {
-                title: `✅ Contra-proposta Aceite e Aplicada: ${clientData.name}`,
-                message: `O cliente ACEITOU a contra-proposta para ${clientData.period}. Os registos de horas foram atualizados automaticamente no sistema.`,
-                type: 'success',
-                target_type: 'admin',
-                created_at: new Date().toISOString(),
-                is_active: true
-            });
-
-            handleDismissNotif(notif.id);
-            alert("As alterações foram aplicadas! Por favor, assine agora o relatório atualizado.");
-            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-
-        } catch (error) {
-            console.error("Erro ao aplicar contra-proposta:", error);
-            alert("Ocorreu um erro ao atualizar os dados. Por favor, tente novamente.");
-        }
-    }, [clientData, clientSession, supabase, logs, initialClientId, saveToDb]);
-
-    const handleApproveCreationRequest = useCallback(async (notif) => {
-        const correctionId = notif.payload?.correction_id;
-        if (!correctionId) {
-            alert("Erro: ID do pedido não encontrado.");
-            return;
-        }
-
-        const correction = corrections?.find(c => c.id === correctionId);
-        const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
-        if (!correction) {
-            alert("Erro: Pedido não encontrado.");
-            return;
-        }
-
-        if (!confirm("Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.")) return;
-
-        try {
-            for (const item of items) {
-                if (correction.type === 'deletion_request') {
-                    const { error: delError } = await supabase
-                        .from('logs')
-                        .delete()
-                        .eq('workerId', item.worker_id)
-                        .eq('date', item.date);
-                    if (delError) throw delError;
-                } else {
-                    let existing = null;
-                    if (item.before) {
-                        const { data } = await supabase
-                            .from('logs')
-                            .select('*')
-                            .eq('workerId', item.worker_id)
-                            .eq('date', item.date)
-                            .limit(1)
-                            .maybeSingle();
-                        existing = data;
-                    }
-
-                    if (item.before && existing) {
-                        const { error } = await supabase.from('logs').update({
-                            startTime: item.proposed?.startTime || null,
-                            endTime: item.proposed?.endTime || null,
-                            breakStart: item.proposed?.breakStart || null,
-                            breakEnd: item.proposed?.breakEnd || null,
-                        }).eq('id', existing.id);
-                        if (error) throw error;
-                    } else if (!item.before && item.proposed) {
-                        // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs
-                        const logId = `log_${crypto.randomUUID()}`;
-                        const { error } = await supabase.from('logs').insert({
-                            id: logId,
-                            workerId: String(item.worker_id),
-                            clientId: String(effectiveClientId),
-                            date: item.date,
-                            startTime: item.proposed.startTime,
-                            endTime: item.proposed.endTime,
-                            breakStart: item.proposed.breakStart,
-                            breakEnd: item.proposed.breakEnd,
-                        });
-                        if (error) throw error;
-                    }
-                }
-
-                await supabase.from('correction_items').update({ item_status: 'accepted' }).eq('id', item.id);
-            }
-
-            await supabase.from('corrections').update({ status: 'applied' }).eq('id', correctionId);
-
-            const adminNotifId = `accp_cr_${notif.id}_${Date.now()}`;
-            await saveToDb('app_notifications', adminNotifId, {
-                title: `✅ Pedido de Registo Aprovado: ${clientData?.name || 'Cliente'}`,
-                message: `O cliente ACEITOU o pedido de registo para ${correction.month}. Os registos foram atualizados.`,
-                type: 'success',
-                target_type: 'admin',
-                created_at: new Date().toISOString(),
-                is_active: true
-            });
-
-            for (const item of items) {
-                if (item.worker_id) {
-                    const workerNotifId = `accp_wr_${item.id}_${Date.now()}`;
-                    await saveToDb('app_notifications', workerNotifId, {
-                        title: '✅ Pedido de Registo Aprovado',
-                        message: `O seu pedido de ${item.date} foi aprovado pelo cliente.`,
-                        type: 'success',
-                        target_type: 'worker',
-                        target_worker_ids: [String(item.worker_id)],
-                        created_at: new Date().toISOString(),
-                        is_active: true
-                    });
-                }
-            }
-
-            handleDismissNotif(notif.id);
-            setLogs(prev => {
-                const updated = [...prev];
-                for (const item of items) {
-                    const existingIdx = updated.findIndex(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
-                    if (correction.type === 'deletion_request') {
-                        if (existingIdx >= 0) updated.splice(existingIdx, 1);
-                    } else if (existingIdx >= 0 && item.proposed) {
-                        updated[existingIdx] = { ...updated[existingIdx], ...item.proposed };
-                    } else if (!item.before && item.proposed) {
-                        updated.push({
-                            // WR-09 fix: Use crypto.randomUUID() for guaranteed unique IDs
-                            id: `log_${crypto.randomUUID()}`,
-                            workerId: item.worker_id,
-                            clientId: effectiveClientId,
-                            date: item.date,
-                            ...item.proposed
-                        });
-                    }
-                }
-                return updated;
-            });
-
-            alert(correction.type === 'deletion_request' ? "Pedido aprovado! Registo eliminado." : "Pedido aprovado! Relatório atualizado.");
-        } catch (error) {
-            console.error("Erro ao aprovar pedido:", error);
-            alert("Ocorreu um erro ao aprovar o pedido. Por favor, tente novamente.");
-        }
-    }, [corrections, correctionItems, supabase, effectiveClientId, saveToDb, handleDismissNotif]);
-
-    const handleRejectCreationRequest = useCallback(async (notif) => {
-        const correctionId = notif.payload?.correction_id;
-        if (!correctionId) return;
-
-        const items = (correctionItems || []).filter(it => it.correction_id === correctionId);
-        const reason = prompt("Motivo da rejeição (opcional):");
-        if (reason === null) return;
-
-        try {
-            await supabase.from('corrections').update({ status: 'rejected' }).eq('id', correctionId);
-
-            const adminNotifId = `rej_cr_${notif.id}_${Date.now()}`;
-            await saveToDb('app_notifications', adminNotifId, {
-                title: `❌ Pedido de Registo Rejeitado: ${clientData?.name || 'Cliente'}`,
-                message: `O cliente REJEITOU o pedido de registo${reason ? `. Motivo: ${reason}` : ''}.`,
-                type: 'error',
-                target_type: 'admin',
-                created_at: new Date().toISOString(),
-                is_active: true
-            });
-
-            const rejectionMsg = reason ? ` Motivo: ${reason}` : '';
-            for (const item of items) {
-                if (item.worker_id) {
-                    const workerNotifId = `rej_wr_${item.id}_${Date.now()}`;
-                    await saveToDb('app_notifications', workerNotifId, {
-                        title: '❌ Pedido de Registo Rejeitado',
-                        message: `O seu pedido de ${item.date} foi rejeitado pelo cliente.${rejectionMsg}`,
-                        type: 'error',
-                        target_type: 'worker',
-                        target_worker_ids: [String(item.worker_id)],
-                        created_at: new Date().toISOString(),
-                        is_active: true
-                    });
-                }
-            }
-
-            handleDismissNotif(notif.id);
-            alert("Pedido rejeitado.");
-        } catch (error) {
-            console.error("Erro ao rejeitar pedido:", error);
-            alert("Ocorreu um erro ao rejeitar o pedido.");
-        }
-    }, [supabase, saveToDb, handleDismissNotif, correctionItems]);
+    const {
+        dismissedNotifs,
+        expandedCards,
+        setExpandedCards,
+        myNotifications,
+        workerSubmissionsResolved,
+        workerSubmissionsPending,
+        handleDismissNotif,
+        handleAcceptContestation,
+        handleApproveCreationRequest,
+        handleRejectCreationRequest,
+    } = useClientNotifications({
+        appNotifications,
+        effectiveClientId,
+        corrections,
+        correctionItems,
+        initialClientId,
+        logs,
+        setLogs,
+        saveToDb,
+        clientData,
+        workers,
+        supabase,
+    });
 
     const availableMonths = useMemo(() => {
         if (!effectiveClientId) return [];
@@ -856,80 +581,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     };
 
     // Animation and time input styles moved into dangerouslySetInnerHTML block (WR-08)
-
-    const Header = ({ showActions = true }) => (
-        <header className="bg-white border-b border-slate-200 sticky top-0 z-10 w-full shadow-sm">
-            <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                    <img
-                        src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
-                        alt="Logo"
-                        className="h-14 w-auto object-contain"
-                        onError={(e) => { e.target.style.display = 'none'; }}
-                    />
-                    <span className="font-bold text-base tracking-tighter uppercase text-slate-900 hidden md:inline">
-                        {systemSettings?.companyName || 'Magnetic Place'}
-                    </span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                        <button onClick={() => changeLang('pt')} title="Português" className={`flex items-center p-1.5 rounded-lg transition-all ${lang === 'pt' ? 'opacity-100' : 'opacity-30 hover:opacity-60'}`}>
-                            <span className="inline-flex h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
-                                <span className="w-2/5 bg-green-700" /><span className="w-3/5 bg-red-600" />
-                            </span>
-                        </button>
-                        <button onClick={() => changeLang('es')} title="Español" className={`flex items-center p-1.5 rounded-lg transition-all ${lang === 'es' ? 'opacity-100' : 'opacity-30 hover:opacity-60'}`}>
-                            <span className="inline-flex flex-col h-3.5 w-5 rounded-sm overflow-hidden flex-shrink-0 shadow-sm">
-                                <span className="flex-1 bg-red-600" /><span className="flex-[2] bg-yellow-400" /><span className="flex-1 bg-red-600" />
-                            </span>
-                        </button>
-                    </div>
-                    {selectedTab === 'dashboard' && (
-                            <div className="relative" ref={notifRef}>
-                                <button onClick={() => setShowNotifDropdown(s => !s)} className="relative p-1.5 text-slate-500 hover:text-slate-800 transition-all">
-                                    <Bell size={18} />
-                                    {activeNow.length > 0 && (
-                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">{activeNow.length}</span>
-                                    )}
-                                </button>
-                                {showNotifDropdown && (
-                                    <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
-                                        <div className="p-4 border-b border-slate-100 bg-indigo-50 flex items-center gap-2">
-                                            <Bell size={16} className="text-indigo-600" />
-                                            <span className="font-black text-slate-800 text-sm uppercase tracking-widest">{t('notifications')}</span>
-                                        </div>
-                                        <div className="max-h-64 overflow-y-auto">
-                                            {activeNow.length === 0 ? (
-                                                <div className="p-4 text-center text-slate-400 text-xs font-bold">{t('no_notifications')}</div>
-                                            ) : (
-                                                activeNow.map((log) => {
-                                                    const w = workers.find(wk => String(wk.id) === String(log.workerId));
-                                                    return (
-                                                        <div key={log.id} className="p-3 border-b border-slate-50 last:border-0">
-                                                            <p className="font-black text-slate-700 text-xs">{w?.name || 'Colaborador'}</p>
-                                                            <p className="text-slate-400 text-[10px]">{t('on_duty_since')} {log.startTime}</p>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            )}
-                            {clientSession ? (
-                                <button onClick={handleLogout} className="p-1.5 text-slate-400 hover:text-rose-500 transition-all" title="Sair">
-                                    <LogOut size={18} />
-                                </button>
-                            ) : (
-                                <a href="https://painelcliente.magneticplace.pt/" className="p-1.5 text-indigo-500 hover:text-indigo-700 transition-all" title="Efetuar Login">
-                                    <LogIn size={18} />
-                                </a>
-                            )}
-                </div>
-            </div>
-        </header>
-    );
 
     const formatElapsed = (startTimeStr) => {
         const [h, m] = startTimeStr.split(':').map(Number);
@@ -1561,220 +1212,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         </div>
     );
 
-    const renderEditarRelatorio = () => {
-        if (correctionMode === 'triagem') {
-            return (
-                <div className="animate-fade-in max-w-4xl mx-auto py-10">
-                    <div className="text-center mb-12">
-                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter mb-4">{t('how_report')}</h2>
-                        <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.3em]">{t('choose_method')}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Opção 1: Mensagem Rápida */}
-                        <button
-                            onClick={() => { setCorrectionMode('comentario'); setReportJustification(''); }}
-                            className="group bg-white p-10 rounded-[3rem] border-2 border-slate-100 hover:border-indigo-600 transition-all text-left shadow-xl shadow-slate-200/50 hover:shadow-indigo-600/10 active:scale-[0.98]"
-                        >
-                            <div className="w-16 h-16 bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 rounded-2xl flex items-center justify-center mb-8 transition-colors">
-                                <MessageCircle size={32} />
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tight">{t('quick_msg')}</h3>
-                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">{t('quick_msg_desc')}</p>
-                            <div className="inline-flex items-center gap-2 text-indigo-600 font-black text-[10px] uppercase tracking-widest">
-                                {t('choose_this')} <ChevronDown size={14} className="-rotate-90" />
-                            </div>
-                        </button>
-
-                        {/* Opção 2: Ajuste Manual */}
-                        <button
-                            onClick={() => { setCorrectionMode('manual'); }}
-                            className="group bg-white p-10 rounded-[3rem] border-2 border-slate-100 hover:border-amber-500 transition-all text-left shadow-xl shadow-slate-200/50 hover:shadow-amber-500/10 active:scale-[0.98]"
-                        >
-                            <div className="w-16 h-16 bg-slate-50 text-slate-400 group-hover:bg-amber-50 group-hover:text-amber-500 rounded-2xl flex items-center justify-center mb-8 transition-colors">
-                                <Sparkles size={32} />
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-800 mb-3 uppercase tracking-tight">{t('precision_adj')}</h3>
-                            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6">{t('precision_adj_desc')}</p>
-                            <div className="inline-flex items-center gap-2 text-amber-600 font-black text-[10px] uppercase tracking-widest">
-                                {t('choose_this')} <ChevronDown size={14} className="-rotate-90" />
-                            </div>
-                        </button>
-                    </div>
-
-                    <div className="mt-12 text-center">
-                        <button onClick={() => goToView('inicio')} className="text-slate-400 hover:text-slate-700 font-black text-[10px] uppercase tracking-widest transition-colors">{t('back_start')}</button>
-                    </div>
-                </div>
-            );
-        }
-
-        if (correctionMode === 'comentario') {
-            return (
-                <div className="animate-fade-in max-w-2xl mx-auto py-10">
-                    <div className="bg-white rounded-[3rem] shadow-2xl border border-slate-100 p-10 md:p-12">
-                        <div className="flex items-center gap-4 mb-8">
-                            <button onClick={() => setCorrectionMode('triagem')} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-all">
-                                <ChevronDown size={24} className="rotate-90" />
-                            </button>
-                            <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">{t('describe_divergence')}</h2>
-                        </div>
-
-                        <p className="text-slate-500 text-sm font-medium mb-8">{t('describe_desc')}</p>
-
-                        <textarea
-                            rows="8"
-                            value={reportJustification}
-                            onChange={(e) => setReportJustification(e.target.value)}
-                            placeholder={t('describe_placeholder')}
-                            className="w-full border-2 border-slate-100 rounded-3xl p-6 bg-slate-50 text-slate-800 text-sm font-medium focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none resize-none mb-10 shadow-inner"
-                        ></textarea>
-
-                        <div className="flex flex-col gap-4">
-                            <button
-                                onClick={async () => {
-                                    if (!reportJustification.trim()) { alert("Por favor, descreva o problema."); return; }
-
-                                    const notifId = `notif_corr_${initialClientId}_${initialMonth}_quick`;
-                                    const correcoesTexto = generateCorrectionMessage(true);
-                                    // Envia TODOS os trabalhadores e TODOS os dias do mês no payload para que o admin possa editar qualquer dia
-                                    const fullMonthSnapshot = draftData;
-                                    const newNotif = {
-                                        id: notifId,
-                                        title: `Divergência Reportada: ${clientData.name}`,
-                                        message: correcoesTexto,
-                                        type: 'warning',
-                                        target_type: 'admin',
-                                        target_client_id: initialClientId,
-                                        target_worker_ids: [],
-                                        payload: { changes: fullMonthSnapshot, isFullMonth: true, month: initialMonth, reportType: 'quick' },
-                                        is_dismissible: true,
-                                        is_active: true,
-                                        created_at: new Date().toISOString()
-                                    };
-                                    const correcaoId = `correcao_${initialClientId}_${initialMonth}_quick`;
-                                    const correcaoRecord = {
-                                        id: correcaoId,
-                                        title: `Divergência Reportada: ${clientData.name}`,
-                                        message: correcoesTexto,
-                                        status: 'pending',
-                                        type: 'quick',
-                                        justification: reportJustification,
-                                        client_id: initialClientId,
-                                        month: initialMonth,
-                                        submitted_at: new Date().toISOString(),
-                                        payload: { changes: fullMonthSnapshot, isFullMonth: true, reportType: 'quick' },
-                                        created_at: new Date().toISOString()
-                                    };
-                                    await saveToDb('corrections', correcaoId, correcaoRecord);
-
-                                    // Include correcao_id in notification payload so admin can update status
-                                    const newNotifWithCorrecaoId = {
-                                        ...newNotif,
-                                        payload: { ...newNotif.payload, correcao_id: correcaoId }
-                                    };
-                                    await saveToDb('app_notifications', notifId, newNotifWithCorrecaoId);
-
-                                    goToView('sucesso_reporte');
-                                }}
-                                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-95 transition-all"
-                            >
-                                {t('send_admin')}
-                            </button>
-                            <button onClick={() => setCorrectionMode('triagem')} className="w-full py-5 text-slate-400 font-black uppercase tracking-widest text-[10px]">{t('change_method')}</button>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        return (
-            <div className="animate-fade-in space-y-6 max-w-5xl mx-auto">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setCorrectionMode('triagem')} className="p-3 text-slate-400 hover:bg-slate-100 hover:text-slate-800 rounded-xl transition-all shadow-sm border border-slate-50"><ChevronDown size={20} className="rotate-90" /></button>
-                        <div><h2 className="text-2xl font-black text-slate-800 uppercase tracking-tighter">Ajuste de Precisão</h2><p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Selecione o colaborador para editar</p></div>
-                    </div>
-                    <div className="text-right bg-slate-50 px-6 py-4 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Novo Total do Mês</p>
-                        <p className={`text-3xl font-black ${draftTotal !== originalTotal ? 'text-amber-500' : 'text-slate-800'}`}>{draftTotal}h</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Lista de Colaboradores (Cards Laterais) */}
-                    <div className="lg:col-span-1 space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-                        {draftData.map(w => {
-                            const workerChanged = w.editedTotalHours !== w.totalHours;
-                            const isEditing = editingWorkerId === w.id;
-                            return (
-                                <button
-                                    key={w.id}
-                                    onClick={() => setEditingWorkerId(w.id)}
-                                    className={`w-full p-6 rounded-[2rem] border-2 transition-all text-left flex flex-col gap-2 ${isEditing ? 'border-indigo-600 bg-white shadow-xl shadow-indigo-100/50 translate-x-2' : 'border-slate-100 bg-white hover:border-slate-300'}`}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${workerChanged ? 'bg-amber-100 text-amber-600' : 'bg-slate-100 text-slate-400'}`}>
-                                            {workerChanged ? '!' : '✓'}
-                                        </span>
-                                        <span className="text-[10px] font-black uppercase text-slate-400">{w.editedTotalHours}h</span>
-                                    </div>
-                                    <h4 className="font-black text-slate-800 leading-tight">{w.name}</h4>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase">{w.role}</p>
-                                </button>
-                            );
-                        })}
-                    </div>
-
-                    {/* Área de Edição (Direita) */}
-                    <div className="lg:col-span-2 h-full">
-                        {!editingWorkerId ? (
-                            <div className="bg-white border-2 border-dashed border-slate-200 rounded-[3rem] h-[500px] flex flex-col items-center justify-center text-center p-10">
-                                <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-3xl flex items-center justify-center mb-6">
-                                    <ChevronDown size={32} />
-                                </div>
-                                <h4 className="text-xl font-black text-slate-800 mb-2">Selecione um colaborador</h4>
-                                <p className="text-sm text-slate-400 font-medium max-w-xs">Clique na lista à esquerda para começar a ajustar os horários individuais.</p>
-                            </div>
-                        ) : (
-                            <div className="h-full">
-                                <PrecisionReportReview
-                                    draftData={draftData}
-                                    originalTotal={originalTotal}
-                                    draftTotal={draftTotal}
-                                    reportJustification={reportJustification}
-                                    readOnly={false}
-                                    showAllDays={false}
-                                    selectedWorkerId={editingWorkerId}
-                                    title={clientData.period}
-                                    subtitle="Ajustando registos diários"
-                                    onBack={() => setEditingWorkerId(null)}
-                                    onEditDay={handleTimeChange}
-                                    onDeleteDay={(workerId, dayDate) => {
-                                        handleTimeChange(workerId, dayDate, 'entry', '--:--');
-                                        handleTimeChange(workerId, dayDate, 'exit', '--:--');
-                                        handleTimeChange(workerId, dayDate, 'breakStart', '--:--');
-                                        handleTimeChange(workerId, dayDate, 'breakEnd', '--:--');
-                                    }}
-                                    onConfirm={() => goToView('rever_alteracoes')}
-                                />
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Secção de Comentário Final */}
-                <section className="bg-white rounded-[3rem] shadow-xl border border-slate-100 p-10 mt-10">
-                    <div className="flex items-center gap-4 mb-6 text-slate-400">
-                        <MessageCircle size={20} />
-                        <label className="text-[10px] font-black uppercase tracking-[0.3em]">Justificação Geral</label>
-                    </div>
-                    <textarea rows="4" value={reportJustification} onChange={(e) => setReportJustification(e.target.value)} placeholder="Ex: O João chegou uma hora mais tarde no dia 2..." className="w-full border-2 border-slate-100 rounded-[2rem] p-6 bg-slate-50 text-slate-800 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none resize-none shadow-inner"></textarea>
-                </section>
-            </div>
-        );
-    };
-
     const generateCorrectionMessage = (isQuickMessage = false) => {
         const changedWorkers = isQuickMessage ? draftData : draftData.filter(w => w.dailyRecords.some(d => {
             const isNewDay = !d.entry || d.entry === '--:--' || !d.exit || d.exit === '--:--';
@@ -2186,7 +1623,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     return (
         <div className={`min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-200 font-sans ${printingWorker ? 'pb-0 bg-white' : 'pb-20'}`}>
             {/* Header Magnetic Place */}
-            {!printingWorker && <Header showActions={selectedTab === 'dashboard'} />}
+            {!printingWorker && <ClientPortalHeader systemSettings={systemSettings} lang={lang} changeLang={changeLang} selectedTab={selectedTab} t={t} activeNow={activeNow} workers={workers} showNotifDropdown={showNotifDropdown} setShowNotifDropdown={setShowNotifDropdown} notifRef={notifRef} clientSession={clientSession} handleLogout={handleLogout} />}
 
             {!printingWorker ? (
                 <>
@@ -2628,6 +2065,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         <ClientReportFlow
                             clientId={effectiveClientId}
                             month={selectedMonth}
+                            initialStep="mode"
                             workers={(() => {
                                 const ids = new Set(
                                     logs
