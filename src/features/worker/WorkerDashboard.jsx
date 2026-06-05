@@ -1,10 +1,10 @@
-﻿import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
   Clock, ChevronLeft, ChevronRight, Calendar, CheckCircle,
-  LogOut, LogIn, Timer, TrendingUp, Edit2, Save, Plus, Users,
-  AlertCircle, Briefcase, FileText, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Sparkles, Download, LayoutGrid, MapPin, Navigation, X
+  LogOut, LogIn, Timer, TrendingUp, Edit2, Plus, Users,
+  AlertCircle, Trash2, UserCircle, Coffee, Star, Zap, ChevronUp, ChevronDown, Loader2, Download, LayoutGrid, MapPin, Navigation
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import {
@@ -21,14 +21,17 @@ import {
 } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 
-import { getCurrentPosition, isWithinGeofence, distanceMeters } from '../../utils/geoUtils';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import WorkerDocuments from '../../components/common/WorkerDocuments';
 import WorkerProfile from './WorkerProfile';
 import RequestEntryCard from '../../components/worker/RequestEntryCard';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
-import { submitCorrection } from '../../utils/correctionsApi';
+
+import { useWorkerGeo } from './worker-dashboard/useWorkerGeo';
+import { useWorkerCorrections } from './worker-dashboard/useWorkerCorrections';
+import PendingCorrectionsPanel from './worker-dashboard/PendingCorrectionsPanel';
+import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
 
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
@@ -72,18 +75,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
 
   const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geoSuggestion, setGeoSuggestion] = useState(null); // { type, within, dist, lat, lng, client, logId }
-  const [geoSuggestionDismissed, setGeoSuggestionDismissed] = useState(false);
-  const [geoActionLoading, setGeoActionLoading] = useState(false);
   const [now, setNow] = useState(() => new Date());
-  const [deleteConfirm, setDeleteConfirm] = useState(null); // { date, logId }
-  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
-  const [pendingCollapsed, setPendingCollapsed] = useState(true);
-  const [dismissedCorrectionIds, setDismissedCorrectionIds] = useState(() => {
-    try { return new Set(JSON.parse(localStorage.getItem('wk_dismissed_corrections') || '[]')); }
-    catch { return new Set(); }
-  });
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -94,269 +86,35 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     })) return true;
     return false;
   }, [currentUser, clients]);
+
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(t);
   }, []);
 
-  // Safety net: refetch correctionItems periodicamente e ao focar a janela.
-  // O realtime do AppContext devia fazer isto, mas se a subscription falhar (RLS, drop, etc.)
-  // o card de pendentes fica preso. Re-fetch garante consistência.
-  useEffect(() => {
-    if (!supabase) return;
-    const refetch = async () => {
-      const { data, error } = await supabase.from('correction_items').select('*');
-      if (error) { console.warn('[WorkerDashboard] refetch correction_items falhou', error); return; }
-      if (Array.isArray(data)) setCorrectionItems(data);
-    };
-    const interval = setInterval(refetch, 30000);
-    const onFocus = () => { refetch(); };
-    window.addEventListener('focus', onFocus);
-    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); };
-  }, [supabase, setCorrectionItems]);
+  const {
+    geoLoading,
+    geoSuggestion, setGeoSuggestion,
+    geoSuggestionDismissed, setGeoSuggestionDismissed,
+    geoActionLoading,
+    handleSaveWithGeoCheck,
+    handleConfirmGeoSuggestion,
+    handleRegistarPausa,
+    handleRegistarSaida,
+  } = useWorkerGeo({ currentUser, clients, logs, systemSettings, saveToDb, isLimitedWorker, handleSaveEntry, setMainFormData });
 
-  const pendingItems = useMemo(() => {
-    const resolvedCorrectionIds = new Set(
-      (corrections || [])
-        .filter((c) => c.status === 'applied' || c.status === 'rejected')
-        .map((c) => c.id)
-    );
-    return (correctionItems || []).filter(
-      (i) =>
-        i.worker_id === currentUser?.id &&
-        i.item_status === 'pending' &&
-        !resolvedCorrectionIds.has(i.correction_id) &&
-        (i.date || '').startsWith(currentMonthStr)
-    );
-  }, [correctionItems, corrections, currentUser, currentMonthStr]);
-
-  const resolvedItems = useMemo(() => {
-    return (correctionItems || []).filter((i) => {
-      if (i.worker_id !== currentUser?.id) return false;
-      if (dismissedCorrectionIds.has(i.correction_id)) return false;
-      if (!(i.date || '').startsWith(currentMonthStr)) return false;
-      const corr = (corrections || []).find((c) => c.id === i.correction_id);
-      return corr && (corr.status === 'applied' || corr.status === 'rejected');
-    });
-  }, [correctionItems, corrections, currentUser, dismissedCorrectionIds, currentMonthStr]);
-
-  const dismissCorrection = (correctionId) => {
-    setDismissedCorrectionIds((prev) => {
-      const next = new Set(prev);
-      next.add(correctionId);
-      localStorage.setItem('wk_dismissed_corrections', JSON.stringify([...next]));
-      return next;
-    });
-  };
-
-  const labelKind = (item) => {
-    if (!item.before || (!item.before.startTime && !item.before.endTime)) return '✚ Novo dia';
-    if (!item.proposed || (!item.proposed.startTime && !item.proposed.endTime)) return '✖ Remover dia';
-    return '✎ Ajuste';
-  };
-
-  const handleSaveWithGeoCheck = async (formData, isMain, ds) => {
-    const client = clients.find(c => c.id === formData.clientId);
-    let enriched = formData;
-    if (client?.lat != null && client?.lng != null) {
-      setGeoLoading(true);
-      try {
-        const { lat, lng } = await getCurrentPosition();
-        const within = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
-        if (!within) {
-          const dist = Math.round(distanceMeters(lat, lng, client.lat, client.lng));
-          const ok = window.confirm(`Estás a ${dist} m da unidade (raio: ${client.geo_radius_m ?? 200} m). Confirmas o registo na mesma?`);
-          if (!ok) { setGeoLoading(false); return; }
-        }
-        enriched = { ...formData, check_in_lat: lat, check_in_lng: lng, geo_verified: within };
-      } catch (err) {
-        console.warn('[WorkerDashboard] GPS unavailable:', err.message);
-      } finally {
-        setGeoLoading(false);
-      }
-    }
-    handleSaveEntry(enriched, isMain, ds, (resetClientId) => {
-      setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: resetClientId || currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
-    });
-  };
-
-  // Sugestão de entrada/saída ao abrir o portal — só para workers limitados
-  useEffect(() => {
-    if (!currentUser || geoSuggestionDismissed) return;
-    if (!isLimitedWorker) return;
-    const client = clients.find(c => c.id === currentUser.defaultClientId);
-    if (!client) return;
-
-    const today = new Date().toLocaleDateString('en-CA');
-    const todayWorkerLogs = logs.filter(l =>
-      l.date === today &&
-      String(l.workerId) === String(currentUser.id) &&
-      String(l.clientId) === String(currentUser.defaultClientId)
-    );
-    const openLog = todayWorkerLogs.find(l => l.startTime && !l.endTime);
-
-    // Para limitados sem GPS - definir geoSuggestion imediatamente sem esperar GPS
-    if (isLimitedWorker && currentUser.gps_enabled !== true) {
-      if (openLog) {
-        setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
-      } else {
-        setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
-      }
-      return;
-    }
-
-    // Para workers com GPS ou não limitados - lógica existente
-    if (currentUser.gps_enabled !== true) return;
-
-    // Mostrar card imediatamente (sem GPS)
-    if (openLog) {
-      setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
-    } else {
-      setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
-    }
-
-    // Enriquecer com GPS se disponível e coordenadas configuradas
-    if (client.lat != null && client.lng != null) {
-      getCurrentPosition()
-        .then(({ lat, lng }) => {
-          const within = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
-          const dist = Math.round(distanceMeters(lat, lng, client.lat, client.lng));
-          if (openLog) {
-            setGeoSuggestion(prev => prev ? { ...prev, within, dist, lat, lng } : prev);
-          } else {
-            setGeoSuggestion(prev => prev ? { ...prev, within, dist, lat, lng } : prev);
-          }
-        })
-        .catch(() => {}); // GPS indisponível — card fica sem info de distância
-    }
-  }, [currentUser?.id, logs.length, isLimitedWorker, currentUser?.gps_enabled]);
-
-const getClientTime = (clientId) => {
-    const client = clients.find(c => c.id === clientId);
-    const tz = client?.timezone || 'Europe/Madrid';
-    const now = new Date();
-    const time = now.toLocaleTimeString('pt-PT', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
-    const date = now.toLocaleDateString('en-CA', { timeZone: tz });
-    return { time, date };
-  };
-
-  const nowTimeStrForEntry = () => {
-    const clientId = currentUser?.defaultClientId;
-    if (!clientId) {
-      const now = new Date();
-      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    }
-    return getClientTime(clientId).time;
-  };
-
-  const nowTimeStrForExit = () => {
-    const clientId = currentUser?.defaultClientId;
-    if (!clientId) {
-      const now = new Date();
-      return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    }
-    return getClientTime(clientId).time;
-};
-
-  const nowTimeStr = nowTimeStrForEntry; // backwards compat if needed
-
-  const handleConfirmGeoSuggestion = async () => {
-    if (!geoSuggestion || !currentUser) return;
-    setGeoActionLoading(true);
-    const entryTime = nowTimeStrForEntry();
-    const exitTime = nowTimeStrForExit();
-    const today = new Date().toLocaleDateString('en-CA');
-
-    try {
-      // Capturar GPS no momento do clique (mais fiável que no momento do card)
-      const pos = await getGpsSilent();
-      const client = geoSuggestion.client;
-      const lat = pos?.lat ?? null;
-      const lng = pos?.lng ?? null;
-      let verified = null;
-      if (pos && client?.lat != null && client?.lng != null) {
-        verified = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
-      }
-
-      if (geoSuggestion.type === 'entrada') {
-        const logId = `l${Date.now()}`;
-        await saveToDb('logs', logId, {
-          id: logId,
-          date: today,
-          workerId: currentUser.id,
-          clientId: currentUser.defaultClientId,
-          startTime: entryTime,
-          endTime: null,
-          breakStart: null,
-          breakEnd: null,
-          hours: 0,
-          description: '',
-          check_in_lat: lat,
-          check_in_lng: lng,
-          geo_verified: verified,
-        });
-      } else {
-        const existingLog = logs.find(l => l.id === geoSuggestion.logId);
-        if (existingLog) {
-          const interval = systemSettings?.minuteInterval || 30;
-          const tolerance = systemSettings?.entryToleranceMinutes ?? 10;
-          const roundedStart = roundTimeToIntervalTimeUp(existingLog.startTime, interval, tolerance);
-          const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
-          const hours = calculateDuration(roundedStart, roundedEnd, existingLog.breakStart, existingLog.breakEnd);
-          await saveToDb('logs', existingLog.id, {
-            ...existingLog,
-            endTime: exitTime,
-            hours,
-            check_out_lat: lat,
-            check_out_lng: lng,
-          });
-        }
-      }
-      setGeoSuggestion(null);
-      setGeoSuggestionDismissed(false);
-    } finally {
-      setGeoActionLoading(false);
-    }
-  };
-
-  const getGpsSilent = async () => {
-    try { return await getCurrentPosition(); } catch { return null; }
-  };
-
-  const handleRegistarPausa = async (tipo) => {
-    if (!todayOpenLog) return;
-    const timeStr = tipo === 'inicio' ? nowTimeStrForEntry() : nowTimeStrForExit();
-    const pos = await getGpsSilent();
-    const updates = tipo === 'inicio'
-      ? { breakStart: timeStr, break_start_lat: pos?.lat ?? null, break_start_lng: pos?.lng ?? null }
-      : { breakEnd: timeStr, break_end_lat: pos?.lat ?? null, break_end_lng: pos?.lng ?? null };
-    await saveToDb('logs', todayOpenLog.id, { ...todayOpenLog, ...updates });
-  };
-
-  const handleRegistarSaida = async () => {
-    if (!todayOpenLog) return;
-    setGeoActionLoading(true);
-    try {
-      const pos = await getGpsSilent();
-      const exitTime = nowTimeStrForExit();
-      const interval = systemSettings?.minuteInterval || 30;
-      const tolerance = systemSettings?.entryToleranceMinutes ?? 10;
-      const roundedStart = roundTimeToIntervalTimeUp(todayOpenLog.startTime, interval, tolerance);
-      const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
-      const hours = calculateDuration(roundedStart, roundedEnd, todayOpenLog.breakStart, todayOpenLog.breakEnd);
-      await saveToDb('logs', todayOpenLog.id, {
-        ...todayOpenLog,
-        endTime: exitTime,
-        hours,
-        check_out_lat: pos?.lat ?? null,
-        check_out_lng: pos?.lng ?? null,
-      });
-      setGeoSuggestion(null);
-      setGeoSuggestionDismissed(false);
-    } finally {
-      setGeoActionLoading(false);
-    }
-  };
+  const {
+    pendingItems,
+    resolvedItems,
+    pendingCollapsed,
+    setPendingCollapsed,
+    deleteConfirm,
+    setDeleteConfirm,
+    deleteSubmitting,
+    dismissCorrection,
+    labelKind,
+    handleSubmitDeletion,
+  } = useWorkerCorrections({ currentUser, correctionItems, setCorrectionItems, corrections, currentMonthStr, supabase, logs, setSuccessMsg });
 
   const [expandedSchedules, setExpandedSchedules] = useState(() =>
     currentUser?.defaultScheduleId ? new Set([currentUser.defaultScheduleId]) : new Set()
@@ -393,11 +151,8 @@ const getClientTime = (clientId) => {
     return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
   };
 
-  // Helper: obter data de início do trabalhador atual
   const workerDataInicio = currentUser?.dataInicio;
-  const workerStartDate = workerDataInicio
-    ? new Date(workerDataInicio)
-    : null;
+  const workerStartDate = workerDataInicio ? new Date(workerDataInicio) : null;
 
   const formatElapsed = (startTimeStr) => {
     const [h, m] = startTimeStr.split(':').map(Number);
@@ -418,12 +173,10 @@ const getClientTime = (clientId) => {
     l.startTime && !l.endTime
   );
 
-  // gps_enabled field controlled in Supabase worker record
   const gpsCheckInEnabled = currentUser?.gps_enabled === true;
 
-  // Filtrar pendingApprovals - só meses >= dataInicio
   const filteredPendingApprovals = pendingApprovals.filter(pending => {
-    if (!workerStartDate) return true; // Sem data de início = sem filtro
+    if (!workerStartDate) return true;
     const pendingMonth = new Date(pending.date);
     const pendingMonthStart = new Date(pendingMonth.getFullYear(), pendingMonth.getMonth(), 1);
     return pendingMonthStart >= workerStartDate;
@@ -482,121 +235,15 @@ const getClientTime = (clientId) => {
         </div>
       </nav>
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
-        {(pendingItems.length > 0 || resolvedItems.length > 0) && (
-          <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-            <button
-              onClick={() => setPendingCollapsed(v => !v)}
-              className="w-full flex items-center justify-between gap-2 text-left"
-            >
-              <div className="flex items-center gap-2">
-                <Clock size={16} className="text-amber-600" />
-                <h3 className="text-sm font-black text-amber-700">
-                  {pendingItems.length > 0
-                    ? `Você tem ${pendingItems.length} pedido${pendingItems.length > 1 ? 's' : ''} pendente${pendingItems.length > 1 ? 's' : ''} de resposta`
-                    : 'Pedidos respondidos'}
-                </h3>
-              </div>
-              {pendingCollapsed
-                ? <ChevronDown size={16} className="text-amber-500 flex-shrink-0" />
-                : <ChevronUp size={16} className="text-amber-500 flex-shrink-0" />}
-            </button>
-            {!pendingCollapsed && (
-              <ul className="space-y-2 mt-3">
-                {pendingItems.map((item) => {
-                  const hasBefore = item.before && (item.before.startTime || item.before.endTime);
-                  const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
-                  const hasBreak = (t) => t && (t.breakStart || t.breakEnd);
-                  return (
-                    <li key={item.id} className="text-xs bg-white/70 rounded-xl p-3 border border-amber-100">
-                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
-                        <span className="font-mono font-black text-amber-900">{item.date}</span>
-                        <span className="text-amber-400">·</span>
-                        <span className="font-black uppercase tracking-widest text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
-                          {labelKind(item)}
-                        </span>
-                      </div>
-                      {hasBefore && (
-                        <div className="flex items-center gap-2 text-slate-500">
-                          <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
-                          <span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>
-                          {hasBreak(item.before) && (
-                            <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>
-                          )}
-                        </div>
-                      )}
-                      {hasProposed && (
-                        <div className="flex items-center gap-2 text-amber-800 font-bold">
-                          <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-amber-600">Solicitado</span>
-                          <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
-                          {hasBreak(item.proposed) && (
-                            <span className="text-amber-500 font-normal">· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>
-                          )}
-                        </div>
-                      )}
-                      {!hasBefore && !hasProposed && (
-                        <div className="text-slate-500 italic text-[11px]">Sem detalhes de horário</div>
-                      )}
-                    </li>
-                  );
-                })}
-                {resolvedItems.length > 0 && (() => {
-                  const byCorrectionId = resolvedItems.reduce((acc, item) => {
-                    if (!acc[item.correction_id]) acc[item.correction_id] = [];
-                    acc[item.correction_id].push(item);
-                    return acc;
-                  }, {});
-                  return Object.entries(byCorrectionId).map(([corrId, items]) => {
-                    const corr = (corrections || []).find((c) => c.id === corrId);
-                    const accepted = corr?.status === 'applied';
-                    return (
-                      <li key={corrId} className={`text-xs rounded-xl p-3 border ${accepted ? 'bg-emerald-50/80 border-emerald-200' : 'bg-rose-50/80 border-rose-200'}`}>
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`font-black text-[10px] uppercase tracking-widest px-2 py-0.5 rounded-md ${accepted ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                              {accepted ? '✓ Aceite' : '✕ Rejeitado'}
-                            </span>
-                            <span className={`font-mono font-black ${accepted ? 'text-emerald-900' : 'text-rose-900'}`}>{items[0]?.date}{items.length > 1 ? ` +${items.length - 1}` : ''}</span>
-                          </div>
-                          <button
-                            onClick={() => dismissCorrection(corrId)}
-                            className={`p-1 rounded-lg transition-colors ${accepted ? 'text-emerald-400 hover:text-emerald-700 hover:bg-emerald-100' : 'text-rose-400 hover:text-rose-700 hover:bg-rose-100'}`}
-                            title="Fechar"
-                          >
-                            <X size={14} />
-                          </button>
-                        </div>
-                        {items.map((item) => {
-                          const hasBefore = item.before && (item.before.startTime || item.before.endTime);
-                          const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
-                          const hasBreak = (t) => t && (t.breakStart || t.breakEnd);
-                          return (
-                            <div key={item.id} className="mt-1">
-                              {items.length > 1 && <span className="font-mono text-[10px] text-slate-400 mr-2">{item.date}</span>}
-                              {hasBefore && (
-                                <div className="flex items-center gap-2 text-slate-500">
-                                  <span className="text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 text-slate-400">Original</span>
-                                  <span className="font-mono">{item.before.startTime} → {item.before.endTime}</span>
-                                  {hasBreak(item.before) && <span className="text-slate-400">· pausa {item.before.breakStart || '--:--'}–{item.before.breakEnd || '--:--'}</span>}
-                                </div>
-                              )}
-                              {hasProposed && (
-                                <div className={`flex items-center gap-2 font-bold ${accepted ? 'text-emerald-800' : 'text-rose-800'}`}>
-                                  <span className={`text-[10px] font-black uppercase tracking-widest w-20 flex-shrink-0 ${accepted ? 'text-emerald-600' : 'text-rose-600'}`}>Solicitado</span>
-                                  <span className="font-mono">{item.proposed.startTime} → {item.proposed.endTime}</span>
-                                  {hasBreak(item.proposed) && <span className={`font-normal ${accepted ? 'text-emerald-500' : 'text-rose-500'}`}>· pausa {item.proposed.breakStart || '--:--'}–{item.proposed.breakEnd || '--:--'}</span>}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </li>
-                    );
-                  });
-                })()}
-              </ul>
-            )}
-          </div>
-        )}
+        <PendingCorrectionsPanel
+          pendingItems={pendingItems}
+          resolvedItems={resolvedItems}
+          pendingCollapsed={pendingCollapsed}
+          setPendingCollapsed={setPendingCollapsed}
+          dismissCorrection={dismissCorrection}
+          labelKind={labelKind}
+          corrections={corrections}
+        />
         {workerTab === 'perfil' && (
           <WorkerProfile
             worker={currentUser}
@@ -747,7 +394,7 @@ const getClientTime = (clientId) => {
             <div className="flex items-center justify-center md:justify-start gap-3 bg-white/10 p-2 rounded-2xl w-full sm:w-fit">
               <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white"><ChevronLeft size={16} /></button>
               <div className="text-indigo-200 flex items-center gap-2 text-sm font-bold font-mono uppercase tracking-widest min-w-[120px] justify-center"><Calendar size={18} /> {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</div>
-              <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white"><ChevronRight size={16} /></button>
+              <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white"><ChevronLeft size={16} className="rotate-180" /></button>
             </div>
             {expectedHours > 0 && (
               <button onClick={() => setShowProgress(!showProgress)} className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-300/80 hover:text-indigo-200 transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5 mx-auto md:mx-0">
@@ -819,7 +466,6 @@ const getClientTime = (clientId) => {
                 <div className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
               </div>
 
-              {/* Pausa info */}
               {todayOpenLog.breakStart && !todayOpenLog.breakEnd && (
                 <div className="bg-amber-400/20 border border-amber-300/30 rounded-xl px-4 py-2 flex items-center gap-2">
                   <Coffee size={14} className="text-amber-200" />
@@ -827,21 +473,18 @@ const getClientTime = (clientId) => {
                 </div>
               )}
 
-              {/* Botões */}
               <div className="flex gap-2 flex-wrap">
-                {/* Pausa */}
                 {!todayOpenLog.breakStart && (
-                  <button onClick={() => handleRegistarPausa('inicio')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-white/15 hover:bg-white/25 text-white transition-all active:scale-95">
+                  <button onClick={() => handleRegistarPausa('inicio', todayOpenLog)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-white/15 hover:bg-white/25 text-white transition-all active:scale-95">
                     <Coffee size={14} /> Iniciar Pausa
                   </button>
                 )}
                 {todayOpenLog.breakStart && !todayOpenLog.breakEnd && (
-                  <button onClick={() => handleRegistarPausa('fim')} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-amber-400/30 hover:bg-amber-400/50 text-amber-100 transition-all active:scale-95">
+                  <button onClick={() => handleRegistarPausa('fim', todayOpenLog)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-amber-400/30 hover:bg-amber-400/50 text-amber-100 transition-all active:scale-95">
                     <Coffee size={14} /> Terminar Pausa
                   </button>
                 )}
-                {/* Saída */}
-                <button onClick={handleRegistarSaida} disabled={geoActionLoading} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-rose-500 hover:bg-rose-600 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50">
+                <button onClick={() => handleRegistarSaida(todayOpenLog)} disabled={geoActionLoading} className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wide bg-rose-500 hover:bg-rose-600 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50">
                   {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
                   Registar Saída
                 </button>
@@ -850,7 +493,7 @@ const getClientTime = (clientId) => {
           </div>
         )}
 
-        {/* CARD ENTRADA / SAÍDA — só aparece se não há já um log em aberto (nesse caso o card "Em serviço" trata de tudo) */}
+        {/* CARD ENTRADA / SAÍDA */}
         {geoSuggestion && !geoSuggestionDismissed && !todayOpenLog && (
           <div className={`mb-6 rounded-[2rem] border shadow-xl overflow-hidden animate-in slide-in-from-top-4 duration-500 ${geoSuggestion.within === false ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
             <div className="p-6 flex flex-col md:flex-row items-center gap-5">
@@ -1088,89 +731,12 @@ Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
           </div>
 
-          {deleteConfirm && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-                <h3 className="text-lg font-black text-slate-800 mb-2">Confirmar pedido de exclusão</h3>
-                <p className="text-sm text-slate-600 mb-6">Ao confirmar, será enviado um pedido para eliminar o registo de <strong>{deleteConfirm.date}</strong>. O administrador analisará o pedido.</p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="flex-1 py-2.5 bg-slate-200 text-slate-700 rounded-xl font-bold text-sm uppercase hover:bg-slate-300 transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    onClick={async (e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      console.log('[WorkerDashboard] Confirmar clicked', { deleteConfirm, logsCount: logs?.length, supabase: !!supabase });
-                      if (deleteSubmitting) return;
-                      const log = logs.find(l => l.id === deleteConfirm.logId);
-                      if (!log) {
-                        console.warn('[WorkerDashboard] log not found', deleteConfirm.logId);
-                        alert('Registo não encontrado. A fechar modal.');
-                        setDeleteConfirm(null);
-                        return;
-                      }
-                      if (!supabase) {
-                        alert('Sistema ainda não está pronto. Aguarde alguns segundos e tente novamente.');
-                        return;
-                      }
-                      const dup = (correctionItems || []).some((i) => {
-                        if (i.worker_id !== String(currentUser?.id)) return false;
-                        if (i.date !== deleteConfirm.date) return false;
-                        if (i.item_status !== 'pending') return false;
-                        const corr = (corrections || []).find((c) => c.id === i.correction_id);
-                        if (!corr) return false;
-                        if (corr.status === 'applied' || corr.status === 'rejected') return false;
-                        return corr.client_id === String(log.clientId);
-                      });
-                      if (dup) {
-                        alert('Já existe um pedido pendente para esta data e cliente. Aguarde resposta do administrador.');
-                        return;
-                      }
-                      setDeleteSubmitting(true);
-                      try {
-                        await submitCorrection(supabase, {
-                          clientId: log.clientId,
-                          month: deleteConfirm.date.substring(0, 7),
-                          type: 'deletion_request',
-                          submittedBy: currentUser?.id,
-                          justification: `Pedido de eliminação do registo de ${deleteConfirm.date}`,
-                          items: [{
-                            workerId: currentUser?.id,
-                            workerName: currentUser?.name,
-                            date: deleteConfirm.date,
-                            before: {
-                              startTime: log.startTime,
-                              endTime: log.endTime,
-                              breakStart: log.breakStart,
-                              breakEnd: log.breakEnd,
-                            },
-                            proposed: null,
-                          }],
-                        });
-                        setDeleteConfirm(null);
-                        setSuccessMsg('Pedido de exclusão submetido!');
-                        setTimeout(() => setSuccessMsg(''), 4000);
-                      } catch (err) {
-                        console.error('[WorkerDashboard] submitCorrection error', err);
-                        alert('Erro ao submeter pedido: ' + (err?.message || err));
-                      } finally {
-                        setDeleteSubmitting(false);
-                      }
-                    }}
-                    disabled={deleteSubmitting}
-                    className="flex-1 py-2.5 bg-rose-600 text-white rounded-xl font-bold text-sm uppercase hover:bg-rose-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {deleteSubmitting && <Loader2 size={14} className="animate-spin" />}
-                    Confirmar
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <DeleteConfirmModal
+            deleteConfirm={deleteConfirm}
+            setDeleteConfirm={setDeleteConfirm}
+            deleteSubmitting={deleteSubmitting}
+            onConfirm={handleSubmitDeletion}
+          />
           </>)}
       </main>
     </div>
