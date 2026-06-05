@@ -1,42 +1,36 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-21T00:28:49.427Z",
+  "timestamp": "2026-06-05T00:00:00.000Z",
   "phase": null,
-  "phase_name": "Ad-hoc UI fixes — Portal Cliente & Validação",
+  "phase_name": "Ad-hoc Refactoring — Split Large Files",
   "phase_dir": null,
   "plan": null,
   "task": null,
   "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Fix responsividade mobile modais email + rejeitar (app.jsx)", "status": "done", "commit": "eab11fc"},
-    {"id": 2, "name": "Remover ecrã seleção modo — ir direto para editor precisão", "status": "done", "commit": "a8641e5"},
-    {"id": 3, "name": "Redesenhar editor precisão — worker tabs, Entrada/Saída + pausa expansível", "status": "done", "commit": "a8641e5"},
-    {"id": 4, "name": "Mostrar total horas por trabalhador + antes/depois na edição", "status": "done", "commit": "5f5b096"},
-    {"id": 5, "name": "Fix service worker — forçar activação imediata para evitar página em branco", "status": "done", "commit": "b35efce"}
+    {"id": 1, "name": "Extract TRANSLATIONS + LoginView from ClientPortal.jsx", "status": "done", "commit": "42867e5"},
+    {"id": 2, "name": "Extract autoMatchEngine.js (5 functions) from MovimentacoesTab.jsx", "status": "done", "commit": "42867e5"},
+    {"id": 3, "name": "Remove duplicate utils from ReconciliacaoAdmin.jsx", "status": "done", "commit": "42867e5"},
+    {"id": 4, "name": "Fix browser console warnings (button nesting, duplicate keys, Router flags)", "status": "done", "commit": "7173409"}
   ],
-  "remaining_tasks": [],
-  "blockers": [
-    {
-      "description": "Portal do cliente mostra página em branco — causa suspeita: SW antigo a servir ficheiros cacheados com hashes desactualizados",
-      "type": "technical",
-      "workaround": "SW fix deployed (b35efce). User should hard refresh (Ctrl+Shift+R) once. Se persistir, adicionar React ErrorBoundary para capturar o crash exacto."
-    }
+  "remaining_tasks": [
+    {"id": 5, "name": "Refactor CostReports.jsx (~1246 lines)", "status": "pending"},
+    {"id": 6, "name": "Refactor WorkerDashboard.jsx (~1135 lines)", "status": "pending"},
+    {"id": 7, "name": "Refactor CorrectionsInbox.jsx (~1052 lines)", "status": "pending"},
+    {"id": 8, "name": "Refactor pdfSigningService.js (~1029 lines)", "status": "pending"},
+    {"id": 9, "name": "Continue refactoring ClientPortal.jsx (~2553 lines)", "status": "pending"},
+    {"id": 10, "name": "Continue refactoring ReconciliacaoAdmin.jsx (~1996 lines)", "status": "pending"},
+    {"id": 11, "name": "Continue refactoring MovimentacoesTab.jsx (~1634 lines)", "status": "pending"}
   ],
-  "human_actions_pending": [
-    {
-      "action": "Testar portal do cliente após deploy b35efce — verificar se página em branco foi resolvida",
-      "context": "Fix ao service worker foi deployed mas não confirmado pelo utilizador",
-      "blocking": false
-    }
-  ],
+  "blockers": [],
+  "human_actions_pending": [],
   "decisions": [
-    {"decision": "Remover step de seleção de modo (Quick vs Precision) — ir direto para editor precisão", "rationale": "Utilizador pediu simplificação do fluxo", "phase": "ad-hoc"},
-    {"decision": "Worker tabs horizontais em vez de painel lateral", "rationale": "Melhor para mobile, mais intuitivo", "phase": "ad-hoc"},
-    {"decision": "Campos Entrada/Saída em destaque + pausa como toggle expansível", "rationale": "Ordem pedida pelo utilizador — simplifica UX sem perder funcionalidade", "phase": "ad-hoc"},
-    {"decision": "Service worker com SKIP_WAITING + controllerchange reload", "rationale": "Evitar conflito entre SW antigo e novos hashes após deploy", "phase": "ad-hoc"}
+    {"decision": "Target file size ~800 lines max per file", "rationale": "Agreed upon in earlier sessions", "phase": "ad-hoc"},
+    {"decision": "Extract into subdirectory named after parent (e.g., cost-reports/ for CostReports.jsx)", "rationale": "Consistent pattern from previous extractions", "phase": "ad-hoc"},
+    {"decision": "Functions that close over component state stay inline; pure functions with explicit params move out", "rationale": "Avoids circular deps and keeps logic traceable", "phase": "ad-hoc"}
   ],
-  "uncommitted_files": [".planning/STATE.md", "public/version.json"],
-  "next_action": "Confirmar com utilizador se portal do cliente já abre correctamente. Se persistir, adicionar React ErrorBoundary em app.jsx para capturar o erro exacto.",
-  "context_notes": "Sessão de melhorias ad-hoc ao portal do cliente e portal de validação. Todas as mudanças estão deployed em app-magnetic.vercel.app. Phase 18 (reconciliação) completa. Phase 14 (editor blocos JSON) em planning. Próximo trabalho formal: /gsd-execute-phase 14."
+  "uncommitted_files": [".planning/STATE.md", "package.json", "package-lock.json", "public/version.json"],
+  "next_action": "Read src/features/admin/CostReports.jsx, identify extractable pieces, create src/features/admin/cost-reports/ directory with extracted modules.",
+  "context_notes": "Ad-hoc refactoring session. No active GSD phase. All changes are local (not deployed). Production build verified clean after each set of extractions."
 }
