@@ -3,34 +3,30 @@
   "timestamp": "2026-06-05T00:00:00.000Z",
   "phase": null,
   "phase_name": "Ad-hoc Refactoring — Split Large Files",
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
     {"id": 1, "name": "Extract TRANSLATIONS + LoginView from ClientPortal.jsx", "status": "done", "commit": "42867e5"},
-    {"id": 2, "name": "Extract autoMatchEngine.js (5 functions) from MovimentacoesTab.jsx", "status": "done", "commit": "42867e5"},
+    {"id": 2, "name": "Extract autoMatchEngine.js from MovimentacoesTab.jsx", "status": "done", "commit": "42867e5"},
     {"id": 3, "name": "Remove duplicate utils from ReconciliacaoAdmin.jsx", "status": "done", "commit": "42867e5"},
-    {"id": 4, "name": "Fix browser console warnings (button nesting, duplicate keys, Router flags)", "status": "done", "commit": "7173409"}
+    {"id": 4, "name": "Fix browser console warnings", "status": "done", "commit": "7173409"},
+    {"id": 5, "name": "Refactor CostReports.jsx (1336→610 lines)", "status": "done", "commit": "a86c81f"},
+    {"id": 6, "name": "Refactor ReconciliacaoAdmin.jsx (2121→565 lines)", "status": "done", "commit": "9c2304b"}
   ],
   "remaining_tasks": [
-    {"id": 5, "name": "Refactor CostReports.jsx (~1246 lines)", "status": "pending"},
-    {"id": 6, "name": "Refactor WorkerDashboard.jsx (~1135 lines)", "status": "pending"},
-    {"id": 7, "name": "Refactor CorrectionsInbox.jsx (~1052 lines)", "status": "pending"},
-    {"id": 8, "name": "Refactor pdfSigningService.js (~1029 lines)", "status": "pending"},
-    {"id": 9, "name": "Continue refactoring ClientPortal.jsx (~2553 lines)", "status": "pending"},
-    {"id": 10, "name": "Continue refactoring ReconciliacaoAdmin.jsx (~1996 lines)", "status": "pending"},
-    {"id": 11, "name": "Continue refactoring MovimentacoesTab.jsx (~1634 lines)", "status": "pending"}
+    {"id": 7, "name": "Refactor WorkerDashboard.jsx (~1188 lines)", "status": "pending"},
+    {"id": 8, "name": "Refactor MovimentacoesTab.jsx (~1789 lines)", "status": "pending"},
+    {"id": 9, "name": "Refactor CorrectionsInbox.jsx (~1115 lines)", "status": "pending"},
+    {"id": 10, "name": "Refactor pdfSigningService.js (~1150 lines)", "status": "pending"},
+    {"id": 11, "name": "Refactor ClientPortal.jsx (~2726 lines)", "status": "pending"}
   ],
   "blockers": [],
   "human_actions_pending": [],
   "decisions": [
-    {"decision": "Target file size ~800 lines max per file", "rationale": "Agreed upon in earlier sessions", "phase": "ad-hoc"},
-    {"decision": "Extract into subdirectory named after parent (e.g., cost-reports/ for CostReports.jsx)", "rationale": "Consistent pattern from previous extractions", "phase": "ad-hoc"},
-    {"decision": "Functions that close over component state stay inline; pure functions with explicit params move out", "rationale": "Avoids circular deps and keeps logic traceable", "phase": "ad-hoc"}
+    {"decision": "Target ~800 lines max per file", "rationale": "Agreed in earlier sessions", "phase": "ad-hoc"},
+    {"decision": "Pattern: JSX sections → child components; stateful actions → custom hook; pure utils → utils file", "rationale": "Validated in CostReports + ReconciliacaoAdmin refactors", "phase": "ad-hoc"},
+    {"decision": "Extract into subdirectory named after parent (e.g., reconciliacao/ for ReconciliacaoAdmin.jsx)", "rationale": "Consistent pattern", "phase": "ad-hoc"}
   ],
   "uncommitted_files": [".planning/STATE.md", "package.json", "package-lock.json", "public/version.json"],
-  "next_action": "Read src/features/admin/CostReports.jsx, identify extractable pieces, create src/features/admin/cost-reports/ directory with extracted modules.",
-  "context_notes": "Ad-hoc refactoring session. No active GSD phase. All changes are local (not deployed). Production build verified clean after each set of extractions."
+  "next_action": "Read src/features/worker/WorkerDashboard.jsx (1188 lines) — identify extractable JSX sections + pure utils. Then MovimentacoesTab.jsx (1789 lines).",
+  "context_notes": "Ad-hoc refactoring. No active GSD phase. Build fails due to missing public/index.html (pre-existing, unrelated). Pattern established: useXxxRun hook + JSX child components."
 }
