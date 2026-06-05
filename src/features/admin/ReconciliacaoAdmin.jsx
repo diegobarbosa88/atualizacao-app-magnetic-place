@@ -11,6 +11,7 @@ import TipoBadge from './TipoBadge';
 import AssociacaoManualModal from './reconciliacao/AssociacaoManualModal';
 import OrfaoBancoModal from './reconciliacao/OrfaoBancoModal';
 import AssocClienteModal from './reconciliacao/AssocClienteModal';
+import { extractMonthYearName, previousMonth, matchClientByTokens } from './movimentacoes/txUtils';
 
 import { useApp } from '../../context/AppContext';
 
@@ -27,68 +28,6 @@ const COR_MAP = {
   gray:    { bg: 'bg-gray-100',    text: 'text-gray-600',    ring: 'ring-gray-400',    dot: 'bg-gray-400'    },
 };
 const CORES_DISPONIVEIS = ['indigo', 'violet', 'emerald', 'blue', 'cyan', 'orange', 'amber', 'rose', 'slate', 'gray'];
-
-function extractMonthYearName(transactionsJson) {
-  if (!transactionsJson || transactionsJson.length === 0) return null;
-  const firstDate = transactionsJson[0]?.data;
-  if (!firstDate) return null;
-  try {
-    const date = new Date(firstDate + 'T00:00:00');
-    return date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-  } catch {
-    return null;
-  }
-}
-
-// ── Utilitários de auto-associação ───────────────────────────────────────────
-function previousMonth(dateStr) {
-  if (!dateStr || dateStr.length < 7) {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return d.toISOString().substring(0, 7);
-  }
-  const [year, month] = dateStr.substring(0, 7).split('-').map(Number);
-  const d = new Date(year, month - 2);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
-const LEGAL_SUFFIXES = /\b(lda|unipessoal|s\.?a\.?|ltd|lda\.|plc|inc|corp|sl|srl|bv)\b\.?/gi;
-
-function normStrClient(s) {
-  return String(s)
-    .toLowerCase().trim()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // remover diacríticos
-    .replace(/[.,\-_/\\()'"]/g, ' ')                    // pontuação → espaço
-    .replace(LEGAL_SUFFIXES, '')                         // sufixos legais
-    .replace(/\s+/g, ' ').trim();
-}
-
-// Extrai tokens significativos (3+ chars) de um nome
-function sigTokens(name) {
-  return normStrClient(name).split(' ').filter(w => w.length >= 3);
-}
-
-function matchClientByDesc(descricao, clients) {
-  const descNorm = normStrClient(descricao || '');
-  let bestMatch = null;
-  let bestScore = 0;
-
-  for (const client of (clients || [])) {
-    const tokens = sigTokens(client.name || '');
-    if (tokens.length === 0) continue;
-
-    // Conta quantos tokens do nome do cliente aparecem na descrição
-    const hits = tokens.filter(t => descNorm.includes(t)).length;
-    const score = hits / tokens.length; // 0-1
-
-    // Exige pelo menos 75% dos tokens a corresponder (≥1 token sempre)
-    if (hits >= 1 && score >= 0.75 && score > bestScore) {
-      bestScore = score;
-      bestMatch = client;
-    }
-  }
-  return bestMatch;
-}
 
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
@@ -177,7 +116,7 @@ export default function ReconciliacaoAdmin() {
         const tx = item.transacao ?? item;
         if (tx?.tipo !== 'credito') return;
         if (jaAssociados.has(`${key}_${idx}`)) return;
-        const client = matchClientByDesc(tx.descricao, clients);
+        const client = matchClientByTokens(tx.descricao, clients);
         if (!client) return;
         toInsert.push({
           client_id: client.id,
