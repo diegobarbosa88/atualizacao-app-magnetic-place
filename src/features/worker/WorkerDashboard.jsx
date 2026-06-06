@@ -243,11 +243,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           ) : (
             <div className="mb-8">
               {successMsg && (
+
                 <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl flex items-center justify-center gap-3 border border-emerald-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
                   <CheckCircle size={24} className="text-emerald-500" /><span>{successMsg}</span>
                 </div>
               )}
-              {isLimitedWorker ? (
+              {currentMonthStr === todayStr.substring(0, 7) && (isLimitedWorker ? (
                 <RequestEntryCard
                   currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
                   onSuccess={() => { setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
@@ -267,7 +268,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   onCancel={() => setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' })}
                   showDate systemSettings={systemSettings} title="Novo Registo de Atividade"
                 />
-              )}
+              ))}
             </div>
           )}
 
