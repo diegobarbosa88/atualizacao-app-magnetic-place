@@ -1,13 +1,12 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
-  Settings, FileText, BarChart3, Sparkles, Bell, LogOut
+  Settings, FileText, Sparkles, Bell
 } from 'lucide-react';
 import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
@@ -21,6 +20,9 @@ import NotificationsAdmin from './NotificationsAdmin';
 import AdminOverview from './AdminOverview';
 import AdminReports from './AdminReports';
 import AdminSettings from './AdminSettings';
+import AdminSidebar from './AdminSidebar';
+import AdminTopbar from './AdminTopbar';
+import AdminClassicNav from './AdminClassicNav';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -132,7 +134,7 @@ function AdminDashboard(props) {
 
   const markNotifRead = async (id) => {
     const previousState = optimisticReadIds;
-    setOptimisticReadIds(prev => new Set([...prev, id]));
+    setOptimisticReadIds(prev => new Set([prev, id]));
     try {
       if (!currentUser?.id || !supabase) return;
       const notif = appNotifications.find(n => n.id === id);
@@ -184,6 +186,7 @@ function AdminDashboard(props) {
   }, [activeTab, portalSubTabFromUrl, currentUser?.id]);
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const notifDropdownRef = useRef(null);
   useEffect(() => {
     if (!showNotifDropdown) return;
@@ -273,50 +276,187 @@ function AdminDashboard(props) {
     return (y && m && day) ? `${day}/${m}/${y}` : 'Data inválida';
   };
 
+  const tabContent = (
+    <>
+      {auditWorkerId && (() => {
+        const currentApproval = approvals.find(a => a.workerId === auditWorkerId && a.month === currentMonthStr);
+        return (
+          <div className="mb-6 bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-8 lg:p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-10 gap-3 md:gap-6">
+              <div className="flex items-center gap-3 sm:gap-6"><div className="bg-slate-900 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
+              <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-[2.5rem] border border-slate-200">
+                {currentApproval && (
+                  <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-[2rem] shadow-sm flex items-center gap-4 border border-emerald-200">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle size={20} />
+                      <div className="flex flex-col">
+                        <span className="text-[8px] font-black uppercase opacity-70 leading-none">Status</span>
+                        <span className="text-sm font-black leading-none">Aprovado</span>
+                      </div>
+                    </div>
+                    <button onClick={() => handleDelete('approvals', currentApproval.id)} className="bg-white p-2 rounded-full text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100" title="Desbloquear Mês para o Trabalhador"><Unlock size={14} /></button>
+                  </div>
+                )}
+                <div className="bg-slate-900 text-white px-8 py-3 rounded-[2rem] shadow-lg flex flex-col items-center"><span className="text-[8px] font-black uppercase opacity-70">Total Mês</span><span className="text-xl font-black">{formatHours(auditedMonthLogs.reduce((a, b) => a + b.hours, 0))}</span></div>
+                <button onClick={() => setAuditWorkerId(null)} className="p-4 bg-white text-red-500 rounded-full border border-red-100 shadow-md"><X size={28} /></button>
+              </div>
+            </div>
+            <div className="mb-8 p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-bold text-indigo-700 flex items-center gap-2"><Sparkles size={16} /> Resumo de Produtividade AI ✨</h4>
+                <button onClick={generateWorkerSummary} disabled={isSummarizing || auditedMonthLogs.length === 0} className="text-[10px] bg-indigo-600 text-white px-4 py-1.5 rounded-full font-black uppercase">{isSummarizing ? "Gerando..." : "Gerar com IA"}</button>
+              </div>
+              <p className="text-sm text-slate-600 italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
+            </div>
+            <div className="overflow-x-auto rounded-[3rem] border border-slate-100 bg-white shadow-inner"><table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest w-16 sm:w-32">Dia</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
+              <tbody className="divide-y divide-slate-50">
+                {daysInMonthList.map(ds => {
+                  const dayLogs = logs.filter(l => l.workerId === auditWorkerId && l.date === ds);
+                  const isCurrentInline = inlineEditingDate === ds;
+                  return (
+                    <React.Fragment key={ds}>
+                      <tr className="group">
+                        <td className="px-4 sm:px-10 py-4 sm:py-8 align-top"><p className="text-2xl sm:text-3xl font-black">{new Date(ds).getDate()}</p></td>
+                        <td className="px-4 sm:px-10 py-4 sm:py-8">
+                          <div className="space-y-3">
+                            {dayLogs.map(log => (
+                              <div key={log.id} className="bg-white p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-100/50 flex items-center justify-between shadow-sm gap-2">
+                                <div className="flex items-center gap-4">
+                                  <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl uppercase border border-indigo-100">{clients.find(c => c.id === log.clientId)?.name}</span>
+                                  <div className="text-sm font-bold font-mono">{log.startTime}-{log.endTime} {log.breakStart ? `(P: ${log.breakStart})` : ''}</div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <span className="text-2xl font-black">{formatHours(log.hours)}</span>
+                                  <button onClick={() => handleDelete('logs', log.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Apagar Registo"><Trash2 size={18} /></button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-10 py-4 sm:py-8 text-right align-top">
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => handleQuickRegister(ds)} title="Registo Rápido" className="p-3 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-2xl transition-all"><Zap size={20} /></button>
+                            <button onClick={() => handleOpenInlineForm(ds)} className="p-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all"><Plus size={20} /></button>
+                          </div>
+                        </td>
+                      </tr>
+                      {isCurrentInline && (
+                        <tr><td colSpan="3" className="px-4 sm:px-10 py-4 bg-indigo-50/30">
+                          <EntryForm isInline data={inlineFormData} clients={clients} assignedClients={auditedWorker?.assignedClients} onChange={setInlineFormData} onSave={() => { handleSaveEntry(inlineFormData, false, ds); setInlineEditingDate(null); }} onCancel={() => setInlineEditingDate(null)} />
+                        </td></tr>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table></div>
+          </div>
+        );
+      })()}
+
+      {!auditWorkerId && activeTab === 'overview' && (
+        <AdminOverview currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} />
+      )}
+
+      {!auditWorkerId && activeTab === 'reports' && (
+        <AdminReports printingReport={printingReport} setPrintingReport={setPrintingReport} />
+      )}
+
+      {!auditWorkerId && activeTab === 'team' && (
+        <TeamManager onLogin={onLogin} />
+      )}
+
+      {!auditWorkerId && activeTab === 'clients' && (
+        <ClientManager />
+      )}
+
+      {!auditWorkerId && activeTab === 'portal_validacao' && (
+        <ValidationPortalProvider portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
+          <ValidationPortal
+            onLogin={onLogin}
+            setClienteSelecionado={setClienteSelecionado}
+            setModalEmailAberto={setModalEmailAberto}
+            setPrintingReport={setPrintingReport}
+            initialCorrectionId={selectedCorrectionId}
+            onCorrectionNavigated={() => setSelectedCorrectionId(null)}
+          />
+        </ValidationPortalProvider>
+      )}
+
+      {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
+
+      {!auditWorkerId && activeTab === 'costs' && <CostReports />}
+
+      {!auditWorkerId && activeTab === 'documentos' && (
+        <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} handleGenerateClientReport={handleGenerateClientReport} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} logs={logs} clientApprovals={clientApprovals} />
+      )}
+
+      {!auditWorkerId && activeTab === 'notificacoes' && (
+        <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
+      )}
+
+      {!auditWorkerId && activeTab === 'settings' && (
+        <AdminSettings />
+      )}
+    </>
+  );
+
+  const navMode = systemSettings?.navMode || 'sidebar';
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-12 font-sans text-slate-900">
-      <nav className="bg-white border-b border-slate-200 min-h-[4rem] sticky top-0 z-40 shadow-sm py-3 px-4 md:px-0">
-        <div className="mx-auto md:px-10 lg:px-16 flex flex-col md:flex-row items-center justify-between gap-2 md:gap-6" style={{ maxWidth: `var(--app-max-width)` }}>
-          {/* Lado Esquerdo: Logo */}
-          <div className="flex items-center justify-between w-full md:w-auto">
-            <div className="flex items-center gap-3 font-bold text-base tracking-tighter uppercase shrink-0">
-              <CompanyLogo className="h-14 w-auto" />
-              <span className="hidden md:inline">{systemSettings.companyName}</span>
-            </div>
-            {/* Mobile Actions */}
-            <div className="flex md:hidden items-center gap-1">
-              <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative">
-                <Bell size={17} />
-                {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}
-              </button>
-              {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"><Users size={18} /></button>}
-              <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"><BarChart3 size={18} /></button>
-              <button onClick={onLogout} className="p-1 text-slate-400"><LogOut size={18} /></button>
-            </div>
-          </div>
+    <div className={`min-h-screen bg-slate-50 font-sans text-slate-900 ${navMode === 'topbar' ? '' : 'flex'}`}>
+      {navMode === 'topbar' ? (
+        <AdminClassicNav
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          setAuditWorkerId={setAuditWorkerId}
+          totalPendingCorrections={totalPendingCorrections}
+          currentUser={currentUser}
+          unreadCount={unreadCount}
+          systemSettings={systemSettings}
+          onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
+          onOpenFinReport={() => setShowFinReport(true)}
+          onLogout={onLogout}
+          onLogin={onLogin}
+        />
+      ) : (
+        <AdminSidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          setAuditWorkerId={setAuditWorkerId}
+          totalPendingCorrections={totalPendingCorrections}
+          currentUser={currentUser}
+          onLogout={onLogout}
+          isMobileOpen={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
+        />
+      )}
 
-          {/* Centro: Menu de Navegação */}
-          <div className="flex-1 flex justify-center w-full md:w-auto">
-            <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
-              {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'documentos', 'reports', 'costs', 'settings'].map(t => (
-                <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && totalPendingCorrections > 0 ? 'animate-pulse' : ''}`}>
-                  {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
-                    <span className="flex items-center gap-1">Portal Validação {totalPendingCorrections > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{totalPendingCorrections}</span>}</span>
-                  ) : t === 'schedules' ? 'Horários' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : t === 'reports' ? 'Folhas' : <Settings size={14} />}
-                </button>
-              ))}
+      {navMode === 'topbar' ? (
+        <main className="px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6 overflow-x-hidden">
+          {tabContent}
+        </main>
+      ) : (
+        <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+          <AdminTopbar
+            activeTab={activeTab}
+            unreadCount={unreadCount}
+            onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
+            onOpenFinReport={() => setShowFinReport(true)}
+            onLogout={onLogout}
+            onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            showBackToTeam={!!auditWorkerId}
+            onBackToTeam={() => setAuditWorkerId(null)}
+          />
+          <main className="flex-1 overflow-x-hidden">
+            <div className="px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
+              {tabContent}
             </div>
-          </div>
-
-          {/* Lado Direito: Ações */}
-          <div className="hidden md:flex items-center gap-4 shrink-0">
-            <button data-notif-bell onClick={() => setShowNotifDropdown(s => !s)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm relative"><Bell size={18} /> {unreadCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{unreadCount}</span>}</button>
-            <button onClick={() => setShowFinReport(true)} className="flex items-center justify-center p-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"><BarChart3 size={18} /></button>
-            {currentUser?.isAdmin && <button onClick={() => onLogin('worker', currentUser)} className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"><Users size={18} /></button>}
-            <button onClick={onLogout} className="p-1 text-slate-400 hover:text-red-500 transition-colors"><LogOut size={20} /></button>
-          </div>
+          </main>
         </div>
-      </nav>
+      )}
 
       {showNotifDropdown && (
         <div ref={notifDropdownRef} className="fixed top-[4.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
@@ -325,7 +465,6 @@ function AdminDashboard(props) {
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
           </div>
           <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
-            {/* Correções de clientes */}
             {notificacoesDeCorrecao.filter(n => !isViewed(n)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
@@ -340,7 +479,6 @@ function AdminDashboard(props) {
                 </button>
               );
             })}
-            {/* Pedidos de alteração */}
             {pendingChangeRequests.map(req => {
               const worker = workers.find(w => w.id === req.worker_id);
               return (
@@ -355,7 +493,6 @@ function AdminDashboard(props) {
                 </button>
               );
             })}
-            {/* Client submissions via submitCorrection (new-format, status=submitted, not in correctionNotifications) */}
             {(() => {
               const seenClientCorrIds = new Set();
               const clientSubmitNotifs = appNotifications.filter(n => {
@@ -367,7 +504,6 @@ function AdminDashboard(props) {
                 if (!cid) return false;
                 const corr = corrections?.find(c => c.id === cid);
                 if (!corr) return false;
-                // Only client correction types
                 if (corr.type === 'creation_request' || corr.type === 'deletion_request') return false;
                 if (seenClientCorrIds.has(cid)) return false;
                 seenClientCorrIds.add(cid);
@@ -390,7 +526,6 @@ function AdminDashboard(props) {
                 );
               });
             })()}
-            {/* Worker submissions */}
             {(() => {
               const seenCorrIds = new Set();
               const workerNotifs = appNotifications.filter(n => {
@@ -401,7 +536,6 @@ function AdminDashboard(props) {
                 const cid = n.payload?.correction_id;
                 if (!cid) return false;
                 const corr = corrections?.find(c => c.id === cid);
-                // Only worker correction types
                 if (corr && corr.type !== 'creation_request' && corr.type !== 'deletion_request') return false;
                 if (seenCorrIds.has(cid)) return false;
                 seenCorrIds.add(cid);
@@ -411,10 +545,8 @@ function AdminDashboard(props) {
                 const badge = getNotificationBadge(n);
                 const corrId = n.payload?.correction_id;
                 const corr = corrections?.find(c => c.id === corrId);
-                // n.worker_id may be absent in older notifications; fall back to corr.submitted_by
                 const workerIdResolved = n.worker_id || corr?.submitted_by;
                 const worker = workers.find(w => String(w.id) === String(workerIdResolved));
-                // Extract worker name from notification title as last-resort fallback ("Pedido de Registo · Nome")
                 const workerNameFallback = n.title?.split('·').slice(-1)[0]?.trim() || 'Trabalhador';
                 const isExpanded = expandedCards[n.id];
                 return (
@@ -446,7 +578,6 @@ function AdminDashboard(props) {
                 );
               });
             })()}
-            {/* App notifications */}
             {(() => {
               const appNotifs = appNotifications.filter(n => {
                 if (n.target_type !== 'admin') return false;
@@ -476,134 +607,6 @@ function AdminDashboard(props) {
           </button>
         </div>
       )}
-
-      <main className="w-full mt-4 pb-12">
-        <div className="mx-auto px-3 sm:px-6 md:px-10 lg:px-16" style={{ maxWidth: `var(--app-max-width)` }}>
-
-          {auditWorkerId && (() => {
-            const currentApproval = approvals.find(a => a.workerId === auditWorkerId && a.month === currentMonthStr);
-            return (
-              <div className="mb-6 bg-white rounded-2xl sm:rounded-[3rem] p-4 sm:p-8 lg:p-10 shadow-2xl border-4 border-indigo-500/20 animate-in slide-in-from-top-8 duration-500">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-10 gap-3 md:gap-6">
-                  <div className="flex items-center gap-3 sm:gap-6"><div className="bg-slate-900 p-3 sm:p-5 rounded-2xl sm:rounded-3xl text-white shadow-xl"><Settings2 size={28} className="sm:hidden" /><Settings2 size={40} className="hidden sm:block" /></div><div><h2 className="text-xl sm:text-3xl font-black uppercase">Audit: {auditedWorker?.name}</h2><p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1">Controlo Mensal Detalhado</p></div></div>
-                  <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-[2.5rem] border border-slate-200">
-                    {currentApproval && (
-                      <div className="bg-emerald-50 text-emerald-600 px-6 py-3 rounded-[2rem] shadow-sm flex items-center gap-4 border border-emerald-200">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle size={20} />
-                          <div className="flex flex-col">
-                            <span className="text-[8px] font-black uppercase opacity-70 leading-none">Status</span>
-                            <span className="text-sm font-black leading-none">Aprovado</span>
-                          </div>
-                        </div>
-                        <button onClick={() => handleDelete('approvals', currentApproval.id)} className="bg-white p-2 rounded-full text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm border border-rose-100" title="Desbloquear Mês para o Trabalhador"><Unlock size={14} /></button>
-                      </div>
-                    )}
-                    <div className="bg-slate-900 text-white px-8 py-3 rounded-[2rem] shadow-lg flex flex-col items-center"><span className="text-[8px] font-black uppercase opacity-70">Total Mês</span><span className="text-xl font-black">{formatHours(auditedMonthLogs.reduce((a, b) => a + b.hours, 0))}</span></div>
-                    <button onClick={() => setAuditWorkerId(null)} className="p-4 bg-white text-red-500 rounded-full border border-red-100 shadow-md"><X size={28} /></button>
-                  </div>
-                </div>
-                <div className="mb-8 p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative">
-                  <div className="flex justify-between items-center mb-2">
-                    <h4 className="font-bold text-indigo-700 flex items-center gap-2"><Sparkles size={16} /> Resumo de Produtividade AI ✨</h4>
-                    <button onClick={generateWorkerSummary} disabled={isSummarizing || auditedMonthLogs.length === 0} className="text-[10px] bg-indigo-600 text-white px-4 py-1.5 rounded-full font-black uppercase">{isSummarizing ? "Gerando..." : "Gerar com IA"}</button>
-                  </div>
-                  <p className="text-sm text-slate-600 italic leading-relaxed">{workerAISummary || "Utilize o Gemini para resumir as atividades deste mês."}</p>
-                </div>
-                <div className="overflow-x-auto rounded-[3rem] border border-slate-100 bg-white shadow-inner"><table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-50 border-b border-slate-100"><tr><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest w-16 sm:w-32">Dia</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest">Actividades</th><th className="px-4 sm:px-10 py-4 sm:py-6 text-[10px] font-black uppercase tracking-widest text-right">Acção</th></tr></thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {daysInMonthList.map(ds => {
-                      const dayLogs = logs.filter(l => l.workerId === auditWorkerId && l.date === ds);
-                      const isCurrentInline = inlineEditingDate === ds;
-                      return (
-                        <React.Fragment key={ds}>
-                          <tr className="group">
-                            <td className="px-4 sm:px-10 py-4 sm:py-8 align-top"><p className="text-2xl sm:text-3xl font-black">{new Date(ds).getDate()}</p></td>
-                            <td className="px-4 sm:px-10 py-4 sm:py-8">
-                              <div className="space-y-3">
-                                {dayLogs.map(log => (
-                                  <div key={log.id} className="bg-white p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-100/50 flex items-center justify-between shadow-sm gap-2">
-                                    <div className="flex items-center gap-4">
-                                      <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl uppercase border border-indigo-100">{clients.find(c => c.id === log.clientId)?.name}</span>
-                                      <div className="text-sm font-bold font-mono">{log.startTime}-{log.endTime} {log.breakStart ? `(P: ${log.breakStart})` : ''}</div>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                      <span className="text-2xl font-black">{formatHours(log.hours)}</span>
-                                      <button onClick={() => handleDelete('logs', log.id)} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Apagar Registo"><Trash2 size={18} /></button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </td>
-                            <td className="px-4 sm:px-10 py-4 sm:py-8 text-right align-top">
-                              <div className="flex justify-end gap-2">
-                                <button onClick={() => handleQuickRegister(ds)} title="Registo Rápido" className="p-3 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-2xl transition-all"><Zap size={20} /></button>
-                                <button onClick={() => handleOpenInlineForm(ds)} className="p-3 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-2xl transition-all"><Plus size={20} /></button>
-                              </div>
-                            </td>
-                          </tr>
-                          {isCurrentInline && (
-                            <tr><td colSpan="3" className="px-4 sm:px-10 py-4 bg-indigo-50/30">
-                              <EntryForm isInline data={inlineFormData} clients={clients} assignedClients={auditedWorker?.assignedClients} onChange={setInlineFormData} onSave={() => { handleSaveEntry(inlineFormData, false, ds); setInlineEditingDate(null); }} onCancel={() => setInlineEditingDate(null)} />
-                            </td></tr>
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </tbody>
-                </table></div>
-              </div>
-            );
-          })()}
-
-          {!auditWorkerId && activeTab === 'overview' && (
-            <AdminOverview currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} />
-          )}
-
-          {!auditWorkerId && activeTab === 'reports' && (
-            <AdminReports printingReport={printingReport} setPrintingReport={setPrintingReport} />
-          )}
-
-          {!auditWorkerId && activeTab === 'team' && (
-            <TeamManager onLogin={onLogin} />
-          )}
-
-          {!auditWorkerId && activeTab === 'clients' && (
-            <ClientManager />
-          )}
-
-          {!auditWorkerId && activeTab === 'portal_validacao' && (
-            <ValidationPortalProvider portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
-              <ValidationPortal
-                onLogin={onLogin}
-                setClienteSelecionado={setClienteSelecionado}
-                setModalEmailAberto={setModalEmailAberto}
-                setPrintingReport={setPrintingReport}
-                initialCorrectionId={selectedCorrectionId}
-                onCorrectionNavigated={() => setSelectedCorrectionId(null)}
-              />
-            </ValidationPortalProvider>
-          )}
-
-          {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
-
-          {!auditWorkerId && activeTab === 'costs' && <CostReports />}
-
-          {!auditWorkerId && activeTab === 'documentos' && (
-            <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} handleGenerateClientReport={handleGenerateClientReport} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} logs={logs} clientApprovals={clientApprovals} />
-          )}
-
-          {!auditWorkerId && activeTab === 'notificacoes' && (
-            <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
-          )}
-
-          {!auditWorkerId && activeTab === 'settings' && (
-            <AdminSettings />
-          )}
-
-        </div>
-      </main>
     </div>
   );
 }

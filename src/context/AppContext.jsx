@@ -219,6 +219,7 @@ export const AppProvider = ({ children }) => {
               ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
               ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),
               ...(data.entry_tolerance_minutes != null && { entryToleranceMinutes: Number(data.entry_tolerance_minutes) }),
+              ...(data.nav_mode && { navMode: data.nav_mode }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
             if (data.notification_preferences) setNotificationPreferences(data.notification_preferences);
@@ -608,6 +609,7 @@ export const AppProvider = ({ children }) => {
       tolerancia_aviso:  newSettings.toleranciaAviso  ?? 10,
       minute_interval: newSettings.minuteInterval ?? 30,
       entry_tolerance_minutes: newSettings.entryToleranceMinutes ?? 10,
+      nav_mode: newSettings.navMode ?? 'sidebar',
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabaseInstance

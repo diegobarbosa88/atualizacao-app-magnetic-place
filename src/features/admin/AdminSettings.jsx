@@ -59,6 +59,77 @@ export default function AdminSettings() {
     setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' });
   };
 
+function NavModePicker({ value, onChange }) {
+  const current = value || 'sidebar';
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <NavModeOption
+        selected={current === 'sidebar'}
+        onClick={() => onChange('sidebar')}
+        title="Menu Lateral"
+        subtitle="Sidebar à esquerda"
+        preview={
+          <svg viewBox="0 0 80 50" className="w-full h-12">
+            <rect x="2" y="2" width="22" height="46" rx="3" fill="#eef2ff" stroke="#c7d2fe" />
+            <rect x="6" y="7" width="14" height="3.5" rx="1" fill="#6366f1" />
+            <rect x="6" y="14" width="14" height="3.5" rx="1" fill="#cbd5e1" />
+            <rect x="6" y="21" width="14" height="3.5" rx="1" fill="#cbd5e1" />
+            <rect x="6" y="28" width="14" height="3.5" rx="1" fill="#cbd5e1" />
+            <rect x="6" y="35" width="14" height="3.5" rx="1" fill="#cbd5e1" />
+            <rect x="28" y="2" width="50" height="46" rx="3" fill="#f8fafc" stroke="#e2e8f0" />
+            <rect x="32" y="8" width="22" height="3" rx="1" fill="#cbd5e1" />
+            <rect x="32" y="15" width="40" height="3" rx="1" fill="#e2e8f0" />
+            <rect x="32" y="22" width="40" height="3" rx="1" fill="#e2e8f0" />
+            <rect x="32" y="29" width="40" height="3" rx="1" fill="#e2e8f0" />
+          </svg>
+        }
+      />
+      <NavModeOption
+        selected={current === 'topbar'}
+        onClick={() => onChange('topbar')}
+        title="Barra Superior"
+        subtitle="Topbar horizontal"
+        preview={
+          <svg viewBox="0 0 80 50" className="w-full h-12">
+            <rect x="2" y="2" width="76" height="10" rx="2" fill="#f8fafc" stroke="#e2e8f0" />
+            <rect x="5" y="4.5" width="14" height="5" rx="1" fill="#6366f1" />
+            <rect x="21" y="4.5" width="14" height="5" rx="1" fill="#cbd5e1" />
+            <rect x="37" y="4.5" width="14" height="5" rx="1" fill="#cbd5e1" />
+            <rect x="53" y="4.5" width="14" height="5" rx="1" fill="#cbd5e1" />
+            <rect x="2" y="15" width="76" height="33" rx="3" fill="#f8fafc" stroke="#e2e8f0" />
+            <rect x="6" y="20" width="22" height="3" rx="1" fill="#cbd5e1" />
+            <rect x="6" y="27" width="68" height="3" rx="1" fill="#e2e8f0" />
+            <rect x="6" y="34" width="68" height="3" rx="1" fill="#e2e8f0" />
+            <rect x="6" y="41" width="68" height="3" rx="1" fill="#e2e8f0" />
+          </svg>
+        }
+      />
+    </div>
+  );
+}
+
+function NavModeOption({ selected, onClick, title, subtitle, preview }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={`relative text-left rounded-2xl border-2 p-3 transition-all ${
+        selected
+          ? 'border-indigo-500 bg-indigo-50/40 shadow-sm'
+          : 'border-slate-200 bg-white hover:border-slate-300'
+      }`}
+    >
+      {selected && (
+        <CheckCircle size={16} className="absolute top-2 right-2 text-indigo-600" />
+      )}
+      <div className="mb-2">{preview}</div>
+      <p className="text-xs font-black text-slate-700">{title}</p>
+      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{subtitle}</p>
+    </button>
+  );
+}
+
   const handleRevokeAdmin = async (worker) => {
     await saveToDb('workers', worker.id, { ...worker, isAdmin: false });
   };
@@ -273,6 +344,16 @@ export default function AdminSettings() {
             <h3 className="font-black text-lg text-slate-800">Visual e Tema</h3>
           </div>
           <div className="space-y-6">
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div className="mb-3">
+                <p className="text-sm font-bold text-slate-700">Layout de Navegação</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Escolha entre menu lateral ou barra superior</p>
+              </div>
+              <NavModePicker
+                value={systemSettings.navMode || 'sidebar'}
+                onChange={(v) => updateSetting('navMode', v)}
+              />
+            </div>
             <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
               <div>
                 <p className="text-sm font-bold text-slate-700">Largura do App (Desktop)</p>
