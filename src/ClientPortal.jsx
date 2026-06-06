@@ -291,8 +291,8 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const {
         draftData, setDraftData, draftTotal,
         reportJustification, setReportJustification,
-        startReport, handleTimeChange, generateCorrectionMessage, handlePrecisionConfirm,
-    } = useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView });
+        startReport, handleTimeChange, handleDeleteDay, handleRevertDay, generateCorrectionMessage, handlePrecisionConfirm,
+    } = useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView, supabase, companySignature });
 
     const {
         canvasRef, isDrawing, hasSignature, setHasSignature,
@@ -400,6 +400,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                     {currentView === 'relatorio_cliente' && (
                         <SimpleReportView
                             draftData={draftData} handleTimeChange={handleTimeChange}
+                            handleDeleteDay={handleDeleteDay} handleRevertDay={handleRevertDay}
                             draftTotal={draftTotal} originalTotal={originalTotal}
                             reportJustification={reportJustification} setReportJustification={setReportJustification}
                             handlePrecisionConfirm={handlePrecisionConfirm}

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { submitCorrection } from '../utils/correctionsApi';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -16,7 +17,7 @@ const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     return Number(Math.max(0, diffMins / 60).toFixed(2));
 };
 
-export function useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView }) {
+export function useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView, supabase, companySignature }) {
     const [draftData, setDraftData] = useState([]);
     const [reportJustification, setReportJustification] = useState('');
 
@@ -63,6 +64,28 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
                 const newBreakStart = field === 'breakStart' ? val : d.editedBreakStart;
                 const newBreakEnd = field === 'breakEnd' ? val : d.editedBreakEnd;
                 return { ...d, editedEntry: newEntry, editedExit: newExit, editedBreakStart: newBreakStart, editedBreakEnd: newBreakEnd, editedHours: calculateHoursDiff(newEntry, newExit, newBreakStart, newBreakEnd) };
+            });
+            return { ...w, dailyRecords: newDaily, editedTotalHours: parseFloat(newDaily.reduce((acc, curr) => acc + curr.editedHours, 0).toFixed(2)) };
+        }));
+    }, []);
+
+    const handleDeleteDay = useCallback((workerId, dateStr) => {
+        setDraftData(prev => prev.map(w => {
+            if (w.id !== workerId) return w;
+            const newDaily = w.dailyRecords.map(d => {
+                if (d.rawDate !== dateStr) return d;
+                return { ...d, editedEntry: '', editedExit: '', editedBreakStart: '', editedBreakEnd: '', editedHours: 0 };
+            });
+            return { ...w, dailyRecords: newDaily, editedTotalHours: parseFloat(newDaily.reduce((acc, curr) => acc + curr.editedHours, 0).toFixed(2)) };
+        }));
+    }, []);
+
+    const handleRevertDay = useCallback((workerId, dateStr) => {
+        setDraftData(prev => prev.map(w => {
+            if (w.id !== workerId) return w;
+            const newDaily = w.dailyRecords.map(d => {
+                if (d.rawDate !== dateStr) return d;
+                return { ...d, editedEntry: d.entry === '--:--' ? '' : (d.entry || ''), editedExit: d.exit === '--:--' ? '' : (d.exit || ''), editedBreakStart: d.breakStart || '', editedBreakEnd: d.breakEnd || '', editedHours: d.hours };
             });
             return { ...w, dailyRecords: newDaily, editedTotalHours: parseFloat(newDaily.reduce((acc, curr) => acc + curr.editedHours, 0).toFixed(2)) };
         }));
@@ -115,11 +138,6 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
     }, [draftData, draftTotal, originalTotal, clientData, reportJustification]);
 
     const handlePrecisionConfirm = useCallback(async () => {
-        const correcoesTexto = generateCorrectionMessage(false);
-        const changedWorkers = draftData.map(w => ({ ...w, dailyRecords: w.dailyRecords.map(d => ({ ...d, date: d.rawDate || d.date })) }));
-        const correcaoId = `correcao_${initialClientId}_${initialMonth}_precision`;
-        const notifId = `notif_corr_${initialClientId}_${initialMonth}_precision`;
-
         const items = [];
         for (const worker of draftData) {
             for (const day of worker.dailyRecords) {
@@ -133,43 +151,37 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
                 if (!hasOrig && !hasEdited) continue;
                 const wasEmpty = !origEntry && !origExit;
                 const isEmpty = !day.editedEntry && !day.editedExit;
-                const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
                 const origLog = logs.find(l => String(l.workerId) === String(worker.id) && l.date === rawDate);
-                const beforeFromLog = origLog ? { startTime: origLog.startTime || null, endTime: origLog.endTime || null, breakStart: origLog.breakStart || null, breakEnd: origLog.breakEnd || null, hours: origLog.hours || 0 } : { startTime: origEntry || null, endTime: origExit || null, breakStart: origBreakStart || null, breakEnd: origBreakEnd || null, hours: day.hours || 0 };
+                const beforeFromLog = origLog
+                    ? { startTime: origLog.startTime || null, endTime: origLog.endTime || null, breakStart: origLog.breakStart || null, breakEnd: origLog.breakEnd || null, hours: origLog.hours || 0 }
+                    : { startTime: origEntry || null, endTime: origExit || null, breakStart: origBreakStart || null, breakEnd: origBreakEnd || null, hours: day.hours || 0 };
 
                 if (wasEmpty && !isEmpty) {
-                    items.push({ id: itemId, workerId: worker.id, workerName: worker.name, date: rawDate, before: null, proposed: { startTime: day.editedEntry || null, endTime: day.editedExit || null, breakStart: day.editedBreakStart || null, breakEnd: day.editedBreakEnd || null, hours: day.editedHours || 0 } });
+                    items.push({ workerId: worker.id, workerName: worker.name, date: rawDate, before: null, proposed: { startTime: day.editedEntry || null, endTime: day.editedExit || null, breakStart: day.editedBreakStart || null, breakEnd: day.editedBreakEnd || null } });
                 } else if (!wasEmpty && isEmpty) {
-                    items.push({ id: itemId, workerId: worker.id, workerName: worker.name, date: rawDate, before: beforeFromLog, proposed: { startTime: null, endTime: null, breakStart: null, breakEnd: null, hours: 0 } });
+                    items.push({ workerId: worker.id, workerName: worker.name, date: rawDate, before: beforeFromLog, proposed: { startTime: null, endTime: null, breakStart: null, breakEnd: null } });
                 } else if (day.editedEntry !== origEntry || day.editedExit !== origExit || day.editedBreakStart !== origBreakStart || day.editedBreakEnd !== origBreakEnd) {
-                    items.push({ id: itemId, workerId: worker.id, workerName: worker.name, date: rawDate, before: beforeFromLog, proposed: { startTime: day.editedEntry || null, endTime: day.editedExit || null, breakStart: day.editedBreakStart || null, breakEnd: day.editedBreakEnd || null, hours: day.editedHours || 0 } });
+                    items.push({ workerId: worker.id, workerName: worker.name, date: rawDate, before: beforeFromLog, proposed: { startTime: day.editedEntry || null, endTime: day.editedExit || null, breakStart: day.editedBreakStart || null, breakEnd: day.editedBreakEnd || null } });
                 }
             }
         }
 
-        await saveToDb('corrections', correcaoId, {
-            id: correcaoId, title: `Pedido de Correção: ${clientData.name}`, message: correcoesTexto,
-            status: 'submitted', type: 'precision', justification: reportJustification,
-            client_id: initialClientId, month: initialMonth, submitted_at: new Date().toISOString(),
-            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision' },
-            created_at: new Date().toISOString(),
-        });
-        for (const item of items) {
-            await saveToDb('correction_items', item.id, { id: item.id, correction_id: correcaoId, worker_id: String(item.workerId), worker_name: item.workerName, date: item.date, before: item.before, proposed: item.proposed, final: null, item_status: 'pending' });
-        }
-        await saveToDb('app_notifications', notifId, {
-            id: notifId, title: `Pedido de Correção: ${clientData.name}`, message: correcoesTexto,
-            type: 'warning', target_type: 'admin', target_client_id: initialClientId, target_worker_ids: [],
-            payload: { changes: changedWorkers, isFullMonth: true, month: initialMonth, reportType: 'precision', correcao_id: correcaoId },
-            is_dismissible: true, is_active: true, created_at: new Date().toISOString(),
+        await submitCorrection(supabase, {
+            clientId: initialClientId,
+            month: initialMonth,
+            type: 'precision',
+            justification: reportJustification,
+            items,
+            adminEmail: companySignature?.responsibleEmail,
+            clientName: clientData?.name,
         });
 
         goToView('sucesso_reporte');
-    }, [generateCorrectionMessage, draftData, logs, initialClientId, initialMonth, saveToDb, clientData, reportJustification, goToView]);
+    }, [draftData, logs, initialClientId, initialMonth, supabase, companySignature, clientData, reportJustification, goToView]);
 
     return {
         draftData, setDraftData, draftTotal,
         reportJustification, setReportJustification,
-        startReport, handleTimeChange, generateCorrectionMessage, handlePrecisionConfirm,
+        startReport, handleTimeChange, handleDeleteDay, handleRevertDay, generateCorrectionMessage, handlePrecisionConfirm,
     };
 }

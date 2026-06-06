@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, AlertCircle, XCircle, Clock, Building2, ChevronDown, LayoutList, Users, Send, MessageCircle, FileText } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
 import { useApp } from '../../../context/AppContext';
@@ -343,10 +344,27 @@ const isWorkerType = (c) => c?.type === 'creation_request' || c?.type === 'delet
 
 const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
   const { corrections, correctionItems, clients, workers, logs, supabase, currentUser, setCorrections, setCorrectionItems } = useApp();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedId, setSelectedId] = useState(initialCorrectionId || null);
-  const [filter, setFilter] = useState('open');
-  const [sourceFilter, setSourceFilter] = useState('workers');
   const [expandedCards, setExpandedCards] = useState({});
+
+  const qp = new URLSearchParams(location.search);
+  const sourceFilter = qp.get('source') || 'workers';
+  const filter = qp.get('filter') || 'open';
+
+  const setSourceFilter = (src) => {
+    const p = new URLSearchParams(location.search);
+    p.set('source', src);
+    p.delete('filter');
+    setExpandedCards({});
+    navigate(`${location.pathname}?${p.toString()}`);
+  };
+  const setFilter = (f) => {
+    const p = new URLSearchParams(location.search);
+    p.set('filter', f);
+    navigate(`${location.pathname}?${p.toString()}`);
+  };
 
   React.useEffect(() => {
     if (initialCorrectionId) { setSelectedId(initialCorrectionId); onCorrectionNavigated?.(); }
@@ -364,9 +382,8 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
       : correction.status === 'rejected' ? 'rejected'
       : 'all';
     setSelectedId(null);
-    setSourceFilter('workers');
-    setFilter(newFilter);
     setExpandedCards((prev) => ({ ...prev, [groupKey]: true }));
+    navigate(`${location.pathname}?source=workers&filter=${newFilter}`, { replace: true });
   }, [selectedId, corrections]);
 
   const workerCorrections = useMemo(() => [...(corrections || [])].filter(c => c.type === 'creation_request' || c.type === 'deletion_request').sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || '')), [corrections]);
@@ -375,7 +392,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
 
   const sorted   = useMemo(() => [...sourceFiltered].sort((a, b) => (b.submitted_at || '').localeCompare(a.submitted_at || '')), [sourceFiltered]);
   const filtered = useMemo(() => {
-    if (filter === 'open')     return sorted.filter((c) => c.status === 'submitted' || c.status === 'under_review');
+    if (filter === 'open')     return sorted.filter((c) => c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending');
     if (filter === 'applied')  return sorted.filter((c) => c.status === 'applied');
     if (filter === 'rejected') return sorted.filter((c) => c.status === 'rejected');
     return sorted;
@@ -432,11 +449,12 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
   }
 
   // ── Inbox list ───────────────────────────────────────────────────────────
-  const workerOpenCount = workerCorrections.filter(c => c.status === 'submitted' || c.status === 'under_review').length;
-  const clientOpenCount = clientCorrections.filter(c => c.status === 'submitted' || c.status === 'under_review').length;
+  const isPending = (c) => c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending';
+  const workerOpenCount = workerCorrections.filter(isPending).length;
+  const clientOpenCount = clientCorrections.filter(isPending).length;
   const totalOpenCount  = workerOpenCount + clientOpenCount;
   const counts = {
-    open:     sorted.filter((c) => c.status === 'submitted' || c.status === 'under_review').length,
+    open:     sorted.filter(isPending).length,
     applied:  sorted.filter((c) => c.status === 'applied').length,
     rejected: sorted.filter((c) => c.status === 'rejected').length,
   };
@@ -450,11 +468,11 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
 
       {/* Source selector */}
       <div className="flex gap-2 mb-4">
-        <button onClick={() => { setSourceFilter('workers'); setExpandedCards({}); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'workers' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-300'}`}>
+        <button onClick={() => setSourceFilter('workers')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'workers' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-300'}`}>
           <Users size={14} /> Workers
           {workerOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{workerOpenCount}</span>}
         </button>
-        <button onClick={() => { setSourceFilter('clients'); setExpandedCards({}); }} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'clients' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
+        <button onClick={() => setSourceFilter('clients')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'clients' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
           <Building2 size={14} /> Clientes
           {clientOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{clientOpenCount}</span>}
         </button>

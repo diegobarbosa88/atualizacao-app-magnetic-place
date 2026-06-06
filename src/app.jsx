@@ -95,7 +95,11 @@ export default function App() {
   const location = useLocation();
 
   const [portalMonth, setPortalMonth] = useState(new Date());
-  const [portalSubTab, setPortalSubTab] = useState('envios');
+  const portalSubTab = useMemo(() => {
+    const match = location.pathname.match(/^\/admin\/portal_validacao\/([^/]+)/);
+    return match ? match[1] : 'envios';
+  }, [location.pathname]);
+  const setPortalSubTab = (tab) => navigate(`/admin/portal_validacao/${tab}`);
   const [printingReport, setPrintingReport] = useState(null);
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [modalEmailAberto, setModalEmailAberto] = useState(false);
@@ -170,20 +174,18 @@ export default function App() {
   }, [currentUser?.id, myNotifications, supabase]);
 
   useEffect(() => {
-    if (location.pathname === '/admin/portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
+    if (location.pathname.startsWith('/admin/portal_validacao/correcoes') && currentUser?.role === 'admin' && myNotifications.length > 0) {
       const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
       if (toDismiss.length > 0) {
         toDismiss.forEach(n => handleDismissNotif(n.id));
       }
     }
-  }, [location.pathname, portalSubTab, myNotifications, currentUser?.role]);
+  }, [location.pathname, myNotifications, currentUser?.role]);
 
   const handleBannerClick = (notif) => {
     handleDismissNotif(notif.id);
     if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
-      setPortalSubTab('correcoes');
-      setView('admin');
-      navigate('/admin/portal_validacao');
+      navigate('/admin/portal_validacao/correcoes?source=clientes');
     }
   };
 

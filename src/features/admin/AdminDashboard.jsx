@@ -65,7 +65,7 @@ function AdminDashboard(props) {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const activeTab = location.pathname.replace(/^\/admin\/?/, '') || 'overview';
+  const activeTab = location.pathname.replace(/^\/admin\//, '').split('/')[0] || 'overview';
   const setActiveTab = useCallback((tab) => navigate('/admin/' + tab), [navigate]);
 
   const notificacoesDeCorrecao = correctionNotifications;
@@ -86,7 +86,10 @@ function AdminDashboard(props) {
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
-  const pendingClientCorrectionsCount = (correctionNotifications || []).length;
+  const pendingClientCorrectionsCount = (corrections || []).filter(c =>
+    c.type !== 'creation_request' && c.type !== 'deletion_request' &&
+    (c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending')
+  ).length;
 
   const pendingWorkerCorrectionsCount = (corrections || []).filter(c =>
     (c.type === 'creation_request' || c.type === 'deletion_request') &&
@@ -194,6 +197,8 @@ function AdminDashboard(props) {
   }, [showNotifDropdown]);
 
   const [selectedCorrectionId, setSelectedCorrectionId] = useState(null);
+
+
   const [workerAISummary, setWorkerAISummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
 
@@ -323,7 +328,7 @@ function AdminDashboard(props) {
             {notificacoesDeCorrecao.filter(n => !isViewed(n)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
-                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); setSelectedCorrectionId(corr.id); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); navigate('/admin/portal_validacao/correcoes?source=clientes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
@@ -372,7 +377,7 @@ function AdminDashboard(props) {
                 const corr = corrections?.find(c => c.id === corrId);
                 const client = clients.find(c => String(c.id) === String(corr?.client_id));
                 return (
-                  <button key={n.id} onClick={() => { markNotifRead(n.id); setSelectedCorrectionId(corrId); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                  <button key={n.id} onClick={() => { markNotifRead(n.id); navigate('/admin/portal_validacao/correcoes?source=clientes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                     <div className="min-w-0 flex-1">
                       <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
@@ -430,8 +435,7 @@ function AdminDashboard(props) {
                         <button onClick={() => {
                           markNotifRead(n.id);
                           if (corrId) setSelectedCorrectionId(corrId);
-                          setActiveTab('portal_validacao');
-                          setPortalSubTab('correcoes');
+                          navigate('/admin/portal_validacao/correcoes?source=workers');
                           setShowNotifDropdown(false);
                         }} className="flex-1 py-1.5 text-[10px] font-black bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 uppercase tracking-widest">Ver</button>
                         <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">Ignorar</button>

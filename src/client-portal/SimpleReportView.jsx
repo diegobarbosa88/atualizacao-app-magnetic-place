@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp, AlertCircle, Trash2, RotateCcw } from 'lucide-react';
+import TimeTextInput from '../components/common/TimeTextInput';
 
-export default function SimpleReportView({ draftData, handleTimeChange, draftTotal, originalTotal, reportJustification, setReportJustification, handlePrecisionConfirm, goToView, clientData, t }) {
+export default function SimpleReportView({ draftData, handleTimeChange, handleDeleteDay, handleRevertDay, draftTotal, originalTotal, reportJustification, setReportJustification, handlePrecisionConfirm, goToView, clientData, t }) {
     const [expandedWorkers, setExpandedWorkers] = useState(() => draftData.map(w => w.id));
     const [showAllDays, setShowAllDays] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -13,10 +14,16 @@ export default function SimpleReportView({ draftData, handleTimeChange, draftTot
     const diff = parseFloat((draftTotal - originalTotal).toFixed(2));
     const hasDiff = diff !== 0;
 
+    const origEntry = (d) => d.entry === '--:--' ? '' : (d.entry || '');
+    const origExit = (d) => d.exit === '--:--' ? '' : (d.exit || '');
+
+    const isDeleted = (d) => {
+        const hasOrig = !!(origEntry(d) || origExit(d));
+        return hasOrig && !d.editedEntry && !d.editedExit;
+    };
+
     const isDayChanged = (d) => {
-        const origEntry = d.entry === '--:--' ? '' : d.entry;
-        const origExit = d.exit === '--:--' ? '' : d.exit;
-        return d.editedEntry !== origEntry || d.editedExit !== origExit ||
+        return d.editedEntry !== origEntry(d) || d.editedExit !== origExit(d) ||
             d.editedBreakStart !== (d.breakStart || '') || d.editedBreakEnd !== (d.breakEnd || '');
     };
 
@@ -107,56 +114,82 @@ export default function SimpleReportView({ draftData, handleTimeChange, draftTot
                                 ) : (
                                     <div className="divide-y divide-slate-50">
                                         {visibleDays.map(day => {
+                                            const deleted = isDeleted(day);
                                             const changed = isDayChanged(day);
+                                            const hasOrigData = !!(origEntry(day) || origExit(day));
                                             return (
-                                                <div key={day.rawDate} className={`px-5 py-3 ${changed ? 'bg-amber-50/50' : ''}`}>
+                                                <div key={day.rawDate} className={`px-5 py-3 ${deleted ? 'bg-rose-50/60' : changed ? 'bg-amber-50/50' : ''}`}>
                                                     <div className="flex items-center justify-between mb-2">
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-wide">{day.date}</span>
-                                                        {changed && <span className="text-[9px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">editado</span>}
-                                                        {!changed && day.editedHours > 0 && <span className="text-[10px] font-black text-indigo-600">{day.editedHours}h</span>}
+                                                        <span className={`text-[10px] font-black uppercase tracking-wide ${deleted ? 'text-rose-400 line-through' : 'text-slate-500'}`}>{day.date}</span>
+                                                        <div className="flex items-center gap-2">
+                                                            {deleted && <span className="text-[9px] font-black text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">eliminado</span>}
+                                                            {!deleted && changed && <span className="text-[9px] font-black text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded">editado</span>}
+                                                            {!deleted && !changed && day.editedHours > 0 && <span className="text-[10px] font-black text-indigo-600">{day.editedHours}h</span>}
+                                                            {deleted && handleRevertDay && (
+                                                                <button
+                                                                    onClick={() => handleRevertDay(worker.id, day.rawDate)}
+                                                                    className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                                                                    title="Reverter"
+                                                                >
+                                                                    <RotateCcw size={13} />
+                                                                </button>
+                                                            )}
+                                                            {!deleted && hasOrigData && handleDeleteDay && (
+                                                                <button
+                                                                    onClick={() => handleDeleteDay(worker.id, day.rawDate)}
+                                                                    className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                    title="Eliminar registo"
+                                                                >
+                                                                    <Trash2 size={13} />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex flex-wrap items-center gap-3">
-                                                        {/* Entrada */}
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase">Entrada</span>
-                                                            <input
-                                                                type="time"
-                                                                value={day.editedEntry || ''}
-                                                                onChange={e => handleTimeChange(worker.id, day.rawDate, 'entry', e.target.value)}
-                                                                className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-24"
-                                                            />
+                                                    {deleted ? (
+                                                        <p className="text-[10px] font-bold text-rose-400">
+                                                            Era: {origEntry(day) || '--:--'} → {origExit(day) || '--:--'}
+                                                            {(day.breakStart || day.breakEnd) && ` · Pausa: ${day.breakStart || '--:--'} – ${day.breakEnd || '--:--'}`}
+                                                        </p>
+                                                    ) : (
+                                                        <div className="flex flex-wrap items-center gap-3">
+                                                            {/* Entrada */}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase">Entrada</span>
+                                                                <TimeTextInput
+                                                                    value={day.editedEntry || ''}
+                                                                    onChange={val => handleTimeChange(worker.id, day.rawDate, 'entry', val)}
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                />
+                                                            </div>
+                                                            {/* Saída */}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase">Saída</span>
+                                                                <TimeTextInput
+                                                                    value={day.editedExit || ''}
+                                                                    onChange={val => handleTimeChange(worker.id, day.rawDate, 'exit', val)}
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                />
+                                                            </div>
+                                                            {/* Pausa */}
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="text-[9px] font-black text-slate-400 uppercase">Pausa</span>
+                                                                <TimeTextInput
+                                                                    value={day.editedBreakStart || ''}
+                                                                    onChange={val => handleTimeChange(worker.id, day.rawDate, 'breakStart', val)}
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                />
+                                                                <span className="text-slate-300 text-xs">–</span>
+                                                                <TimeTextInput
+                                                                    value={day.editedBreakEnd || ''}
+                                                                    onChange={val => handleTimeChange(worker.id, day.rawDate, 'breakEnd', val)}
+                                                                    className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-20"
+                                                                />
+                                                            </div>
+                                                            {changed && (
+                                                                <span className="ml-auto text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">{day.editedHours}h</span>
+                                                            )}
                                                         </div>
-                                                        {/* Saída */}
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase">Saída</span>
-                                                            <input
-                                                                type="time"
-                                                                value={day.editedExit || ''}
-                                                                onChange={e => handleTimeChange(worker.id, day.rawDate, 'exit', e.target.value)}
-                                                                className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-24"
-                                                            />
-                                                        </div>
-                                                        {/* Pausa */}
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-[9px] font-black text-slate-400 uppercase">Pausa</span>
-                                                            <input
-                                                                type="time"
-                                                                value={day.editedBreakStart || ''}
-                                                                onChange={e => handleTimeChange(worker.id, day.rawDate, 'breakStart', e.target.value)}
-                                                                className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-24"
-                                                            />
-                                                            <span className="text-slate-300 text-xs">–</span>
-                                                            <input
-                                                                type="time"
-                                                                value={day.editedBreakEnd || ''}
-                                                                onChange={e => handleTimeChange(worker.id, day.rawDate, 'breakEnd', e.target.value)}
-                                                                className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-mono text-slate-700 bg-white focus:ring-1 focus:ring-indigo-400 focus:outline-none w-24"
-                                                            />
-                                                        </div>
-                                                        {changed && (
-                                                            <span className="ml-auto text-[10px] font-black text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg">{day.editedHours}h</span>
-                                                        )}
-                                                    </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -208,9 +241,9 @@ export default function SimpleReportView({ draftData, handleTimeChange, draftTot
                 </button>
                 <button
                     onClick={handleSubmit}
-                    disabled={isSubmitting || !reportJustification.trim()}
+                    disabled={isSubmitting}
                     className={`px-8 py-3 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center gap-2 ${
-                        !isSubmitting && reportJustification.trim()
+                        !isSubmitting
                             ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200 active:scale-95'
                             : 'bg-slate-200 text-slate-400 cursor-not-allowed'
                     }`}
