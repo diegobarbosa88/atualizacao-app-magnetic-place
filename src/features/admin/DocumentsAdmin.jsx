@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, CheckCircle, BarChart3, Coins, Receipt, TrendingUp } from 'lucide-react';
+import { FileText, FileSignature, CheckCircle, Coins, Receipt, TrendingUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -17,7 +17,7 @@ import { fetchPublicIp } from '../../utils/deviceUtils';
 import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
 import UploadManualModal from './documents/UploadManualModal';
-import ReportsEmbedded from './documents/ReportsEmbedded';
+
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
@@ -299,7 +299,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           {[
             { id: 'documentos', icon: FileText, label: 'Documentos' },
             { id: 'faturas', icon: FileText, label: 'Faturas' },
-            { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
             { id: 'validar', icon: CheckCircle, label: 'Validar' },
           ].map(({ id, icon: Icon, label }) => (
@@ -338,8 +337,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         </>
       ) : activeSubTab === 'templates' ? (
         <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} />
-      ) : activeSubTab === 'relatorios' ? (
-        <ReportsEmbedded {...props} />
       ) : activeSubTab === 'faturas' ? (
         <FaturasAdmin />
       ) : (

@@ -54,6 +54,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [alertsModalDismissed, setAlertsModalDismissed] = useState(false);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
+  const [approvedAbsencesExpanded, setApprovedAbsencesExpanded] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
 
@@ -430,32 +431,72 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           </div>
 
           {(() => {
-            const myAbsences = (absenceRequests || []).filter(r => r.worker_id === currentUser?.id).slice(0, 10);
+            const statusMap = {
+              approved: { label: 'Confirmado', cls: 'bg-emerald-100 text-emerald-700' },
+              seen:     { label: 'Visto',      cls: 'bg-slate-100 text-slate-500' },
+              pending:  { label: 'Aguarda',    cls: 'bg-orange-100 text-orange-600' },
+            };
+            const renderRow = (r) => {
+              const s = statusMap[r.status] || statusMap.pending;
+              const sortedDates = (r.dates || []).slice().sort();
+              return (
+                <div key={r.id} className="px-4 py-3 space-y-2 border-b border-slate-50 last:border-b-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold text-slate-700">{r.reason}</p>
+                    <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
+                  </div>
+                  {sortedDates.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sortedDates.map(ds => {
+                        const d = new Date(ds + 'T00:00:00');
+                        const weekday = d.toLocaleDateString('pt-PT', { weekday: 'short' });
+                        const dayNum = d.getDate();
+                        const month = d.toLocaleDateString('pt-PT', { month: 'short' });
+                        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                        return (
+                          <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700'}`}>
+                            <span className="text-[8px] font-black uppercase tracking-wider">{weekday}</span>
+                            <span className="text-sm font-black">{dayNum}</span>
+                            <span className="text-[8px] font-bold opacity-70">{month}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            const myAbsences = (absenceRequests || [])
+              .filter(r => r.worker_id === currentUser?.id && r.status !== 'archived')
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             if (!myAbsences.length) return null;
+
+            const pendingOnes = myAbsences.filter(r => r.status !== 'approved');
+            const approvedOnes = myAbsences.filter(r => r.status === 'approved');
+            const mostRecentApproved = approvedOnes[0];
+            const restApproved = approvedOnes.slice(1);
+
             return (
-              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6">
                 <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Os meus avisos de falta</p>
                 </div>
-                <div className="divide-y divide-slate-50">
-                  {myAbsences.map(r => {
-                    const statusMap = {
-                      approved: { label: 'Confirmado', cls: 'bg-emerald-100 text-emerald-700' },
-                      seen:     { label: 'Visto',      cls: 'bg-slate-100 text-slate-500' },
-                      pending:  { label: 'Aguarda',    cls: 'bg-orange-100 text-orange-600' },
-                    };
-                    const s = statusMap[r.status] || statusMap.pending;
-                    const dateLabel = (r.dates || []).slice().sort().map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })).join(', ');
-                    return (
-                      <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-700 truncate">{r.reason}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">{dateLabel}</p>
-                        </div>
-                        <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
-                      </div>
-                    );
-                  })}
+                <div>
+                  {pendingOnes.map(renderRow)}
+                  {mostRecentApproved && renderRow(mostRecentApproved)}
+                  {restApproved.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setApprovedAbsencesExpanded(p => !p)}
+                        className="w-full px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                      >
+                        {approvedAbsencesExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                        {approvedAbsencesExpanded ? 'Mostrar menos' : `Ver mais ${restApproved.length} confirmado${restApproved.length !== 1 ? 's' : ''}`}
+                      </button>
+                      {approvedAbsencesExpanded && restApproved.map(renderRow)}
+                    </>
+                  )}
                 </div>
               </div>
             );
