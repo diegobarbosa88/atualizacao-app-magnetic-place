@@ -177,10 +177,11 @@ function AdminDashboard(props) {
     }));
   }, [activeTab, currentUser?.id, appNotifications, supabase]);
 
+  const portalSubTabFromUrl = location.pathname.split('/')[3] || '';
   useEffect(() => {
-    if (activeTab !== 'portal_validacao' || portalSubTab !== 'correcoes' || !currentUser?.id || !supabase) return;
+    if (activeTab !== 'portal_validacao' || portalSubTabFromUrl !== 'correcoes' || !currentUser?.id || !supabase) return;
     markCorrectionsViewed();
-  }, [activeTab, portalSubTab, currentUser?.id]);
+  }, [activeTab, portalSubTabFromUrl, currentUser?.id]);
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifDropdownRef = useRef(null);
@@ -573,7 +574,7 @@ function AdminDashboard(props) {
           )}
 
           {!auditWorkerId && activeTab === 'portal_validacao' && (
-            <ValidationPortalProvider portalSubTab={portalSubTab} setPortalSubTab={setPortalSubTab} portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
+            <ValidationPortalProvider portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
               <ValidationPortal
                 onLogin={onLogin}
                 setClienteSelecionado={setClienteSelecionado}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download, Link2, Loader2, Plus, BookOpen, ChevronDown } from 'lucide-react';
 import { toISODateLocal } from '../../utils/dateUtils';
@@ -9,8 +10,11 @@ import LinkPagamentoModal from './cost-reports/LinkPagamentoModal';
 
 const CostReports = () => {
   const { workers, clients, logs, expenses, saveToDb, handleDelete, supabase } = useApp();
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState('workers');
+  const activeTab = location.pathname.split('/')[3] || 'workers';
+  const setActiveTab = (id) => navigate('/admin/costs/' + id);
   const [pagamentos, setPagamentos] = useState([]);
   const [pagamentosLoading, setPagamentosLoading] = useState(false);
   const [linkModal, setLinkModal] = useState(null);

@@ -1,9 +1,16 @@
 import React, { createContext, useContext, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toISODateLocal } from '../../../utils/dateUtils';
 
 const ValidationPortalContext = createContext();
 
-export const ValidationPortalProvider = ({ children, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth }) => {
+export const ValidationPortalProvider = ({ children, portalMonth, setPortalMonth }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const portalSubTab = location.pathname.split('/')[3] || 'envios';
+  const setPortalSubTab = (tab) => navigate('/admin/portal_validacao/' + tab);
+
   const [portalWorkersSort, setPortalWorkersSort] = useState({ key: 'name', direction: 'asc' });
   const [valSortConfig, setValSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [clientPortalLinkFilter, setClientPortalLinkFilter] = useState({
