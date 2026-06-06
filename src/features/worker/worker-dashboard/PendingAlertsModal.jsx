@@ -74,7 +74,7 @@ export default function PendingAlertsModal({
                   </button>
                 ) : (
                   <button
-                    onClick={() => onReviewMonth(pending)}
+                    onClick={() => { onReviewMonth(pending); onClose(); }}
                     className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
                   >
                     <ChevronRight size={13} /> Rever e Validar

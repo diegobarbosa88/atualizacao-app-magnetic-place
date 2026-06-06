@@ -193,6 +193,22 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
 
         {workerTab === 'home' && (<>
 
+          {filteredPendingApprovals.some(p => p.monthStr === currentMonthStr) && (
+            <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle size={20} className="text-indigo-500 shrink-0" />
+                <p className="text-sm font-black text-indigo-800">
+                  Revê os registos abaixo e confirma as horas de {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
+                </p>
+              </div>
+              <button
+                onClick={() => handleApproveMonth(currentUser?.id)}
+                className="w-full sm:w-auto shrink-0 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={14} /> Confirmar e Enviar
+              </button>
+            </div>
+          )}
 
           <WorkerHeroStats
             currentUser={currentUser} currentMonth={currentMonth} setCurrentMonth={setCurrentMonth}
