@@ -67,6 +67,15 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
   const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + (b.hours || 0), 0);
   const totalMonthHours = monthLogs.reduce((acc, curr) => acc + (curr.hours || 0), 0);
 
+  const previousOpenLogs = useMemo(() => {
+    if (!currentUser) return [];
+    return (logs || []).filter(l =>
+      String(l.workerId) === String(currentUser.id) &&
+      l.startTime && !l.endTime &&
+      l.date < todayStr
+    );
+  }, [logs, currentUser, todayStr]);
+
   const activeWorkerSchedule = schedules.find(s => s.id === currentUser?.defaultScheduleId) || personalSchedules.find(p => p.id === currentUser?.defaultScheduleId);
   const expectedHours = activeWorkerSchedule ? calculateExpectedMonthlyHours(activeWorkerSchedule, currentMonth) : 0;
 
@@ -229,6 +238,7 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     myApproval,
     myNotifications,
     pendingApprovals,
+    previousOpenLogs,
     // Handlers
     handleDismissNotif,
     handleOpenInlineForm,

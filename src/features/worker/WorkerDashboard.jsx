@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
-  Clock, CheckCircle, LogIn, Edit2, AlertCircle,
+  Clock, CheckCircle, LogIn, Edit2, AlertCircle, AlertTriangle,
   ChevronUp, ChevronDown, Trash2, Plus, Zap,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -40,7 +40,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     monthLogs, todayHours, totalMonthHours,
     activeWorkerSchedule, expectedHours,
     daysList, assigned, currentMonthStr,
-    myApproval, pendingApprovals,
+    myApproval, pendingApprovals, previousOpenLogs,
     handleOpenInlineForm, handleQuickRegister,
     setDefaultSchedule, handleSaveEntry,
     saveToDb, handleDelete, handleApproveMonth,
@@ -97,6 +97,21 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+
+  const openIncompleteLogModal = (log) => {
+    setInlineEditingDate(log.date);
+    setInlineFormData({
+      id: log.id,
+      date: log.date,
+      clientId: log.clientId || currentUser?.defaultClientId || '',
+      startTime: log.startTime || '',
+      breakStart: log.breakStart || '',
+      breakEnd: log.breakEnd || '',
+      endTime: '',
+      description: log.description || '',
+    });
+    setTimeEntryModalOpen(true);
+  };
 
   const openTimeEntryModal = (ds) => {
     setInlineEditingDate(ds);
@@ -232,6 +247,36 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               </div>
             </div>
           )}
+
+          {(previousOpenLogs || []).map(log => (
+            <div key={log.id} className="mb-6 animate-in slide-in-from-top-4 duration-500">
+              <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-[2.5rem] p-1 shadow-xl ring-4 ring-orange-400/20">
+                <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-5 sm:p-6">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-orange-100 p-3 rounded-2xl text-orange-600 shadow-inner shrink-0">
+                        <AlertTriangle size={24} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
+                          Registo Incompleto
+                        </h3>
+                        <p className="text-xs font-bold text-slate-500 mt-0.5">
+                          Dia {new Date(log.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })} · Entrada às {log.startTime} · Saída em falta
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openIncompleteLogModal(log)}
+                      className="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-orange-200 active:scale-95 flex items-center justify-center gap-2 shrink-0"
+                    >
+                      <Edit2 size={14} /> Completar Registo
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
 
           <WorkerHeroStats
             currentUser={currentUser} currentMonth={currentMonth} setCurrentMonth={setCurrentMonth}
