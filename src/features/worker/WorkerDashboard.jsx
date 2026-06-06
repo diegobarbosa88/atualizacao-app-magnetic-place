@@ -3,7 +3,7 @@ import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
   CheckCircle, Edit2,
-  ChevronUp, ChevronDown, Trash2, Plus, Zap, CalendarX,
+  ChevronUp, ChevronDown, Trash2, Plus, Zap,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
@@ -198,6 +198,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         onLogout={onLogout}
         alertCount={alertCount}
         onOpenAlerts={() => setAlertsModalOpen(true)}
+        onOpenAbsenceModal={() => setAbsenceModalOpen(true)}
+        isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
       />
 
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
@@ -264,17 +266,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
               geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
             />
-          )}
-
-          {!myApproval && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
-            <div className="mb-4 flex justify-end">
-              <button
-                onClick={() => setAbsenceModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-orange-200 text-orange-600 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-orange-50 transition-all shadow-sm active:scale-95"
-              >
-                <CalendarX size={14} /> Avisar Falta
-              </button>
-            </div>
           )}
 
           {myApproval ? (

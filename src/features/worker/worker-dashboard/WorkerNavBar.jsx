@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Timer, Users, UserCircle, Bell, Home } from 'lucide-react';
+import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX } from 'lucide-react';
 import CompanyLogo from '../../../components/common/CompanyLogo';
 
 const formatShortName = (fullName) => {
@@ -17,10 +17,10 @@ const formatTimeCompact = (timeStr) => {
   return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
 };
 
-const TabButton = ({ active, onClick, icon, label, badge }) => (
+const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
   <button
     onClick={onClick}
-    className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative transition-colors ${active ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+    className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative transition-colors ${active ? (accent ? 'text-orange-500' : 'text-indigo-600') : accent ? 'text-orange-400 hover:text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
   >
     {icon}
     <span className="text-[9px] font-black uppercase tracking-wide">{label}</span>
@@ -32,7 +32,7 @@ const TabButton = ({ active, onClick, icon, label, badge }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, isCurrentMonth }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
 
   return (
@@ -136,6 +136,15 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           icon={<Timer size={20} />}
           label="Horários"
         />
+        {isCurrentMonth && (
+          <TabButton
+            active={false}
+            onClick={onOpenAbsenceModal}
+            icon={<CalendarX size={20} />}
+            label="Falta"
+            accent
+          />
+        )}
         <TabButton
           active={workerTab === 'perfil'}
           onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
