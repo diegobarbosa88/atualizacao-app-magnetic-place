@@ -434,7 +434,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
       </div>
 
       {draft && (
-        <div className="fixed bottom-8 right-8 z-50 bg-white rounded-[2rem] shadow-2xl border border-slate-200 p-6 w-80 animate-fade-in">
+        <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 bg-white rounded-[2rem] shadow-2xl border border-slate-200 p-6 w-80 max-w-[calc(100vw-2rem)] animate-fade-in">
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Editando</p>

@@ -462,7 +462,7 @@ function AdminDashboard(props) {
       )}
 
       {showNotifDropdown && (
-        <div ref={notifDropdownRef} className="fixed top-[4.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+        <div ref={notifDropdownRef} className="fixed top-[4.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notificações</h3>
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>

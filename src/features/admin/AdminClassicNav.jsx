@@ -74,10 +74,11 @@ export default function AdminClassicNav({
           </div>
         </div>
 
-        <div className="flex-1 flex justify-center w-full md:w-auto">
+        <div className="flex-1 flex justify-center w-full md:w-auto relative">
+          <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white/80 to-transparent z-10 rounded-r-2xl md:hidden" />
           <div
             className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto"
-            style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
           >
             {TABS.map(t => {
               const isActive = activeTab === t.id;

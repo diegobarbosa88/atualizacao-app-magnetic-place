@@ -56,9 +56,9 @@ export default function DocumentsTable({
         <thead>
           <tr className="text-slate-400">
             <SortableTh label="Data" columnKey="createdAt" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <SortableTh label="Colaborador" columnKey="workerName" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+            <SortableTh label="Colaborador" columnKey="workerName" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
             <SortableTh label="Documento" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
-            <SortableTh label="Tipo" columnKey="tipo" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+            <SortableTh label="Tipo" columnKey="tipo" sortKey={sortKey} sortDir={sortDir} onSort={onSort} className="hidden md:table-cell" />
             <SortableTh label="Estado" columnKey="state" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
             <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
           </tr>
@@ -89,7 +89,7 @@ export default function DocumentsTable({
                       {d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : '—'}
                     </span>
                   </td>
-                  <td className="px-4 py-4 border-y border-slate-100">
+                  <td className="hidden md:table-cell px-4 py-4 border-y border-slate-100">
                     <p className="text-sm font-black text-slate-800">{d.workerName}</p>
                   </td>
                   <td className="px-4 py-4 border-y border-slate-100">
@@ -110,7 +110,7 @@ export default function DocumentsTable({
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-4 border-y border-slate-100">
+                  <td className="hidden md:table-cell px-4 py-4 border-y border-slate-100">
                     <p className="text-xs font-bold text-slate-700">{d.tipo || '—'}</p>
                   </td>
                   <td className="px-4 py-4 border-y border-slate-100"><StateBadge state={d.state} /></td>

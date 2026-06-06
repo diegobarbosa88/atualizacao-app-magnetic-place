@@ -123,7 +123,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
       </nav>
 
       {/* Bottom tab bar — mobile only */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex sm:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.06)]">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 flex sm:hidden shadow-[0_-4px_12px_rgba(0,0,0,0.06)] pb-[env(safe-area-inset-bottom)]">
         <TabButton
           active={workerTab === 'home'}
           onClick={() => { setWorkerTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}

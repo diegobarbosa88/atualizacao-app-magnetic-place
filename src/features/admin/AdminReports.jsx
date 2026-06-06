@@ -65,7 +65,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
           <div className="bg-indigo-50 text-indigo-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
           <div>
