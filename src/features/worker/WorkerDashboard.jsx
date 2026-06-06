@@ -284,12 +284,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             </div>
           ) : (
             <div className="mb-8">
-              {successMsg && (
-
-                <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl flex items-center justify-center gap-3 border border-emerald-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
-                  <CheckCircle size={24} className="text-emerald-500" /><span>{successMsg}</span>
-                </div>
-              )}
               {(currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()) && (isLimitedWorker ? (
                 <RequestEntryCard
                   currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
@@ -493,6 +487,16 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           />
         </>)}
       </main>
+
+      {/* Toast de confirmação */}
+      {successMsg && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none">
+          <div className="flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300 whitespace-nowrap">
+            <CheckCircle size={18} className="text-emerald-400 shrink-0" />
+            <span className="text-sm font-bold">{successMsg}</span>
+          </div>
+        </div>
+      )}
 
       {/* Modal Horários — mobile */}
       {scheduleModalOpen && (

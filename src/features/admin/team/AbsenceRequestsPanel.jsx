@@ -48,9 +48,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
     <div className="space-y-3">
       {[...requests].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).map(req => {
         const client = clients?.find(c => c.id === req.client_id);
-        const dateLabels = (req.dates || []).sort().map(ds =>
-          new Date(ds + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })
-        ).join(' · ');
+        const sortedDates = (req.dates || []).slice().sort();
         const createdLabel = new Date(req.created_at).toLocaleString('pt-PT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         const isNew = req.status === 'pending';
 
@@ -101,8 +99,27 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
               </div>
 
               <div>
-                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1">Dias</p>
-                <p className="text-xs font-bold text-orange-600">{dateLabels || '—'}</p>
+                <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                  Dias ausente <span className="font-bold normal-case tracking-normal text-slate-300">({sortedDates.length})</span>
+                </p>
+                {sortedDates.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {sortedDates.map(ds => {
+                      const d = new Date(ds + 'T00:00:00');
+                      const weekday = d.toLocaleDateString('pt-PT', { weekday: 'short' });
+                      const dayNum = d.getDate();
+                      const month = d.toLocaleDateString('pt-PT', { month: 'short' });
+                      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                      return (
+                        <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700'}`}>
+                          <span className="text-[8px] font-black uppercase tracking-wider">{weekday}</span>
+                          <span className="text-sm font-black">{dayNum}</span>
+                          <span className="text-[8px] font-bold opacity-70">{month}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                ) : <span className="text-xs text-slate-400">—</span>}
               </div>
 
               {req.notes && (
