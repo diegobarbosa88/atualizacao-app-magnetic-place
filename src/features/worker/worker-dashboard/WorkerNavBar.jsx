@@ -32,7 +32,7 @@ const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, isCurrentMonth }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, isCurrentMonth }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
 
   return (
@@ -131,8 +131,8 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           label="Home"
         />
         <TabButton
-          active={workerTab === 'horarios'}
-          onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')}
+          active={false}
+          onClick={onOpenScheduleModal}
           icon={<Timer size={20} />}
           label="Horários"
         />
@@ -146,8 +146,8 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           />
         )}
         <TabButton
-          active={workerTab === 'perfil'}
-          onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
+          active={false}
+          onClick={onOpenProfileModal}
           icon={<UserCircle size={20} />}
           label="Perfil"
           badge={pendingRequests}

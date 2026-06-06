@@ -3,7 +3,7 @@ import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
   CheckCircle, Edit2,
-  ChevronUp, ChevronDown, Trash2, Plus, Zap,
+  ChevronUp, ChevronDown, Trash2, Plus, Zap, X,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
@@ -54,6 +54,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [alertsModalDismissed, setAlertsModalDismissed] = useState(false);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -199,6 +201,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         alertCount={alertCount}
         onOpenAlerts={() => setAlertsModalOpen(true)}
         onOpenAbsenceModal={() => setAbsenceModalOpen(true)}
+        onOpenScheduleModal={() => setScheduleModalOpen(true)}
+        onOpenProfileModal={() => setProfileModalOpen(true)}
         isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
       />
 
@@ -489,6 +493,52 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           />
         </>)}
       </main>
+
+      {/* Modal Horários — mobile */}
+      {scheduleModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] flex flex-col sm:hidden">
+          <button className="flex-shrink-0 h-16" onClick={() => setScheduleModalOpen(false)} aria-label="Fechar" />
+          <div className="flex-1 bg-white rounded-t-3xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Meus Horários</h2>
+              <button onClick={() => setScheduleModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-4 py-4">
+              <WorkerScheduleTab
+                assigned={assigned}
+                currentUser={currentUser}
+                expandedSchedules={expandedSchedules}
+                toggleScheduleExpand={toggleScheduleExpand}
+                setDefaultSchedule={setDefaultSchedule}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Perfil — mobile */}
+      {profileModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] flex flex-col sm:hidden">
+          <button className="flex-shrink-0 h-16" onClick={() => setProfileModalOpen(false)} aria-label="Fechar" />
+          <div className="flex-1 bg-white rounded-t-3xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Meu Perfil</h2>
+              <button onClick={() => setProfileModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-4 py-4">
+              <WorkerProfile
+                worker={currentUser}
+                changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
+                documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
