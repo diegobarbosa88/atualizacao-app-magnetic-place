@@ -248,7 +248,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   <CheckCircle size={24} className="text-emerald-500" /><span>{successMsg}</span>
                 </div>
               )}
-              {currentMonthStr === todayStr.substring(0, 7) && (isLimitedWorker ? (
+              {(currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()) && (isLimitedWorker ? (
                 <RequestEntryCard
                   currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
                   onSuccess={() => { setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
