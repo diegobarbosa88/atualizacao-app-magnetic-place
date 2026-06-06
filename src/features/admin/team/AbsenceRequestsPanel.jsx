@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarX, Eye, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp } from 'lucide-react';
+import { CalendarX, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 export default function AbsenceRequestsPanel({ requests, systemSettings, clients }) {
@@ -77,13 +77,8 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-xs font-black text-slate-800">{req.worker_name}</p>
-                  {isNew && (
+                  {!isApproved && (
                     <span className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Novo</span>
-                  )}
-                  {!isNew && !isApproved && (
-                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase">
-                      <CheckCircle size={10} /> Visto
-                    </span>
                   )}
                   {isApproved && (
                     <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">
@@ -95,14 +90,6 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                   <Clock size={9} /> {createdLabel}
                 </p>
               </div>
-              {isNew && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleMarkSeen(req); }}
-                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all"
-                >
-                  <Eye size={12} /> Marcar como Visto
-                </button>
-              )}
               {!isApproved && (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleApprove(req); }}
