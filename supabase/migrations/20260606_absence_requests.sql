@@ -13,6 +13,11 @@ CREATE TABLE IF NOT EXISTS absence_requests (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+ALTER TABLE absence_requests DISABLE ROW LEVEL SECURITY;
+
+-- Habilitar realtime para a tabela
+ALTER PUBLICATION supabase_realtime ADD TABLE absence_requests;
+
 -- Coluna absence_config na tabela system_settings (JSONB com motivos e toggle)
 ALTER TABLE system_settings
   ADD COLUMN IF NOT EXISTS absence_config JSONB DEFAULT '{
