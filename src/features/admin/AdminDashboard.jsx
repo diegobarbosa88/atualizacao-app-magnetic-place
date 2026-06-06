@@ -12,8 +12,6 @@ import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
 import ScheduleManager from './ScheduleManager';
 import CostReports from './CostReports';
-import ValidationPortal from './ValidationPortal';
-import { ValidationPortalProvider } from './contexts/ValidationPortalContext';
 import DocumentsAdmin from './DocumentsAdmin';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
@@ -54,8 +52,6 @@ function AdminDashboard(props) {
     correctionNotifications,
     setClienteSelecionado,
     setModalEmailAberto,
-    portalSubTab,
-    setPortalSubTab,
     portalMonth,
     setPortalMonth,
     setModalRejeitarAberto,
@@ -180,11 +176,13 @@ function AdminDashboard(props) {
     }));
   }, [activeTab, currentUser?.id, appNotifications, supabase]);
 
-  const portalSubTabFromUrl = location.pathname.split('/')[3] || '';
   useEffect(() => {
-    if (activeTab !== 'portal_validacao' || portalSubTabFromUrl !== 'correcoes' || !currentUser?.id || !supabase) return;
+    const qp = new URLSearchParams(location.search);
+    const src = qp.get('source');
+    if ((activeTab !== 'clients' || src !== 'clients') && (activeTab !== 'team' || src !== 'workers')) return;
+    if (!currentUser?.id || !supabase) return;
     markCorrectionsViewed();
-  }, [activeTab, portalSubTabFromUrl, currentUser?.id]);
+  }, [activeTab, location.search, currentUser?.id]);
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -369,20 +367,13 @@ function AdminDashboard(props) {
       )}
 
       {!auditWorkerId && activeTab === 'clients' && (
-        <ClientManager />
-      )}
-
-      {!auditWorkerId && activeTab === 'portal_validacao' && (
-        <ValidationPortalProvider portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
-          <ValidationPortal
-            onLogin={onLogin}
-            setClienteSelecionado={setClienteSelecionado}
-            setModalEmailAberto={setModalEmailAberto}
-            setPrintingReport={setPrintingReport}
-            initialCorrectionId={selectedCorrectionId}
-            onCorrectionNavigated={() => setSelectedCorrectionId(null)}
-          />
-        </ValidationPortalProvider>
+        <ClientManager
+          setClienteSelecionado={setClienteSelecionado}
+          setModalEmailAberto={setModalEmailAberto}
+          setPrintingReport={setPrintingReport}
+          portalMonth={portalMonth}
+          setPortalMonth={setPortalMonth}
+        />
       )}
 
       {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
@@ -412,8 +403,9 @@ function AdminDashboard(props) {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           setAuditWorkerId={setAuditWorkerId}
-          totalPendingCorrections={totalPendingCorrections}
           pendingAbsencesCount={pendingAbsencesCount}
+          pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
+          pendingClientCorrectionsCount={pendingClientCorrectionsCount}
           currentUser={currentUser}
           unreadCount={unreadCount}
           systemSettings={systemSettings}
@@ -427,8 +419,9 @@ function AdminDashboard(props) {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           setAuditWorkerId={setAuditWorkerId}
-          totalPendingCorrections={totalPendingCorrections}
           pendingAbsencesCount={pendingAbsencesCount}
+          pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
+          pendingClientCorrectionsCount={pendingClientCorrectionsCount}
           currentUser={currentUser}
           onLogout={onLogout}
           isMobileOpen={mobileNavOpen}
@@ -471,7 +464,7 @@ function AdminDashboard(props) {
             {notificacoesDeCorrecao.filter(n => !isViewed(n)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
-                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); navigate('/admin/portal_validacao/correcoes?source=clientes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); navigate('/admin/clients?source=clients'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
@@ -517,7 +510,7 @@ function AdminDashboard(props) {
                 const corr = corrections?.find(c => c.id === corrId);
                 const client = clients.find(c => String(c.id) === String(corr?.client_id));
                 return (
-                  <button key={n.id} onClick={() => { markNotifRead(n.id); navigate('/admin/portal_validacao/correcoes?source=clientes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                  <button key={n.id} onClick={() => { markNotifRead(n.id); navigate('/admin/clients?source=clients'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
                     <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                     <div className="min-w-0 flex-1">
                       <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
@@ -571,7 +564,7 @@ function AdminDashboard(props) {
                         <button onClick={() => {
                           markNotifRead(n.id);
                           if (corrId) setSelectedCorrectionId(corrId);
-                          navigate('/admin/portal_validacao/correcoes?source=workers');
+                          navigate('/admin/team?source=workers');
                           setShowNotifDropdown(false);
                         }} className="flex-1 py-1.5 text-[10px] font-black bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 uppercase tracking-widest">Ver</button>
                         <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">Ignorar</button>

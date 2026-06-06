@@ -6,9 +6,8 @@ import CompanyLogo from '../../components/common/CompanyLogo';
 
 const TABS = [
   { id: 'overview', label: 'Geral' },
-  { id: 'team', label: 'Equipa' },
-  { id: 'clients', label: 'Clientes' },
-  { id: 'portal_validacao', label: 'Portal Validação', showBadge: true },
+  { id: 'team', label: 'Equipa', badgeType: 'team' },
+  { id: 'clients', label: 'Clientes', badgeType: 'clients' },
   { id: 'schedules', label: 'Horários' },
   { id: 'documentos', label: 'Documentos' },
   { id: 'reports', label: 'Folhas' },
@@ -20,8 +19,9 @@ export default function AdminClassicNav({
   activeTab,
   setActiveTab,
   setAuditWorkerId,
-  totalPendingCorrections,
   pendingAbsencesCount,
+  pendingWorkerCorrectionsCount,
+  pendingClientCorrectionsCount,
   currentUser,
   unreadCount,
   systemSettings,
@@ -82,36 +82,25 @@ export default function AdminClassicNav({
           >
             {TABS.map(t => {
               const isActive = activeTab === t.id;
-              const isPortalValidacao = t.id === 'portal_validacao';
-              const isTeam = t.id === 'team';
-              const teamBadge = isTeam ? (pendingAbsencesCount || 0) : 0;
+              const badge = t.badgeType === 'team'
+                ? (pendingAbsencesCount || 0) + (pendingWorkerCorrectionsCount || 0)
+                : t.badgeType === 'clients'
+                  ? (pendingClientCorrectionsCount || 0)
+                  : 0;
               return (
                 <button
                   key={t.id}
                   onClick={() => { setActiveTab(t.id); setAuditWorkerId(null); }}
                   className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${
                     isActive ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'
-                  } ${isPortalValidacao && totalPendingCorrections > 0 ? 'animate-pulse' : ''}`}
+                  }`}
                 >
-                  {t.id === 'settings' ? t.label : (
-                    isPortalValidacao ? (
-                      <span className="flex items-center gap-1">
-                        Portal Validação
-                        {totalPendingCorrections > 0 && (
-                          <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
-                            {totalPendingCorrections}
-                          </span>
-                        )}
-                      </span>
-                    ) : isTeam && teamBadge > 0 ? (
-                      <span className="flex items-center gap-1">
-                        {t.label}
-                        <span className="bg-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
-                          {teamBadge}
-                        </span>
-                      </span>
-                    ) : t.label
-                  )}
+                  {t.id === 'settings' ? t.label : badge > 0 ? (
+                    <span className="flex items-center gap-1">
+                      {t.label}
+                      <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{badge}</span>
+                    </span>
+                  ) : t.label}
                 </button>
               );
             })}

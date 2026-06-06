@@ -5,7 +5,6 @@ const TAB_LABELS = {
   overview: 'Geral',
   team: 'Equipa',
   clients: 'Clientes',
-  portal_validacao: 'Portal Validação',
   schedules: 'Horários',
   documentos: 'Documentos',
   reports: 'Folhas',

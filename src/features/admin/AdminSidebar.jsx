@@ -7,9 +7,8 @@ import CompanyLogo from '../../components/common/CompanyLogo';
 
 const TABS = [
   { id: 'overview', label: 'Geral', icon: LayoutGrid },
-  { id: 'team', label: 'Equipa', icon: Trophy },
-  { id: 'clients', label: 'Clientes', icon: Building2 },
-  { id: 'portal_validacao', label: 'Portal Validação', icon: Bell, showBadge: true },
+  { id: 'team', label: 'Equipa', icon: Trophy, badgeType: 'team' },
+  { id: 'clients', label: 'Clientes', icon: Building2, badgeType: 'clients' },
   { id: 'schedules', label: 'Horários', icon: Clock },
   { id: 'documentos', label: 'Documentos', icon: FileText },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },
@@ -17,13 +16,17 @@ const TABS = [
   { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 
-function NavList({ activeTab, setActiveTab, setAuditWorkerId, totalPendingCorrections, pendingAbsencesCount, onItemClick }) {
+function NavList({ activeTab, setActiveTab, setAuditWorkerId, pendingAbsencesCount, pendingWorkerCorrectionsCount, pendingClientCorrectionsCount, onItemClick }) {
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
       {TABS.map(tab => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
-        const badge = tab.showBadge ? totalPendingCorrections : tab.id === 'team' ? (pendingAbsencesCount || 0) : 0;
+        const badge = tab.badgeType === 'team'
+          ? (pendingAbsencesCount || 0) + (pendingWorkerCorrectionsCount || 0)
+          : tab.badgeType === 'clients'
+            ? (pendingClientCorrectionsCount || 0)
+            : 0;
         return (
           <button
             key={tab.id}
@@ -81,8 +84,9 @@ export default function AdminSidebar({
   activeTab,
   setActiveTab,
   setAuditWorkerId,
-  totalPendingCorrections,
   pendingAbsencesCount,
+  pendingWorkerCorrectionsCount,
+  pendingClientCorrectionsCount,
   currentUser,
   onLogout,
   isMobileOpen,
@@ -120,8 +124,9 @@ export default function AdminSidebar({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         setAuditWorkerId={setAuditWorkerId}
-        totalPendingCorrections={totalPendingCorrections}
         pendingAbsencesCount={pendingAbsencesCount}
+        pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
+        pendingClientCorrectionsCount={pendingClientCorrectionsCount}
       />
       <UserFooter currentUser={currentUser} onLogout={onLogout} />
     </aside>
@@ -151,8 +156,9 @@ export default function AdminSidebar({
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           setAuditWorkerId={setAuditWorkerId}
-          totalPendingCorrections={totalPendingCorrections}
           pendingAbsencesCount={pendingAbsencesCount}
+          pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
+          pendingClientCorrectionsCount={pendingClientCorrectionsCount}
           onItemClick={onClose}
         />
         <UserFooter currentUser={currentUser} onLogout={onLogout} onItemClick={onClose} />

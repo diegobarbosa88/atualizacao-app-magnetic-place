@@ -174,7 +174,7 @@ export default function App() {
   }, [currentUser?.id, myNotifications, supabase]);
 
   useEffect(() => {
-    if (location.pathname.startsWith('/admin/portal_validacao/correcoes') && currentUser?.role === 'admin' && myNotifications.length > 0) {
+    if ((location.pathname.startsWith('/admin/team') || location.pathname.startsWith('/admin/clients')) && currentUser?.role === 'admin' && myNotifications.length > 0) {
       const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
       if (toDismiss.length > 0) {
         toDismiss.forEach(n => handleDismissNotif(n.id));
@@ -185,7 +185,7 @@ export default function App() {
   const handleBannerClick = (notif) => {
     handleDismissNotif(notif.id);
     if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
-      navigate('/admin/portal_validacao/correcoes?source=clientes');
+      navigate('/admin/team?source=workers');
     }
   };
 

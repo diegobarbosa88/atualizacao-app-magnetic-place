@@ -342,7 +342,7 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
 
 const isWorkerType = (c) => c?.type === 'creation_request' || c?.type === 'deletion_request';
 
-const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
+const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSource }) => {
   const { corrections, correctionItems, clients, workers, logs, supabase, currentUser, setCorrections, setCorrectionItems } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -350,10 +350,11 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
   const [expandedCards, setExpandedCards] = useState({});
 
   const qp = new URLSearchParams(location.search);
-  const sourceFilter = qp.get('source') || 'workers';
+  const sourceFilter = forcedSource || qp.get('source') || 'workers';
   const filter = qp.get('filter') || 'open';
 
   const setSourceFilter = (src) => {
+    if (forcedSource) return;
     const p = new URLSearchParams(location.search);
     p.set('source', src);
     p.delete('filter');
@@ -466,17 +467,19 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated }) => {
         <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Inbox de Correções</h3>
       </header>
 
-      {/* Source selector */}
-      <div className="flex gap-2 mb-4">
-        <button onClick={() => setSourceFilter('workers')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'workers' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-300'}`}>
-          <Users size={14} /> Workers
-          {workerOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{workerOpenCount}</span>}
-        </button>
-        <button onClick={() => setSourceFilter('clients')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'clients' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
-          <Building2 size={14} /> Clientes
-          {clientOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{clientOpenCount}</span>}
-        </button>
-      </div>
+      {/* Source selector — hidden when forcedSource is set */}
+      {!forcedSource && (
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setSourceFilter('workers')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'workers' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-300'}`}>
+            <Users size={14} /> Workers
+            {workerOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{workerOpenCount}</span>}
+          </button>
+          <button onClick={() => setSourceFilter('clients')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'clients' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
+            <Building2 size={14} /> Clientes
+            {clientOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{clientOpenCount}</span>}
+          </button>
+        </div>
+      )}
 
       {/* Status filter tabs */}
       <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
