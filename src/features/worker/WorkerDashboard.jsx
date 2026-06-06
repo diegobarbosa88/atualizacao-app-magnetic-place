@@ -20,6 +20,7 @@ import { useWorkerCorrections } from './worker-dashboard/useWorkerCorrections';
 import PendingCorrectionsPanel from './worker-dashboard/PendingCorrectionsPanel';
 import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
 import TimeEntryModal from './worker-dashboard/TimeEntryModal';
+import IncompleteLogModal from './worker-dashboard/IncompleteLogModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -49,6 +50,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
   const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
+  const [incompleteModalDismissed, setIncompleteModalDismissed] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -248,35 +250,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             </div>
           )}
 
-          {(previousOpenLogs || []).map(log => (
-            <div key={log.id} className="mb-6 animate-in slide-in-from-top-4 duration-500">
-              <div className="bg-gradient-to-br from-orange-500 to-amber-500 rounded-[2.5rem] p-1 shadow-xl ring-4 ring-orange-400/20">
-                <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-5 sm:p-6">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-orange-100 p-3 rounded-2xl text-orange-600 shadow-inner shrink-0">
-                        <AlertTriangle size={24} />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">
-                          Registo Incompleto
-                        </h3>
-                        <p className="text-xs font-bold text-slate-500 mt-0.5">
-                          Dia {new Date(log.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })} · Entrada às {log.startTime} · Saída em falta
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => openIncompleteLogModal(log)}
-                      className="w-full sm:w-auto px-6 py-3 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-orange-200 active:scale-95 flex items-center justify-center gap-2 shrink-0"
-                    >
-                      <Edit2 size={14} /> Completar Registo
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
 
           <WorkerHeroStats
             currentUser={currentUser} currentMonth={currentMonth} setCurrentMonth={setCurrentMonth}
@@ -463,6 +436,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <div id="secao-documentos">
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
           </div>
+
+          <IncompleteLogModal
+            logs={!incompleteModalDismissed ? (previousOpenLogs || []) : []}
+            clients={clients}
+            onComplete={(log) => { setIncompleteModalDismissed(true); openIncompleteLogModal(log); }}
+            onDismiss={() => setIncompleteModalDismissed(true)}
+          />
 
           <TimeEntryModal
             isOpen={timeEntryModalOpen}
