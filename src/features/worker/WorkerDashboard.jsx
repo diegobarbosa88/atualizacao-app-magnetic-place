@@ -379,23 +379,27 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                           {dayLogs.length > 0 && (
                             <div className="space-y-3">
                               {dayLogs.map(log => (
-                                <div key={log.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm w-full">
-                                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-lg border border-indigo-100 uppercase">{clients.find(c => c.id === log.clientId)?.name || 'Cliente'}</span>
-                                    <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">{log.startTime}-{log.endTime}</div>
+                                <div
+                                  key={log.id}
+                                  onClick={() => openTimeEntryModal(ds)}
+                                  className="bg-white px-3 py-2.5 sm:p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm w-full cursor-pointer hover:bg-indigo-50/40 transition-all"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg border border-indigo-100 uppercase shrink-0 max-w-[90px] truncate">{clients.find(c => c.id === log.clientId)?.name || 'Cliente'}</span>
+                                    <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">{log.startTime}–{log.endTime}</div>
                                     {(log.breakStart || log.breakEnd) && (
-                                      <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1.5 rounded-lg border border-orange-100">
-                                        Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
+                                      <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100 hidden sm:block shrink-0">
+                                        Pausa: {log.breakStart || '--:--'}–{log.breakEnd || '--:--'}
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex flex-row items-center justify-between sm:justify-end gap-4 sm:border-l sm:pl-4 border-slate-100 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
-                                    <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
+                                  <div className="flex items-center gap-2 shrink-0 border-l border-slate-100 pl-3">
+                                    <span className="text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
                                     {!myApproval && !isLimitedWorker && (
-                                      <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                                     )}
                                     {isLimitedWorker && (
-                                      <button onClick={() => openTimeEntryModal(ds)} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={14} /></button>
                                     )}
                                   </div>
                                 </div>
