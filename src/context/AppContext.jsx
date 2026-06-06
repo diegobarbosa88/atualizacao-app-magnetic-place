@@ -92,6 +92,7 @@ export const AppProvider = ({ children }) => {
   const [clientApprovals, setClientApprovals] = useState([]);
   const [appNotifications, setAppNotifications] = useState([]);
   const [workerChangeRequests, setWorkerChangeRequests] = useState([]);
+  const [absenceRequests, setAbsenceRequests] = useState([]);
   const [isDbReady, setIsDbReady] = useState(false);
   const [gmailQueryConfig, setGmailQueryConfig] = useState(null);
 
@@ -190,6 +191,10 @@ export const AppProvider = ({ children }) => {
         fetchTable('correction_items', setCorrectionItems),
         fetchTable('worker_change_requests', setWorkerChangeRequests),
         (async () => {
+          const { data: absData } = await supabaseInstance.from('absence_requests').select('*').order('created_at', { ascending: false });
+          if (absData) setAbsenceRequests(absData);
+        })(),
+        (async () => {
           const { data, error } = await supabaseInstance
             .from('system_settings')
             .select('*')
@@ -220,6 +225,7 @@ export const AppProvider = ({ children }) => {
               ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),
               ...(data.entry_tolerance_minutes != null && { entryToleranceMinutes: Number(data.entry_tolerance_minutes) }),
               ...(data.nav_mode && { navMode: data.nav_mode }),
+              ...(data.absence_config && { absenceConfig: data.absence_config }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
             if (data.notification_preferences) setNotificationPreferences(data.notification_preferences);
@@ -319,6 +325,14 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
+    const channelAbsences = supabaseInstance
+      .channel('realtime-absences')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'absence_requests' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setAbsenceRequests)(payload.old);
+        else upsertById(setAbsenceRequests)(payload.new);
+      })
+      .subscribe();
+
     const channelWorkers = supabaseInstance
       .channel('realtime-workers')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workers' }, (payload) => {
@@ -340,6 +354,7 @@ export const AppProvider = ({ children }) => {
       supabaseInstance.removeChannel(channelApprovals);
       supabaseInstance.removeChannel(channelLogs);
       supabaseInstance.removeChannel(channelChangeReqs);
+      supabaseInstance.removeChannel(channelAbsences);
       supabaseInstance.removeChannel(channelWorkers);
     };
   }, [isDbReady]);
@@ -365,6 +380,7 @@ export const AppProvider = ({ children }) => {
     }
     else if (colName === 'correction_items') prependState(setCorrectionItems);
     else if (colName === 'documents' || colName === 'documentos') updateState(setDocuments);
+    else if (colName === 'absence_requests') prependState(setAbsenceRequests);
 
     // Supabase Persistence
     if (!supabaseInstance) return;
@@ -584,6 +600,15 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const saveAbsenceConfig = async (config) => {
+    setSystemSettings(prev => ({ ...prev, absenceConfig: config }));
+    if (!supabaseInstance) return;
+    const { error } = await supabaseInstance
+      .from('system_settings')
+      .upsert({ id: 1, absence_config: config, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) console.error('Erro ao gravar absence_config:', error);
+  };
+
   const saveGmailQueryConfig = async (config) => {
     setGmailQueryConfig(config);
     if (!supabaseInstance) return;
@@ -641,13 +666,15 @@ export const AppProvider = ({ children }) => {
     clientApprovals, setClientApprovals,
     appNotifications, setAppNotifications,
     workerChangeRequests, setWorkerChangeRequests,
+    absenceRequests, setAbsenceRequests,
     isDbReady,
     adminStats,
     saveToDb,
     handleDelete,
     handleApproveMonth,
     supabase: supabaseInstance,
-    notificationPreferences, updateNotificationPreferences
+    notificationPreferences, updateNotificationPreferences,
+    saveAbsenceConfig,
   };
 
   return (

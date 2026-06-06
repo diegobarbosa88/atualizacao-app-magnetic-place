@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
+import AbsenceRequestsPanel from './team/AbsenceRequestsPanel';
 import WorkerValorHoraHistoryModal from './team/WorkerValorHoraHistoryModal';
 import WorkerEmploymentHistoryModal from './team/WorkerEmploymentHistoryModal';
 
 const TeamManagerContent = ({ onLogin }) => {
-  const { workers, schedules, clients, supabase, workerChangeRequests } = useApp();
+  const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
+  const [teamSubTab, setTeamSubTab] = useState('workers');
   const {
     isAddingInTab, setIsAddingInTab,
     workersView, setWorkersView,
@@ -23,6 +25,7 @@ const TeamManagerContent = ({ onLogin }) => {
   const [empModal, setEmpModal] = useState({ show: false, workerId: null, workerName: '' });
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
+  const pendingAbsences = (absenceRequests || []).filter(r => r.status === 'pending').length;
   const inactiveCount = workers.filter(w => w.status === 'inativo').length;
 
   const displayWorkers = workers.filter(w => showInactive || w.status !== 'inativo');
@@ -62,13 +65,41 @@ const TeamManagerContent = ({ onLogin }) => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Sub-tab navigation */}
+      <div className="flex items-center gap-2 mb-5 border-b border-slate-100 pb-3">
+        <button
+          onClick={() => setTeamSubTab('workers')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'workers' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-indigo-600'}`}
+        >
+          <Users size={14} /> Colaboradores
+          {pendingChangeRequests.length > 0 && (
+            <span className="bg-amber-400 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingChangeRequests.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setTeamSubTab('absences')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'absences' ? 'bg-orange-500 text-white' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+        >
+          <CalendarX size={14} /> Faltas
+          {pendingAbsences > 0 && (
+            <span className="bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{teamSubTab === 'absences' ? pendingAbsences : pendingAbsences}</span>
+          )}
+        </button>
+      </div>
+
+      {teamSubTab === 'absences' && (
+        <AbsenceRequestsPanel
+          requests={absenceRequests || []}
+          systemSettings={systemSettings}
+          clients={clients}
+        />
+      )}
+
+      {teamSubTab === 'workers' && (<>
       <div className="flex justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Users size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Colaboradores</h3>
-          {pendingChangeRequests.length > 0 && (
-            <span className="bg-amber-400 text-white text-[9px] font-black px-2 py-0.5 rounded-full">{pendingChangeRequests.length}</span>
-          )}
         </div>
         <div className="flex items-center gap-2">
           {inactiveCount > 0 && (
@@ -125,6 +156,7 @@ const TeamManagerContent = ({ onLogin }) => {
         supabase={supabase}
         onClose={() => setEmpModal({ show: false, workerId: null, workerName: '' })}
       />
+      </>)}
     </div>
   );
 };

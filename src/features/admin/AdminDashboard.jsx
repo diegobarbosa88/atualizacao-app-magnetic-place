@@ -63,7 +63,7 @@ function AdminDashboard(props) {
     setRejeitarNotif
   } = props;
 
-  const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, corrections, correctionItems, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
+  const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, absenceRequests, corrections, correctionItems, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -88,6 +88,7 @@ function AdminDashboard(props) {
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
+  const pendingAbsencesCount = (absenceRequests || []).filter(r => r.status === 'pending').length;
   const pendingClientCorrectionsCount = (corrections || []).filter(c =>
     c.type !== 'creation_request' && c.type !== 'deletion_request' &&
     (c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending')
@@ -105,7 +106,7 @@ function AdminDashboard(props) {
     if (dismissedAdminNotifs.includes(n.id)) return false;
     return true;
   }).length;
-  const unreadCount = workerSubmissionUnread + pendingChangeRequestsCount;
+  const unreadCount = workerSubmissionUnread + pendingChangeRequestsCount + pendingAbsencesCount;
 
   const handleDismissAdminNotif = useCallback((id) => {
     setDismissedAdminNotifs(prev => {

@@ -3,7 +3,7 @@ import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
   CheckCircle, Edit2,
-  ChevronUp, ChevronDown, Trash2, Plus, Zap,
+  ChevronUp, ChevronDown, Trash2, Plus, Zap, CalendarX,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
@@ -21,6 +21,7 @@ import PendingCorrectionsPanel from './worker-dashboard/PendingCorrectionsPanel'
 import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
 import TimeEntryModal from './worker-dashboard/TimeEntryModal';
 import PendingAlertsModal from './worker-dashboard/PendingAlertsModal';
+import AbsenceRequestModal from './worker-dashboard/AbsenceRequestModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -52,6 +53,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [alertsModalDismissed, setAlertsModalDismissed] = useState(false);
+  const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -130,6 +132,38 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       await handleSaveEntry({ ...formData, date }, false, date);
     }
     setSuccessMsg(`${dates.length} registo${dates.length !== 1 ? 's' : ''} guardado${dates.length !== 1 ? 's' : ''} com sucesso!`);
+    setTimeout(() => setSuccessMsg(''), 6000);
+  };
+
+  const handleAbsenceSubmit = async (dates, reason, notes) => {
+    const id = `abs_${Date.now()}`;
+    await saveToDb('absence_requests', id, {
+      id,
+      worker_id: currentUser.id,
+      worker_name: currentUser.name,
+      client_id: currentUser.defaultClientId || null,
+      dates,
+      reason,
+      notes: notes || null,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    });
+    const notifId = `notif_abs_${Date.now()}`;
+    await saveToDb('app_notifications', notifId, {
+      id: notifId,
+      title: 'Aviso de Falta',
+      message: `${currentUser.name} avisou falta (${dates.length} dia${dates.length !== 1 ? 's' : ''}): ${reason}`,
+      type: 'warning',
+      target_type: 'admin',
+      payload: { absenceId: id, kind: 'absence' },
+      is_dismissible: true,
+      is_active: true,
+      viewed_by_ids: [],
+      dismissed_by_ids: [],
+      read_by_admin_ids: [],
+      created_at: new Date().toISOString(),
+    });
+    setSuccessMsg('Aviso de falta enviado com sucesso!');
     setTimeout(() => setSuccessMsg(''), 6000);
   };
 
@@ -230,6 +264,17 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
               geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
             />
+          )}
+
+          {!myApproval && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+            <div className="mb-4 flex justify-end">
+              <button
+                onClick={() => setAbsenceModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-orange-200 text-orange-600 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-orange-50 transition-all shadow-sm active:scale-95"
+              >
+                <CalendarX size={14} /> Avisar Falta
+              </button>
+            </div>
           )}
 
           {myApproval ? (
@@ -440,6 +485,16 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <DeleteConfirmModal
             deleteConfirm={deleteConfirm} setDeleteConfirm={setDeleteConfirm}
             deleteSubmitting={deleteSubmitting} onConfirm={handleSubmitDeletion}
+          />
+
+          <AbsenceRequestModal
+            isOpen={absenceModalOpen}
+            onClose={() => setAbsenceModalOpen(false)}
+            daysList={daysList}
+            monthLogs={monthLogs}
+            currentUser={currentUser}
+            systemSettings={systemSettings}
+            onSubmit={handleAbsenceSubmit}
           />
         </>)}
       </main>

@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
-  ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2
+  ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2
 } from 'lucide-react';
 import { calculateDuration } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
@@ -18,7 +18,14 @@ export default function AdminSettings() {
     logs,
     companySignature,
     saveCompanySignature,
+    saveAbsenceConfig,
   } = useApp();
+
+  const absenceConfig = systemSettings?.absenceConfig || {
+    absence_reasons: ['Doença', 'Consulta médica', 'Emergência familiar', 'Férias', 'Assunto pessoal', 'Outro'],
+    absence_notify_client: false,
+  };
+  const [newReason, setNewReason] = useState('');
 
   const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
 
@@ -414,6 +421,79 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               >
                 Recalcular
               </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Avisos de Falta */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-orange-50 p-2 rounded-xl text-orange-600"><CalendarX size={20} /></div>
+            <h3 className="font-black text-lg text-slate-800">Avisos de Falta</h3>
+          </div>
+          <div className="space-y-5">
+            {/* Notify client toggle */}
+            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+              <div>
+                <p className="text-sm font-bold text-slate-700">Mostrar email do cliente no aviso</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                  Quando activo, aparece um botão para copiar mensagem pronta ao cliente
+                </p>
+              </div>
+              <button
+                onClick={() => saveAbsenceConfig({ ...absenceConfig, absence_notify_client: !absenceConfig.absence_notify_client })}
+                className={`relative w-11 h-6 rounded-full transition-colors ${absenceConfig.absence_notify_client ? 'bg-orange-500' : 'bg-slate-200'}`}
+              >
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${absenceConfig.absence_notify_client ? 'translate-x-5' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Reasons list */}
+            <div>
+              <p className="text-xs font-black uppercase text-slate-500 tracking-widest mb-3">Motivos Predefinidos</p>
+              <div className="space-y-2">
+                {(absenceConfig.absence_reasons || []).map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                    <span className="flex-1 text-sm font-bold text-slate-700">{r}</span>
+                    {(absenceConfig.absence_reasons || []).length > 1 && (
+                      <button
+                        onClick={() => {
+                          const updated = (absenceConfig.absence_reasons || []).filter((_, idx) => idx !== i);
+                          saveAbsenceConfig({ ...absenceConfig, absence_reasons: updated });
+                        }}
+                        className="p-1.5 text-slate-300 hover:text-rose-500 transition-colors rounded-lg"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="text"
+                  value={newReason}
+                  onChange={e => setNewReason(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && newReason.trim()) {
+                      saveAbsenceConfig({ ...absenceConfig, absence_reasons: [...(absenceConfig.absence_reasons || []), newReason.trim()] });
+                      setNewReason('');
+                    }
+                  }}
+                  placeholder="Adicionar motivo..."
+                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
+                />
+                <button
+                  onClick={() => {
+                    if (!newReason.trim()) return;
+                    saveAbsenceConfig({ ...absenceConfig, absence_reasons: [...(absenceConfig.absence_reasons || []), newReason.trim()] });
+                    setNewReason('');
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-orange-600 transition-all"
+                >
+                  <Plus size={13} /> Adicionar
+                </button>
+              </div>
             </div>
           </div>
         </div>
