@@ -216,7 +216,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             myApproval={myApproval} showProgress={showProgress} setShowProgress={setShowProgress}
           />
 
-          {currentUser?.gps_enabled && (
+          {currentUser?.gps_enabled && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
             <InServiceCard
               todayOpenLog={todayOpenLog} clients={clients}
               handleRegistarPausa={handleRegistarPausa} handleRegistarSaida={handleRegistarSaida}
@@ -224,11 +224,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             />
           )}
 
-          <GeoSuggestionCard
-            geoSuggestion={geoSuggestion} geoSuggestionDismissed={geoSuggestionDismissed}
-            setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
-            geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
-          />
+          {currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+            <GeoSuggestionCard
+              geoSuggestion={geoSuggestion} geoSuggestionDismissed={geoSuggestionDismissed}
+              setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
+              geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
+            />
+          )}
 
           {myApproval ? (
             <div className="mb-10 bg-emerald-50/80 border border-emerald-200 rounded-[3rem] p-12 text-center text-emerald-800 shadow-inner animate-in zoom-in-95">
