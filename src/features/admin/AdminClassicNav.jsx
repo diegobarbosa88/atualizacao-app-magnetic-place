@@ -21,6 +21,7 @@ export default function AdminClassicNav({
   setActiveTab,
   setAuditWorkerId,
   totalPendingCorrections,
+  pendingAbsencesCount,
   currentUser,
   unreadCount,
   systemSettings,
@@ -81,6 +82,8 @@ export default function AdminClassicNav({
             {TABS.map(t => {
               const isActive = activeTab === t.id;
               const isPortalValidacao = t.id === 'portal_validacao';
+              const isTeam = t.id === 'team';
+              const teamBadge = isTeam ? (pendingAbsencesCount || 0) : 0;
               return (
                 <button
                   key={t.id}
@@ -98,6 +101,13 @@ export default function AdminClassicNav({
                             {totalPendingCorrections}
                           </span>
                         )}
+                      </span>
+                    ) : isTeam && teamBadge > 0 ? (
+                      <span className="flex items-center gap-1">
+                        {t.label}
+                        <span className="bg-orange-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">
+                          {teamBadge}
+                        </span>
                       </span>
                     ) : t.label
                   )}

@@ -17,13 +17,13 @@ const TABS = [
   { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 
-function NavList({ activeTab, setActiveTab, setAuditWorkerId, totalPendingCorrections, onItemClick }) {
+function NavList({ activeTab, setActiveTab, setAuditWorkerId, totalPendingCorrections, pendingAbsencesCount, onItemClick }) {
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
       {TABS.map(tab => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
-        const badge = tab.showBadge ? totalPendingCorrections : 0;
+        const badge = tab.showBadge ? totalPendingCorrections : tab.id === 'team' ? (pendingAbsencesCount || 0) : 0;
         return (
           <button
             key={tab.id}
@@ -82,6 +82,7 @@ export default function AdminSidebar({
   setActiveTab,
   setAuditWorkerId,
   totalPendingCorrections,
+  pendingAbsencesCount,
   currentUser,
   onLogout,
   isMobileOpen,
@@ -120,6 +121,7 @@ export default function AdminSidebar({
         setActiveTab={setActiveTab}
         setAuditWorkerId={setAuditWorkerId}
         totalPendingCorrections={totalPendingCorrections}
+        pendingAbsencesCount={pendingAbsencesCount}
       />
       <UserFooter currentUser={currentUser} onLogout={onLogout} />
     </aside>
@@ -150,6 +152,7 @@ export default function AdminSidebar({
           setActiveTab={setActiveTab}
           setAuditWorkerId={setAuditWorkerId}
           totalPendingCorrections={totalPendingCorrections}
+          pendingAbsencesCount={pendingAbsencesCount}
           onItemClick={onClose}
         />
         <UserFooter currentUser={currentUser} onLogout={onLogout} onItemClick={onClose} />

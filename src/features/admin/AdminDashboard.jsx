@@ -413,6 +413,7 @@ function AdminDashboard(props) {
           setActiveTab={setActiveTab}
           setAuditWorkerId={setAuditWorkerId}
           totalPendingCorrections={totalPendingCorrections}
+          pendingAbsencesCount={pendingAbsencesCount}
           currentUser={currentUser}
           unreadCount={unreadCount}
           systemSettings={systemSettings}
@@ -427,6 +428,7 @@ function AdminDashboard(props) {
           setActiveTab={setActiveTab}
           setAuditWorkerId={setAuditWorkerId}
           totalPendingCorrections={totalPendingCorrections}
+          pendingAbsencesCount={pendingAbsencesCount}
           currentUser={currentUser}
           onLogout={onLogout}
           isMobileOpen={mobileNavOpen}
