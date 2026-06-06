@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { FileText, FileSignature, CheckCircle, BarChart3, Coins, Receipt, TrendingUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
@@ -23,8 +24,22 @@ const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato
 const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings, onSwitchTab, ...rest }) => {
   const props = { workers, documents, setDocuments, systemSettings, onSwitchTab, ...rest };
   const { supabase: clientSupabase, companySignature, stampStyle } = useApp();
-  const [activeSubTab, setActiveSubTab] = useState('documentos');
-  const [validarSubTab, setValidarSubTab] = useState('recibos');
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const activeSubTab = useMemo(() => {
+    const match = location.pathname.match(/^\/admin\/documentos\/([^/]+)/);
+    return match ? match[1] : 'documentos';
+  }, [location.pathname]);
+
+  const setActiveSubTab = (tab) => navigate(`/admin/documentos/${tab}`);
+
+  const validarSubTab = useMemo(() => {
+    const match = location.pathname.match(/^\/admin\/documentos\/validar\/([^/]+)/);
+    return match ? match[1] : 'recibos';
+  }, [location.pathname]);
+
+  const setValidarSubTab = (tab) => navigate(`/admin/documentos/validar/${tab}`);
 
   const {
     generatedDocs,
@@ -286,7 +301,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             { id: 'faturas', icon: FileText, label: 'Faturas' },
             { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
             { id: 'templates', icon: FileSignature, label: 'Templates' },
-            { id: 'validar-recibo', icon: CheckCircle, label: 'Validar' },
+            { id: 'validar', icon: CheckCircle, label: 'Validar' },
           ].map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -299,7 +314,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         </div>
       </div>
 
-      {activeSubTab === 'validar-recibo' ? (
+      {activeSubTab === 'validar' ? (
         <>
           <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-lg">
             {[
