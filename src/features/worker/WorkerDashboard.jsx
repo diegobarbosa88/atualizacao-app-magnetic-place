@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
-  Clock, CheckCircle, LogIn, Edit2, AlertCircle, AlertTriangle,
+  CheckCircle, Edit2,
   ChevronUp, ChevronDown, Trash2, Plus, Zap,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
@@ -20,7 +20,7 @@ import { useWorkerCorrections } from './worker-dashboard/useWorkerCorrections';
 import PendingCorrectionsPanel from './worker-dashboard/PendingCorrectionsPanel';
 import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
 import TimeEntryModal from './worker-dashboard/TimeEntryModal';
-import IncompleteLogModal from './worker-dashboard/IncompleteLogModal';
+import PendingAlertsModal from './worker-dashboard/PendingAlertsModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -50,7 +50,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
   const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
-  const [incompleteModalDismissed, setIncompleteModalDismissed] = useState(false);
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false);
+  const [alertsModalDismissed, setAlertsModalDismissed] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -144,6 +145,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     return pendingMonthStart >= workerStartDate;
   });
 
+  const pendingSignaturesCount = (documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id && d.status !== 'Rascunho').length;
+  const alertCount = filteredPendingApprovals.length + (pendingSignaturesCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
+
+  useEffect(() => {
+    if (alertCount > 0 && !alertsModalDismissed) setAlertsModalOpen(true);
+  }, [alertCount, alertsModalDismissed]);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-32 font-sans relative">
       <WorkerNavBar
@@ -154,6 +162,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         workerChangeRequests={workerChangeRequests}
         onLogin={onLogin}
         onLogout={onLogout}
+        alertCount={alertCount}
+        onOpenAlerts={() => setAlertsModalOpen(true)}
       />
 
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
@@ -182,73 +192,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         )}
 
         {workerTab === 'home' && (<>
-          {/* Pending approval banners */}
-          {filteredPendingApprovals.map((pending) => {
-            const isViewingThisMonth = pending.monthStr === currentMonthStr;
-            return (
-              <div key={`pending-${pending.monthStr}`} className="mb-8 animate-in slide-in-from-top-4 duration-700">
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-1 shadow-2xl ring-4 ring-indigo-500/20">
-                  <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-5">
-                        <div className="bg-indigo-100 p-4 rounded-2xl text-indigo-600 shadow-inner animate-pulse"><Clock size={32} /></div>
-                        <div>
-                          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">
-                            Validar Horas de {pending.date.toLocaleDateString('pt-PT', { month: 'long' })}
-                          </h3>
-                          <p className="text-sm font-bold text-slate-500 mt-1">
-                            {isViewingThisMonth
-                              ? 'O mês terminou. Verifica os teus registos e submete para aprovação.'
-                              : 'Ainda tens horas de um mês anterior por validar. Por favor, revê e submete.'}
-                          </p>
-                        </div>
-                      </div>
-                      {isViewingThisMonth ? (
-                        <button
-                          onClick={() => handleApproveMonth(currentUser?.id)}
-                          className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 flex items-center justify-center gap-3"
-                        >
-                          <CheckCircle size={18} /> Confirmar e Enviar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
-                          className="w-full md:w-auto px-10 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
-                        >
-                          <Clock size={18} /> Rever e Validar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Pending signatures banner */}
-          {(documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id && d.status !== 'Rascunho').length > 0 && (
-            <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
-              <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-1 shadow-lg">
-                <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                      <div className="bg-amber-100 p-4 rounded-2xl text-amber-600 shadow-inner"><AlertCircle size={32} /></div>
-                      <div>
-                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Assinaturas Pendentes</h3>
-                        <p className="text-sm font-bold text-slate-500 mt-1">Tens documentos importantes que requerem a tua validação e assinatura digital.</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { const el = document.getElementById('secao-documentos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                      className="w-full md:w-auto px-10 py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
-                    >
-                      <Edit2 size={18} /> Assinar Agora
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
 
           <WorkerHeroStats
@@ -437,11 +380,18 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
           </div>
 
-          <IncompleteLogModal
-            logs={!incompleteModalDismissed ? (previousOpenLogs || []) : []}
+          <PendingAlertsModal
+            isOpen={alertsModalOpen}
+            onClose={() => { setAlertsModalOpen(false); setAlertsModalDismissed(true); }}
+            pendingApprovals={filteredPendingApprovals}
+            currentMonthStr={currentMonthStr}
+            pendingSignaturesCount={pendingSignaturesCount}
+            previousOpenLogs={previousOpenLogs}
             clients={clients}
-            onComplete={(log) => { setIncompleteModalDismissed(true); openIncompleteLogModal(log); }}
-            onDismiss={() => setIncompleteModalDismissed(true)}
+            onApproveMonth={() => handleApproveMonth(currentUser?.id)}
+            onReviewMonth={(pending) => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
+            onSignDocuments={() => { const el = document.getElementById('secao-documentos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+            onCompleteLog={openIncompleteLogModal}
           />
 
           <TimeEntryModal

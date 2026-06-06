@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Timer, Users, UserCircle } from 'lucide-react';
+import { LogOut, Timer, Users, UserCircle, Bell } from 'lucide-react';
 import CompanyLogo from '../../../components/common/CompanyLogo';
 
 const formatShortName = (fullName) => {
@@ -17,7 +17,7 @@ const formatTimeCompact = (timeStr) => {
   return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
 };
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
 
   return (
@@ -45,6 +45,18 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           </div>
         </button>
         <div className="flex items-center gap-2 sm:gap-4">
+          {alertCount > 0 && (
+            <button
+              onClick={onOpenAlerts}
+              className="relative p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"
+              title="Avisos pendentes"
+            >
+              <Bell size={18} />
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 rounded-full text-[9px] font-black text-white flex items-center justify-center px-1">
+                {alertCount}
+              </span>
+            </button>
+          )}
           <button
             onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')}
             className={`flex items-center gap-2 p-2 sm:px-4 sm:py-2 rounded-xl text-xs font-black shadow-sm ${workerTab === 'horarios' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}
