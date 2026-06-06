@@ -12,15 +12,12 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
 
   const handleApprove = async (req) => {
     if (!supabase) return;
-    const now = new Date().toISOString();
-    await supabase.from('absence_requests').update({
-      status: 'approved',
-      approved_at: now,
-      approved_by: currentUser?.name || 'admin',
-    }).eq('id', req.id);
-    setAbsenceRequests(prev => prev.map(r =>
-      r.id === req.id ? { ...r, status: 'approved', approved_at: now, approved_by: currentUser?.name || 'admin' } : r
-    ));
+    const { error } = await supabase.from('absence_requests').update({ status: 'approved' }).eq('id', req.id);
+    if (!error) {
+      setAbsenceRequests(prev => prev.map(r =>
+        r.id === req.id ? { ...r, status: 'approved' } : r
+      ));
+    }
   };
 
   const handleMarkSeen = async (req) => {
