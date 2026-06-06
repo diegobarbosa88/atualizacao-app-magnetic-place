@@ -1,12 +1,27 @@
 import React, { useState } from 'react';
-import { CalendarX, Eye, Copy, CheckCircle, Clock } from 'lucide-react';
+import { CalendarX, Eye, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 export default function AbsenceRequestsPanel({ requests, systemSettings, clients }) {
   const { supabase, setAbsenceRequests, currentUser } = useApp();
   const [copiedId, setCopiedId] = useState(null);
+  const [openIds, setOpenIds] = useState(new Set());
+  const toggleOpen = (id) => setOpenIds(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const notifyClient = systemSettings?.absenceConfig?.absence_notify_client ?? false;
+
+  const handleApprove = async (req) => {
+    if (!supabase) return;
+    const now = new Date().toISOString();
+    await supabase.from('absence_requests').update({
+      status: 'approved',
+      approved_at: now,
+      approved_by: currentUser?.name || 'admin',
+    }).eq('id', req.id);
+    setAbsenceRequests(prev => prev.map(r =>
+      r.id === req.id ? { ...r, status: 'approved', approved_at: now, approved_by: currentUser?.name || 'admin' } : r
+    ));
+  };
 
   const handleMarkSeen = async (req) => {
     if (!supabase) return;
@@ -51,10 +66,11 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
         const sortedDates = (req.dates || []).slice().sort();
         const createdLabel = new Date(req.created_at).toLocaleString('pt-PT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
         const isNew = req.status === 'pending';
+        const isApproved = req.status === 'approved';
 
         return (
           <div key={req.id} className={`bg-white rounded-2xl border shadow-sm overflow-hidden ${isNew ? 'border-orange-200' : 'border-slate-100'}`}>
-            <div className={`px-5 py-3 flex items-center gap-3 ${isNew ? 'bg-orange-50' : 'bg-slate-50'}`}>
+            <div onClick={() => toggleOpen(req.id)} className={`px-5 py-3 flex items-center gap-3 cursor-pointer select-none ${isNew ? 'bg-orange-50' : 'bg-slate-50'}`}>
               <div className={`p-2 rounded-xl shrink-0 ${isNew ? 'bg-orange-100' : 'bg-slate-100'}`}>
                 <CalendarX size={15} className={isNew ? 'text-orange-600' : 'text-slate-400'} />
               </div>
@@ -64,9 +80,14 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                   {isNew && (
                     <span className="bg-orange-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">Novo</span>
                   )}
-                  {!isNew && (
+                  {!isNew && !isApproved && (
                     <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase">
                       <CheckCircle size={10} /> Visto
+                    </span>
+                  )}
+                  {isApproved && (
+                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full uppercase">
+                      <ThumbsUp size={9} /> OK dado
                     </span>
                   )}
                 </div>
@@ -76,15 +97,24 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
               </div>
               {isNew && (
                 <button
-                  onClick={() => handleMarkSeen(req)}
+                  onClick={(e) => { e.stopPropagation(); handleMarkSeen(req); }}
                   className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-slate-900 transition-all"
                 >
                   <Eye size={12} /> Marcar como Visto
                 </button>
               )}
+              {!isApproved && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleApprove(req); }}
+                  className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-700 transition-all"
+                >
+                  <ThumbsUp size={12} /> Dar OK
+                </button>
+              )}
+              {openIds.has(req.id) ? <ChevronUp size={14} className="text-slate-400 shrink-0" /> : <ChevronDown size={14} className="text-slate-400 shrink-0" />}
             </div>
 
-            <div className="px-5 py-4 space-y-2">
+            {openIds.has(req.id) && <div className="px-5 py-4 space-y-2">
               <div className="flex flex-wrap items-start gap-x-4 gap-y-1">
                 <div>
                   <p className="text-[9px] font-black uppercase text-slate-400 tracking-widest">Motivo</p>
@@ -141,7 +171,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         );
       })}

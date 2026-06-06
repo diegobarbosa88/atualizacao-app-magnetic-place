@@ -48,7 +48,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     saveToDb, handleDelete, handleApproveMonth,
   } = useWorker();
 
-  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
+  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase, absenceRequests } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
   const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
@@ -428,6 +428,38 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               })}
             </div>
           </div>
+
+          {(() => {
+            const myAbsences = (absenceRequests || []).filter(r => r.worker_id === currentUser?.id).slice(0, 10);
+            if (!myAbsences.length) return null;
+            return (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Os meus avisos de falta</p>
+                </div>
+                <div className="divide-y divide-slate-50">
+                  {myAbsences.map(r => {
+                    const statusMap = {
+                      approved: { label: 'Confirmado', cls: 'bg-emerald-100 text-emerald-700' },
+                      seen:     { label: 'Visto',      cls: 'bg-slate-100 text-slate-500' },
+                      pending:  { label: 'Aguarda',    cls: 'bg-orange-100 text-orange-600' },
+                    };
+                    const s = statusMap[r.status] || statusMap.pending;
+                    const dateLabel = (r.dates || []).slice().sort().map(d => new Date(d + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })).join(', ');
+                    return (
+                      <div key={r.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-700 truncate">{r.reason}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{dateLabel}</p>
+                        </div>
+                        <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           <div id="secao-documentos">
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
