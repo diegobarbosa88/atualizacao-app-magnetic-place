@@ -19,6 +19,7 @@ import { useWorkerGeo } from './worker-dashboard/useWorkerGeo';
 import { useWorkerCorrections } from './worker-dashboard/useWorkerCorrections';
 import PendingCorrectionsPanel from './worker-dashboard/PendingCorrectionsPanel';
 import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
+import TimeEntryModal from './worker-dashboard/TimeEntryModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -47,6 +48,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
 
   const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
+  const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -95,6 +97,23 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
+
+  const openTimeEntryModal = (ds) => {
+    setInlineEditingDate(ds);
+    setInlineFormData({
+      id: null, date: ds, clientId: currentUser?.defaultClientId || '',
+      startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '',
+    });
+    setTimeEntryModalOpen(true);
+  };
+
+  const handleBulkSave = async (formData, dates) => {
+    for (const date of dates) {
+      await handleSaveEntry({ ...formData, date }, false, date);
+    }
+    setSuccessMsg(`${dates.length} registo${dates.length !== 1 ? 's' : ''} guardado${dates.length !== 1 ? 's' : ''} com sucesso!`);
+    setTimeout(() => setSuccessMsg(''), 6000);
+  };
 
   const workerStartDate = currentUser?.dataInicio ? new Date(currentUser.dataInicio) : null;
   const todayStr = toISODateLocal(new Date());
@@ -294,10 +313,10 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 const toggleExpand = () => {
                   if (isExpanded) {
                     setExpandedDays(prev => prev.filter(d => d !== ds));
-                    if (isCurrentInline) setInlineEditingDate(null);
-                  } else {
+                  } else if (dayLogs.length > 0) {
                     setExpandedDays(prev => [...prev, ds]);
-                    if (dayLogs.length === 0) handleOpenInlineForm(ds);
+                  } else {
+                    openTimeEntryModal(ds);
                   }
                 };
 
@@ -340,11 +359,11 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                           {!myApproval && !isDayBeforeStart && !isLimitedWorker && (
                             <div className="flex gap-2">
                               <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Zap size={16} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
                             </div>
                           )}
                           {isLimitedWorker && (
-                            <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
                           )}
                           {isDayBeforeStart && <span className="text-[10px] text-slate-300 font-bold">Indisponível</span>}
                           <div className="ml-1 border-l border-slate-100 pl-3">
@@ -377,33 +396,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                                     )}
                                     {isLimitedWorker && (
                                       <div className="flex gap-1">
-                                        <button onClick={() => handleOpenInlineForm(ds)} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
+                                        <button onClick={() => openTimeEntryModal(ds)} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
                                         <button onClick={() => setDeleteConfirm({ date: ds, logId: log.id })} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               ))}
-                            </div>
-                          )}
-                          {isLimitedWorker && isCurrentInline && (
-                            <div className="mt-4 pt-4 border-t border-slate-100">
-                              <RequestEntryCard
-                                currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
-                                initialDate={ds} isInline={true}
-                                onSuccess={() => { setInlineEditingDate(null); setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
-                              />
-                            </div>
-                          )}
-                          {!isLimitedWorker && isCurrentInline && (
-                            <div className="mt-4 pt-4 border-t border-slate-100">
-                              <EntryForm
-                                isInline data={inlineFormData} clients={clients} assignedClients={currentUser?.assignedClients}
-                                onChange={setInlineFormData}
-                                onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
-                                onCancel={() => setInlineEditingDate(null)}
-                                systemSettings={systemSettings}
-                              />
                             </div>
                           )}
                         </div>
@@ -418,6 +417,30 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           <div id="secao-documentos">
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
           </div>
+
+          <TimeEntryModal
+            isOpen={timeEntryModalOpen}
+            onClose={() => { setTimeEntryModalOpen(false); setInlineEditingDate(null); }}
+            initialDate={inlineEditingDate}
+            daysList={daysList}
+            formData={inlineFormData}
+            onFormChange={setInlineFormData}
+            onSave={async (formData, date) => { await handleSaveWithGeoCheck(formData, false, date); }}
+            onBulkSave={handleBulkSave}
+            clients={clients}
+            assignedClients={currentUser?.assignedClients}
+            currentUser={currentUser}
+            systemSettings={systemSettings}
+            monthLogs={monthLogs}
+            logs={logs}
+            isLimitedWorker={isLimitedWorker}
+            onLimitedSuccess={() => {
+              setTimeEntryModalOpen(false);
+              setInlineEditingDate(null);
+              setSuccessMsg('Pedido submetido com sucesso!');
+              setTimeout(() => setSuccessMsg(''), 6000);
+            }}
+          />
 
           <DeleteConfirmModal
             deleteConfirm={deleteConfirm} setDeleteConfirm={setDeleteConfirm}
