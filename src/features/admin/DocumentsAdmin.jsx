@@ -1,18 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import {
-  FileText, Eye, Trash2, Search, Upload, Loader2, Plus, X,
-  Clock, FileSignature, CheckCircle, ChevronUp, ChevronDown, LayoutList, BarChart3,
-  Users, Building2, Activity, History, Zap, Coins, Receipt, TrendingUp,
-} from 'lucide-react';
-import { formatDocDate } from '../../utils/dateUtils';
+import { FileText, FileSignature, CheckCircle, BarChart3, Coins, Receipt, TrendingUp } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
-import {
-  downloadTemplateBytes,
-  renderDocx,
-  buildRenderData,
-} from '../../utils/docxTemplateService';
+import { downloadTemplateBytes, renderDocx, buildRenderData } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../../components/common/DocxPreviewModal';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
@@ -20,26 +11,14 @@ import SalariosTab from './SalariosTab';
 import FaturasTab from './FaturasTab';
 import MovimentacoesTab from './MovimentacoesTab';
 import FaturasAdmin from './FaturasAdmin';
-import ReconciliacaoAdmin from './ReconciliacaoAdmin';
-import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 
-const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
+import DocumentsFilters from './documents/DocumentsFilters';
+import DocumentsTable from './documents/DocumentsTable';
+import UploadManualModal from './documents/UploadManualModal';
+import ReportsEmbedded from './documents/ReportsEmbedded';
 
-const SortableTh = ({ label, columnKey, sortKey, sortDir, onSort }) => {
-  const active = sortKey === columnKey;
-  return (
-    <th
-      onClick={() => onSort(columnKey)}
-      className="px-4 py-2 text-[10px] font-black uppercase tracking-widest cursor-pointer select-none hover:text-slate-600 transition-colors"
-    >
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {active && (sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)}
-      </span>
-    </th>
-  );
-};
+const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
 const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings, onSwitchTab, ...rest }) => {
   const props = { workers, documents, setDocuments, systemSettings, onSwitchTab, ...rest };
@@ -61,15 +40,14 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     return m;
   }, [workers]);
 
-  // ─── Vista unificada ──────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState('');
-  const [stateFilter, setStateFilter] = useState('all');     // all | pending | awaiting_admin | signed
-  const [sourceFilter, setSourceFilter] = useState('all');   // all | manual | template
-  const [tipoFilter, setTipoFilter] = useState('all');      // all | <tipo value>
+  const [stateFilter, setStateFilter] = useState('all');
+  const [sourceFilter, setSourceFilter] = useState('all');
+  const [tipoFilter, setTipoFilter] = useState('all');
   const [approvingId, setApprovingId] = useState(null);
   const [preview, setPreview] = useState(null);
   const [sortKey, setSortKey] = useState('createdAt');
-  const [sortDir, setSortDir] = useState('desc'); // 'asc' | 'desc'
+  const [sortDir, setSortDir] = useState('desc');
 
   const handleSort = (key) => {
     if (sortKey === key) {
@@ -80,7 +58,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     }
   };
 
-  // Modal de upload manual
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selWorker, setSelWorker] = useState('');
   const [selTipo, setSelTipo] = useState(TIPOS_MANUAIS[0]);
@@ -159,12 +136,12 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       const va = getVal(a);
       const vb = getVal(b);
       if (va == null && vb == null) return 0;
-      if (va == null) return 1;  // nulls always last
+      if (va == null) return 1;
       if (vb == null) return -1;
       if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
       return String(va).localeCompare(String(vb), 'pt', { sensitivity: 'base' }) * dir;
     });
-  }, [unifiedDocs, stateFilter, sourceFilter, searchTerm, sortKey, sortDir]);
+  }, [unifiedDocs, stateFilter, sourceFilter, searchTerm, sortKey, sortDir, tipoFilter]);
 
   const counts = useMemo(() => {
     const c = { all: unifiedDocs.length, pending: 0, awaiting_admin: 0, signed: 0 };
@@ -177,7 +154,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     return tipos.sort();
   }, [unifiedDocs]);
 
-  // ─── Acções ───────────────────────────────────────────────────────────────
   const onUpload = async () => {
     if (!selWorker || !selFile) return alert('Selecione tudo.');
     setUploading(true);
@@ -187,7 +163,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       return alert('A conexão com a base de dados falhou. Por favor, atualize a página (F5) e tente novamente.');
     }
 
-    const docId = `doc_${Date.now()}`;
     const cleanTipo = selTipo.replace(/[^a-zA-Z0-9]/g, '_');
     const cleanName = selFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const path = `${selWorker}/${cleanTipo}/${Date.now()}_${cleanName}`;
@@ -199,7 +174,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       const { data: urlData } = clientSupabase.storage.from('documentos').getPublicUrl(path);
 
       const newDoc = {
-        id: docId,
+        id: `doc_${Date.now()}`,
         workerId: selWorker,
         tipo: selTipo,
         nomeFicheiro: selFile.name,
@@ -209,16 +184,10 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       };
 
       const { file: _unused, ...docToInsert } = newDoc;
-
-      const { error: dbError } = await clientSupabase
-        .from('documents')
-        .insert([docToInsert]);
-
+      const { error: dbError } = await clientSupabase.from('documents').insert([docToInsert]);
       if (dbError) throw dbError;
 
-      if (setDocuments) {
-        setDocuments(prev => [newDoc, ...prev]);
-      }
+      if (setDocuments) setDocuments(prev => [newDoc, ...prev]);
       setSelFile(null);
       setSelWorker('');
       setShowUploadModal(false);
@@ -238,15 +207,10 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     try {
       const match = raw.url?.match(/\/storage\/v1\/object\/public\/documentos\/(.+?)(\?|$)/);
       const pathInStorage = match ? decodeURIComponent(match[1]) : null;
-      if (pathInStorage) {
-        await clientSupabase.storage.from('documentos').remove([pathInStorage]);
-      }
+      if (pathInStorage) await clientSupabase.storage.from('documentos').remove([pathInStorage]);
       const { error } = await clientSupabase.from('documents').delete().eq('id', raw.id);
       if (error) throw error;
-
-      if (setDocuments) {
-        setDocuments(prev => prev.filter(d => d.id !== raw.id));
-      }
+      if (setDocuments) setDocuments(prev => prev.filter(d => d.id !== raw.id));
     } catch (err) {
       alert(`Erro ao apagar: ${err.message}`);
     }
@@ -306,40 +270,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     }
   };
 
-  // ─── Render helpers ───────────────────────────────────────────────────────
-  const renderStateBadge = (state) => {
-    if (state === 'signed') {
-      return (
-        <span title="Assinado" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600">
-          <CheckCircle size={14} />
-        </span>
-      );
-    }
-    if (state === 'awaiting_admin') {
-      return (
-        <span title="Aguarda Aprovação" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600">
-          <FileSignature size={14} />
-        </span>
-      );
-    }
-    return (
-      <span title="Pendente" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-500">
-        <Clock size={14} />
-      </span>
-    );
-  };
-
-  const renderSourceChip = (source) => (
-    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider border ${
-      source === 'template'
-        ? 'bg-purple-50 text-purple-700 border-purple-100'
-        : 'bg-slate-50 text-slate-600 border-slate-200'
-    }`}>
-      {source === 'template' ? 'Template' : 'Manual'}
-    </span>
-  );
-
-  // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-slate-50 pb-4">
@@ -360,13 +290,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           ].map(({ id, icon: Icon, label }) => (
             <button
               key={id}
-              onClick={() => {
-                if (id === 'relatorios') {
-                  setActiveSubTab('relatorios');
-                } else {
-                  setActiveSubTab(id);
-                }
-              }}
+              onClick={() => setActiveSubTab(id)}
               className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <Icon size={13} /> {label}
@@ -398,309 +322,52 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           {validarSubTab === 'entradas' && <MovimentacoesTab />}
         </>
       ) : activeSubTab === 'templates' ? (
-        <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
+        <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} />
       ) : activeSubTab === 'relatorios' ? (
         <ReportsEmbedded {...props} />
       ) : activeSubTab === 'faturas' ? (
         <FaturasAdmin />
       ) : (
         <>
-          {/* Pills de contagem por estado */}
-          <div className="grid grid-cols-4 gap-1 mb-5 bg-slate-100 p-1 rounded-2xl w-full">
-            {[
-              { key: 'all', label: 'Todos', icon: LayoutList, activeColor: 'text-slate-700' },
-              { key: 'pending', label: 'Pendentes', icon: Clock, activeColor: 'text-amber-500' },
-              { key: 'awaiting_admin', label: 'Aprovação', icon: FileSignature, activeColor: 'text-indigo-600' },
-              { key: 'signed', label: 'Assinados', icon: CheckCircle, activeColor: 'text-emerald-600' },
-            ].map(({ key, label, icon: Icon, activeColor }) => {
-              const active = stateFilter === key;
-              return (
-                <button
-                  key={key}
-                  onClick={() => setStateFilter(key)}
-                  className={`flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${active ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}
-                >
-                  <Icon size={13} className={active ? activeColor : 'text-slate-400'} />
-                  <span className={`text-[9px] font-black uppercase whitespace-nowrap ${active ? activeColor : 'text-slate-400'}`}>{label}</span>
-                  {counts[key] > 0 && <span className={`text-[9px] font-black tabular-nums ${active ? activeColor : 'text-slate-400'}`}>({counts[key]})</span>}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Toolbar */}
-          <div className="flex flex-col gap-2 mb-5">
-            <div className="flex gap-2 items-center">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                <input
-                  type="text"
-                  placeholder="Pesquisar..."
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <button
-                onClick={() => setShowUploadModal(true)}
-                className="p-2.5 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 shrink-0"
-                title="Upload Manual"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-            <div className="flex gap-2">
-              <select
-                className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
-                value={sourceFilter}
-                onChange={(e) => setSourceFilter(e.target.value)}
-              >
-                <option value="all">Todas as fontes</option>
-                <option value="manual">Manual</option>
-                <option value="template">Template</option>
-              </select>
-              <select
-                className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
-                value={tipoFilter}
-                onChange={(e) => setTipoFilter(e.target.value)}
-              >
-                <option value="all">Todos os Tipos</option>
-                {tipoOptions.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Lista unificada */}
-          <div className="overflow-x-auto -mx-2">
-            <table className="w-full text-left border-separate border-spacing-y-2">
-              <thead>
-                <tr className="text-slate-400">
-                  <SortableTh label="Data" columnKey="createdAt" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Colaborador" columnKey="workerName" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Documento" columnKey="title" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Tipo" columnKey="tipo" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortableTh label="Estado" columnKey="state" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loadingDocs && filteredDocs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-16 text-center">
-                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-slate-300" />
-                    </td>
-                  </tr>
-                ) : filteredDocs.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-20 text-center">
-                      <div className="flex flex-col items-center gap-2 opacity-30">
-                        <FileText size={40} />
-                        <p className="text-xs font-black uppercase tracking-widest">Sem documentos</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredDocs.map(d => {
-                    const isApproving = approvingId === d.raw.id;
-                    return (
-                      <tr key={d.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
-                        <td className="px-4 py-4 rounded-l-2xl border-y border-l border-slate-100">
-                          <span className="text-xs font-bold text-slate-500 font-mono">
-                            {d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : '—'}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 border-y border-slate-100">
-                          <p className="text-sm font-black text-slate-800">{d.workerName}</p>
-                        </td>
-                        <td className="px-4 py-4 border-y border-slate-100">
-                          <p className="text-xs font-bold text-slate-700 truncate max-w-[260px]" title={d.title}>{d.title}</p>
-                          {d.subtitle && <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[260px]">{d.subtitle}</p>}
-                          {(d.signedAtWorker || d.signedAtAdmin) && (
-                            <div className="mt-1 flex flex-col gap-0.5">
-                              {d.signedAtWorker && (
-                                <p className="text-[10px] text-emerald-600 font-bold">
-                                  Trabalhador: {formatDocDate(d.signedAtWorker.toISOString(), true)}
-                                </p>
-                              )}
-                              {d.signedAtAdmin && (
-                                <p className="text-[10px] text-indigo-600 font-bold">
-                                  Magnetic Place: {formatDocDate(d.signedAtAdmin.toISOString(), true)}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 border-y border-slate-100">
-                          <p className="text-xs font-bold text-slate-700">{d.tipo || '—'}</p>
-                        </td>
-                        <td className="px-4 py-4 border-y border-slate-100">{renderStateBadge(d.state)}</td>
-                        <td className="px-4 py-4 rounded-r-2xl border-y border-r border-slate-100 text-right">
-                          <div className="flex justify-end items-center gap-1 flex-nowrap overflow-x-auto">
-                            {d.source === 'manual' ? (
-                              <>
-                                {d.viewUrl && (
-                                  <a
-                                    href={d.viewUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="p-1.5 bg-white text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                                    title="Visualizar original"
-                                  >
-                                    <Eye size={12} />
-                                  </a>
-                                )}
-                                {d.signedPdfUrl && (
-                                  <a
-                                    href={d.signedPdfUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="p-1.5 bg-white text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                                    title="Visualizar assinado"
-                                  >
-                                    <CheckCircle size={12} />
-                                  </a>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteManual(d.raw)}
-                                  className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  onClick={() => openGeneratedPreview(d.raw)}
-                                  className="p-1.5 bg-white text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                                  title="Pré-visualizar com dados do trabalhador"
-                                >
-                                  <Eye size={12} />
-                                </button>
-                                {d.signedPdfUrl && (
-                                  <a
-                                    href={d.signedPdfUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="p-1.5 bg-white text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
-                                    title="Visualizar assinado"
-                                  >
-                                    <CheckCircle size={12} />
-                                  </a>
-                                )}
-                                {d.state === 'awaiting_admin' && (
-                                  <button
-                                    onClick={() => onApprove(d.raw)}
-                                    disabled={isApproving || saving}
-                                    className="p-1.5 bg-indigo-600 text-white rounded-lg border border-indigo-600 hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50"
-                                    title="Aplicar carimbo da empresa e finalizar"
-                                  >
-                                    {isApproving ? <Loader2 size={12} className="animate-spin" /> : <FileSignature size={12} />}
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => handleDeleteGenerated(d.raw.id)}
-                                  className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
-                                  title="Eliminar"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+          <DocumentsFilters
+            stateFilter={stateFilter}
+            setStateFilter={setStateFilter}
+            counts={counts}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            sourceFilter={sourceFilter}
+            setSourceFilter={setSourceFilter}
+            tipoFilter={tipoFilter}
+            setTipoFilter={setTipoFilter}
+            tipoOptions={tipoOptions}
+            onShowUpload={() => setShowUploadModal(true)}
+          />
+          <DocumentsTable
+            filteredDocs={filteredDocs}
+            loadingDocs={loadingDocs}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={handleSort}
+            onDeleteManual={handleDeleteManual}
+            onDeleteGenerated={handleDeleteGenerated}
+            onApprove={onApprove}
+            onPreview={openGeneratedPreview}
+            approvingId={approvingId}
+            saving={saving}
+          />
         </>
       )}
 
-      {/* Modal Upload Manual */}
       {showUploadModal && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[200] flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white w-full max-w-xl rounded-[2rem] p-6 shadow-2xl my-8 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center mb-5">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Upload size={18} /></div>
-                <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight">Upload Manual</h2>
-              </div>
-              <button
-                onClick={() => !uploading && setShowUploadModal(false)}
-                className="p-2 text-slate-400 hover:text-slate-600 disabled:opacity-50"
-                disabled={uploading}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Colaborador</label>
-                <select
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-                  value={selWorker}
-                  onChange={(e) => setSelWorker(e.target.value)}
-                  disabled={uploading}
-                >
-                  <option value="">Selecionar...</option>
-                  {workers.map(w => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo</label>
-                <select
-                  className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-                  value={selTipo}
-                  onChange={(e) => setSelTipo(e.target.value)}
-                  disabled={uploading}
-                >
-                  {TIPOS_MANUAIS.map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ficheiro (PDF)</label>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-xs cursor-pointer"
-                  onChange={(e) => setSelFile(e.target.files?.[0])}
-                  disabled={uploading}
-                />
-                {selFile && (
-                  <p className="text-[10px] text-slate-500 mt-1 ml-1 truncate">{selFile.name}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-6 pt-5 border-t border-slate-100">
-              <button
-                onClick={() => setShowUploadModal(false)}
-                disabled={uploading}
-                className="px-5 py-2.5 text-xs font-black uppercase tracking-widest text-slate-600 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={onUpload}
-                disabled={uploading || !selWorker || !selFile}
-                className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-200"
-              >
-                {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
-                {uploading ? 'A Enviar...' : 'Submeter'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <UploadManualModal
+          workers={workers}
+          uploading={uploading}
+          selWorker={selWorker} setSelWorker={setSelWorker}
+          selTipo={selTipo} setSelTipo={setSelTipo}
+          selFile={selFile} setSelFile={setSelFile}
+          onClose={() => setShowUploadModal(false)}
+          onUpload={onUpload}
+        />
       )}
 
       {preview && (
@@ -712,138 +379,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           onClose={() => setPreview(null)}
         />
       )}
-    </div>
-  );
-};
-
-const ReportsEmbedded = ({ reportFilter, setReportFilter, reportHistory, setReportHistory, printingReport, setPrintingReport, clients, workers, logs, activeWorkersCount, activeClientsCount, handleGenerateClientReport, clientApprovals }) => {
-  const reportData = printingReport ? { ...printingReport, logs, workers, clients, clientApprovals } : null;
-  const [showFinReport, setShowFinReport] = useState(false);
-
-  return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileText size={20} /></div>
-          <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Folhas de Horas para Clientes</h3>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="bg-indigo-50 text-indigo-600 p-2 rounded-xl w-fit"><Users size={18} /></div>
-          <div><p className="text-xl sm:text-2xl font-black text-slate-800">{activeWorkersCount}</p><p className="text-[10px] font-black text-slate-400 uppercase">Colaboradores c/ Registos</p></div>
-          <p className="text-xs font-bold text-slate-500 uppercase">no mês seleccionado</p>
-        </div>
-        <div className="bg-white p-3 sm:p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="bg-emerald-50 text-emerald-600 p-2 rounded-xl w-fit"><Building2 size={18} /></div>
-          <div><p className="text-xl sm:text-2xl font-black text-slate-800">{activeClientsCount}</p><p className="text-[10px] font-black text-slate-400 uppercase">Clientes Activos</p></div>
-          <p className="text-xs font-bold text-slate-500 uppercase">no mês seleccionado</p>
-        </div>
-      </div>
-
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
-              <option value="">-- Escolher Cliente --</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
-              <option value="">-- Todos os Colaboradores --</option>
-              {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês (Ano-Mês)</label>
-            <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-        <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-          <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
-            <FileText size={18} /> Gerar Selecção
-          </button>
-          <button onClick={() => {
-            const historyEntry = { id: `rh_${Date.now()}`, month: reportFilter.month, clientId: '', clientName: 'Todos os Clientes', workerId: '', workerName: 'Todos', timestamp: new Date().toISOString() };
-            const updatedHistory = [historyEntry, ...reportHistory].slice(0, 5);
-            setReportHistory(updatedHistory);
-            localStorage.setItem('reportHistory', JSON.stringify(updatedHistory));
-            setPrintingReport({ isGlobal: true, month: reportFilter.month });
-          }} disabled={!reportFilter.month} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
-            <Zap size={18} className="text-amber-400" /> Gerar Tudo do Mês
-          </button>
-        </div>
-      </div>
-
-      {printingReport && (
-        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto" onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}>
-          <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-indigo-100 animate-in fade-in zoom-in duration-300">
-            <div className="sticky top-0 z-10 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 bg-white rounded-t-[2rem] sm:rounded-t-[3rem]">
-              <div className="flex items-center gap-3">
-                <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><FileText size={20} /></div>
-                <div><h3 className="font-black text-lg text-slate-800">A Visualizar Relatório</h3><p className="text-[10px] font-bold text-slate-400 uppercase">{printingReport.month}</p></div>
-              </div>
-              <button onClick={() => setPrintingReport(null)} className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all"><X size={20} /></button>
-            </div>
-            <ClientTimesheetReport data={reportData} onBack={() => setPrintingReport(null)} isEmbedded={true} />
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><History size={20} /></div>
-          <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
-        </div>
-        {reportHistory.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
-            <div className="bg-slate-50 p-4 rounded-2xl mb-3"><FileText size={32} className="text-slate-300" /></div>
-            <p className="text-sm font-bold text-slate-400">Ainda sem relatórios gerados</p>
-            <p className="text-[10px] text-slate-300 mt-1">Gere um relatório para o ver aqui</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-100">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Mês</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-                  <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Gerado em</th>
-                  <th className="px-5 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-100">
-                {reportHistory.map(entry => (
-                  <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3 text-sm font-black text-slate-700">{entry.month}</td>
-                    <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.clientName}</td>
-                    <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.workerName}</td>
-                    <td className="px-5 py-3 text-xs text-slate-400">{new Date(entry.timestamp).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-                    <td className="px-5 py-3 text-right">
-                      <button onClick={() => {
-                        setReportFilter(prev => ({ ...prev, month: entry.month, clientId: entry.clientId, workerId: entry.workerId }));
-                        setTimeout(() => {
-                          const clientSelected = entry.clientId ? clients.find(c => c.id === entry.clientId) : null;
-                          if (entry.clientId || entry.workerId) setPrintingReport({ client: clientSelected, month: entry.month, workerId: entry.workerId });
-                          else setPrintingReport({ isGlobal: true, month: entry.month });
-                        }, 50);
-                      }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">Ver</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
