@@ -1,26 +1,63 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-05T23:35:00.000Z",
+  "timestamp": "2026-06-06T12:30:00.000Z",
   "phase": null,
-  "phase_name": "Ad-hoc Refactoring — ClientPortal + SimpleReportFlow",
+  "phase_name": "refatoracao-v2 — Modularização de Componentes Admin + URL Routing",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
   "status": "paused",
   "completed_tasks": [
-    {"id": 1, "name": "Refactor WorkerDashboard", "status": "done", "commit": "d3ba61a"},
-    {"id": 2, "name": "Refactor CorrectionsInbox", "status": "done", "commit": "eaf428a"},
-    {"id": 3, "name": "Refactor MovimentacoesTab", "status": "done", "commit": "76b0044"},
-    {"id": 4, "name": "ClientPortal dead-code + 6 módulos (2164→496 linhas)", "status": "done", "commit": "9a837c1"},
-    {"id": 5, "name": "Simplificar fluxo reporte cliente → SimpleReportView", "status": "done", "commit": "1a36e82"}
+    {
+      "id": 1,
+      "name": "Refatorar SalariosTab — extrair SalarioEmployeeCard, AssocTransacaoModal, JustificarModal",
+      "status": "done",
+      "commit": "6ad205d"
+    },
+    {
+      "id": 2,
+      "name": "Refatorar FaturasAdmin — extrair GmailConfigPanel, CelEditTd, faturasExport.js, faturasUtils.js",
+      "status": "done",
+      "commit": "6ad205d"
+    },
+    {
+      "id": 3,
+      "name": "Refatorar WorkerDocuments — extrair useDocumentPreview e useSignDocument hooks",
+      "status": "done",
+      "commit": "6ad205d"
+    },
+    {
+      "id": 4,
+      "name": "URL routing completo para sub-tabs de DocumentsAdmin (activeSubTab + validarSubTab)",
+      "status": "done",
+      "commit": "af810ce"
+    }
   ],
   "remaining_tasks": [],
   "blockers": [],
-  "human_actions_pending": [
-    {"action": "Testar SimpleReportView no browser", "context": "Novo fluxo não testado manualmente", "blocking": false}
-  ],
+  "human_actions_pending": [],
   "decisions": [
-    {"decision": "SimpleReportView: submit direto, justificação obrigatória", "rationale": "Fluxo igual ao worker"},
-    {"decision": "useDraftReport: correctionMode/editingWorkerId removidos", "rationale": "Apenas necessários para o fluxo multi-step removido"}
+    {
+      "decision": "URL routing via useMemo+useLocation sem Route declarations",
+      "rationale": "A app usa convenção própria (sem Routes/Route), pattern já existia em portal_validacao",
+      "phase": "refatoracao-v2"
+    },
+    {
+      "decision": "Extrações mínimas — lógica de export CSV/PDF fica no pai",
+      "rationale": "Export usa estado do componente, seria over-engineering extrair sem motivo claro",
+      "phase": "refatoracao-v2"
+    },
+    {
+      "decision": "useSignDocument recebe canvasRef e devolve {docData, type} para o pai actualizar o estado",
+      "rationale": "Evita prop drilling mantendo o estado local no componente",
+      "phase": "refatoracao-v2"
+    }
   ],
-  "uncommitted_files": [".planning/.continue-here.md", ".planning/STATE.md", "public/version.json"],
-  "next_action": "Testar SimpleReportView; depois /gsd-execute-phase 18 (Reconciliação Bancária)",
-  "context_notes": "Sessão de refactoring ad-hoc concluída. Branch: refatoracao-v2."
+  "uncommitted_files": [
+    ".planning/STATE.md",
+    "public/version.json"
+  ],
+  "next_action": "Merge branch refatoracao-v2 → master se refactoring considerado completo, ou executar Phase 18: /gsd-execute-phase 18",
+  "context_notes": "Branch refatoracao-v2 com toda a refactorização de admin modularizada e URL routing implementado. Build limpo. STATE.md aponta para Phase 18 (Reconciliação Bancária Automática) como próximo passo."
 }
