@@ -10,9 +10,9 @@ export default function PendingAlertsModal({
   onSignDocuments,
   onCompleteLog,
 }) {
-  if (!isOpen) return null;
-
   const totalCount = (pendingApprovals?.length || 0) + (pendingSignaturesCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
+
+  if (!isOpen || totalCount === 0) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999] p-0 sm:p-4">
