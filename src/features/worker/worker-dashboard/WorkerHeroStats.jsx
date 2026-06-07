@@ -5,47 +5,56 @@ import { formatHours } from '../../../utils/formatUtils';
 
 export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentMonth, todayHours, totalMonthHours, expectedHours, myApproval, showProgress, setShowProgress }) {
   return (
-    <div className="bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] p-5 md:p-8 mb-6 md:mb-8 shadow-2xl text-white flex flex-col md:flex-row justify-between items-center gap-6 md:gap-8 relative overflow-hidden group">
+    <div className="bg-slate-900 rounded-2xl md:rounded-[3rem] p-4 md:p-8 mb-4 md:mb-8 shadow-lg md:shadow-2xl text-white flex flex-col md:flex-row justify-between items-center gap-3 md:gap-8 relative overflow-hidden group">
       <div className="absolute top-0 right-0 p-10 opacity-10 group-hover:rotate-12 transition-transform duration-700 hidden sm:block">
         <CompanyLogo className="h-64 w-64 filter invert grayscale" />
       </div>
-      <div className="relative z-10 w-full md:flex-1 mb-2 md:mb-0">
-        <div className="text-3xl md:text-5xl font-black mb-4 leading-tight text-white text-center md:text-left uppercase tracking-tighter">
-          Olá, {currentUser?.name?.split(' ')[0]}!
-        </div>
-        <div className="flex items-center justify-center md:justify-start gap-3 bg-white/10 p-2 rounded-2xl w-full sm:w-fit">
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white">
-            <ChevronLeft size={16} />
-          </button>
-          <div className="text-indigo-200 flex items-center gap-2 text-sm font-bold font-mono uppercase tracking-widest min-w-[120px] justify-center">
-            <Calendar size={18} /> {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+      <div className="relative z-10 w-full md:flex-1 mb-1 md:mb-0">
+        <div className="mb-2 md:mb-4 text-center md:text-left">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-300/70 mb-0.5">Bem-vindo</p>
+          <div className="text-2xl md:text-5xl font-black leading-tight text-white uppercase tracking-tighter">
+            {currentUser?.name?.split(' ')[0]}
           </div>
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-white/20 rounded-xl text-white">
-            <ChevronLeft size={16} className="rotate-180" />
+          {currentUser?.name?.split(' ').slice(1).join(' ') && (
+            <div className="text-xs md:text-sm font-semibold text-white/40 uppercase tracking-widest mt-0.5">
+              {currentUser.name.split(' ').slice(1).join(' ')}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-center md:justify-start gap-2 bg-white/10 p-1.5 md:p-2 rounded-xl md:rounded-2xl w-full sm:w-fit">
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg md:rounded-xl text-white">
+            <ChevronLeft size={14} />
+          </button>
+          <div className="text-indigo-200 flex items-center gap-1.5 text-xs md:text-sm font-bold font-mono uppercase tracking-widest min-w-[110px] md:min-w-[120px] justify-center">
+            <Calendar size={14} className="md:w-[18px] md:h-[18px]" /> {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+          </div>
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 md:p-2 hover:bg-white/20 rounded-lg md:rounded-xl text-white">
+            <ChevronLeft size={14} className="rotate-180" />
           </button>
         </div>
         {expectedHours > 0 && (
           <button
             onClick={() => setShowProgress(!showProgress)}
-            className="mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-300/80 hover:text-indigo-200 transition-colors bg-white/5 px-4 py-2 rounded-xl border border-white/5 mx-auto md:mx-0"
+            className="mt-2 md:mt-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-indigo-300/80 hover:text-indigo-200 transition-colors bg-white/5 px-3 md:px-4 py-1.5 md:py-2 rounded-xl border border-white/5 mx-auto md:mx-0"
           >
-            <TrendingUp size={14} /> {showProgress ? 'Ocultar Progresso' : 'Ver Meta Mensal'}
+            <TrendingUp size={12} className="md:w-[14px] md:h-[14px]" /> {showProgress ? 'Ocultar Progresso' : 'Ver Meta Mensal'}
           </button>
         )}
       </div>
-      <div className="relative z-10 flex flex-row gap-4 w-full md:w-auto">
-        <div className="bg-white/10 backdrop-blur-xl p-6 sm:p-8 rounded-3xl md:rounded-[2.5rem] border border-white/10 flex flex-col items-center justify-center flex-1 md:min-w-[150px]">
-          <p className="text-[10px] font-black uppercase opacity-70 mb-1">Horas Hoje</p>
-          <div className="text-3xl sm:text-5xl font-black">{formatHours(todayHours)}</div>
+      <div className="relative z-10 flex flex-row gap-2 md:gap-4 w-full md:w-auto">
+        <div className="bg-white/10 backdrop-blur-xl px-3 py-2 md:p-8 rounded-xl md:rounded-[2.5rem] border border-white/10 flex flex-row md:flex-col items-center justify-between md:justify-center gap-2 md:gap-0 flex-1 md:min-w-[150px]">
+          <p className="text-[9px] md:text-[10px] font-black uppercase opacity-60 md:mb-1 shrink-0">Hoje</p>
+          <div className="text-lg md:text-5xl font-black">{formatHours(todayHours)}</div>
         </div>
-        <div className="bg-indigo-500/20 backdrop-blur-xl p-6 sm:p-8 rounded-3xl md:rounded-[2.5rem] border border-indigo-400/30 flex flex-col items-center justify-center flex-1 md:min-w-[150px] shadow-inner relative">
-          <p className="text-[10px] font-black uppercase text-indigo-200 mb-1">Total Mês</p>
-          <div className="text-3xl sm:text-5xl font-black text-indigo-50 flex items-baseline gap-2 justify-center">
+        <div className="bg-indigo-500/20 backdrop-blur-xl px-3 py-2 md:p-8 rounded-xl md:rounded-[2.5rem] border border-indigo-400/30 flex flex-row md:flex-col items-center justify-between md:justify-center gap-2 md:gap-0 flex-1 md:min-w-[150px] shadow-inner relative">
+          <p className="text-[9px] md:text-[10px] font-black uppercase text-indigo-300 md:mb-1 shrink-0">Mês</p>
+          <div className="text-lg md:text-5xl font-black text-indigo-50 flex items-baseline gap-1 justify-center">
             {formatHours(totalMonthHours)}
+            {myApproval && <CheckCircle size={12} className="text-emerald-400 md:hidden" />}
           </div>
           {myApproval && (
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 text-[9px] font-black uppercase text-emerald-300 bg-emerald-500/20 px-2 sm:px-3 py-1.5 rounded-xl sm:rounded-full border border-emerald-400/30 w-full sm:w-auto text-center mt-2">
-              <div className="flex items-center gap-1"><CheckCircle size={12} className="shrink-0" /><span className="hidden sm:inline">Aprovado</span></div>
+            <div className="hidden md:flex items-center justify-center gap-1 text-[9px] font-black uppercase text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-400/30 w-full text-center mt-2">
+              <CheckCircle size={12} className="shrink-0" /> Aprovado
               <span className="opacity-90">{new Date(myApproval.timestamp).toLocaleDateString('pt-PT')}</span>
             </div>
           )}
