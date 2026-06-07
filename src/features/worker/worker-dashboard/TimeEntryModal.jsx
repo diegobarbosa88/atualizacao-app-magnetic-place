@@ -6,7 +6,7 @@ import RequestEntryCard from '../../../components/worker/RequestEntryCard';
 const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
 export default function TimeEntryModal({
-  isOpen, onClose, initialDate, daysList,
+  isOpen, onClose, initialDate, initialLogId, daysList,
   formData, onFormChange, onSave, onBulkSave,
   clients, assignedClients, currentUser, systemSettings,
   monthLogs, logs, isLimitedWorker, onLimitedSuccess,
@@ -161,6 +161,7 @@ export default function TimeEntryModal({
               clients={clients}
               monthLogs={monthLogs}
               initialDate={initialDate}
+              initialLogId={initialLogId}
               isInline={true}
               onSuccess={onLimitedSuccess}
             />

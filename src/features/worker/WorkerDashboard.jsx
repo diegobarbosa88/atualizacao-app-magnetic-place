@@ -51,6 +51,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase, absenceRequests } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
   const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
+  const [timeEntryInitialLogId, setTimeEntryInitialLogId] = useState(null);
   const [alertsModalOpen, setAlertsModalOpen] = useState(false);
   const [alertsModalDismissed, setAlertsModalDismissed] = useState(false);
   const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
@@ -121,8 +122,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     setTimeEntryModalOpen(true);
   };
 
-  const openTimeEntryModal = (ds) => {
+  const openTimeEntryModal = (ds, logId = null) => {
     setInlineEditingDate(ds);
+    setTimeEntryInitialLogId(logId);
     setInlineFormData({
       id: null, date: ds, clientId: currentUser?.defaultClientId || '',
       startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '',
@@ -390,7 +392,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                               {dayLogs.map(log => (
                                 <div
                                   key={log.id}
-                                  onClick={() => openTimeEntryModal(ds)}
+                                  onClick={() => isLimitedWorker ? openTimeEntryModal(ds, log.id) : openIncompleteLogModal(log)}
                                   className="bg-white px-3 py-2.5 sm:p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm w-full cursor-pointer hover:bg-indigo-50/40 transition-all"
                                 >
                                   <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -408,7 +410,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                                       <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                                     )}
                                     {isLimitedWorker && (
-                                      <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={14} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds, log.id); }} className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={14} /></button>
                                     )}
                                   </div>
                                 </div>
@@ -516,8 +518,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
 
           <TimeEntryModal
             isOpen={timeEntryModalOpen}
-            onClose={() => { setTimeEntryModalOpen(false); setInlineEditingDate(null); }}
+            onClose={() => { setTimeEntryModalOpen(false); setInlineEditingDate(null); setTimeEntryInitialLogId(null); }}
             initialDate={inlineEditingDate}
+            initialLogId={timeEntryInitialLogId}
             daysList={daysList}
             formData={inlineFormData}
             onFormChange={setInlineFormData}

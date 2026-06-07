@@ -5,7 +5,7 @@ import { toISODateLocal } from '../../utils/dateUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
-const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false, openInDeleteMode = false }) => {
+const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, initialLogId, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval, systemSettings } = useApp();
   const [collapsed, setCollapsed] = useState(!isInline);
   const [showBreaks, setShowBreaks] = useState(false);
@@ -32,7 +32,9 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
   useMemo(() => {
     if (initialDate) {
       setSelectedDate(initialDate);
-      const log = monthLogs?.find(l => l.date === initialDate && l.workerId === currentUser?.id);
+      const log = initialLogId
+        ? monthLogs?.find(l => l.id === initialLogId)
+        : monthLogs?.find(l => l.date === initialDate && l.workerId === currentUser?.id);
       if (log) {
         setFormData({
           clientId: log.clientId || '',
@@ -44,12 +46,14 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         });
       }
     }
-  }, [initialDate]);
+  }, [initialDate, initialLogId]);
 
   const dayLog = useMemo(() => {
-    if (!selectedDate || !monthLogs) return null;
-    return monthLogs.find(l => l.date === selectedDate && l.workerId === currentUser?.id);
-  }, [selectedDate, monthLogs, currentUser]);
+    if (!monthLogs) return null;
+    if (initialLogId) return monthLogs.find(l => l.id === initialLogId) ?? null;
+    if (!selectedDate) return null;
+    return monthLogs.find(l => l.date === selectedDate && l.workerId === currentUser?.id) ?? null;
+  }, [selectedDate, monthLogs, currentUser, initialLogId]);
 
   const existingLog = dayLog;
 
@@ -117,6 +121,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         worker_name: currentUser?.name,
         date: selectedDate,
         before: {
+          log_id: existingLog.id,
           startTime: existingLog.startTime,
           endTime: existingLog.endTime,
           breakStart: existingLog.breakStart,
