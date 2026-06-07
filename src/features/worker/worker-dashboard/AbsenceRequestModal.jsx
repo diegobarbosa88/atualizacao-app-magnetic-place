@@ -49,17 +49,18 @@ export default function AbsenceRequestModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999] p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300">
+      <div className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-md flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        style={{ maxHeight: 'min(92dvh, 92vh)' }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        {/* Header — fixo */}
+        <div className="flex-none flex items-center justify-between px-5 py-3.5 border-b border-slate-100">
           <div className="flex items-center gap-3">
-            <div className="bg-orange-50 p-2.5 rounded-xl text-orange-600">
-              <CalendarX size={18} />
+            <div className="bg-orange-50 p-2 rounded-xl text-orange-600">
+              <CalendarX size={17} />
             </div>
             <div>
               <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Avisar Falta</h2>
-              <p className="text-[10px] font-bold text-slate-400 mt-0.5 capitalize">{monthLabel}</p>
+              <p className="text-[10px] font-bold text-slate-400 capitalize">{monthLabel}</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
@@ -67,7 +68,8 @@ export default function AbsenceRequestModal({
           </button>
         </div>
 
-        <div className="overflow-y-auto max-h-[75vh] px-4 py-4 space-y-4">
+        {/* Conteúdo scrollável — ocupa espaço disponível */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 space-y-4 min-h-0">
 
           {/* Day grid */}
           <div>
@@ -78,7 +80,6 @@ export default function AbsenceRequestModal({
               {WEEKDAY_SHORT.map(d => (
                 <div key={d} className="text-center text-[9px] font-black uppercase text-slate-300 pb-1">{d}</div>
               ))}
-              {/* empty cells before first day */}
               {Array.from({ length: new Date(daysList[0] + 'T00:00:00').getDay() }).map((_, i) => (
                 <div key={`e${i}`} />
               ))}
@@ -141,8 +142,8 @@ export default function AbsenceRequestModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-4 pb-6 pt-2 space-y-2">
+        {/* Footer — fixo, com padding extra para home indicator iOS */}
+        <div className="flex-none px-4 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))] space-y-2 border-t border-slate-100">
           <button
             onClick={handleSubmit}
             disabled={selectedDates.length === 0 || !reason || submitting}
