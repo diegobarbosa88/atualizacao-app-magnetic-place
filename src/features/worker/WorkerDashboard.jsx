@@ -339,51 +339,45 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   <React.Fragment key={ds}>
                     <div
                       onClick={toggleExpand}
-                      className={`p-4 md:px-8 md:py-6 transition-all border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${dObj.getDay() === 0 || dObj.getDay() === 6 ? 'bg-slate-50/40' : ''} ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                      className={`px-3 py-2.5 md:px-8 md:py-5 transition-all border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${dObj.getDay() === 0 || dObj.getDay() === 6 ? 'bg-slate-50/40' : ''} ${isExpanded ? 'bg-indigo-50/20' : ''}`}
                     >
-                      <div className="flex items-center justify-between gap-2 md:grid md:grid-cols-[120px_1fr_220px]">
-                        <div className="flex md:flex-col items-baseline md:items-start gap-2 md:gap-0">
-                          <span className="text-2xl font-black text-slate-800">{dObj.getDate()}</span>
-                          <span className="text-[10px] uppercase font-bold text-slate-400">{['DOM','SEG','TER','QUA','QUI','SEX','SÁB'][dObj.getDay()]}</span>
-                        </div>
-                        <div className="flex-1 flex flex-col items-start gap-1">
-                          <div className="flex items-center gap-2">
-                            {dayTotalTotal > 0 ? (
-                              <>
-                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
-                                {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">• Detalhes</span>}
-                              </>
-                            ) : (
-                              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem registos</span>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2.5">
+                        {/* Dia */}
+                        <span className="text-base font-black text-slate-800 w-5 text-right shrink-0">{dObj.getDate()}</span>
+                        <span className="text-[10px] uppercase font-black text-slate-400 w-7 shrink-0">{['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dObj.getDay()]}</span>
+
+                        {/* Horas / estado */}
+                        <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                          {dayTotalTotal > 0 ? (
+                            <span className="text-xs font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">—</span>
+                          )}
                           {(dayRequestsByDate[ds] || []).map(({ item, corr }) => {
                             if (corr.status !== 'submitted' && corr.status !== 'under_review') return null;
                             const isDeletion = corr.type === 'deletion_request';
-                            const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
-                            const label = isDeletion ? 'Pedido de eliminação' : item.before?.startTime ? 'Pedido de ajuste' : 'Pedido de registo';
+                            const label = isDeletion ? 'Eliminação' : item.before?.startTime ? 'Ajuste' : 'Registo';
                             return (
-                              <span key={item.id} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">
+                              <span key={item.id} className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">
                                 ⏳ {label}
-                                {hasProposed && <span className="font-mono ml-1">{item.proposed.startTime}–{item.proposed.endTime}</span>}
                               </span>
                             );
                           })}
                         </div>
-                        <div className="flex justify-end items-center gap-2">
+
+                        {/* Ações */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {!myApproval && !isDayBeforeStart && !isLimitedWorker && (
-                            <div className="flex gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Zap size={16} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
-                            </div>
+                            <>
+                              <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-lg transition-all"><Zap size={13} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"><Plus size={13} /></button>
+                            </>
                           )}
                           {isLimitedWorker && (
-                            <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-lg transition-all"><Plus size={13} /></button>
                           )}
-                          {isDayBeforeStart && <span className="text-[10px] text-slate-300 font-bold">Indisponível</span>}
-                          <div className="ml-1 border-l border-slate-100 pl-3">
-                            {isExpanded ? <ChevronUp size={20} className="text-indigo-400" /> : <ChevronDown size={20} className="text-slate-300" />}
-                          </div>
+                          {isDayBeforeStart && <span className="text-[9px] text-slate-300 font-bold">—</span>}
+                          {isExpanded ? <ChevronUp size={14} className="text-indigo-400 ml-1" /> : <ChevronDown size={14} className="text-slate-300 ml-1" />}
                         </div>
                       </div>
                     </div>
