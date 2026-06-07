@@ -38,6 +38,8 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
       if (outcome === 'accepted') setDeferredPrompt(null);
+    } else {
+      setShowIosInstructions(prev => !prev);
     }
   };
 
@@ -89,7 +91,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
     }
   };
 
-  const showInstallButton = !isStandalone && (deferredPrompt || isIOS);
+  const showInstallButton = !isStandalone;
 
   if (pendingAdminWorker) {
     return (
@@ -152,6 +154,26 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
                 <div className="bg-white/20 p-1.5 rounded-lg"><Download size={20} /></div>
                 Instalar no Telemóvel
               </button>
+            )}
+
+            {/* Instruções genéricas (Android/desktop sem prompt nativo) */}
+            {!isIOS && !deferredPrompt && showIosInstructions && (
+              <div className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100 animate-in zoom-in-95 duration-300">
+                <div className="flex justify-between items-center mb-3">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-900">Como instalar</h4>
+                  <button onClick={() => setShowIosInstructions(false)} className="text-indigo-300 hover:text-indigo-600"><X size={16} /></button>
+                </div>
+                <ul className="space-y-2">
+                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-800 bg-white/70 p-2.5 rounded-xl border border-indigo-100">
+                    <span className="bg-indigo-200 text-indigo-900 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]">1</span>
+                    Abra o menu do browser (⋮ ou ···)
+                  </li>
+                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-800 bg-white/70 p-2.5 rounded-xl border border-indigo-100">
+                    <span className="bg-indigo-200 text-indigo-900 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]">2</span>
+                    Escolha <span className="font-black mx-1">"Instalar aplicação"</span> ou <span className="font-black mx-1">"Adicionar ao ecrã inicial"</span>
+                  </li>
+                </ul>
+              </div>
             )}
 
             {/* Instruções para iPhone (iOS) - Mostra apenas após clique */}

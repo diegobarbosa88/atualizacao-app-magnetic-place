@@ -76,7 +76,7 @@ export default function AdminTopbar({
         {onSwitchToWorker && (
           <button
             onClick={onSwitchToWorker}
-            className="hidden md:flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+            className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
             aria-label="Ver como trabalhador"
             title="Ver como trabalhador"
           >

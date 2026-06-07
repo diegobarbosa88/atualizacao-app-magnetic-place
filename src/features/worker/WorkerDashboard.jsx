@@ -349,7 +349,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                         {/* Horas / estado */}
                         <div className="flex-1 flex items-center gap-1.5 min-w-0">
                           {dayTotalTotal > 0 ? (
-                            <span className="text-xs font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
+                            <span className="text-xs font-black text-teal-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
                           ) : (
                             <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">—</span>
                           )}

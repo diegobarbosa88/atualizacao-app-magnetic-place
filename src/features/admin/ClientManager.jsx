@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
@@ -16,7 +17,13 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     (c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending')
   ).length;
 
-  const [clientSubTab, setClientSubTab] = useState('list');
+  const [searchParams] = useSearchParams();
+  const [clientSubTab, setClientSubTab] = useState(() => searchParams.get('subtab') || 'list');
+
+  useEffect(() => {
+    const tab = searchParams.get('subtab');
+    if (tab) setClientSubTab(tab);
+  }, [searchParams]);
 
   const {
     isAddingInTab, setIsAddingInTab,

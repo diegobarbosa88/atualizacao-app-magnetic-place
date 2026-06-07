@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
 import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle } from 'lucide-react';
@@ -13,7 +14,13 @@ import CorrectionsInbox from './corrections/CorrectionsInbox';
 
 const TeamManagerContent = ({ onLogin }) => {
   const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
-  const [teamSubTab, setTeamSubTab] = useState('workers');
+  const [searchParams] = useSearchParams();
+  const [teamSubTab, setTeamSubTab] = useState(() => searchParams.get('subtab') || 'workers');
+
+  useEffect(() => {
+    const tab = searchParams.get('subtab');
+    if (tab) setTeamSubTab(tab);
+  }, [searchParams]);
   const {
     isAddingInTab, setIsAddingInTab,
     workersView, setWorkersView,

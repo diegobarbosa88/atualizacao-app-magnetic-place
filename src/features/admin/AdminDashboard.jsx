@@ -424,6 +424,7 @@ function AdminDashboard(props) {
           pendingClientCorrectionsCount={pendingClientCorrectionsCount}
           currentUser={currentUser}
           onLogout={onLogout}
+          onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
           isMobileOpen={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
         />
