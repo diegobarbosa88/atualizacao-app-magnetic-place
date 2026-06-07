@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2, Trash2, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
@@ -8,6 +8,8 @@ import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval, systemSettings } = useApp();
   const [collapsed, setCollapsed] = useState(!isInline);
+  const [showBreaks, setShowBreaks] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [selectedDate, setSelectedDate] = useState(initialDate || toISODateLocal(new Date()));
   const [formData, setFormData] = useState({
     clientId: currentUser?.defaultClientId || '',
@@ -59,8 +61,12 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
 
   const handleDateChange = (dateStr) => {
     setSelectedDate(dateStr);
+    setShowBreaks(false);
+    setShowComments(false);
     const log = monthLogs?.find(l => l.date === dateStr && l.workerId === currentUser?.id);
     if (log) {
+      setShowBreaks(!!(log.breakStart || log.breakEnd));
+      setShowComments(!!log.description);
       setFormData({
         clientId: log.clientId || '',
         startTime: log.startTime || '',
@@ -321,8 +327,8 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       )}
 
       {(isInline || !collapsed) && (
-        <div className="px-5 sm:px-6 pb-5 sm:pb-6 border-t border-slate-100 pt-4 space-y-4">
-          <div className="space-y-1">
+        <div className="px-3 sm:px-6 pb-3 sm:pb-6 border-t border-slate-100 pt-3 sm:pt-4 space-y-2 sm:space-y-4">
+          <div className="space-y-0.5 sm:space-y-1">
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1">
               <Calendar size={10} /> Data
             </label>
@@ -330,108 +336,112 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
               type="date"
               value={selectedDate}
               onChange={e => handleDateChange(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-50"
+              className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm font-bold outline-none shadow-sm focus:border-amber-400 focus:ring-2 focus:ring-amber-50"
             />
           </div>
 
           {existingLog ? (
-            <div className="bg-amber-50/50 rounded-xl p-4 border border-amber-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Edit2 size={14} className="text-amber-600" />
-                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">A editar registo de {selectedDate}</span>
+            <div className="bg-amber-50/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-amber-100">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Edit2 size={12} className="text-amber-600" />
+                <span className="text-[9px] font-black text-amber-600 uppercase tracking-widest">A editar registo de {selectedDate}</span>
               </div>
-              <div className="space-y-3">
-                <div className="space-y-1">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-0.5 sm:space-y-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
-                  <select
-                    value={formData.clientId || ''}
-                    onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm"
-                  >
+                  <select value={formData.clientId || ''} onChange={e => setFormData({ ...formData, clientId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm">
                     <option value="">Selecione...</option>
                     {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="space-y-0.5 sm:space-y-1">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Entrada</label>
-                    <input type="time" value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    <input type="time" value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5 sm:space-y-1">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Saída</label>
-                    <input type="time" value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    <input type="time" value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa Início</label>
-                    <input type="time" value={formData.breakStart || ''} onChange={e => setFormData({ ...formData, breakStart: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                {showBreaks ? (
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa I.</label>
+                      <input type="time" value={formData.breakStart || ''} onChange={e => setFormData({ ...formData, breakStart: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    </div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa F.</label>
+                      <input type="time" value={formData.breakEnd || ''} onChange={e => setFormData({ ...formData, breakEnd: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa Fim</label>
-                    <input type="time" value={formData.breakEnd || ''} onChange={e => setFormData({ ...formData, breakEnd: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                ) : (
+                  <button type="button" onClick={() => setShowBreaks(true)} className="w-full text-[10px] font-black uppercase text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[42px]">
+                    <Coffee size={13} /> Adicionar Pausa
+                  </button>
+                )}
+                {showComments ? (
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                    <textarea rows={2} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none resize-none shadow-inner" placeholder="Opcional..." />
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
-                  <textarea
-                    rows={2}
-                    value={formData.description || ''}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none resize-none shadow-inner"
-                    placeholder="Opcional..."
-                  />
-                </div>
+                ) : (
+                  <button type="button" onClick={() => setShowComments(true)} className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+                    <Plus size={12} /> Adicionar Comentários
+                  </button>
+                )}
               </div>
             </div>
           ) : (
-            <div className="bg-slate-50/50 rounded-xl p-4 border border-slate-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Clock size={14} className="text-slate-500" />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Criar novo registo para {selectedDate}</span>
+            <div className="bg-slate-50/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-slate-100">
+              <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                <Clock size={12} className="text-slate-500" />
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Novo registo para {selectedDate}</span>
               </div>
-              <div className="space-y-3">
-                <div className="space-y-1">
+              <div className="space-y-2 sm:space-y-3">
+                <div className="space-y-0.5 sm:space-y-1">
                   <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
-                  <select
-                    value={formData.clientId || ''}
-                    onChange={e => setFormData({ ...formData, clientId: e.target.value })}
-                    className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm"
-                  >
+                  <select value={formData.clientId || ''} onChange={e => setFormData({ ...formData, clientId: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm">
                     <option value="">Selecione...</option>
                     {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="space-y-0.5 sm:space-y-1">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Entrada</label>
-                    <input type="time" value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    <input type="time" value={formData.startTime || ''} onChange={e => setFormData({ ...formData, startTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5 sm:space-y-1">
                     <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Saída</label>
-                    <input type="time" value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    <input type="time" value={formData.endTime || ''} onChange={e => setFormData({ ...formData, endTime: e.target.value })} className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa Início</label>
-                    <input type="time" value={formData.breakStart || ''} onChange={e => setFormData({ ...formData, breakStart: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                {showBreaks ? (
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa I.</label>
+                      <input type="time" value={formData.breakStart || ''} onChange={e => setFormData({ ...formData, breakStart: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    </div>
+                    <div className="space-y-0.5 sm:space-y-1">
+                      <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa F.</label>
+                      <input type="time" value={formData.breakEnd || ''} onChange={e => setFormData({ ...formData, breakEnd: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none shadow-sm" />
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[9px] font-black text-orange-500 uppercase tracking-widest ml-1">Pausa Fim</label>
-                    <input type="time" value={formData.breakEnd || ''} onChange={e => setFormData({ ...formData, breakEnd: e.target.value })} className="w-full bg-orange-50 border border-orange-100 rounded-xl p-2.5 text-sm font-bold outline-none shadow-sm" />
+                ) : (
+                  <button type="button" onClick={() => setShowBreaks(true)} className="w-full text-[10px] font-black uppercase text-orange-500 bg-orange-50 hover:bg-orange-100 border border-orange-100 rounded-lg sm:rounded-xl p-2 sm:p-2.5 transition-colors flex items-center justify-center gap-2 h-[34px] sm:h-[42px]">
+                    <Coffee size={13} /> Adicionar Pausa
+                  </button>
+                )}
+                {showComments ? (
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
+                    <textarea rows={2} value={formData.description || ''} onChange={e => setFormData({ ...formData, description: e.target.value })} className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 text-sm font-bold outline-none resize-none shadow-inner" placeholder="Opcional..." />
                   </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição</label>
-                  <textarea
-                    rows={2}
-                    value={formData.description || ''}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-bold outline-none resize-none shadow-inner"
-                    placeholder="Opcional..."
-                  />
-                </div>
+                ) : (
+                  <button type="button" onClick={() => setShowComments(true)} className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+                    <Plus size={12} /> Adicionar Comentários
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -439,32 +449,23 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           {existingLog && !requestDelete && (
             <button
               onClick={() => setRequestDelete(true)}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-rose-50 text-rose-600 rounded-xl border border-rose-200 font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-all"
+              className="w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 bg-rose-50 text-rose-600 rounded-lg sm:rounded-xl border border-rose-200 font-bold text-xs uppercase tracking-widest hover:bg-rose-100 transition-all"
             >
-              <Trash2 size={14} />
+              <Trash2 size={13} />
               Solicitar Exclusão
             </button>
           )}
 
           {requestDelete && (
-            <div className="bg-rose-50/50 rounded-xl p-4 border border-rose-200 space-y-3">
-              <div className="flex items-center gap-2 mb-2">
-                <Trash2 size={16} className="text-rose-600" />
-                <span className="text-xs font-black text-rose-600 uppercase tracking-widest">Confirmar pedido de exclusão</span>
+            <div className="bg-rose-50/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-rose-200 space-y-2 sm:space-y-3">
+              <div className="flex items-center gap-2">
+                <Trash2 size={13} className="text-rose-600" />
+                <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">Confirmar pedido de exclusão</span>
               </div>
-              <p className="text-xs text-slate-600">Ao confirmar, será enviado um pedido para eliminar o registo de <strong>{selectedDate}</strong>. O administrador analisará o pedido.</p>
+              <p className="text-xs text-slate-600">Ao confirmar, será enviado um pedido para eliminar o registo de <strong>{selectedDate}</strong>.</p>
               <div className="flex gap-2">
-                <button
-                  onClick={() => setRequestDelete(false)}
-                  className="flex-1 py-2 bg-slate-200 text-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-300 transition-all"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleDeleteRequest}
-                  disabled={isSubmitting}
-                  className="flex-1 py-2 bg-rose-600 text-white rounded-xl font-bold text-xs uppercase hover:bg-rose-700 transition-all disabled:opacity-50"
-                >
+                <button onClick={() => setRequestDelete(false)} className="flex-1 py-2 bg-slate-200 text-slate-700 rounded-lg sm:rounded-xl font-bold text-xs uppercase hover:bg-slate-300 transition-all">Cancelar</button>
+                <button onClick={handleDeleteRequest} disabled={isSubmitting} className="flex-1 py-2 bg-rose-600 text-white rounded-lg sm:rounded-xl font-bold text-xs uppercase hover:bg-rose-700 transition-all disabled:opacity-50">
                   {isSubmitting ? <Loader2 size={14} className="animate-spin mx-auto" /> : 'Confirmar'}
                 </button>
               </div>
@@ -475,10 +476,10 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
             <button
               onClick={handleSubmit}
               disabled={isSubmitting || !formData.clientId || !formData.startTime || !formData.endTime}
-              className="w-full bg-emerald-600 text-white py-3 rounded-xl shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+              className="w-full bg-emerald-600 text-white py-2 sm:py-3 rounded-xl shadow-md sm:shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
             >
-              {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-              {isSubmitting ? 'A Submeter...' : 'Submeter Pedido'}
+              {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} className="sm:w-4 sm:h-4" />}
+              {isSubmitting ? 'A Submeter...' : 'Submeter'}
             </button>
           )}
         </div>
