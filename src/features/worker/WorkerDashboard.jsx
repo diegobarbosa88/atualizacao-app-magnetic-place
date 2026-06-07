@@ -265,7 +265,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             />
           )}
 
-          {currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+          {currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && !(todayOpenLog && geoSuggestion?.type === 'saida') && (
             <GeoSuggestionCard
               geoSuggestion={geoSuggestion} geoSuggestionDismissed={geoSuggestionDismissed}
               setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
