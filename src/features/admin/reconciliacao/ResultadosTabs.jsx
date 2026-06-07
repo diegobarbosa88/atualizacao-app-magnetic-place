@@ -49,7 +49,7 @@ export default function ResultadosTabs({
           ].map(tab => (
             <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
               className={`flex-1 px-2 py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all ${
-                activeSubTab === tab.key ? 'bg-white shadow-md' : 'text-slate-400 hover:text-slate-600'
+                activeSubTab === tab.key ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
               }`}>
               <span className="hidden sm:inline">{tab.labelFull}</span>
               <span className="sm:hidden">{tab.labelShort}</span>

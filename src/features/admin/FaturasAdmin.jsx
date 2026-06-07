@@ -332,7 +332,7 @@ export default function FaturasAdmin() {
             )},
           ].map(({ key, label, jsx }) => (
             <button key={key} onClick={() => setFiltroStatus(key)}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtroStatus === key ? 'bg-white shadow-sm text-slate-800' : 'text-slate-400 hover:text-slate-600'}`}>
+              className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtroStatus === key ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
               {jsx ?? label}
             </button>
           ))}

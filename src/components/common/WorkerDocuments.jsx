@@ -225,16 +225,18 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
       </div>
 
       {!pendingOnly && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button onClick={() => setActiveTab('pendentes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'pendentes' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-            Pendentes ({pendentes.length})
-          </button>
-          <button onClick={() => setActiveTab('historico')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'historico' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-            Histórico ({historico.length})
-          </button>
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">
+            <button onClick={() => setActiveTab('pendentes')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'pendentes' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              Pendentes ({pendentes.length})
+            </button>
+            <button onClick={() => setActiveTab('historico')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === 'historico' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              Histórico ({historico.length})
+            </button>
+          </div>
           {activeTab === 'historico' && (
             <button onClick={() => setShowFilters(!showFilters)}
-              className={`ml-auto p-2 rounded-xl ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+              className={`ml-auto p-1.5 rounded-xl transition-all ${showFilters ? 'bg-white text-indigo-600 shadow-sm' : 'bg-slate-100 text-slate-400 hover:text-slate-600'}`}>
               <Filter size={16} />
             </button>
           )}
