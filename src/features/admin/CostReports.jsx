@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download, Link2, Loader2, Plus, BookOpen, ChevronDown } from 'lucide-react';
+import { Users, Building2, TrendingUp, Receipt, CalendarRange, FileText, Trash2, X, Download, Link2, Loader2, Plus, BookOpen, ChevronDown, Coins } from 'lucide-react';
+import AjudasCalculadora from './cost-reports/AjudasCalculadora';
 import { toISODateLocal } from '../../utils/dateUtils';
 import { formatCurrency, formatDate, getMonthLabel, parseFaturaValor, generateMonthOptions } from './cost-reports/costReportsUtils';
 import { exportToXLS, exportRelatorioGeralPDF, exportRelatorioGeralXLS } from './cost-reports/exportUtils';
@@ -212,6 +213,7 @@ const CostReports = () => {
     if (activeTab === 'clients') return 'Faturação por Cliente';
     if (activeTab === 'margins') return 'Margem Bruta por Cliente';
     if (activeTab === 'expenses') return 'Despesas';
+    if (activeTab === 'ajudas')   return 'Ajudas de Custo — Faturação';
     return 'Relatórios';
   };
 
@@ -552,6 +554,10 @@ const CostReports = () => {
         </div>
       );
     }
+
+    if (activeTab === 'ajudas') {
+      return <AjudasCalculadora logs={logs} clients={clients} selectedMonth={selectedMonth} />;
+    }
   };
 
   const exportArgs = { workerCosts, clientCosts, clientMargins, allExpensesSorted, totalAllExpenses, selectedMonth };
@@ -599,13 +605,14 @@ const CostReports = () => {
       </div>
 
       <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-200">
-        <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
+        <div className="grid grid-cols-6 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
           {[
             { id: 'workers', icon: Users, label: 'Equipa' },
             { id: 'clients', icon: Building2, label: 'Clientes' },
             { id: 'faturas', icon: FileText, label: 'Faturas' },
             { id: 'margins', icon: TrendingUp, label: 'Margem' },
             { id: 'expenses', icon: Receipt, label: 'Despesas' },
+            { id: 'ajudas', icon: Coins, label: 'Ajudas' },
           ].map(({ id, icon: Icon, label }) => (
             <button
               key={id}
