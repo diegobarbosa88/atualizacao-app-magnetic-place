@@ -100,8 +100,8 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
   const [files, setFiles] = useState([]);
   const [processando, setProcessando] = useState(false);
   const [expandidoId, setExpandidoId] = useState(null);
-  const [mesesColapsados, setMesesColapsados] = useState(new Set());
-  const toggleMes = mes => setMesesColapsados(prev => { const next = new Set(prev); next.has(mes) ? next.delete(mes) : next.add(mes); return next; });
+  const [mesesAbertos, setMesesAbertos] = useState(new Set());
+  const toggleMes = mes => setMesesAbertos(prev => { const next = new Set(prev); next.has(mes) ? next.delete(mes) : next.add(mes); return next; });
   const [erroProcessamento, setErroProcessamento] = useState(null);
   const [configAberto, setConfigAberto] = useState(false);
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
@@ -478,7 +478,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
         return (
           <div className="space-y-4">
             {Object.entries(grupos).map(([mes, regs]) => {
-              const colapsado = mesesColapsados.has(mes);
+              const colapsado = !mesesAbertos.has(mes);
               return (
               <div key={mes} className="rounded-xl border border-slate-100 overflow-hidden">
                 {/* Cabeçalho do mês — clicável */}
