@@ -12,6 +12,11 @@ import {
   aplicarOverrideSempreValido,
   guardarValidacao,
   formatarMes,
+  calcularTolerancias,
+  calcularBrutoDeMes,
+  agregarTotaisPorMes,
+  adicionarCustosAoMes,
+  guardarValidacoesEmLote,
 } from '../../utils/validacaoHelpers';
 
 // ─── Modo Bursting ────────────────────────────────────────────────────────────
@@ -84,10 +89,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
     setSelecionados(prev => prev.size === nifs.length ? new Set() : new Set(nifs));
   };
 
-  const tolerancias = {
-    valido: parseFloat(String(systemSettings?.toleranciaValido ?? 0.77).replace(',', '.')),
-    aviso:  parseFloat(String(systemSettings?.toleranciaAviso  ?? 10).replace(',', '.')),
-  };
+  const tolerancias = calcularTolerancias(systemSettings);
 
   const handleBurst = async () => {
     if (!ficheiro) return;
@@ -102,11 +104,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
       );
       const enriquecidos = res.resultados.map(r => {
         const worker = r.nome ? encontrarWorker(r.nome, workers) : null;
-        let bruto = 0;
-        if (worker && r.mes) {
-          const logsDoMes = (logs ?? []).filter(l => l.workerId === worker.id && l.date?.startsWith(r.mes));
-          bruto = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0) * (worker.valorHora || 0);
-        }
+        const bruto = calcularBrutoDeMes(worker, r.mes, logs);
         const validacao = aplicarOverrideSempreValido(parseReciboTOConline(r.texto, bruto, tolerancias), worker);
         return { ...r, worker, bruto, ...validacao };
       });
@@ -129,42 +127,18 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
     setGuardando(true); setErroGuardar(null);
     try {
       const sessionId = crypto.randomUUID();
-      await Promise.all(resultado.resultados.map(r =>
-        guardarValidacao(r, { sessionId, origem: r.nif })
-      ));
+      await guardarValidacoesEmLote(resultado.resultados, sessionId, r => ({ origem: r.nif }));
       setGuardados(true);
     } catch (e) { setErroGuardar(e.message); }
     finally { setGuardando(false); }
   };
 
-  const totaisPorMesBurst = (resultado?.resultados ?? []).reduce((acc, r) => {
-    if (!r.sucesso || !r.mes || r.mes === '—') return acc;
-    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
-    acc[r.mes].ss        += r.ssExtraido  ?? 0;
-    acc[r.mes].irs       += r.irsExtraido ?? 0;
-    acc[r.mes].ssEmpresa += (r.ssExtraido ?? 0) * (23.75 / 11);
-    return acc;
-  }, {});
+  const totaisPorMesBurst = agregarTotaisPorMes(resultado?.resultados);
 
   const handleAdicionarACustosBurst = async () => {
     setAdicionando(true); setErroAdicionar(null);
     try {
-      for (const [mes, totais] of Object.entries(totaisPorMesBurst)) {
-        const dataMes = `${mes}-01`;
-        const mesNome = formatarMes(mes);
-        if (totais.ss > 0) {
-          const id = `e${Date.now()}_ss_${mes}`;
-          await saveToDb('expenses', id, { id, name: `Segurança Social - ${mesNome}`, amount: parseFloat(totais.ss.toFixed(2)), type: 'variável', date: dataMes });
-        }
-        if (totais.irs > 0) {
-          const id = `e${Date.now()}_irs_${mes}`;
-          await saveToDb('expenses', id, { id, name: `IRS - ${mesNome}`, amount: parseFloat(totais.irs.toFixed(2)), type: 'variável', date: dataMes });
-        }
-        if (totais.ssEmpresa > 0) {
-          const id = `e${Date.now()}_sse_${mes}`;
-          await saveToDb('expenses', id, { id, name: `Seg. Social Empresa - ${mesNome}`, amount: parseFloat(totais.ssEmpresa.toFixed(2)), type: 'variável', date: dataMes });
-        }
-      }
+      await adicionarCustosAoMes(totaisPorMesBurst, saveToDb, formatarMes);
       setAdicionado(true);
     } catch (e) { setErroAdicionar(e.message); }
     finally { setAdicionando(false); }

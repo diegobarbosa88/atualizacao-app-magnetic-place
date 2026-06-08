@@ -130,6 +130,18 @@ const ModoHistorico = ({ workers, saveToDb, systemSettings }) => {
     setRegistos(prev => prev.map(r => r.id === id ? { ...r, ...patch } : r));
   };
 
+  const atualizarExtracaoPdf = async (updates) => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    for (const { id, ...campos } of updates) {
+      await db.from('receipt_validations').update(campos).eq('id', id);
+    }
+    setRegistos(prev => prev.map(r => {
+      const u = updates.find(u => u.id === r.id);
+      return u ? { ...r, ...u } : r;
+    }));
+  };
+
   const apagarRegisto = async (id) => {
     const db = window.supabaseInstance;
     if (!db) return;
@@ -456,6 +468,8 @@ const ModoHistorico = ({ workers, saveToDb, systemSettings }) => {
                   onApagarSessao={apagarSessao}
                   onAdicionarACustos={adicionarACustosSessao}
                   onEnviarRecibos={enviarRecibosSessao}
+                  onAtualizarAjudas={atualizarExtracaoPdf}
+                  workers={workers}
                 />
               ))}
             </tbody>

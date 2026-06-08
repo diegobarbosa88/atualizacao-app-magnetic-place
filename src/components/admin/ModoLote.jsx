@@ -18,6 +18,11 @@ import {
   estadoStringToFlags,
   guardarValidacao,
   formatarMes,
+  calcularTolerancias,
+  calcularBrutoDeMes,
+  agregarTotaisPorMes,
+  adicionarCustosAoMes,
+  guardarValidacoesEmLote,
 } from '../../utils/validacaoHelpers';
 import { DivergenciaBadge, EstadoPicker } from './ValidacaoUI';
 
@@ -41,10 +46,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
   const [tolAvisoLocal,  setTolAvisoLocal]  = useState(String(systemSettings?.toleranciaAviso  ?? 10));
 
-  const tolerancias = {
-    valido: parseFloat(String(systemSettings?.toleranciaValido ?? 0.77).replace(',', '.')),
-    aviso:  parseFloat(String(systemSettings?.toleranciaAviso  ?? 10).replace(',', '.')),
-  };
+  const tolerancias = calcularTolerancias(systemSettings);
 
   const guardarTolerancias = () => {
     const v = parseFloat(tolValidoLocal.replace(',', '.'));
@@ -69,12 +71,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   const processarPagina = async (text, origem) => {
     const { nome, mes } = extrairMetadadosTOConline(text);
     const worker = nome ? encontrarWorker(nome, workers) : null;
-    let bruto = 0;
-    if (worker && mes) {
-      const logsDoMes = logs.filter(l => l.workerId === worker.id && l.date?.startsWith(mes));
-      const totalHoras = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
-      bruto = totalHoras * (worker.valorHora || 0);
-    }
+    const bruto = calcularBrutoDeMes(worker, mes, logs);
     const validacao = aplicarOverrideSempreValido(parseReciboTOConline(text, bruto, tolerancias), worker);
     return { origem, nomeExtraido: nome ?? '—', worker: worker ?? null, mes: mes ?? '—', bruto, ...validacao };
   };
@@ -134,69 +131,25 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
     setProcessando(false);
   };
 
-  // Agrupa SS + IRS por mês — usado pelo botão "Adicionar a Custos"
-  const totaisPorMes = resultados.reduce((acc, r) => {
-    if (!r.sucesso || r.mes === '—' || !r.mes) return acc;
-    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
-    acc[r.mes].ss        += r.ssExtraido  ?? 0;
-    acc[r.mes].irs       += r.irsExtraido ?? 0;
-    acc[r.mes].ssEmpresa += (r.ssExtraido ?? 0) * (23.75 / 11);
-    return acc;
-  }, {});
+  const totaisPorMes = agregarTotaisPorMes(resultados);
 
   const handleAdicionarACustos = async () => {
-    setAdicionando(true);
-    setErroAdicionar(null);
+    setAdicionando(true); setErroAdicionar(null);
     try {
-      const entradas = Object.entries(totaisPorMes);
-      for (const [mes, totais] of entradas) {
-        const dataMes = `${mes}-01`;
-        const mesNome = formatarMes(mes);
-        if (totais.ss > 0) {
-          const id = `e${Date.now()}_ss_${mes}`;
-          await saveToDb('expenses', id, {
-            id, name: `Segurança Social - ${mesNome}`,
-            amount: parseFloat(totais.ss.toFixed(2)),
-            type: 'variável', date: dataMes,
-          });
-        }
-        if (totais.irs > 0) {
-          const id = `e${Date.now()}_irs_${mes}`;
-          await saveToDb('expenses', id, {
-            id, name: `IRS - ${mesNome}`,
-            amount: parseFloat(totais.irs.toFixed(2)),
-            type: 'variável', date: dataMes,
-          });
-        }
-        if (totais.ssEmpresa > 0) {
-          const id = `e${Date.now()}_sse_${mes}`;
-          await saveToDb('expenses', id, {
-            id, name: `Seg. Social Empresa - ${mesNome}`,
-            amount: parseFloat(totais.ssEmpresa.toFixed(2)),
-            type: 'variável', date: dataMes,
-          });
-        }
-      }
+      await adicionarCustosAoMes(totaisPorMes, saveToDb, formatarMes);
       setAdicionado(true);
-    } catch (e) {
-      setErroAdicionar(e.message);
-    } finally {
-      setAdicionando(false);
-    }
+    } catch (e) { setErroAdicionar(e.message); }
+    finally { setAdicionando(false); }
   };
 
   const handleGuardarTodos = async () => {
-    setGuardando(true);
-    setErroGuardar(null);
+    setGuardando(true); setErroGuardar(null);
     try {
       const sessionId = crypto.randomUUID();
-      await Promise.all(resultados.map(r => guardarValidacao(r, { sessionId })));
+      await guardarValidacoesEmLote(resultados, sessionId);
       setGuardados(true);
-    } catch (e) {
-      setErroGuardar(e.message);
-    } finally {
-      setGuardando(false);
-    }
+    } catch (e) { setErroGuardar(e.message); }
+    finally { setGuardando(false); }
   };
 
 
