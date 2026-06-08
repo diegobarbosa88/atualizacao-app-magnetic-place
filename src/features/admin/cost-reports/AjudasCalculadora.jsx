@@ -97,11 +97,10 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     const estimadoAuto = sugestaoMes * proporcao;
     const valorStr = overrides[c.clientId];
     const ajudas = valorStr !== undefined ? (parseFloat(valorStr.replace(',', '.')) || 0) : estimadoAuto;
-    return { ...c, proporcao, ajudasEstimadas: ajudas, totalFatura: c.valorFatura + ajudas };
+    return { ...c, proporcao, ajudasEstimadas: ajudas };
   }), [clientesMes, totalFaturaMes, sugestaoMes, overrides]);
 
   const totalAjudasMes = linhas.reduce((s, l) => s + l.ajudasEstimadas, 0);
-  const totalGeralMes  = linhas.reduce((s, l) => s + l.totalFatura, 0);
 
   // — Confirmar e guardar —
   const handleConfirmar = async () => {
@@ -121,11 +120,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   // — Copiar tabela —
   const handleCopiar = () => {
-    const header = ['Cliente', 'Horas', 'Valor Fatura', 'Ajudas de Custo', 'Total Fatura'].join('\t');
+    const header = ['Cliente', 'Horas', 'Valor Fatura', 'Ajudas de Custo (incluídas)'].join('\t');
     const rows = linhas.map(l =>
-      [l.nome, l.horas.toFixed(2), l.valorFatura.toFixed(2), l.ajudasEstimadas.toFixed(2), l.totalFatura.toFixed(2)].join('\t')
+      [l.nome, l.horas.toFixed(2), l.valorFatura.toFixed(2), l.ajudasEstimadas.toFixed(2)].join('\t')
     );
-    const total = ['TOTAL', linhas.reduce((s,l)=>s+l.horas,0).toFixed(2), totalFaturaMes.toFixed(2), totalAjudasMes.toFixed(2), totalGeralMes.toFixed(2)].join('\t');
+    const total = ['TOTAL', linhas.reduce((s,l)=>s+l.horas,0).toFixed(2), totalFaturaMes.toFixed(2), totalAjudasMes.toFixed(2)].join('\t');
     navigator.clipboard.writeText([header, ...rows, total].join('\n'));
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
@@ -229,8 +228,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Horas</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Valor Fatura</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">% Total</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Estimadas</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Total Fatura</th>
+                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Incluídas</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -250,7 +248,6 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                         className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
                       />
                     </td>
-                    <td className="px-3 py-2.5 text-right font-black text-slate-800">{fmtEur(l.totalFatura)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -265,7 +262,6 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                       {fmtEur(totalAjudasMes)}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-800">{fmtEur(totalGeralMes)}</td>
                 </tr>
               </tfoot>
             </table>
