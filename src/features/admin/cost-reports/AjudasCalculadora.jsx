@@ -25,6 +25,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const [confirmado, setConfirmado] = useState(false);
   const [copiado, setCopiado] = useState(false);
   const [historicoAberto, setHistoricoAberto] = useState(false);
+  const [expandidoHistMes, setExpandidoHistMes] = useState(null);
+  const [histOverrides, setHistOverrides] = useState({});   // 'YYYY-MM|clientId' → valorString
+  const [gravandoHist, setGravandoHist] = useState(null);   // mes a gravar
   // overrides manuais: { clientId: valorString }
   const [overrides, setOverrides] = useState({});
 
@@ -142,6 +145,29 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       return { mes, ajudasRecibo, ajudasFaturadas, dif: ajudasFaturadas - ajudasRecibo };
     });
   }, [recibosAno, faturadosAno]);
+
+  // — Guardar edições do histórico —
+  const handleGuardarHist = async (mes) => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    setGravandoHist(mes);
+    const linhasMes = faturadosAno.filter(r => r.mes === mes);
+    await Promise.all(linhasMes.map(r => {
+      const key = `${mes}|${r.client_id}`;
+      const val = histOverrides[key] !== undefined
+        ? parseFloat(String(histOverrides[key]).replace(',', '.')) || 0
+        : parseFloat(r.valor_ajudas) || 0;
+      return db.from('ajudas_faturadas_clientes')
+        .upsert({ mes, client_id: r.client_id, valor_ajudas: parseFloat(val.toFixed(2)), confirmado: true }, { onConflict: 'mes,client_id' });
+    }));
+    await carregar();
+    setHistOverrides(prev => {
+      const next = { ...prev };
+      linhasMes.forEach(r => delete next[`${mes}|${r.client_id}`]);
+      return next;
+    });
+    setGravandoHist(null);
+  };
 
   // — Cor da barra de progresso —
   const barCls = progressoPct >= 95 ? 'bg-red-500' : progressoPct >= 75 ? 'bg-yellow-400' : 'bg-emerald-500';
@@ -311,19 +337,86 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Recibos</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Faturadas</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Diferença</th>
+                    <th className="px-3 py-2 w-6"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {historicoAnual.map(h => (
-                    <tr key={h.mes} className={`${h.mes === selectedMonth ? 'bg-indigo-50' : 'hover:bg-slate-50'} transition-colors`}>
-                      <td className="px-3 py-2.5 font-bold text-slate-700">{formatarMes(h.mes)}</td>
-                      <td className="px-3 py-2.5 text-right text-slate-600">{fmtEur(h.ajudasRecibo)}</td>
-                      <td className="px-3 py-2.5 text-right text-slate-600">{fmtEur(h.ajudasFaturadas)}</td>
-                      <td className={`px-3 py-2.5 text-right font-bold ${h.dif > 0.5 ? 'text-red-600' : h.dif < -0.5 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {h.dif > 0 ? '+' : ''}{fmtEur(h.dif)}
-                      </td>
-                    </tr>
-                  ))}
+                  {historicoAnual.map(h => {
+                    const aberto = expandidoHistMes === h.mes;
+                    const clientesMesHist = faturadosAno.filter(r => r.mes === h.mes);
+                    const temEdicoes = clientesMesHist.some(r => histOverrides[`${h.mes}|${r.client_id}`] !== undefined);
+                    return (
+                      <React.Fragment key={h.mes}>
+                        <tr
+                          onClick={() => setExpandidoHistMes(aberto ? null : h.mes)}
+                          className={`cursor-pointer select-none transition-colors ${h.mes === selectedMonth ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                        >
+                          <td className="px-3 py-2.5 font-bold text-slate-700">
+                            <div className="flex items-center gap-1.5">
+                              <ChevronRight size={12} className={`text-slate-300 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
+                              {formatarMes(h.mes)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-slate-600">{fmtEur(h.ajudasRecibo)}</td>
+                          <td className="px-3 py-2.5 text-right text-slate-600">{fmtEur(h.ajudasFaturadas)}</td>
+                          <td className={`px-3 py-2.5 text-right font-bold ${h.dif > 0.5 ? 'text-red-600' : h.dif < -0.5 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                            {h.dif > 0 ? '+' : ''}{fmtEur(h.dif)}
+                          </td>
+                          <td className="px-3 py-2.5"></td>
+                        </tr>
+                        {aberto && (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                              {clientesMesHist.length === 0 ? (
+                                <p className="text-[10px] text-slate-400 text-center py-2">Sem registos por cliente para este mês.</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr>
+                                        <th className="pb-1 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                                        <th className="pb-1 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Faturadas</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {clientesMesHist.map(r => {
+                                        const key = `${h.mes}|${r.client_id}`;
+                                        const nomeCliente = clients.find(c => c.id === r.client_id)?.name ?? r.client_id;
+                                        const val = histOverrides[key] !== undefined ? histOverrides[key] : parseFloat(r.valor_ajudas).toFixed(2);
+                                        return (
+                                          <tr key={r.client_id}>
+                                            <td className="py-1.5 font-bold text-slate-700">{nomeCliente}</td>
+                                            <td className="py-1.5 text-right" onClick={e => e.stopPropagation()}>
+                                              <input
+                                                type="number" min="0" step="0.01"
+                                                value={val}
+                                                onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
+                                                className="w-28 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                              />
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                  <div className="flex justify-end pt-1" onClick={e => e.stopPropagation()}>
+                                    <button
+                                      onClick={() => handleGuardarHist(h.mes)}
+                                      disabled={gravandoHist === h.mes || !temEdicoes}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40"
+                                    >
+                                      {gravandoHist === h.mes ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} />}
+                                      {gravandoHist === h.mes ? 'A guardar...' : 'Guardar'}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                   <tr className="border-t-2 border-slate-200 bg-slate-50">
                     <td className="px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">TOTAL {ano}</td>
                     <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">{fmtEur(orcamentoAnual)}</td>
@@ -336,6 +429,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                         return `${d > 0 ? '+' : ''}${fmtEur(d)}`;
                       })()}
                     </td>
+                    <td></td>
                   </tr>
                 </tbody>
               </table>
