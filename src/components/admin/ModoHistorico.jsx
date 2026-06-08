@@ -4,7 +4,7 @@ import autoTable from 'jspdf-autotable';
 import {
   Loader2, RefreshCw, Download, FileDown, X,
   ChevronRight, CheckCircle, AlertTriangle, XCircle, AlertCircle,
-  Upload, Coins, Trash2, ScanSearch, ReceiptText, Files, Settings,
+  Upload, Coins, Trash2, ScanSearch, ReceiptText, Files, Settings, Save,
 } from 'lucide-react';
 import {
   MESES_PT,
@@ -16,6 +16,7 @@ import {
   calcularTolerancias,
   calcularBrutoDeMes,
   guardarValidacoesEmLote,
+  estadoStringToFlags,
   ESTADO_PT,
   ESTADO_BADGE,
 } from '../../utils/validacaoHelpers';
@@ -96,6 +97,7 @@ function MesRow({ mes, registos, onAlterarEstado, onApagarRegisto, onApagarMes, 
   const [erroEnvio, setErroEnvio] = useState(null);
   const [adicionandoCustos, setAdicionandoCustos] = useState(false);
   const [adicionadoCustos, setAdicionadoCustos] = useState(false);
+  const [expandidoRow, setExpandidoRow] = useState(null);
   const fileInputRef = useRef(null);
 
   const nValidos   = registos.filter(r => r.estado === 'valido').length;
@@ -293,6 +295,7 @@ function MesRow({ mes, registos, onAlterarEstado, onApagarRegisto, onApagarMes, 
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-4 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
+                <th className="px-4 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
                 <th className="px-4 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
                 <th className="px-4 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">SS</th>
                 <th className="px-4 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">IRS</th>
@@ -310,35 +313,67 @@ function MesRow({ mes, registos, onAlterarEstado, onApagarRegisto, onApagarMes, 
                     : r.liquido_extraido != null && r.bruto_extraido != null
                       ? parseFloat((Number(r.liquido_extraido) - Number(r.bruto_extraido)).toFixed(2))
                       : null;
+                const rowAberto = expandidoRow === r.id;
                 return (
-                  <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${emFalta ? 'bg-amber-50/30' : ''}`} title={r.mensagem ?? undefined}>
-                    <td className="px-4 py-2.5 font-bold text-slate-800">
-                      <div className="flex items-center gap-1.5">
-                        {emFalta && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Dados em falta" />}
-                        {r.worker_name ?? '—'}
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-bold text-slate-700">{fmtV(r.liquido_extraido)}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{fmtV(r.ss_extraido)}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-500">{fmtV(r.irs_extraido)}</td>
-                    <td className="px-4 py-2.5 text-center">
-                      {divergencia != null ? <DivergenciaBadge sinal={divergencia} className="text-xs font-bold" /> : <span className="text-slate-300">—</span>}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <EstadoPicker atual={r.estado} onChange={novo => onAlterarEstado(r.id, novo)} size={14} />
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
-                          {ESTADO_PT[r.estado] ?? r.estado}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <button onClick={() => { if (window.confirm('Apagar este registo?')) onApagarRegisto(r.id); }}
-                        className="p-1 rounded text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors">
-                        <Trash2 size={11} />
-                      </button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={r.id}>
+                    <tr
+                      onClick={() => setExpandidoRow(rowAberto ? null : r.id)}
+                      className={`cursor-pointer hover:bg-slate-50 transition-colors select-none ${emFalta ? 'bg-amber-50/30' : ''}`}
+                    >
+                      <td className="px-4 py-2.5 font-bold text-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          <ChevronRight size={12} className={`text-slate-300 transition-transform shrink-0 ${rowAberto ? 'rotate-90' : ''}`} />
+                          {emFalta && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Dados em falta" />}
+                          {r.worker_name ?? '—'}
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-bold text-indigo-700">{fmtV(r.bruto_plataforma)}</td>
+                      <td className="px-4 py-2.5 text-right font-bold text-slate-700">{fmtV(r.liquido_extraido)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{fmtV(r.ss_extraido)}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-500">{fmtV(r.irs_extraido)}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        {divergencia != null ? <DivergenciaBadge sinal={divergencia} className="text-xs font-bold" /> : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-center gap-1.5">
+                          <EstadoPicker atual={r.estado} onChange={novo => onAlterarEstado(r.id, novo)} size={14} />
+                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[r.estado] ?? 'bg-slate-100 text-slate-500'}`}>
+                            {ESTADO_PT[r.estado] ?? r.estado}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 text-right" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => { if (window.confirm('Apagar este registo?')) onApagarRegisto(r.id); }}
+                          className="p-1 rounded text-slate-300 hover:bg-red-50 hover:text-red-600 transition-colors">
+                          <Trash2 size={11} />
+                        </button>
+                      </td>
+                    </tr>
+
+                    {/* Detalhe expandido da linha */}
+                    {rowAberto && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={8} className="px-6 py-3">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                            {[
+                              ['Bruto plataforma', fmtV(r.bruto_plataforma)],
+                              ['Bruto PDF',        fmtV(r.bruto_extraido)],
+                              ['Ajudas de custo',  fmtV(r.ajudas_custo_extraidas)],
+                              ['Seg. Social empresa', r.ss_extraido != null ? `${(Number(r.ss_extraido) * (23.75 / 11)).toFixed(2)}€` : '—'],
+                            ].map(([label, val]) => (
+                              <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+                                <p className="text-sm font-black text-slate-800">{val}</p>
+                              </div>
+                            ))}
+                          </div>
+                          {r.mensagem && (
+                            <p className="text-[10px] text-slate-500 font-medium">{r.mensagem}</p>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -363,7 +398,10 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
   const [uploadAberto, setUploadAberto] = useState(false);
   const [files, setFiles] = useState([]);
   const [processando, setProcessando] = useState(false);
-  const [resultadoProcessamento, setResultadoProcessamento] = useState(null);
+  const [resultadosTemporarios, setResultadosTemporarios] = useState([]);
+  const [expandidoTemp, setExpandidoTemp] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [guardados, setGuardados] = useState(false);
   const [erroProcessamento, setErroProcessamento] = useState(null);
   const [configAberto, setConfigAberto] = useState(false);
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
@@ -411,15 +449,14 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
     saveSystemSettings({ ...systemSettings, toleranciaValido: v, toleranciaAviso: a });
   };
 
-  // — Processar PDFs e guardar automaticamente —
+  // — Processar PDFs (sem guardar) —
   const handleProcessar = async () => {
     if (!files.length) return;
     setProcessando(true);
-    setResultadoProcessamento(null);
+    setResultadosTemporarios([]);
+    setGuardados(false);
     setErroProcessamento(null);
-
     const tolerancias = calcularTolerancias(systemSettings);
-
     try {
       const res = [];
       for (const file of files) {
@@ -441,8 +478,6 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
           res.push({ sucesso: false, mensagem: `${file.name}: ${err.message}` });
         }
       }
-
-      // Agregar duplicados (mesmo trabalhador + mês)
       const agregados = {};
       for (const r of res) {
         if (!r.sucesso) continue;
@@ -459,28 +494,32 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
         }
       }
       const deduplicados = Object.values(agregados);
-
       if (!deduplicados.length) throw new Error('Nenhum recibo TOConline reconhecido nos ficheiros.');
-
-      // Guardar automaticamente
-      const sessionId = crypto.randomUUID();
-      await guardarValidacoesEmLote(deduplicados, sessionId);
-
-      // Resumo
-      const validos   = deduplicados.filter(r => r.sucesso && r.valido).length;
-      const avisos    = deduplicados.filter(r => r.sucesso && !r.valido && r.aviso).length;
-      const invalidos = deduplicados.filter(r => r.sucesso && !r.valido && !r.aviso).length;
-      const erros     = res.filter(r => !r.sucesso).length;
-      setResultadoProcessamento({ total: deduplicados.length, validos, avisos, invalidos, erros });
-
-      // Recarregar lista e limpar ficheiros
-      await carregar();
-      setFiles([]);
-      setUploadAberto(false);
+      setResultadosTemporarios(deduplicados);
     } catch (err) {
       setErroProcessamento(err.message);
     } finally {
       setProcessando(false);
+    }
+  };
+
+  // — Guardar resultados na BD —
+  const handleGuardar = async () => {
+    if (!resultadosTemporarios.length) return;
+    setGuardando(true);
+    setErroProcessamento(null);
+    try {
+      const sessionId = crypto.randomUUID();
+      await guardarValidacoesEmLote(resultadosTemporarios, sessionId);
+      setGuardados(true);
+      setResultadosTemporarios([]);
+      setFiles([]);
+      setUploadAberto(false);
+      await carregar();
+    } catch (err) {
+      setErroProcessamento(err.message);
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -705,36 +744,130 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                   : 'Clique para selecionar PDF(s)'}
               </span>
               <span className="text-[10px] text-slate-400">1 PDF agregado ou vários PDFs individuais</span>
-              <input type="file" accept=".pdf" multiple className="hidden" onChange={e => { setFiles(Array.from(e.target.files).filter(f => f.type === 'application/pdf')); setResultadoProcessamento(null); setErroProcessamento(null); }} />
+              <input type="file" accept=".pdf" multiple className="hidden" onChange={e => { setFiles(Array.from(e.target.files).filter(f => f.type === 'application/pdf')); setResultadosTemporarios([]); setErroProcessamento(null); }} />
             </label>
 
             <button onClick={handleProcessar} disabled={!files.length || processando}
               className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
               {processando ? <Loader2 size={16} className="animate-spin" /> : <ReceiptText size={16} />}
-              {processando ? 'A processar e guardar...' : files.length > 0 ? `Processar ${files.length} ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}
+              {processando ? 'A processar...' : files.length > 0 ? `Processar ${files.length} ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}
             </button>
 
-            {erroProcessamento && (
-              <p className="text-xs text-red-500 font-medium">{erroProcessamento}</p>
+            {erroProcessamento && <p className="text-xs text-red-500 font-medium">{erroProcessamento}</p>}
+
+            {/* Tabela de resultados temporários */}
+            {resultadosTemporarios.length > 0 && (
+              <div className="space-y-3">
+                {/* Sumário */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { label: 'Válidos',   val: resultadosTemporarios.filter(r => r.valido).length,                       cls: 'emerald' },
+                    { label: 'Avisos',    val: resultadosTemporarios.filter(r => !r.valido && r.aviso).length,            cls: 'yellow'  },
+                    { label: 'Inválidos', val: resultadosTemporarios.filter(r => !r.valido && !r.aviso).length,           cls: 'red'     },
+                    { label: 'Total',     val: resultadosTemporarios.length,                                              cls: 'indigo'  },
+                  ].map(({ label, val, cls }) => (
+                    <div key={label} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-2 text-center`}>
+                      <p className={`text-base font-black text-${cls}-600`}>{val}</p>
+                      <p className={`text-[9px] font-black uppercase tracking-widest text-${cls}-500`}>{label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Tabela */}
+                <div className="rounded-xl border border-slate-100 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
+                        <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                        <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                        <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Divergência</th>
+                        <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {resultadosTemporarios.map((r, i) => {
+                        const estadoAtual = !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido';
+                        const aberto = expandidoTemp === i;
+                        return (
+                          <React.Fragment key={i}>
+                            <tr onClick={() => setExpandidoTemp(aberto ? null : i)} className="cursor-pointer hover:bg-slate-50 transition-colors select-none">
+                              <td className="px-3 py-2.5 font-bold text-slate-800">
+                                <div className="flex items-center gap-1.5">
+                                  <ChevronRight size={12} className={`text-slate-300 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
+                                  {r.worker?.name ?? <span className="text-amber-500">{r.nomeExtraido}</span>}
+                                </div>
+                              </td>
+                              <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{r.mes !== '—' ? formatarMes(r.mes) : '—'}</td>
+                              <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
+                              <td className="px-3 py-2.5 text-center">
+                                {r.divergenciaSinal != null ? <DivergenciaBadge sinal={r.divergenciaSinal} className="text-xs font-bold" /> : <span className="text-slate-300">—</span>}
+                              </td>
+                              <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                                <div className="flex items-center justify-center gap-1.5">
+                                  <EstadoPicker
+                                    atual={estadoAtual}
+                                    onChange={novo => setResultadosTemporarios(prev => prev.map((x, idx) => idx === i ? { ...x, ...estadoStringToFlags(novo) } : x))}
+                                  />
+                                  <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-slate-100 text-slate-500'}`}>
+                                    {ESTADO_PT[estadoAtual] ?? estadoAtual}
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                            {aberto && (
+                              <tr className="bg-slate-50">
+                                <td colSpan={5} className="px-4 py-3">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                    {[
+                                      ['Bruto plataforma', r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'],
+                                      ['Bruto PDF',        r.abonosExtraidos != null ? `${r.abonosExtraidos.toFixed(2)}€` : '—'],
+                                      ['Seg. Social',      r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'],
+                                      ['IRS',              r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'],
+                                    ].map(([label, val]) => (
+                                      <div key={label} className="bg-white rounded-xl p-2.5 text-center border border-slate-100">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+                                        <p className="text-sm font-black text-slate-800">{val}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {r.mensagem && <p className="text-[10px] text-slate-500">{r.mensagem}</p>}
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Botão guardar */}
+                <div className="flex justify-end gap-2">
+                  <button onClick={() => { setResultadosTemporarios([]); setFiles([]); setExpandidoTemp(null); }}
+                    className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
+                    Descartar
+                  </button>
+                  <button onClick={handleGuardar} disabled={guardando}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200 disabled:opacity-40">
+                    {guardando ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+                    {guardando ? 'A guardar...' : 'Guardar'}
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {/* Feedback após processamento */}
-      {resultadoProcessamento && (
+      {/* Feedback guardado */}
+      {guardados && (
         <div className="flex items-center justify-between px-4 py-3 bg-emerald-50 border border-emerald-200 rounded-xl">
           <div className="flex items-center gap-2">
             <CheckCircle size={15} className="text-emerald-600 shrink-0" />
-            <span className="text-xs font-bold text-emerald-700">
-              {resultadoProcessamento.total} recibo{resultadoProcessamento.total !== 1 ? 's' : ''} guardados
-              {resultadoProcessamento.validos > 0 && ` · ${resultadoProcessamento.validos} válidos`}
-              {resultadoProcessamento.avisos > 0 && ` · ${resultadoProcessamento.avisos} avisos`}
-              {resultadoProcessamento.invalidos > 0 && ` · ${resultadoProcessamento.invalidos} inválidos`}
-              {resultadoProcessamento.erros > 0 && ` · ${resultadoProcessamento.erros} erros`}
-            </span>
+            <span className="text-xs font-bold text-emerald-700">Recibos guardados com sucesso.</span>
           </div>
-          <button onClick={() => setResultadoProcessamento(null)} className="text-emerald-400 hover:text-emerald-600">
+          <button onClick={() => setGuardados(false)} className="text-emerald-400 hover:text-emerald-600">
             <X size={14} />
           </button>
         </div>
