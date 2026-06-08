@@ -365,43 +365,33 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                           <td className="px-3 py-2.5"></td>
                         </tr>
                         {aberto && (
-                          <tr>
+                          <tr onClick={e => e.stopPropagation()}>
                             <td colSpan={5} className="px-4 py-3 bg-slate-50 border-b border-slate-100">
                               {clientesMesHist.length === 0 ? (
                                 <p className="text-[10px] text-slate-400 text-center py-2">Sem registos por cliente para este mês.</p>
                               ) : (
-                                <div className="space-y-2">
-                                  <table className="w-full text-xs">
-                                    <thead>
-                                      <tr>
-                                        <th className="pb-1 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
-                                        <th className="pb-1 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Faturadas</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                      {clientesMesHist.map(r => {
-                                        const key = `${h.mes}|${r.client_id}`;
-                                        const nomeCliente = clients.find(c => c.id === r.client_id)?.name ?? r.client_id;
-                                        const val = histOverrides[key] !== undefined ? histOverrides[key] : parseFloat(r.valor_ajudas).toFixed(2);
-                                        return (
-                                          <tr key={r.client_id}>
-                                            <td className="py-1.5 font-bold text-slate-700">{nomeCliente}</td>
-                                            <td className="py-1.5 text-right" onClick={e => e.stopPropagation()}>
-                                              <input
-                                                type="number" min="0" step="0.01"
-                                                value={val}
-                                                onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
-                                                className="w-28 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
-                                              />
-                                            </td>
-                                          </tr>
-                                        );
-                                      })}
-                                    </tbody>
-                                  </table>
-                                  <div className="flex justify-end pt-1" onClick={e => e.stopPropagation()}>
+                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
+                                  {clientesMesHist.map(r => {
+                                    const key = `${h.mes}|${r.client_id}`;
+                                    const nomeCliente = clients.find(c => c.id === r.client_id)?.name ?? r.client_id;
+                                    const val = histOverrides[key] !== undefined ? histOverrides[key] : parseFloat(r.valor_ajudas).toFixed(2);
+                                    return (
+                                      <div key={r.client_id} className="flex items-center justify-between gap-3 py-1 border-b border-slate-100 last:border-0">
+                                        <span className="text-xs font-bold text-slate-700">{nomeCliente}</span>
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          value={val}
+                                          onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
+                                          onClick={e => e.stopPropagation()}
+                                          className="w-28 text-right p-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                        />
+                                      </div>
+                                    );
+                                  })}
+                                  <div className="flex justify-end pt-1">
                                     <button
-                                      onClick={() => handleGuardarHist(h.mes)}
+                                      onClick={e => { e.stopPropagation(); handleGuardarHist(h.mes); }}
                                       disabled={gravandoHist === h.mes || !temEdicoes}
                                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40"
                                     >
