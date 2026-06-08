@@ -100,6 +100,8 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
   const [files, setFiles] = useState([]);
   const [processando, setProcessando] = useState(false);
   const [expandidoId, setExpandidoId] = useState(null);
+  const [mesesColapsados, setMesesColapsados] = useState(new Set());
+  const toggleMes = mes => setMesesColapsados(prev => { const next = new Set(prev); next.has(mes) ? next.delete(mes) : next.add(mes); return next; });
   const [erroProcessamento, setErroProcessamento] = useState(null);
   const [configAberto, setConfigAberto] = useState(false);
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
@@ -475,16 +477,21 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
         });
         return (
           <div className="space-y-4">
-            {Object.entries(grupos).map(([mes, regs]) => (
+            {Object.entries(grupos).map(([mes, regs]) => {
+              const colapsado = mesesColapsados.has(mes);
+              return (
               <div key={mes} className="rounded-xl border border-slate-100 overflow-hidden">
-                {/* Cabeçalho do mês */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
-                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">
-                    {mes !== 'sem-mes' ? formatarMes(mes) : 'Sem data'}
-                  </span>
+                {/* Cabeçalho do mês — clicável */}
+                <button onClick={() => toggleMes(mes)} className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-50 hover:bg-slate-100 transition-colors border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <ChevronRight size={13} className={`text-slate-400 transition-transform ${colapsado ? '' : 'rotate-90'}`} />
+                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-600">
+                      {mes !== 'sem-mes' ? formatarMes(mes) : 'Sem data'}
+                    </span>
+                  </div>
                   <span className="text-[10px] text-slate-400">{regs.length} recibo{regs.length !== 1 ? 's' : ''}</span>
-                </div>
-                <table className="w-full text-xs">
+                </button>
+                {!colapsado && <table className="w-full text-xs">
                   <thead className="border-b border-slate-50">
                     <tr>
                       <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
@@ -550,9 +557,10 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                       );
                     })}
                   </tbody>
-                </table>
+                </table>}
               </div>
-            ))}
+              );
+            })}
           </div>
         );
       })()}
