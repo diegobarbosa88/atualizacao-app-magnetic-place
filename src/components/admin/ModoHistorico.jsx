@@ -466,79 +466,96 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
         <p className="text-center text-sm text-slate-400 py-10">Nenhum recibo guardado. Processe os PDFs acima para começar.</p>
       )}
 
-      {!carregando && registosFiltrados.length > 0 && (
-        <div className="rounded-xl border border-slate-100 overflow-hidden">
-          <table className="w-full text-xs">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
-                <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Mês</th>
-                <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
-                <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Divergência</th>
-                <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
-                <th className="px-3 py-2 w-8"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {[...registosFiltrados].sort((a, b) => (b.mes ?? '').localeCompare(a.mes ?? '')).map(r => {
-                const workerLabel = workers.find(w => w.id === r.worker_id)?.name ?? r.worker_name ?? '—';
-                const estadoAtual = r.estado ?? 'erro';
-                const aberto = expandidoId === r.id;
-                return (
-                  <React.Fragment key={r.id}>
-                    <tr onClick={() => setExpandidoId(aberto ? null : r.id)} className="cursor-pointer hover:bg-slate-50 transition-colors select-none">
-                      <td className="px-3 py-2.5 font-bold text-slate-800">
-                        <div className="flex items-center gap-1.5">
-                          <ChevronRight size={12} className={`text-slate-300 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
-                          {workerLabel}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5 text-slate-500 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
-                      <td className="px-3 py-2.5 text-center">
-                        {r.divergencia != null ? <DivergenciaBadge sinal={r.divergencia} /> : <span className="text-slate-300">—</span>}
-                      </td>
-                      <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-center gap-1.5">
-                          <EstadoPicker atual={estadoAtual} onChange={novo => alterarEstado(r.id, novo)} />
-                          <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-slate-100 text-slate-500'}`}>
-                            {ESTADO_PT[estadoAtual] ?? estadoAtual}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => apagarRegisto(r.id)} className="text-slate-300 hover:text-red-500 transition-colors">
-                          <Trash2 size={13} />
-                        </button>
-                      </td>
+      {!carregando && registosFiltrados.length > 0 && (() => {
+        const grupos = {};
+        [...registosFiltrados].sort((a, b) => (b.mes ?? '').localeCompare(a.mes ?? '')).forEach(r => {
+          const key = r.mes ?? 'sem-mes';
+          if (!grupos[key]) grupos[key] = [];
+          grupos[key].push(r);
+        });
+        return (
+          <div className="space-y-4">
+            {Object.entries(grupos).map(([mes, regs]) => (
+              <div key={mes} className="rounded-xl border border-slate-100 overflow-hidden">
+                {/* Cabeçalho do mês */}
+                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                  <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">
+                    {mes !== 'sem-mes' ? formatarMes(mes) : 'Sem data'}
+                  </span>
+                  <span className="text-[10px] text-slate-400">{regs.length} recibo{regs.length !== 1 ? 's' : ''}</span>
+                </div>
+                <table className="w-full text-xs">
+                  <thead className="border-b border-slate-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
+                      <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                      <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Divergência</th>
+                      <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                      <th className="px-3 py-2 w-8"></th>
                     </tr>
-                    {aberto && (
-                      <tr className="bg-slate-50">
-                        <td colSpan={6} className="px-4 py-3">
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
-                            {[
-                              ['Bruto plataforma', r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'],
-                              ['Bruto PDF',        r.abonos_extraidos != null ? `${Number(r.abonos_extraidos).toFixed(2)}€` : '—'],
-                              ['Seg. Social',      r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'],
-                              ['IRS',              r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'],
-                            ].map(([label, val]) => (
-                              <div key={label} className="bg-white rounded-xl p-2.5 text-center border border-slate-100">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                                <p className="text-sm font-black text-slate-800">{val}</p>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {regs.map(r => {
+                      const workerLabel = workers.find(w => w.id === r.worker_id)?.name ?? r.worker_name ?? '—';
+                      const estadoAtual = r.estado ?? 'erro';
+                      const aberto = expandidoId === r.id;
+                      return (
+                        <React.Fragment key={r.id}>
+                          <tr onClick={() => setExpandidoId(aberto ? null : r.id)} className="cursor-pointer hover:bg-slate-50 transition-colors select-none">
+                            <td className="px-3 py-2.5 font-bold text-slate-800">
+                              <div className="flex items-center gap-1.5">
+                                <ChevronRight size={12} className={`text-slate-300 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
+                                {workerLabel}
                               </div>
-                            ))}
-                          </div>
-                          {r.mensagem && <p className="text-[10px] text-slate-500 mt-1">{r.mensagem}</p>}
-                        </td>
-                      </tr>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
+                            <td className="px-3 py-2.5 text-center">
+                              {r.divergencia != null ? <DivergenciaBadge sinal={r.divergencia} /> : <span className="text-slate-300">—</span>}
+                            </td>
+                            <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <EstadoPicker atual={estadoAtual} onChange={novo => alterarEstado(r.id, novo)} />
+                                <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-slate-100 text-slate-500'}`}>
+                                  {ESTADO_PT[estadoAtual] ?? estadoAtual}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                              <button onClick={() => apagarRegisto(r.id)} className="text-slate-300 hover:text-red-500 transition-colors">
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                          {aberto && (
+                            <tr className="bg-slate-50">
+                              <td colSpan={5} className="px-4 py-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
+                                  {[
+                                    ['Bruto plataforma', r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'],
+                                    ['Bruto PDF',        r.abonos_extraidos != null ? `${Number(r.abonos_extraidos).toFixed(2)}€` : '—'],
+                                    ['Seg. Social',      r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'],
+                                    ['IRS',              r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'],
+                                  ].map(([label, val]) => (
+                                    <div key={label} className="bg-white rounded-xl p-2.5 text-center border border-slate-100">
+                                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+                                      <p className="text-sm font-black text-slate-800">{val}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                {r.mensagem && <p className="text-[10px] text-slate-500 mt-1">{r.mensagem}</p>}
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       <ExportModal
         show={showExportModal}
