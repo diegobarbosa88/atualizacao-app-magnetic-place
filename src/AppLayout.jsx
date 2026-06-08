@@ -299,6 +299,7 @@ export default function AppLayout() {
     const dateToSave = isMain ? formData.date : inlineDate
     const wId = auditWorkerId ? auditWorkerId : currentUser.id
     const logId = formData.id || `l${Date.now()}`
+    const isEdit = !!formData.id
     const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m) }
     const newStart = toMins(formData.startTime)
     const newEnd = toMins(formData.endTime)
@@ -308,7 +309,11 @@ export default function AppLayout() {
       const existingEnd = toMins(log.endTime)
       if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return }
     }
-    saveToDb('logs', logId, { ...formData, startTime: formData.startTime, endTime: formData.endTime, breakStart: formData.breakStart, breakEnd: formData.breakEnd, date: dateToSave, hours, workerId: wId, id: logId })
+    const actorSource = currentUser?.role === 'admin' ? 'manual_admin' : 'manual_worker'
+    const sourceFields = isEdit
+      ? { edited_at: new Date().toISOString(), edited_source: actorSource }
+      : { source: actorSource }
+    saveToDb('logs', logId, { ...formData, startTime: formData.startTime, endTime: formData.endTime, breakStart: formData.breakStart, breakEnd: formData.breakEnd, date: dateToSave, hours, workerId: wId, id: logId, ...sourceFields })
     if (isMain && onResetMainForm) { const resetClientId = currentUser.role === 'worker' ? (currentUser.defaultClientId || '') : ''; onResetMainForm(resetClientId) }
   }
 

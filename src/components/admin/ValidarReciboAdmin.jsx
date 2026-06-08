@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
-import { ReceiptText, History, Scissors, Files } from 'lucide-react';
+import { ReceiptText, Scissors, Files } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import ModoLote from './ModoLote';
 import ModoHistorico from './ModoHistorico';
 import ModoBursting from './ModoBursting';
 import ModoDocumentos from './ModoDocumentos';
 
 const ValidarReciboAdmin = ({ workers = [] }) => {
   const { logs = [], systemSettings, saveSystemSettings, saveToDb } = useApp();
-  const [modo, setModo] = useState('validar');
+  const [modo, setModo] = useState('recibos');
+
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 p-1 rounded-2xl">
+      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl">
         {[
-          { id: 'validar',    icon: ReceiptText, label: 'Validar' },
-          { id: 'historico',  icon: History,     label: 'Histórico' },
-          { id: 'burst',      icon: Scissors,    label: 'Burst' },
+          { id: 'recibos',    icon: ReceiptText, label: 'Recibos'    },
+          { id: 'burst',      icon: Scissors,    label: 'Burst'      },
           { id: 'documentos', icon: Files,       label: 'Documentos' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
@@ -24,9 +23,9 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
           </button>
         ))}
       </div>
-      {modo === 'validar'    && <ModoLote       workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
-      {modo === 'historico'  && <ModoHistorico  workers={workers} saveToDb={saveToDb} systemSettings={systemSettings} />}
-      {modo === 'burst'      && <ModoBursting   workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} />}
+
+      {modo === 'recibos'    && <ModoHistorico workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
+      {modo === 'burst'      && <ModoBursting  workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} />}
       {modo === 'documentos' && <ModoDocumentos workers={workers} />}
     </div>
   );

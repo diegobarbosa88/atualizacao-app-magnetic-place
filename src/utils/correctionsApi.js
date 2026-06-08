@@ -169,6 +169,8 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
           breakStart: normalizeTime(final.breakStart),
           breakEnd: normalizeTime(final.breakEnd),
           hours: calculateDuration(normalizeTime(final.startTime), normalizeTime(final.endTime), normalizeTime(final.breakStart), normalizeTime(final.breakEnd)),
+          edited_at: new Date().toISOString(),
+          edited_source: 'correction',
         }, { onConflict: 'id' });
         if (error) throw error;
       } else if (final.startTime && final.endTime && it.date) {
@@ -183,6 +185,7 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
           breakStart: normalizeTime(final.breakStart),
           breakEnd: normalizeTime(final.breakEnd),
           hours: calculateDuration(normalizeTime(final.startTime), normalizeTime(final.endTime), normalizeTime(final.breakStart), normalizeTime(final.breakEnd)),
+          source: 'correction',
         });
         if (error) throw error;
       }
@@ -351,6 +354,8 @@ export async function applyCreationRequest(supabase, { correction, items, client
         breakStart: item.proposed?.breakStart || null,
         breakEnd: item.proposed?.breakEnd || null,
         hours: calculateDuration(item.proposed?.startTime, item.proposed?.endTime, item.proposed?.breakStart, item.proposed?.breakEnd),
+        edited_at: new Date().toISOString(),
+        edited_source: 'request',
       }).eq('id', existing.id);
       if (error) throw error;
     } else if (!item.before && item.proposed) {
@@ -365,6 +370,7 @@ export async function applyCreationRequest(supabase, { correction, items, client
         breakStart: item.proposed.breakStart,
         breakEnd: item.proposed.breakEnd,
         hours: calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
+        source: 'request',
       });
       if (error) throw error;
     }

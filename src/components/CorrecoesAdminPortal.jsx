@@ -81,7 +81,9 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
                 endTime: normEnd,
                 breakStart: editedBreakStart,
                 breakEnd: editedBreakEnd,
-                hours
+                hours,
+                edited_at: new Date().toISOString(),
+                edited_source: 'batch',
               });
             } else if (normStart && normEnd && day.rawDate) {
               const newId = `l${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -94,7 +96,8 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
                 endTime: normEnd,
                 breakStart: editedBreakStart || null,
                 breakEnd: editedBreakEnd || null,
-                hours
+                hours,
+                source: 'batch',
               });
             }
           }
@@ -245,7 +248,9 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
                 endTime: normEnd,
                 breakStart: newBreakStart,
                 breakEnd: newBreakEnd,
-                hours
+                hours,
+                edited_at: new Date().toISOString(),
+                edited_source: 'batch',
               });
             }
           } else if (normStart && normEnd && rowDate) {
@@ -259,7 +264,8 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
               endTime: normEnd,
               breakStart: newBreakStart || null,
               breakEnd: newBreakEnd || null,
-              hours
+              hours,
+              source: 'batch',
             });
           }
         }

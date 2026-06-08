@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { CheckCircle, AlertTriangle, XCircle, AlertCircle, ChevronRight, Loader2, Upload, Coins, Trash2 } from 'lucide-react';
+import { CheckCircle, AlertTriangle, XCircle, AlertCircle, ChevronRight, Loader2, Upload, Coins, Trash2, ScanSearch } from 'lucide-react';
 import {
   separarRecibosTOConline,
   associarDocumentoAoTrabalhador,
@@ -52,7 +52,13 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
       setSelecionadosEnvio(new Set(enriquecidos.map(r => r.nif)));
       setSelecionadosReextracao(new Set(
         enriquecidos
-          .filter(r => r.sessaoMatch.ajudas_custo_extraidas == null || r.sessaoMatch.bruto_extraido == null)
+          .filter(r =>
+            r.sessaoMatch.ajudas_custo_extraidas == null ||
+            r.sessaoMatch.bruto_extraido == null ||
+            r.sessaoMatch.liquido_extraido == null ||
+            r.sessaoMatch.ss_extraido == null ||
+            r.sessaoMatch.irs_extraido == null
+          )
           .map(r => r.nif)
       ));
     } catch (err) {
@@ -107,6 +113,15 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
   const nInvalidos = sessao.filter(r => r.estado === 'invalido').length;
   const nErros     = sessao.filter(r => r.estado === 'erro').length;
 
+  const temDadosEmFalta = sessao.some(r =>
+    r.ss_extraido == null || r.irs_extraido == null ||
+    r.liquido_extraido == null || r.ajudas_custo_extraidas == null
+  );
+  const nEmFalta = sessao.filter(r =>
+    r.ss_extraido == null || r.irs_extraido == null ||
+    r.liquido_extraido == null || r.ajudas_custo_extraidas == null
+  ).length;
+
   const fmtV = v => v != null ? `${Number(v).toFixed(2)}€` : '—';
 
   return (
@@ -145,6 +160,16 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                 <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-widest">
                   <CheckCircle size={11} /> Enviado {enviadosNifs.size}
                 </span>
+              )}
+              {temDadosEmFalta && (
+                <button
+                  onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                  disabled={bursting || enviandoRecibos}
+                  title={`Re-extrair dados em falta (${nEmFalta} registo${nEmFalta !== 1 ? 's' : ''})`}
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 hover:bg-amber-100 text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-40"
+                >
+                  <ScanSearch size={12} /> {nEmFalta} em falta
+                </button>
               )}
               <button
                 onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
@@ -239,6 +264,7 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                     </tr>
                   ))}
                 </tbody>
+
               </table>
               <div className="flex items-center gap-2 pt-1">
                 <button
@@ -273,19 +299,28 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">SS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">IRS</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas de Custo</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
                     <th className="px-3 py-2 text-center text-[9px] font-black uppercase tracking-widest text-slate-400">Estado</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {sessao.map(r => (
-                    <tr key={r.id} className="hover:bg-slate-50 transition-colors" title={r.mensagem}>
-                      <td className="px-3 py-2.5 font-bold text-slate-800 max-w-[140px] truncate">{r.worker_name ?? '—'}</td>
+                  {sessao.map(r => {
+                    const emFalta = r.ss_extraido == null || r.irs_extraido == null || r.liquido_extraido == null || r.ajudas_custo_extraidas == null;
+                    return (
+                    <tr key={r.id} className={`hover:bg-slate-50 transition-colors ${emFalta ? 'bg-amber-50/40' : ''}`} title={r.mensagem}>
+                      <td className="px-3 py-2.5 font-bold text-slate-800 max-w-[140px] truncate">
+                        <div className="flex items-center gap-1.5">
+                          {emFalta && <span title="Dados em falta — carregue o PDF para re-extrair" className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />}
+                          {r.worker_name ?? '—'}
+                        </div>
+                      </td>
                       <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">{r.mes ? formatarMes(r.mes) : '—'}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.bruto_plataforma != null ? `${Number(r.bruto_plataforma).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right font-bold text-indigo-700">{r.bruto_extraido != null ? `${Number(r.bruto_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.ss_extraido != null ? `${Number(r.ss_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-slate-500">{r.irs_extraido != null ? `${Number(r.irs_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5 text-right text-emerald-600 font-bold">{r.ajudas_custo_extraidas != null ? `${Number(r.ajudas_custo_extraidas).toFixed(2)}€` : '—'}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center justify-center gap-2">
                           <EstadoPicker atual={r.estado} onChange={(novo) => onAlterarEstado(r.id, novo)} size={14} />
@@ -317,7 +352,8 @@ function SessaoRow({ sessao, onAlterarEstado, onApagarRegisto, onApagarSessao, o
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
