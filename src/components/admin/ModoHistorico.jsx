@@ -300,56 +300,144 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
   // — Exportação —
   const handleExportPdf = () => {
     let data = registosFiltrados;
-    if (exportFilters.ano) data = data.filter(r => r.mes?.startsWith(exportFilters.ano));
-    if (exportFilters.mes) data = data.filter(r => r.mes === exportFilters.mes);
+    if (exportFilters.ano)      data = data.filter(r => r.mes?.startsWith(exportFilters.ano));
+    if (exportFilters.mes)      data = data.filter(r => r.mes === exportFilters.mes);
     if (exportFilters.workerId) data = data.filter(r => r.worker_id === exportFilters.workerId);
     if (!data.length) return;
 
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const margin = 15;
-    let yPos = margin;
-    try { doc.addImage('/MAGNETIC (3).png', 'PNG', margin, yPos, 25, 25); } catch {}
-    doc.setFontSize(18); doc.setTextColor(30);
-    doc.text('Relatório de Recibos', margin + 30, yPos + 8);
-    doc.setFontSize(9); doc.setTextColor(120);
-    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} — ${data.length} registo(s)`, margin + 30, yPos + 16);
-    yPos += 32;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const margin = 12;
+    const pageW = doc.internal.pageSize.getWidth();
+    let y = margin;
 
+    // Cabeçalho
+    try { doc.addImage('/MAGNETIC (3).png', 'PNG', margin, y, 22, 22); } catch {}
+    doc.setFontSize(16); doc.setTextColor(30);
+    doc.text('Relatório de Recibos', margin + 26, y + 8);
+    doc.setFontSize(8); doc.setTextColor(120);
+    doc.text(`Gerado em ${new Date().toLocaleDateString('pt-PT')} · ${data.length} registo(s)`, margin + 26, y + 15);
+    y += 28;
+
+    // Resumo por mês
     const byMonth = {};
     data.forEach(r => {
-      const m = r.mes || 'Sem mês';
-      if (!byMonth[m]) byMonth[m] = { count: 0, ss: 0, irs: 0, ajudas: 0, liquido: 0 };
+      const m = r.mes || 'sem-mes';
+      if (!byMonth[m]) byMonth[m] = { count: 0, bruto: 0, bruto_pdf: 0, ss: 0, irs: 0, ajudas: 0, liquido: 0 };
       byMonth[m].count++;
-      byMonth[m].ss      += Number(r.ss_extraido) || 0;
-      byMonth[m].irs     += Number(r.irs_extraido) || 0;
-      byMonth[m].ajudas  += Number(r.ajudas_custo_extraidas) || 0;
-      byMonth[m].liquido += Number(r.liquido_extraido) || 0;
+      byMonth[m].bruto     += Number(r.bruto_plataforma)        || 0;
+      byMonth[m].bruto_pdf += Number(r.abonos_extraidos)        || 0;
+      byMonth[m].ss        += Number(r.ss_extraido)             || 0;
+      byMonth[m].irs       += Number(r.irs_extraido)            || 0;
+      byMonth[m].ajudas    += Number(r.ajudas_custo_extraidas)  || 0;
+      byMonth[m].liquido   += Number(r.liquido_extraido)        || 0;
     });
-    const totalSS  = data.reduce((s, r) => s + (Number(r.ss_extraido) || 0), 0);
-    const totalIRS = data.reduce((s, r) => s + (Number(r.irs_extraido) || 0), 0);
-    const totalLiq = data.reduce((s, r) => s + (Number(r.liquido_extraido) || 0), 0);
+    const sortedMonths = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
 
-    doc.setFontSize(11); doc.setTextColor(30);
-    doc.text('Resumo por Mês', margin, yPos); yPos += 4;
+    doc.setFontSize(10); doc.setTextColor(30);
+    doc.text('Resumo por Mês', margin, y); y += 3;
     autoTable(doc, {
-      startY: yPos,
-      head: [['Mês', 'Recibos', 'SS', 'IRS', 'Ajudas', 'Líquido']],
+      startY: y,
+      head: [['Mês', 'Recibos', 'Bruto Plataforma', 'Bruto PDF', 'Seg. Social', 'IRS', 'Ajudas de Custo', 'Líquido']],
       body: [
-        ...Object.entries(byMonth).sort((a, b) => b[0].localeCompare(a[0])).map(([m, v]) => [
-          fmtMesLabel(m), v.count, fmtEur(v.ss), fmtEur(v.irs), fmtEur(v.ajudas), fmtEur(v.liquido),
-        ]),
-        ['TOTAL', data.length, fmtEur(totalSS), fmtEur(totalIRS), fmtEur(data.reduce((s, r) => s + (Number(r.ajudas_custo_extraidas) || 0), 0)), fmtEur(totalLiq)],
+        ...sortedMonths.map(m => {
+          const v = byMonth[m];
+          return [fmtMesLabel(m), v.count, fmtEur(v.bruto), fmtEur(v.bruto_pdf), fmtEur(v.ss), fmtEur(v.irs), fmtEur(v.ajudas), fmtEur(v.liquido)];
+        }),
+        ['TOTAL', data.length,
+          fmtEur(data.reduce((s, r) => s + (Number(r.bruto_plataforma) || 0), 0)),
+          fmtEur(data.reduce((s, r) => s + (Number(r.abonos_extraidos) || 0), 0)),
+          fmtEur(data.reduce((s, r) => s + (Number(r.ss_extraido) || 0), 0)),
+          fmtEur(data.reduce((s, r) => s + (Number(r.irs_extraido) || 0), 0)),
+          fmtEur(data.reduce((s, r) => s + (Number(r.ajudas_custo_extraidas) || 0), 0)),
+          fmtEur(data.reduce((s, r) => s + (Number(r.liquido_extraido) || 0), 0)),
+        ],
       ],
-      styles: { fontSize: 7, cellPadding: 1.2 },
+      styles: { fontSize: 7, cellPadding: 1.5 },
       headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
       alternateRowStyles: { fillColor: [248, 250, 252] },
       margin: { left: margin, right: margin },
       didParseCell: d => {
-        if (d.section === 'body' && d.row.index === Object.keys(byMonth).length) {
+        if (d.section === 'body' && d.row.index === sortedMonths.length) {
           d.cell.styles.fillColor = [220, 220, 255]; d.cell.styles.fontStyle = 'bold';
         }
       },
     });
+
+    // Detalhe por mês
+    sortedMonths.forEach(mes => {
+      const regs = data.filter(r => (r.mes || 'sem-mes') === mes).sort((a, b) =>
+        (a.worker_name ?? '').localeCompare(b.worker_name ?? '')
+      );
+      doc.addPage();
+      let dy = margin;
+
+      // Título do mês
+      doc.setFillColor(99, 102, 241);
+      doc.rect(margin, dy, pageW - margin * 2, 7, 'F');
+      doc.setFontSize(10); doc.setTextColor(255);
+      doc.text(fmtMesLabel(mes), margin + 3, dy + 5);
+      dy += 11;
+
+      // Totais do mês em cards
+      const tot = byMonth[mes];
+      const cards = [
+        ['Bruto Plataforma', fmtEur(tot.bruto)],
+        ['Bruto PDF',        fmtEur(tot.bruto_pdf)],
+        ['Seg. Social',      fmtEur(tot.ss)],
+        ['IRS',              fmtEur(tot.irs)],
+        ['Ajudas de Custo',  fmtEur(tot.ajudas)],
+        ['Líquido Total',    fmtEur(tot.liquido)],
+      ];
+      const cardW = (pageW - margin * 2) / cards.length;
+      cards.forEach(([label, val], i) => {
+        const cx = margin + i * cardW;
+        doc.setFillColor(248, 250, 252); doc.setDrawColor(220, 220, 230);
+        doc.roundedRect(cx, dy, cardW - 1, 11, 1, 1, 'FD');
+        doc.setFontSize(6); doc.setTextColor(120);
+        doc.text(label, cx + (cardW - 1) / 2, dy + 4, { align: 'center' });
+        doc.setFontSize(8); doc.setTextColor(30); doc.setFont(undefined, 'bold');
+        doc.text(val, cx + (cardW - 1) / 2, dy + 9, { align: 'center' });
+        doc.setFont(undefined, 'normal');
+      });
+      dy += 15;
+
+      // Tabela de trabalhadores
+      autoTable(doc, {
+        startY: dy,
+        head: [['Trabalhador', 'Bruto Plataforma', 'Bruto PDF', 'Seg. Social', 'IRS', 'Ajudas de Custo', 'Líquido', 'Divergência', 'Estado', 'Observações']],
+        body: regs.map(r => {
+          const workerName = workers.find(w => w.id === r.worker_id)?.name ?? r.worker_name ?? '—';
+          const estadoLabel = { valido: 'Válido', aviso: 'Aviso', invalido: 'Inválido', erro: 'Erro' }[r.estado] ?? (r.estado ?? '—');
+          const div = r.divergencia != null ? (r.divergencia > 0 ? `+${Number(r.divergencia).toFixed(2)}€` : `${Number(r.divergencia).toFixed(2)}€`) : '—';
+          return [
+            workerName,
+            r.bruto_plataforma != null ? fmtEur(r.bruto_plataforma) : '—',
+            r.abonos_extraidos  != null ? fmtEur(r.abonos_extraidos)  : '—',
+            r.ss_extraido       != null ? fmtEur(r.ss_extraido)       : '—',
+            r.irs_extraido      != null ? fmtEur(r.irs_extraido)      : '—',
+            r.ajudas_custo_extraidas != null ? fmtEur(r.ajudas_custo_extraidas) : '—',
+            r.liquido_extraido  != null ? fmtEur(r.liquido_extraido)  : '—',
+            div,
+            estadoLabel,
+            r.mensagem ?? '',
+          ];
+        }),
+        styles: { fontSize: 6.5, cellPadding: 1.5, overflow: 'linebreak' },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        columnStyles: { 9: { cellWidth: 40 } },
+        margin: { left: margin, right: margin },
+        didParseCell: d => {
+          if (d.section === 'body' && d.column.index === 8) {
+            const estado = regs[d.row.index]?.estado;
+            if (estado === 'valido')   { d.cell.styles.textColor = [5, 150, 105]; d.cell.styles.fontStyle = 'bold'; }
+            if (estado === 'aviso')    { d.cell.styles.textColor = [180, 130, 0]; d.cell.styles.fontStyle = 'bold'; }
+            if (estado === 'invalido') { d.cell.styles.textColor = [220, 38, 38]; d.cell.styles.fontStyle = 'bold'; }
+          }
+        },
+      });
+    });
+
     doc.save(`recibos_${new Date().toISOString().slice(0, 10)}.pdf`);
     setShowExportModal(false);
   };
