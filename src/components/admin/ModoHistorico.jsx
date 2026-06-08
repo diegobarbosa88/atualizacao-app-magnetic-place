@@ -138,7 +138,17 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
     setCarregando(false);
   }, []);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  // Aguarda o supabaseInstance ficar disponível antes de carregar
+  useEffect(() => {
+    if (window.supabaseInstance) { carregar(); return; }
+    let tries = 0;
+    const id = setInterval(() => {
+      tries++;
+      if (window.supabaseInstance) { clearInterval(id); carregar(); }
+      else if (tries >= 20) clearInterval(id);
+    }, 250);
+    return () => clearInterval(id);
+  }, [carregar]);
 
   // — Guardar tolerâncias —
   const guardarTolerancias = () => {
