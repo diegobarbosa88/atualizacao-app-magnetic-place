@@ -170,18 +170,28 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       for (const file of files) {
         try {
           const paginas = await extrairPaginasPdf(file);
-          // Verifica que pelo menos uma página tem o marcador TOConline
-          if (!paginas.some(p => p.includes('Emitido por TOConline'))) {
+          // Divide em secções: cada secção termina com "Emitido por TOConline".
+          // Funciona para PDFs de 1 ou N trabalhadores — cada secção inclui
+          // todas as páginas do trabalhador (pág. de detalhe + pág. de assinatura).
+          const secoes = [];
+          let atual = [];
+          for (const pag of paginas) {
+            atual.push(pag);
+            if (pag.includes('Emitido por TOConline')) {
+              secoes.push(atual.join('\n'));
+              atual = [];
+            }
+          }
+          if (secoes.length === 0) {
             res.push({ sucesso: false, mensagem: `${file.name}: documento não reconhecido como TOConline.` });
           } else {
-            // Junta todas as páginas: detalhes de abonos (pág. 1) + totais/assinatura (pág. final)
-            // ficam no mesmo texto, permitindo extrair "Ajudas de Custo" corretamente.
-            const texto = paginas.join('\n');
-            const { nome, mes } = extrairMetadadosTOConline(texto);
-            const worker = nome ? encontrarWorker(nome, workers) : null;
-            const bruto  = calcularBrutoDeMes(worker, mes, logs);
-            const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
-            res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
+            for (const texto of secoes) {
+              const { nome, mes } = extrairMetadadosTOConline(texto);
+              const worker = nome ? encontrarWorker(nome, workers) : null;
+              const bruto  = calcularBrutoDeMes(worker, mes, logs);
+              const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
+              res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
+            }
           }
         } catch (err) {
           res.push({ sucesso: false, mensagem: `${file.name}: ${err.message}` });
