@@ -158,8 +158,19 @@ const liquidoCalculado = (brutoPlataforma && brutoPlataforma > 0)
   const divStr  = divergenciaAbs != null ? divergenciaAbs.toFixed(2) : null;
   const calcStr = liquidoCalculado != null ? liquidoCalculado.toFixed(2) : null;
 
-  const ajudasCustoLinha = text.match(/Ajudas de Custo.*?([\d.,]+)€/s)?.[0] ?? '';
-  const ajudasCustoExtraido = ultimoEuroDaLinha(ajudasCustoLinha);
+  // Linha das Ajudas de Custo: case-insensitive + \s+ para espaços não-standard.
+  // Se o pdfjs separar etiqueta e valores em Y-groups diferentes, a etiqueta
+  // fica sem números — nesse caso inclui a linha imediatamente seguinte.
+  let ajudasCtx = text.match(/^.*ajudas\s+de\s+custo.*$/mi)?.[0] ?? '';
+  if (ajudasCtx && !/([\d]{1,3}[.,])/.test(ajudasCtx)) {
+    const pos = text.indexOf(ajudasCtx);
+    const proxLinha = text.slice(pos + ajudasCtx.length).match(/^\n([^\n]+)/)?.[1] ?? '';
+    if (proxLinha) ajudasCtx += '\n' + proxLinha;
+  }
+  const ajudasNumeros = [...ajudasCtx.matchAll(/([\d.,]+)/g)]
+    .map(m => parseMoeda(m[1]))
+    .filter(v => !isNaN(v) && v > 0);
+  const ajudasCustoExtraido = ajudasNumeros.length > 0 ? Math.max(...ajudasNumeros) : 0;
 
   return {
     sucesso: true,

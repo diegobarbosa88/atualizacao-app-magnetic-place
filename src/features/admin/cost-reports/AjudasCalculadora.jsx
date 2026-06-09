@@ -135,9 +135,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const progressoPct = orcamentoAnual > 0 ? Math.min((jaFaturadoYTD / orcamentoAnual) * 100, 100) : 0;
 
   // — Faturação por cliente no mês atual —
-  // As faturas de um mês referem-se ao trabalho do mês anterior.
+  // selectedMonth = mês de trabalho; as horas são do próprio mês selecionado.
   const clientesMes = useMemo(() => {
-    const logsDoMes = logs.filter(l => l.date?.startsWith(mesAnterior(selectedMonth)));
+    const logsDoMes = logs.filter(l => l.date?.startsWith(selectedMonth));
     const map = {};
     logsDoMes.forEach(l => {
       if (!l.clientId) return;
@@ -168,7 +168,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     const limiteStr = `${limite.getFullYear()}-${String(limite.getMonth() + 1).padStart(2, '0')}`;
     db.from('receipt_validations')
       .select('mes, ajudas_custo_extraidas')
-      .lt('mes', mesDoRecibo)
+      .lte('mes', mesDoRecibo)   // inclui mesDoRecibo quando não está em recibosAno (ex: Dez do ano anterior)
       .gte('mes', limiteStr)
       .gt('ajudas_custo_extraidas', 0)
       .order('mes', { ascending: false })

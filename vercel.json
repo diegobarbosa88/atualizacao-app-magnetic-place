@@ -33,6 +33,9 @@
     "api/toconline/artigos.js": {
       "maxDuration": 30
     },
+    "api/toconline/relatorio.js": {
+      "maxDuration": 30
+    },
     "api/toconline/documento.js": {
       "maxDuration": 30
     },

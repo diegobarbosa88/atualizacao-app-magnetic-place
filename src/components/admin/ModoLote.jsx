@@ -90,12 +90,23 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
     const res = [];
     for (const file of files) {
       try {
+        // Divide o PDF em secções: cada secção termina com "Emitido por TOConline".
+        // Isto preserva todas as páginas de cada trabalhador (incluindo a pág. 1
+        // com "Ajudas de Custo") independentemente de quantos trabalhadores existam.
         const paginas = await extrairPaginasPdf(file);
-        const paginasRecibo = paginas.filter(p => p.includes('Emitido por TOConline'));
-        if (paginasRecibo.length === 0) {
+        const secoes = [];
+        let atual = [];
+        for (const pag of paginas) {
+          atual.push(pag);
+          if (pag.includes('Emitido por TOConline')) {
+            secoes.push(atual.join('\n'));
+            atual = [];
+          }
+        }
+        if (secoes.length === 0) {
           res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, aviso: false, mensagem: 'Documento não reconhecido como recibo TOConline.' });
         } else {
-          for (const texto of paginasRecibo) {
+          for (const texto of secoes) {
             res.push(await processarPagina(texto, file.name));
           }
         }

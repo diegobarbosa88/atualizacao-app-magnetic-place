@@ -170,17 +170,18 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       for (const file of files) {
         try {
           const paginas = await extrairPaginasPdf(file);
-          const paginasRecibo = paginas.filter(p => p.includes('Emitido por TOConline'));
-          if (!paginasRecibo.length) {
+          // Verifica que pelo menos uma página tem o marcador TOConline
+          if (!paginas.some(p => p.includes('Emitido por TOConline'))) {
             res.push({ sucesso: false, mensagem: `${file.name}: documento não reconhecido como TOConline.` });
           } else {
-            for (const texto of paginasRecibo) {
-              const { nome, mes } = extrairMetadadosTOConline(texto);
-              const worker = nome ? encontrarWorker(nome, workers) : null;
-              const bruto  = calcularBrutoDeMes(worker, mes, logs);
-              const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
-              res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
-            }
+            // Junta todas as páginas: detalhes de abonos (pág. 1) + totais/assinatura (pág. final)
+            // ficam no mesmo texto, permitindo extrair "Ajudas de Custo" corretamente.
+            const texto = paginas.join('\n');
+            const { nome, mes } = extrairMetadadosTOConline(texto);
+            const worker = nome ? encontrarWorker(nome, workers) : null;
+            const bruto  = calcularBrutoDeMes(worker, mes, logs);
+            const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
+            res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
           }
         } catch (err) {
           res.push({ sucesso: false, mensagem: `${file.name}: ${err.message}` });
