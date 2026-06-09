@@ -718,169 +718,127 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
               <table className="w-full text-xs">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Mês</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Total Fatura</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Recibos</th>
+                    <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Horas</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Valor Fatura</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">% Total</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Faturadas</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Diferença</th>
-                    <th className="px-3 py-2 w-6"></th>
+                    <th className="px-3 py-2 w-20"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {historicoAnual.map(h => {
-                    const aberto = expandidoHistMes === h.mes;
                     const clientesMesHist = faturadosAno.filter(r => r.mes === h.mes);
                     const temLogsNoMes = logs.some(l => l.date?.startsWith(h.mes));
-                    const ehMesTOConline = !temLogsNoMes;
-                    const temEdicoes = !ehMesTOConline && clientesMesHist.some(r => histOverrides[`${h.mes}|${r.client_id}`] !== undefined);
+                    const temEdicoes = clientesMesHist.some(r => histOverrides[`${h.mes}|${r.client_id}`] !== undefined);
                     return (
                       <React.Fragment key={h.mes}>
-                        <tr
-                          onClick={() => toggleExpandidoHist(h.mes)}
-                          className={`cursor-pointer select-none transition-colors ${h.mes === selectedMonth ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
-                        >
-                          <td className="px-3 py-2.5 font-bold text-slate-700">
-                            <div className="flex items-center gap-1.5">
-                              <ChevronRight size={12} className={`text-slate-300 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
-                              {formatarMes(h.mes)}
+                        {/* Cabeçalho do mês */}
+                        <tr className="bg-slate-50 border-t border-slate-200">
+                          <td colSpan={3} className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-black text-slate-700">{formatarMes(h.mes)}</span>
+                              {h.mes === selectedMonth && (
+                                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[8px] font-black uppercase tracking-wider">Seleccionado</span>
+                              )}
+                              <span className="text-[9px] text-slate-400">
+                                Recibos: <span className="font-bold text-slate-600">{fmtEur(h.ajudasRecibo)}</span>
+                              </span>
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 text-right font-bold text-slate-700">{fmtEur(h.totalFatura)}</td>
-                          <td className="px-3 py-2.5 text-right text-slate-600">{fmtEur(h.ajudasRecibo)}</td>
-                          <td className="px-3 py-2.5 text-right text-slate-600">{fmtEur(h.ajudasFaturadas)}</td>
-                          <td className={`px-3 py-2.5 text-right font-bold ${h.dif > 0.5 ? 'text-red-600' : h.dif < -0.5 ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            {h.dif > 0 ? '+' : ''}{fmtEur(h.dif)}
+                          <td className="px-3 py-2 text-right">
+                            <span className={`text-[9px] font-black ${h.dif > 0.5 ? 'text-red-500' : h.dif < -0.5 ? 'text-emerald-600' : 'text-slate-400'}`}>
+                              {h.dif !== 0 ? `${h.dif > 0 ? '+' : ''}${fmtEur(h.dif)}` : ''}
+                            </span>
                           </td>
-                          <td className="px-3 py-2.5 text-right">
-                            {clientesMesHist.length > 0 && (
+                          <td className="px-3 py-2 text-right font-black text-slate-700">{fmtEur(h.ajudasFaturadas)}</td>
+                          <td className="px-3 py-2 text-right">
+                            <div className="flex items-center justify-end gap-1">
                               <button
-                                onClick={e => { e.stopPropagation(); handleApagarHist(h.mes); }}
-                                disabled={apagandoHist === h.mes}
-                                className="p-1 text-slate-300 hover:text-red-500 transition-colors disabled:opacity-40"
-                                title={`Apagar ${formatarMes(h.mes)} do histórico`}
+                                onClick={() => handleGuardarHist(h.mes)}
+                                disabled={gravandoHist === h.mes || !temEdicoes}
+                                className="flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:bg-slate-900 transition-all disabled:opacity-30"
+                                title="Guardar edições"
                               >
-                                {apagandoHist === h.mes ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                                {gravandoHist === h.mes ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
+                                Guardar
                               </button>
-                            )}
+                              {clientesMesHist.length > 0 && (
+                                <button
+                                  onClick={() => handleApagarHist(h.mes)}
+                                  disabled={apagandoHist === h.mes}
+                                  className="p-1 text-slate-300 hover:text-red-500 transition-colors disabled:opacity-40"
+                                  title={`Apagar ${formatarMes(h.mes)}`}
+                                >
+                                  {apagandoHist === h.mes ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
-                        {aberto && (
-                          <tr onClick={e => e.stopPropagation()}>
-                            <td colSpan={6} className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                              {clientesMesHist.length === 0 ? (
-                                <p className="text-[10px] text-slate-400 text-center py-2">Sem registos por cliente para este mês.</p>
-                              ) : (
-                                <div className="space-y-2" onClick={e => e.stopPropagation()}>
-                                  <div className="flex items-center justify-between gap-3 pb-1 border-b border-slate-200">
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</span>
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 w-28 text-right">Total Fatura</span>
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 w-28 text-right">Ajudas</span>
-                                    </div>
-                                  </div>
-                                  {clientesMesHist.map(r => {
-                                    const key = `${h.mes}|${r.client_id}`;
-                                    const client = clients.find(c => c.id === r.client_id);
-                                    const nomeCliente = client?.name ?? r.client_id;
-                                    const horasCliente = logs
-                                      .filter(l => l.clientId === r.client_id && l.date?.startsWith(h.mes))
-                                      .reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
-                                    // Prefere total guardado (inclui faturas TOConline); fallback para horas
-                                    const totalFaturaCliente = (parseFloat(r.total_fatura) || 0) > 0
-                                      ? parseFloat(r.total_fatura)
-                                      : horasCliente * (parseFloat(client?.valorHora) || 0);
-                                    const val = histOverrides[key] !== undefined ? histOverrides[key] : parseFloat(r.valor_ajudas).toFixed(2);
-                                    // Faturas individuais TOConline deste cliente neste mês
-                                    const faturasCliente = (faturasHist[h.mes] || []).filter(f => {
-                                      const a = f.attributes || f;
-                                      const nomeF = a.customer_business_name || a.customer_name;
-                                      if (!nomeF) return false;
-                                      const cli = clients.find(c => c.name?.toLowerCase().trim() === nomeF.toLowerCase().trim());
-                                      return (cli?.id ?? `toc:${nomeF}`) === r.client_id;
-                                    });
-                                    return (
-                                      <div key={r.client_id} className="py-1 border-b border-slate-100 last:border-0">
-                                        <div className="flex items-center justify-between gap-3">
-                                          <span className="text-xs font-bold text-slate-700">{nomeCliente}</span>
-                                          <div className="flex items-center gap-3">
-                                            <span className="w-28 text-right text-xs font-bold text-slate-600">{totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}</span>
-                                            {ehMesTOConline ? (
-                                              <span className="w-28 text-right text-xs font-bold text-slate-600 px-1.5 py-1.5 inline-block">{fmtEur(parseFloat(val) || 0)}</span>
-                                            ) : (
-                                              <input
-                                                type="text"
-                                                inputMode="decimal"
-                                                value={val}
-                                                onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
-                                                onClick={e => e.stopPropagation()}
-                                                className="w-28 text-right p-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
-                                              />
-                                            )}
-                                          </div>
-                                        </div>
-                                        {faturasCliente.length > 1 && (
-                                          <div className="mt-1 ml-2 pl-2 border-l-2 border-slate-200 space-y-0.5">
-                                            {faturasCliente.map((f, fi) => {
-                                              const a = f.attributes || f;
-                                              const docNum = a.document_number || a.document_no || `#${f.id ?? fi}`;
-                                              const valF = parseFloat(a.gross_total ?? a.total_amount ?? a.total_value ?? 0) || 0;
-                                              const obsF = extrairValorObs(getObservacao(a));
-                                              return (
-                                                <div key={f.id ?? fi} className="flex items-center justify-between gap-3 text-[10px] text-slate-500">
-                                                  <span className="font-mono">{docNum}</span>
-                                                  <div className="flex items-center gap-3">
-                                                    <span className="w-28 text-right">{fmtEur(valF)}</span>
-                                                    <span className="w-28 text-right">{obsF != null ? <span className="text-blue-600 font-bold">{fmtEur(obsF)}</span> : '—'}</span>
-                                                  </div>
-                                                </div>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                  {carregandoFaturasHist === h.mes && (
-                                    <div className="flex items-center gap-1.5 text-[10px] text-slate-400 pt-1">
-                                      <Loader2 size={10} className="animate-spin" /> A carregar detalhe das faturas…
-                                    </div>
-                                  )}
-                                  <div className="flex justify-end pt-1">
-                                    <button
-                                      onClick={e => { e.stopPropagation(); handleGuardarHist(h.mes); }}
-                                      disabled={gravandoHist === h.mes || !temEdicoes}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40"
-                                    >
-                                      {gravandoHist === h.mes ? <Loader2 size={11} className="animate-spin" /> : <CheckCircle size={11} />}
-                                      {gravandoHist === h.mes ? 'A guardar...' : 'Guardar'}
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
-                            </td>
+                        {/* Linhas por cliente */}
+                        {clientesMesHist.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-3 py-2 text-[10px] text-slate-400 text-center italic">Sem registos por cliente.</td>
                           </tr>
+                        ) : (
+                          clientesMesHist.map(r => {
+                            const key = `${h.mes}|${r.client_id}`;
+                            const client = clients.find(c => c.id === r.client_id);
+                            const nomeCliente = client?.name ?? r.client_id;
+                            const horasCliente = logs
+                              .filter(l => l.clientId === r.client_id && l.date?.startsWith(h.mes))
+                              .reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
+                            const totalFaturaCliente = (parseFloat(r.total_fatura) || 0) > 0
+                              ? parseFloat(r.total_fatura)
+                              : horasCliente * (parseFloat(client?.valorHora) || 0);
+                            const pct = h.totalFatura > 0 ? (totalFaturaCliente / h.totalFatura) * 100 : 0;
+                            const val = histOverrides[key] !== undefined
+                              ? histOverrides[key]
+                              : parseFloat(r.valor_ajudas).toFixed(2);
+                            return (
+                              <tr key={r.client_id} className={`border-t border-slate-50 transition-colors ${h.mes === selectedMonth ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`}>
+                                <td className="px-3 py-2.5 pl-6 font-bold text-slate-800">{nomeCliente}</td>
+                                <td className="px-3 py-2.5 text-right text-slate-500">
+                                  {!temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right font-bold text-slate-700">
+                                  {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
+                                </td>
+                                <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(pct)}</td>
+                                <td className="px-3 py-2.5 text-right">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={val}
+                                    onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
+                                    className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                  />
+                                </td>
+                                <td />
+                              </tr>
+                            );
+                          })
                         )}
                       </React.Fragment>
                     );
                   })}
-                  <tr className="border-t-2 border-slate-200 bg-slate-50">
+                </tbody>
+                <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                  <tr>
                     <td className="px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">TOTAL {ano}</td>
+                    <td />
                     <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">
                       {fmtEur(historicoAnual.reduce((s, h) => s + h.totalFatura, 0))}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">{fmtEur(orcamentoAnual)}</td>
+                    <td />
                     <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">
-                      {fmtEur(faturadosAno.reduce((s,r) => s + (parseFloat(r.valor_ajudas)||0), 0))}
+                      {fmtEur(faturadosAno.reduce((s, r) => s + (parseFloat(r.valor_ajudas) || 0), 0))}
                     </td>
-                    <td className={`px-3 py-2.5 text-right text-[10px] font-black ${(faturadosAno.reduce((s,r)=>s+(parseFloat(r.valor_ajudas)||0),0) - orcamentoAnual) > 0.5 ? 'text-red-600' : 'text-emerald-600'}`}>
-                      {(() => {
-                        const d = faturadosAno.reduce((s,r)=>s+(parseFloat(r.valor_ajudas)||0),0) - orcamentoAnual;
-                        return `${d > 0 ? '+' : ''}${fmtEur(d)}`;
-                      })()}
-                    </td>
-                    <td></td>
+                    <td />
                   </tr>
-                </tbody>
+                </tfoot>
               </table>
             )}
           </div>
