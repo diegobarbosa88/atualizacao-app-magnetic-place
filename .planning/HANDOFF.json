@@ -1,63 +1,50 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-06T12:30:00.000Z",
+  "timestamp": "2026-06-09T05:31:53Z",
   "phase": null,
-  "phase_name": "refatoracao-v2 — Modularização de Componentes Admin + URL Routing",
-  "phase_dir": null,
-  "plan": null,
-  "task": null,
-  "total_tasks": null,
+  "phase_name": "TOConline Integration (ad-hoc)",
   "status": "paused",
   "completed_tasks": [
+    {"id": 1, "name": "api/toconline/_fetch.js — helper partilhado", "status": "done"},
+    {"id": 2, "name": "api/toconline/status|clientes|fornecedores|artigos|documento.js — novos endpoints", "status": "done"},
+    {"id": 3, "name": "api/toconline/create-fatura.js — refatorado, 12 tipos doc", "status": "done"},
+    {"id": 4, "name": "api/toconline/import.js — refatorado para usar _fetch.js", "status": "done"},
+    {"id": 5, "name": "TOConlineAdmin.jsx + toconline/* — módulo UI completo (4 tabs)", "status": "done"},
+    {"id": 6, "name": "FaturarClienteModal.jsx — wizard automático cliente+período→fatura", "status": "done"},
+    {"id": 7, "name": "AdminSidebar + AdminDashboard — rota toconline integrada", "status": "done"},
+    {"id": 8, "name": "vercel.json — maxDuration para endpoints TOConline", "status": "done"},
+    {"id": 9, "name": "Fixes: 401 (estado verificando), 500 (paths /api/customers), toFixed (Number())", "status": "done"}
+  ],
+  "remaining_tasks": [
+    {"id": 10, "name": "Testar fluxo completo em browser após ligar OAuth", "status": "not_started"},
+    {"id": 11, "name": "Verificar se import.js paths /v1/... precisam de /api/v1/...", "status": "not_started"},
+    {"id": 12, "name": "Commit de todo o trabalho", "status": "not_started"}
+  ],
+  "blockers": [
     {
-      "id": 1,
-      "name": "Refatorar SalariosTab — extrair SalarioEmployeeCard, AssocTransacaoModal, JustificarModal",
-      "status": "done",
-      "commit": "6ad205d"
-    },
-    {
-      "id": 2,
-      "name": "Refatorar FaturasAdmin — extrair GmailConfigPanel, CelEditTd, faturasExport.js, faturasUtils.js",
-      "status": "done",
-      "commit": "6ad205d"
-    },
-    {
-      "id": 3,
-      "name": "Refatorar WorkerDocuments — extrair useDocumentPreview e useSignDocument hooks",
-      "status": "done",
-      "commit": "6ad205d"
-    },
-    {
-      "id": 4,
-      "name": "URL routing completo para sub-tabs de DocumentsAdmin (activeSubTab + validarSubTab)",
-      "status": "done",
-      "commit": "af810ce"
+      "description": "import.js usa /v1/commercial_sales_documents mas swagger documenta /api/v1/... — confirmar com teste real",
+      "type": "technical",
+      "workaround": "Se import falhar 500, mudar paths de /v1/ para /api/v1/ em import.js"
     }
   ],
-  "remaining_tasks": [],
-  "blockers": [],
-  "human_actions_pending": [],
+  "human_actions_pending": [
+    {"action": "Correr migração: supabase/migrations/20260608_toconline_integration.sql", "blocking": true},
+    {"action": "Confirmar env vars: TOCONLINE_CLIENT_ID, TOCONLINE_CLIENT_SECRET, TOCONLINE_OAUTH_URL, TOCONLINE_API_URL", "blocking": true}
+  ],
   "decisions": [
-    {
-      "decision": "URL routing via useMemo+useLocation sem Route declarations",
-      "rationale": "A app usa convenção própria (sem Routes/Route), pattern já existia em portal_validacao",
-      "phase": "refatoracao-v2"
-    },
-    {
-      "decision": "Extrações mínimas — lógica de export CSV/PDF fica no pai",
-      "rationale": "Export usa estado do componente, seria over-engineering extrair sem motivo claro",
-      "phase": "refatoracao-v2"
-    },
-    {
-      "decision": "useSignDocument recebe canvasRef e devolve {docData, type} para o pai actualizar o estado",
-      "rationale": "Evita prop drilling mantendo o estado local no componente",
-      "phase": "refatoracao-v2"
-    }
+    {"decision": "Endpoints corretos: /api/customers, /api/suppliers, /api/products, /api/services", "rationale": "Confirmado via Swagger TOConline"},
+    {"decision": "FaturarClienteModal usa dados locais (clients/logs/ajudas) para pré-calcular", "rationale": "Evita chamadas extra à API"},
+    {"decision": "Bloquear render de tabs até status verificado", "rationale": "Evita 401/500 em cascata"}
   ],
   "uncommitted_files": [
-    ".planning/STATE.md",
-    "public/version.json"
+    "api/toconline/ (todos os ficheiros)",
+    "src/features/admin/TOConlineAdmin.jsx",
+    "src/features/admin/toconline/ (todos)",
+    "src/features/admin/faturas/TOConlinePanel.jsx",
+    "src/features/admin/AdminDashboard.jsx",
+    "src/features/admin/AdminSidebar.jsx",
+    "vercel.json"
   ],
-  "next_action": "Merge branch refatoracao-v2 → master se refactoring considerado completo, ou executar Phase 18: /gsd-execute-phase 18",
-  "context_notes": "Branch refatoracao-v2 com toda a refactorização de admin modularizada e URL routing implementado. Build limpo. STATE.md aponta para Phase 18 (Reconciliação Bancária Automática) como próximo passo."
+  "next_action": "git add + commit 'feat: integração completa TOConline'. Depois testar: ligar OAuth → tab Clientes → tab Artigos → botão Faturar Cliente.",
+  "context_notes": "Trabalho ad-hoc. Build Vite OK. Último fix: Number(valorHora). Paths API corrigidos via Swagger."
 }

@@ -50,6 +50,7 @@ import AdminSettings from './AdminSettings';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminClassicNav from './AdminClassicNav';
+import TOConlineAdmin from './TOConlineAdmin';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -416,6 +417,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'notificacoes' && (
         <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
+      )}
+
+      {!auditWorkerId && activeTab === 'toconline' && (
+        <TOConlineAdmin />
       )}
 
       {!auditWorkerId && activeTab === 'settings' && (
