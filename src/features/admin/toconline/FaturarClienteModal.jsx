@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, Loader2, ChevronRight, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { X, Loader2, ChevronRight, CheckCircle, AlertCircle, FileText, Plus, Trash2, Save } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
@@ -16,23 +16,36 @@ function periodoDefault() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+function novoId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+const IVA_OPTS = [0, 6, 13, 23];
+
 export default function FaturarClienteModal({ onClose, onFaturado }) {
   const { clients, logs, supabase } = useApp();
 
-  const [passo, setPasso] = useState(1); // 1=seleção, 2=revisão, 3=resultado
+  const hoje = new Date().toISOString().slice(0, 10);
+  const daqui30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+
+  const [passo, setPasso] = useState(1);
   const [clienteId, setClienteId] = useState('');
   const [periodo, setPeriodo] = useState(periodoDefault);
+  const [dataFatura, setDataFatura] = useState(hoje);
+  const [dataVencimento, setDataVencimento] = useState(daqui30);
   const [ajudas, setAjudas] = useState(null);
   const [carregandoAjudas, setCarregandoAjudas] = useState(false);
-  const [taxaIva, setTaxaIva] = useState(23);
-  const [taxaIvaAjudas, setTaxaIvaAjudas] = useState(0);
-  const [descricaoServico, setDescricaoServico] = useState('');
+  const [observacoes, setObservacoes] = useState('');
   const [emitindo, setEmitindo] = useState(false);
   const [resultado, setResultado] = useState(null);
 
+  // Serviços configuráveis por cliente
+  const [servicosLinhas, setServicosLinhas] = useState([]);
+  const [guardandoConfig, setGuardandoConfig] = useState(false);
+  const [configGuardada, setConfigGuardada] = useState(false);
+
   const cliente = useMemo(() => clients?.find(c => c.id === clienteId), [clients, clienteId]);
 
-  // Calcular horas do período para este cliente
   const totalHoras = useMemo(() => {
     if (!clienteId || !periodo || !logs) return 0;
     return (logs || [])
@@ -41,15 +54,30 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
   }, [clienteId, periodo, logs]);
 
   const valorHora = Number(cliente?.valorHora ?? 0);
-  const subtotalServicos = totalHoras * valorHora;
+  const subtotalHoras = totalHoras * valorHora;
   const valorAjudas = ajudas?.valor_ajudas ?? 0;
-  const baseIvaServicos = subtotalServicos;
-  const baseIvaAjudas = valorAjudas;
-  const ivaServicos = baseIvaServicos * taxaIva / 100;
-  const ivaAjudas = baseIvaAjudas * taxaIvaAjudas / 100;
-  const totalFatura = subtotalServicos + valorAjudas + ivaServicos + ivaAjudas;
 
-  // Carregar ajudas faturadas ao selecionar cliente/período
+  const totalFatura = useMemo(() => servicosLinhas.reduce((sum, s) => {
+    const qty = Number(s.quantidade) || 0;
+    const price = Number(s.preco_unitario ?? s.valor_fixo) || 0;
+    return sum + qty * price * (1 + (s.taxa_iva || 0) / 100);
+  }, 0), [servicosLinhas]);
+
+  // Carregar invoice_config do cliente ao selecioná-lo
+  useEffect(() => {
+    if (!cliente) { setServicosLinhas([]); setConfigGuardada(false); return; }
+    const cfg = cliente.invoice_config;
+    if (cfg?.servicos?.length) {
+      setServicosLinhas(cfg.servicos.map(s =>
+        s.tipo === 'horas' ? { ...s, quantidade: s.quantidade ?? totalHoras, preco_unitario: s.preco_unitario ?? valorHora } : s
+      ));
+    } else {
+      setServicosLinhas([{ id: novoId(), tipo: 'horas', descricao: 'Serviços de gestão de pessoal', taxa_iva: 0, quantidade: totalHoras, preco_unitario: valorHora, unidade: 'h' }]);
+    }
+    setConfigGuardada(false);
+  }, [cliente?.id]);
+
+  // Carregar ajudas ao selecionar cliente/período
   useEffect(() => {
     if (!clienteId || !periodo || !supabase) { setAjudas(null); return; }
     setCarregandoAjudas(true);
@@ -64,46 +92,69 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
       .finally(() => setCarregandoAjudas(false));
   }, [clienteId, periodo, supabase]);
 
-  // Pré-preencher descrição quando cliente/período mudam
+  // Pré-preencher observação quando ajudas carregam
   useEffect(() => {
-    if (cliente && periodo) {
-      setDescricaoServico(`Serviços de gestão de pessoal — ${periodoLabel(periodo)}`);
+    if (!clienteId || !periodo) return;
+    const val = ajudas?.valor_ajudas ?? 0;
+    if (val > 0) {
+      setObservacoes(`Nesta fatura estão incluidas as ajudas de custo dos trabalhadores no valor de ${Number(val).toFixed(2)} €`);
     }
-  }, [cliente, periodo]);
+  }, [ajudas, clienteId, periodo]);
 
-  const podeContinuar = clienteId && periodo && (totalHoras > 0 || valorAjudas > 0);
+  const podeContinuar = clienteId && periodo && totalHoras > 0;
+
+  const updateLinha = (id, campo, valor) =>
+    setServicosLinhas(prev => prev.map(s => s.id === id ? { ...s, [campo]: valor } : s));
+
+  const removerLinha = (id) =>
+    setServicosLinhas(prev => prev.filter(s => s.id !== id));
+
+  const adicionarLinhaFixa = () =>
+    setServicosLinhas(prev => [...prev, { id: novoId(), tipo: 'fixo', descricao: '', taxa_iva: 0, valor_fixo: 0, quantidade: 1, unidade: '' }]);
+
+  const handleGuardarConfig = async () => {
+    if (!cliente || !supabase) return;
+    setGuardandoConfig(true);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ invoice_config: { servicos: servicosLinhas } })
+        .eq('id', clienteId);
+      if (error) throw error;
+      setConfigGuardada(true);
+      setTimeout(() => setConfigGuardada(false), 2500);
+    } catch (e) {
+      alert('Erro ao guardar configuração: ' + e.message);
+    } finally {
+      setGuardandoConfig(false);
+    }
+  };
 
   const handleEmitir = async () => {
     setEmitindo(true);
     try {
-      const linhas = [];
+      const linhas = servicosLinhas
+        .filter(s => s.tipo === 'horas' ? totalHoras > 0 : (Number(s.valor_fixo) || 0) > 0)
+        .map(s => ({
+          descricao: s.tipo === 'horas' ? `${s.descricao} — ${periodoLabel(periodo)}` : s.descricao,
+          quantidade: Number(s.quantidade) || 1,
+          preco_unitario: Number(s.preco_unitario ?? s.valor_fixo) || 0,
+          taxa_iva: s.taxa_iva || 0,
+          unidade: s.unidade || undefined,
+        }));
 
-      if (totalHoras > 0) {
-        linhas.push({
-          descricao: descricaoServico || `Serviços — ${periodoLabel(periodo)}`,
-          quantidade: Number(totalHoras.toFixed(2)),
-          preco_unitario: Number(valorHora),
-          taxa_iva: taxaIva,
-        });
-      }
-
-      if (valorAjudas > 0) {
-        linhas.push({
-          descricao: `Ajudas de custo — ${periodoLabel(periodo)}`,
-          quantidade: 1,
-          preco_unitario: Number(valorAjudas),
-          taxa_iva: taxaIvaAjudas,
-        });
-      }
+      if (!linhas.length) throw new Error('Sem linhas para faturar');
 
       const res = await fetch('/api/toconline/create-fatura', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           tipo_documento: 'FT',
-          data: new Date().toISOString().slice(0, 10),
+          data: dataFatura,
+          data_vencimento: dataVencimento || undefined,
           cliente: { nome: cliente.name, nif: cliente.nif || undefined },
           linhas,
+          observacoes: observacoes.trim() || undefined,
         }),
       });
 
@@ -123,7 +174,7 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 space-y-5">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6 space-y-5 max-h-[90vh] overflow-y-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -131,8 +182,7 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Faturar Cliente</h2>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {passo === 1 ? 'Passo 1 — Selecionar cliente e período' :
-               passo === 2 ? 'Passo 2 — Rever e confirmar' :
-               'Concluído'}
+               passo === 2 ? 'Passo 2 — Rever e confirmar' : 'Concluído'}
             </p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
@@ -160,6 +210,19 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
                 className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
             </div>
 
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data da fatura</p>
+                <input type="date" value={dataFatura} onChange={e => setDataFatura(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Vencimento</p>
+                <input type="date" value={dataVencimento} onChange={e => setDataVencimento(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              </div>
+            </div>
+
             {clienteId && periodo && (
               <div className="bg-slate-50 rounded-2xl p-4 space-y-2 text-xs">
                 <div className="flex justify-between text-slate-600">
@@ -168,21 +231,121 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>Tarifa horária</span>
-                  <span className="font-black text-slate-800">{Number(valorHora).toFixed(2)} €/h</span>
+                  <span className="font-black text-slate-800">{valorHora.toFixed(2)} €/h</span>
                 </div>
                 {carregandoAjudas ? (
                   <div className="flex items-center gap-2 text-slate-400"><Loader2 size={12} className="animate-spin" /> A carregar ajudas...</div>
                 ) : valorAjudas > 0 && (
                   <div className="flex justify-between text-slate-600">
-                    <span>Ajudas de custo faturadas</span>
+                    <span>Ajudas de custo (incluídas)</span>
                     <span className="font-black text-slate-800">{valorAjudas.toFixed(2)} €</span>
                   </div>
                 )}
                 {!podeContinuar && clienteId && periodo && !carregandoAjudas && (
                   <p className="text-amber-600 flex items-center gap-1">
-                    <AlertCircle size={12} /> Sem horas nem ajudas registadas neste período
+                    <AlertCircle size={12} /> Sem horas registadas neste período
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Configuração de serviços predefinidos */}
+            {clienteId && servicosLinhas.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Serviços predefinidos</p>
+                  <button
+                    onClick={handleGuardarConfig}
+                    disabled={guardandoConfig}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
+                  >
+                    {guardandoConfig ? <Loader2 size={11} className="animate-spin" /> : configGuardada ? <CheckCircle size={11} className="text-emerald-500" /> : <Save size={11} />}
+                    {configGuardada ? 'Guardado' : 'Guardar padrão'}
+                  </button>
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 overflow-hidden">
+                  <div className="bg-slate-50 px-3 py-2 grid grid-cols-[1fr_48px_52px_44px_28px] gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-400">
+                    <span>Descrição / Valor unit.</span>
+                    <span className="text-center">Qtd</span>
+                    <span className="text-center">Unidade</span>
+                    <span className="text-center">IVA</span>
+                    <span />
+                  </div>
+
+                  {servicosLinhas.map((s) => (
+                    <div key={s.id} className="px-3 py-2.5 space-y-1.5 border-t border-slate-50">
+                      {/* Linha 1: Descrição + apagar */}
+                      <div className="flex gap-1.5 items-center">
+                        <input
+                          type="text"
+                          value={s.descricao}
+                          onChange={e => updateLinha(s.id, 'descricao', e.target.value)}
+                          placeholder="Descrição do serviço"
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                        />
+                        <button
+                          onClick={() => removerLinha(s.id)}
+                          className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all shrink-0"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                      {/* Linha 2: Qtd · Unidade · Preço unit. · IVA */}
+                      <div className="grid grid-cols-4 gap-1.5">
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Qtd</p>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={s.quantidade ?? ''}
+                            onChange={e => updateLinha(s.id, 'quantidade', e.target.value)}
+                            placeholder="0"
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Unidade</p>
+                          <input
+                            type="text"
+                            value={s.unidade ?? ''}
+                            onChange={e => updateLinha(s.id, 'unidade', e.target.value)}
+                            placeholder="h / un / mês"
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Preço unit. (€)</p>
+                          <input
+                            type="number" min="0" step="0.01"
+                            value={s.preco_unitario ?? s.valor_fixo ?? ''}
+                            onChange={e => updateLinha(s.id, 'preco_unitario', e.target.value)}
+                            placeholder="0.00"
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">IVA</p>
+                          <select
+                            value={s.taxa_iva}
+                            onChange={e => updateLinha(s.id, 'taxa_iva', Number(e.target.value))}
+                            className="w-full px-1 py-1.5 rounded-lg border border-slate-200 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-indigo-300"
+                          >
+                            {IVA_OPTS.map(v => <option key={v} value={v}>{v}%</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="px-3 py-2 border-t border-slate-100">
+                    <button
+                      onClick={adicionarLinhaFixa}
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700 transition-colors"
+                    >
+                      <Plus size={11} /> Adicionar linha fixa
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -196,10 +359,17 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
         {/* Passo 2 — Revisão */}
         {passo === 2 && (
           <div className="space-y-4">
+
+            {/* Observações */}
             <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Descrição do serviço</p>
-              <input type="text" value={descricaoServico} onChange={e => setDescricaoServico(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações <span className="normal-case font-normal text-slate-400">(opcional)</span></p>
+              <textarea
+                value={observacoes}
+                onChange={e => setObservacoes(e.target.value)}
+                rows={3}
+                placeholder="Observações que aparecerão na fatura..."
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              />
             </div>
 
             {/* Linhas da fatura */}
@@ -208,35 +378,27 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
                 <span>Descrição</span><span className="text-center">Qtd</span><span className="text-right">Unit.</span><span className="text-center">IVA</span><span className="text-right">Total</span>
               </div>
 
-              {totalHoras > 0 && (
-                <div className="px-4 py-3 grid grid-cols-[1fr_60px_70px_50px_70px] gap-2 text-xs items-center border-t border-slate-50">
-                  <span className="text-slate-700 font-semibold truncate">{descricaoServico || 'Serviços'}</span>
-                  <span className="text-center text-slate-500">{totalHoras.toFixed(2)}h</span>
-                  <span className="text-right text-slate-500">{valorHora.toFixed(2)} €</span>
-                  <div className="flex justify-center">
-                    <select value={taxaIva} onChange={e => setTaxaIva(Number(e.target.value))}
-                      className="w-full px-1 py-1 rounded-lg border border-slate-200 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-blue-300">
-                      {[0, 6, 13, 23].map(v => <option key={v} value={v}>{v}%</option>)}
-                    </select>
+              {servicosLinhas.map(s => {
+                const qtd = s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 1);
+                const unitPrice = s.tipo === 'horas' ? valorHora : (Number(s.valor_fixo) || 0);
+                const base = qtd * unitPrice;
+                const total = base * (1 + (s.taxa_iva || 0) / 100);
+                const unidade = s.unidade || (s.tipo === 'horas' ? 'h' : '');
+                if (s.tipo === 'horas' && totalHoras === 0) return null;
+                if (s.tipo === 'fixo' && unitPrice === 0) return null;
+                return (
+                  <div key={s.id} className="px-4 py-3 grid grid-cols-[1fr_60px_70px_50px_70px] gap-2 text-xs items-center border-t border-slate-50">
+                    <span className="text-slate-700 font-semibold truncate">
+                      {s.descricao || (s.tipo === 'horas' ? 'Serviços' : 'Linha fixa')}
+                      {s.tipo === 'horas' && <span className="text-slate-400 font-normal"> — {periodoLabel(periodo)}</span>}
+                    </span>
+                    <span className="text-center text-slate-500">{qtd.toFixed(2)}{unidade && ` ${unidade}`}</span>
+                    <span className="text-right text-slate-500">{unitPrice.toFixed(2)} €</span>
+                    <span className="text-center text-slate-500">{s.taxa_iva || 0}%</span>
+                    <span className="text-right font-semibold text-slate-800">{total.toFixed(2)} €</span>
                   </div>
-                  <span className="text-right font-semibold text-slate-800">{(subtotalServicos * (1 + taxaIva / 100)).toFixed(2)} €</span>
-                </div>
-              )}
-
-              {valorAjudas > 0 && (
-                <div className="px-4 py-3 grid grid-cols-[1fr_60px_70px_50px_70px] gap-2 text-xs items-center border-t border-slate-50">
-                  <span className="text-slate-700 font-semibold truncate">Ajudas de custo</span>
-                  <span className="text-center text-slate-500">1</span>
-                  <span className="text-right text-slate-500">{valorAjudas.toFixed(2)} €</span>
-                  <div className="flex justify-center">
-                    <select value={taxaIvaAjudas} onChange={e => setTaxaIvaAjudas(Number(e.target.value))}
-                      className="w-full px-1 py-1 rounded-lg border border-slate-200 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-blue-300">
-                      {[0, 6, 13, 23].map(v => <option key={v} value={v}>{v}%</option>)}
-                    </select>
-                  </div>
-                  <span className="text-right font-semibold text-slate-800">{(valorAjudas * (1 + taxaIvaAjudas / 100)).toFixed(2)} €</span>
-                </div>
-              )}
+                );
+              })}
 
               <div className="px-4 py-3 border-t border-slate-200 flex justify-between items-center bg-slate-50">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total c/ IVA</span>
@@ -273,13 +435,9 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
                 <div>
                   <p className="text-sm font-black text-slate-800">Fatura emitida com sucesso</p>
                   {resultado.documento?.attributes?.document_number && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Nº {resultado.documento.attributes.document_number}
-                    </p>
+                    <p className="text-xs text-slate-500 mt-1">Nº {resultado.documento.attributes.document_number}</p>
                   )}
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Cliente: {cliente?.name} · {periodoLabel(periodo)}
-                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">Cliente: {cliente?.name} · {periodoLabel(periodo)}</p>
                   <p className="text-sm font-black text-emerald-700 mt-2">{totalFatura.toFixed(2)} €</p>
                 </div>
               </div>

@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const body = req.body || {};
-  const { cliente, data, linhas, tipo_documento = 'FT', serie, observacoes } = body;
+  const { cliente, data, data_vencimento, linhas, tipo_documento = 'FT', serie, observacoes } = body;
 
   if (!cliente || !linhas?.length) {
     return res.status(400).json({ error: 'Campos obrigatórios: cliente, linhas' });
@@ -48,6 +48,7 @@ export default async function handler(req, res) {
 
   if (serie) attrs.serie = serie;
   if (observacoes) attrs.notes = observacoes;
+  if (data_vencimento) attrs.due_date = data_vencimento;
 
   const payload = { data: { type: 'commercial_sales_documents', attributes: attrs } };
 
