@@ -1,50 +1,67 @@
 {
   "version": "1.0",
-  "timestamp": "2026-06-09T05:31:53Z",
+  "timestamp": "2026-06-09T00:00:00.000Z",
   "phase": null,
-  "phase_name": "TOConline Integration (ad-hoc)",
+  "phase_name": "TOConline — Relatórios fix + refatoracao-v2",
+  "phase_dir": null,
+  "plan": null,
+  "task": null,
+  "total_tasks": null,
   "status": "paused",
+  "branch": "refatoracao-v2",
   "completed_tasks": [
-    {"id": 1, "name": "api/toconline/_fetch.js — helper partilhado", "status": "done"},
-    {"id": 2, "name": "api/toconline/status|clientes|fornecedores|artigos|documento.js — novos endpoints", "status": "done"},
-    {"id": 3, "name": "api/toconline/create-fatura.js — refatorado, 12 tipos doc", "status": "done"},
-    {"id": 4, "name": "api/toconline/import.js — refatorado para usar _fetch.js", "status": "done"},
-    {"id": 5, "name": "TOConlineAdmin.jsx + toconline/* — módulo UI completo (4 tabs)", "status": "done"},
-    {"id": 6, "name": "FaturarClienteModal.jsx — wizard automático cliente+período→fatura", "status": "done"},
-    {"id": 7, "name": "AdminSidebar + AdminDashboard — rota toconline integrada", "status": "done"},
-    {"id": 8, "name": "vercel.json — maxDuration para endpoints TOConline", "status": "done"},
-    {"id": 9, "name": "Fixes: 401 (estado verificando), 500 (paths /api/customers), toFixed (Number())", "status": "done"}
-  ],
-  "remaining_tasks": [
-    {"id": 10, "name": "Testar fluxo completo em browser após ligar OAuth", "status": "not_started"},
-    {"id": 11, "name": "Verificar se import.js paths /v1/... precisam de /api/v1/...", "status": "not_started"},
-    {"id": 12, "name": "Commit de todo o trabalho", "status": "not_started"}
-  ],
-  "blockers": [
     {
-      "description": "import.js usa /v1/commercial_sales_documents mas swagger documenta /api/v1/... — confirmar com teste real",
-      "type": "technical",
-      "workaround": "Se import falhar 500, mudar paths de /v1/ para /api/v1/ em import.js"
+      "id": 1,
+      "name": "Corrigir TOConlineRelatorios.jsx — remover item.attributes, usar campos diretos (document_no, gross_total, customer_business_name)",
+      "status": "done",
+      "commit": "uncommitted"
     }
   ],
+  "remaining_tasks": [
+    {
+      "id": 2,
+      "name": "Testar funcionalidade Relatórios TOConline no browser — confirmar que dados aparecem na tabela",
+      "status": "not_started"
+    },
+    {
+      "id": 3,
+      "name": "Commitar alterações da sessão: TOConlineRelatorios.jsx + api/toconline/relatorio.js + supabase migration",
+      "status": "not_started"
+    },
+    {
+      "id": 4,
+      "name": "Rever e commitar restantes ficheiros da refatoracao-v2 (FaturasAdmin, faturasExport, AppContext, vercel.json)",
+      "status": "not_started"
+    }
+  ],
+  "blockers": [],
   "human_actions_pending": [
-    {"action": "Correr migração: supabase/migrations/20260608_toconline_integration.sql", "blocking": true},
-    {"action": "Confirmar env vars: TOCONLINE_CLIENT_ID, TOCONLINE_CLIENT_SECRET, TOCONLINE_OAUTH_URL, TOCONLINE_API_URL", "blocking": true}
+    {
+      "action": "Testar a funcionalidade Relatórios TOConline no browser após fix",
+      "context": "A correção foi feita mas não testada no browser — verificar se dados aparecem na tabela",
+      "blocking": false
+    }
   ],
   "decisions": [
-    {"decision": "Endpoints corretos: /api/customers, /api/suppliers, /api/products, /api/services", "rationale": "Confirmado via Swagger TOConline"},
-    {"decision": "FaturarClienteModal usa dados locais (clients/logs/ajudas) para pré-calcular", "rationale": "Evita chamadas extra à API"},
-    {"decision": "Bloquear render de tabs até status verificado", "rationale": "Evita 401/500 em cascata"}
+    {
+      "decision": "TOConlineRelatorios.jsx usa campos diretos no objeto (document_no, gross_total, customer_business_name) em vez de item.attributes",
+      "rationale": "A API TOConline retorna objetos JSON simples, não formato JSON:API. O código anterior assumia formato JSON:API com wrapper attributes que não existe nesta API.",
+      "phase": "refatoracao-v2"
+    }
   ],
   "uncommitted_files": [
-    "api/toconline/ (todos os ficheiros)",
-    "src/features/admin/TOConlineAdmin.jsx",
-    "src/features/admin/toconline/ (todos)",
-    "src/features/admin/faturas/TOConlinePanel.jsx",
-    "src/features/admin/AdminDashboard.jsx",
-    "src/features/admin/AdminSidebar.jsx",
-    "vercel.json"
+    ".gitignore (M)",
+    ".planning/STATE.md (M)",
+    "package.json (M)",
+    "public/version.json (M)",
+    "src/context/AppContext.jsx (M)",
+    "src/features/admin/FaturasAdmin.jsx (M)",
+    "src/features/admin/faturas/faturasExport.js (M)",
+    "src/features/admin/toconline/TOConlineRelatorios.jsx (M)",
+    "vercel.json (M)",
+    "api/toconline/relatorio.js (untracked)",
+    "supabase/migrations/20260608_toconline_integration.sql (untracked)"
   ],
-  "next_action": "git add + commit 'feat: integração completa TOConline'. Depois testar: ligar OAuth → tab Clientes → tab Artigos → botão Faturar Cliente.",
-  "context_notes": "Trabalho ad-hoc. Build Vite OK. Último fix: Number(valorHora). Paths API corrigidos via Swagger."
+  "next_action": "Testar Relatórios TOConline no browser. Se funcionar, commitar: git add api/toconline/relatorio.js src/features/admin/toconline/TOConlineRelatorios.jsx && git commit",
+  "context_notes": "Branch refatoracao-v2 tem várias alterações acumuladas não commitadas. O fix desta sessão foi no TOConlineRelatorios onde os dados não apareciam porque o componente acedia a item.attributes mas a API TOConline retorna campos directamente no objeto raiz. Campo correto: document_no (não document_number), gross_total (não total_amount)."
 }

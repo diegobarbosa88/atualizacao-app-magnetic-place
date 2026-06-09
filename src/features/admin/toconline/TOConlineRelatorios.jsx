@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { BarChart2, Download, Loader2, ExternalLink } from 'lucide-react';
+import { BarChart2, Loader2 } from 'lucide-react';
 
 const RELATORIOS = [
-  { id: 'vendas', label: 'Resumo de Vendas', descricao: 'Totais de faturas emitidas por período', endpoint: '/api/toconline/clientes' },
-  { id: 'compras', label: 'Resumo de Compras', descricao: 'Totais de faturas de compra por período', endpoint: '/api/toconline/fornecedores' },
+  { id: 'vendas', label: 'Vendas', descricao: 'Documentos comerciais de venda' },
+  { id: 'compras', label: 'Compras', descricao: 'Documentos comerciais de compra' },
+  { id: 'recibos', label: 'Recibos', descricao: 'Recibos de venda' },
 ];
 
 export default function TOConlineRelatorios({ onDesligado }) {
@@ -19,13 +20,11 @@ export default function TOConlineRelatorios({ onDesligado }) {
     setErro(null);
     setDados(null);
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ tipo, page: '1' });
       if (dataDe) params.set('data_de', dataDe);
       if (dataAte) params.set('data_ate', dataAte);
-      params.set('page', '1');
 
-      const relat = RELATORIOS.find(r => r.id === tipo);
-      const res = await fetch(`${relat.endpoint}?${params}`);
+      const res = await fetch(`/api/toconline/relatorio?${params}`);
       const data = await res.json();
       if (res.status === 401) { onDesligado?.(); return; }
       if (!res.ok) throw new Error(data.error || 'Erro ao carregar dados');
@@ -38,9 +37,11 @@ export default function TOConlineRelatorios({ onDesligado }) {
   };
 
   const totalValor = dados?.data?.reduce((sum, item) => {
-    const v = item.attributes?.total_amount ?? item.attributes?.balance ?? 0;
+    const v = item.gross_total ?? item.received_value ?? item.total_amount ?? item.total_value ?? 0;
     return sum + Number(v);
   }, 0);
+
+  const isCompras = tipo === 'compras';
 
   return (
     <div className="space-y-5">
@@ -84,7 +85,7 @@ export default function TOConlineRelatorios({ onDesligado }) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             <div className="bg-white rounded-2xl border border-slate-100 p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Registos</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Documentos</p>
               <p className="text-2xl font-black text-slate-800">{dados.data?.length ?? 0}</p>
             </div>
             {totalValor != null && (
@@ -95,25 +96,38 @@ export default function TOConlineRelatorios({ onDesligado }) {
             )}
           </div>
 
+          {dados.data?.length === 0 && (
+            <div className="text-center py-10 text-slate-400 text-xs font-semibold">
+              Nenhum documento encontrado para os filtros selecionados
+            </div>
+          )}
+
           {dados.data?.length > 0 && (
             <div className="overflow-x-auto rounded-2xl border border-slate-100">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
-                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Nome</th>
-                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">NIF</th>
-                    <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Nº Doc.</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Data</th>
+                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      {isCompras ? 'Fornecedor' : 'Cliente'}
+                    </th>
+                    <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {dados.data.map((item) => {
-                    const a = item.attributes || {};
+                  {dados.data.map((item, idx) => {
+                    const entidade = isCompras
+                      ? (item.supplier_business_name || item.supplier_name || '—')
+                      : (item.customer_business_name || item.customer_name || '—');
+                    const valor = item.gross_total ?? item.received_value ?? item.total_amount ?? item.total_value;
                     return (
-                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-4 py-3 font-semibold text-slate-800">{a.business_name || a.name || '—'}</td>
-                        <td className="px-4 py-3 font-mono text-slate-500">{a.tax_number || '—'}</td>
+                      <tr key={item.id ?? idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 font-mono text-slate-600">{item.document_no || item.document_number || item.id}</td>
+                        <td className="px-4 py-3 text-slate-500">{item.date || '—'}</td>
+                        <td className="px-4 py-3 font-semibold text-slate-800">{entidade}</td>
                         <td className="px-4 py-3 text-right font-semibold text-slate-700">
-                          {a.total_amount != null ? `${Number(a.total_amount).toFixed(2)} €` : '—'}
+                          {valor != null ? `${Number(valor).toFixed(2)} €` : '—'}
                         </td>
                       </tr>
                     );
