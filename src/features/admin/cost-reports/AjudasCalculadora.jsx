@@ -153,9 +153,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   const semHoras = clientesMes.length === 0;
 
-  // As ajudas de custo que incidem sobre as faturas de um mês são sempre
-  // as do mês anterior (ex: fatura de fevereiro → recibos de janeiro).
-  const mesDoRecibo = mesAnterior(selectedMonth);
+  // Ajudas e recibos são sempre do mês seleccionado.
+  const mesDoRecibo = selectedMonth;
 
   // Carrega meses anteriores com dados para estimar quando mesDoRecibo não tem recibos
   useEffect(() => {
@@ -202,12 +201,14 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     (async () => {
       setCarregandoToC(true);
       try {
-        const [y, m] = selectedMonth.split('-').map(Number);
+        // As faturas emitidas são do mês seguinte ao mês de trabalho seleccionado.
+        const mesFat = mesSeguinte(selectedMonth);
+        const [y, m] = mesFat.split('-').map(Number);
         const ultimoDia = new Date(y, m, 0).getDate();
         const params = new URLSearchParams({
           tipo: 'vendas',
-          data_de: `${selectedMonth}-01`,
-          data_ate: `${selectedMonth}-${String(ultimoDia).padStart(2, '0')}`,
+          data_de: `${mesFat}-01`,
+          data_ate: `${mesFat}-${String(ultimoDia).padStart(2, '0')}`,
         });
         const res = await fetch(`/api/toconline/relatorio?${params}`);
         if (!res.ok || cancelled) return;
