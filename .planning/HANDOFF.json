@@ -2,7 +2,7 @@
   "version": "1.0",
   "timestamp": "2026-06-09T00:00:00.000Z",
   "phase": null,
-  "phase_name": "TOConline — Relatórios fix + refatoracao-v2",
+  "phase_name": "ad-hoc: ajudas calculadora + TOConline + refatoracao-v2",
   "phase_dir": null,
   "plan": null,
   "task": null,
@@ -10,58 +10,40 @@
   "status": "paused",
   "branch": "refatoracao-v2",
   "completed_tasks": [
-    {
-      "id": 1,
-      "name": "Corrigir TOConlineRelatorios.jsx — remover item.attributes, usar campos diretos (document_no, gross_total, customer_business_name)",
-      "status": "done",
-      "commit": "uncommitted"
-    }
+    {"id": 1, "name": "Redistribuir button na tabela estimativa", "status": "done", "commit": "4d01aec"},
+    {"id": 2, "name": "Confirmar salva valores modificados (sem redistribuir)", "status": "done", "commit": "4d01aec"},
+    {"id": 3, "name": "Historico: read-only para meses TOConline", "status": "done", "commit": "4d01aec"},
+    {"id": 4, "name": "Selecao por checkbox para redistribuicao granular", "status": "done", "commit": "4d01aec"},
+    {"id": 5, "name": "Estimativa de ajudas de meses anteriores (AjudasCalculadora + FaturarClienteModal)", "status": "done", "commit": "4d01aec"},
+    {"id": 6, "name": "Fix extrairValorObs prioriza simbolo EUR para extracao correta", "status": "done", "commit": "4d01aec"},
+    {"id": 7, "name": "Offset de mes: faturas do mes M referem-se a horas do mes M-1", "status": "done", "commit": "4d01aec"},
+    {"id": 8, "name": "Fix valor recibo a mostrar corretamente apos offset", "status": "done", "commit": "4d01aec"},
+    {"id": 9, "name": "Fix horas na estimativa sao do mes anterior", "status": "done", "commit": "4d01aec"},
+    {"id": 10, "name": "Redistribuir usa diferenca (alvo - total) e distribui proporcionalmente", "status": "done", "commit": "4d01aec"}
   ],
   "remaining_tasks": [
-    {
-      "id": 2,
-      "name": "Testar funcionalidade Relatórios TOConline no browser — confirmar que dados aparecem na tabela",
-      "status": "not_started"
-    },
-    {
-      "id": 3,
-      "name": "Commitar alterações da sessão: TOConlineRelatorios.jsx + api/toconline/relatorio.js + supabase migration",
-      "status": "not_started"
-    },
-    {
-      "id": 4,
-      "name": "Rever e commitar restantes ficheiros da refatoracao-v2 (FaturasAdmin, faturasExport, AppContext, vercel.json)",
-      "status": "not_started"
-    }
+    {"id": 11, "name": "Commit ficheiros restantes: TOConlinePanel.jsx (+462 linhas), AppContext.jsx, package.json, vercel.json, .gitignore, public/version.json, STATE.md", "status": "not_started"}
   ],
   "blockers": [],
   "human_actions_pending": [
-    {
-      "action": "Testar a funcionalidade Relatórios TOConline no browser após fix",
-      "context": "A correção foi feita mas não testada no browser — verificar se dados aparecem na tabela",
-      "blocking": false
-    }
+    {"action": "Aplicar migracao SQL em producao: supabase/migrations/20260610_ajudas_total_fatura.sql", "context": "Adiciona coluna total_fatura em ajudas_faturadas_clientes — necessaria para guardar total por cliente no handleConfirmar", "blocking": false},
+    {"action": "Testar AjudasCalculadora em producao para validar offset de mes e redistribuicao", "context": "Logica de offset (mesAnterior/mesSeguinte) implementada mas nao testada em producao com dados reais", "blocking": false}
   ],
   "decisions": [
-    {
-      "decision": "TOConlineRelatorios.jsx usa campos diretos no objeto (document_no, gross_total, customer_business_name) em vez de item.attributes",
-      "rationale": "A API TOConline retorna objetos JSON simples, não formato JSON:API. O código anterior assumia formato JSON:API com wrapper attributes que não existe nesta API.",
-      "phase": "refatoracao-v2"
-    }
+    {"decision": "Faturas do mes M referem-se a horas do mes M-1 (offset)", "rationale": "Confirmado pelo utilizador — as faturas de maio sao das horas de abril", "phase": "ad-hoc"},
+    {"decision": "Redistribuir distribui a diferenca (ajudasEfetivoMes - totalAjudasMes) proporcionalmente por fatura", "rationale": "Comportamento pedido: nao redistribuir o total, apenas a diferenca", "phase": "ad-hoc"},
+    {"decision": "Historico: meses TOConline (sem logs) sao read-only", "rationale": "Valores extraidos de faturas TOConline nao devem ser editaveis no historico", "phase": "ad-hoc"},
+    {"decision": "extrairValorObs prioriza padrao EUR+VALOR antes de fallback numerico", "rationale": "Texto das notas TOConline contem multiplos numeros; valor de ajudas esta sempre apos simbolo EUR", "phase": "ad-hoc"}
   ],
   "uncommitted_files": [
-    ".gitignore (M)",
-    ".planning/STATE.md (M)",
-    "package.json (M)",
-    "public/version.json (M)",
-    "src/context/AppContext.jsx (M)",
-    "src/features/admin/FaturasAdmin.jsx (M)",
-    "src/features/admin/faturas/faturasExport.js (M)",
-    "src/features/admin/toconline/TOConlineRelatorios.jsx (M)",
-    "vercel.json (M)",
-    "api/toconline/relatorio.js (untracked)",
-    "supabase/migrations/20260608_toconline_integration.sql (untracked)"
+    ".gitignore",
+    ".planning/STATE.md",
+    "package.json",
+    "public/version.json",
+    "src/context/AppContext.jsx",
+    "src/features/admin/faturas/TOConlinePanel.jsx",
+    "vercel.json"
   ],
-  "next_action": "Testar Relatórios TOConline no browser. Se funcionar, commitar: git add api/toconline/relatorio.js src/features/admin/toconline/TOConlineRelatorios.jsx && git commit",
-  "context_notes": "Branch refatoracao-v2 tem várias alterações acumuladas não commitadas. O fix desta sessão foi no TOConlineRelatorios onde os dados não apareciam porque o componente acedia a item.attributes mas a API TOConline retorna campos directamente no objeto raiz. Campo correto: document_no (não document_number), gross_total (não total_amount)."
+  "next_action": "Commit dos ficheiros restantes (TOConlinePanel.jsx e outros), depois testar em producao",
+  "context_notes": "Branch refatoracao-v2. Toda a logica de ajudas esta em AjudasCalculadora.jsx. Fonte dos valores: tabela receipt_validations.ajudas_custo_extraidas. TOConlinePanel.jsx tem mudancas significativas nao commitadas (+462 linhas)."
 }
