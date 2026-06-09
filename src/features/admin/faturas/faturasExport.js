@@ -4,6 +4,10 @@ export async function gerarRelatorioFaturasPDF({ lista, filtroStatus, systemSett
   const soReconciliadas = filtroStatus === 'pagas';
   const hoje = new Date().toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
   const empresa = systemSettings?.companyName || 'Magnetic Place';
+  const nif = systemSettings?.companyNif || '';
+  const morada = systemSettings?.companyAddress || '';
+  const email = systemSettings?.companyEmail || '';
+  const telefone = systemSettings?.companyPhone || '';
   const totalValor = lista.reduce((s, f) => s + (f.dados?.valor_total ?? 0), 0);
   const totalIva = lista.reduce((s, f) => s + (f.dados?.iva ?? 0), 0);
 
@@ -40,7 +44,6 @@ export async function gerarRelatorioFaturasPDF({ lista, filtroStatus, systemSett
   const rowH = 7;
   let y = M;
 
-  const headerH = 14;
   if (logoDataUrl) {
     try { pdf.addImage(logoDataUrl, M, y + 1, 12, 12); } catch { /* ignora */ }
   }
@@ -49,20 +52,32 @@ export async function gerarRelatorioFaturasPDF({ lista, filtroStatus, systemSett
   pdf.setTextColor(30, 41, 59);
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(12);
-  pdf.text(empresa.toUpperCase(), textX, y + 7);
+  pdf.text(empresa.toUpperCase(), textX, y + 5);
+
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(7.5);
+  pdf.setFontSize(7);
   pdf.setTextColor(100, 116, 139);
-  pdf.text(soReconciliadas ? 'Relatório de Faturas Reconciliadas' : 'Relatório de Faturas', textX, y + 12);
+  let subY = y + 10;
+  const subLines = [];
+  if (nif) subLines.push(`NIF: ${nif}`);
+  if (morada) subLines.push(morada);
+  if (email || telefone) subLines.push([email, telefone].filter(Boolean).join('  ·  '));
+  if (subLines.length) {
+    pdf.text(subLines.join('   ·   '), textX, subY);
+    subY += 5;
+  }
+  pdf.setFontSize(7.5);
+  pdf.text(soReconciliadas ? 'Relatório de Faturas Reconciliadas' : 'Relatório de Faturas', textX, subY);
 
   pdf.setFont('helvetica', 'bold');
   pdf.setFontSize(7);
   pdf.setTextColor(30, 41, 59);
-  pdf.text(`Emitido em ${hoje}`, pW - M, y + 7, { align: 'right' });
+  pdf.text(`Emitido em ${hoje}`, pW - M, y + 5, { align: 'right' });
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(100, 116, 139);
-  pdf.text(`${lista.length} fatura(s)`, pW - M, y + 12, { align: 'right' });
+  pdf.text(`${lista.length} fatura(s)`, pW - M, y + 10, { align: 'right' });
 
+  const headerH = Math.max(14, subY - y + 4);
   y += headerH + 2;
   pdf.setDrawColor(226, 232, 240);
   pdf.line(M, y, M + cW, y);

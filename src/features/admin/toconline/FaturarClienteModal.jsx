@@ -35,6 +35,7 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
   const [dataVencimento, setDataVencimento] = useState(daqui30);
   const [ajudas, setAjudas] = useState(null);
   const [carregandoAjudas, setCarregandoAjudas] = useState(false);
+  const [ajudasEstimado, setAjudasEstimado] = useState(null);
   const [observacoes, setObservacoes] = useState('');
   const [emitindo, setEmitindo] = useState(false);
   const [resultado, setResultado] = useState(null);
@@ -92,14 +93,35 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
       .finally(() => setCarregandoAjudas(false));
   }, [clienteId, periodo, supabase]);
 
-  // Pré-preencher observação quando ajudas carregam
+  // Estimativa de ajudas baseada nos últimos meses do cliente quando não há dados confirmados
+  useEffect(() => {
+    const val = ajudas?.valor_ajudas ?? 0;
+    if (val > 0 || !clienteId || !periodo || !supabase) { setAjudasEstimado(null); return; }
+    supabase
+      .from('ajudas_faturadas_clientes')
+      .select('mes, valor_ajudas')
+      .eq('client_id', clienteId)
+      .lt('mes', periodo)
+      .gt('valor_ajudas', 0)
+      .order('mes', { ascending: false })
+      .limit(3)
+      .then(({ data }) => {
+        if (!data?.length) { setAjudasEstimado(null); return; }
+        const media = data.reduce((s, r) => s + parseFloat(r.valor_ajudas), 0) / data.length;
+        setAjudasEstimado(Math.round(media * 100) / 100);
+      });
+  }, [ajudas, clienteId, periodo, supabase]);
+
+  // Pré-preencher observação quando ajudas (ou estimativa) carregam
   useEffect(() => {
     if (!clienteId || !periodo) return;
     const val = ajudas?.valor_ajudas ?? 0;
-    if (val > 0) {
-      setObservacoes(`Nesta fatura estão incluidas as ajudas de custo dos trabalhadores no valor de ${Number(val).toFixed(2)} €`);
+    const valEfetivo = val > 0 ? val : (ajudasEstimado ?? 0);
+    if (valEfetivo > 0) {
+      const sufixo = val === 0 && ajudasEstimado != null ? ' (estimativa)' : '';
+      setObservacoes(`Nesta fatura estão incluidas as ajudas de custo dos trabalhadores no valor de ${Number(valEfetivo).toFixed(2)} €${sufixo}`);
     }
-  }, [ajudas, clienteId, periodo]);
+  }, [ajudas, ajudasEstimado, clienteId, periodo]);
 
   const podeContinuar = clienteId && periodo && totalHoras > 0;
 
@@ -235,10 +257,15 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
                 </div>
                 {carregandoAjudas ? (
                   <div className="flex items-center gap-2 text-slate-400"><Loader2 size={12} className="animate-spin" /> A carregar ajudas...</div>
-                ) : valorAjudas > 0 && (
+                ) : valorAjudas > 0 ? (
                   <div className="flex justify-between text-slate-600">
                     <span>Ajudas de custo (incluídas)</span>
                     <span className="font-black text-slate-800">{valorAjudas.toFixed(2)} €</span>
+                  </div>
+                ) : ajudasEstimado != null && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>Ajudas de custo <span className="text-amber-500 font-black">(estimativa)</span></span>
+                    <span className="font-black text-amber-700">{ajudasEstimado.toFixed(2)} €</span>
                   </div>
                 )}
                 {!podeContinuar && clienteId && periodo && !carregandoAjudas && (

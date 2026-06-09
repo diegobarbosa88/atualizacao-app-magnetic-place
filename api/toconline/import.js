@@ -151,8 +151,8 @@ export default async function handler(req, res) {
 
   function buildFiltro(tablePrefix) {
     const partes = [];
-    if (body.data_de) partes.push(`${tablePrefix}.created_at>='${body.data_de}'::date`);
-    if (body.data_ate) partes.push(`${tablePrefix}.created_at<='${body.data_ate}'::date`);
+    if (body.data_de) partes.push(`${tablePrefix}.date>='${body.data_de}'`);
+    if (body.data_ate) partes.push(`${tablePrefix}.date<='${body.data_ate}'`);
     return partes.length ? `?filter=${encodeURIComponent(`"${partes.join(' AND ')}"`) }` : '';
   }
 
