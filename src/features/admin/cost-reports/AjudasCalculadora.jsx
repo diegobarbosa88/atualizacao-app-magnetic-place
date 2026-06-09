@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Loader2, CheckCircle, Copy, ChevronDown, ChevronRight, AlertTriangle, FileSearch, Trash2, RotateCcw } from 'lucide-react';
+import { Loader2, CheckCircle, Copy, ChevronDown, ChevronRight, AlertTriangle, FileSearch, Trash2, RotateCcw, Zap } from 'lucide-react';
+import FaturarClienteModal from '../toconline/FaturarClienteModal';
 import { MESES_PT, mesesDisponiveis, formatarMes } from '../../../utils/validacaoHelpers';
 
 const fmtEur = v => (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
@@ -78,6 +79,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const [tocSemAuth, setTocSemAuth] = useState(false);
   // overrides manuais: { clientId: valorString }
   const [overrides, setOverrides] = useState({});
+  // modal faturar cliente
+  const [faturarCliente, setFaturarCliente] = useState(null);
 
   // Recibos de referência para estimativa (meses anteriores, quando o mês atual não tem dados)
   const [recibosRef, setRecibosRef] = useState([]);
@@ -625,6 +628,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Valor Fatura</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">% Total</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Incluídas</th>
+                  <th className="px-2 py-2 w-8" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -662,6 +666,20 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                         />
                       </div>
                     </td>
+                    <td className="px-2 py-2.5 w-8">
+                      <button
+                        onClick={() => {
+                          const val = overrides[l.clientId] !== undefined
+                            ? parseFloat(overrides[l.clientId]) || 0
+                            : l.ajudasEstimadas;
+                          setFaturarCliente({ clienteId: l.dbClientId, ajudasValor: val });
+                        }}
+                        title="Faturar este cliente"
+                        className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                      >
+                        <Zap size={12} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -677,6 +695,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                       {fmtEur(totalAjudasMes)}
                     </span>
                   </td>
+                  <td className="px-2 py-2.5 w-8" />
                 </tr>
               </tfoot>
             </table>
@@ -980,6 +999,16 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           </div>
         )}
       </div>
+
+      {faturarCliente && (
+        <FaturarClienteModal
+          clienteIdInicial={faturarCliente.clienteId}
+          ajudasValorInicial={faturarCliente.ajudasValor}
+          periodoInicial={selectedMonth}
+          onClose={() => setFaturarCliente(null)}
+          onFaturado={() => setFaturarCliente(null)}
+        />
+      )}
     </div>
   );
 }

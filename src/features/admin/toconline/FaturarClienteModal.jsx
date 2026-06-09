@@ -22,15 +22,15 @@ function novoId() {
 
 const IVA_OPTS = [0, 6, 13, 23];
 
-export default function FaturarClienteModal({ onClose, onFaturado }) {
+export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInicial, ajudasValorInicial, periodoInicial }) {
   const { clients, logs, supabase } = useApp();
 
   const hoje = new Date().toISOString().slice(0, 10);
   const daqui30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
   const [passo, setPasso] = useState(1);
-  const [clienteId, setClienteId] = useState('');
-  const [periodo, setPeriodo] = useState(periodoDefault);
+  const [clienteId, setClienteId] = useState(clienteIdInicial || '');
+  const [periodo, setPeriodo] = useState(periodoInicial || periodoDefault);
   const [dataFatura, setDataFatura] = useState(hoje);
   const [dataVencimento, setDataVencimento] = useState(daqui30);
   const [ajudas, setAjudas] = useState(null);
@@ -80,6 +80,7 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
 
   // Carregar ajudas ao selecionar cliente/período
   useEffect(() => {
+    if (ajudasValorInicial != null) { setAjudas(null); return; }
     if (!clienteId || !periodo || !supabase) { setAjudas(null); return; }
     setCarregandoAjudas(true);
     supabase
@@ -95,6 +96,7 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
 
   // Estimativa de ajudas baseada nos últimos meses do cliente quando não há dados confirmados
   useEffect(() => {
+    if (ajudasValorInicial != null) { setAjudasEstimado(null); return; }
     const val = ajudas?.valor_ajudas ?? 0;
     if (val > 0 || !clienteId || !periodo || !supabase) { setAjudasEstimado(null); return; }
     supabase
@@ -115,6 +117,12 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
   // Pré-preencher observação quando ajudas (ou estimativa) carregam
   useEffect(() => {
     if (!clienteId || !periodo) return;
+    if (ajudasValorInicial != null) {
+      if (ajudasValorInicial > 0) {
+        setObservacoes(`Nesta fatura estão incluidas as ajudas de custo dos trabalhadores no valor de ${Number(ajudasValorInicial).toFixed(2)} €`);
+      }
+      return;
+    }
     const val = ajudas?.valor_ajudas ?? 0;
     const valEfetivo = val > 0 ? val : (ajudasEstimado ?? 0);
     if (valEfetivo > 0) {
@@ -218,7 +226,8 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente *</p>
               <select value={clienteId} onChange={e => setClienteId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                disabled={!!clienteIdInicial}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-slate-50 disabled:text-slate-500">
                 <option value="">Selecionar cliente...</option>
                 {(clients || []).filter(c => c.valorHora > 0).map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -229,7 +238,8 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período *</p>
               <input type="month" value={periodo} onChange={e => setPeriodo(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                disabled={!!periodoInicial}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-slate-50 disabled:text-slate-500" />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -255,7 +265,14 @@ export default function FaturarClienteModal({ onClose, onFaturado }) {
                   <span>Tarifa horária</span>
                   <span className="font-black text-slate-800">{valorHora.toFixed(2)} €/h</span>
                 </div>
-                {carregandoAjudas ? (
+                {ajudasValorInicial != null ? (
+                  ajudasValorInicial > 0 && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>Ajudas de custo (incluídas)</span>
+                      <span className="font-black text-slate-800">{Number(ajudasValorInicial).toFixed(2)} €</span>
+                    </div>
+                  )
+                ) : carregandoAjudas ? (
                   <div className="flex items-center gap-2 text-slate-400"><Loader2 size={12} className="animate-spin" /> A carregar ajudas...</div>
                 ) : valorAjudas > 0 ? (
                   <div className="flex justify-between text-slate-600">
