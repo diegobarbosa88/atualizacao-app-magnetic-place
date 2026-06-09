@@ -153,9 +153,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   const semHoras = clientesMes.length === 0;
 
-  // Faturas de um mês são referentes às horas do mês anterior.
-  // Para meses sem horas (mês de faturação), o recibo a usar é do mês anterior (mês de trabalho).
-  const mesDoRecibo = semHoras ? mesAnterior(selectedMonth) : selectedMonth;
+  // As ajudas de custo que incidem sobre as faturas de um mês são sempre
+  // as do mês anterior (ex: fatura de fevereiro → recibos de janeiro).
+  const mesDoRecibo = mesAnterior(selectedMonth);
 
   // Carrega meses anteriores com dados para estimar quando mesDoRecibo não tem recibos
   useEffect(() => {
@@ -175,19 +175,13 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       .then(({ data }) => setRecibosRef(data || []));
   }, [mesDoRecibo, recibosAno]);
 
-  // Ajudas do recibo do mês de trabalho.
-  // Com horas: usa o recibo do próprio mês (comportamento original, apenas recibosAno).
-  // Sem horas: usa o recibo do mês anterior (inclui recibosRef para cobrir anos anteriores).
+  // Ajudas do recibo do mês anterior ao seleccionado.
+  // Inclui recibosRef para cobrir o caso em que mesDoRecibo é de outro ano.
   const ajudasReciboMes = useMemo(() => {
-    if (!semHoras) {
-      return recibosAno
-        .filter(r => r.mes === selectedMonth)
-        .reduce((s, r) => s + (parseFloat(r.ajudas_custo_extraidas) || 0), 0);
-    }
     return [...recibosAno, ...recibosRef]
       .filter(r => r.mes === mesDoRecibo)
       .reduce((s, r) => s + (parseFloat(r.ajudas_custo_extraidas) || 0), 0);
-  }, [recibosAno, recibosRef, semHoras, selectedMonth, mesDoRecibo]);
+  }, [recibosAno, recibosRef, mesDoRecibo]);
 
   // Estimativa baseada nos meses anteriores (média) quando não há dados do mês atual
   const ajudasEstimadoMes = useMemo(() => {
