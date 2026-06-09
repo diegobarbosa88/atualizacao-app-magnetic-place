@@ -75,6 +75,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const [apagandoHist, setApagandoHist] = useState(null);   // mes a apagar
   const [faturasHist, setFaturasHist] = useState({});       // { 'YYYY-MM': faturas[] } detalhe por mês
   const [carregandoFaturasHist, setCarregandoFaturasHist] = useState(null); // mes a carregar detalhe
+  const [tocSemAuth, setTocSemAuth] = useState(false);
   // overrides manuais: { clientId: valorString }
   const [overrides, setOverrides] = useState({});
 
@@ -182,16 +183,6 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       .reduce((s, r) => s + (parseFloat(r.ajudas_custo_extraidas) || 0), 0);
   }, [recibosAno, recibosRef, mesDoRecibo]);
 
-  // Estimativa baseada nos meses anteriores (média) quando não há dados do mês atual
-  const ajudasEstimadoMes = useMemo(() => {
-    if (recibosRef.length === 0) return 0;
-    const total = recibosRef.reduce((s, r) => s + (parseFloat(r.ajudas_custo_extraidas) || 0), 0);
-    return total / recibosRef.length;
-  }, [recibosRef]);
-
-  // Valor efetivo: dados reais do recibo, ou estimativa dos meses anteriores
-  const ajudasEfetivoMes = ajudasReciboMes > 0 ? ajudasReciboMes : ajudasEstimadoMes;
-  const eEstimativa = ajudasReciboMes === 0 && ajudasEstimadoMes > 0;
 
   // Buscar faturas de vendas TOConline para meses sem horas registadas
   useEffect(() => {
@@ -211,7 +202,10 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           data_ate: `${mesFat}-${String(ultimoDia).padStart(2, '0')}`,
         });
         const res = await fetch(`/api/toconline/relatorio?${params}`);
-        if (!res.ok || cancelled) return;
+        if (cancelled) return;
+        if (res.status === 401) { setTocSemAuth(true); return; }
+        if (!res.ok) return;
+        setTocSemAuth(false);
         const data = await res.json();
         if (!cancelled) setFaturasToC(data.data || []);
       } catch { /* ignora */ }
@@ -254,9 +248,29 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   const totalFaturaMes = useMemo(() => clientesMesFinal.reduce((s, c) => s + c.valorFatura, 0), [clientesMesFinal]);
 
+  // Taxa histórica de ajudas sobre faturação: total ajudas faturadas / total faturas
+  // Usa apenas meses anteriores ao seleccionado para não contaminar a estimativa corrente.
+  const taxaAjudas = useMemo(() => {
+    const totalFat = faturadosAno.reduce((s, r) => s + (parseFloat(r.total_fatura) || 0), 0);
+    const totalAj  = faturadosAno.reduce((s, r) => s + (parseFloat(r.valor_ajudas) || 0), 0);
+    return totalFat > 0 ? totalAj / totalFat : 0;
+  }, [faturadosAno]);
+
+  // Estimativa card: taxa aplicada ao mês ± saldo residual acumulado dos meses anteriores.
+  const ajudasEstimadoMes = useMemo(() => {
+    if (taxaAjudas === 0) return 0;
+    return Math.max(0, totalFaturaMes * taxaAjudas + saldoDisponivel);
+  }, [taxaAjudas, totalFaturaMes, saldoDisponivel]);
+
+  // Valor efetivo: sempre a estimativa por taxa histórica (para faturação antes de ter os recibos).
+  // ajudasReciboMes fica disponível para referência/comparação mas não sobrepõe a estimativa.
+  const ajudasEfetivoMes = ajudasEstimadoMes > 0 ? ajudasEstimadoMes : ajudasReciboMes;
+  const eEstimativa = ajudasEstimadoMes > 0;
+
   // — Ajudas estimadas por cliente —
-  // Clientes com valor fixo (observação da fatura ou edição manual) mantêm o valor;
-  // o restante das ajudas do recibo do mês é redistribuído apenas pelos não-fixos.
+  // Clientes com override manual ou obs mantêm valor fixo.
+  // Restantes: distribuição proporcional de ajudasEfetivoMes (taxa × fatura + saldo),
+  // garantindo que sum(ajudasEstimadas) == ajudasEfetivoMes == valor do card.
   const linhas = useMemo(() => {
     const comFixo = clientesMesFinal.map(c => {
       const valorStr = overrides[c.clientId];
@@ -364,27 +378,21 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     }
   };
 
-  // — Redistribuir: pega a diferença (alvo − total atual) e distribui-a proporcionalmente
-  // entre os selecionados (ou todos os não-fixos se não houver seleção).
+  // Redistribuir = limpar overrides manuais dos clientes alvo, deixando o
+  // cálculo proporcional automático (linhas useMemo) assumir.
   const handleRedistribuir = () => {
-    const diferenca = ajudasEfetivoMes - totalAjudasMes;
-    const alvo = linhas.filter(l =>
-      selecionados.size > 0 ? selecionados.has(l.clientId) : (!obsAplicados.has(l.clientId) && !l.daObservacao)
-    );
-    if (!alvo.length) return;
-    const totalFaturaAlvo = alvo.reduce((s, l) => s + l.valorFatura, 0);
+    const alvoIds = selecionados.size > 0
+      ? [...selecionados]
+      : linhas.filter(l => !obsAplicados.has(l.clientId) && !l.daObservacao).map(l => l.clientId);
+    if (!alvoIds.length) return;
     setOverrides(prev => {
       const next = { ...prev };
-      alvo.forEach(l => {
-        const extra = totalFaturaAlvo > 0 ? diferenca * (l.valorFatura / totalFaturaAlvo) : 0;
-        const novo = Math.max(0, l.ajudasEstimadas + extra);
-        next[l.clientId] = novo.toFixed(2);
-      });
+      alvoIds.forEach(id => delete next[id]);
       return next;
     });
     setObsAplicados(prev => {
       const n = new Set(prev);
-      alvo.forEach(l => n.delete(l.clientId));
+      alvoIds.forEach(id => n.delete(id));
       return n;
     });
     setSelecionados(new Set());
@@ -420,28 +428,38 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         return s + (parseFloat(l.hours) || 0) * (parseFloat(client?.valorHora) || 0);
       }, 0);
       const totalFatura = totalGuardado > 0 ? totalGuardado : totalLogs;
-      return { mes, ajudasRecibo, ajudasFaturadas, totalFatura, dif: ajudasFaturadas - ajudasRecibo };
+      const ajudasEstimado = ajudasRecibo === 0 ? totalFatura * taxaAjudas : 0;
+      const referencia = ajudasRecibo > 0 ? ajudasRecibo : ajudasEstimado;
+      return { mes, ajudasRecibo, ajudasEstimado, ajudasFaturadas, totalFatura, dif: ajudasFaturadas - referencia };
     });
-  }, [recibosAno, faturadosAno, logs, clients]);
+  }, [recibosAno, faturadosAno, logs, clients, taxaAjudas]);
 
   // — Guardar edições do histórico —
+  // Suporta overrides por fatura (chave "mes|client_id|docNum") e por cliente ("mes|client_id").
+  // Quando existem overrides por fatura, soma-os para obter o total do cliente.
   const handleGuardarHist = async (mes) => {
     const db = window.supabaseInstance;
     if (!db) return;
     setGravandoHist(mes);
     const linhasMes = faturadosAno.filter(r => r.mes === mes);
     await Promise.all(linhasMes.map(r => {
-      const key = `${mes}|${r.client_id}`;
-      const val = histOverrides[key] !== undefined
-        ? parseFloat(String(histOverrides[key]).replace(',', '.')) || 0
-        : parseFloat(r.valor_ajudas) || 0;
+      const prefixFatura = `${mes}|${r.client_id}|`;
+      const invoiceKeys = Object.keys(histOverrides).filter(k => k.startsWith(prefixFatura));
+      const val = invoiceKeys.length > 0
+        ? invoiceKeys.reduce((s, k) => s + (parseFloat(String(histOverrides[k]).replace(',', '.')) || 0), 0)
+        : histOverrides[`${mes}|${r.client_id}`] !== undefined
+          ? parseFloat(String(histOverrides[`${mes}|${r.client_id}`]).replace(',', '.')) || 0
+          : parseFloat(r.valor_ajudas) || 0;
       return db.from('ajudas_faturadas_clientes')
         .upsert({ mes, client_id: r.client_id, valor_ajudas: parseFloat(val.toFixed(2)), total_fatura: parseFloat(r.total_fatura) || 0, confirmado: true }, { onConflict: 'mes,client_id' });
     }));
     await carregar();
     setHistOverrides(prev => {
       const next = { ...prev };
-      linhasMes.forEach(r => delete next[`${mes}|${r.client_id}`]);
+      linhasMes.forEach(r => {
+        delete next[`${mes}|${r.client_id}`];
+        Object.keys(next).filter(k => k.startsWith(`${mes}|${r.client_id}|`)).forEach(k => delete next[k]);
+      });
       return next;
     });
     setGravandoHist(null);
@@ -507,7 +525,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       <div className="rounded-2xl border border-slate-100 bg-white p-4 space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-black text-slate-800">Orçamento Anual de Ajudas — {ano}</h3>
+            <h3 className="text-sm font-black text-slate-800">Ajudas de Custo — {ano}</h3>
             <p className="text-[10px] text-slate-400 mt-0.5">Baseado nos recibos TOConline processados do ano</p>
           </div>
           {orcamentoAnual === 0 && (
@@ -521,7 +539,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         {/* Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           {[
-            { label: 'Orçamento anual', val: fmtEur(orcamentoAnual), cls: 'indigo' },
+            { label: 'Total recibos ano', val: fmtEur(orcamentoAnual), cls: 'indigo' },
             { label: 'Já faturado', val: fmtEur(jaFaturadoYTD), cls: 'slate' },
             { label: 'Saldo restante', val: fmtEur(saldoDisponivel), cls: saldoDisponivel < 0 ? 'red' : 'emerald' },
             { label: 'Meses restantes', val: mesesRestantes, cls: 'slate' },
@@ -538,7 +556,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         {orcamentoAnual > 0 && (
           <div className="space-y-1">
             <div className="flex justify-between text-[10px] text-slate-400">
-              <span>Faturado vs Orçamento</span>
+              <span>Faturado vs Total recibos</span>
               <span>{fmtPct(progressoPct)}</span>
             </div>
             <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -557,7 +575,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
             </h3>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {eEstimativa
-                ? `Estimativa baseada em ${recibosRef.length} mês(es) anterior(es) — ${fmtEur(ajudasEfetivoMes)}`
+                ? `Estimativa por taxa histórica (${fmtPct(taxaAjudas * 100)}) × faturação do mês — ${fmtEur(ajudasEfetivoMes)}${saldoDisponivel > 0 && ajudasEstimadoMes < totalFaturaMes * taxaAjudas ? ' (limitado pelo saldo)' : ''}`
                 : `Distribui as ajudas dos recibos do mês (${fmtEur(ajudasReciboMes)}) proporcional à faturação de cada cliente`}
             </p>
           </div>
@@ -565,6 +583,12 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
             {semHoras && clientesMesFinal.length > 0 && (
               <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl">
                 <span className="text-[10px] font-bold text-blue-700">Valores de faturas TOConline</span>
+              </div>
+            )}
+            {tocSemAuth && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertTriangle size={12} className="text-amber-500" />
+                <span className="text-[10px] font-bold text-amber-700">TOConline sem autenticação — sem faturas do mês</span>
               </div>
             )}
             {confirmado && (
@@ -661,7 +685,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
               <p className="text-[10px] text-slate-400">
                 {eEstimativa ? 'Estimativa' : 'Recibos do mês'}:{' '}
                 <span className={`font-bold ${eEstimativa ? 'text-amber-600' : 'text-indigo-600'}`}>{fmtEur(ajudasEfetivoMes)}</span>
-                {eEstimativa && <span className="ml-1 text-amber-500">(média de {recibosRef.length} mês(es))</span>}
+                {eEstimativa && <span className="ml-1 text-amber-500">(taxa {fmtPct(taxaAjudas * 100)})</span>}
                 {ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 && (
                   <span className="ml-2 text-amber-500 font-bold">
                     (diferença de {fmtEur(Math.abs(totalAjudasMes - ajudasEfetivoMes))})
@@ -681,9 +705,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   {extraindoObs ? 'A extrair...' : 'Extrair da observação'}
                 </button>
                 <button onClick={handleRedistribuir}
-                  disabled={Math.abs(ajudasEfetivoMes - totalAjudasMes) < 0.01 && selecionados.size === 0}
+                  disabled={selecionados.size === 0 && Object.keys(overrides).filter(k => !obsAplicados.has(k)).length === 0}
                   className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-40"
-                  title={selecionados.size > 0 ? `Redistribuir entre ${selecionados.size} selecionado(s)` : 'Redistribuir todos proporcionalmente'}>
+                  title={selecionados.size > 0 ? `Repor distribuição proporcional nos ${selecionados.size} selecionado(s)` : 'Repor distribuição proporcional automática'}>
                   <RotateCcw size={12} />
                   {selecionados.size > 0 ? `Redistribuir (${selecionados.size})` : 'Redistribuir'}
                 </button>
@@ -711,12 +735,12 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           <ChevronRight size={14} className={`text-slate-400 transition-transform ${historicoAberto ? 'rotate-90' : ''}`} />
         </button>
         {historicoAberto && (
-          <div className="border-t border-slate-100">
+          <div className="border-t border-slate-100 max-h-[70vh] overflow-y-auto">
             {historicoAnual.length === 0 ? (
               <p className="text-center text-sm text-slate-400 py-8">Sem dados para {ano}.</p>
             ) : (
               <table className="w-full text-xs">
-                <thead className="bg-slate-50 border-b border-slate-100">
+                <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-20">
                   <tr>
                     <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Horas</th>
@@ -728,22 +752,39 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                 </thead>
                 <tbody>
                   {historicoAnual.map(h => {
+                    const aberto = expandidoHistMes === h.mes;
                     const clientesMesHist = faturadosAno.filter(r => r.mes === h.mes);
                     const temLogsNoMes = logs.some(l => l.date?.startsWith(h.mes));
-                    const temEdicoes = clientesMesHist.some(r => histOverrides[`${h.mes}|${r.client_id}`] !== undefined);
+                    const temEdicoes = clientesMesHist.some(r =>
+                      histOverrides[`${h.mes}|${r.client_id}`] !== undefined ||
+                      Object.keys(histOverrides).some(k => k.startsWith(`${h.mes}|${r.client_id}|`))
+                    );
                     return (
                       <React.Fragment key={h.mes}>
-                        {/* Cabeçalho do mês */}
-                        <tr className="bg-slate-50 border-t border-slate-200">
+                        {/* Cabeçalho do mês — clicável para expandir, sticky abaixo do thead */}
+                        <tr
+                          className="bg-slate-50 border-t border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors select-none sticky top-[30px] z-10"
+                          onClick={() => toggleExpandidoHist(h.mes)}
+                        >
                           <td colSpan={3} className="px-3 py-2">
                             <div className="flex items-center gap-2">
+                              <ChevronRight size={12} className={`text-slate-400 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
                               <span className="font-black text-slate-700">{formatarMes(h.mes)}</span>
                               {h.mes === selectedMonth && (
                                 <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[8px] font-black uppercase tracking-wider">Seleccionado</span>
                               )}
-                              <span className="text-[9px] text-slate-400">
-                                Recibos: <span className="font-bold text-slate-600">{fmtEur(h.ajudasRecibo)}</span>
-                              </span>
+                              {h.ajudasRecibo > 0 ? (
+                                <span className="text-[9px] text-slate-400">
+                                  Recibos: <span className="font-bold text-slate-600">{fmtEur(h.ajudasRecibo)}</span>
+                                </span>
+                              ) : h.ajudasEstimado > 0 ? (
+                                <span className="text-[9px] text-amber-500">
+                                  Estimativa ({fmtPct(taxaAjudas * 100)}): <span className="font-bold">{fmtEur(h.ajudasEstimado)}</span>
+                                </span>
+                              ) : null}
+                              {temEdicoes && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Edições por guardar" />
+                              )}
                             </div>
                           </td>
                           <td className="px-3 py-2 text-right">
@@ -752,7 +793,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                             </span>
                           </td>
                           <td className="px-3 py-2 text-right font-black text-slate-700">{fmtEur(h.ajudasFaturadas)}</td>
-                          <td className="px-3 py-2 text-right">
+                          <td className="px-3 py-2 text-right" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1">
                               <button
                                 onClick={() => handleGuardarHist(h.mes)}
@@ -776,14 +817,41 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                             </div>
                           </td>
                         </tr>
-                        {/* Linhas por cliente */}
-                        {clientesMesHist.length === 0 ? (
-                          <tr>
-                            <td colSpan={6} className="px-3 py-2 text-[10px] text-slate-400 text-center italic">Sem registos por cliente.</td>
-                          </tr>
-                        ) : (
-                          clientesMesHist.map(r => {
-                            const key = `${h.mes}|${r.client_id}`;
+                        {/* Linhas por cliente — só visíveis quando mês expandido */}
+                        {aberto && (() => {
+                          if (carregandoFaturasHist === h.mes) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="px-3 py-3 text-center">
+                                  <Loader2 size={12} className="animate-spin inline text-slate-400" />
+                                </td>
+                              </tr>
+                            );
+                          }
+                          if (clientesMesHist.length === 0) {
+                            return (
+                              <tr>
+                                <td colSpan={6} className="px-3 py-2 text-[10px] text-slate-400 text-center italic">Sem registos por cliente.</td>
+                              </tr>
+                            );
+                          }
+                          // Indexar faturas TOConline por dbClientId
+                          const faturasDoMes = faturasHist[h.mes] ?? [];
+                          const faturasPorCliente = {};
+                          faturasDoMes.forEach((item, idx) => {
+                            const a = item.attributes || item;
+                            const nome = a.customer_business_name || a.customer_name;
+                            if (!nome) return;
+                            const c = clients.find(x => x.name?.toLowerCase().trim() === nome.toLowerCase().trim());
+                            const dbId = c?.id ?? `toc:${nome}`;
+                            if (!faturasPorCliente[dbId]) faturasPorCliente[dbId] = [];
+                            faturasPorCliente[dbId].push({
+                              docNum: a.document_number || a.document_no || `#${item.id ?? idx}`,
+                              valor: parseFloat(a.gross_total ?? a.total_amount ?? a.total_value ?? 0) || 0,
+                            });
+                          });
+
+                          return clientesMesHist.map(r => {
                             const client = clients.find(c => c.id === r.client_id);
                             const nomeCliente = client?.name ?? r.client_id;
                             const horasCliente = logs
@@ -793,34 +861,102 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                               ? parseFloat(r.total_fatura)
                               : horasCliente * (parseFloat(client?.valorHora) || 0);
                             const pct = h.totalFatura > 0 ? (totalFaturaCliente / h.totalFatura) * 100 : 0;
+                            const invoices = faturasPorCliente[r.client_id] ?? [];
+                            // Se não há recibo real, usar taxa histórica × fatura como valor de referência
+                            const ajudasSalvo = parseFloat(r.valor_ajudas) || 0;
+                            const ajudasTotal = ajudasSalvo > 0 ? ajudasSalvo : totalFaturaCliente * taxaAjudas;
+                            const totalFaturaInv = invoices.reduce((s, inv) => s + inv.valor, 0);
+                            const rowCls = `border-t border-slate-50 transition-colors ${h.mes === selectedMonth ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`;
+                            const subRowCls = `border-t border-slate-50/50 ${h.mes === selectedMonth ? 'bg-indigo-50/20' : 'bg-white'}`;
+
+                            if (invoices.length > 1) {
+                              // Várias faturas: linha-cabeçalho do cliente (sem input) + sub-linha por fatura com input individual
+                              return (
+                                <React.Fragment key={r.client_id}>
+                                  <tr className={rowCls}>
+                                    <td className="px-3 py-2.5 pl-8 font-bold text-slate-800">{nomeCliente}</td>
+                                    <td className="px-3 py-2.5 text-right text-slate-500">
+                                      {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right font-bold text-slate-700">
+                                      {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
+                                    </td>
+                                    <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(pct)}</td>
+                                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-500">
+                                      {fmtEur(invoices.reduce((s, inv) => {
+                                        const k = `${h.mes}|${r.client_id}|${inv.docNum}`;
+                                        return s + (histOverrides[k] !== undefined
+                                          ? parseFloat(String(histOverrides[k]).replace(',', '.')) || 0
+                                          : (totalFaturaInv > 0 ? ajudasTotal * (inv.valor / totalFaturaInv) : 0));
+                                      }, 0))}
+                                    </td>
+                                    <td />
+                                  </tr>
+                                  {invoices.map(inv => {
+                                    const invKey = `${h.mes}|${r.client_id}|${inv.docNum}`;
+                                    const invDefault = totalFaturaInv > 0
+                                      ? (ajudasTotal * (inv.valor / totalFaturaInv)).toFixed(2)
+                                      : '0.00';
+                                    const invVal = histOverrides[invKey] !== undefined ? histOverrides[invKey] : invDefault;
+                                    return (
+                                      <tr key={inv.docNum} className={subRowCls}>
+                                        <td className="px-3 py-1.5 pl-12 text-[10px] text-slate-400 font-mono">{inv.docNum}</td>
+                                        <td />
+                                        <td className="px-3 py-1.5 text-right text-[10px] text-slate-500">{fmtEur(inv.valor)}</td>
+                                        <td />
+                                        <td className="px-3 py-1.5 text-right">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={invVal}
+                                            onChange={e => setHistOverrides(prev => ({ ...prev, [invKey]: e.target.value }))}
+                                            className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                          />
+                                        </td>
+                                        <td />
+                                      </tr>
+                                    );
+                                  })}
+                                </React.Fragment>
+                              );
+                            }
+
+                            // 0 ou 1 fatura: linha normal com input de ajudas no cliente
+                            const key = `${h.mes}|${r.client_id}`;
                             const val = histOverrides[key] !== undefined
                               ? histOverrides[key]
-                              : parseFloat(r.valor_ajudas).toFixed(2);
+                              : ajudasTotal.toFixed(2);
                             return (
-                              <tr key={r.client_id} className={`border-t border-slate-50 transition-colors ${h.mes === selectedMonth ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`}>
-                                <td className="px-3 py-2.5 pl-6 font-bold text-slate-800">{nomeCliente}</td>
-                                <td className="px-3 py-2.5 text-right text-slate-500">
-                                  {!temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
-                                </td>
-                                <td className="px-3 py-2.5 text-right font-bold text-slate-700">
-                                  {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
-                                </td>
-                                <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(pct)}</td>
-                                <td className="px-3 py-2.5 text-right">
-                                  <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={val}
-                                    onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
-                                    className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
-                                  />
-                                </td>
-                                <td />
-                              </tr>
+                              <React.Fragment key={r.client_id}>
+                                <tr className={rowCls}>
+                                  <td className="px-3 py-2.5 pl-8 font-bold text-slate-800">
+                                    {nomeCliente}
+                                    {invoices[0] && <span className="ml-2 text-[9px] font-mono text-slate-400">{invoices[0].docNum}</span>}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-right text-slate-500">
+                                    {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-right font-bold text-slate-700">
+                                    {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
+                                  </td>
+                                  <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(pct)}</td>
+                                  <td className="px-3 py-2.5 text-right">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={val}
+                                      onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
+                                      className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                    />
+                                  </td>
+                                  <td />
+                                </tr>
+                              </React.Fragment>
                             );
-                          })
-                        )}
+                          });
+                        })()}
                       </React.Fragment>
                     );
                   })}
