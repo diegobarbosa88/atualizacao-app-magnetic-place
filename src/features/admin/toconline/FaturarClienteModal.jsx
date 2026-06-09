@@ -212,7 +212,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Faturar Cliente</h2>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {passo === 1 ? 'Passo 1 — Selecionar cliente e período' :
-               passo === 2 ? 'Passo 2 — Rever e confirmar' : 'Concluído'}
+               passo === 2 ? 'Passo 2 — Preview da fatura' : 'Concluído'}
             </p>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
@@ -395,80 +395,135 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
             <button onClick={() => setPasso(2)} disabled={!podeContinuar}
               className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-100">
-              Continuar <ChevronRight size={14} />
+              Ver Preview <ChevronRight size={14} />
             </button>
           </div>
         )}
 
-        {/* Passo 2 — Revisão */}
-        {passo === 2 && (
-          <div className="space-y-4">
+        {/* Passo 2 — Preview local */}
+        {passo === 2 && (() => {
+          const linhasPreview = servicosLinhas
+            .map(s => {
+              const qtd = s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 1);
+              const unitPrice = s.tipo === 'horas' ? valorHora : (Number(s.preco_unitario ?? s.valor_fixo) || 0);
+              const unidade = s.unidade || (s.tipo === 'horas' ? 'h' : '');
+              const descricao = s.tipo === 'horas'
+                ? `${s.descricao || 'Serviços'} — ${periodoLabel(periodo)}`
+                : (s.descricao || 'Linha fixa');
+              const base = qtd * unitPrice;
+              const iva = base * (s.taxa_iva || 0) / 100;
+              return { descricao, qtd, unidade, unitPrice, taxa_iva: s.taxa_iva || 0, base, iva, total: base + iva };
+            })
+            .filter(l => l.base > 0);
 
-            {/* Observações */}
-            <div className="space-y-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações <span className="normal-case font-normal text-slate-400">(opcional)</span></p>
-              <textarea
-                value={observacoes}
-                onChange={e => setObservacoes(e.target.value)}
-                rows={3}
-                placeholder="Observações que aparecerão na fatura..."
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-              />
-            </div>
+          const totalBase = linhasPreview.reduce((s, l) => s + l.base, 0);
+          const totalIva = linhasPreview.reduce((s, l) => s + l.iva, 0);
+          const gruposIva = Object.values(
+            linhasPreview.reduce((acc, l) => {
+              const k = l.taxa_iva;
+              if (!acc[k]) acc[k] = { taxa: k, base: 0, iva: 0 };
+              acc[k].base += l.base; acc[k].iva += l.iva;
+              return acc;
+            }, {})
+          );
 
-            {/* Linhas da fatura */}
-            <div className="rounded-2xl border border-slate-100 overflow-hidden">
-              <div className="bg-slate-50 px-4 py-2 grid grid-cols-[1fr_60px_70px_50px_70px] gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <span>Descrição</span><span className="text-center">Qtd</span><span className="text-right">Unit.</span><span className="text-center">IVA</span><span className="text-right">Total</span>
-              </div>
-
-              {servicosLinhas.map(s => {
-                const qtd = s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 1);
-                const unitPrice = s.tipo === 'horas' ? valorHora : (Number(s.valor_fixo) || 0);
-                const base = qtd * unitPrice;
-                const total = base * (1 + (s.taxa_iva || 0) / 100);
-                const unidade = s.unidade || (s.tipo === 'horas' ? 'h' : '');
-                if (s.tipo === 'horas' && totalHoras === 0) return null;
-                if (s.tipo === 'fixo' && unitPrice === 0) return null;
-                return (
-                  <div key={s.id} className="px-4 py-3 grid grid-cols-[1fr_60px_70px_50px_70px] gap-2 text-xs items-center border-t border-slate-50">
-                    <span className="text-slate-700 font-semibold truncate">
-                      {s.descricao || (s.tipo === 'horas' ? 'Serviços' : 'Linha fixa')}
-                      {s.tipo === 'horas' && <span className="text-slate-400 font-normal"> — {periodoLabel(periodo)}</span>}
-                    </span>
-                    <span className="text-center text-slate-500">{qtd.toFixed(2)}{unidade && ` ${unidade}`}</span>
-                    <span className="text-right text-slate-500">{unitPrice.toFixed(2)} €</span>
-                    <span className="text-center text-slate-500">{s.taxa_iva || 0}%</span>
-                    <span className="text-right font-semibold text-slate-800">{total.toFixed(2)} €</span>
+          return (
+            <div className="space-y-4">
+              {/* Documento simulado */}
+              <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-sm">
+                {/* Cabeçalho */}
+                <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Fatura</p>
+                    <p className="text-lg font-black text-slate-800">FT ••••</p>
                   </div>
-                );
-              })}
+                  <div className="text-right text-[10px] text-slate-500 space-y-0.5">
+                    <p><span className="font-bold text-slate-700">Data:</span> {dataFatura}</p>
+                    {dataVencimento && <p><span className="font-bold text-slate-700">Vencimento:</span> {dataVencimento}</p>}
+                  </div>
+                </div>
 
-              <div className="px-4 py-3 border-t border-slate-200 flex justify-between items-center bg-slate-50">
-                <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total c/ IVA</span>
-                <span className="text-base font-black text-slate-900">{totalFatura.toFixed(2)} €</span>
+                {/* Cliente */}
+                <div className="px-5 py-3 border-b border-slate-100 bg-slate-50">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Cliente</p>
+                  <p className="text-xs font-bold text-slate-800">{cliente?.name}</p>
+                  {cliente?.nif && <p className="text-[10px] text-slate-500">NIF: {cliente.nif}</p>}
+                </div>
+
+                {/* Linhas */}
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-100">
+                      <th className="px-5 py-2 text-left font-black uppercase tracking-widest text-slate-400">Descrição</th>
+                      <th className="px-3 py-2 text-center font-black uppercase tracking-widest text-slate-400 w-16">Qtd</th>
+                      <th className="px-3 py-2 text-right font-black uppercase tracking-widest text-slate-400 w-20">Unit.</th>
+                      <th className="px-3 py-2 text-center font-black uppercase tracking-widest text-slate-400 w-12">IVA</th>
+                      <th className="px-5 py-2 text-right font-black uppercase tracking-widest text-slate-400 w-20">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {linhasPreview.map((l, i) => (
+                      <tr key={i}>
+                        <td className="px-5 py-2.5 text-slate-700 font-semibold">{l.descricao}</td>
+                        <td className="px-3 py-2.5 text-center text-slate-500">{l.qtd.toFixed(2)}{l.unidade && ` ${l.unidade}`}</td>
+                        <td className="px-3 py-2.5 text-right text-slate-500">{l.unitPrice.toFixed(2)} €</td>
+                        <td className="px-3 py-2.5 text-center text-slate-500">{l.taxa_iva}%</td>
+                        <td className="px-5 py-2.5 text-right font-bold text-slate-800">{l.total.toFixed(2)} €</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Totais */}
+                <div className="px-5 py-3 border-t border-slate-100 bg-slate-50 space-y-1">
+                  <div className="flex justify-between text-[10px] text-slate-500">
+                    <span>Subtotal</span><span>{totalBase.toFixed(2)} €</span>
+                  </div>
+                  {gruposIva.map(g => g.taxa > 0 && (
+                    <div key={g.taxa} className="flex justify-between text-[10px] text-slate-500">
+                      <span>IVA {g.taxa}%</span><span>{g.iva.toFixed(2)} €</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-sm font-black text-slate-900 pt-1 border-t border-slate-200">
+                    <span>Total</span><span>{totalFatura.toFixed(2)} €</span>
+                  </div>
+                </div>
+
+                {/* Observações inline */}
+                {observacoes.trim() && (
+                  <div className="px-5 py-3 border-t border-slate-100">
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">Observações</p>
+                    <p className="text-[10px] text-slate-600 leading-relaxed">{observacoes}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Observações editáveis */}
+              <div className="space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações <span className="normal-case font-normal">(opcional)</span></p>
+                <textarea
+                  value={observacoes}
+                  onChange={e => setObservacoes(e.target.value)}
+                  rows={2}
+                  placeholder="Observações que aparecerão na fatura..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button onClick={() => setPasso(1)}
+                  className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+                  Voltar
+                </button>
+                <button onClick={handleEmitir} disabled={emitindo}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60 shadow-md shadow-blue-100">
+                  {emitindo ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                  Emitir Fatura
+                </button>
               </div>
             </div>
-
-            <div className="bg-blue-50 rounded-2xl px-4 py-3 text-xs text-blue-700 space-y-0.5">
-              <p className="font-black">Cliente: {cliente?.name}</p>
-              {cliente?.nif && <p className="text-blue-600">NIF: {cliente.nif}</p>}
-              <p className="text-blue-600">Período: {periodoLabel(periodo)}</p>
-            </div>
-
-            <div className="flex gap-2">
-              <button onClick={() => setPasso(1)}
-                className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
-                Voltar
-              </button>
-              <button onClick={handleEmitir} disabled={emitindo}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60 shadow-md shadow-blue-100">
-                {emitindo ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
-                Emitir Fatura
-              </button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Passo 3 — Resultado */}
         {passo === 3 && resultado && (
