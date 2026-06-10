@@ -259,21 +259,19 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     return totalFat > 0 ? totalAj / totalFat : 0;
   }, [faturadosAno]);
 
-  // Estimativa card: taxa aplicada ao mês ± saldo residual acumulado dos meses anteriores.
-  const ajudasEstimadoMes = useMemo(() => {
-    if (taxaAjudas === 0) return 0;
-    return Math.max(0, totalFaturaMes * taxaAjudas + saldoDisponivel);
-  }, [taxaAjudas, totalFaturaMes, saldoDisponivel]);
+  // Total alvo: totalFaturaMes × taxa + saldo. Sempre calculado — saldo incluído mesmo sem taxa histórica.
+  const ajudasEstimadoMes = useMemo(
+    () => Math.max(0, totalFaturaMes * taxaAjudas + saldoDisponivel),
+    [taxaAjudas, totalFaturaMes, saldoDisponivel]
+  );
 
-  // Valor efetivo: sempre a estimativa por taxa histórica (para faturação antes de ter os recibos).
-  // ajudasReciboMes fica disponível para referência/comparação mas não sobrepõe a estimativa.
   const ajudasEfetivoMes = ajudasEstimadoMes > 0 ? ajudasEstimadoMes : ajudasReciboMes;
-  const eEstimativa = ajudasEstimadoMes > 0;
+  const eEstimativa = taxaAjudas > 0 || saldoDisponivel > 0;
 
-  // — Ajudas estimadas por cliente —
-  // Clientes com override manual ou obs mantêm valor fixo.
-  // Restantes: distribuição proporcional de ajudasEfetivoMes (taxa × fatura + saldo),
-  // garantindo que sum(ajudasEstimadas) == ajudasEfetivoMes == valor do card.
+  // — Ajudas por cliente —
+  // Override/obs mantém o valor fixo. O alvo global (ajudasEfetivoMes) é sempre
+  // distribuído na íntegra: o que sobra após os fixos vai proporcionalmente aos restantes;
+  // se todos tiverem fixo, o saldo residual é adicionado proporcionalmente a todos.
   const linhas = useMemo(() => {
     const comFixo = clientesMesFinal.map(c => {
       const valorStr = overrides[c.clientId];
@@ -285,11 +283,16 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     const somaFixos = comFixo.reduce((s, c) => s + (c.fixo ?? 0), 0);
     const restante = Math.max(0, ajudasEfetivoMes - somaFixos);
     const faturaNaoFixos = comFixo.filter(c => c.fixo == null).reduce((s, c) => s + c.valorFatura, 0);
+    const todosSaoFixos = faturaNaoFixos === 0;
     return comFixo.map(c => {
       const proporcao = totalFaturaMes > 0 ? c.valorFatura / totalFaturaMes : 0;
-      const ajudas = c.fixo != null
-        ? c.fixo
-        : (faturaNaoFixos > 0 ? restante * (c.valorFatura / faturaNaoFixos) : 0);
+      let ajudas;
+      if (c.fixo != null) {
+        // Quando todos têm valor fixo, distribuir o saldo residual proporcionalmente por cima
+        ajudas = c.fixo + (todosSaoFixos && restante > 0 ? restante * proporcao : 0);
+      } else {
+        ajudas = faturaNaoFixos > 0 ? restante * (c.valorFatura / faturaNaoFixos) : 0;
+      }
       return { ...c, proporcao, ajudasEstimadas: ajudas };
     });
   }, [clientesMesFinal, totalFaturaMes, ajudasEfetivoMes, overrides]);
@@ -334,8 +337,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     setExtraindoObs(true);
     setObsResult(null);
     try {
-      // Faturas de um mês referem-se ao trabalho do mês anterior → buscar o mês seguinte
-      const mesFaturas = mesSeguinte(selectedMonth);
+      const mesFaturas = selectedMonth;
       const [y, m] = mesFaturas.split('-').map(Number);
       const ultimoDia = new Date(y, m, 0).getDate();
       const params = new URLSearchParams({

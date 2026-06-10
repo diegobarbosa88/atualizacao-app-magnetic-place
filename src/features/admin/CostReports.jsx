@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, getMonthLabel, parseFaturaValor, generateMo
 import { exportToXLS, exportRelatorioGeralPDF, exportRelatorioGeralXLS } from './cost-reports/exportUtils';
 import { useCostReportsData } from './cost-reports/useCostReportsData';
 import LinkPagamentoModal from './cost-reports/LinkPagamentoModal';
+import LinkFaturaModal from './cost-reports/LinkFaturaModal';
 
 const CostReports = () => {
   const { workers, clients, logs, expenses, saveToDb, handleDelete, supabase } = useApp();
@@ -37,6 +38,11 @@ const CostReports = () => {
   const [isAddingFatura, setIsAddingFatura] = useState(false);
   const [faturaForm, setFaturaForm] = useState({ cliente: '', numero: '', valor: '', data: toISODateLocal(new Date()) });
   const [faturaSaving, setFaturaSaving] = useState(false);
+  const [fatLinks, setFatLinks] = useState([]);
+  const [linkFaturaModal, setLinkFaturaModal] = useState(null);
+  const [selectedRunFatura, setSelectedRunFatura] = useState(null);
+  const [runFaturaLoading, setRunFaturaLoading] = useState(false);
+  const [linkFaturaSaving, setLinkFaturaSaving] = useState(false);
 
   const monthOptions = useMemo(() => generateMonthOptions(), []);
 
@@ -64,15 +70,14 @@ const CostReports = () => {
   useEffect(() => {
     if (!supabase) return;
     setFaturasLoading(true);
-    supabase
-      .from('faturas')
-      .select('id, dados, status, importado_em')
-      .eq('tipo', 'cliente')
-      .order('importado_em', { ascending: false })
-      .then(({ data }) => {
-        setClienteFaturas(data || []);
-        setFaturasLoading(false);
-      });
+    Promise.all([
+      supabase.from('faturas').select('id, dados, status, importado_em').eq('tipo', 'cliente').order('importado_em', { ascending: false }),
+      supabase.from('fatura_pagamento_links').select('fatura_id, run_id, tx_key, auto_matched'),
+    ]).then(([{ data: fats }, { data: links }]) => {
+      setClienteFaturas(fats || []);
+      setFatLinks(links || []);
+      setFaturasLoading(false);
+    });
   }, [supabase]);
 
   const carregarPagamentos = useCallback(async () => {
@@ -125,6 +130,71 @@ const CostReports = () => {
     }
     return result;
   }, [selectedRun, pagamentos]);
+
+  const creditosDisponiveisFatura = useMemo(() => {
+    if (!selectedRunFatura?.results_json) return [];
+    const usedKeys = new Set(fatLinks.map(fl => fl.tx_key));
+    const result = [];
+    for (const { key, items } of [
+      { key: 'matched', items: selectedRunFatura.results_json.matched || [] },
+      { key: 'orphan_bank', items: selectedRunFatura.results_json.orphan_bank || [] },
+    ]) {
+      items.forEach((item, idx) => {
+        const tx = item.transacao ?? item;
+        if (tx?.tipo === 'credito' && !usedKeys.has(`${tx.data}|${tx.descricao}|${tx.valor}`))
+          result.push({ section: key, index: idx, tx });
+      });
+    }
+    return result;
+  }, [selectedRunFatura, fatLinks]);
+
+  const recarregarFaturas = async () => {
+    const [{ data: fats }, { data: links }] = await Promise.all([
+      supabase.from('faturas').select('id,dados,status,importado_em').eq('tipo','cliente').order('importado_em',{ascending:false}),
+      supabase.from('fatura_pagamento_links').select('fatura_id,run_id,tx_key,auto_matched'),
+    ]);
+    setClienteFaturas(fats || []);
+    setFatLinks(links || []);
+  };
+
+  const abrirLinkFaturaModal = async (fatura) => {
+    setLinkFaturaModal(fatura);
+    setSelectedRunFatura(null);
+    setRunsLoading(true);
+    const { data } = await supabase.from('reconciliation_runs')
+      .select('id, filename, created_at, transaction_count')
+      .order('created_at', { ascending: false }).limit(30);
+    setRunsLista(data || []);
+    setRunsLoading(false);
+  };
+
+  const selecionarRunFatura = async (runId) => {
+    if (!runId) { setSelectedRunFatura(null); return; }
+    setRunFaturaLoading(true);
+    const { data } = await supabase.from('reconciliation_runs').select('id, filename, results_json').eq('id', runId).single();
+    setSelectedRunFatura(data);
+    setRunFaturaLoading(false);
+  };
+
+  const associarPagamentoFatura = async (section, index, tx) => {
+    if (!linkFaturaModal || !selectedRunFatura) return;
+    setLinkFaturaSaving(true);
+    const key = `${tx.data}|${tx.descricao}|${tx.valor}`;
+    await supabase.from('fatura_pagamento_links').upsert(
+      { fatura_id: linkFaturaModal.id, run_id: selectedRunFatura.id, tx_key: key, auto_matched: false },
+      { onConflict: 'fatura_id' }
+    );
+    await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', linkFaturaModal.id);
+    await recarregarFaturas();
+    setLinkFaturaSaving(false);
+    setLinkFaturaModal(null);
+  };
+
+  const removerPagamentoFatura = async (faturaId) => {
+    await supabase.from('fatura_pagamento_links').delete().eq('fatura_id', faturaId);
+    await supabase.from('faturas').update({ status: 'PENDENTE' }).eq('id', faturaId);
+    await recarregarFaturas();
+  };
 
   const abrirLinkModal = async (clientId, clientName, valorFaturado) => {
     setLinkModal({ clientId, clientName, valorFaturado });
@@ -376,13 +446,32 @@ const CostReports = () => {
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${f.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{f.status}</span>
                       </td>
                       <td className="px-4 py-3 rounded-r-2xl text-right">
-                        {f.status === 'PENDENTE' && (
-                          <button onClick={async () => {
-                            await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', f.id);
-                            const { data } = await supabase.from('faturas').select('id, dados, status, importado_em').eq('tipo', 'cliente').order('importado_em', { ascending: false });
-                            setClienteFaturas(data || []);
-                          }} className="text-emerald-600 hover:text-emerald-800 text-xs font-black uppercase hover:underline">Marcar PAGO</button>
-                        )}
+                        {(() => {
+                          const fl = fatLinks.find(l => l.fatura_id === f.id);
+                          if (fl) {
+                            return (
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-[9px] text-slate-400 truncate max-w-[120px]" title={fl.tx_key}>
+                                  {fl.tx_key?.split('|')[0]} · {fl.tx_key?.split('|')[2]} €
+                                </span>
+                                <button onClick={() => removerPagamentoFatura(f.id)} className="text-rose-400 hover:text-rose-600 text-[9px] font-black uppercase hover:underline">Desligar</button>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="flex items-center justify-end gap-2">
+                              <button onClick={() => abrirLinkFaturaModal(f)} className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[9px] font-black uppercase transition-colors">
+                                <Link2 size={10} /> Ligar
+                              </button>
+                              {f.status === 'PENDENTE' && (
+                                <button onClick={async () => {
+                                  await supabase.from('faturas').update({ status: 'PAGO' }).eq('id', f.id);
+                                  await recarregarFaturas();
+                                }} className="text-emerald-600 hover:text-emerald-800 text-[9px] font-black uppercase hover:underline">PAGO</button>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                     </tr>
                   );
@@ -627,6 +716,22 @@ const CostReports = () => {
         {renderTable()}
       </div>
 
+      {linkFaturaModal && (
+        <LinkFaturaModal
+          fatura={linkFaturaModal}
+          runsLista={runsLista}
+          runsLoading={runsLoading}
+          selectedRun={selectedRunFatura}
+          runLoading={runFaturaLoading}
+          creditosDisponiveisFatura={creditosDisponiveisFatura}
+          fatLink={fatLinks.find(l => l.fatura_id === linkFaturaModal.id) || null}
+          linkSaving={linkFaturaSaving}
+          onClose={() => setLinkFaturaModal(null)}
+          selecionarRun={selecionarRunFatura}
+          associarPagamentoFatura={associarPagamentoFatura}
+          removerPagamentoFatura={removerPagamentoFatura}
+        />
+      )}
       {linkModal && (
         <LinkPagamentoModal
           linkModal={linkModal}
