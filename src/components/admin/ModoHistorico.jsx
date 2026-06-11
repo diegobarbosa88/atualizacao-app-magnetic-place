@@ -621,7 +621,15 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                             </td>
                             <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
                             <td className="px-3 py-2.5 text-center">
-                              {r.divergencia != null ? <DivergenciaBadge sinal={r.divergencia} /> : <span className="text-slate-300">—</span>}
+                              {r.divergencia != null ? (() => {
+                                const calculado = r.bruto_plataforma != null
+                                  ? (r.bruto_plataforma ?? 0) - (r.ss_extraido ?? 0) - (r.irs_extraido ?? 0)
+                                  : null;
+                                const sinal = calculado != null && r.liquido_extraido != null
+                                  ? parseFloat((r.liquido_extraido - calculado).toFixed(2))
+                                  : 0;
+                                return <DivergenciaBadge sinal={sinal} />;
+                              })() : <span className="text-slate-300">—</span>}
                             </td>
                             <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1.5">
