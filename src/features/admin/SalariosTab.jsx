@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertCircle, ChevronDown, Download, FileText, Loader2, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, Download, FileText, Landmark, Loader2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 import '../../utils/toggleTipoLink';
@@ -9,9 +9,10 @@ import { MESES_PT_SAL, fmtEur, fmtMes } from './salarios/salarioUtils';
 import SalarioEmployeeCard from './salarios/SalarioEmployeeCard';
 import AssocTransacaoModal from './salarios/AssocTransacaoModal';
 import JustificarModal from './salarios/JustificarModal';
+import ImportarIBANsModal from './salarios/ImportarIBANsModal';
 
 export default function SalariosTab({ month }) {
-  const { supabase } = useApp();
+  const { supabase, workers } = useApp();
   const year = month ? String(month.getFullYear()) : String(new Date().getFullYear());
 
   const [salarioResultado, setSalarioResultado] = useState(null);
@@ -24,6 +25,10 @@ export default function SalariosTab({ month }) {
 
   const [justificacoes, setJustificacoes] = useState([]);
   const [justModal, setJustModal] = useState(null);
+
+  const [sepaModal, setSepaModal] = useState(false);
+  const [sepaSelecao, setSepaSelecao] = useState(new Set());
+  const [sepaCarregando, setSepaCarregando] = useState(false);
   const [justText, setJustText] = useState('');
   const [justSaving, setJustSaving] = useState(false);
 
@@ -33,6 +38,7 @@ export default function SalariosTab({ month }) {
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
+  const [importarIBANsModal, setImportarIBANsModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [openEmployee, setOpenEmployee] = useState(null);
 
@@ -277,6 +283,77 @@ export default function SalariosTab({ month }) {
     setShowExportMenu(false);
   };
 
+  const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+  const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  const abrirSepaModal = () => {
+    const mesAlvo = selectedMonth || (monthsAvailable.length === 1 ? monthsAvailable[0] : null);
+    if (!mesAlvo) { alert('Selecciona um mês antes de exportar o SEPA XML.'); return; }
+    const elegíveis = employeesFiltered
+      .filter(emp => emp.months.find(x => x.month === mesAlvo && x.expected_amount > 0))
+      .map(emp => emp.employee_name);
+    setSepaSelecao(new Set(elegíveis));
+    setSepaModal(true);
+    setShowExportMenu(false);
+  };
+
+  const confirmarSepa = async () => {
+    const mesAlvo = selectedMonth || (monthsAvailable.length === 1 ? monthsAvailable[0] : null);
+    if (!mesAlvo) return;
+    setSepaCarregando(true);
+
+    const trabalhadores = [];
+    for (const emp of employeesFiltered) {
+      if (!sepaSelecao.has(emp.employee_name)) continue;
+      const m = emp.months.find(x => x.month === mesAlvo);
+      if (!m || m.expected_amount <= 0) continue;
+      const worker = workers.find(w => norm(w.name) === norm(emp.employee_name));
+      if (!worker?.iban) {
+        alert(`"${emp.employee_name}" não tem IBAN registado. Preenche o IBAN no perfil.`);
+        setSepaCarregando(false);
+        return;
+      }
+      trabalhadores.push({
+        nome: emp.employee_name,
+        iban: worker.iban.replace(/\s/g, '').toUpperCase(),
+        salario: m.expected_amount,
+        mes: MESES_PT[parseInt(mesAlvo.split('-')[1], 10) - 1],
+        ano: mesAlvo.split('-')[0],
+      });
+    }
+
+    if (trabalhadores.length === 0) {
+      alert('Nenhum trabalhador seleccionado.');
+      setSepaCarregando(false);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/salarios/exportar-sepa', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trabalhadores }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        alert(`Erro ao gerar SEPA: ${err.error}`);
+        setSepaCarregando(false);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `salarios_${mesAlvo}_magnetic_place.xml`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(`Erro de rede: ${e.message}`);
+    }
+    setSepaCarregando(false);
+    setSepaModal(false);
+  };
+
   const handleRemoverJustificacao = async ({ employee_name, month }) => {
     await supabase.from('salary_justifications').delete().eq('employee_name', employee_name).eq('month', month);
     setJustificacoes(prev => prev.filter(j => !(j.employee_name === employee_name && j.month === month)));
@@ -357,6 +434,13 @@ export default function SalariosTab({ month }) {
                   </button>
                   <button onClick={handleExportPdf} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                     <FileText size={13} className="text-rose-500" /> PDF
+                  </button>
+                  <div className="border-t border-slate-100 my-1" />
+                  <button onClick={abrirSepaModal} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
+                    <Landmark size={13} className="text-indigo-500" /> SEPA XML
+                  </button>
+                  <button onClick={() => { setShowExportMenu(false); setImportarIBANsModal(true); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
+                    <Landmark size={13} className="text-emerald-500" /> Importar IBANs
                   </button>
                 </div>
               )}
@@ -535,6 +619,99 @@ export default function SalariosTab({ month }) {
           onSave={handleSaveJustificacao}
         />
       )}
+
+      {sepaModal && (() => {
+        const mesAlvo = selectedMonth || (monthsAvailable.length === 1 ? monthsAvailable[0] : null);
+        const candidatos = employeesFiltered.filter(emp =>
+          emp.months.find(x => x.month === mesAlvo && x.expected_amount > 0)
+        );
+        const total = candidatos
+          .filter(emp => sepaSelecao.has(emp.employee_name))
+          .reduce((acc, emp) => {
+            const m = emp.months.find(x => x.month === mesAlvo);
+            return acc + (m?.expected_amount || 0);
+          }, 0);
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Landmark size={16} className="text-indigo-500" />
+                  <p className="text-[12px] font-black uppercase tracking-widest text-slate-700">SEPA XML — {mesAlvo ? fmtMes(mesAlvo) : ''}</p>
+                </div>
+                <button onClick={() => setSepaModal(false)} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={16} /></button>
+              </div>
+
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Seleccionar todos</span>
+                <input
+                  type="checkbox"
+                  checked={candidatos.length > 0 && candidatos.every(e => sepaSelecao.has(e.employee_name))}
+                  onChange={e => setSepaSelecao(e.target.checked ? new Set(candidatos.map(c => c.employee_name)) : new Set())}
+                  className="w-4 h-4 accent-indigo-600 cursor-pointer"
+                />
+              </div>
+
+              <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+                {candidatos.map(emp => {
+                  const m = emp.months.find(x => x.month === mesAlvo);
+                  const worker = workers.find(w => norm(w.name) === norm(emp.employee_name));
+                  const semIban = !worker?.iban;
+                  return (
+                    <label key={emp.employee_name} className={`flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${semIban ? 'opacity-50' : ''}`}>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[11px] font-bold text-slate-700 truncate">{emp.employee_name}</p>
+                        {semIban
+                          ? <p className="text-[9px] text-rose-500 font-bold">Sem IBAN — preenche no perfil</p>
+                          : <p className="text-[9px] text-slate-400 font-mono">{worker.iban.replace(/\s/g,'').slice(0,8)}…</p>
+                        }
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                        <span className="text-[11px] font-black text-slate-600">{fmtEur(m?.expected_amount || 0)}</span>
+                        <input
+                          type="checkbox"
+                          disabled={semIban}
+                          checked={sepaSelecao.has(emp.employee_name)}
+                          onChange={e => setSepaSelecao(prev => {
+                            const next = new Set(prev);
+                            e.target.checked ? next.add(emp.employee_name) : next.delete(emp.employee_name);
+                            return next;
+                          })}
+                          className="w-4 h-4 accent-indigo-600 cursor-pointer disabled:cursor-not-allowed"
+                        />
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total selecionado</p>
+                  <p className="text-[15px] font-black text-indigo-700">{fmtEur(total)}</p>
+                </div>
+                <button
+                  onClick={confirmarSepa}
+                  disabled={sepaCarregando || sepaSelecao.size === 0}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+                >
+                  {sepaCarregando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                  Exportar {sepaSelecao.size > 0 ? `(${sepaSelecao.size})` : ''}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+    {importarIBANsModal && (
+      <ImportarIBANsModal
+        workers={workers}
+        supabase={supabase}
+        onClose={() => setImportarIBANsModal(false)}
+        onImportado={() => {/* workers actualizam via realtime do AppContext */}}
+      />
+    )}
     </div>
   );
 }
