@@ -28,6 +28,8 @@ export default function SalariosTab({ month }) {
 
   const [sepaModal, setSepaModal] = useState(false);
   const [sepaSelecao, setSepaSelecao] = useState(new Set());
+  const [sepaAjustes, setSepaAjustes] = useState({}); // employee_name → { base, adicionar, abater }
+  const [sepaExpandido, setSepaExpandido] = useState(null); // employee_name com ajustes abertos
   const [sepaCarregando, setSepaCarregando] = useState(false);
   const [justText, setJustText] = useState('');
   const [justSaving, setJustSaving] = useState(false);
@@ -290,9 +292,14 @@ export default function SalariosTab({ month }) {
     const mesAlvo = selectedMonth || (monthsAvailable.length === 1 ? monthsAvailable[0] : null);
     if (!mesAlvo) { alert('Selecciona um mês antes de exportar o SEPA XML.'); return; }
     const elegíveis = employeesFiltered
-      .filter(emp => emp.months.find(x => x.month === mesAlvo && x.expected_amount > 0))
-      .map(emp => emp.employee_name);
-    setSepaSelecao(new Set(elegíveis));
+      .filter(emp => emp.months.find(x => x.month === mesAlvo && x.expected_amount > 0));
+    const ajustesIniciais = {};
+    elegíveis.forEach(emp => {
+      const m = emp.months.find(x => x.month === mesAlvo);
+      ajustesIniciais[emp.employee_name] = { base: String(m?.expected_amount ?? 0), adicionar: '', abater: '' };
+    });
+    setSepaSelecao(new Set(elegíveis.map(e => e.employee_name)));
+    setSepaAjustes(ajustesIniciais);
     setSepaModal(true);
     setShowExportMenu(false);
   };
@@ -305,8 +312,9 @@ export default function SalariosTab({ month }) {
     const trabalhadores = [];
     for (const emp of employeesFiltered) {
       if (!sepaSelecao.has(emp.employee_name)) continue;
-      const m = emp.months.find(x => x.month === mesAlvo);
-      if (!m || m.expected_amount <= 0) continue;
+      const aj = sepaAjustes[emp.employee_name] || {};
+      const valorFinal = (parseFloat(aj.base) || 0) + (parseFloat(aj.adicionar) || 0) - (parseFloat(aj.abater) || 0);
+      if (valorFinal <= 0) continue;
       const worker = workers.find(w => norm(w.name) === norm(emp.employee_name));
       if (!worker?.iban) {
         alert(`"${emp.employee_name}" não tem IBAN registado. Preenche o IBAN no perfil.`);
@@ -316,7 +324,7 @@ export default function SalariosTab({ month }) {
       trabalhadores.push({
         nome: emp.employee_name,
         iban: worker.iban.replace(/\s/g, '').toUpperCase(),
-        salario: m.expected_amount,
+        salario: valorFinal,
         mes: MESES_PT[parseInt(mesAlvo.split('-')[1], 10) - 1],
         ano: mesAlvo.split('-')[0],
       });
@@ -420,30 +428,40 @@ export default function SalariosTab({ month }) {
               </div>
             </div>
 
-            <div className="relative flex-shrink-0" ref={exportRef}>
+            <div className="flex flex-col gap-2 flex-shrink-0">
+              {/* Exportar CSV / PDF */}
+              <div className="relative" ref={exportRef}>
+                <button
+                  onClick={() => setShowExportMenu(v => !v)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest transition-all w-full justify-center"
+                >
+                  <Download size={13} /> Exportar
+                </button>
+                {showExportMenu && (
+                  <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px]">
+                    <button onClick={handleExportCsv} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                      <FileText size={13} className="text-emerald-600" /> CSV
+                    </button>
+                    <button onClick={handleExportPdf} className="w-full flex items-center gap-2 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                      <FileText size={13} className="text-rose-500" /> PDF
+                    </button>
+                  </div>
+                )}
+              </div>
+              {/* SEPA XML */}
               <button
-                onClick={() => setShowExportMenu(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
+                onClick={abrirSepaModal}
+                className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-800 rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
               >
-                <Download size={13} /> Exportar
+                <Landmark size={13} /> SEPA XML
               </button>
-              {showExportMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px] max-w-[calc(100vw-2rem)]">
-                  <button onClick={handleExportCsv} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                    <FileText size={13} className="text-emerald-600" /> CSV
-                  </button>
-                  <button onClick={handleExportPdf} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                    <FileText size={13} className="text-rose-500" /> PDF
-                  </button>
-                  <div className="border-t border-slate-100 my-1" />
-                  <button onClick={abrirSepaModal} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
-                    <Landmark size={13} className="text-indigo-500" /> SEPA XML
-                  </button>
-                  <button onClick={() => { setShowExportMenu(false); setImportarIBANsModal(true); }} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors">
-                    <Landmark size={13} className="text-emerald-500" /> Importar IBANs
-                  </button>
-                </div>
-              )}
+              {/* Importar IBANs */}
+              <button
+                onClick={() => setImportarIBANsModal(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 hover:text-emerald-800 rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
+              >
+                <Landmark size={13} /> Importar IBANs
+              </button>
             </div>
           </div>
 
@@ -625,26 +643,32 @@ export default function SalariosTab({ month }) {
         const candidatos = employeesFiltered.filter(emp =>
           emp.months.find(x => x.month === mesAlvo && x.expected_amount > 0)
         );
+
+        const calcFinal = name => {
+          const aj = sepaAjustes[name] || {};
+          return (parseFloat(aj.base) || 0) + (parseFloat(aj.adicionar) || 0) - (parseFloat(aj.abater) || 0);
+        };
+
+        const setAj = (name, field, val) =>
+          setSepaAjustes(prev => ({ ...prev, [name]: { ...(prev[name] || {}), [field]: val } }));
+
         const total = candidatos
           .filter(emp => sepaSelecao.has(emp.employee_name))
-          .reduce((acc, emp) => {
-            const m = emp.months.find(x => x.month === mesAlvo);
-            return acc + (m?.expected_amount || 0);
-          }, 0);
+          .reduce((acc, emp) => acc + Math.max(0, calcFinal(emp.employee_name)), 0);
 
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <Landmark size={16} className="text-indigo-500" />
-                  <p className="text-[12px] font-black uppercase tracking-widest text-slate-700">SEPA XML — {mesAlvo ? fmtMes(mesAlvo) : ''}</p>
+                  <Landmark size={18} className="text-indigo-500" />
+                  <p className="text-sm font-black uppercase tracking-widest text-slate-700">SEPA XML — {mesAlvo ? fmtMes(mesAlvo) : ''}</p>
                 </div>
-                <button onClick={() => setSepaModal(false)} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={16} /></button>
+                <button onClick={() => setSepaModal(false)} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={18} /></button>
               </div>
 
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Seleccionar todos</span>
+              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Seleccionar todos</span>
                 <input
                   type="checkbox"
                   checked={candidatos.length > 0 && candidatos.every(e => sepaSelecao.has(e.employee_name))}
@@ -653,50 +677,111 @@ export default function SalariosTab({ month }) {
                 />
               </div>
 
-              <div className="max-h-72 overflow-y-auto divide-y divide-slate-50">
+              <div className="overflow-y-auto flex-1 divide-y divide-slate-100">
                 {candidatos.map(emp => {
-                  const m = emp.months.find(x => x.month === mesAlvo);
                   const worker = workers.find(w => norm(w.name) === norm(emp.employee_name));
                   const semIban = !worker?.iban;
+                  const selecionado = sepaSelecao.has(emp.employee_name);
+                  const aj = sepaAjustes[emp.employee_name] || {};
+                  const valorFinal = calcFinal(emp.employee_name);
+                  const temAjuste = (parseFloat(aj.adicionar) || 0) !== 0 || (parseFloat(aj.abater) || 0) !== 0;
+                  const expandido = sepaExpandido === emp.employee_name;
+
                   return (
-                    <label key={emp.employee_name} className={`flex items-center justify-between px-5 py-3 cursor-pointer hover:bg-slate-50 transition-colors ${semIban ? 'opacity-50' : ''}`}>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-bold text-slate-700 truncate">{emp.employee_name}</p>
-                        {semIban
-                          ? <p className="text-[9px] text-rose-500 font-bold">Sem IBAN — preenche no perfil</p>
-                          : <p className="text-[9px] text-slate-400 font-mono">{worker.iban.replace(/\s/g,'').slice(0,8)}…</p>
-                        }
-                      </div>
-                      <div className="flex items-center gap-3 flex-shrink-0 ml-3">
-                        <span className="text-[11px] font-black text-slate-600">{fmtEur(m?.expected_amount || 0)}</span>
+                    <div key={emp.employee_name} className={semIban ? 'opacity-50' : ''}>
+                      {/* Linha principal — clicar expande os ajustes */}
+                      <div
+                        className={`flex items-center gap-3 px-4 py-3.5 cursor-pointer transition-colors ${expandido ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}
+                        onClick={() => !semIban && setSepaExpandido(expandido ? null : emp.employee_name)}
+                      >
                         <input
                           type="checkbox"
                           disabled={semIban}
-                          checked={sepaSelecao.has(emp.employee_name)}
+                          checked={selecionado}
+                          onClick={e => e.stopPropagation()}
                           onChange={e => setSepaSelecao(prev => {
                             const next = new Set(prev);
                             e.target.checked ? next.add(emp.employee_name) : next.delete(emp.employee_name);
                             return next;
                           })}
-                          className="w-4 h-4 accent-indigo-600 cursor-pointer disabled:cursor-not-allowed"
+                          className="w-4 h-4 accent-indigo-600 cursor-pointer disabled:cursor-not-allowed flex-shrink-0"
                         />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-slate-700 truncate">{emp.employee_name}</p>
+                          {semIban
+                            ? <p className="text-xs text-rose-500 font-semibold">Sem IBAN</p>
+                            : <p className="text-xs text-slate-400 font-mono">{worker.iban.replace(/\s/g,'').slice(0,8)}…</p>
+                          }
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {temAjuste && (
+                            <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 rounded-full px-2 py-0.5">ajustado</span>
+                          )}
+                          <span className={`text-sm font-black ${temAjuste ? 'text-indigo-600' : 'text-slate-700'}`}>
+                            {fmtEur(valorFinal)}
+                          </span>
+                          <ChevronDown size={14} className={`text-slate-300 transition-transform ${expandido ? 'rotate-180' : ''}`} />
+                        </div>
                       </div>
-                    </label>
+
+                      {/* Painel de ajustes — expande ao clicar */}
+                      {expandido && (
+                        <div className="px-4 pb-4 pt-1 bg-indigo-50 border-t border-indigo-100">
+                          <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest mb-3">Ajustar valor</p>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs font-bold text-slate-500 block mb-1.5">Base (€)</label>
+                              <input
+                                type="number" min="0" step="0.01"
+                                value={aj.base ?? ''}
+                                onChange={e => setAj(emp.employee_name, 'base', e.target.value)}
+                                className="w-full border border-slate-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-slate-700 text-right focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-emerald-600 block mb-1.5">+ Adicionar</label>
+                              <input
+                                type="number" min="0" step="0.01"
+                                value={aj.adicionar ?? ''}
+                                placeholder="0,00"
+                                onChange={e => setAj(emp.employee_name, 'adicionar', e.target.value)}
+                                className="w-full border border-emerald-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-emerald-700 text-right focus:outline-none focus:ring-2 focus:ring-emerald-300 placeholder:text-slate-300"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs font-bold text-rose-500 block mb-1.5">− Abater</label>
+                              <input
+                                type="number" min="0" step="0.01"
+                                value={aj.abater ?? ''}
+                                placeholder="0,00"
+                                onChange={e => setAj(emp.employee_name, 'abater', e.target.value)}
+                                className="w-full border border-rose-200 bg-white rounded-xl px-3 py-2 text-sm font-mono text-rose-700 text-right focus:outline-none focus:ring-2 focus:ring-rose-300 placeholder:text-slate-300"
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-3 flex justify-end">
+                            <p className="text-sm font-black text-indigo-700">
+                              Total: {fmtEur(valorFinal)}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
 
-              <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+              <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between gap-3 flex-shrink-0">
                 <div>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Total selecionado</p>
-                  <p className="text-[15px] font-black text-indigo-700">{fmtEur(total)}</p>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Total selecionado</p>
+                  <p className="text-xl font-black text-indigo-700">{fmtEur(total)}</p>
                 </div>
                 <button
                   onClick={confirmarSepa}
                   disabled={sepaCarregando || sepaSelecao.size === 0}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
                 >
-                  {sepaCarregando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                  {sepaCarregando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   Exportar {sepaSelecao.size > 0 ? `(${sepaSelecao.size})` : ''}
                 </button>
               </div>

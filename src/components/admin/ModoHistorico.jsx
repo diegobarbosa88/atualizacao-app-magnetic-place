@@ -201,15 +201,10 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       for (const r of res) {
         if (!r.sucesso) continue;
         const key = `${r.worker?.id ?? normalizarNome(r.nomeExtraido ?? '')}|${r.mes}`;
+        // Recibos de várias páginas geram 2 secções (ORIGINAL + DUPLICADO) com valores idênticos.
+        // Manter apenas a primeira secção (ORIGINAL); ignorar o DUPLICADO para não duplicar valores.
         if (!agregados[key]) {
           agregados[key] = { ...r };
-        } else {
-          const ex = agregados[key];
-          ex.bruto = (ex.bruto || 0) + (r.bruto || 0);
-          if (r.liquidoExtraido != null)  ex.liquidoExtraido  = (ex.liquidoExtraido  || 0) + r.liquidoExtraido;
-          if (r.abonosExtraidos != null)  ex.abonosExtraidos  = (ex.abonosExtraidos  || 0) + r.abonosExtraidos;
-          if (r.ssExtraido != null)       ex.ssExtraido       = (ex.ssExtraido       || 0) + r.ssExtraido;
-          if (r.irsExtraido != null)      ex.irsExtraido      = (ex.irsExtraido      || 0) + r.irsExtraido;
         }
       }
       const deduplicados = Object.values(agregados);

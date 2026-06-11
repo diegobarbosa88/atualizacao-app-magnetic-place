@@ -23,7 +23,6 @@ function parsearXLS(xmlText) {
   const rows = Array.from(folha.getElementsByTagNameNS(ns, 'Row'));
   const resultado = [];
 
-  // Primeira linha é cabeçalho — encontrar índice da coluna "Conta"
   const cabecalho = rows[0];
   const headerCells = Array.from(cabecalho.getElementsByTagNameNS(ns, 'Cell'));
   let idxConta = -1;
@@ -32,20 +31,11 @@ function parsearXLS(xmlText) {
     const txt = data?.textContent?.trim() || '';
     if (txt === 'Conta') idxConta = i;
   });
-  if (idxConta < 0) idxConta = 5; // fallback: coluna 6 (0-based 5)
+  if (idxConta < 0) idxConta = 5;
 
   for (let r = 1; r < rows.length; r++) {
     const cells = Array.from(rows[r].getElementsByTagNameNS(ns, 'Cell'));
     const getCellValue = idx => {
-      // Cells podem ter atributo ss:Index para colunas esparsas
-      // Reconstruir array completo por Index
-      const cellsByIndex = {};
-      cells.forEach(c => {
-        const idxAttr = c.getAttributeNS(ns, 'Index');
-        const pos = idxAttr ? parseInt(idxAttr, 10) - 1 : null;
-        if (pos !== null) cellsByIndex[pos] = c;
-      });
-      // Preencher posições sem Index com ordem sequencial
       let cursor = 0;
       const ordered = [];
       cells.forEach(c => {
@@ -67,9 +57,7 @@ function parsearXLS(xmlText) {
 function matchWorkers(entradas, workers) {
   return entradas.map(entrada => {
     const normEntrada = normalizar(entrada.nome);
-    // Exacto
     let worker = workers.find(w => normalizar(w.name) === normEntrada);
-    // Parcial: todos os tokens do ficheiro presentes no nome do worker
     if (!worker) {
       const tokens = normEntrada.split(' ').filter(Boolean);
       worker = workers.find(w => {
@@ -77,7 +65,6 @@ function matchWorkers(entradas, workers) {
         return tokens.every(t => normW.includes(t));
       });
     }
-    // Parcial inverso: todos os tokens do worker no nome do ficheiro
     if (!worker) {
       worker = workers.find(w => {
         const tokens = normalizar(w.name).split(' ').filter(Boolean);
@@ -90,9 +77,9 @@ function matchWorkers(entradas, workers) {
 }
 
 export default function ImportarIBANsModal({ workers, supabase, onClose, onImportado }) {
-  const [passo, setPasso] = useState('upload'); // upload | preview | done
+  const [passo, setPasso] = useState('upload');
   const [entradas, setEntradas] = useState([]);
-  const [overrides, setOverrides] = useState({}); // idx → workerId
+  const [overrides, setOverrides] = useState({});
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState('');
   const [resultado, setResultado] = useState(null);
@@ -105,14 +92,12 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
     const reader = new FileReader();
     reader.onload = ev => {
       try {
-        const text = ev.target.result;
-        const parsed = parsearXLS(text);
+        const parsed = parsearXLS(ev.target.result);
         if (parsed.length === 0) {
           setErro('Não foram encontrados dados na folha "Empregados". Verifica o ficheiro.');
           return;
         }
-        const matched = matchWorkers(parsed, workers);
-        setEntradas(matched);
+        setEntradas(matchWorkers(parsed, workers));
         setPasso('preview');
       } catch (err) {
         setErro('Erro ao ler o ficheiro: ' + err.message);
@@ -126,7 +111,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
   const seleccionados = entradas.filter((_, idx) => {
     const wid = getWorkerId(idx);
     if (!wid) return false;
-    if (entradas[idx].jaTemIban && !overrides[idx]) return false; // já tem este IBAN — skip
+    if (entradas[idx].jaTemIban && !overrides[idx]) return false;
     return true;
   });
 
@@ -139,10 +124,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
       if (!wid) continue;
       const entrada = entradas[idx];
       if (entrada.jaTemIban && !overrides[idx]) continue;
-      const { error } = await supabase
-        .from('workers')
-        .update({ iban: entrada.iban })
-        .eq('id', wid);
+      const { error } = await supabase.from('workers').update({ iban: entrada.iban }).eq('id', wid);
       if (error) fail++;
       else ok++;
     }
@@ -159,11 +141,11 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <Landmark size={15} className="text-indigo-500" />
-            <p className="text-[12px] font-black uppercase tracking-widest text-slate-700">Importar IBANs</p>
+            <Landmark size={18} className="text-emerald-500" />
+            <p className="text-sm font-black uppercase tracking-widest text-slate-700">Importar IBANs</p>
           </div>
           <button onClick={onClose} className="text-slate-300 hover:text-slate-600 transition-colors">
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
@@ -171,64 +153,63 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
         <div className="flex-1 overflow-y-auto">
 
           {passo === 'upload' && (
-            <div className="px-5 py-8 flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center">
-                <Upload size={28} className="text-indigo-400" />
+            <div className="px-6 py-10 flex flex-col items-center gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                <Upload size={30} className="text-emerald-400" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-bold text-slate-700">Lista de Beneficiários (.xls)</p>
-                <p className="text-[11px] text-slate-400 mt-1">Exportado do novobanco — folha "Empregados"</p>
+                <p className="text-base font-bold text-slate-700">Lista de Beneficiários (.xls)</p>
+                <p className="text-sm text-slate-400 mt-1">Exportado do novobanco — folha "Empregados"</p>
               </div>
               <button
                 onClick={() => fileRef.current?.click()}
-                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+                className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
               >
                 Seleccionar ficheiro
               </button>
               <input ref={fileRef} type="file" accept=".xls,.xml" className="hidden" onChange={handleFile} />
-              {erro && <p className="text-[11px] text-rose-500 font-bold text-center">{erro}</p>}
+              {erro && <p className="text-sm text-rose-500 font-bold text-center">{erro}</p>}
             </div>
           )}
 
           {passo === 'preview' && (
             <>
               <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
-                <p className="text-[10px] text-slate-400">
-                  <span className="font-black text-slate-700">{entradas.length}</span> registos encontrados ·{' '}
-                  <span className="font-black text-indigo-600">{seleccionados.length}</span> a actualizar
+                <p className="text-sm text-slate-500">
+                  <span className="font-black text-slate-700">{entradas.length}</span> registos ·{' '}
+                  <span className="font-black text-emerald-600">{seleccionados.length}</span> a actualizar
                 </p>
-                <p className="text-[9px] text-slate-400 uppercase tracking-widest font-bold">Folha: Empregados</p>
+                <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Empregados</p>
               </div>
 
               <div className="divide-y divide-slate-50">
                 {entradas.map((entrada, idx) => {
                   const wid = getWorkerId(idx);
-                  const workerActual = workers.find(w => w.id === wid);
                   const semMatch = !wid;
                   const jaIgual = entrada.jaTemIban && !overrides[idx];
 
                   return (
-                    <div key={idx} className={`px-5 py-3 ${jaIgual ? 'opacity-40' : ''}`}>
-                      <div className="flex items-start gap-2">
-                        <div className="mt-0.5">
+                    <div key={idx} className={`px-5 py-3.5 ${jaIgual ? 'opacity-40' : ''}`}>
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5 flex-shrink-0">
                           {jaIgual
-                            ? <CheckCircle2 size={13} className="text-emerald-400" />
+                            ? <CheckCircle2 size={15} className="text-emerald-400" />
                             : semMatch
-                            ? <HelpCircle size={13} className="text-amber-400" />
-                            : <CheckCircle2 size={13} className="text-indigo-500" />
+                            ? <HelpCircle size={15} className="text-amber-400" />
+                            : <CheckCircle2 size={15} className="text-indigo-500" />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-bold text-slate-700 truncate">{entrada.nome}</p>
-                          <p className="text-[10px] font-mono text-slate-400">{entrada.iban}</p>
+                          <p className="text-sm font-bold text-slate-700 truncate">{entrada.nome}</p>
+                          <p className="text-xs font-mono text-slate-400 mt-0.5">{entrada.iban}</p>
                           {jaIgual && (
-                            <p className="text-[9px] text-emerald-500 font-bold mt-0.5">IBAN já registado — sem alteração</p>
+                            <p className="text-xs text-emerald-500 font-bold mt-1">IBAN já registado — sem alteração</p>
                           )}
                           {!jaIgual && (
                             <select
                               value={wid || ''}
                               onChange={e => setOverrides(prev => ({ ...prev, [idx]: e.target.value || null }))}
-                              className="mt-1.5 w-full border border-slate-200 rounded-xl px-2 py-1 text-[10px] text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                              className="mt-2 w-full border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
                             >
                               <option value="">— sem correspondência —</option>
                               {workers
@@ -252,17 +233,17 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
           )}
 
           {passo === 'done' && (
-            <div className="px-5 py-10 flex flex-col items-center gap-4 text-center">
+            <div className="px-6 py-12 flex flex-col items-center gap-5 text-center">
               {resultado.fail === 0
-                ? <CheckCircle2 size={40} className="text-emerald-500" />
-                : <AlertCircle size={40} className="text-amber-500" />
+                ? <CheckCircle2 size={48} className="text-emerald-500" />
+                : <AlertCircle size={48} className="text-amber-500" />
               }
               <div>
-                <p className="font-black text-slate-700 text-sm">
+                <p className="font-black text-slate-700 text-base">
                   {resultado.ok} IBAN{resultado.ok !== 1 ? 's' : ''} guardado{resultado.ok !== 1 ? 's' : ''} com sucesso
                 </p>
                 {resultado.fail > 0 && (
-                  <p className="text-[11px] text-rose-500 mt-1">{resultado.fail} erro{resultado.fail !== 1 ? 's' : ''} ao guardar</p>
+                  <p className="text-sm text-rose-500 mt-1">{resultado.fail} erro{resultado.fail !== 1 ? 's' : ''} ao guardar</p>
                 )}
               </div>
             </div>
@@ -275,14 +256,14 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
           <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between flex-shrink-0">
             <button
               onClick={() => { setPasso('upload'); setEntradas([]); setOverrides({}); }}
-              className="text-[11px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+              className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
             >
               Voltar
             </button>
             <button
               onClick={handleGuardar}
               disabled={salvando || seleccionados.length === 0}
-              className="flex items-center gap-1.5 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
             >
               {salvando ? 'A guardar…' : `Guardar ${seleccionados.length} IBAN${seleccionados.length !== 1 ? 's' : ''}`}
             </button>
@@ -293,7 +274,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
           <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
             <button
               onClick={onClose}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all"
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
             >
               Fechar
             </button>
