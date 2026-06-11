@@ -64,12 +64,12 @@ export default async function handler(req, res) {
       // Simular dadosFallback
       const a = doc.attributes || doc; // se flat, usar o próprio doc
       result.dadosFallback_simulado = {
-        numero_fatura: a.document_number || a.number || null,
-        data_fatura: a.date || a.emission_date || null,
-        nif_fornecedor: a.supplier_tax_number || null,
-        fornecedor: a.supplier_name || a.supplier_business_name || a.entity_name || null,
-        valor_total: a.total_amount ?? a.gross_total ?? a.total_value ?? null,
-        iva: a.total_tax_amount ?? a.total_tax ?? null,
+        numero_fatura: a.document_no || a.document_number || a.number || null,
+        data_fatura: a.date || null,
+        nif_fornecedor: a.supplier_tax_registration_number || a.supplier_tax_number || null,
+        fornecedor: a.supplier_business_name || a.supplier_name || null,
+        valor_total: a.gross_total ?? a.total_amount ?? null,
+        iva: a.tax_payable ?? a.total_tax_amount ?? null,
       };
     }
   } catch (e) {
@@ -88,6 +88,21 @@ export default async function handler(req, res) {
     }
   } catch (e) {
     result.vendas_erro = e.message;
+  }
+
+  // Contas bancárias — ver estrutura completa
+  try {
+    const data = await tocFetch('/api/bank_accounts', accessToken);
+    const lista = Array.isArray(data) ? data : (data.data || []);
+    result.bank_accounts_count = lista.length;
+    if (lista.length > 0) {
+      result.bank_account_raw = lista[0];
+      result.bank_account_all_keys = Object.keys(lista[0]);
+      const a = lista[0].attributes || lista[0];
+      result.bank_account_attributes_keys = Object.keys(a);
+    }
+  } catch (e) {
+    result.bank_accounts_erro = e.message;
   }
 
   return res.status(200).json(result);

@@ -80,19 +80,18 @@ ${texto.slice(0, 6000)}`;
 }
 
 function dadosFallback(a, tipo) {
-  // numero_fatura: vários formatos possíveis no Toconline
-  const numero = a.document_number || a.document_no || a.number || a.doc_number || a.reference || null;
-  // valor total: total_amount para vendas, gross_total para compras
-  const total = a.total_amount ?? a.gross_total ?? a.net_amount ?? a.total_value ?? a.received_value ?? null;
-  // IVA
-  const iva_val = a.total_tax_amount ?? a.tax_total ?? a.total_tax ?? a.iva ?? null;
+  const numero = a.document_no || a.document_number || a.number || a.doc_number || a.reference || null;
+  const total = a.gross_total ?? a.total_amount ?? a.net_amount ?? a.total_value ?? a.received_value ?? null;
+  // tax_payable é o campo real nas compras flat; total_tax_amount aparece noutros formatos
+  const iva_val = a.tax_payable ?? a.total_tax_amount ?? a.tax_total ?? a.total_tax ?? a.iva ?? null;
 
   if (tipo === 'fornecedor') {
     return {
       numero_fatura: numero,
       data_fatura: a.date || null,
-      nif_fornecedor: a.supplier_tax_number || a.entity_tax_number || null,
-      fornecedor: a.supplier_name || a.supplier_business_name || a.entity_name || null,
+      // supplier_tax_registration_number é o campo real nas compras flat
+      nif_fornecedor: a.supplier_tax_registration_number || a.supplier_tax_number || a.entity_tax_number || null,
+      fornecedor: a.supplier_business_name || a.supplier_name || a.entity_name || null,
       valor_total: total,
       iva: iva_val,
     };

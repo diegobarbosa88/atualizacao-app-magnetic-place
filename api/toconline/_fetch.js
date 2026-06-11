@@ -38,7 +38,7 @@ export async function fetchAllPages(basePath, accessToken) {
 }
 
 export async function obterUrlPdf(docId, tipoDoc, accessToken) {
-  const filterType = tipoDoc === 'recibo' ? 'Receipt' : 'Document';
+  const filterType = tipoDoc === 'recibo' ? 'Receipt' : tipoDoc === 'fornecedor' ? 'PurchasesDocument' : 'Document';
   try {
     const res = await fetch(
       `${API_URL}/api/url_for_print/${docId}?filter[type]=${filterType}&filter[copies]=1`,
