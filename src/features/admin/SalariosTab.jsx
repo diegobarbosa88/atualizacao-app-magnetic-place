@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertCircle, ChevronDown, Download, FileText, Landmark, Loader2, X } from 'lucide-react';
+import { AlertCircle, ChevronDown, Download, FileText, Landmark, Loader2, X, Zap } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 import '../../utils/toggleTipoLink';
@@ -27,6 +27,7 @@ export default function SalariosTab({ month }) {
   const [justModal, setJustModal] = useState(null);
 
   const [sepaModal, setSepaModal] = useState(false);
+  const [sepaModo, setSepaModo] = useState('normal'); // 'normal' | 'instant'
   const [sepaSelecao, setSepaSelecao] = useState(new Set());
   const [sepaAjustes, setSepaAjustes] = useState({}); // employee_name → { base, adicionar, abater }
   const [sepaExpandido, setSepaExpandido] = useState(null); // employee_name com ajustes abertos
@@ -288,9 +289,14 @@ export default function SalariosTab({ month }) {
   const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
   const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-  const abrirSepaModal = () => {
+  const abrirSepaModal = (modo = 'normal') => {
     const mesAlvo = selectedMonth || (monthsAvailable.length === 1 ? monthsAvailable[0] : null);
-    if (!mesAlvo) { alert('Selecciona um mês antes de exportar o SEPA XML.'); return; }
+    if (!mesAlvo) {
+      alert(modo === 'instant'
+        ? 'Selecciona um mês antes de exportar a Transferência Imediata.'
+        : 'Selecciona um mês antes de exportar o SEPA XML.');
+      return;
+    }
     const elegíveis = employeesFiltered
       .filter(emp => emp.months.find(x => x.month === mesAlvo && x.expected_amount > 0));
     const ajustesIniciais = {};
@@ -300,6 +306,7 @@ export default function SalariosTab({ month }) {
     });
     setSepaSelecao(new Set(elegíveis.map(e => e.employee_name)));
     setSepaAjustes(ajustesIniciais);
+    setSepaModo(modo);
     setSepaModal(true);
     setShowExportMenu(false);
   };
@@ -337,14 +344,15 @@ export default function SalariosTab({ month }) {
     }
 
     try {
+      const isInstant = sepaModo === 'instant';
       const res = await fetch('/api/salarios/exportar-sepa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trabalhadores }),
+        body: JSON.stringify({ trabalhadores, instant: isInstant }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));
-        alert(`Erro ao gerar SEPA: ${err.error}`);
+        alert(`Erro ao gerar ficheiro: ${err.error}`);
         setSepaCarregando(false);
         return;
       }
@@ -352,7 +360,9 @@ export default function SalariosTab({ month }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `salarios_${mesAlvo}_magnetic_place.xml`;
+      a.download = isInstant
+        ? `transf_imediata_${mesAlvo}_magnetic_place.xml`
+        : `salarios_${mesAlvo}_magnetic_place.xml`;
       a.click();
       URL.revokeObjectURL(url);
     } catch (e) {
@@ -450,10 +460,17 @@ export default function SalariosTab({ month }) {
               </div>
               {/* SEPA XML */}
               <button
-                onClick={abrirSepaModal}
+                onClick={() => abrirSepaModal('normal')}
                 className="flex items-center gap-1.5 px-3 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-800 rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
               >
                 <Landmark size={13} /> SEPA XML
+              </button>
+              {/* Transferência Imediata (SCT Inst) */}
+              <button
+                onClick={() => abrirSepaModal('instant')}
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 hover:text-amber-800 rounded-2xl text-xs font-black uppercase tracking-widest transition-all justify-center"
+              >
+                <Zap size={13} /> Transf. Imediata
               </button>
               {/* Importar IBANs */}
               <button
@@ -661,8 +678,12 @@ export default function SalariosTab({ month }) {
             <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md mx-4 flex flex-col max-h-[90vh]">
               <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
                 <div className="flex items-center gap-2">
-                  <Landmark size={18} className="text-indigo-500" />
-                  <p className="text-sm font-black uppercase tracking-widest text-slate-700">SEPA XML — {mesAlvo ? fmtMes(mesAlvo) : ''}</p>
+                  {sepaModo === 'instant'
+                    ? <Zap size={18} className="text-amber-500" />
+                    : <Landmark size={18} className="text-indigo-500" />}
+                  <p className="text-sm font-black uppercase tracking-widest text-slate-700">
+                    {sepaModo === 'instant' ? 'Transferência Imediata' : 'SEPA XML'} — {mesAlvo ? fmtMes(mesAlvo) : ''}
+                  </p>
                 </div>
                 <button onClick={() => setSepaModal(false)} className="text-slate-300 hover:text-slate-600 transition-colors"><X size={18} /></button>
               </div>
@@ -779,7 +800,7 @@ export default function SalariosTab({ month }) {
                 <button
                   onClick={confirmarSepa}
                   disabled={sepaCarregando || sepaSelecao.size === 0}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+                  className={`flex items-center gap-2 px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all ${sepaModo === 'instant' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-indigo-600 hover:bg-indigo-700'}`}
                 >
                   {sepaCarregando ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
                   Exportar {sepaSelecao.size > 0 ? `(${sepaSelecao.size})` : ''}

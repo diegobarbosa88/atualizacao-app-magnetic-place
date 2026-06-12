@@ -24,6 +24,14 @@ function calcularDataExecucao() {
   return `${ano}-${mes}-${dia}`;
 }
 
+function calcularDataHoje() {
+  const data = new Date();
+  const ano = data.getFullYear();
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
 /**
  * Gera um identificador único baseado em timestamp + índice para evitar colisões
  * em lotes com múltiplas transações no mesmo milissegundo.
@@ -40,7 +48,7 @@ function gerarId(prefixo = 'MSG', indice = '') {
  * @param {Array<{nome: string, iban: string, salario: number, mes: string, ano: string}>} trabalhadores
  * @returns {string} XML UTF-8 pronto a descarregar
  */
-export function gerarSEPAXml(trabalhadores) {
+export function gerarSEPAXml(trabalhadores, { instant = false } = {}) {
   const ibanEmpresa = process.env.MINHA_CONTA_IBAN;
   const bicEmpresa = process.env.MINHA_CONTA_BIC;
 
@@ -57,12 +65,12 @@ export function gerarSEPAXml(trabalhadores) {
 
   const totalTransacoes = trabalhadores.length;
   const somaTotal = trabalhadores.reduce((acc, t) => acc + Number(t.salario), 0);
-  const dataExecucao = calcularDataExecucao();
+  const dataExecucao = instant ? calcularDataHoje() : calcularDataExecucao();
   const agora = new Date().toISOString().slice(0, 19); // YYYY-MM-DDTHH:MM:SS
   const msgId = gerarId('MAGN');
   const pmtInfId = gerarId('PMT');
 
-  const doc = create({ version: '1.0', encoding: 'UTF-8' })
+  const root = create({ version: '1.0', encoding: 'UTF-8' })
     .ele('Document', {
       xmlns: 'urn:iso:std:iso:20022:tech:xsd:pain.001.001.03',
       'xmlns:xsi': 'http://www.w3.org/2001/XMLSchema-instance',
@@ -87,19 +95,18 @@ export function gerarSEPAXml(trabalhadores) {
           .ele('PmtInfId').txt(pmtInfId).up()
           .ele('PmtMtd').txt('TRF').up()
           .ele('NbOfTxs').txt(String(totalTransacoes)).up()
-          .ele('CtrlSum').txt(somaTotal.toFixed(2)).up()
+          .ele('CtrlSum').txt(somaTotal.toFixed(2)).up();
 
-          // Tipo de pagamento: SEPA + categoria Salários (SALA)
-          // A tag SALA é obrigatória para isenção de taxas e privacidade no novobanco
-          .ele('PmtTpInf')
-            .ele('SvcLvl')
-              .ele('Cd').txt('SEPA').up()
-            .up()
-            .ele('CtgyPurp')
-              .ele('Cd').txt('SALA').up()
-            .up()
-          .up()
+  // Tipo de pagamento: SEPA (+ INST para transferência imediata SCT Inst)
+  // A tag SALA é obrigatória para isenção de taxas e privacidade no novobanco
+  const pmtTpInf = root.ele('PmtTpInf');
+  pmtTpInf.ele('SvcLvl').ele('Cd').txt('SEPA').up().up();
+  if (instant) {
+    pmtTpInf.ele('LclInstrm').ele('Cd').txt('INST').up().up();
+  }
+  pmtTpInf.ele('CtgyPurp').ele('Cd').txt('SALA').up().up();
 
+  const doc = root
           .ele('ReqdExctnDt').txt(dataExecucao).up()
 
           // Ordenante (empresa debitada)

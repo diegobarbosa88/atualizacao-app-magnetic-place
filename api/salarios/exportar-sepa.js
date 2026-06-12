@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
 
-  const { trabalhadores } = req.body || {};
+  const { trabalhadores, instant = false } = req.body || {};
 
   if (!Array.isArray(trabalhadores) || trabalhadores.length === 0) {
     return res.status(400).json({
@@ -24,13 +24,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const xmlString = gerarSEPAXml(trabalhadores);
+    const xmlString = gerarSEPAXml(trabalhadores, { instant });
+
+    const filename = instant
+      ? 'transferencias_imediatas_magnetic_place.xml'
+      : 'salarios_magnetic_place.xml';
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader(
-      'Content-Disposition',
-      'attachment; filename="salarios_magnetic_place.xml"'
-    );
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
     return res.status(200).send(xmlString);
   } catch (erro) {
