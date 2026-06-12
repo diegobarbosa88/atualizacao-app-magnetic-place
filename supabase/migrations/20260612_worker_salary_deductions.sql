@@ -11,3 +11,22 @@ CREATE TABLE IF NOT EXISTS worker_salary_deductions (
 
 CREATE INDEX IF NOT EXISTS worker_salary_deductions_month_idx
   ON worker_salary_deductions (month);
+
+ALTER TABLE worker_salary_deductions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anon select worker_salary_deductions"
+  ON worker_salary_deductions FOR SELECT
+  USING (true);
+
+CREATE POLICY "Allow anon insert worker_salary_deductions"
+  ON worker_salary_deductions FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon update worker_salary_deductions"
+  ON worker_salary_deductions FOR UPDATE
+  USING (true)
+  WITH CHECK (true);
+
+CREATE POLICY "Allow anon delete worker_salary_deductions"
+  ON worker_salary_deductions FOR DELETE
+  USING (true);
