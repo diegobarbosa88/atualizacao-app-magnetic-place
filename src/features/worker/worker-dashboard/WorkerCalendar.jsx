@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Zap, Trash2, Edit2 } from 'lucide-react';
 import { formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
@@ -11,7 +11,14 @@ export default function WorkerCalendar({
   onAddEntry, onEditLog, onDeleteLog, onEditLimitedLog, onQuickRegister,
 }) {
   const [selectedDay, setSelectedDay] = useState(null);
+  const detailRef = useRef(null);
   const today = toISODateLocal(new Date());
+
+  useEffect(() => {
+    if (selectedDay && detailRef.current) {
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [selectedDay]);
 
   if (!daysList || daysList.length === 0) return null;
 
@@ -55,7 +62,9 @@ export default function WorkerCalendar({
             const isSelected = ds === selectedDay;
             const isWeekend = dObj.getDay() === 0 || dObj.getDay() === 6;
             const isDayBeforeStart = workerStartDate && dObj < workerStartDate;
-            const hasPending = !!(dayRequestsByDate?.[ds]?.length);
+            const hasPending = (dayRequestsByDate?.[ds] || []).some(
+              ({ corr }) => corr.status === 'submitted' || corr.status === 'under_review'
+            );
             const hasLog = dayLogs.length > 0;
 
             return (
@@ -97,7 +106,7 @@ export default function WorkerCalendar({
 
       {/* Selected day detail panel */}
       {selectedDay && (
-        <div className="border-t border-slate-100 px-4 py-4 bg-slate-50/50 animate-in slide-in-from-top-2 duration-300">
+        <div ref={detailRef} className="border-t border-slate-100 px-4 py-4 bg-slate-50/50 animate-in slide-in-from-top-2 duration-300">
           <div className="flex items-center justify-between mb-3">
             <div>
               <p className="text-xs font-black text-slate-800 capitalize">
