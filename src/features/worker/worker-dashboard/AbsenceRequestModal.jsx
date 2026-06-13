@@ -1,14 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarX, Send } from 'lucide-react';
+import { CalendarX, Send, CheckCircle, Clock, Eye } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 
 const DEFAULT_REASONS = ['Doença', 'Consulta médica', 'Emergência familiar', 'Férias', 'Assunto pessoal', 'Outro'];
 const WEEKDAY_SHORT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+const STATUS_MAP = {
+  approved: { label: 'Confirmado', cls: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+  seen:     { label: 'Visto',      cls: 'bg-slate-100 text-slate-500',    icon: Eye },
+  pending:  { label: 'Aguarda',    cls: 'bg-orange-100 text-orange-600',  icon: Clock },
+};
+
+function AbsenceHistoryRow({ r }) {
+  const s = STATUS_MAP[r.status] || STATUS_MAP.pending;
+  const Icon = s.icon;
+  const sortedDates = (r.dates || []).slice().sort();
+  return (
+    <div className="px-4 py-3 space-y-2 border-b border-slate-50 last:border-b-0">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-bold text-slate-700">{r.reason}</p>
+        <span className={`shrink-0 flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${s.cls}`}>
+          <Icon size={9} /> {s.label}
+        </span>
+      </div>
+      {sortedDates.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {sortedDates.map(ds => {
+            const d = new Date(ds + 'T00:00:00');
+            const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+            return (
+              <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700'}`}>
+                <span className="text-[8px] font-black uppercase tracking-wider">{d.toLocaleDateString('pt-PT', { weekday: 'short' })}</span>
+                <span className="text-sm font-black">{d.getDate()}</span>
+                <span className="text-[8px] font-bold opacity-70">{d.toLocaleDateString('pt-PT', { month: 'short' })}</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AbsenceRequestModal({
   isOpen, onClose,
   daysList, monthLogs,
   currentUser, systemSettings,
+  absenceRequests,
   onSubmit,
 }) {
   const [selectedDates, setSelectedDates] = useState([]);
@@ -44,6 +82,10 @@ export default function AbsenceRequestModal({
   const monthLabel = daysList.length > 0
     ? new Date(daysList[0] + 'T00:00:00').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
     : '';
+
+  const myAbsences = (absenceRequests || [])
+    .filter(r => r.worker_id === currentUser?.id && r.status !== 'archived')
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   const footer = (
     <div className="px-4 pt-2 pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))] space-y-2 border-t border-slate-100">
@@ -144,6 +186,16 @@ export default function AbsenceRequestModal({
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all resize-none placeholder:text-slate-300"
           />
         </div>
+
+        {/* Histórico de avisos */}
+        {myAbsences.length > 0 && (
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Os meus avisos</p>
+            <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+              {myAbsences.map(r => <AbsenceHistoryRow key={r.id} r={r} />)}
+            </div>
+          </div>
+        )}
       </div>
     </ModalShell>
   );
