@@ -97,10 +97,10 @@ export function useClientNotifications({
           const entry = (d.adminEntry || d.editedEntry || d.newEntry) === '--:--' ? null : (d.adminEntry || d.editedEntry || d.newEntry);
           const exit  = (d.adminExit  || d.editedExit  || d.newExit)  === '--:--' ? null : (d.adminExit  || d.editedExit  || d.newExit);
           if (originalLog) {
-            updates.push({ id: originalLog.id, data: { ...originalLog, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours } });
+            updates.push({ id: originalLog.id, data: { ...originalLog, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours, edited_at: new Date().toISOString(), edited_source: 'client_portal' } });
           } else {
             const newLogId = `log_${crypto.randomUUID()}`;
-            inserts.push({ id: newLogId, data: { id: newLogId, date: targetDate, workerId: targetWorkerId, clientId: targetClientId, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours, created_at: new Date().toISOString() } });
+            inserts.push({ id: newLogId, data: { id: newLogId, date: targetDate, workerId: targetWorkerId, clientId: targetClientId, startTime: entry, endTime: exit, breakStart: d.adminBreakStart || d.editedBreakStart || d.newBreakStart, breakEnd: d.adminBreakEnd || d.editedBreakEnd || d.newBreakEnd, hours: d.adminHours || d.editedHours || d.newHours, created_at: new Date().toISOString(), source: 'client_portal' } });
           }
         }
       }
@@ -155,10 +155,10 @@ export function useClientNotifications({
         } else if (item.proposed) {
           const existingLog = logs.find(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
           if (existingLog) {
-            await saveToDb('logs', existingLog.id, { ...existingLog, ...item.proposed });
+            await saveToDb('logs', existingLog.id, { ...existingLog, ...item.proposed, edited_at: new Date().toISOString(), edited_source: 'client_portal' });
           } else {
             const newId = `log_${crypto.randomUUID()}`;
-            await saveToDb('logs', newId, { id: newId, workerId: item.worker_id, clientId: effectiveClientId, date: item.date, ...item.proposed, created_at: new Date().toISOString() });
+            await saveToDb('logs', newId, { id: newId, workerId: item.worker_id, clientId: effectiveClientId, date: item.date, ...item.proposed, created_at: new Date().toISOString(), source: 'client_portal' });
           }
         }
       }

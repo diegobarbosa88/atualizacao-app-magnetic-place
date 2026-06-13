@@ -6,8 +6,37 @@ import ClientTimesheetReport from '../../components/common/ClientTimesheetReport
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
-  Settings, FileText, Sparkles, Bell
+  Settings, FileText, Sparkles, Bell, Pencil
 } from 'lucide-react';
+
+const SOURCE_CFG = {
+  gps_auto:     { label: 'GPS',        bg: 'bg-emerald-100', text: 'text-emerald-700' },
+  quick_worker: { label: 'Card',       bg: 'bg-cyan-100',    text: 'text-cyan-700' },
+  manual_admin: { label: 'Admin',      bg: 'bg-indigo-100',  text: 'text-indigo-700' },
+  manual_worker:{ label: 'Manual',     bg: 'bg-blue-100',    text: 'text-blue-700' },
+  batch:        { label: 'Lote',       bg: 'bg-amber-100',   text: 'text-amber-700' },
+  request:      { label: 'Pedido',     bg: 'bg-purple-100',  text: 'text-purple-700' },
+  correction:   { label: 'Correcção',  bg: 'bg-orange-100',  text: 'text-orange-700' },
+  client_portal:{ label: 'Portal',     bg: 'bg-teal-100',    text: 'text-teal-700' },
+};
+
+function LogSourceBadge({ log }) {
+  const cfg = SOURCE_CFG[log.source];
+  return (
+    <div className="flex items-center gap-1 flex-wrap">
+      {cfg && (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${cfg.bg} ${cfg.text}`}>
+          {cfg.label}
+        </span>
+      )}
+      {log.edited_at && (
+        <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">
+          <Pencil size={8} /> Editado
+        </span>
+      )}
+    </div>
+  );
+}
 import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
 import ScheduleManager from './ScheduleManager';
@@ -21,6 +50,7 @@ import AdminSettings from './AdminSettings';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminClassicNav from './AdminClassicNav';
+import TOConlineAdmin from './TOConlineAdmin';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -321,9 +351,10 @@ function AdminDashboard(props) {
                           <div className="space-y-3">
                             {dayLogs.map(log => (
                               <div key={log.id} className="bg-white p-3 sm:p-6 rounded-2xl sm:rounded-3xl border border-indigo-100/50 flex items-center justify-between shadow-sm gap-2">
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-3 flex-wrap">
                                   <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-4 py-2 rounded-xl uppercase border border-indigo-100">{clients.find(c => c.id === log.clientId)?.name}</span>
                                   <div className="text-sm font-bold font-mono">{log.startTime}-{log.endTime} {log.breakStart ? `(P: ${log.breakStart})` : ''}</div>
+                                  <LogSourceBadge log={log} />
                                 </div>
                                 <div className="flex items-center gap-4">
                                   <span className="text-2xl font-black">{formatHours(log.hours)}</span>
@@ -386,6 +417,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'notificacoes' && (
         <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
+      )}
+
+      {!auditWorkerId && activeTab === 'toconline' && (
+        <TOConlineAdmin />
       )}
 
       {!auditWorkerId && activeTab === 'settings' && (

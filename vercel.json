@@ -17,6 +17,30 @@
     },
     "api/reconciliacao/reprocess.js": {
       "maxDuration": 30
+    },
+    "api/toconline/import.js": {
+      "maxDuration": 300
+    },
+    "api/toconline/create-fatura.js": {
+      "maxDuration": 30
+    },
+    "api/toconline/clientes.js": {
+      "maxDuration": 30
+    },
+    "api/toconline/fornecedores.js": {
+      "maxDuration": 30
+    },
+    "api/toconline/artigos.js": {
+      "maxDuration": 30
+    },
+    "api/toconline/relatorio.js": {
+      "maxDuration": 30
+    },
+    "api/toconline/documento.js": {
+      "maxDuration": 30
+    },
+    "api/toconline/status.js": {
+      "maxDuration": 10
     }
   },
   "headers": [
@@ -39,10 +63,5 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/((?!api/).*)",
-      "destination": "/index.html"
-    }
-  ]
+  "rewrites": []
 }

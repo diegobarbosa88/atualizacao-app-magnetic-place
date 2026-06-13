@@ -1,13 +1,126 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturas/faturasUtils';
 import GmailConfigPanel from './faturas/GmailConfigPanel';
+import TOConlinePanel from './faturas/TOConlinePanel';
+import FaturaConfigPanel from './faturas/FaturaConfigPanel';
 import CelEditTd from './faturas/CelEditTd';
 import { gerarRelatorioFaturasPDF } from './faturas/faturasExport';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
+
+const MESES = [
+  { val: '01', label: 'Janeiro' }, { val: '02', label: 'Fevereiro' },
+  { val: '03', label: 'Março' }, { val: '04', label: 'Abril' },
+  { val: '05', label: 'Maio' }, { val: '06', label: 'Junho' },
+  { val: '07', label: 'Julho' }, { val: '08', label: 'Agosto' },
+  { val: '09', label: 'Setembro' }, { val: '10', label: 'Outubro' },
+  { val: '11', label: 'Novembro' }, { val: '12', label: 'Dezembro' },
+];
+
+const FIELD_LABELS = {
+  numero_fatura: 'Nº Fatura',
+  fornecedor: 'Fornecedor',
+  data_fatura: 'Data da Fatura',
+  valor_total: 'Valor Total (€)',
+  iva: 'IVA (€)',
+  subtotal: 'Subtotal (€)',
+  desconto: 'Desconto',
+  descricao: 'Descrição',
+  categoria: 'Categoria',
+  moeda: 'Moeda',
+  forma_pagamento: 'Forma de Pagamento',
+  nif_fornecedor: 'NIF Fornecedor',
+  nif_cliente: 'NIF Cliente',
+  banco: 'Banco',
+  iban: 'IBAN',
+  prazo_pagamento: 'Prazo de Pagamento',
+  notas: 'Notas',
+};
+
+function ModalDetalhe({ fatura, onClose }) {
+  if (!fatura) return null;
+  const d = fatura.dados || {};
+  const todasChaves = Object.keys(d).filter(k => d[k] != null && d[k] !== '');
+
+  const formatVal = (k, v) => {
+    if (k === 'valor_total' || k === 'iva' || k === 'subtotal' || k === 'desconto') {
+      const n = parseFloat(v);
+      return isNaN(n) ? String(v) : n.toFixed(2) + ' €';
+    }
+    return String(v);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Detalhes da Fatura</p>
+            <p className="text-sm font-bold text-slate-700 truncate" title={fatura.filename}>{fatura.filename}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Importada em {fatura.importado_em ? new Date(fatura.importado_em).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 ml-3">
+            {fatura.status === 'PAGO'
+              ? <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-50 text-emerald-700 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={11} /> Pago</span>
+              : <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest">Pendente</span>
+            }
+            <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Campos extraídos */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {todasChaves.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-8">Nenhum dado extraído para esta fatura.</p>
+          ) : (
+            <div className="space-y-3">
+              {todasChaves.map(k => (
+                <div key={k} className="flex gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-32 shrink-0 pt-0.5">
+                    {FIELD_LABELS[k] || k.replace(/_/g, ' ')}
+                  </span>
+                  <span className="text-sm text-slate-700 font-semibold flex-1 break-words">
+                    {formatVal(k, d[k])}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Ações */}
+        {fatura.url && (
+          <div className="px-6 pb-6 pt-4 border-t border-slate-100 flex gap-3">
+            <a
+              href={fatura.url}
+              download={fatura.filename}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm"
+            >
+              <Download size={16} /> Baixar PDF Original
+            </a>
+            <a
+              href={fatura.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-4 py-3 bg-slate-100 text-slate-600 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+            >
+              <ExternalLink size={16} /> Abrir
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function FaturasAdmin() {
   const { supabase, gmailQueryConfig, saveGmailQueryConfig, systemSettings } = useApp();
@@ -20,6 +133,8 @@ export default function FaturasAdmin() {
   const [cfg, setCfg] = useState(() => gmailQueryConfig || DEFAULT_GMAIL_CONFIG);
   const [importando, setImportando] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [importandoToc, setImportandoToc] = useState(false);
+  const [importResultToc, setImportResultToc] = useState(null);
   const [extraindo, setExtraindo] = useState(false);
   const [extraindoErros, setExtraindoErros] = useState([]);
 
@@ -32,10 +147,14 @@ export default function FaturasAdmin() {
   const [filtroDataAte, setFiltroDataAte] = useState('');
   const [filtroValorMin, setFiltroValorMin] = useState('');
   const [filtroValorMax, setFiltroValorMax] = useState('');
+  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAno, setFiltroAno] = useState('');
+  const [filtroFornecedor, setFiltroFornecedor] = useState('');
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [filtroStatus, setFiltroStatus] = useState('todas');
   const [ordem, setOrdem] = useState({ campo: 'importado_em', dir: 'desc' });
   const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [faturaDetalhe, setFaturaDetalhe] = useState(null);
 
   useEffect(() => {
     if (gmailQueryConfig) setCfg(gmailQueryConfig);
@@ -119,6 +238,17 @@ export default function FaturasAdmin() {
 
   useEffect(() => { carregar(); }, []);
 
+  const anosDisponiveis = useMemo(() => {
+    const anos = new Set(
+      faturas.map(f => (f.dados?.data_fatura || f.importado_em || '').slice(0, 4)).filter(a => a && a.length === 4)
+    );
+    return [...anos].sort().reverse();
+  }, [faturas]);
+
+  const fornecedoresDisponiveis = useMemo(() => {
+    return [...new Set(faturas.map(f => f.dados?.fornecedor).filter(Boolean))].sort();
+  }, [faturas]);
+
   const abrirEdit = (e, fatura, campo, valorAtual) => {
     e.stopPropagation();
     setCelEdit({ id: fatura.id, campo });
@@ -156,6 +286,9 @@ export default function FaturasAdmin() {
     if (filtroDataAte) lista = lista.filter(f => (f.dados?.data_fatura || f.importado_em || '').slice(0, 10) <= filtroDataAte);
     if (filtroValorMin !== '') lista = lista.filter(f => (f.dados?.valor_total ?? 0) >= parseFloat(filtroValorMin));
     if (filtroValorMax !== '') lista = lista.filter(f => (f.dados?.valor_total ?? 0) <= parseFloat(filtroValorMax));
+    if (filtroAno) lista = lista.filter(f => (f.dados?.data_fatura || f.importado_em || '').slice(0, 4) === filtroAno);
+    if (filtroMes) lista = lista.filter(f => (f.dados?.data_fatura || f.importado_em || '').slice(5, 7) === filtroMes);
+    if (filtroFornecedor) lista = lista.filter(f => f.dados?.fornecedor === filtroFornecedor);
     if (filtroStatus === 'pendentes') lista = lista.filter(f => (f.status || 'PENDENTE') === 'PENDENTE');
     if (filtroStatus === 'pagas') lista = lista.filter(f => f.status === 'PAGO');
     lista.sort((a, b) => {
@@ -170,7 +303,7 @@ export default function FaturasAdmin() {
       return 0;
     });
     return lista;
-  }, [faturas, pesquisa, filtroDataDe, filtroDataAte, filtroValorMin, filtroValorMax, filtroStatus, ordem]);
+  }, [faturas, pesquisa, filtroDataDe, filtroDataAte, filtroValorMin, filtroValorMax, filtroAno, filtroMes, filtroFornecedor, filtroStatus, ordem]);
 
   const toggleOrdem = (campo) => setOrdem(prev =>
     prev.campo === campo ? { campo, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { campo, dir: 'asc' }
@@ -181,8 +314,12 @@ export default function FaturasAdmin() {
     return ordem.dir === 'asc' ? <ArrowUp size={11} className="text-indigo-500" /> : <ArrowDown size={11} className="text-indigo-500" />;
   };
 
-  const filtrosAtivos = pesquisa || filtroDataDe || filtroDataAte || filtroValorMin !== '' || filtroValorMax !== '';
-  const limparFiltros = () => { setPesquisa(''); setFiltroDataDe(''); setFiltroDataAte(''); setFiltroValorMin(''); setFiltroValorMax(''); };
+  const filtrosAtivos = pesquisa || filtroDataDe || filtroDataAte || filtroValorMin !== '' || filtroValorMax !== '' || filtroMes || filtroAno || filtroFornecedor;
+  const limparFiltros = () => {
+    setPesquisa(''); setFiltroDataDe(''); setFiltroDataAte('');
+    setFiltroValorMin(''); setFiltroValorMax('');
+    setFiltroMes(''); setFiltroAno(''); setFiltroFornecedor('');
+  };
 
   const toggleSel = (id) => setSelecionados(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleTodos = () => {
@@ -194,7 +331,7 @@ export default function FaturasAdmin() {
     const alvo = faturas.filter(f => ids.includes(f.id));
     setApagando(true);
     try {
-      const paths = alvo.map(f => f.storage_path);
+      const paths = alvo.map(f => f.storage_path).filter(Boolean);
       if (paths.length) await supabase.storage.from('faturas').remove(paths);
       const { error } = await supabase.from('faturas').delete().in('id', ids);
       if (error) throw error;
@@ -235,6 +372,7 @@ export default function FaturasAdmin() {
     </th>
   );
 
+  const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white";
   const celEditProps = { celEdit, celValor, salvandoCell, onOpen: abrirEdit, onValorChange: setCelValor, onSave: guardarEdit, onCancel: cancelarEdit };
 
   return (
@@ -265,6 +403,8 @@ export default function FaturasAdmin() {
         </div>
       </div>
 
+      <FaturaConfigPanel />
+
       <GmailConfigPanel
         cfg={cfg}
         onCfgChange={setCfg}
@@ -272,6 +412,14 @@ export default function FaturasAdmin() {
         onImport={handleImportar}
         importing={importando}
         importResult={importResult}
+      />
+
+      <TOConlinePanel
+        onImportDone={carregar}
+        importing={importandoToc}
+        setImporting={setImportandoToc}
+        importResult={importResultToc}
+        setImportResult={setImportResultToc}
       />
 
       {erro && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-2xl text-sm font-semibold">Erro: {erro}</div>}
@@ -294,26 +442,53 @@ export default function FaturasAdmin() {
           {filtrosAtivos && <button onClick={limparFiltros} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors"><X size={12} /> Limpar</button>}
         </div>
         {mostrarFiltros && (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de</label>
-              <input type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+            {/* Linha 1: Ano, Mês, Fornecedor */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ano</label>
+                <select value={filtroAno} onChange={e => setFiltroAno(e.target.value)} className={selectClass}>
+                  <option value="">Todos</option>
+                  {anosDisponiveis.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</label>
+                <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)} className={selectClass}>
+                  <option value="">Todos</option>
+                  {MESES.map(m => <option key={m.val} value={m.val}>{m.label}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Fornecedor</label>
+                <select value={filtroFornecedor} onChange={e => setFiltroFornecedor(e.target.value)} className={selectClass}>
+                  <option value="">Todos</option>
+                  {fornecedoresDisponiveis.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data até</label>
-              <input type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor mín (€)</label>
-              <input type="number" min="0" step="0.01" value={filtroValorMin} onChange={e => setFiltroValorMin(e.target.value)} placeholder="0.00"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor máx (€)</label>
-              <input type="number" min="0" step="0.01" value={filtroValorMax} onChange={e => setFiltroValorMax(e.target.value)} placeholder="9999.00"
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+            {/* Linha 2: Datas e valores */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de</label>
+                <input type="date" value={filtroDataDe} onChange={e => setFiltroDataDe(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data até</label>
+                <input type="date" value={filtroDataAte} onChange={e => setFiltroDataAte(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor mín (€)</label>
+                <input type="number" min="0" step="0.01" value={filtroValorMin} onChange={e => setFiltroValorMin(e.target.value)} placeholder="0.00"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Valor máx (€)</label>
+                <input type="number" min="0" step="0.01" value={filtroValorMax} onChange={e => setFiltroValorMax(e.target.value)} placeholder="9999.00"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              </div>
             </div>
           </div>
         )}
@@ -370,7 +545,7 @@ export default function FaturasAdmin() {
       ) : (
         <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-5 py-3 border-b border-slate-50">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Duplo clique numa célula para editar · <span className="text-indigo-400">Enter</span> para guardar · <span className="text-slate-400">Esc</span> para cancelar</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Duplo clique numa célula para editar · <span className="text-indigo-400">Enter</span> para guardar · <span className="text-slate-400">Esc</span> para cancelar · <span className="text-slate-400"><Eye size={9} className="inline" /> Ver detalhes</span></p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -423,8 +598,14 @@ export default function FaturasAdmin() {
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
-                          <a href={f.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Abrir"><ExternalLink size={14} /></a>
-                          <a href={f.url} download={f.filename} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Download"><Download size={14} /></a>
+                          <button onClick={() => setFaturaDetalhe(f)} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Ver detalhes e descarregar">
+                            <Eye size={14} />
+                          </button>
+                          {f.url && (
+                            <a href={f.url} download={f.filename} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Download PDF">
+                              <Download size={14} />
+                            </a>
+                          )}
                           <button onClick={() => handleApagarUm(f)} disabled={apagando} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50" title="Apagar">
                             {apagando ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                           </button>
@@ -445,6 +626,8 @@ export default function FaturasAdmin() {
           </div>
         </div>
       )}
+
+      <ModalDetalhe fatura={faturaDetalhe} onClose={() => setFaturaDetalhe(null)} />
     </div>
   );
 }

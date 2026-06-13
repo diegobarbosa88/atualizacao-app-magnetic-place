@@ -152,3 +152,52 @@ export const STATUS_DOC = {
   Assinado:  { label: 'Assinado',   cls: 'bg-emerald-100 text-emerald-700' },
   signed:    { label: 'Assinado',   cls: 'bg-emerald-100 text-emerald-700' },
 };
+
+// ─── Utilitários partilhados entre ModoBursting e ModoLote ────────────────────
+
+export function calcularTolerancias(systemSettings) {
+  return {
+    valido: parseFloat(String(systemSettings?.toleranciaValido ?? 0.77).replace(',', '.')),
+    aviso:  parseFloat(String(systemSettings?.toleranciaAviso  ?? 10).replace(',', '.')),
+  };
+}
+
+export function calcularBrutoDeMes(worker, mes, logs) {
+  if (!worker || !mes) return 0;
+  const logsDoMes = (logs ?? []).filter(l => l.workerId === worker.id && l.date?.startsWith(mes));
+  return logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0) * (worker.valorHora || 0);
+}
+
+export function agregarTotaisPorMes(resultados) {
+  return (resultados ?? []).reduce((acc, r) => {
+    if (!r.sucesso || !r.mes || r.mes === '—') return acc;
+    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
+    acc[r.mes].ss        += r.ssExtraido  ?? 0;
+    acc[r.mes].irs       += r.irsExtraido ?? 0;
+    acc[r.mes].ssEmpresa += (r.ssExtraido ?? 0) * (23.75 / 11);
+    return acc;
+  }, {});
+}
+
+export async function adicionarCustosAoMes(totaisPorMes, saveToDb, formatarMesFn) {
+  for (const [mes, totais] of Object.entries(totaisPorMes)) {
+    const dataMes = `${mes}-01`;
+    const mesNome = formatarMesFn(mes);
+    if (totais.ss > 0) {
+      const id = `e${Date.now()}_ss_${mes}`;
+      await saveToDb('expenses', id, { id, name: `Segurança Social - ${mesNome}`, amount: parseFloat(totais.ss.toFixed(2)), type: 'variável', date: dataMes });
+    }
+    if (totais.irs > 0) {
+      const id = `e${Date.now()}_irs_${mes}`;
+      await saveToDb('expenses', id, { id, name: `IRS - ${mesNome}`, amount: parseFloat(totais.irs.toFixed(2)), type: 'variável', date: dataMes });
+    }
+    if (totais.ssEmpresa > 0) {
+      const id = `e${Date.now()}_sse_${mes}`;
+      await saveToDb('expenses', id, { id, name: `Seg. Social Empresa - ${mesNome}`, amount: parseFloat(totais.ssEmpresa.toFixed(2)), type: 'variável', date: dataMes });
+    }
+  }
+}
+
+export async function guardarValidacoesEmLote(resultados, sessionId, extrasPorResultado = () => ({})) {
+  await Promise.all(resultados.map(r => guardarValidacao(r, { sessionId, ...extrasPorResultado(r) })));
+}

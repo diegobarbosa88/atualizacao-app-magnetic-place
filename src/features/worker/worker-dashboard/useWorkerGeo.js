@@ -119,8 +119,9 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
     try {
       const pos = await getGpsSilent();
       const client = geoSuggestion.client;
-      const lat = pos?.lat ?? null;
-      const lng = pos?.lng ?? null;
+      // fallback para coords já capturadas quando o card carregou
+      const lat = pos?.lat ?? geoSuggestion.lat ?? null;
+      const lng = pos?.lng ?? geoSuggestion.lng ?? null;
       let verified = null;
       if (pos && client?.lat != null && client?.lng != null) {
         verified = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
@@ -142,6 +143,7 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
           check_in_lat: lat,
           check_in_lng: lng,
           geo_verified: verified,
+          source: 'gps_auto',
         });
       } else {
         const existingLog = logs.find(l => l.id === geoSuggestion.logId);

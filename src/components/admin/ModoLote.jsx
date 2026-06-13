@@ -18,6 +18,13 @@ import {
   estadoStringToFlags,
   guardarValidacao,
   formatarMes,
+  calcularTolerancias,
+  calcularBrutoDeMes,
+  agregarTotaisPorMes,
+  adicionarCustosAoMes,
+  guardarValidacoesEmLote,
+  ESTADO_BADGE,
+  ESTADO_PT,
 } from '../../utils/validacaoHelpers';
 import { DivergenciaBadge, EstadoPicker } from './ValidacaoUI';
 
@@ -41,10 +48,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   const [tolValidoLocal, setTolValidoLocal] = useState(String(systemSettings?.toleranciaValido ?? 0.77));
   const [tolAvisoLocal,  setTolAvisoLocal]  = useState(String(systemSettings?.toleranciaAviso  ?? 10));
 
-  const tolerancias = {
-    valido: parseFloat(String(systemSettings?.toleranciaValido ?? 0.77).replace(',', '.')),
-    aviso:  parseFloat(String(systemSettings?.toleranciaAviso  ?? 10).replace(',', '.')),
-  };
+  const tolerancias = calcularTolerancias(systemSettings);
 
   const guardarTolerancias = () => {
     const v = parseFloat(tolValidoLocal.replace(',', '.'));
@@ -69,12 +73,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   const processarPagina = async (text, origem) => {
     const { nome, mes } = extrairMetadadosTOConline(text);
     const worker = nome ? encontrarWorker(nome, workers) : null;
-    let bruto = 0;
-    if (worker && mes) {
-      const logsDoMes = logs.filter(l => l.workerId === worker.id && l.date?.startsWith(mes));
-      const totalHoras = logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
-      bruto = totalHoras * (worker.valorHora || 0);
-    }
+    const bruto = calcularBrutoDeMes(worker, mes, logs);
     const validacao = aplicarOverrideSempreValido(parseReciboTOConline(text, bruto, tolerancias), worker);
     return { origem, nomeExtraido: nome ?? '—', worker: worker ?? null, mes: mes ?? '—', bruto, ...validacao };
   };
@@ -91,12 +90,23 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
     const res = [];
     for (const file of files) {
       try {
+        // Divide o PDF em secções: cada secção termina com "Emitido por TOConline".
+        // Isto preserva todas as páginas de cada trabalhador (incluindo a pág. 1
+        // com "Ajudas de Custo") independentemente de quantos trabalhadores existam.
         const paginas = await extrairPaginasPdf(file);
-        const paginasRecibo = paginas.filter(p => p.includes('Emitido por TOConline'));
-        if (paginasRecibo.length === 0) {
+        const secoes = [];
+        let atual = [];
+        for (const pag of paginas) {
+          atual.push(pag);
+          if (pag.includes('Emitido por TOConline')) {
+            secoes.push(atual.join('\n'));
+            atual = [];
+          }
+        }
+        if (secoes.length === 0) {
           res.push({ origem: file.name, nomeExtraido: '—', worker: null, mes: '—', bruto: 0, sucesso: false, valido: false, aviso: false, mensagem: 'Documento não reconhecido como recibo TOConline.' });
         } else {
-          for (const texto of paginasRecibo) {
+          for (const texto of secoes) {
             res.push(await processarPagina(texto, file.name));
           }
         }
@@ -134,69 +144,25 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
     setProcessando(false);
   };
 
-  // Agrupa SS + IRS por mês — usado pelo botão "Adicionar a Custos"
-  const totaisPorMes = resultados.reduce((acc, r) => {
-    if (!r.sucesso || r.mes === '—' || !r.mes) return acc;
-    if (!acc[r.mes]) acc[r.mes] = { ss: 0, irs: 0, ssEmpresa: 0 };
-    acc[r.mes].ss        += r.ssExtraido  ?? 0;
-    acc[r.mes].irs       += r.irsExtraido ?? 0;
-    acc[r.mes].ssEmpresa += (r.ssExtraido ?? 0) * (23.75 / 11);
-    return acc;
-  }, {});
+  const totaisPorMes = agregarTotaisPorMes(resultados);
 
   const handleAdicionarACustos = async () => {
-    setAdicionando(true);
-    setErroAdicionar(null);
+    setAdicionando(true); setErroAdicionar(null);
     try {
-      const entradas = Object.entries(totaisPorMes);
-      for (const [mes, totais] of entradas) {
-        const dataMes = `${mes}-01`;
-        const mesNome = formatarMes(mes);
-        if (totais.ss > 0) {
-          const id = `e${Date.now()}_ss_${mes}`;
-          await saveToDb('expenses', id, {
-            id, name: `Segurança Social - ${mesNome}`,
-            amount: parseFloat(totais.ss.toFixed(2)),
-            type: 'variável', date: dataMes,
-          });
-        }
-        if (totais.irs > 0) {
-          const id = `e${Date.now()}_irs_${mes}`;
-          await saveToDb('expenses', id, {
-            id, name: `IRS - ${mesNome}`,
-            amount: parseFloat(totais.irs.toFixed(2)),
-            type: 'variável', date: dataMes,
-          });
-        }
-        if (totais.ssEmpresa > 0) {
-          const id = `e${Date.now()}_sse_${mes}`;
-          await saveToDb('expenses', id, {
-            id, name: `Seg. Social Empresa - ${mesNome}`,
-            amount: parseFloat(totais.ssEmpresa.toFixed(2)),
-            type: 'variável', date: dataMes,
-          });
-        }
-      }
+      await adicionarCustosAoMes(totaisPorMes, saveToDb, formatarMes);
       setAdicionado(true);
-    } catch (e) {
-      setErroAdicionar(e.message);
-    } finally {
-      setAdicionando(false);
-    }
+    } catch (e) { setErroAdicionar(e.message); }
+    finally { setAdicionando(false); }
   };
 
   const handleGuardarTodos = async () => {
-    setGuardando(true);
-    setErroGuardar(null);
+    setGuardando(true); setErroGuardar(null);
     try {
       const sessionId = crypto.randomUUID();
-      await Promise.all(resultados.map(r => guardarValidacao(r, { sessionId })));
+      await guardarValidacoesEmLote(resultados, sessionId);
       setGuardados(true);
-    } catch (e) {
-      setErroGuardar(e.message);
-    } finally {
-      setGuardando(false);
-    }
+    } catch (e) { setErroGuardar(e.message); }
+    finally { setGuardando(false); }
   };
 
 
@@ -372,7 +338,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
 
   return (
     <div className="space-y-5">
-      {/* Botão Configurar tolerâncias */}
+      {/* Tolerâncias */}
       <div className="flex justify-end">
         <button onClick={() => setConfigAberto(o => !o)}
           className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">
@@ -407,11 +373,13 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
         </div>
       )}
 
-      {/* Upload múltiplo */}
+      {/* Upload */}
       <label className="flex flex-col items-center justify-center gap-2 p-8 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
         <Files size={28} className="text-slate-300" />
         <span className="text-sm font-bold text-slate-500">
-          {files.length > 0 ? `${files.length} ficheiro${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}` : 'Clique para selecionar PDF(s)'}
+          {files.length > 0
+            ? `${files.length} ficheiro${files.length > 1 ? 's' : ''} selecionado${files.length > 1 ? 's' : ''}`
+            : 'Clique para selecionar PDF(s)'}
         </span>
         <span className="text-[10px] text-slate-400">1 PDF com todos os recibos, ou vários PDFs separados</span>
         <input type="file" accept=".pdf" multiple className="hidden" onChange={handleFiles} />
@@ -426,124 +394,153 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
       {/* Sumário */}
       {resultados.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-emerald-600">{validos}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Válidos</p>
-          </div>
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-yellow-600">{avisos}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-yellow-500">Avisos</p>
-          </div>
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-red-500">{invalidos}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-red-400">Inválidos</p>
-          </div>
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-            <p className="text-lg font-black text-amber-500">{erros}</p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-amber-400">Erros</p>
-          </div>
+          {[
+            { label: 'Válidos',   val: validos,   cls: 'emerald' },
+            { label: 'Avisos',    val: avisos,    cls: 'yellow'  },
+            { label: 'Inválidos', val: invalidos, cls: 'red'     },
+            { label: 'Erros',     val: erros,     cls: 'amber'   },
+          ].map(({ label, val, cls }) => (
+            <div key={label} className={`bg-${cls}-50 border border-${cls}-200 rounded-xl p-3 text-center`}>
+              <p className={`text-lg font-black text-${cls}-600`}>{val}</p>
+              <p className={`text-[9px] font-black uppercase tracking-widest text-${cls}-500`}>{label}</p>
+            </div>
+          ))}
         </div>
       )}
 
       {/* Tabela de resultados */}
       {resultados.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+        <div className="rounded-2xl border border-slate-100 overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
-                <th className="hidden lg:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto PDF</th>
-                <th className="hidden lg:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">SS</th>
-                <th className="hidden lg:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">IRS</th>
-                <th className="hidden md:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Divergência</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
-                <th className="hidden sm:table-cell px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Envio</th>
+                {burstResultados && (
+                  <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-indigo-400">Enviar</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {resultados.map((r, i) => (
-                <React.Fragment key={i}>
-                  <tr
-                    onClick={() => setExpandido(expandido === i ? null : i)}
-                    className="hover:bg-slate-50 transition-colors cursor-pointer select-none"
-                  >
-                    <td className="px-4 py-3">
-                      <p className="font-bold text-slate-800">{r.worker?.name ?? <span className="text-amber-500 font-bold">Não encontrado</span>}</p>
-                      {!r.worker && <p className="text-[10px] text-slate-400 truncate max-w-[160px]">{r.nomeExtraido}</p>}
-                    </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-slate-600 font-medium">{r.mes !== '—' ? formatarMes(r.mes) : '—'}</td>
-                    <td className="hidden md:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'}</td>
-                    <td className="hidden lg:table-cell px-4 py-3 text-right font-bold text-indigo-700">{r.abonosExtraidos != null ? `${r.abonosExtraidos.toFixed(2)}€` : '—'}</td>
-                    <td className="hidden lg:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'}</td>
-                    <td className="hidden lg:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'}</td>
-                    <td className="hidden md:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-center gap-2">
-                        <EstadoPicker
-                          atual={!r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido'}
-                          onChange={(novo) => {
-                            const flags = estadoStringToFlags(novo);
-                            setResultados(prev => prev.map((x, idx) => idx === i ? { ...x, ...flags } : x));
-                          }}
-                        />
-                        {r.sucesso && (r.divergenciaSinal != null || (r.bruto > 0 && r.abonosExtraidos != null)) && (
-                          <DivergenciaBadge
-                            sinal={r.divergenciaSinal ?? (r.liquidoExtraido - r.abonosExtraidos)}
-                            className="text-xs font-bold"
-                          />
-                        )}
-                      </div>
-                    </td>
-                    <td className="hidden sm:table-cell px-4 py-3 text-center">
-                      {enviandoRecibos && !r.envioStatus
-                        ? <Loader2 size={13} className="animate-spin text-indigo-400 mx-auto" />
-                        : r.envioStatus === 'enviado'    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase"><CheckCircle size={10} />Enviado</span>
-                        : r.envioStatus === 'ja_enviado' ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>
-                        : r.envioStatus === 'erro_envio' ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase" title={r.erroEnvio}><XCircle size={10} />Erro</span>
-                        : r.envioStatus === 'sem_pdf'    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-black uppercase"><AlertCircle size={10} />Sem PDF</span>
-                        : <span className="text-slate-300">—</span>
-                      }
-                    </td>
-                  </tr>
-
-                  {expandido === i && (
-                    <tr className="bg-slate-50">
-                      <td colSpan={9} className="px-4 py-4">
-                        <div className={`rounded-xl border p-4 space-y-3 ${estadoBg(r)}`}>
-                          <p className="text-xs font-bold text-slate-700">{r.mensagem}</p>
-
-                          {r.sucesso && (
-                            <div className="grid grid-cols-3 gap-2">
-                              {[['Seg. Social', r.ssExtraido], ['IRS', r.irsExtraido], ['Líquido', r.liquidoExtraido]].map(([label, val]) => (
-                                <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
-                                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
-                                  <p className="text-sm font-black text-slate-800">{val?.toFixed(2)}€</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          {r.sucesso && !r.valido && (
-                            <div className={`bg-white rounded-xl px-4 py-2.5 flex items-center justify-between border ${r.aviso ? 'border-yellow-100' : 'border-red-100'}`}>
-                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Divergência</span>
-                              <DivergenciaBadge sinal={r.divergenciaSinal} />
-                            </div>
-                          )}
-
-                          {!r.sucesso && r._textoExtraido && (
-                            <details>
-                              <summary className="text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer">Texto extraído (debug)</summary>
-                              <pre className="mt-2 text-[10px] text-slate-600 bg-white border border-slate-200 rounded-xl p-3 overflow-auto max-h-40 whitespace-pre-wrap break-all">{r._textoExtraido}</pre>
-                            </details>
-                          )}
+              {resultados.map((r, i) => {
+                const estadoAtual = !r.sucesso ? 'erro' : r.valido ? 'valido' : r.aviso ? 'aviso' : 'invalido';
+                const burstMatch  = burstResultados?.find(b => b.worker?.id === r.worker?.id);
+                return (
+                  <React.Fragment key={i}>
+                    <tr
+                      onClick={() => setExpandido(expandido === i ? null : i)}
+                      className="hover:bg-slate-50 transition-colors cursor-pointer select-none"
+                    >
+                      {/* Trabalhador */}
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight size={13} className={`text-slate-300 transition-transform shrink-0 ${expandido === i ? 'rotate-90' : ''}`} />
+                          <div>
+                            <p className="font-bold text-slate-800">
+                              {r.worker?.name ?? <span className="text-amber-500">Não encontrado</span>}
+                            </p>
+                            {!r.worker && <p className="text-[10px] text-slate-400 truncate max-w-[160px]">{r.nomeExtraido}</p>}
+                          </div>
                         </div>
                       </td>
+
+                      {/* Mês */}
+                      <td className="px-4 py-3 text-slate-600 font-medium whitespace-nowrap">
+                        {r.mes !== '—' ? formatarMes(r.mes) : '—'}
+                      </td>
+
+                      {/* Líquido */}
+                      <td className="px-4 py-3 text-right font-bold text-slate-700">
+                        {r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}
+                      </td>
+
+                      {/* Divergência */}
+                      <td className="px-4 py-3 text-center">
+                        {r.sucesso && r.divergenciaSinal != null
+                          ? <DivergenciaBadge sinal={r.divergenciaSinal} className="text-xs font-bold" />
+                          : <span className="text-slate-300">—</span>
+                        }
+                      </td>
+
+                      {/* Estado (validação + envio) */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className="flex items-center gap-1.5">
+                            <EstadoPicker
+                              atual={estadoAtual}
+                              onChange={(novo) => {
+                                const flags = estadoStringToFlags(novo);
+                                setResultados(prev => prev.map((x, idx) => idx === i ? { ...x, ...flags } : x));
+                              }}
+                            />
+                            <span className={`inline-block px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${ESTADO_BADGE[estadoAtual] ?? 'bg-slate-100 text-slate-500'}`}>
+                              {ESTADO_PT[estadoAtual] ?? estadoAtual}
+                            </span>
+                          </div>
+                          {r.envioStatus === 'enviado'    && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase"><CheckCircle size={10} />Enviado</span>}
+                          {r.envioStatus === 'ja_enviado' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] font-black uppercase"><CheckCircle size={10} />Já enviado</span>}
+                          {r.envioStatus === 'erro_envio' && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[9px] font-black uppercase" title={r.erroEnvio}><XCircle size={10} />Erro envio</span>}
+                          {r.envioStatus === 'sem_pdf'    && <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-600 text-[9px] font-black uppercase"><AlertCircle size={10} />Sem PDF</span>}
+                        </div>
+                      </td>
+
+                      {/* Checkbox de envio (só quando burstResultados disponível) */}
+                      {burstResultados && (
+                        <td className="px-4 py-3 text-center" onClick={e => e.stopPropagation()}>
+                          {burstMatch
+                            ? <input
+                                type="checkbox"
+                                checked={selecionadosEnvio.has(burstMatch.nif)}
+                                onChange={() => !burstMatch.jaEnviado && toggleEnvio(burstMatch.nif)}
+                                disabled={burstMatch.jaEnviado}
+                                title={burstMatch.jaEnviado ? 'Já enviado anteriormente' : undefined}
+                                className="accent-indigo-600 w-4 h-4 disabled:opacity-40 cursor-pointer"
+                              />
+                            : <span className="text-slate-300">—</span>
+                          }
+                        </td>
+                      )}
                     </tr>
-                  )}
-                </React.Fragment>
-              ))}
+
+                    {/* Linha expandida — detalhe numérico */}
+                    {expandido === i && (
+                      <tr className="bg-slate-50">
+                        <td colSpan={burstResultados ? 6 : 5} className="px-6 py-4">
+                          <div className={`rounded-xl border p-4 space-y-3 ${estadoBg(r)}`}>
+                            {r.sucesso && (
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                {[
+                                  ['Bruto plataforma', r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'],
+                                  ['Bruto PDF',        r.abonosExtraidos != null ? `${r.abonosExtraidos.toFixed(2)}€` : '—'],
+                                  ['Seg. Social',      r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'],
+                                  ['IRS',              r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'],
+                                ].map(([label, val]) => (
+                                  <div key={label} className="bg-white rounded-xl p-3 text-center border border-slate-100">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+                                    <p className="text-sm font-black text-slate-800">{val}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {r.mensagem && (
+                              <p className="text-xs font-bold text-slate-700">{r.mensagem}</p>
+                            )}
+                            {!r.sucesso && r._textoExtraido && (
+                              <details>
+                                <summary className="text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer">Texto extraído (debug)</summary>
+                                <pre className="mt-2 text-[10px] text-slate-600 bg-white border border-slate-200 rounded-xl p-3 overflow-auto max-h-40 whitespace-pre-wrap break-all">{r._textoExtraido}</pre>
+                              </details>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -551,7 +548,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
 
       {/* Ações pós-processamento */}
       {resultados.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="space-y-2">
           <div className="flex flex-col sm:flex-row sm:justify-end sm:flex-wrap gap-2">
             <button onClick={handleAdicionarACustos} disabled={adicionando || adicionado || Object.keys(totaisPorMes).length === 0}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
@@ -568,50 +565,30 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
               <FileDown size={13} />
               Exportar PDF
             </button>
-            <button
-              onClick={burstResultados ? handleConfirmarEnvio : handleIniciarEnvio}
-              disabled={enviandoRecibos || (burstResultados && selecionadosEnvio.size === 0)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed">
-              {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-              {burstResultados ? `Confirmar Envio (${selecionadosEnvio.size})` : 'Enviar Recibos'}
-            </button>
+            {burstResultados ? (
+              <>
+                <button
+                  onClick={handleConfirmarEnvio}
+                  disabled={enviandoRecibos || selecionadosEnvio.size === 0}
+                  className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed">
+                  {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                  Confirmar Envio ({selecionadosEnvio.size})
+                </button>
+                <button onClick={() => { setBurstResultados(null); setSelecionadosEnvio(new Set()); }}
+                  className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
+                  Cancelar
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={handleIniciarEnvio}
+                disabled={enviandoRecibos}
+                className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed">
+                {enviandoRecibos ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+                Enviar Recibos
+              </button>
+            )}
           </div>
-
-          {burstResultados && (
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
-                  Selecionar trabalhadores para envio
-                </span>
-                <div className="flex items-center gap-1">
-                  <button onClick={() => setSelecionadosEnvio(new Set(burstResultados.filter(r => !r.jaEnviado).map(r => r.nif)))}
-                    className="text-[9px] font-bold uppercase text-indigo-500 hover:text-indigo-700 px-1.5 py-0.5 rounded">Todos</button>
-                  <span className="text-indigo-200">|</span>
-                  <button onClick={() => setSelecionadosEnvio(new Set())}
-                    className="text-[9px] font-bold uppercase text-indigo-500 hover:text-indigo-700 px-1.5 py-0.5 rounded">Nenhum</button>
-                  <span className="text-indigo-200">|</span>
-                  <button onClick={() => setBurstResultados(null)}
-                    className="text-[9px] font-bold uppercase text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded">Cancelar</button>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
-                {burstResultados.map(r => (
-                  <label key={r.nif} className={`flex items-center gap-2 cursor-pointer ${r.jaEnviado ? 'opacity-50' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={selecionadosEnvio.has(r.nif)}
-                      onChange={() => !r.jaEnviado && toggleEnvio(r.nif)}
-                      disabled={r.jaEnviado}
-                      className="accent-indigo-600 w-4 h-4 flex-shrink-0"
-                    />
-                    <span className="text-xs font-bold text-slate-700">{r.worker?.name ?? r.nome ?? r.nif}</span>
-                    {r.jaEnviado && <span className="text-[9px] text-slate-400">(já enviado)</span>}
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
           {Object.keys(totaisPorMes).length > 0 && (
             <p className="text-[10px] text-slate-400 text-right">
               {Object.entries(totaisPorMes).map(([mes, t]) =>
