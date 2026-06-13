@@ -48,9 +48,8 @@ const ValidationPortal = ({
     handleDelete,
     appNotifications,
     currentUser,
-    correctionNotifications,
     clientApprovals,
-    correcoesCorrections,
+    corrections: correcoesCorrections,
     workerChangeRequests,
     notificationPreferences,
     updateNotificationPreferences
@@ -58,7 +57,7 @@ const ValidationPortal = ({
 
   const pendingWorkerSubmissionsCount = (workerChangeRequests || []).filter(r => r.status === 'pending').length;
   const workerSubmissionsPending = (correcoesCorrections || []).filter(c => (c.type === 'creation_request' || c.type === 'deletion_request') && (c.status === 'submitted' || c.status === 'under_review')).length;
-  const clientCorrectionsPending = (correcoesCorrections || []).filter(c => c.type !== 'creation_request' && c.type !== 'deletion_request' && (c.status === 'submitted' || c.status === 'under_review')).length;
+  const clientCorrectionsPending = (correcoesCorrections || []).filter(c => c.type !== 'creation_request' && c.type !== 'deletion_request' && (c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending')).length;
   const totalCorrectionsPending = workerSubmissionsPending + clientCorrectionsPending;
 
   const sortedWorkers = useMemo(() => {

@@ -1,13 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock, Send, AlertTriangle
 } from 'lucide-react';
 import { getCurrentPosition } from '../../utils/geoUtils';
+import ClientEnviosPanel from './client/ClientEnviosPanel';
+import CorrectionsInbox from './corrections/CorrectionsInbox';
 
-const ClientManagerContent = () => {
-  const { clients, supabase } = useApp();
+const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
+  const { clients, supabase, corrections } = useApp();
+
+  const pendingClientCorrections = (corrections || []).filter(c =>
+    c.type !== 'creation_request' && c.type !== 'deletion_request' &&
+    (c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending')
+  ).length;
+
+  const [searchParams] = useSearchParams();
+  const [clientSubTab, setClientSubTab] = useState(() => searchParams.get('subtab') || 'list');
+
+  useEffect(() => {
+    const tab = searchParams.get('subtab');
+    if (tab) setClientSubTab(tab);
+  }, [searchParams]);
 
   const {
     isAddingInTab, setIsAddingInTab,
@@ -120,6 +136,46 @@ const ClientManagerContent = () => {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Sub-tab navigation */}
+      <div className="flex flex-wrap items-center gap-2 mb-5 border-b border-slate-100 pb-3">
+        <button
+          onClick={() => setClientSubTab('list')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'list' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-indigo-600'}`}
+        >
+          <Building2 size={14} /> Clientes
+        </button>
+        <button
+          onClick={() => setClientSubTab('envios')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'envios' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-blue-600'}`}
+        >
+          <Send size={14} /> Envios
+        </button>
+        <button
+          onClick={() => setClientSubTab('correcoes')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'correcoes' ? 'bg-orange-500 text-white' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+        >
+          <AlertTriangle size={14} /> Correções
+          {pendingClientCorrections > 0 && (
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${clientSubTab === 'correcoes' ? 'bg-white text-orange-500' : 'bg-red-500 text-white'}`}>{pendingClientCorrections}</span>
+          )}
+        </button>
+      </div>
+
+      {clientSubTab === 'envios' && (
+        <ClientEnviosPanel
+          portalMonth={portalMonth}
+          setPortalMonth={setPortalMonth}
+          setClienteSelecionado={setClienteSelecionado}
+          setModalEmailAberto={setModalEmailAberto}
+          setPrintingReport={setPrintingReport}
+        />
+      )}
+
+      {clientSubTab === 'correcoes' && (
+        <CorrectionsInbox forcedSource="clients" />
+      )}
+
+      {clientSubTab === 'list' && (<>
       <div className="flex justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Briefcase size={20} /></div>
@@ -362,8 +418,8 @@ const ClientManagerContent = () => {
           ))}
         </div>
       )}
+      </>)} {/* fim clientSubTab === 'list' */}
 
-      {/* D-07: Modal de Histórico de Valor Hora do Cliente */}
       {showClientHistory.show && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowClientHistory({ show: false, clientId: null, clientName: '' }); setEditingHistoryId(null); }}>
           <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -420,10 +476,16 @@ const ClientManagerContent = () => {
   );
 };
 
-const ClientManager = () => {
+const ClientManager = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
   return (
     <ClientProvider>
-      <ClientManagerContent />
+      <ClientManagerContent
+        setClienteSelecionado={setClienteSelecionado}
+        setModalEmailAberto={setModalEmailAberto}
+        setPrintingReport={setPrintingReport}
+        portalMonth={portalMonth}
+        setPortalMonth={setPortalMonth}
+      />
     </ClientProvider>
   );
 };

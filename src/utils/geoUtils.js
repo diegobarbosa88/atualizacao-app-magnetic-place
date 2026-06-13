@@ -24,7 +24,7 @@ export function getCurrentPosition() {
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => reject(new Error(err.message || 'Erro ao obter localização.')),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
   });
 }

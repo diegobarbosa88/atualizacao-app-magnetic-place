@@ -388,8 +388,8 @@ export default function EntradasTab() {
   return (
     <div className="space-y-3">
       {/* Header: KPIs + exportar */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="grid grid-cols-3 gap-3 flex-1">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Total Créditos', value: creditos.length,   color: 'text-slate-700',   bg: 'bg-slate-50' },
             { label: 'Resolvidos',     value: totalResolvido,    color: 'text-emerald-700', bg: 'bg-emerald-50' },
@@ -402,7 +402,7 @@ export default function EntradasTab() {
           ))}
         </div>
 
-        <div className="relative flex-shrink-0" ref={exportRef}>
+        <div className="relative self-start sm:flex-shrink-0" ref={exportRef}>
           <button
             onClick={() => setShowExportMenu(v => !v)}
             className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-indigo-100 text-slate-500 hover:text-indigo-700 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all"
@@ -410,7 +410,7 @@ export default function EntradasTab() {
             <Download size={13} /> Exportar
           </button>
           {showExportMenu && (
-            <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px]">
+            <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px] max-w-[calc(100vw-2rem)]">
               <button onClick={handleExportCsv}
                 className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                 <FileText size={13} className="text-emerald-600" /> CSV

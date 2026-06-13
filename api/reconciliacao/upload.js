@@ -3,7 +3,7 @@ import fs from 'fs';
 import { parse } from 'csv-parse/sync';
 import { parse as parseOFX } from 'ofx-js';
 import { createClient } from '@supabase/supabase-js';
-import { runMatchingEngine } from './matchingEngine.js';
+import { runMatchingEngine } from './_matchingEngine.js';
 
 export const config = { api: { bodyParser: false } };
 
