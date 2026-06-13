@@ -10,7 +10,6 @@ import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
 
 import EntryForm from '../../components/common/EntryForm';
-import WorkerDocuments from '../../components/common/WorkerDocuments';
 import WorkerProfile from './WorkerProfile';
 import RequestEntryCard from '../../components/worker/RequestEntryCard';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
@@ -30,6 +29,7 @@ import WorkerScheduleTab from './worker-dashboard/WorkerScheduleTab';
 import WorkerCalendar from './worker-dashboard/WorkerCalendar';
 import ScheduleModal from './worker-dashboard/ScheduleModal';
 import ProfileModal from './worker-dashboard/ProfileModal';
+import DocumentsModal from './worker-dashboard/DocumentsModal';
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const {
@@ -61,6 +61,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [approvedAbsencesExpanded, setApprovedAbsencesExpanded] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [documentsModalOpen, setDocumentsModalOpen] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -209,8 +210,10 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         onOpenAbsenceModal={() => setAbsenceModalOpen(true)}
         onOpenScheduleModal={() => setScheduleModalOpen(true)}
         onOpenProfileModal={() => setProfileModalOpen(true)}
+        onOpenDocumentsModal={() => setDocumentsModalOpen(true)}
         isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
         absencePendingCount={(absenceRequests || []).filter(r => r.worker_id === currentUser?.id && (r.status === 'pending' || r.status === 'seen')).length}
+        documentsPendingCount={pendingSignaturesCount}
       />
 
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
@@ -331,10 +334,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           />
 
 
-          <div id="secao-documentos">
-            <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
-          </div>
-
           <PendingAlertsModal
             isOpen={alertsModalOpen}
             onClose={() => { setAlertsModalOpen(false); setAlertsModalDismissed(true); }}
@@ -345,7 +344,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             clients={clients}
             onApproveMonth={() => handleApproveMonth(currentUser?.id)}
             onReviewMonth={(pending) => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
-            onSignDocuments={() => { const el = document.getElementById('secao-documentos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+            onSignDocuments={() => setDocumentsModalOpen(true)}
             onCompleteLog={openIncompleteLogModal}
           />
 
@@ -418,6 +417,14 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         worker={currentUser}
         changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
         documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
+      />
+
+      <DocumentsModal
+        isOpen={documentsModalOpen}
+        onClose={() => setDocumentsModalOpen(false)}
+        currentUser={currentUser}
+        documents={documents}
+        saveToDb={saveToDb}
       />
     </div>
   );

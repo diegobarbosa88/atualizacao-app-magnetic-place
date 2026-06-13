@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX } from 'lucide-react';
+import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText } from 'lucide-react';
 import CompanyLogo from '../../../components/common/CompanyLogo';
 
 const formatShortName = (fullName) => {
@@ -32,7 +32,7 @@ const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, isCurrentMonth, absencePendingCount }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, isCurrentMonth, absencePendingCount, documentsPendingCount }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
 
   return (
@@ -115,6 +115,20 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             )}
           </div>
 
+          {/* Perfil — visível apenas no mobile (desktop usa o botão na secção sm:flex) */}
+          <button
+            onClick={onOpenProfileModal}
+            className="relative p-1.5 text-slate-400 hover:text-indigo-600 transition-all sm:hidden"
+            title="Meu Perfil"
+          >
+            <UserCircle size={16} />
+            {pendingRequests > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-400 rounded-full text-[7px] font-black text-white flex items-center justify-center">
+                {pendingRequests}
+              </span>
+            )}
+          </button>
+
           {/* Logout — sempre visível */}
           <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-600 transition-all">
             <LogOut size={18} />
@@ -154,10 +168,16 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
         )}
         <TabButton
           active={false}
-          onClick={onOpenProfileModal}
-          icon={<UserCircle size={20} />}
-          label="Perfil"
-          badge={pendingRequests}
+          onClick={onOpenDocumentsModal}
+          icon={
+            <span className="relative inline-flex">
+              <FileText size={20} />
+              {documentsPendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500" />
+              )}
+            </span>
+          }
+          label="Documentos"
         />
         {currentUser?.isAdmin && !currentUser?.isAdminImpersonating && (
           <TabButton
