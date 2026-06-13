@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Users } from 'lucide-react';
+import { Calendar, Users } from 'lucide-react';
 import EntryForm from '../../../components/common/EntryForm';
 import RequestEntryCard from '../../../components/worker/RequestEntryCard';
+import ModalShell from '../../../components/common/ModalShell';
 
 const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
@@ -21,8 +22,6 @@ export default function TimeEntryModal({
     }
   }, [isOpen, initialDate]);
 
-  if (!isOpen) return null;
-
   const toggleDay = (day) => {
     setSelectedDays(prev =>
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
@@ -41,48 +40,23 @@ export default function TimeEntryModal({
   const dObj = initialDate ? new Date(initialDate + 'T00:00:00') : new Date();
   const monthName = dObj.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
 
-  return (
-    <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-[9999] p-0 sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg flex flex-col overflow-hidden"
-        style={{ maxHeight: 'min(92dvh, 92vh)' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-5 border-b border-slate-100 shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2.5 bg-indigo-50 rounded-lg sm:rounded-xl text-indigo-600">
-              <Calendar size={16} className="sm:w-5 sm:h-5" />
-            </div>
-            <div>
-              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm sm:text-base">
-                Registar Horário
-              </h2>
-              {bulkMode ? (
-                <p className="text-[10px] sm:text-xs text-indigo-500 font-bold">
-                  {selectedDays.length} {selectedDays.length === 1 ? 'dia selecionado' : 'dias selecionados'}
-                </p>
-              ) : (
-                <p className="text-[10px] sm:text-xs text-slate-400 font-bold">
-                  {dObj.getDate()} de {monthName} · {DAY_NAMES[dObj.getDay()]}
-                </p>
-              )}
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
-          >
-            <X size={18} />
-          </button>
-        </div>
+  const subtitle = bulkMode
+    ? `${selectedDays.length} ${selectedDays.length === 1 ? 'dia selecionado' : 'dias selecionados'}`
+    : `${dObj.getDate()} de ${monthName} · ${DAY_NAMES[dObj.getDay()]}`;
 
+  return (
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Registar Ponto"
+      subtitle={subtitle}
+      icon={<Calendar size={16} />}
+      accent="indigo"
+    >
+      <div onClick={e => e.stopPropagation()}>
         {/* Bulk mode toggle — non-limited workers only */}
         {!isLimitedWorker && (
-          <div className="px-4 py-2.5 sm:px-6 sm:py-3 border-b border-slate-100 shrink-0">
+          <div className="px-5 py-3 border-b border-slate-100 shrink-0">
             <button
               onClick={() => {
                 setBulkMode(v => !v);
@@ -102,11 +76,9 @@ export default function TimeEntryModal({
 
         {/* Day selector grid — bulk mode */}
         {bulkMode && !isLimitedWorker && (
-          <div className="px-6 py-4 border-b border-slate-100 shrink-0">
+          <div className="px-5 py-4 border-b border-slate-100">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                Selecionar Dias
-              </span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selecionar Dias</span>
               <div className="flex gap-3">
                 <button
                   onClick={() => setSelectedDays([...daysList])}
@@ -153,7 +125,7 @@ export default function TimeEntryModal({
         )}
 
         {/* Form */}
-        <div className="overflow-y-auto overscroll-contain flex-1 px-3 py-3 sm:px-6 sm:py-4">
+        <div className="px-3 py-3 sm:px-5 sm:py-4">
           {isLimitedWorker ? (
             <RequestEntryCard
               currentUser={currentUser}
@@ -179,6 +151,6 @@ export default function TimeEntryModal({
           )}
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

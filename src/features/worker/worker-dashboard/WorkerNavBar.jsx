@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX } from 'lucide-react';
+import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText } from 'lucide-react';
 import CompanyLogo from '../../../components/common/CompanyLogo';
 
 const formatShortName = (fullName) => {
@@ -32,7 +32,7 @@ const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, isCurrentMonth }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, isCurrentMonth, absencePendingCount, documentsPendingCount }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
 
   return (
@@ -140,11 +140,31 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           <TabButton
             active={false}
             onClick={onOpenAbsenceModal}
-            icon={<CalendarX size={20} />}
+            icon={
+              <span className="relative inline-flex">
+                <CalendarX size={20} />
+                {absencePendingCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-500" />
+                )}
+              </span>
+            }
             label="Falta"
             accent
           />
         )}
+        <TabButton
+          active={false}
+          onClick={onOpenDocumentsModal}
+          icon={
+            <span className="relative inline-flex">
+              <FileText size={20} />
+              {documentsPendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500" />
+              )}
+            </span>
+          }
+          label="Documentos"
+        />
         <TabButton
           active={false}
           onClick={onOpenProfileModal}

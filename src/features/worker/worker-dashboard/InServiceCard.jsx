@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, Coffee, Loader2 } from 'lucide-react';
+import { LogOut, Coffee, Loader2, Timer } from 'lucide-react';
 
 export default function InServiceCard({ todayOpenLog, clients, handleRegistarPausa, handleRegistarSaida, geoActionLoading }) {
   const [now, setNow] = useState(() => new Date());
@@ -13,11 +13,11 @@ export default function InServiceCard({ todayOpenLog, clients, handleRegistarPau
     const start = new Date(now);
     start.setHours(h, m, 0, 0);
     const diffMins = Math.max(0, Math.floor((now - start) / 60000));
-    if (diffMins < 1) return 'agora';
-    if (diffMins < 60) return `${diffMins}m`;
+    if (diffMins < 1) return 'agora mesmo';
+    if (diffMins < 60) return `${diffMins} min`;
     const hh = Math.floor(diffMins / 60);
     const mm = diffMins % 60;
-    return mm > 0 ? `${hh}h ${mm}m` : `${hh}h`;
+    return mm > 0 ? `${hh}h ${mm}min` : `${hh}h`;
   };
 
   if (!todayOpenLog) return null;
@@ -26,57 +26,64 @@ export default function InServiceCard({ todayOpenLog, clients, handleRegistarPau
   const clientName = clients.find(c => String(c.id) === String(todayOpenLog.clientId))?.name;
 
   return (
-    <div className={`mb-4 rounded-2xl overflow-hidden animate-in slide-in-from-top-4 duration-500 ${inBreak ? 'bg-amber-500' : 'bg-indigo-600'}`}>
-      <div className="p-4 flex flex-col gap-3">
+    <div className="flex-shrink-0 bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-200/30 overflow-hidden animate-in slide-in-from-top-4 duration-500 mb-4">
+      <div className="p-5 flex flex-col gap-4">
 
-        {/* Status */}
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${inBreak ? 'bg-amber-200' : 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]'}`} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-white/70">
-            {inBreak ? 'Em pausa' : 'Em serviço'}
-          </span>
+        {/* Timer + info + dot */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <Timer size={24} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200 mb-0.5">
+              Em serviço desde {todayOpenLog.startTime}
+            </p>
+            <p className="text-white font-black text-3xl leading-none tabular-nums">{formatElapsed(todayOpenLog.startTime)}</p>
+            <p className="text-indigo-200 text-sm font-bold mt-0.5 truncate">
+              {clientName || 'Unidade'}
+            </p>
+          </div>
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse flex-shrink-0" />
         </div>
 
-        {/* Cliente + tempo */}
-        <div className="text-center">
-          {clientName && (
-            <p className="text-lg font-black uppercase tracking-tight text-white mb-1">{clientName}</p>
-          )}
-          <p className="text-4xl font-black text-white tracking-tight">
-            {formatElapsed(inBreak ? todayOpenLog.breakStart : todayOpenLog.startTime)}
-          </p>
-          <p className="text-xs text-white/50 font-bold mt-0.5">
-            desde as {inBreak ? todayOpenLog.breakStart : todayOpenLog.startTime}
-          </p>
-        </div>
+        {/* Card de pausa activa */}
+        {inBreak && (
+          <div className="bg-amber-400/15 border border-amber-300/20 rounded-xl px-4 py-2.5 flex items-center gap-2">
+            <Coffee size={13} className="text-amber-200 shrink-0" />
+            <span className="text-amber-100 text-sm font-bold">
+              Em pausa desde {todayOpenLog.breakStart} · {formatElapsed(todayOpenLog.breakStart)}
+            </span>
+          </div>
+        )}
 
         {/* Botões */}
-        <div className={`grid gap-2 ${inBreak ? 'grid-cols-1' : 'grid-cols-2'}`}>
-          {!inBreak && (
+        <div className="grid grid-cols-2 gap-2">
+          {!todayOpenLog.breakStart && (
             <button
               onClick={() => handleRegistarPausa('inicio', todayOpenLog)}
-              className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-sm uppercase tracking-wide bg-white/15 hover:bg-white/25 text-white transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide bg-white/15 hover:bg-white/25 text-white transition-all active:scale-95"
             >
-              <Coffee size={16} /> Pausa
+              <Coffee size={14} /> Iniciar Pausa
             </button>
           )}
           {inBreak && (
             <button
               onClick={() => handleRegistarPausa('fim', todayOpenLog)}
-              className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-sm uppercase tracking-wide bg-white text-amber-600 hover:bg-amber-50 transition-all active:scale-95 shadow-sm"
+              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide bg-amber-400/25 hover:bg-amber-400/40 text-amber-100 transition-all active:scale-95"
             >
-              <Coffee size={16} /> Retomar
+              <Coffee size={14} /> Terminar Pausa
             </button>
           )}
           <button
             onClick={() => handleRegistarSaida(todayOpenLog)}
             disabled={geoActionLoading}
-            className="flex items-center justify-center gap-2 py-3.5 rounded-xl font-black text-sm uppercase tracking-wide bg-rose-500 hover:bg-rose-600 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide bg-rose-500 hover:bg-rose-400 text-white transition-all active:scale-95 shadow-sm disabled:opacity-50"
           >
-            {geoActionLoading ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}
-            Saída
+            {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
+            Registar Saída
           </button>
         </div>
+
       </div>
     </div>
   );

@@ -1,64 +1,60 @@
-import React, { useState, useEffect } from 'react';
-import { LogIn, LogOut, Loader2, MapPin } from 'lucide-react';
+import React from 'react';
+import { LogIn, LogOut, Loader2, MapPin, Building2 } from 'lucide-react';
 
 export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismissed, setGeoSuggestion, setGeoSuggestionDismissed, geoActionLoading, handleConfirmGeoSuggestion }) {
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
   if (!geoSuggestion || geoSuggestionDismissed) return null;
 
   const isEntry = geoSuggestion.type === 'entrada';
-  const hm      = now.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-  const sec     = String(now.getSeconds()).padStart(2, '0');
-  const dayNum  = now.toLocaleDateString('pt-PT', { day: '2-digit' });
-  const month   = now.toLocaleDateString('pt-PT', { month: 'short' }).replace('.', '').toUpperCase();
-  const year    = now.getFullYear();
-  const weekday = now.toLocaleDateString('pt-PT', { weekday: 'long' });
 
   return (
-    <div className="mb-4 rounded-2xl overflow-hidden bg-white border border-slate-200 shadow-sm animate-in slide-in-from-top-4 duration-500">
-      <div className="flex items-stretch bg-slate-50">
-        <div className="flex flex-col items-center justify-center px-4 py-3 min-w-[64px] bg-indigo-600">
-          <span className="text-[9px] font-black uppercase tracking-widest text-indigo-200">{month}</span>
-          <span className="text-3xl font-black text-white leading-none">{dayNum}</span>
-          <span className="text-[9px] font-bold text-indigo-200">{year}</span>
-        </div>
-        <div className="flex flex-col justify-center px-4 flex-1 py-3">
-          <span className="text-[10px] font-black uppercase tracking-widest capitalize text-indigo-400">{weekday}</span>
-          <div className="flex items-end gap-1 mt-0.5">
-            <span className="text-4xl font-black tabular-nums leading-none text-slate-800">{hm}</span>
-            <span className="text-xl font-bold tabular-nums mb-0.5 text-slate-300">{sec}</span>
-          </div>
-        </div>
-      </div>
+    <div className="bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-200/30 overflow-hidden mb-4 animate-in slide-in-from-top-4 duration-500">
+      <div className="p-5 flex flex-col gap-4">
 
-      <div className="p-4 flex flex-col gap-3">
-        <div className="text-center">
-          <p className="text-2xl font-black uppercase tracking-tight text-slate-800">{geoSuggestion.client?.name}</p>
-          {geoSuggestion.dist != null && (
-            <span className="flex items-center justify-center gap-1 text-[10px] font-black uppercase tracking-widest mt-0.5 text-slate-400">
-              <MapPin size={10} />{geoSuggestion.within ? `Na unidade · ${geoSuggestion.dist} m` : `${geoSuggestion.dist} m da unidade`}
-            </span>
-          )}
+        {/* Ícone + info + dot */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+            <Building2 size={24} className="text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-200 mb-0.5">
+              {isEntry ? 'Registar entrada em' : 'Registar saída de'}
+            </p>
+            <p className="text-white font-black text-xl leading-none truncate">{geoSuggestion.client?.name}</p>
+            {geoSuggestion.dist != null && (
+              <p className={`text-sm font-bold mt-0.5 ${geoSuggestion.within ? 'text-emerald-300' : 'text-rose-300'}`}>
+                <MapPin size={10} className="inline mr-1 -mt-0.5" />
+                {geoSuggestion.within ? `Dentro · ${geoSuggestion.dist}m` : `Fora · ${geoSuggestion.dist}m`}
+              </p>
+            )}
+          </div>
+          <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+            geoSuggestion.within
+              ? 'bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse'
+              : 'bg-rose-400'
+          }`} />
         </div>
+
+        {/* Botão */}
         <button
           onClick={handleConfirmGeoSuggestion}
           disabled={geoActionLoading}
-          className="w-full flex items-center justify-center gap-3 py-4 rounded-xl font-black text-base uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50 bg-emerald-600 hover:bg-emerald-700 text-white"
+          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50 text-white ${
+            isEntry
+              ? 'bg-emerald-500 hover:bg-emerald-400'
+              : 'bg-rose-500 hover:bg-rose-400'
+          }`}
           style={isEntry && !geoActionLoading ? { animation: 'pulse-slow 2.5s ease-in-out infinite' } : {}}
         >
-          {geoActionLoading ? <Loader2 size={20} className="animate-spin" /> : isEntry ? <LogIn size={20} /> : <LogOut size={20} />}
+          {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : isEntry ? <LogIn size={14} /> : <LogOut size={14} />}
           {geoActionLoading ? 'A registar...' : isEntry ? 'Registar Entrada' : 'Registar Saída'}
         </button>
+
         {!isEntry && geoSuggestion.startTime && (
-          <p className="text-center text-xs font-bold text-slate-400">
+          <p className="text-center text-xs font-bold text-indigo-200/60 -mt-1">
             Em serviço desde {geoSuggestion.startTime}
           </p>
         )}
+
       </div>
     </div>
   );

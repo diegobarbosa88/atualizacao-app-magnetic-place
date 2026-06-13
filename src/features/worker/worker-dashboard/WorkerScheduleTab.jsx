@@ -1,96 +1,114 @@
 import React from 'react';
-import { Timer, Coffee, Star, ChevronUp, ChevronDown } from 'lucide-react';
-
-const formatTimeCompact = (timeStr) => {
-  if (!timeStr) return '--h';
-  const [h, m] = timeStr.split(':').map(Number);
-  if (isNaN(h)) return '--h';
-  return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
-};
+import { Coffee, Star } from 'lucide-react';
 
 const ALL_DAYS = [{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }];
-const WEEKDAY_BADGES = [{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }];
+const WEEKDAY_BADGES = [{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }];
 
-export default function WorkerScheduleTab({ assigned, currentUser, expandedSchedules, toggleScheduleExpand, setDefaultSchedule }) {
+function TimeBlock({ label, time }) {
   return (
-    <div className="animate-in slide-in-from-top-4 duration-300">
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-6 max-w-2xl">
-        <h3 className="text-base sm:text-lg font-black flex items-center gap-2 mb-5 border-b pb-3">
-          <Timer className="text-indigo-600" size={18} /> Meus Horários
-        </h3>
-        <div className="space-y-3">
-          <h4 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pela Empresa</h4>
-          <div className="space-y-1.5">
-            {assigned.length > 0 ? assigned.map(s => {
-              const isExpanded = expandedSchedules.has(s.id);
-              const isDefault = currentUser?.defaultScheduleId === s.id;
-              return (
-                <div
-                  key={s.id}
-                  onClick={() => toggleScheduleExpand(s.id)}
-                  className={`p-3 rounded-xl border cursor-pointer hover:shadow-sm transition-all flex flex-col gap-2 ${isDefault ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-100'}`}
-                >
-                  <div className="flex justify-between items-center gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                      <p className="text-xs font-black truncate">{s.name}</p>
-                      {isExpanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-300 flex-shrink-0" />}
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDefaultSchedule(s.id); }}
-                      title="Definir como Padrão"
-                      className={`p-2 rounded-xl transition-all flex-shrink-0 ${isDefault ? 'text-amber-500 bg-amber-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}
-                    >
-                      <Star fill={isDefault ? 'currentColor' : 'none'} size={16} />
-                    </button>
-                  </div>
-                  {isExpanded && (
-                    <div>
-                      {s.isAdvanced ? (
-                        <div className="space-y-1">
-                          {ALL_DAYS.map(d => {
-                            const config = s.dailyConfigs && s.dailyConfigs[d.v];
-                            if (!config || !config.isActive) return null;
-                            return (
-                              <div key={d.v} className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold text-slate-600">
-                                <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded flex-shrink-0 w-6 text-center uppercase">{d.l}</span>
-                                <span>{config.startTime}-{config.endTime}</span>
-                                {config.breakStart && (
-                                  <span className="text-orange-500 flex items-center ml-1">
-                                    <Coffee size={10} className="mr-0.5" /> {config.breakStart}-{config.breakEnd}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-sm sm:text-base font-black text-slate-900 mb-1 leading-none">
-                            {s.startTime || '--:--'} - {s.endTime || '--:--'}
-                          </p>
-                          {s.breakStart && (
-                            <div className="flex items-center gap-1 text-[9px] font-black text-orange-500 uppercase">
-                              <Coffee size={10} /> Pausa: {s.breakStart} - {s.breakEnd || '--:--'}
-                            </div>
-                          )}
-                          <div className="flex gap-0.5 mt-1">
-                            {WEEKDAY_BADGES.map(d => {
-                              const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                              return isActive ? (
-                                <span key={d.v} className="bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span>
-                              ) : null;
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            }) : <p className="text-xs text-slate-400 italic">Sem turnos atribuídos.</p>}
-          </div>
+    <div className="flex flex-col items-center">
+      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">{label}</span>
+      <span className="text-lg font-black tabular-nums text-slate-800 leading-none">{time || '--:--'}</span>
+    </div>
+  );
+}
+
+function ScheduleCard({ s, isDefault, setDefaultSchedule }) {
+  return (
+    <div className={`rounded-2xl border p-4 space-y-3 ${isDefault ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100'}`}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between gap-2">
+        <p className={`text-sm font-black leading-tight ${isDefault ? 'text-indigo-800' : 'text-slate-800'}`}>{s.name}</p>
+        <div className="flex items-center gap-2 shrink-0">
+          {isDefault && (
+            <span className="text-[8px] font-black uppercase tracking-widest bg-indigo-600 text-white px-2 py-0.5 rounded-full">Padrão</span>
+          )}
+          <button
+            onClick={() => setDefaultSchedule(s.id)}
+            title="Definir como Padrão"
+            className={`p-1.5 rounded-xl transition-all ${isDefault ? 'text-indigo-500 bg-indigo-100' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}
+          >
+            <Star fill={isDefault ? 'currentColor' : 'none'} size={14} />
+          </button>
         </div>
       </div>
+
+      {/* Time info */}
+      {s.isAdvanced ? (
+        <div className="space-y-1.5">
+          {ALL_DAYS.map(d => {
+            const config = s.dailyConfigs?.[d.v];
+            if (!config?.isActive) return null;
+            return (
+              <div key={d.v} className="flex items-center gap-2">
+                <span className="w-7 shrink-0 text-center text-[9px] font-black uppercase bg-indigo-100 text-indigo-600 px-1 py-0.5 rounded-lg">{d.l}</span>
+                <span className="text-xs font-black tabular-nums text-slate-700">{config.startTime} – {config.endTime}</span>
+                {config.breakStart && (
+                  <span className="text-[9px] font-bold text-orange-500 flex items-center gap-0.5 ml-1">
+                    <Coffee size={9} /> {config.breakStart}–{config.breakEnd}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <>
+          <div className="flex items-center gap-3">
+            <TimeBlock label="Entrada" time={s.startTime} />
+            <span className="text-slate-300 font-black text-lg mt-3">→</span>
+            <TimeBlock label="Saída" time={s.endTime} />
+            {s.breakStart && (
+              <>
+                <div className="h-8 w-px bg-slate-100 mx-1" />
+                <div className="flex flex-col items-center">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-orange-400 mb-0.5 flex items-center gap-0.5"><Coffee size={8} /> Pausa</span>
+                  <span className="text-xs font-black tabular-nums text-orange-500 leading-none">{s.breakStart} – {s.breakEnd || '--:--'}</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Day chips */}
+          <div className="flex gap-1 flex-wrap">
+            {WEEKDAY_BADGES.map(d => {
+              const isActive = (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
+              return (
+                <span
+                  key={d.v}
+                  className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}
+                >
+                  {d.l}
+                </span>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function WorkerScheduleTab({ assigned, currentUser, expandedSchedules, toggleScheduleExpand, setDefaultSchedule }) {
+  if (assigned.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-400">
+        <p className="text-sm font-bold">Sem turnos atribuídos.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {assigned.map(s => (
+        <ScheduleCard
+          key={s.id}
+          s={s}
+          isDefault={currentUser?.defaultScheduleId === s.id}
+          setDefaultSchedule={setDefaultSchedule}
+        />
+      ))}
     </div>
   );
 }
