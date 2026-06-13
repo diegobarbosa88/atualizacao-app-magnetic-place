@@ -60,7 +60,9 @@ export default function WorkerHeroStats({ currentUser, currentMonth, setCurrentM
         {/* Mês */}
         <div className="bg-indigo-500/20 border border-indigo-400/20 rounded-xl px-4 py-3 flex flex-col gap-0.5 relative">
           <div className="flex items-center justify-between">
-            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300">Mês</p>
+            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-300 capitalize">
+              {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long' })}
+            </p>
             <div className="flex items-center gap-1.5">
               {myApproval && <CheckCircle size={11} className="text-emerald-400" />}
               {expectedHours > 0 && (
