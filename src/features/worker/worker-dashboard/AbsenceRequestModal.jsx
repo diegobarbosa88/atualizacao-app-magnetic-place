@@ -130,6 +130,7 @@ export default function AbsenceRequestModal({
             {daysList.map(ds => {
               const d = new Date(ds + 'T00:00:00');
               const hasLog = (monthLogs || []).some(l => l.date === ds);
+              const hasAbsence = myAbsences.some(r => (r.dates || []).includes(ds));
               const isSelected = selectedDates.includes(ds);
               const isWeekend = d.getDay() === 0 || d.getDay() === 6;
               return (
@@ -145,8 +146,11 @@ export default function AbsenceRequestModal({
                     }`}
                 >
                   {d.getDate()}
-                  {hasLog && !isSelected && (
-                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-indigo-400" />
+                  {!isSelected && (hasLog || hasAbsence) && (
+                    <span className="absolute bottom-0.5 left-1/2 -translate-x-1/2 flex gap-0.5">
+                      {hasLog && <span className="w-1 h-1 rounded-full bg-indigo-400" />}
+                      {hasAbsence && <span className="w-1 h-1 rounded-full bg-orange-400" />}
+                    </span>
                   )}
                 </button>
               );

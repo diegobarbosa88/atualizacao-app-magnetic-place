@@ -282,7 +282,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             />
           )}
 
-          {myApproval ? (
+          {myApproval && (
             <div className="mb-10 bg-emerald-50/80 border border-emerald-200 rounded-[3rem] p-12 text-center text-emerald-800 shadow-inner animate-in zoom-in-95">
               <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
                 <CheckCircle size={40} className="text-emerald-500" />
@@ -292,9 +292,26 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 As horas de {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} já foram aprovadas e enviadas para a administração. Não é possível adicionar novos registos ou apagar os existentes.
               </p>
             </div>
-          ) : (
+          )}
+
+          <WorkerCalendar
+            daysList={daysList}
+            monthLogs={monthLogs}
+            dayRequestsByDate={dayRequestsByDate}
+            clients={clients}
+            myApproval={myApproval}
+            isLimitedWorker={isLimitedWorker}
+            workerStartDate={workerStartDate}
+            onAddEntry={openTimeEntryModal}
+            onEditLog={openIncompleteLogModal}
+            onDeleteLog={(log) => handleDelete('logs', log.id)}
+            onEditLimitedLog={openTimeEntryModal}
+            onQuickRegister={handleQuickRegister}
+          />
+
+          {!myApproval && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
             <div className="mb-8">
-              {(currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()) && (isLimitedWorker ? (
+              {isLimitedWorker ? (
                 <RequestEntryCard
                   currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
                   onSuccess={() => { setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
@@ -314,25 +331,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   onCancel={() => setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' })}
                   showDate systemSettings={systemSettings} title="Novo Registo de Atividade"
                 />
-              ))}
+              )}
             </div>
           )}
-
-          <WorkerCalendar
-            daysList={daysList}
-            monthLogs={monthLogs}
-            dayRequestsByDate={dayRequestsByDate}
-            clients={clients}
-            myApproval={myApproval}
-            isLimitedWorker={isLimitedWorker}
-            workerStartDate={workerStartDate}
-            onAddEntry={openTimeEntryModal}
-            onEditLog={openIncompleteLogModal}
-            onDeleteLog={(log) => handleDelete('logs', log.id)}
-            onEditLimitedLog={openTimeEntryModal}
-            onQuickRegister={handleQuickRegister}
-          />
-
 
           <PendingAlertsModal
             isOpen={alertsModalOpen}
