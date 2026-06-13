@@ -281,14 +281,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
           )}
 
           {myApproval && (
-            <div className="mb-10 bg-emerald-50/80 border border-emerald-200 rounded-[3rem] p-12 text-center text-emerald-800 shadow-inner animate-in zoom-in-95">
-              <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-                <CheckCircle size={40} className="text-emerald-500" />
-              </div>
-              <h3 className="text-2xl font-black uppercase tracking-widest mb-2">Mês Validado e Fechado</h3>
-              <p className="text-sm font-bold opacity-70 max-w-md mx-auto">
-                As horas de {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} já foram aprovadas e enviadas para a administração. Não é possível adicionar novos registos ou apagar os existentes.
-              </p>
+            <div className="mb-6 flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-3">
+              <CheckCircle size={15} className="text-emerald-500 shrink-0" />
+              <p className="text-xs font-black text-emerald-700 uppercase tracking-wide">Mês validado</p>
+              <span className="text-xs text-emerald-600 font-bold opacity-70 capitalize">
+                — {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+              </span>
             </div>
           )}
 
