@@ -316,18 +316,18 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       {!isInline && (
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full p-5 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
+          className="w-full p-3 sm:p-6 flex items-center justify-between text-left hover:bg-slate-50 transition-colors"
         >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-xl text-amber-600">
-              <FileText size={20} />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-amber-100 rounded-lg sm:rounded-xl text-amber-600">
+              <FileText size={16} className="sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h3 className="font-black text-base uppercase tracking-tight text-slate-800">Solicitar Registo</h3>
-              <p className="text-[10px] text-slate-400 font-bold">Pedidos requerem aprovação</p>
+              <h3 className="font-black text-sm sm:text-base uppercase tracking-tight text-slate-800">Solicitar Registo</h3>
+              <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold">Pedidos requerem aprovação</p>
             </div>
           </div>
-          {collapsed ? <ChevronDown size={20} className="text-slate-400" /> : <ChevronUp size={20} className="text-slate-400" />}
+          {collapsed ? <ChevronDown size={16} className="text-slate-400 sm:w-5 sm:h-5" /> : <ChevronUp size={16} className="text-slate-400 sm:w-5 sm:h-5" />}
         </button>
       )}
 
