@@ -15,8 +15,13 @@ export default function WorkerCalendar({
   const today = toISODateLocal(new Date());
 
   useEffect(() => {
-    if (selectedDay && detailRef.current) {
-      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    if (!selectedDay || !detailRef.current) return;
+    const el = detailRef.current;
+    const rect = el.getBoundingClientRect();
+    const bottomNavHeight = 72; // fixed bottom nav + safe area buffer
+    const visibleBottom = window.innerHeight - bottomNavHeight;
+    if (rect.bottom > visibleBottom) {
+      window.scrollBy({ top: rect.bottom - visibleBottom, behavior: 'smooth' });
     }
   }, [selectedDay]);
 
