@@ -1,150 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CheckCircle, AlertCircle, ChevronDown, ChevronUp, X, Loader2, Download, FileText, MessageSquare, Undo2 } from 'lucide-react';
+import { AlertCircle, ChevronDown, Download, FileText, Loader2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 import '../../utils/toggleTipoLink';
-
-const MESES_PT_SAL = {
-  '01': 'Jan', '02': 'Fev', '03': 'Mar', '04': 'Abr',
-  '05': 'Mai', '06': 'Jun', '07': 'Jul', '08': 'Ago',
-  '09': 'Set', '10': 'Out', '11': 'Nov', '12': 'Dez',
-};
-
-const ESTADO_BADGE = {
-  valido:   'bg-emerald-100 text-emerald-700',
-  aviso:    'bg-yellow-100 text-yellow-700',
-  invalido: 'bg-amber-100 text-amber-700',
-};
-const ESTADO_PT = {
-  valido:   'Match Exato',
-  aviso:    'Justificado',
-  invalido: 'Saldo Pendente',
-};
-
-function fmtEur(v) {
-  return (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
-}
-
-function fmtMes(month) {
-  const [ano, mm] = month.split('-');
-  return `${MESES_PT_SAL[mm]} ${ano}`;
-}
-
-function SalarioEmployeeCard({ employee, justificacoes, onJustificar, onRemoverJustificacao, tolerancia = 0.01, onTipoUpdate, isOpen, onToggleOpen }) {
-  const { supabase } = useApp();
-  const pendingMonths = employee.months.filter(m =>
-    m.status !== 'Match Exato' &&
-    !justificacoes.some(j => j.employee_name === employee.employee_name && j.month === m.month)
-  ).length;
-  const allOk = pendingMonths === 0;
-
-  return (
-    <div className="border border-slate-200 rounded-2xl overflow-hidden">
-      <button onClick={onToggleOpen}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left">
-        <div className="flex items-center gap-3">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-          <span className="text-sm font-bold text-slate-800">{employee.employee_name}</span>
-          <span className="text-[10px] text-slate-400">{employee.months.length} mês(es)</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
-            {allOk ? 'Tudo Ok' : `${pendingMonths} pendente(s)`}
-          </span>
-          {isOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
-        </div>
-      </button>
-      {isOpen && (
-        <div className="divide-y divide-slate-100 bg-slate-50">
-          {employee.months.map((m, index) => {
-            const [ano, mm] = m.month.split('-');
-            const isMatch = m.status === 'Match Exato';
-            const justEntry = justificacoes.find(j => j.employee_name === employee.employee_name && j.month === m.month);
-            const isJustified = !!justEntry;
-            const displayStatus = isMatch ? 'Match Exato' : isJustified ? 'Justificado' : m.status;
-            const badgeClass = isMatch || isJustified
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-amber-100 text-amber-700';
-
-            return (
-              <div key={`${m.month}-${index}`} className="px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                      {MESES_PT_SAL[mm]} {ano}
-                    </span>
-                    <span
-                      onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-80 ${badgeClass}`}
-                    >
-                      {isMatch || isJustified ? <CheckCircle size={9} /> : <AlertCircle size={9} />} {displayStatus}
-                    </span>
-                    {isJustified && (
-                      <>
-                        <span className="text-[9px] text-slate-400 italic max-w-[180px] truncate" title={justEntry.justification}>
-                          "{justEntry.justification}"
-                        </span>
-                        <button
-                          onClick={() => onRemoverJustificacao({ employee_name: employee.employee_name, month: m.month })}
-                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors"
-                          title="Desfazer justificação"
-                        >
-                          <Undo2 size={9} /> Desfazer
-                        </button>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-3 text-[11px] text-slate-600">
-                      <span>Recibo: <strong>{fmtEur(m.expected_amount)}</strong></span>
-                      <span>Pago: <strong>{fmtEur(m.total_paid)}</strong></span>
-                      {Math.abs(m.balance) > tolerancia && (
-                        <span className={`font-black text-[10px] px-2 py-0.5 rounded-full ${m.balance > 0 ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
-                          {m.balance > 0
-                            ? `Pagou ${fmtEur(m.balance)} a menos`
-                            : `Pagou ${fmtEur(Math.abs(m.balance))} a mais`}
-                        </span>
-                      )}
-                    </div>
-                    {!isMatch && !isJustified && (
-                      <button
-                        onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                        className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
-                      >
-                        <MessageSquare size={9} /> Justificar
-                      </button>
-                    )}
-                  </div>
-                </div>
-                {m.transfers.length > 0 ? (
-                  <div className="space-y-1">
-                    {m.transfers.map((t, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => window.__toggleTipoLink(t, supabase, onTipoUpdate)}
-                            className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
-                            {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
-                          </button>
-                          <span className="text-[11px] text-slate-500">{t.date}</span>
-                        </div>
-                        <span className="text-[12px] font-bold text-slate-700">{fmtEur(t.amount)}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-slate-400 italic">Nenhuma transferência identificada</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+import { MESES_PT_SAL, fmtEur, fmtMes } from './salarios/salarioUtils';
+import SalarioEmployeeCard from './salarios/SalarioEmployeeCard';
+import AssocTransacaoModal from './salarios/AssocTransacaoModal';
+import JustificarModal from './salarios/JustificarModal';
 
 export default function SalariosTab({ month }) {
   const { supabase } = useApp();
@@ -158,18 +22,15 @@ export default function SalariosTab({ month }) {
   const [salarioAssocWorker, setSalarioAssocWorker] = useState('');
   const [salarioAssocSaving, setSalarioAssocSaving] = useState(false);
 
-  // Justificações
   const [justificacoes, setJustificacoes] = useState([]);
-  const [justModal, setJustModal] = useState(null); // { employee_name, month, balance }
+  const [justModal, setJustModal] = useState(null);
   const [justText, setJustText] = useState('');
   const [justSaving, setJustSaving] = useState(false);
 
-  // Tolerância (euros) — diferença máxima para considerar "Match Exato"
   const savedTol = parseFloat(localStorage.getItem('salarios_tolerancia')) || 0.01;
   const [tolerancia, setTolerancia] = useState(savedTol);
   const [tolInput, setTolInput] = useState(String(savedTol));
 
-  // Exportar dropdown
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportRef = useRef(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
@@ -193,7 +54,6 @@ export default function SalariosTab({ month }) {
     });
   }, []);
 
-  // Extrair meses únicos disponíveis nos dados
   const monthsAvailable = useMemo(() => {
     if (!salarioResultado) return [];
     const set = new Set();
@@ -201,26 +61,19 @@ export default function SalariosTab({ month }) {
     return [...set].sort();
   }, [salarioResultado]);
 
-  // Employees filtrados pelo mês seleccionado
   const employeesFiltered = useMemo(() => {
     if (!salarioResultado) return [];
     if (!selectedMonth) return salarioResultado.employees;
     return salarioResultado.employees
-      .map(emp => ({
-        ...emp,
-        months: emp.months.filter(m => m.month === selectedMonth),
-      }))
+      .map(emp => ({ ...emp, months: emp.months.filter(m => m.month === selectedMonth) }))
       .filter(emp => emp.months.length > 0);
   }, [salarioResultado, selectedMonth]);
 
-  // KPIs filtrados pelo mês seleccionado
   const pendentesEfectivos = employeesFiltered
-    ? employeesFiltered.reduce((acc, emp) => {
-        return acc + emp.months.filter(m =>
-          m.status !== 'Match Exato' &&
-          !justificacoes.some(j => j.employee_name === emp.employee_name && j.month === m.month)
-        ).length;
-      }, 0)
+    ? employeesFiltered.reduce((acc, emp) => acc + emp.months.filter(m =>
+        m.status !== 'Match Exato' &&
+        !justificacoes.some(j => j.employee_name === emp.employee_name && j.month === m.month)
+      ).length, 0)
     : 0;
 
   useEffect(() => {
@@ -259,11 +112,7 @@ export default function SalariosTab({ month }) {
       const [refYear, refMonth] = refMes.split('-').map(Number);
       const [txYear, txMonth, txDay] = txDate.split('-').map(Number);
       const monthDiff = (txYear - refYear) * 12 + (txMonth - refMonth);
-      if (monthDiff === 0) {
-        return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
-             : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
-      }
-      if (monthDiff === 1) {
+      if (monthDiff === 0 || monthDiff === 1) {
         return (txDay >= 1 && txDay <= 6) || txDay >= 16 ? 'Adiantamento'
              : txDay >= 7 && txDay <= 15 ? 'Liquidação' : null;
       }
@@ -277,7 +126,7 @@ export default function SalariosTab({ month }) {
       if (!tx) return;
       const type = link.tipo || classifyTransfer(tx.data, link.mes);
       if (!type) return;
-      const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').trim();
+      const normStr = (s) => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, '').trim();
       const workerKey = link.worker_id || normStr(link.worker_name);
       if (!paymentsMap[workerKey]) paymentsMap[workerKey] = {};
       if (!paymentsMap[workerKey][link.mes]) paymentsMap[workerKey][link.mes] = [];
@@ -285,7 +134,7 @@ export default function SalariosTab({ month }) {
         amount: Math.abs(parseFloat(tx.valor) || 0),
         data: tx.data,
         type,
-        linkId: link.id
+        linkId: link.id,
       });
     });
 
@@ -317,7 +166,6 @@ export default function SalariosTab({ month }) {
     init();
   }, [year]);
 
-  // Totais de diferenças com detalhe por entrada
   const totaisDiferencas = employeesFiltered
     ? employeesFiltered.reduce((acc, emp) => {
         emp.months.forEach(m => {
@@ -331,17 +179,14 @@ export default function SalariosTab({ month }) {
       }, { aMais: 0, aMenos: 0, detalheAmais: [], detalheAmenos: [] })
     : { aMais: 0, aMenos: 0, detalheAmais: [], detalheAmenos: [] };
 
-  // ── Relatórios ──────────────────────────────────────────────────────────────
   const buildRows = () => {
     if (!employeesFiltered || employeesFiltered.length === 0) return [];
     const allMonths = [...new Set(employeesFiltered.flatMap(e => e.months.map(m => m.month)))].sort();
     const result = [];
     for (const mes of allMonths) {
-      let monthExpected = 0;
-      let monthPaid = 0;
+      let monthExpected = 0, monthPaid = 0;
       for (const emp of employeesFiltered) {
-        const empMonthRows = emp.months.filter(m => m.month === mes);
-        for (const m of empMonthRows) {
+        for (const m of emp.months.filter(m => m.month === mes)) {
           const justEntry = justificacoes.find(j => j.employee_name === emp.employee_name && j.month === m.month);
           const status = m.status === 'Match Exato' ? 'Match Exato' : justEntry ? 'Justificado' : 'Saldo Pendente';
           const difLabel = Math.abs(m.balance) > tolerancia
@@ -365,12 +210,8 @@ export default function SalariosTab({ month }) {
     const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const header = ['Trabalhador', 'Mês', 'Recibo (€)', 'Pago (€)', 'Diferença', 'Status', 'Justificação'].map(esc).join(';');
     const rows = buildRows().map(r => r.map(esc).join(';'));
-    const totRow = [
-      '"Total Pago a Mais"', '""', '""', '""', `"${fmtEur(totaisDiferencas.aMais)}"`, '""', '""',
-    ].join(';');
-    const totRow2 = [
-      '"Total Pago a Menos"', '""', '""', '""', `"${fmtEur(totaisDiferencas.aMenos)}"`, '""', '""',
-    ].join(';');
+    const totRow = ['"Total Pago a Mais"', '""', '""', '""', `"${fmtEur(totaisDiferencas.aMais)}"`, '""', '""'].join(';');
+    const totRow2 = ['"Total Pago a Menos"', '""', '""', '""', `"${fmtEur(totaisDiferencas.aMenos)}"`, '""', '""'].join(';');
     const blob = new Blob(['﻿' + [header, ...rows, '', totRow, totRow2].join('\n')], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -413,7 +254,6 @@ export default function SalariosTab({ month }) {
         }
       },
     });
-    // Tabela de resumo de diferenças
     const lastY = doc.lastAutoTable?.finalY ?? 30;
     doc.setFontSize(10);
     doc.setTextColor(30);
@@ -437,17 +277,11 @@ export default function SalariosTab({ month }) {
     setShowExportMenu(false);
   };
 
-  // ── Remover justificação ────────────────────────────────────────────────────
   const handleRemoverJustificacao = async ({ employee_name, month }) => {
-    await supabase
-      .from('salary_justifications')
-      .delete()
-      .eq('employee_name', employee_name)
-      .eq('month', month);
+    await supabase.from('salary_justifications').delete().eq('employee_name', employee_name).eq('month', month);
     setJustificacoes(prev => prev.filter(j => !(j.employee_name === employee_name && j.month === month)));
   };
 
-  // ── Guardar justificação ─────────────────────────────────────────────────────
   const handleSaveJustificacao = async () => {
     if (!justText.trim() || !justModal) return;
     setJustSaving(true);
@@ -457,10 +291,7 @@ export default function SalariosTab({ month }) {
       .select('employee_name, month, justification')
       .single();
     if (!error && data) {
-      setJustificacoes(prev => {
-        const filtered = prev.filter(j => !(j.employee_name === data.employee_name && j.month === data.month));
-        return [...filtered, data];
-      });
+      setJustificacoes(prev => [...prev.filter(j => !(j.employee_name === data.employee_name && j.month === data.month)), data]);
     }
     setJustSaving(false);
     setJustModal(null);
@@ -478,13 +309,13 @@ export default function SalariosTab({ month }) {
         <p className="text-center text-slate-400 py-8 text-sm">Sem dados de análise salarial.</p>
       ) : (
         <>
-          {/* Header: sumário + botão exportar */}
+          {/* Header: sumário + exportar */}
           <div className="flex items-start justify-between gap-3">
             <div className="grid grid-cols-3 gap-3 flex-1">
               {[
                 { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-slate-700', bg: 'bg-slate-50' },
-                { label: 'Match Exato',   value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
-                { label: 'Pendentes',     value: pendentesEfectivos, color: 'text-amber-700', bg: 'bg-amber-50' },
+                { label: 'Match Exato', value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
+                { label: 'Pendentes', value: pendentesEfectivos, color: 'text-amber-700', bg: 'bg-amber-50' },
               ].map(c => (
                 <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center`}>
                   <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
@@ -493,15 +324,11 @@ export default function SalariosTab({ month }) {
               ))}
             </div>
 
-            {/* Tolerância */}
             <div className="flex flex-col items-end gap-1 flex-shrink-0">
               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Tolerância (€)</label>
               <div className="flex items-center gap-1">
                 <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={tolInput}
+                  type="number" min="0" step="0.01" value={tolInput}
                   onChange={e => setTolInput(e.target.value)}
                   onBlur={() => {
                     const v = Math.max(0, parseFloat(tolInput) || 0);
@@ -516,7 +343,6 @@ export default function SalariosTab({ month }) {
               </div>
             </div>
 
-            {/* Exportar dropdown */}
             <div className="relative flex-shrink-0" ref={exportRef}>
               <button
                 onClick={() => setShowExportMenu(v => !v)}
@@ -526,12 +352,10 @@ export default function SalariosTab({ month }) {
               </button>
               {showExportMenu && (
                 <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px]">
-                  <button onClick={handleExportCsv}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <button onClick={handleExportCsv} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                     <FileText size={13} className="text-emerald-600" /> CSV
                   </button>
-                  <button onClick={handleExportPdf}
-                    className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
+                  <button onClick={handleExportPdf} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                     <FileText size={13} className="text-rose-500" /> PDF
                   </button>
                 </div>
@@ -546,29 +370,21 @@ export default function SalariosTab({ month }) {
             </div>
           ) : (
             <>
-              {/* Seletor de mês */}
               <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setSelectedMonth(null)}
-                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!selectedMonth ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}
-                >
+                <button onClick={() => setSelectedMonth(null)}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!selectedMonth ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}>
                   Todos
                 </button>
                 {monthsAvailable.map(mes => (
-                  <button
-                    key={mes}
-                    onClick={() => setSelectedMonth(mes)}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === mes ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}
-                  >
+                  <button key={mes} onClick={() => setSelectedMonth(mes)}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${selectedMonth === mes ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-500 hover:bg-indigo-100 hover:text-indigo-700'}`}>
                     {fmtMes(mes)}
                   </button>
                 ))}
               </div>
 
               {employeesFiltered.length === 0 ? (
-                <div className="text-center py-8 text-[12px] text-slate-400">
-                  Nenhum dado para o mês seleccionado.
-                </div>
+                <div className="text-center py-8 text-[12px] text-slate-400">Nenhum dado para o mês seleccionado.</div>
               ) : (
                 employeesFiltered.map(emp => (
                   <SalarioEmployeeCard
@@ -590,7 +406,6 @@ export default function SalariosTab({ month }) {
           {/* Resumo de diferenças */}
           {(totaisDiferencas.aMais > 0.01 || totaisDiferencas.aMenos > 0.01) && (
             <div className="mt-2 grid grid-cols-2 gap-3">
-              {/* Pago a Mais */}
               <div className="bg-sky-50 border border-sky-100 rounded-2xl px-4 py-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-sky-500 mb-1">Total Pago a Mais</p>
                 <p className="text-xl font-black text-sky-700">{fmtEur(totaisDiferencas.aMais)}</p>
@@ -609,7 +424,6 @@ export default function SalariosTab({ month }) {
                   </div>
                 )}
               </div>
-              {/* Pago a Menos */}
               <div className="bg-rose-50 border border-rose-100 rounded-2xl px-4 py-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-rose-500 mb-1">Total Pago a Menos</p>
                 <p className="text-xl font-black text-rose-700">{fmtEur(totaisDiferencas.aMenos)}</p>
@@ -685,119 +499,41 @@ export default function SalariosTab({ month }) {
         </>
       )}
 
-      {/* Modal: associar transação não identificada */}
       {salarioAssocModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Associar Transferência</h3>
-              <button onClick={() => setSalarioAssocModal(null)} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-slate-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Descrição do movimento</p>
-              <p className="text-[12px] text-slate-700 break-all">{salarioAssocModal.descricao}</p>
-              <p className="text-[11px] text-slate-500 mt-1">{salarioAssocModal.date} · {fmtEur(salarioAssocModal.amount)}</p>
-            </div>
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">
-                  Padrão a identificar (parte da descrição)
-                </label>
-                <input
-                  value={salarioAssocPattern}
-                  onChange={e => setSalarioAssocPattern(e.target.value)}
-                  placeholder="Ex: João Silva"
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                />
-                {(() => {
-                  const p = salarioAssocPattern.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-                  if (p.length < 4) return <p className="text-[10px] text-slate-400 mt-1">Mínimo 4 caracteres.</p>;
-                  const allTx = salarioResultado?.unmatched_transactions || [];
-                  const matchCount = allTx.filter(t => t.descricao.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').includes(p)).length;
-                  if (matchCount === 0) return <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> Nenhuma transação corresponde.</p>;
-                  if (matchCount > 1) return <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1"><AlertCircle size={10} /> Vai capturar {matchCount} transferências.</p>;
-                  return <p className="text-[10px] text-emerald-600 mt-1 flex items-center gap-1"><CheckCircle size={10} /> Corresponde exactamente a 1.</p>;
-                })()}
-              </div>
-              <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Trabalhador</label>
-                <select value={salarioAssocWorker} onChange={e => setSalarioAssocWorker(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                  <option value="">Seleccionar…</option>
-                  {[...new Set((salarioResultado?.employees || []).map(e => e.employee_name))].sort().map(name => (
-                    <option key={name} value={name}>{name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button onClick={() => setSalarioAssocModal(null)}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button
-                disabled={!salarioAssocPattern.trim() || !salarioAssocWorker || salarioAssocSaving}
-                onClick={async () => {
-                  setSalarioAssocSaving(true);
-                  const newAlias = { pattern: salarioAssocPattern.trim(), worker_name: salarioAssocWorker };
-                  const { data, error } = await supabase.from('reconciliacao_salarial_aliases').insert(newAlias).select().single();
-                  if (!error && data) {
-                    const updated = [data, ...salarioAliases];
-                    setSalarioAliases(updated);
-                    setSalarioAssocModal(null);
-                    setSalarioAssocSaving(false);
-                    analisarSalarios(updated);
-                  } else { setSalarioAssocSaving(false); }
-                }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
-                {salarioAssocSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Guardar
-              </button>
-            </div>
-          </div>
-        </div>
+        <AssocTransacaoModal
+          tx={salarioAssocModal}
+          pattern={salarioAssocPattern}
+          onPatternChange={setSalarioAssocPattern}
+          worker={salarioAssocWorker}
+          onWorkerChange={setSalarioAssocWorker}
+          workers={[...new Set((salarioResultado?.employees || []).map(e => e.employee_name))].sort()}
+          unmatchedTxs={salarioResultado?.unmatched_transactions || []}
+          saving={salarioAssocSaving}
+          onClose={() => setSalarioAssocModal(null)}
+          onSave={async () => {
+            setSalarioAssocSaving(true);
+            const newAlias = { pattern: salarioAssocPattern.trim(), worker_name: salarioAssocWorker };
+            const { data, error } = await supabase.from('reconciliacao_salarial_aliases').insert(newAlias).select().single();
+            if (!error && data) {
+              const updated = [data, ...salarioAliases];
+              setSalarioAliases(updated);
+              setSalarioAssocModal(null);
+              setSalarioAssocSaving(false);
+              analisarSalarios(updated);
+            } else { setSalarioAssocSaving(false); }
+          }}
+        />
       )}
 
-      {/* Modal: justificar mês pendente */}
       {justModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-sm font-black text-slate-800">Justificar Diferença</h3>
-              <button onClick={() => { setJustModal(null); setJustText(''); }} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
-            </div>
-            <div className="bg-amber-50 rounded-2xl px-4 py-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Mês pendente</p>
-              <p className="text-sm font-bold text-slate-800">{justModal.employee_name}</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">{fmtMes(justModal.month)} · Saldo em falta: <strong className="text-red-600">{fmtEur(Math.abs(justModal.balance))}</strong></p>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">
-                Justificação
-              </label>
-              <textarea
-                value={justText}
-                onChange={e => setJustText(e.target.value)}
-                placeholder="Ex: Adiantamento pago em numerário, remuneração acordada diferente, pagamento parcial pendente…"
-                rows={3}
-                className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
-              />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => { setJustModal(null); setJustText(''); }}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-                Cancelar
-              </button>
-              <button
-                disabled={!justText.trim() || justSaving}
-                onClick={handleSaveJustificacao}
-                className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
-              >
-                {justSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
-              </button>
-            </div>
-          </div>
-        </div>
+        <JustificarModal
+          entry={justModal}
+          text={justText}
+          onTextChange={setJustText}
+          saving={justSaving}
+          onClose={() => { setJustModal(null); setJustText(''); }}
+          onSave={handleSaveJustificacao}
+        />
       )}
     </div>
   );

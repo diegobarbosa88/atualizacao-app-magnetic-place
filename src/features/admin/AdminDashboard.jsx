@@ -1,18 +1,13 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import EntryForm from '../../components/common/EntryForm';
 import ClientTimesheetReport from '../../components/common/ClientTimesheetReport';
-import CompanyValidationStamp from '../../components/common/CompanyValidationStamp';
-import CompanyClassicStamp from '../../components/common/CompanyClassicStamp';
-import CompanyCorporateStamp from '../../components/common/CompanyCorporateStamp';
-import ValidationStampAdmin from '../../components/common/ValidationStampAdmin';
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
-  LayoutGrid, Clock, TrendingUp, TrendingDown, Wallet, Trophy, History, Printer,
-  Activity, FileText, BarChart3, Settings2, Sparkles, CheckCircle, Users, Download,
-  X, ChevronLeft, ChevronRight, ChevronDown, LogOut, Zap, Plus, Trash2, Unlock,
-  Building2, Palette, Lock, Settings, FileSignature, Upload, Loader2, PenTool, UserPlus, ShieldCheck, ShieldOff, Bell, Wrench
+  Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
+  Settings, FileText, BarChart3, Sparkles, Bell, LogOut
 } from 'lucide-react';
 import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
@@ -23,15 +18,16 @@ import { ValidationPortalProvider } from './contexts/ValidationPortalContext';
 import DocumentsAdmin from './DocumentsAdmin';
 import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
+import AdminOverview from './AdminOverview';
+import AdminReports from './AdminReports';
+import AdminSettings from './AdminSettings';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
 import {
-  formatHours, formatCurrency, calculateDuration
+  formatHours, calculateDuration
 } from '../../utils/formatUtils';
-import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 import { callGemini } from '../../utils/aiUtils';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 function AdminDashboard(props) {
   const {
@@ -40,8 +36,6 @@ function AdminDashboard(props) {
     currentUser,
     currentMonth,
     setCurrentMonth,
-    activeTab,
-    setActiveTab,
     auditWorkerId,
     setAuditWorkerId,
     setShowFinReport,
@@ -68,61 +62,14 @@ function AdminDashboard(props) {
   } = props;
 
   const { adminStats, clients, workers, schedules, expenses, appNotifications, workerChangeRequests, corrections, correctionItems, saveToDb, setSystemSettings, saveSystemSettings, supabase, companySignature, saveCompanySignature } = useApp();
-  const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeTab = location.pathname.replace(/^\/admin\//, '').split('/')[0] || 'overview';
+  const setActiveTab = useCallback((tab) => navigate('/admin/' + tab), [navigate]);
 
   const notificacoesDeCorrecao = correctionNotifications;
 
-
-  const [adminFormMode, setAdminFormMode] = useState(null); // null | 'new' | 'existing' | 'edit'
-  const [adminForm, setAdminForm] = useState({ id: null, name: '', nif: '', selectedWorkerId: '' });
-  const [badgeTotals, setBadgeTotals] = useState({
-    cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0
-  });
-  const [prevBadgeTotals, setPrevBadgeTotals] = useState({
-    cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0
-  });
-  const [ytdTotals, setYtdTotals] = useState({ receitas: 0, despesas: 0 });
-  const [badgeDetails, setBadgeDetails] = useState([]);
-  const [expandedItems, setExpandedItems] = useState([]);
-  const [detailsPage, setDetailsPage] = useState(1);
-
-  const nonAdminWorkers = workers.filter(w => !w.isAdmin);
-
-  const handleOpenAddAdmin = () => {
-    setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' });
-    setAdminFormMode('new');
-  };
-
-  const handleSelectExistingWorker = (workerId) => {
-    const w = workers.find(x => x.id === workerId);
-    if (!w) return;
-    setAdminForm({ id: w.id, name: w.name, nif: w.nif || '', selectedWorkerId: workerId });
-    setAdminFormMode('existing');
-  };
-
-  const handleEditAdmin = (worker) => {
-    setAdminForm({ id: worker.id, name: worker.name, nif: worker.nif || '', selectedWorkerId: worker.id });
-    setAdminFormMode('edit');
-  };
-
-  const handleSaveAdmin = async () => {
-    if (!adminForm.name.trim() || !adminForm.nif.trim()) return alert('Nome e senha são obrigatórios.');
-    if (adminFormMode === 'edit' || adminFormMode === 'existing') {
-      const existing = workers.find(w => w.id === adminForm.id);
-      await saveToDb('workers', adminForm.id, { ...existing, name: adminForm.name.trim(), nif: adminForm.nif.trim(), isAdmin: true });
-    } else {
-      const id = `worker_${Date.now()}`;
-      await saveToDb('workers', id, { id, name: adminForm.name.trim(), nif: adminForm.nif.trim(), isAdmin: true, status: 'ativo', assignedClients: [], assignedSchedules: [] });
-    }
-    setAdminFormMode(null);
-    setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' });
-  };
-
-  const handleRevokeAdmin = async (worker) => {
-    await saveToDb('workers', worker.id, { ...worker, isAdmin: false });
-  };
-
-  // Estado otimista local — atualiza badge imediatamente sem esperar Supabase
   const [optimisticReadIds, setOptimisticReadIds] = useState(new Set());
   const [optimisticViewedCorrIds, setOptimisticViewedCorrIds] = useState(new Set());
 
@@ -139,283 +86,10 @@ function AdminDashboard(props) {
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingChangeRequestsCount = pendingChangeRequests.length;
-  const pendingClientCorrectionsCount = (correctionNotifications || []).length;
-
-  useEffect(() => {
-    if (!supabase) return;
-
-    const monthStr = currentMonth.getFullYear() + '-' + String(currentMonth.getMonth() + 1).padStart(2, '0');
-
-    supabase
-      .from('reconciliation_runs')
-      .select('id, transactions_json')
-      .then(async ({ data: runs }) => {
-        if (!runs?.length) {
-          setBadgeTotals({ cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 });
-          setBadgeDetails([]);
-          return;
-        }
-
-        const runIds = runs.map(r => r.id);
-
-        const [pags, rls, fatLinks, ints, imps, justs, allClients] = await Promise.all([
-          supabase.from('faturacao_clientes_pagamentos').select('tx_key, valor_pago, client_id').in('run_id', runIds),
-          supabase.from('movimentacao_recibo_links').select('tx_key, worker_name').in('run_id', runIds),
-          supabase.from('fatura_pagamento_links').select('tx_key, fatura_id').in('run_id', runIds),
-          supabase.from('entrada_internos').select('tx_key').in('run_id', runIds),
-          supabase.from('entrada_impostos').select('tx_key').in('run_id', runIds),
-          supabase.from('entrada_justifications').select('tx_key, justification').in('run_id', runIds),
-          supabase.from('clients').select('id, name')
-        ]);
-
-        const faturaIds = (fatLinks.data || []).map(f => f.fatura_id).filter(Boolean);
-        let allFaturas = { data: [] };
-        if (faturaIds.length > 0 && faturaIds.length <= 100) {
-          try {
-            allFaturas = await supabase.from('faturas').select('id, dados').in('id', faturaIds);
-          } catch (e) {
-            console.warn('Erro ao carregar faturas:', e);
-          }
-        }
-
-        const mapCliente = {};
-        const mapClienteNome = {};
-        (pags.data || []).forEach(p => { 
-          mapCliente[p.tx_key] = Number(p.valor_pago) || 0;
-          mapClienteNome[p.tx_key] = p.client_id;
-        });
-
-        const mapReciboNome = {};
-        (rls.data || []).forEach(r => { mapReciboNome[r.tx_key] = r.worker_name; });
-
-        const mapFaturaId = {};
-        (fatLinks.data || []).forEach(f => { 
-          mapFaturaId[f.tx_key] = f.fatura_id;
-        });
-
-        const mapFaturaDetails = {};
-        (allFaturas.data || []).forEach(fat => {
-          mapFaturaDetails[fat.id] = {
-            fornecedor: fat.dados?.fornecedor || fat.dados?.entidade || '—'
-          };
-        });
-
-        const mapJustificacao = {};
-        (justs.data || []).forEach(j => { mapJustificacao[j.tx_key] = j.justification; });
-
-        const clientNames = {};
-        (allClients.data || []).forEach(c => { clientNames[c.id] = c.name; });
-
-        const setRecibo = new Set((rls.data || []).map(r => r.tx_key));
-        const setFatura = new Set((fatLinks.data || []).map(f => f.tx_key));
-        const setInterno = new Set((ints.data || []).map(i => i.tx_key));
-        const setImposto = new Set((imps.data || []).map(i => i.tx_key));
-        const setJustificado = new Set((justs.data || []).map(j => j.tx_key));
-
-        const totals = { cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 };
-        const details = [];
-
-        runs.forEach(run => {
-          let txs = run.transactions_json;
-          if (typeof txs === 'string') {
-            try { txs = JSON.parse(txs || '[]'); } catch { txs = []; }
-          }
-          if (!Array.isArray(txs)) txs = [];
-
-          txs.forEach(tx => {
-            if (!tx.data?.startsWith(monthStr)) return;
-
-            const key = `${tx.data}|${tx.descricao}|${tx.valor}`;
-            const valor = Math.abs(Number(tx.valor) || 0);
-
-            if (setInterno.has(key)) return;
-
-            let badge = null;
-            if (mapCliente[key]) {
-              badge = 'cliente';
-              totals.cliente += valor;
-            } else if (setRecibo.has(key)) {
-              badge = 'recibo';
-              totals.recibo += valor;
-            } else if (setFatura.has(key)) {
-              badge = 'fatura';
-              totals.fatura += valor;
-            } else if (setImposto.has(key)) {
-              badge = 'imposto';
-              totals.imposto += valor;
-            } else if (setJustificado.has(key)) {
-              badge = 'justificado';
-              totals.justificado += valor;
-            }
-
-            if (tx.tipo === 'credito') {
-              totals.receitas += valor;
-            } else {
-              totals.despesas += valor;
-            }
-
-            const detail = {
-              date: tx.data,
-              descricao: tx.descricao || '',
-              valor,
-              tipo: tx.tipo,
-              badge,
-              clienteNome: mapClienteNome[key] ? clientNames[mapClienteNome[key]] || mapClienteNome[key] : null,
-              workerName: mapReciboNome[key] || null,
-              faturaFornecedor: mapFaturaDetails[mapFaturaId[key]]?.fornecedor || null,
-              justificacao: mapJustificacao[key] || null
-            };
-
-            if (badge) details.push(detail);
-          });
-        });
-
-        setBadgeTotals(totals);
-        setBadgeDetails(details);
-
-        // Calculate YTD (year-to-date) from January 1st
-        const yearStr = currentMonth.getFullYear().toString();
-        const ytdTotals = { receitas: 0, despesas: 0 };
-        runs.forEach(run => {
-          let txs = run.transactions_json;
-          if (typeof txs === 'string') {
-            try { txs = JSON.parse(txs || '[]'); } catch { txs = []; }
-          }
-          if (!Array.isArray(txs)) txs = [];
-
-          txs.forEach(tx => {
-            if (!tx.data?.startsWith(yearStr)) return;
-            if (setInterno.has(`${tx.data}|${tx.descricao}|${tx.valor}`)) return;
-
-            const valor = Math.abs(Number(tx.valor) || 0);
-            if (tx.tipo === 'credito') {
-              ytdTotals.receitas += valor;
-            } else {
-              ytdTotals.despesas += valor;
-            }
-          });
-        });
-        setYtdTotals(ytdTotals);
-      });
-  }, [supabase, currentMonth]);
-
-  useEffect(() => {
-    if (!supabase) return;
-
-    const prevMonthDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const prevMonthStr = prevMonthDate.getFullYear() + '-' + String(prevMonthDate.getMonth() + 1).padStart(2, '0');
-
-    supabase
-      .from('reconciliation_runs')
-      .select('id, transactions_json')
-      .then(async ({ data: runs }) => {
-        if (!runs?.length) {
-          setPrevBadgeTotals({ cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 });
-          return;
-        }
-
-        const runIds = runs.map(r => r.id);
-
-        const [pags, rls, fatLinks, ints, imps, justs, allClients] = await Promise.all([
-          supabase.from('faturacao_clientes_pagamentos').select('tx_key, valor_pago, client_id').in('run_id', runIds),
-          supabase.from('movimentacao_recibo_links').select('tx_key, worker_name').in('run_id', runIds),
-          supabase.from('fatura_pagamento_links').select('tx_key, fatura_id').in('run_id', runIds),
-          supabase.from('entrada_internos').select('tx_key').in('run_id', runIds),
-          supabase.from('entrada_impostos').select('tx_key').in('run_id', runIds),
-          supabase.from('entrada_justifications').select('tx_key, justification').in('run_id', runIds),
-          supabase.from('clients').select('id, name')
-        ]);
-
-        const faturaIds = (fatLinks.data || []).map(f => f.fatura_id).filter(Boolean);
-        let allFaturas = { data: [] };
-        if (faturaIds.length > 0 && faturaIds.length <= 100) {
-          try {
-            allFaturas = await supabase.from('faturas').select('id, dados').in('id', faturaIds);
-          } catch (e) {
-            console.warn('Erro ao carregar faturas:', e);
-          }
-        }
-
-        const mapCliente = {};
-        const mapClienteNome = {};
-        (pags.data || []).forEach(p => { 
-          mapCliente[p.tx_key] = Number(p.valor_pago) || 0;
-          mapClienteNome[p.tx_key] = p.client_id;
-        });
-
-        const mapReciboNome = {};
-        (rls.data || []).forEach(r => { mapReciboNome[r.tx_key] = r.worker_name; });
-
-        const mapFaturaId = {};
-        (fatLinks.data || []).forEach(f => { 
-          mapFaturaId[f.tx_key] = f.fatura_id;
-        });
-
-        const mapFaturaDetails = {};
-        (allFaturas.data || []).forEach(fat => {
-          mapFaturaDetails[fat.id] = {
-            fornecedor: fat.dados?.fornecedor || fat.dados?.entidade || '—'
-          };
-        });
-
-        const mapJustificacao = {};
-        (justs.data || []).forEach(j => { mapJustificacao[j.tx_key] = j.justification; });
-
-        const clientNames = {};
-        (allClients.data || []).forEach(c => { clientNames[c.id] = c.name; });
-
-        const setRecibo = new Set((rls.data || []).map(r => r.tx_key));
-        const setFatura = new Set((fatLinks.data || []).map(f => f.tx_key));
-        const setInterno = new Set((ints.data || []).map(i => i.tx_key));
-        const setImposto = new Set((imps.data || []).map(i => i.tx_key));
-        const setJustificado = new Set((justs.data || []).map(j => j.tx_key));
-
-        const totals = { cliente: 0, recibo: 0, fatura: 0, imposto: 0, justificado: 0, receitas: 0, despesas: 0 };
-
-        runs.forEach(run => {
-          let txs = run.transactions_json;
-          if (typeof txs === 'string') {
-            try { txs = JSON.parse(txs || '[]'); } catch { txs = []; }
-          }
-          if (!Array.isArray(txs)) txs = [];
-
-          txs.forEach(tx => {
-            if (!tx.data?.startsWith(prevMonthStr)) return;
-
-            const key = `${tx.data}|${tx.descricao}|${tx.valor}`;
-            const valor = Math.abs(Number(tx.valor) || 0);
-
-            if (setInterno.has(key)) return;
-
-            let badge = null;
-            if (mapCliente[key]) {
-              badge = 'cliente';
-              totals.cliente += valor;
-            } else if (setRecibo.has(key)) {
-              badge = 'recibo';
-              totals.recibo += valor;
-            } else if (setFatura.has(key)) {
-              badge = 'fatura';
-              totals.fatura += valor;
-            } else if (setImposto.has(key)) {
-              badge = 'imposto';
-              totals.imposto += valor;
-            } else if (setJustificado.has(key)) {
-              badge = 'justificado';
-              totals.justificado += valor;
-            }
-
-            if (tx.tipo === 'credito') {
-              totals.receitas += valor;
-            } else {
-              totals.despesas += valor;
-            }
-          });
-        });
-
-        setPrevBadgeTotals(totals);
-      });
-  }, [supabase, currentMonth]);
+  const pendingClientCorrectionsCount = (corrections || []).filter(c =>
+    c.type !== 'creation_request' && c.type !== 'deletion_request' &&
+    (c.status === 'submitted' || c.status === 'under_review' || c.status === 'pending')
+  ).length;
 
   const pendingWorkerCorrectionsCount = (corrections || []).filter(c =>
     (c.type === 'creation_request' || c.type === 'deletion_request') &&
@@ -456,7 +130,6 @@ function AdminDashboard(props) {
     return { resolved: false };
   };
 
-  // WR-04 fix: Add error handling and revert optimistic update on failure
   const markNotifRead = async (id) => {
     const previousState = optimisticReadIds;
     setOptimisticReadIds(prev => new Set([...prev, id]));
@@ -470,13 +143,11 @@ function AdminDashboard(props) {
         .update({ read_by_admin_ids: [...current, currentUser.id] })
         .eq('id', id);
     } catch (err) {
-      // Revert optimistic update on failure
       setOptimisticReadIds(previousState);
       console.error('Failed to mark notification as read:', err);
     }
   };
 
-  // Marcar correções como vistas — otimista imediato + Supabase async
   const markCorrectionsViewed = async (specificIds) => {
     const ids = specificIds ?? notificacoesDeCorrecao.map(n => n.id);
     setOptimisticViewedCorrIds(prev => new Set([...prev, ...ids]));
@@ -493,7 +164,6 @@ function AdminDashboard(props) {
     }));
   };
 
-  // Auto-marcar lido ao abrir tab de notificações
   useEffect(() => {
     if (activeTab !== 'notificacoes' || !currentUser?.id || !supabase || !appNotifications.length) return;
     const unread = appNotifications.filter(n => !isRead(n));
@@ -507,11 +177,11 @@ function AdminDashboard(props) {
     }));
   }, [activeTab, currentUser?.id, appNotifications, supabase]);
 
-  // Auto-marcar correções vistas ao abrir tab de correções
+  const portalSubTabFromUrl = location.pathname.split('/')[3] || '';
   useEffect(() => {
-    if (activeTab !== 'portal_validacao' || portalSubTab !== 'correcoes' || !currentUser?.id || !supabase) return;
+    if (activeTab !== 'portal_validacao' || portalSubTabFromUrl !== 'correcoes' || !currentUser?.id || !supabase) return;
     markCorrectionsViewed();
-  }, [activeTab, portalSubTab, currentUser?.id]);
+  }, [activeTab, portalSubTabFromUrl, currentUser?.id]);
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifDropdownRef = useRef(null);
@@ -527,13 +197,11 @@ function AdminDashboard(props) {
     return () => document.removeEventListener('mousedown', handler);
   }, [showNotifDropdown]);
 
-  // State para navegar diretamente a uma correção específica
   const [selectedCorrectionId, setSelectedCorrectionId] = useState(null);
+
 
   const [workerAISummary, setWorkerAISummary] = useState("");
   const [isSummarizing, setIsSummarizing] = useState(false);
-  const [reportFilter, setReportFilter] = useState({ clientId: '', workerId: '', month: toISODateLocal(new Date()).substring(0, 7) });
-  const [valSortConfig, setValSortConfig] = useState({ key: 'name', direction: 'asc' });
 
   const auditedWorker = workers.find(w => w.id === auditWorkerId);
   const auditedMonthLogs = logs.filter(l => l.workerId === auditWorkerId && isSameMonth(l.date, currentMonth));
@@ -541,311 +209,13 @@ function AdminDashboard(props) {
   const currentMonthStr = toISODateLocal(currentMonth).substring(0, 7);
   const portalMonthStr = toISODateLocal(portalMonth).substring(0, 7);
 
-  const allClientsValidated = useMemo(() => {
-    if (clients.length === 0) return false;
-    return clients.every(c => {
-      const approval = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr);
-      const hasEmail = c.status_email === `enviado_${portalMonthStr}`;
-      return approval || hasEmail;
-    });
-  }, [clients, clientApprovals, portalMonthStr]);
-
-  const [showAllActivity, setShowAllActivity] = useState(false);
-  const [showRecalcModal, setShowRecalcModal] = useState(false);
-  const [recalcProgress, setRecalcProgress] = useState({ current: 0, total: 0, done: false });
-
-  const handleRecalcHours = useCallback(async () => {
-    const interval = systemSettings?.minuteInterval || 30;
-    const logsToFix = logs.filter(l => l.startTime && l.endTime);
-    if (logsToFix.length === 0) { setRecalcProgress({ current: 0, total: 0, done: true }); return; }
-    setRecalcProgress({ current: 0, total: logsToFix.length, done: false });
-    let fixed = 0;
-    for (let i = 0; i < logsToFix.length; i++) {
-      const log = logsToFix[i];
-      const roundedStart = roundTimeToIntervalTimeUp(log.startTime, interval);
-      const roundedEnd = roundTimeToIntervalTimeDown(log.endTime, interval);
-      const roundedBreakStart = log.breakStart ? roundTimeToIntervalTimeUp(log.breakStart, interval) : null;
-      const roundedBreakEnd = log.breakEnd ? roundTimeToIntervalTimeDown(log.breakEnd, interval) : null;
-      const newHours = calculateDuration(roundedStart, roundedEnd, roundedBreakStart, roundedBreakEnd);
-      await saveToDb('logs', log.id, { ...log, hours: newHours });
-      fixed++;
-      setRecalcProgress(prev => ({ ...prev, current: fixed }));
-    }
-    setRecalcProgress(prev => ({ ...prev, done: true }));
-  }, [logs, systemSettings, saveToDb]);
-
-  // Calculate working days in month
-  const getWorkingDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    let count = 0;
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    for (let i = 1; i <= daysInMonth; i++) {
-      const day = new Date(year, month, i).getDay();
-      if (day !== 0 && day !== 6) count++;
-    }
-    return count;
-  };
-
-  // Calculate expected hours per worker based on their schedule
-  const getWorkerExpectedHours = (workerId) => {
-    const worker = workers.find(w => w.id === workerId);
-    if (!worker?.defaultScheduleId) return 0;
-    const schedule = schedules.find(s => s.id === worker.defaultScheduleId);
-    if (!schedule) return 0;
-    const hoursPerDay = calculateDuration(schedule.startTime, schedule.endTime, schedule.breakStart, schedule.breakEnd);
-    const workingDays = getWorkingDaysInMonth(currentMonth);
-    return hoursPerDay * workingDays;
-  };
-
-  // Aggregated trend vs expected
-  const aggregatedTrend = useMemo(() => {
-    const totalExpected = workers.reduce((sum, w) => sum + getWorkerExpectedHours(w.id), 0);
-    const totalRegistered = adminStats.totalHours;
-    if (totalExpected === 0) return { percent: 0, expected: 0 };
-    return {
-      percent: ((totalRegistered - totalExpected) / totalExpected * 100).toFixed(1),
-      expected: totalExpected
-    };
-  }, [workers, schedules, currentMonth, adminStats.totalHours]);
-
-  // Dia de corte proporcional: dia de hoje no mês atual
-  const todayDay = new Date().getDate();
-
-  // Filtra logs do mês anterior até ao mesmo dia do mês de hoje
-  const filterPrevMonthProportional = (allLogs, prevMonth) =>
-    allLogs.filter(l => {
-      if (!isSameMonth(l.date, prevMonth)) return false;
-      const d = new Date(l.date.split('T')[0]);
-      return d.getDate() <= todayDay;
-    });
-
-  // Stats do mês anterior (proporcional ao dia atual)
-  const prevMonthStats = useMemo(() => {
-    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const prevLogs = filterPrevMonthProportional(logs, prevMonth);
-    const totalHours = prevLogs.reduce((acc, l) => acc + (Number(l.hours) || 0), 0);
-    let expectedRevenue = 0;
-    let expectedCosts = 0;
-    prevLogs.forEach(l => {
-      const client = clients.find(c => c.id === l.clientId);
-      const worker = workers.find(w => w.id === l.workerId);
-      if (client) expectedRevenue += l.hours * (Number(client.valorHora) || 0);
-      if (worker) expectedCosts += l.hours * (Number(worker.valorHora) || 0);
-    });
-    const prevMonth2 = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const monthlyExpenses = expenses
-      .filter(e => {
-        if (!isSameMonth(e.date, prevMonth2)) return false;
-        const d = new Date(e.date.split('T')[0]);
-        return d.getDate() <= todayDay;
-      })
-      .reduce((a, b) => a + Number(b.amount), 0);
-    return {
-      totalHours,
-      expectedRevenue,
-      expectedCosts,
-      monthlyExpenses,
-      netProfit: expectedRevenue - expectedCosts - monthlyExpenses
-    };
-  }, [logs, currentMonth, clients, workers, expenses]);
-
-  // Variações % vs mês anterior (proporcional)
-  const vsLastMonth = useMemo(() => {
-    const pct = (curr, prev) => {
-      if (prev === 0) return null;
-      return Number(((curr - prev) / Math.abs(prev) * 100).toFixed(1));
-    };
-    return {
-      hours: pct(adminStats.totalHours, prevMonthStats.totalHours),
-      revenue: pct(adminStats.expectedRevenue, prevMonthStats.expectedRevenue),
-      costs: pct(adminStats.expectedCosts + adminStats.monthlyExpenses, prevMonthStats.expectedCosts + prevMonthStats.monthlyExpenses),
-      profit: pct(adminStats.netProfit, prevMonthStats.netProfit)
-    };
-  }, [adminStats, prevMonthStats]);
-
-  // Worker comparison data - comparativo dia a dia vs mes anterior
-  const workerComparisonData = useMemo(() => {
-    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    return workers
-      .map(w => {
-        const filterByDay = (logList, month) =>
-          logList.filter(l => {
-            if (!isSameMonth(l.date, month)) return false;
-            const d = new Date(l.date.split('T')[0]);
-            return d.getDate() <= todayDay;
-          });
-
-        const currLogs = filterByDay(logs.filter(l => l.workerId === w.id), currentMonth);
-        const prevLogs = filterByDay(logs.filter(l => l.workerId === w.id), prevMonth);
-        const currHours = currLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
-        const prevHours = prevLogs.reduce((sum, l) => sum + (l.hours || 0), 0);
-        const ratioPct = prevHours > 0 ? Number((currHours / prevHours * 100).toFixed(1)) : null;
-        const diffPct = prevHours > 0 ? Number(((currHours - prevHours) / prevHours * 100).toFixed(1)) : null;
-        return {
-          id: w.id,
-          name: w.name,
-          registered: currHours,
-          prevRegistered: prevHours,
-          expected: getWorkerExpectedHours(w.id),
-          ratioPct,
-          diffPct,
-          isOver: currHours >= prevHours && prevHours > 0
-        };
-      })
-      .filter(w => w.registered > 0 || w.prevRegistered > 0)
-      .sort((a, b) => (b.ratioPct || 0) - (a.ratioPct || 0));
-  }, [workers, logs, schedules, currentMonth, todayDay]);
-
-  // Area chart data - daily revenue
-  const areaData = useMemo(() => {
-    if (!logs.length || !adminStats.totalHours) return [];
-    const byDay = {};
-    logs.forEach(l => {
-      if (l.date && l.hours) {
-        const day = l.date.split('T')[0];
-        byDay[day] = (byDay[day] || 0) + l.hours;
-      }
-    });
-    return Object.entries(byDay)
-      .map(([date, hours]) => ({
-        date: date.slice(5).replace('-', '/'),
-        horas: Number(hours.toFixed(1)),
-        valor: adminStats.totalHours > 0
-          ? Number(((hours / adminStats.totalHours) * adminStats.expectedRevenue).toFixed(2))
-          : 0
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [logs, adminStats]);
-
-  // Pie chart data - todas as sub-categorias (badges) dentro de Receitas e Despesa
-  const pieData = [
-    { name: 'R. Cliente', tipo: 'credito', badgeKey: 'cliente', color: '#22c55e' },
-    { name: 'R. Recibo', tipo: 'credito', badgeKey: 'recibo', color: '#16a34a' },
-    { name: 'R. Fatura', tipo: 'credito', badgeKey: 'fatura', color: '#15803d' },
-    { name: 'R. Justif.', tipo: 'credito', badgeKey: 'justificado', color: '#166534' },
-    { name: 'D. Cliente', tipo: 'debito', badgeKey: 'cliente', color: '#ef4444' },
-    { name: 'D. Recibo', tipo: 'debito', badgeKey: 'recibo', color: '#dc2626' },
-    { name: 'D. Fatura', tipo: 'debito', badgeKey: 'fatura', color: '#b91c1c' },
-    { name: 'D. Imposto', tipo: 'debito', badgeKey: 'imposto', color: '#991b1b' },
-    { name: 'D. Justif.', tipo: 'debito', badgeKey: 'justificado', color: '#7f1d1d' }
-  ].map(item => {
-    const items = badgeDetails.filter(t => t.badge === item.badgeKey && t.tipo === item.tipo);
-    const value = items.reduce((sum, t) => sum + t.valor, 0);
-    return { ...item, value };
-  }).filter(p => p.value > 0);
-
-  // Sub-categorias por tipo
-  const subCategoriasCredito = [
-    { name: 'Com Cliente', badgeKey: 'cliente', color: '#f43f5e' },
-    { name: 'Com Recibo', badgeKey: 'recibo', color: '#14b8a6' },
-    { name: 'Com Fatura', badgeKey: 'fatura', color: '#a855f7' },
-    { name: 'Justificado', badgeKey: 'justificado', color: '#8b5cf6' }
-  ];
-  const subCategoriasDebito = [
-    { name: 'Com Cliente', badgeKey: 'cliente', color: '#f43f5e' },
-    { name: 'Com Recibo', badgeKey: 'recibo', color: '#14b8a6' },
-    { name: 'Com Fatura', badgeKey: 'fatura', color: '#a855f7' },
-    { name: 'Imposto', badgeKey: 'imposto', color: '#ef4444' },
-    { name: 'Justificado', badgeKey: 'justificado', color: '#8b5cf6' }
-  ];
-
-  const resultado = badgeTotals.receitas - badgeTotals.despesas;
-
-  // Top clientes com comparação proporcional vs mês anterior
-  const topClientsWithPrev = useMemo(() => {
-    const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const currHours = {};
-    const prevHours = {};
-    logs.forEach(l => {
-      if (!l.clientId || !l.hours) return;
-      if (isSameMonth(l.date, currentMonth)) {
-        currHours[l.clientId] = (currHours[l.clientId] || 0) + l.hours;
-      } else if (isSameMonth(l.date, prevMonth)) {
-        const d = new Date(l.date.split('T')[0]);
-        if (d.getDate() <= todayDay) {
-          prevHours[l.clientId] = (prevHours[l.clientId] || 0) + l.hours;
-        }
-      }
-    });
-    const totalCurr = Object.values(currHours).reduce((a, b) => a + b, 0);
-    return Object.keys(currHours)
-      .map(id => {
-        const curr = currHours[id];
-        const prev = prevHours[id] || 0;
-        const pct = prev > 0 ? Number(((curr - prev) / prev * 100).toFixed(1)) : null;
-        return {
-          id,
-          name: clients.find(c => c.id === id)?.name || 'Desconhecido',
-          hours: curr,
-          prevHours: prev,
-          pct,
-          totalCurr
-        };
-      })
-      .sort((a, b) => b.hours - a.hours)
-      .slice(0, 5);
-  }, [logs, currentMonth, clients, todayDay]);
-
-  const parseLogDate = (d) => {
-    if (!d) return 0;
-    const ptMatch = d.match(/^(\d{2})\/(\d{2})/);
-    if (ptMatch) {
-      return new Date(`${new Date().getFullYear()}-${ptMatch[2]}-${ptMatch[1]}`).getTime();
-    }
-    const [y, m, day] = d.split('T')[0].split('-');
-    return y && m && day ? new Date(`${y}-${m}-${day}`).getTime() : 0;
-  };
-
-  const formatLogDate = (d) => {
-    if (!d) return 'Data inválida';
-    const ptMatch = d.match(/^(\d{2})\/(\d{2})/);
-    if (ptMatch) return `${ptMatch[1]}/${ptMatch[2]}`;
-    const [y, m, day] = d.split('T')[0].split('-');
-    return (y && m && day) ? `${day}/${m}/${y}` : 'Data inválida';
-  };
-
-
   const [inlineEditingDate, setInlineEditingDate] = useState(null);
   const [inlineFormData, setInlineFormData] = useState({});
+
+  const [reportFilter, setReportFilter] = useState({ clientId: '', workerId: '', month: toISODateLocal(new Date()).substring(0, 7) });
   const [reportHistory, setReportHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('reportHistory') || '[]'); } catch { return []; }
   });
-
-  const activeReportsCount = useMemo(() => {
-    if (!reportFilter.month) return 0;
-    return logs.filter(l => l.date?.startsWith(reportFilter.month)).length;
-  }, [logs, reportFilter.month]);
-
-  const activeClientsCount = useMemo(() => {
-    if (!reportFilter.month) return clients.length;
-    return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.clientId))].length;
-  }, [logs, reportFilter.month, clients]);
-
-  const activeWorkersCount = useMemo(() => {
-    if (!reportFilter.month) return workers.filter(w => w.is_active !== false).length;
-    return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.workerId))].length;
-  }, [logs, reportFilter.month, workers]);
-
-  const handleOpenInlineForm = (ds) => {
-    setInlineEditingDate(ds);
-    setInlineFormData({ id: null, date: ds, clientId: auditedWorker?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
-  };
-
-  const handleQuickRegister = (ds) => {
-    // Legacy logic reference - needs to be handled via proper schedule selection in future refactor
-    handleOpenInlineForm(ds);
-  };
-
-  const generateWorkerSummary = async () => {
-    if (auditedMonthLogs.length === 0) return;
-    setIsSummarizing(true);
-    const logTexts = auditedMonthLogs.map(l => `- ${l.date}: ${l.description}`).join('\n');
-    const prompt = `Resuma o desempenho de ${auditedWorker.name} baseado nestas atividades de ${currentMonth.toLocaleDateString('pt-PT', { month: 'long' })}: \n${logTexts}\n Destaque produtividade e áreas de foco de forma executiva.`;
-    const summary = await callGemini(prompt, "Você é um gestor de RH analítico.");
-    setWorkerAISummary(summary);
-    setIsSummarizing(false);
-  };
 
   const handleGenerateClientReport = () => {
     if (!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)) return;
@@ -866,12 +236,42 @@ function AdminDashboard(props) {
     setPrintingReport({ client: clientSelected, month: reportFilter.month, workerId: reportFilter.workerId });
   };
 
-  // Derivado reactivo: enriquece o snapshot leve de `printingReport` com os arrays vivos do AppContext.
-  // Sem isto, aplicar uma correção enquanto o modal está aberto mostraria dados antigos.
-  const reportData = useMemo(() => {
-    if (!printingReport) return null;
-    return { ...printingReport, logs, workers, clients, clientApprovals };
-  }, [printingReport, logs, workers, clients, clientApprovals]);
+  const activeWorkersCount = useMemo(() => {
+    if (!reportFilter.month) return workers.filter(w => w.is_active !== false).length;
+    return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.workerId))].length;
+  }, [logs, reportFilter.month, workers]);
+
+  const activeClientsCount = useMemo(() => {
+    if (!reportFilter.month) return clients.length;
+    return [...new Set(logs.filter(l => l.date?.startsWith(reportFilter.month)).map(l => l.clientId))].length;
+  }, [logs, reportFilter.month, clients]);
+
+  const handleOpenInlineForm = (ds) => {
+    setInlineEditingDate(ds);
+    setInlineFormData({ id: null, date: ds, clientId: auditedWorker?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' });
+  };
+
+  const handleQuickRegister = (ds) => {
+    handleOpenInlineForm(ds);
+  };
+
+  const generateWorkerSummary = async () => {
+    if (auditedMonthLogs.length === 0) return;
+    setIsSummarizing(true);
+    const logTexts = auditedMonthLogs.map(l => `- ${l.date}: ${l.description}`).join('\n');
+    const prompt = `Resuma o desempenho de ${auditedWorker.name} baseado nestas atividades de ${currentMonth.toLocaleDateString('pt-PT', { month: 'long' })}: \n${logTexts}\n Destaque produtividade e áreas de foco de forma executiva.`;
+    const summary = await callGemini(prompt, "Você é um gestor de RH analítico.");
+    setWorkerAISummary(summary);
+    setIsSummarizing(false);
+  };
+
+  const formatLogDate = (d) => {
+    if (!d) return 'Data inválida';
+    const ptMatch = d.match(/^(\d{2})\/(\d{2})/);
+    if (ptMatch) return `${ptMatch[1]}/${ptMatch[2]}`;
+    const [y, m, day] = d.split('T')[0].split('-');
+    return (y && m && day) ? `${day}/${m}/${y}` : 'Data inválida';
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-12 font-sans text-slate-900">
@@ -898,11 +298,11 @@ function AdminDashboard(props) {
           {/* Centro: Menu de Navegação */}
           <div className="flex-1 flex justify-center w-full md:w-auto">
             <div className="flex menu-scroll w-full md:w-auto items-center gap-1 bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto" style={{ scrollbarWidth: 'thin', msOverflowStyle: 'auto' }}>
-              {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'documentos', 'costs', 'settings'].map(t => (
+              {['overview', 'team', 'clients', 'portal_validacao', 'schedules', 'documentos', 'reports', 'costs', 'settings'].map(t => (
                 <button key={t} onClick={() => { setActiveTab(t); setAuditWorkerId(null); }} className={`flex-shrink-0 whitespace-nowrap px-3 sm:px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${activeTab === t ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-400 hover:text-slate-600'} ${t === 'portal_validacao' && totalPendingCorrections > 0 ? 'animate-pulse' : ''}`}>
                   {t === 'overview' ? 'Geral' : t === 'team' ? 'Equipa' : t === 'clients' ? 'Clientes' : t === 'portal_validacao' ? (
                     <span className="flex items-center gap-1">Portal Validação {totalPendingCorrections > 0 && <span className="bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full">{totalPendingCorrections}</span>}</span>
-                  ) : t === 'schedules' ? 'Horários' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : <Settings size={14} />}
+                  ) : t === 'schedules' ? 'Horários' : t === 'costs' ? 'Custos' : t === 'documentos' ? 'Documentos' : t === 'reports' ? 'Folhas' : <Settings size={14} />}
                 </button>
               ))}
             </div>
@@ -925,11 +325,11 @@ function AdminDashboard(props) {
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
           </div>
           <div className="max-h-[60vh] overflow-y-auto divide-y divide-slate-50">
-            {/* Correções de clientes — laranja */}
+            {/* Correções de clientes */}
             {notificacoesDeCorrecao.filter(n => !isViewed(n)).map(corr => {
               const client = clients.find(c => String(c.id) === String(corr.client_id));
               return (
-                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); setSelectedCorrectionId(corr.id); setActiveTab('portal_validacao'); setPortalSubTab('correcoes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                <button key={corr.id} onClick={() => { markCorrectionsViewed([corr.id]); navigate('/admin/portal_validacao/correcoes?source=clientes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
                   <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
                   <div className="min-w-0 flex-1">
                     <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
@@ -940,7 +340,7 @@ function AdminDashboard(props) {
                 </button>
               );
             })}
-            {/* Pedidos de alteração de dados — âmbar */}
+            {/* Pedidos de alteração */}
             {pendingChangeRequests.map(req => {
               const worker = workers.find(w => w.id === req.worker_id);
               return (
@@ -955,8 +355,42 @@ function AdminDashboard(props) {
                 </button>
               );
             })}
-
-            {/* Worker submissions - clica e vai direto para o portal */}
+            {/* Client submissions via submitCorrection (new-format, status=submitted, not in correctionNotifications) */}
+            {(() => {
+              const seenClientCorrIds = new Set();
+              const clientSubmitNotifs = appNotifications.filter(n => {
+                if (isRead(n)) return false;
+                if (dismissedAdminNotifs.includes(n.id)) return false;
+                if (n.target_type !== 'admin') return false;
+                if (n.payload?.kind !== 'submitted') return false;
+                const cid = n.payload?.correction_id;
+                if (!cid) return false;
+                const corr = corrections?.find(c => c.id === cid);
+                if (!corr) return false;
+                // Only client correction types
+                if (corr.type === 'creation_request' || corr.type === 'deletion_request') return false;
+                if (seenClientCorrIds.has(cid)) return false;
+                seenClientCorrIds.add(cid);
+                return true;
+              });
+              return clientSubmitNotifs.map(n => {
+                const corrId = n.payload?.correction_id;
+                const corr = corrections?.find(c => c.id === corrId);
+                const client = clients.find(c => String(c.id) === String(corr?.client_id));
+                return (
+                  <button key={n.id} onClick={() => { markNotifRead(n.id); navigate('/admin/portal_validacao/correcoes?source=clientes'); setShowNotifDropdown(false); }} className="w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-orange-100 text-orange-600 shrink-0 mt-0.5"><FileText size={14} /></div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[8px] font-black uppercase tracking-widest text-orange-500 block">Report de Cliente</span>
+                      <p className="text-xs font-black text-slate-800 truncate">{client?.name || corr?.client_id || 'Cliente'}</p>
+                      {corr?.month && <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
+                      {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                    </div>
+                  </button>
+                );
+              });
+            })()}
+            {/* Worker submissions */}
             {(() => {
               const seenCorrIds = new Set();
               const workerNotifs = appNotifications.filter(n => {
@@ -966,105 +400,85 @@ function AdminDashboard(props) {
                 if (n.payload?.kind !== 'submitted') return false;
                 const cid = n.payload?.correction_id;
                 if (!cid) return false;
+                const corr = corrections?.find(c => c.id === cid);
+                // Only worker correction types
+                if (corr && corr.type !== 'creation_request' && corr.type !== 'deletion_request') return false;
                 if (seenCorrIds.has(cid)) return false;
                 seenCorrIds.add(cid);
                 return true;
               });
-              if (workerNotifs.length === 0) return null;
-              return (
-                <button
-                  onClick={() => {
-                    workerNotifs.forEach(n => markNotifRead(n.id));
-                    setActiveTab('portal_validacao');
-                    setPortalSubTab('correcoes');
-                    setShowNotifDropdown(false);
-                  }}
-                  className="w-full text-left px-4 py-3 hover:bg-emerald-50 transition-colors flex items-start gap-3"
-                >
-                  <div className="p-2 rounded-xl bg-emerald-100 text-emerald-600 shrink-0 mt-0.5"><Clock size={14} /></div>
-                  <div className="min-w-0 flex-1">
-                    <span className="text-[8px] font-black uppercase tracking-widest text-emerald-500 block">Pedidos de Workers</span>
-                    <p className="text-xs font-black text-slate-800 truncate">{workerNotifs.length} pedido{workerNotifs.length > 1 ? 's' : ''} pendente{workerNotifs.length > 1 ? 's' : ''}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">Clica para ver no Portal de Validação</p>
-                  </div>
-                </button>
-              );
-            })()}
-
-            {/* Notificações gerais — cor por tipo */}
-            {appNotifications.filter(n => {
-              if (isRead(n)) return false;
-              if (dismissedAdminNotifs.includes(n.id)) return false;
-              if (n.payload?.kind === 'submitted') return false;
-              return true;
-            }).map(notif => {
-              const badge = getNotificationBadge(notif);
-              const styles = notif.type === 'urgent'
-                ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Urgente' }
-                : notif.type === 'warning'
-                ? { hover: 'hover:bg-yellow-50', icon: 'bg-yellow-100 text-yellow-600', label: 'text-yellow-500', tag: 'Aviso' }
-                : notif.type === 'danger'
-                ? { hover: 'hover:bg-rose-50', icon: 'bg-rose-100 text-rose-600', label: 'text-rose-500', tag: 'Eliminar' }
-                : notif.type === 'success'
-                ? { hover: 'hover:bg-emerald-50', icon: 'bg-emerald-100 text-emerald-600', label: 'text-emerald-500', tag: 'Sucesso' }
-                : { hover: 'hover:bg-indigo-50', icon: 'bg-indigo-100 text-indigo-600', label: 'text-indigo-500', tag: 'Informação' };
-              return (
-                <button key={notif.id} onClick={() => {
-                  if (badge.resolved) { handleDismissAdminNotif(notif.id); return; }
-                  markNotifRead(notif.id);
-                  const corrId = notif.payload?.correction_id || notif.payload?.correcao_id;
-                  if (corrId) {
-                    setSelectedCorrectionId(corrId);
-                    setActiveTab('portal_validacao');
-                    setPortalSubTab('correcoes');
-                  } else {
-                    setActiveTab('notificacoes');
-                  }
-                  setShowNotifDropdown(false);
-                }} className={`w-full text-left px-4 py-3 ${styles.hover} transition-colors flex items-start gap-3 ${badge.resolved ? 'opacity-60' : ''}`}>
-                  <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${styles.icon}`}>
-                    {notif.type === 'danger' ? <Trash2 size={14} /> : <Bell size={14} />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <span className={`text-[8px] font-black uppercase tracking-widest ${styles.label} block`}>{styles.tag}</span>
-                    <p className="text-xs font-black text-slate-800 truncate">{notif.title}</p>
-                    {badge.resolved && (
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded mt-1 inline-block ${
-                        badge.status === 'applied' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'
-                      }`}>
-                        {badge.label}
-                      </span>
+              return workerNotifs.map(n => {
+                const badge = getNotificationBadge(n);
+                const corrId = n.payload?.correction_id;
+                const corr = corrections?.find(c => c.id === corrId);
+                // n.worker_id may be absent in older notifications; fall back to corr.submitted_by
+                const workerIdResolved = n.worker_id || corr?.submitted_by;
+                const worker = workers.find(w => String(w.id) === String(workerIdResolved));
+                // Extract worker name from notification title as last-resort fallback ("Pedido de Registo · Nome")
+                const workerNameFallback = n.title?.split('·').slice(-1)[0]?.trim() || 'Trabalhador';
+                const isExpanded = expandedCards[n.id];
+                return (
+                  <div key={n.id} className={`px-4 py-3 ${badge.resolved ? 'bg-slate-50' : 'hover:bg-indigo-50'} transition-colors`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${badge.resolved ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'}`}><FileText size={14} /></div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-[8px] font-black uppercase tracking-widest block ${badge.resolved ? 'text-slate-400' : 'text-indigo-500'}`}>Submissão Trabalhador</span>
+                          {badge.resolved && <span className="text-[8px] font-black text-slate-400">{badge.label}</span>}
+                        </div>
+                        <p className="text-xs font-black text-slate-800 truncate">{worker?.name || workerNameFallback}</p>
+                        {corr?.month && <p className="text-[10px] text-slate-500 mt-0.5">Mês <span className="font-bold">{corr.month}</span></p>}
+                        {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                      </div>
+                    </div>
+                    {!badge.resolved && (
+                      <div className="flex gap-2 mt-2 ml-9">
+                        <button onClick={() => {
+                          markNotifRead(n.id);
+                          if (corrId) setSelectedCorrectionId(corrId);
+                          navigate('/admin/portal_validacao/correcoes?source=workers');
+                          setShowNotifDropdown(false);
+                        }} className="flex-1 py-1.5 text-[10px] font-black bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 uppercase tracking-widest">Ver</button>
+                        <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">Ignorar</button>
+                      </div>
                     )}
-                    {!badge.resolved && <p className="text-[10px] text-slate-500 line-clamp-2 mt-0.5">{notif.message}</p>}
                   </div>
-                  {badge.resolved ? (
-                    <button onClick={(e) => { e.stopPropagation(); handleDismissAdminNotif(notif.id); }} className="p-1 text-slate-400 hover:text-slate-600 shrink-0">
-                      <X size={14} />
-                    </button>
-                  ) : (
-                    <ChevronRight size={14} className="text-slate-300 shrink-0 mt-1" />
-                  )}
-                </button>
-              );
-            })}
-            {unreadCount === 0 && (
-              <div className="px-4 py-8 text-center">
-                <Bell size={24} className="text-slate-200 mx-auto mb-2" />
-                <p className="text-xs text-slate-400">Sem notificações por ler</p>
-              </div>
+                );
+              });
+            })()}
+            {/* App notifications */}
+            {(() => {
+              const appNotifs = appNotifications.filter(n => {
+                if (n.target_type !== 'admin') return false;
+                if (n.payload?.kind === 'submitted') return false;
+                if (isRead(n)) return false;
+                if (dismissedAdminNotifs.includes(n.id)) return false;
+                return true;
+              });
+              return appNotifs.map(n => (
+                <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-slate-100 text-slate-500 shrink-0 mt-0.5"><Bell size={14} /></div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-black text-slate-800">{n.title || 'Notificação'}</p>
+                    {n.body && <p className="text-[10px] text-slate-500 mt-0.5 truncate">{n.body}</p>}
+                    {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                  </div>
+                  <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="p-1 text-slate-300 hover:text-slate-500"><X size={12} /></button>
+                </div>
+              ));
+            })()}
+            {unreadCount === 0 && notificacoesDeCorrecao.filter(n => !isViewed(n)).length === 0 && (
+              <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>
             )}
           </div>
-          <div className="border-t border-slate-100 p-2">
-            <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest py-1.5 hover:bg-indigo-50 rounded-xl transition-colors">
-              Ver todas as notificações →
-            </button>
-          </div>
+          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest py-1.5 hover:bg-indigo-50 rounded-xl transition-colors">
+            Ver Todas as Notificações
+          </button>
         </div>
       )}
 
       <main className="w-full mt-4 pb-12">
         <div className="mx-auto px-3 sm:px-6 md:px-10 lg:px-16" style={{ maxWidth: `var(--app-max-width)` }}>
-
 
           {auditWorkerId && (() => {
             const currentApproval = approvals.find(a => a.workerId === auditWorkerId && a.month === currentMonthStr);
@@ -1144,568 +558,23 @@ function AdminDashboard(props) {
           })()}
 
           {!auditWorkerId && activeTab === 'overview' && (
-            <div className="animate-in fade-in duration-500 space-y-4 sm:space-y-6 lg:space-y-8">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-8">
-                <div className="flex items-center gap-3">
-                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><LayoutGrid size={20} /></div>
-                  <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Dashboard Geral</h3>
-                </div>
-                <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
-                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronLeft size={16} /></button>
-                  <span className="font-bold text-sm uppercase tracking-widest text-indigo-600 min-w-[120px] text-center">
-                    {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
-                  </span>
-                  <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronRight size={16} /></button>
-                </div>
-              </div>
-
-              {/* KPI Cards Row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-                {/* Horas Totais */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
-                  <div className="flex justify-between items-start">
-                    <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl"><Clock size={24} /></div>
-                    {vsLastMonth.hours !== null && vsLastMonth.hours !== 0 && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.hours >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                        {vsLastMonth.hours >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.hours)}%
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black text-slate-800">{formatHours(adminStats.totalHours)}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{formatHours(aggregatedTrend.expected)} Esperadas</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Horas Totais</p>
-                </div>
-
-                {/* Faturação */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
-                  <div className="flex justify-between items-start">
-                    <div className="bg-emerald-50 text-emerald-600 p-3 rounded-2xl"><TrendingUp size={24} /></div>
-                    {vsLastMonth.revenue !== null && vsLastMonth.revenue !== 0 && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.revenue >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                        {vsLastMonth.revenue >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.revenue)}%
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedRevenue)}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Estimada</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Faturação</p>
-                </div>
-
-                {/* Custos */}
-                <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2 sm:gap-3">
-                  <div className="flex justify-between items-start">
-                    <div className="bg-rose-50 text-rose-600 p-3 rounded-2xl"><TrendingDown size={24} /></div>
-                    {vsLastMonth.costs !== null && vsLastMonth.costs !== 0 && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.costs <= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                        {vsLastMonth.costs >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.costs)}%
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black text-slate-800">{formatCurrency(adminStats.expectedCosts + adminStats.monthlyExpenses)}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operacionais + Fixos</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Custos Globais</p>
-                </div>
-
-                {/* Resultado Líquido */}
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-xl flex flex-col gap-2 sm:gap-3 text-white">
-                  <div className="flex justify-between items-start">
-                    <div className="bg-white/20 p-3 rounded-2xl"><Wallet size={24} /></div>
-                    {vsLastMonth.profit !== null && vsLastMonth.profit !== 0 && (
-                      <span className={`text-[10px] font-black px-2 py-1 rounded-full ${vsLastMonth.profit >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}`}>
-                        {vsLastMonth.profit >= 0 ? '▲' : '▼'} {Math.abs(vsLastMonth.profit)}%
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black">{formatCurrency(adminStats.netProfit)}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Líquido</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Resultado</p>
-                </div>
-              </div>
-
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-                {/* Area Chart - 1/2 */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><TrendingUp size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Fluxo de Faturamento Diário</h3>
-                  </div>
-                  {areaData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} tickLine={false} />
-                        <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} tickFormatter={(v) => `€${v}`} />
-                        <Tooltip
-                          contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                          formatter={(value) => [`€${value}`, 'Faturamento']}
-                        />
-                        <Area type="monotone" dataKey="valor" stroke="#6366f1" strokeWidth={2} fill="url(#colorValor)" />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-[280px] flex items-center justify-center text-slate-400 text-sm">
-                      Sem dados de faturação para exibir
-                    </div>
-                  )}
-                </div>
-
-                {/* Pie Chart - 1/2 */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Wallet size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Resumo Financeiro</h3>
-                  </div>
-                  {pieData.some(p => p.value > 0) ? (
-                    <div className="relative flex items-center justify-center">
-                      <ResponsiveContainer width="100%" height={260}>
-                        <PieChart>
-                          <Pie
-                            data={pieData}
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={70}
-                            outerRadius={105}
-                            paddingAngle={2}
-                            dataKey="value"
-                            startAngle={90}
-                            endAngle={-270}
-                          >
-                            {pieData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} stroke="white" strokeWidth={2} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value, name) => formatCurrency(value)} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-[9px] font-black text-slate-400 uppercase">{currentMonth.getFullYear()}</span>
-                        <span className={`text-lg font-black ${ytdTotals.receitas - ytdTotals.despesas >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                          {formatCurrency(ytdTotals.receitas - ytdTotals.despesas)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : null}
-<div className="space-y-3 mt-4">
-                    {['Receitas', 'Despesa'].map(tipoNome => {
-                      const tipoKey = tipoNome === 'Receitas' ? 'credito' : 'debito';
-                      const itemData = pieData.filter(p => p.tipo === tipoKey);
-                      const totalValue = tipoKey === 'credito' ? badgeTotals.receitas : badgeTotals.despesas;
-                      const isExpanded = expandedItems.includes(tipoNome);
-                      const subCats = tipoKey === 'credito' ? subCategoriasCredito : subCategoriasDebito;
-
-                      return (
-                        <div key={tipoNome}>
-                          <div
-                            onClick={() => {
-                              setExpandedItems(prev => isExpanded ? prev.filter(i => i !== tipoNome) : [...prev, tipoNome]);
-                              setDetailsPage(1);
-                            }}
-                            className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tipoKey === 'credito' ? '#22c55e' : '#ef4444' }} />
-                              <span className="text-sm font-bold text-slate-700">{tipoNome}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-black text-slate-800">{formatCurrency(totalValue)}</span>
-                              <ChevronDown size={14} className={`text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                            </div>
-                          </div>
-
-                          {isExpanded && itemData.length > 0 && (
-                            <div className="mt-2 pl-4 border-l-2 border-slate-200 space-y-2">
-                              {itemData.map(sub => {
-                                const isSubExpanded = expandedItems.includes(`${tipoNome}-${sub.name}`);
-                                const subBadgeItems = badgeDetails.filter(t => t.badge === sub.badgeKey && t.tipo === tipoKey);
-                                const totalPages = Math.ceil(subBadgeItems.length / 10);
-                                const paginatedItems = subBadgeItems
-                                  .sort((a, b) => new Date(b.date) - new Date(a.date))
-                                  .slice((detailsPage - 1) * 10, detailsPage * 10);
-
-                                return (
-                                  <div key={sub.name}>
-                                    <div
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const key = `${tipoNome}-${sub.name}`;
-                                        setExpandedItems(prev => isSubExpanded ? prev.filter(i => i !== key) : [...prev, key]);
-                                        setDetailsPage(1);
-                                      }}
-                                      className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-lg transition-colors"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: sub.color }} />
-                                        <span className="text-xs font-bold text-slate-600">{sub.name}</span>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-black text-slate-700">{formatCurrency(sub.value)}</span>
-                                        <ChevronDown size={12} className={`text-slate-400 transition-transform ${isSubExpanded ? 'rotate-180' : ''}`} />
-                                      </div>
-                                    </div>
-
-                                    {isSubExpanded && (
-                                      <div className="mt-1 pl-4 border-l border-slate-100">
-                                        <table className="w-full text-[11px]">
-                                          <thead>
-                                            <tr className="text-[9px] font-black uppercase text-slate-400">
-                                              <th className="text-left py-1 pr-4">Data</th>
-                                              <th className="text-left py-1 pr-4">Descrição</th>
-                                              <th className="text-right py-1 pr-4">Valor</th>
-                                              <th className="text-right py-1">Detalhe</th>
-                                            </tr>
-                                          </thead>
-                                          <tbody>
-                                            {subBadgeItems.length === 0 ? (
-                                              <tr><td colSpan="4" className="text-xs text-slate-400 py-2 text-center">Sem dados</td></tr>
-                                            ) : (
-                                              paginatedItems.map((tx, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50">
-                                                  <td className="py-1.5 pr-4 font-mono text-slate-500 whitespace-nowrap">{tx.date}</td>
-                                                  <td className="py-1.5 pr-4 text-slate-600 truncate max-w-[150px]" title={tx.descricao}>{tx.descricao}</td>
-                                                  <td className={`py-1.5 pr-4 text-right font-bold whitespace-nowrap ${tx.tipo === 'credito' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                                    {formatCurrency(tx.valor)}
-                                                  </td>
-                                                  <td className="py-1.5 text-right text-slate-400 truncate max-w-[100px]" title={tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}>
-                                                    {tx.clienteNome || tx.workerName || tx.faturaFornecedor || tx.justificacao || '—'}
-                                                  </td>
-                                                </tr>
-                                              ))
-                                            )}
-                                          </tbody>
-                                        </table>
-                                        {totalPages > 1 && (
-                                          <div className="flex justify-center gap-1 pt-2">
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.max(1, p - 1)); }}
-                                              disabled={detailsPage === 1}
-                                              className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
-                                            >‹</button>
-                                            <span className="px-2 py-1 text-xs font-bold text-slate-500">{detailsPage}/{totalPages}</span>
-                                            <button
-                                              onClick={(e) => { e.stopPropagation(); setDetailsPage(p => Math.min(totalPages, p + 1)); }}
-                                              disabled={detailsPage === totalPages}
-                                              className="px-2 py-1 text-xs font-bold bg-slate-100 rounded-lg disabled:opacity-40 hover:bg-slate-200 transition-colors"
-                                            >›</button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-sm font-black text-slate-700">Resultado</span>
-                    <span className={`text-sm font-black ${resultado >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {formatCurrency(resultado)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Worker Comparison */}
-              <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Activity size={20} /></div>
-                  <h3 className="font-black text-lg text-slate-800">Comparativo por Trabalhador</h3>
-                </div>
-                <div className="space-y-3">
-                  {workerComparisonData.length > 0 ? workerComparisonData.map((w) => (
-                    <div key={w.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-bold text-slate-700 truncate">{w.name}</span>
-                          <div className="flex items-center gap-3 shrink-0">
-                            <span className="text-[10px] font-black text-slate-400">{formatHours(w.registered)} / {formatHours(w.prevRegistered)}</span>
-                            {w.diffPct !== null ? (
-                              <span className={`text-[10px] font-black px-2 py-1 rounded-full ${w.isOver ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                {w.isOver ? '▲' : '▼'} {Math.abs(w.diffPct)}%
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-black text-slate-400 px-2 py-1">—</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="w-full bg-slate-100 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-500 ${w.isOver ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                            style={{ width: `${Math.min(100, w.ratioPct || 0)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )) : (
-                    <p className="text-xs text-slate-400 italic text-center py-8">Sem dados de trabalhadores este mês.</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom Row: Top Units + Activity */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-                {/* Top Units */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Trophy size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Top Unidades (Horas)</h3>
-                  </div>
-                  <div className="space-y-4">
-                    {topClientsWithPrev.length > 0 ? topClientsWithPrev.map((c, i) => (
-                      <div key={c.id} className="flex items-center justify-between group">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-1">
-                            <span className="text-xs font-bold text-slate-700">{c.name}</span>
-                            <div className="flex items-center gap-2 shrink-0">
-                              {c.pct !== null && c.pct !== 0 && (
-                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${c.pct >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                  {c.pct >= 0 ? '▲' : '▼'} {Math.abs(c.pct)}%
-                                </span>
-                              )}
-                              <span className="text-xs font-black text-indigo-600">{formatHours(c.hours)}</span>
-                            </div>
-                          </div>
-                          <div className="w-full bg-slate-50 rounded-full h-2">
-                            <div className="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%` }}></div>
-                          </div>
-                        </div>
-                      </div>
-                    )) : <p className="text-xs text-slate-400 italic">Sem dados de clientes registados este mês.</p>}
-                  </div>
-                </div>
-
-                {/* Activity Recente */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><History size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Atividade Recente</h3>
-                  </div>
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {logs.slice().sort((a, b) => parseLogDate(b.date) - parseLogDate(a.date) || b.id.localeCompare(a.id)).slice(0, showAllActivity ? undefined : 5).map(log => (
-                      <div key={log.id} className="flex gap-3 items-start p-3 hover:bg-slate-50 rounded-2xl transition-colors">
-                        <div className="bg-slate-100 p-2 rounded-xl text-slate-400 mt-0.5"><Activity size={12} /></div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-slate-700 truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
-                        </div>
-                        <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg shrink-0">
-                          {formatHours(Number(log.hours) || 0)}
-                        </div>
-                      </div>
-                    ))}
-                    {logs.length === 0 && <p className="text-xs text-slate-400 italic text-center py-4">Sem atividade registada.</p>}
-                  </div>
-                  {logs.length > 5 && (
-                    <button
-                      onClick={() => setShowAllActivity(!showAllActivity)}
-                      className="mt-4 w-full py-3 text-xs font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-colors"
-                    >
-                      {showAllActivity ? 'Mostrar Menos' : 'Ver Tudo →'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+            <AdminOverview currentMonth={currentMonth} setCurrentMonth={setCurrentMonth} />
           )}
 
-{!auditWorkerId && activeTab === 'reports' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 sm:space-y-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileText size={20} /></div>
-                  <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Folhas de Horas para Clientes</h3>
-                </div>
-              </div>
-
-              {/* KPI Cards */}
-              <div className="grid grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-                  <div className="bg-indigo-50 text-indigo-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black text-slate-800">{activeWorkersCount}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaboradores com Registos</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
-                </div>
-                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-                  <div className="bg-emerald-50 text-emerald-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black text-slate-800">{activeClientsCount}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes Activos</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
-                </div>
-                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-                  <div className="bg-amber-50 text-amber-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
-                  <div>
-                    <p className="text-xl sm:text-3xl font-black text-slate-800">{activeReportsCount}</p>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registos</p>
-                  </div>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no mês seleccionado</p>
-                </div>
-              </div>
-
-              {/* Filtros */}
-              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
-                      <option value="">-- Escolher Cliente --</option>
-                      {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
-                    <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
-                      <option value="">-- Todos os Colaboradores --</option>
-                      {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês (Ano-Mês)</label>
-                    <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Botões de ação */}
-              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-                  <button onClick={handleGenerateClientReport} disabled={!reportFilter.month || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    <FileText size={18} /> Gerar Selecção
-                  </button>
-                  <button onClick={() => {
-                    const historyEntry = {
-                      id: `rh_${Date.now()}`,
-                      month: reportFilter.month,
-                      clientId: '',
-                      clientName: 'Todos os Clientes',
-                      workerId: '',
-                      workerName: 'Todos',
-                      timestamp: new Date().toISOString()
-                    };
-                    const updatedHistory = [historyEntry, ...reportHistory].slice(0, 5);
-                    setReportHistory(updatedHistory);
-                    localStorage.setItem('reportHistory', JSON.stringify(updatedHistory));
-                    setPrintingReport({ isGlobal: true, month: reportFilter.month });
-                  }} disabled={!reportFilter.month} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
-                    <Zap size={18} className="text-amber-400" /> Gerar Tudo do Mês
-                  </button>
-                </div>
-              </div>
-
-              {/* Modal de Relatório */}
-              {printingReport && (
-                <div
-                  className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto print:bg-transparent print:backdrop-blur-none print:p-0 print:static print:overflow-visible"
-                  onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}
-                >
-                  <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-indigo-100 animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
-                    <div className="no-print sticky top-0 z-10 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 bg-white rounded-t-[2rem] sm:rounded-t-[3rem]">
-                      <div className="flex items-center gap-3">
-                        <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><FileText size={20} /></div>
-                        <div>
-                          <h3 className="font-black text-lg text-slate-800">A Visualizar Relatório</h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">{printingReport.month}</p>
-                        </div>
-                      </div>
-                      <button onClick={() => setPrintingReport(null)} className="p-3 bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all">
-                        <X size={20} />
-                      </button>
-                    </div>
-                    <ClientTimesheetReport data={reportData} onBack={() => setPrintingReport(null)} isEmbedded={true} />
-                  </div>
-                </div>
-              )}
-
-              {/* Histórico Recente */}
-              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><History size={20} /></div>
-                  <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
-                </div>
-                {reportHistory.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <div className="bg-slate-50 p-4 rounded-2xl mb-3"><FileText size={32} className="text-slate-300" /></div>
-                    <p className="text-sm font-bold text-slate-400">Ainda sem relatórios gerados</p>
-                    <p className="text-[10px] text-slate-300 mt-1">Gere um relatório para o ver aqui</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto rounded-2xl border border-slate-100">
-                    <table className="min-w-full divide-y divide-slate-200">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Mês</th>
-                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente</th>
-                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaborador</th>
-                          <th className="px-5 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Gerado em</th>
-                          <th className="px-5 py-3 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-slate-100">
-                        {reportHistory.map(entry => (
-                          <tr key={entry.id} className="hover:bg-slate-50 transition-colors">
-                            <td className="px-5 py-3 text-sm font-black text-slate-700">{entry.month}</td>
-                            <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.clientName}</td>
-                            <td className="px-5 py-3 text-sm font-bold text-slate-600">{entry.workerName}</td>
-                            <td className="px-5 py-3 text-xs text-slate-400">{new Date(entry.timestamp).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</td>
-                            <td className="px-5 py-3 text-right">
-                              <button onClick={() => {
-                                setReportFilter(prev => ({ ...prev, month: entry.month, clientId: entry.clientId, workerId: entry.workerId }));
-                                setTimeout(() => {
-                                  const clientSelected = entry.clientId ? clients.find(c => c.id === entry.clientId) : null;
-                                  if (entry.clientId || entry.workerId) {
-                                    setPrintingReport({ client: clientSelected, month: entry.month, workerId: entry.workerId });
-                                  } else {
-                                    setPrintingReport({ isGlobal: true, month: entry.month });
-                                  }
-                                }, 50);
-                              }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">
-                                Ver
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
+          {!auditWorkerId && activeTab === 'reports' && (
+            <AdminReports printingReport={printingReport} setPrintingReport={setPrintingReport} />
           )}
-
-
 
           {!auditWorkerId && activeTab === 'team' && (
             <TeamManager onLogin={onLogin} />
           )}
 
-          {/* Módulos Clientes */}
           {!auditWorkerId && activeTab === 'clients' && (
             <ClientManager />
           )}
 
           {!auditWorkerId && activeTab === 'portal_validacao' && (
-            <ValidationPortalProvider portalSubTab={portalSubTab} setPortalSubTab={setPortalSubTab} portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
+            <ValidationPortalProvider portalMonth={portalMonth} setPortalMonth={setPortalMonth}>
               <ValidationPortal
                 onLogin={onLogin}
                 setClienteSelecionado={setClienteSelecionado}
@@ -1716,674 +585,25 @@ function AdminDashboard(props) {
               />
             </ValidationPortalProvider>
           )}
+
           {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
 
-{!auditWorkerId && activeTab === 'costs' && <CostReports />}
+          {!auditWorkerId && activeTab === 'costs' && <CostReports />}
+
           {!auditWorkerId && activeTab === 'documentos' && (
-            <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} handleGenerateClientReport={handleGenerateClientReport} logs={logs} clientApprovals={clientApprovals} />
+            <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} handleGenerateClientReport={handleGenerateClientReport} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} logs={logs} clientApprovals={clientApprovals} />
           )}
+
           {!auditWorkerId && activeTab === 'notificacoes' && (
             <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
           )}
 
-          {/* Módulo Configurações */}
           {!auditWorkerId && activeTab === 'settings' && (
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6 sm:mb-8">
-                <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2"><Settings size={22} className="text-indigo-600" /> Configurações do Sistema</h2>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-
-                {/* Administradores */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><ShieldCheck size={20} /></div>
-                      <h3 className="font-black text-lg text-slate-800">Administradores</h3>
-                    </div>
-                    <button onClick={handleOpenAddAdmin} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-indigo-700 transition-all">
-                      <UserPlus size={14} /> Adicionar
-                    </button>
-                  </div>
-
-                  {/* Lista de admins */}
-                  <div className="space-y-2 mb-4">
-                    {workers.filter(w => w.isAdmin).length === 0 && !adminFormMode && (
-                      <p className="text-xs text-slate-400 font-bold text-center py-4">Nenhum administrador configurado.</p>
-                    )}
-                    {workers.filter(w => w.isAdmin).map(w => {
-                      const parts = (w.name || '').trim().split(/\s+/);
-                      const username = parts.length > 1 ? (parts[0] + parts[parts.length - 1]).toLowerCase() : parts[0].toLowerCase();
-                      const isEditing = adminFormMode === 'edit' && adminForm.id === w.id;
-                      return (
-                        <div key={w.id} className={`p-3 bg-slate-50 rounded-2xl border transition-all ${isEditing ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100'}`}>
-                          {isEditing ? (
-                            <div className="space-y-2">
-                              <input type="text" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-                              <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-                              <div className="flex gap-2 pt-1">
-                                <button onClick={handleSaveAdmin} className="flex-1 bg-indigo-600 text-white py-2 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all">Guardar</button>
-                                <button onClick={() => setAdminFormMode(null)} className="px-4 py-2 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <p className="text-sm font-black text-slate-800">{w.name}</p>
-                                <p className="text-[10px] text-slate-400 font-mono">{username}</p>
-                              </div>
-                              <div className="flex gap-1">
-                                <button onClick={() => handleEditAdmin(w)} className="text-xs font-bold text-indigo-500 hover:bg-indigo-50 px-3 py-1.5 rounded-xl transition-all">Editar</button>
-                                <button onClick={() => handleRevokeAdmin(w)} className="flex items-center gap-1 text-xs font-bold text-rose-500 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-all"><ShieldOff size={12} /> Revogar</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Form adicionar admin */}
-                  {(adminFormMode === 'new' || adminFormMode === 'existing') && (
-                    <div className="border-t border-slate-100 pt-5 space-y-3">
-                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Novo Administrador</p>
-                      {nonAdminWorkers.length > 0 && (
-                        <select
-                          value={adminForm.selectedWorkerId}
-                          onChange={e => handleSelectExistingWorker(e.target.value)}
-                          className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                        >
-                          <option value="">— Selecionar trabalhador existente —</option>
-                          {nonAdminWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-                        </select>
-                      )}
-                      <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-                      <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-                      <div className="flex gap-2">
-                        <button onClick={handleSaveAdmin} className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider hover:bg-indigo-700 transition-all">Criar</button>
-                        <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Conta e Segurança */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Lock size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Segurança da Conta</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Alterar Senha Administrador</p>
-                    <div className="flex gap-2">
-                      <input
-                        type="password"
-                        placeholder="Nova Senha"
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                        id="new-admin-pass"
-                      />
-                      <button
-                        onClick={() => {
-                          const passEl = document.getElementById('new-admin-pass');
-                          if (!passEl) return;
-                          const newPass = passEl.value;
-                          if (!newPass) return;
-                          updateSetting('adminPassword', newPass);
-                          alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.');
-                          passEl.value = '';
-                        }}
-                        className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-slate-800 transition-all"
-                      >
-                        Atualizar
-                      </button>
-                    </div>
-                    <div className="border-t border-slate-100 pt-4">
-                      <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Chave API Gemini (IA)</p>
-                      <p className="text-[10px] text-slate-400 mb-3">Obtenha a sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-indigo-500 underline">aistudio.google.com</a></p>
-                      <div className="flex gap-2">
-                        <input
-                          type="password"
-                          placeholder="AIza..."
-                          defaultValue={systemSettings.geminiApiKey || ''}
-                          className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
-                          id="gemini-api-key"
-                        />
-                        <button
-                          onClick={() => {
-                            const keyEl = document.getElementById('gemini-api-key');
-                            const key = keyEl ? keyEl.value.trim() : '';
-                            updateSetting('geminiApiKey', key);
-                            alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.');
-                          }}
-                          className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-indigo-700 transition-all whitespace-nowrap"
-                        >
-                          Guardar
-                        </button>
-                      </div>
-                      {systemSettings.geminiApiKey ? (
-                        <p className="text-[10px] text-emerald-600 font-bold mt-2 flex items-center gap-1"><span>•</span> IA activa</p>
-                      ) : (
-                        <p className="text-[10px] text-slate-400 font-bold mt-2 flex items-center gap-1"><span>•</span> IA inactiva - configure a chave</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Identidade Visual */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Building2 size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Identidade da Empresa</h3>
-                  </div>
-                  <div className="space-y-4">
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Nome da Empresa</p>
-                    <input
-                      type="text"
-                      value={systemSettings.companyName}
-                      onChange={(e) => setSystemSettings(prev => ({ ...prev, companyName: e.target.value }))}
-                      onBlur={(e) => updateSetting('companyName', e.target.value)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-                    />
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Morada</p>
-                    <input
-                      type="text"
-                      value={systemSettings.companyAddress || ''}
-                      onChange={(e) => setSystemSettings(prev => ({ ...prev, companyAddress: e.target.value }))}
-                      onBlur={(e) => updateSetting('companyAddress', e.target.value)}
-                      placeholder="Rua, nº, código postal, localidade"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-                    />
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">NIF</p>
-                    <input
-                      type="text"
-                      value={systemSettings.companyNif || ''}
-                      onChange={(e) => setSystemSettings(prev => ({ ...prev, companyNif: e.target.value }))}
-                      onBlur={(e) => updateSetting('companyNif', e.target.value)}
-                      placeholder="Nº de Identificação Fiscal"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-                    />
-                  </div>
-                </div>
-
-                {/* Assinatura da Empresa (Responsável) */}
-                <CompanySignatureSettings
-                  companySignature={companySignature}
-                  saveCompanySignature={saveCompanySignature}
-                />
-
-                {/* Personalização Visual */}
-                <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="bg-emerald-50 p-2 rounded-xl text-emerald-600"><Palette size={20} /></div>
-                    <h3 className="font-black text-lg text-slate-800">Visual e Tema</h3>
-                  </div>
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div>
-                        <p className="text-sm font-bold text-slate-700">Largura do App (Desktop)</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{systemSettings.appWidth}px</p>
-                      </div>
-                      <input
-                        type="range"
-                        min="1000"
-                        max="4000"
-                        step="20"
-                        value={Number(systemSettings.appWidth)}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSystemSettings(prev => ({ ...prev, appWidth: val }));
-                        }}
-                        onMouseUp={(e) => updateSetting('appWidth', e.target.value)}
-                        onTouchEnd={(e) => updateSetting('appWidth', e.target.value)}
-                        className="w-32 accent-indigo-600"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div>
-                        <p className="text-sm font-bold text-slate-700">Modo Escuro (Interface)</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Ajuste de luminosidade</p>
-                      </div>
-                      <button
-                        onClick={() => updateSetting('darkMode', !systemSettings.darkMode)}
-                        className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${systemSettings.darkMode ? 'bg-indigo-600' : 'bg-slate-300'}`}
-                      >
-                        <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-all ${systemSettings.darkMode ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                      <div>
-                        <p className="text-sm font-bold text-slate-700">Intervalo de Arredondamento</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Arredonda horários a cada {systemSettings.minuteInterval || 30} min</p>
-                      </div>
-                      <select
-                        value={systemSettings.minuteInterval || 30}
-                        onChange={(e) => updateSetting('minuteInterval', Number(e.target.value))}
-                        className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold shadow-sm"
-                      >
-                        <option value={5}>5 min</option>
-                        <option value={10}>10 min</option>
-                        <option value={15}>15 min</option>
-                        <option value={30}>30 min</option>
-                        <option value={60}>60 min</option>
-                      </select>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-amber-50 rounded-2xl border border-amber-200">
-                      <div>
-                        <p className="text-sm font-bold text-amber-700">Corrigir Hours Anteriores</p>
-                        <p className="text-[10px] text-amber-500 font-bold uppercase tracking-wider">Recalcular horas com arredondamento</p>
-                      </div>
-                      <button
-                        onClick={() => setShowRecalcModal(true)}
-                        className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors"
-                      >
-                        Recalcular
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Destaque Informativo */}
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl text-white relative overflow-hidden flex flex-col justify-center">
-                  <div className="absolute top-0 right-0 p-6 opacity-10"><Sparkles size={80} /></div>
-                  <h3 className="text-xl font-black uppercase tracking-tighter mb-2">Magnetic Place Pro</h3>
-                  <p className="text-sm font-medium opacity-80 leading-relaxed mb-6">Utilize o painel de configurações para moldar a experiência do dashboard conforme as necessidades da sua empresa.</p>
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Relatórios Financeiros</div>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Gestão de Equipa Analítica</div>
-                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Automação com IA</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminSettings />
           )}
 
-          {showRecalcModal && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-              <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <Wrench size={20} className="text-amber-600" />
-                    Corrigir Hours Anteriores
-                  </h3>
-                  <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl">
-                    <X size={20} />
-                  </button>
-                </div>
-                <p className="text-sm text-slate-600 mb-4">
-                  Este processo vai recalcular as horas de todos os registos existentes usando o arredondamento configurado (entrada ↑, saída ↓) e guardar o valor correto.
-                </p>
-                {recalcProgress.total === 0 && !recalcProgress.done && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-                    <p className="text-xs text-amber-700 font-bold">Atenção:</p>
-                    <p className="text-xs text-amber-600 mt-1">Os registos existentes que não foram criados com arredondamento vão ser corrigidos. Esta ação não pode ser desfeita.</p>
-                  </div>
-                )}
-                {recalcProgress.total > 0 && !recalcProgress.done && (
-                  <div className="mb-4">
-                    <div className="flex justify-between text-xs font-bold text-slate-600 mb-2">
-                      <span>A processar...</span>
-                      <span>{recalcProgress.current} / {recalcProgress.total}</span>
-                    </div>
-                    <div className="w-full bg-slate-200 rounded-full h-3">
-                      <div className="bg-amber-600 h-3 rounded-full transition-all" style={{ width: `${(recalcProgress.current / recalcProgress.total) * 100}%` }} />
-                    </div>
-                  </div>
-                )}
-                {recalcProgress.done && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-4">
-                    <p className="text-sm font-bold text-emerald-700 flex items-center gap-2">
-                      <CheckCircle size={16} />
-                      Correção concluída!
-                    </p>
-                    <p className="text-xs text-emerald-600 mt-1">{recalcProgress.current} registos corrigidos.</p>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  {!recalcProgress.done ? (
-                    <>
-                      <button onClick={() => setShowRecalcModal(false)} className="flex-1 px-4 py-2.5 bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-300 transition-colors">
-                        Cancelar
-                      </button>
-                      <button onClick={handleRecalcHours} disabled={recalcProgress.total > 0} className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
-                        {recalcProgress.total > 0 ? <><Loader2 size={14} className="animate-spin" /> A processar...</> : 'Iniciar'}
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => { setShowRecalcModal(false); setRecalcProgress({ current: 0, total: 0, done: false }); }} className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-colors">
-                      Fechar
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </main>
-    </div>
-  );
-}
-
-function CompanySignatureSettings({ companySignature, saveCompanySignature }) {
-  const { stampStyle, setStampStyle } = useApp();
-  const [name, setName] = useState('');
-  const [role, setRole] = useState('');
-  const [email, setEmail] = useState('');
-  const [sigDataUrl, setSigDataUrl] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [showSignaturePad, setShowSignaturePad] = useState(false);
-
-  // Hidratar quando os dados chegam do servidor
-  useEffect(() => {
-    setName(companySignature?.responsibleName || '');
-    setRole(companySignature?.responsibleRole || '');
-    setEmail(companySignature?.responsibleEmail || '');
-    setSigDataUrl(companySignature?.signatureDataUrl || '');
-  }, [companySignature?.responsibleName, companySignature?.responsibleRole, companySignature?.responsibleEmail, companySignature?.signatureDataUrl]);
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError('');
-    setMessage('');
-    try {
-      await saveCompanySignature({
-        responsibleName: name.trim(),
-        responsibleRole: role.trim(),
-        responsibleEmail: email.trim(),
-        signatureDataUrl: sigDataUrl,
-      });
-      setMessage('Assinatura da empresa guardada com sucesso.');
-    } catch (err) {
-      setError('Erro ao guardar: ' + (err.message || err));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileSignature size={20} /></div>
-        <h3 className="font-black text-lg text-slate-800">Assinatura da Empresa</h3>
-      </div>
-      <p className="text-xs text-slate-500 mb-6">
-        Carimbo aplicado pelo responsável da Magnetic Place quando aprova um documento assinado pelo trabalhador.
-      </p>
-
-      <div className="space-y-4">
-        <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Nome do Responsável</p>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: João Silva"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-          />
-        </div>
-        <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Cargo</p>
-          <input
-            type="text"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="Ex: Diretor, Gestor de RH"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-          />
-        </div>
-        <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Email do Responsável</p>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="admin@magneticplace.pt"
-            className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
-          />
-          <p className="text-[10px] text-slate-400 mt-1">Recebe notificações de validação (correções, assinaturas mensais).</p>
-        </div>
-        <div>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Imagem da Assinatura</p>
-          <div className="flex flex-col sm:flex-row items-start gap-4">
-            <div className="flex-1">
-              <button
-                onClick={() => setShowSignaturePad(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-xl transition-colors w-fit"
-              >
-                <PenTool size={16} />
-                {sigDataUrl ? 'Redesenhar assinatura' : 'Desenhar assinatura'}
-              </button>
-              <p className="text-[11px] text-slate-400 mt-2">Desenhe a sua assinatura digital diretamente no ecrã.</p>
-            </div>
-            <div className="w-40 h-20 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center overflow-hidden flex-shrink-0 bg-white">
-              {sigDataUrl ? (
-                <img src={sigDataUrl} alt="Assinatura" className="max-w-full max-h-full object-contain" />
-              ) : (
-                <span className="text-[10px] text-slate-400 font-bold uppercase text-center">Sem assinatura</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {error && (
-          <div className="text-xs text-rose-700 bg-rose-50 border border-rose-100 rounded-lg p-2 font-bold">{error}</div>
-        )}
-        {message && (
-          <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg p-2 font-bold">{message}</div>
-        )}
-
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-          Guardar
-        </button>
-
-        <div className="pt-6 mt-2 border-t border-slate-100 space-y-4">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-            Estilo do carimbo aplicado aos documentos
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => setStampStyle('mirror')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'mirror' ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-white hover:border-blue-300'}`}
-            >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Espelho · Estilo Trabalhador</div>
-              <div className="text-[10px] text-slate-500 mt-1">Mesmo layout do trabalhador, paleta azul, com assinatura e cargo</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStampStyle('classic')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'classic' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
-            >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Logo + Assinatura</div>
-              <div className="text-[10px] text-slate-500 mt-1">Logo da empresa + assinatura desenhada azul</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStampStyle('corporate')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'corporate' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
-            >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Corporate · Multinacional</div>
-              <div className="text-[10px] text-slate-500 mt-1">Marinho + dourado, selo CERTIFIED ORIGINAL, logo proeminente</div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setStampStyle('tech')}
-              className={`p-4 rounded-2xl border-2 text-left transition-all ${stampStyle === 'tech' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white hover:border-indigo-300'}`}
-            >
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-800">Tech Data-Grid</div>
-              <div className="text-[10px] text-slate-500 mt-1">Auditoria técnica + token (sem assinatura desenhada)</div>
-            </button>
-          </div>
-
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest pt-2">
-            Pré-visualização
-          </p>
-          {stampStyle === 'mirror' ? (
-            <ValidationStampAdmin
-              responsibleName={name || 'Nome do Responsável'}
-              responsibleRole={role}
-              signedAt={new Date().toISOString()}
-              ip="192.168.x.x"
-              signatureDataUrl={sigDataUrl}
-              companyLogoUrl="/icon-512x512.png"
-            />
-          ) : stampStyle === 'classic' ? (
-            <CompanyClassicStamp
-              responsibleName={name || 'Nome do Responsável'}
-              responsibleRole={role}
-              signedAt={new Date().toISOString()}
-              signatureDataUrl={sigDataUrl}
-            />
-          ) : stampStyle === 'corporate' ? (
-            <CompanyCorporateStamp
-              responsibleName={name || 'Nome do Responsável'}
-              responsibleRole={role}
-              signedAt={new Date().toISOString()}
-              signatureDataUrl={sigDataUrl}
-            />
-          ) : (
-            <CompanyValidationStamp
-              responsibleName={name || 'Nome do Responsável'}
-              responsibleRole={role}
-              signedAt={new Date().toISOString()}
-              ip="192.168.x.x"
-              id={`prev_${Date.now().toString(16).slice(-8)}`}
-              signatureDataUrl={sigDataUrl}
-            />
-          )}
-        </div>
-      </div>
-
-      {showSignaturePad && (
-        <AdminSignDrawModal
-          onClose={() => setShowSignaturePad(false)}
-          onSign={(dataUrl) => {
-            setSigDataUrl(dataUrl);
-            setShowSignaturePad(false);
-            setError('');
-          }}
-          userName={name || 'Responsável'}
-        />
-      )}
-    </div>
-  );
-}
-
-function AdminSignDrawModal({ onClose, onSign, userName }) {
-  const canvasRef = useRef(null);
-  const drawing = useRef(false);
-  const [hasInk, setHasInk] = useState(false);
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const setup = () => {
-      const parent = c.parentElement;
-      if (!parent) return;
-      const ratio = window.devicePixelRatio || 1;
-      const cssW = parent.clientWidth;
-      const cssH = parent.clientHeight;
-      c.width = cssW * ratio;
-      c.height = cssH * ratio;
-      c.style.width = cssW + 'px';
-      c.style.height = cssH + 'px';
-      const ctx = c.getContext('2d');
-      ctx.scale(ratio, ratio);
-      ctx.lineWidth = 3;
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = '#1e293b';
-    };
-    setup();
-    window.addEventListener('resize', setup);
-    return () => window.removeEventListener('resize', setup);
-  }, []);
-
-  const pos = (e) => {
-    const c = canvasRef.current;
-    const r = c.getBoundingClientRect();
-    const src = e.touches?.[0] || e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
-  };
-
-  const start = (e) => {
-    e.preventDefault();
-    drawing.current = true;
-    const { x, y } = pos(e);
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-  const move = (e) => {
-    if (!drawing.current) return;
-    e.preventDefault();
-    const { x, y } = pos(e);
-    const ctx = canvasRef.current.getContext('2d');
-    ctx.lineTo(x, y);
-    ctx.stroke();
-    setHasInk(true);
-  };
-  const stop = (e) => {
-    if (!drawing.current) return;
-    e?.preventDefault?.();
-    drawing.current = false;
-    canvasRef.current?.getContext('2d')?.closePath();
-  };
-  const clear = () => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const ctx = c.getContext('2d');
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    const ratio = window.devicePixelRatio || 1;
-    ctx.scale(ratio, ratio);
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = '#1e293b';
-    setHasInk(false);
-  };
-  const submit = () => {
-    if (!hasInk) { setError('Por favor, assine antes de confirmar.'); return; }
-    setError('');
-    onSign(canvasRef.current.toDataURL('image/png'));
-  };
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[210] flex items-stretch sm:items-center justify-center p-0 sm:p-4">
-      <div className="bg-white w-full sm:max-w-lg sm:rounded-[2rem] p-4 sm:p-6 shadow-2xl flex flex-col h-full sm:h-auto sm:max-h-[90vh]">
-        <div className="flex justify-between items-center mb-3 flex-shrink-0">
-          <h2 className="text-lg sm:text-xl font-black text-slate-800">Assinatura da Empresa</h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        {userName && (
-          <p className="text-xs text-slate-500 mb-3 flex-shrink-0">
-            <span className="font-bold text-slate-700">{userName}</span> — desenhe a assinatura digital abaixo.
-          </p>
-        )}
-        <div className="mb-3 bg-white border-2 border-slate-200 rounded-2xl flex-1 sm:flex-none relative" style={{ minHeight: '200px', height: 'auto', touchAction: 'none' }}>
-          <canvas ref={canvasRef} className="w-full h-full cursor-crosshair block rounded-2xl" style={{ touchAction: 'none', height: '100%' }} onMouseDown={start} onMouseMove={move} onMouseUp={stop} onMouseLeave={stop} onTouchStart={start} onTouchMove={move} onTouchEnd={stop} onTouchCancel={stop} />
-          {!hasInk && <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-slate-300 font-bold text-xs uppercase tracking-widest">Assine aqui</div>}
-        </div>
-        {error && <div className="mb-3 p-3 bg-rose-50 text-rose-600 text-sm font-bold rounded-xl flex-shrink-0">{error}</div>}
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-2 flex-shrink-0">
-          <button onClick={clear} className="px-4 py-3 sm:py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-sm border border-slate-200 sm:border-0 font-bold">Limpar</button>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button onClick={onClose} className="px-4 py-3 sm:py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold">Cancelar</button>
-            <button onClick={submit} disabled={!hasInk} className="px-6 py-3 sm:py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2">
-              <CheckCircle className="w-4 h-4" /> Confirmar
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
