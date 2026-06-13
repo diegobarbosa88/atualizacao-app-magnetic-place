@@ -24,23 +24,8 @@
     "api/toconline/create-fatura.js": {
       "maxDuration": 30
     },
-    "api/toconline/clientes.js": {
+    "api/toconline/proxy.js": {
       "maxDuration": 30
-    },
-    "api/toconline/fornecedores.js": {
-      "maxDuration": 30
-    },
-    "api/toconline/artigos.js": {
-      "maxDuration": 30
-    },
-    "api/toconline/relatorio.js": {
-      "maxDuration": 30
-    },
-    "api/toconline/documento.js": {
-      "maxDuration": 30
-    },
-    "api/toconline/status.js": {
-      "maxDuration": 10
     }
   },
   "headers": [
@@ -63,5 +48,15 @@
       ]
     }
   ],
-  "rewrites": []
+  "rewrites": [
+    { "source": "/api/toconline/artigos", "destination": "/api/toconline/proxy?action=artigos" },
+    { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
+    { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },
+    { "source": "/api/toconline/documento", "destination": "/api/toconline/proxy?action=documento" },
+    { "source": "/api/toconline/relatorio", "destination": "/api/toconline/proxy?action=relatorio" },
+    { "source": "/api/toconline/status", "destination": "/api/toconline/proxy?action=status" },
+    { "source": "/api/toconline/auth-init", "destination": "/api/toconline/proxy?action=auth-init" },
+    { "source": "/api/toconline/token-exchange", "destination": "/api/toconline/proxy?action=token-exchange" },
+    { "source": "/((?!api/)(?!@)[^.]*)", "destination": "/index.html" }
+  ]
 }
