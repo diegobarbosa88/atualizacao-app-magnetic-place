@@ -9,9 +9,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
 
-import EntryForm from '../../components/common/EntryForm';
 import WorkerProfile from './WorkerProfile';
-import RequestEntryCard from '../../components/worker/RequestEntryCard';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
 import { useWorkerGeo } from './worker-dashboard/useWorkerGeo';
@@ -308,32 +306,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             onEditLimitedLog={openTimeEntryModal}
             onQuickRegister={handleQuickRegister}
           />
-
-          {!myApproval && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
-            <div className="mb-8">
-              {isLimitedWorker ? (
-                <RequestEntryCard
-                  currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
-                  onSuccess={() => { setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
-                />
-              ) : (
-                <EntryForm
-                  data={mainFormData} clients={clients} assignedClients={currentUser?.assignedClients}
-                  onChange={setMainFormData}
-                  onSave={async () => {
-                    await handleSaveWithGeoCheck(mainFormData, true);
-                    if (mainFormData.clientId && mainFormData.startTime && mainFormData.endTime) {
-                      setSuccessMsg('Registo inserido com sucesso!');
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                      setTimeout(() => setSuccessMsg(''), 6000);
-                    }
-                  }}
-                  onCancel={() => setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' })}
-                  showDate systemSettings={systemSettings} title="Novo Registo de Atividade"
-                />
-              )}
-            </div>
-          )}
 
           <PendingAlertsModal
             isOpen={alertsModalOpen}
