@@ -80,28 +80,35 @@ ${texto.slice(0, 6000)}`;
 }
 
 function dadosFallback(a, tipo) {
+  const numero = a.document_no || a.document_number || a.number || a.doc_number || a.reference || null;
+  const total = a.gross_total ?? a.total_amount ?? a.net_amount ?? a.total_value ?? a.received_value ?? null;
+  // tax_payable é o campo real nas compras flat; total_tax_amount aparece noutros formatos
+  const iva_val = a.tax_payable ?? a.total_tax_amount ?? a.tax_total ?? a.total_tax ?? a.iva ?? null;
+
   if (tipo === 'fornecedor') {
     return {
-      numero_fatura: a.document_number || null,
+      numero_fatura: numero,
       data_fatura: a.date || null,
-      nif_fornecedor: a.supplier_tax_number || null,
-      fornecedor: a.supplier_name || a.supplier_business_name || null,
-      valor_total: a.total_amount ?? a.total_value ?? null,
-      iva: a.total_tax_amount ?? a.total_tax ?? null,
+      // supplier_tax_registration_number é o campo real nas compras flat
+      nif_fornecedor: a.supplier_tax_registration_number || a.supplier_tax_number || a.entity_tax_number || null,
+      fornecedor: a.supplier_business_name || a.supplier_name || a.entity_name || null,
+      valor_total: total,
+      iva: iva_val,
     };
   }
   return {
-    numero_fatura: a.document_number || null,
+    numero_fatura: numero,
     data_fatura: a.date || null,
-    nif_fornecedor: a.customer_tax_number || null,
-    fornecedor: a.customer_name || a.customer_business_name || null,
-    valor_total: a.received_value ?? a.total_amount ?? a.total_value ?? null,
-    iva: tipo === 'recibo' ? null : (a.total_tax_amount ?? a.total_tax ?? null),
+    nif_fornecedor: a.customer_tax_number || a.entity_tax_number || null,
+    fornecedor: a.customer_name || a.customer_business_name || a.entity_name || null,
+    valor_total: a.received_value ?? total,
+    iva: tipo === 'recibo' ? null : iva_val,
   };
 }
 
 async function mapDoc(doc, tipo, accessToken, supabase) {
-  const a = doc.attributes || {};
+  // Suporta JSON:API (doc.attributes) e estrutura flat
+  const a = doc.attributes || doc;
   const prefixo = tipo === 'fornecedor' ? 'FC' : tipo === 'recibo' ? 'RC' : 'FT';
   const filename = (a.document_number || `${prefixo}-${doc.id}`).replace(/[^a-zA-Z0-9.\-_()\/]/g, '_');
 
@@ -109,13 +116,19 @@ async function mapDoc(doc, tipo, accessToken, supabase) {
     doc.id, filename, tipo, accessToken, supabase
   );
 
-  // Usa texto do PDF se disponível; caso contrário usa atributos estruturados como texto
-  const textoParaGemini = texto || Object.entries(a)
-    .filter(([, v]) => v !== null && v !== undefined && v !== '')
-    .map(([k, v]) => `${k}: ${typeof v === 'object' ? JSON.stringify(v) : v}`)
-    .join('\n');
+  // Dados estruturados da API como base garantida
+  const dadosBase = dadosFallback(a, tipo);
+  console.log(`[toc-import] id=${doc.id} tipo=${tipo} ALL_KEYS=${Object.keys(a).join(',')} dados=${JSON.stringify(dadosBase)}`);
 
-  const dados = (await extrairDadosComGemini(textoParaGemini)) || dadosFallback(a, tipo);
+  // Enriquecer com Gemini apenas se há texto real do PDF
+  let dados = dadosBase;
+  if (texto) {
+    const dadosGemini = await extrairDadosComGemini(texto);
+    if (dadosGemini) {
+      // Merge: Gemini tem prioridade, mas campos em falta são preenchidos pelos dados da API
+      dados = { ...dadosBase, ...Object.fromEntries(Object.entries(dadosGemini).filter(([, v]) => v != null)) };
+    }
+  }
 
   return {
     toconline_doc_id: String(doc.id),
@@ -171,7 +184,18 @@ export default async function handler(req, res) {
     for (const row of rows) {
       const { error } = await supabase.from('faturas').insert(row);
       if (error) {
-        if (error.message.includes('duplicate') || error.code === '23505') {
+        if ((error.message.includes('duplicate') || error.code === '23505') && row.toconline_doc_id) {
+          // Documento já existe — atualizar os dados extraídos
+          const { error: updateError } = await supabase
+            .from('faturas')
+            .update({ dados: row.dados, entidade: row.entidade, data_documento: row.data_documento, valor: row.valor })
+            .eq('toconline_doc_id', row.toconline_doc_id);
+          if (updateError) {
+            resultados.erros.push(`${row.filename}: ${updateError.message}`);
+          } else {
+            resultados.duplicados++;
+          }
+        } else if (error.message.includes('duplicate') || error.code === '23505') {
           resultados.duplicados++;
         } else {
           resultados.erros.push(`${row.filename}: ${error.message}`);

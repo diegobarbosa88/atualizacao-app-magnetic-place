@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Package, BarChart2, Link2, Plus, Loader2, Zap } from 'lucide-react';
+import { FileText, Users, Package, BarChart2, Link2, Plus, Loader2, Zap, Landmark } from 'lucide-react';
 import TOConlinePanel from './faturas/TOConlinePanel';
 import TOConlineClientes from './toconline/TOConlineClientes';
 import TOConlineArtigos from './toconline/TOConlineArtigos';
 import TOConlineRelatorios from './toconline/TOConlineRelatorios';
+import TOConlineBankAccounts from './toconline/TOConlineBankAccounts';
 import CriarDocumentoModal from './toconline/CriarDocumentoModal';
 import FaturarClienteModal from './toconline/FaturarClienteModal';
 
@@ -13,6 +14,7 @@ const TABS = [
   { id: 'clientes', label: 'Clientes', icon: Users },
   { id: 'artigos', label: 'Artigos', icon: Package },
   { id: 'relatorios', label: 'Relatórios', icon: BarChart2 },
+  { id: 'contas', label: 'Contas Bancárias', icon: Landmark },
 ];
 
 export default function TOConlineAdmin() {
@@ -114,6 +116,10 @@ export default function TOConlineAdmin() {
 
             {subtab === 'relatorios' && (
               ligado ? <TOConlineRelatorios onDesligado={() => setLigado(false)} /> : <NaoLigado />
+            )}
+
+            {subtab === 'contas' && (
+              ligado ? <TOConlineBankAccounts onDesligado={() => setLigado(false)} /> : <NaoLigado />
             )}
           </>
         )}

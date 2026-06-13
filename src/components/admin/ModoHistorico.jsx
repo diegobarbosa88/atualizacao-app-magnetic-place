@@ -170,18 +170,28 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       for (const file of files) {
         try {
           const paginas = await extrairPaginasPdf(file);
-          // Verifica que pelo menos uma página tem o marcador TOConline
-          if (!paginas.some(p => p.includes('Emitido por TOConline'))) {
+          // Divide em secções: cada secção termina com "Emitido por TOConline".
+          // Funciona para PDFs de 1 ou N trabalhadores — cada secção inclui
+          // todas as páginas do trabalhador (pág. de detalhe + pág. de assinatura).
+          const secoes = [];
+          let atual = [];
+          for (const pag of paginas) {
+            atual.push(pag);
+            if (pag.includes('Emitido por TOConline')) {
+              secoes.push(atual.join('\n'));
+              atual = [];
+            }
+          }
+          if (secoes.length === 0) {
             res.push({ sucesso: false, mensagem: `${file.name}: documento não reconhecido como TOConline.` });
           } else {
-            // Junta todas as páginas: detalhes de abonos (pág. 1) + totais/assinatura (pág. final)
-            // ficam no mesmo texto, permitindo extrair "Ajudas de Custo" corretamente.
-            const texto = paginas.join('\n');
-            const { nome, mes } = extrairMetadadosTOConline(texto);
-            const worker = nome ? encontrarWorker(nome, workers) : null;
-            const bruto  = calcularBrutoDeMes(worker, mes, logs);
-            const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
-            res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
+            for (const texto of secoes) {
+              const { nome, mes } = extrairMetadadosTOConline(texto);
+              const worker = nome ? encontrarWorker(nome, workers) : null;
+              const bruto  = calcularBrutoDeMes(worker, mes, logs);
+              const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
+              res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
+            }
           }
         } catch (err) {
           res.push({ sucesso: false, mensagem: `${file.name}: ${err.message}` });
@@ -191,15 +201,10 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       for (const r of res) {
         if (!r.sucesso) continue;
         const key = `${r.worker?.id ?? normalizarNome(r.nomeExtraido ?? '')}|${r.mes}`;
+        // Recibos de várias páginas geram 2 secções (ORIGINAL + DUPLICADO) com valores idênticos.
+        // Manter apenas a primeira secção (ORIGINAL); ignorar o DUPLICADO para não duplicar valores.
         if (!agregados[key]) {
           agregados[key] = { ...r };
-        } else {
-          const ex = agregados[key];
-          ex.bruto = (ex.bruto || 0) + (r.bruto || 0);
-          if (r.liquidoExtraido != null)  ex.liquidoExtraido  = (ex.liquidoExtraido  || 0) + r.liquidoExtraido;
-          if (r.abonosExtraidos != null)  ex.abonosExtraidos  = (ex.abonosExtraidos  || 0) + r.abonosExtraidos;
-          if (r.ssExtraido != null)       ex.ssExtraido       = (ex.ssExtraido       || 0) + r.ssExtraido;
-          if (r.irsExtraido != null)      ex.irsExtraido      = (ex.irsExtraido      || 0) + r.irsExtraido;
         }
       }
       const deduplicados = Object.values(agregados);
@@ -616,7 +621,15 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
                             </td>
                             <td className="px-3 py-2.5 text-right font-bold text-slate-700">{r.liquido_extraido != null ? `${Number(r.liquido_extraido).toFixed(2)}€` : '—'}</td>
                             <td className="px-3 py-2.5 text-center">
-                              {r.divergencia != null ? <DivergenciaBadge sinal={r.divergencia} /> : <span className="text-slate-300">—</span>}
+                              {r.divergencia != null ? (() => {
+                                const calculado = r.bruto_plataforma != null
+                                  ? (r.bruto_plataforma ?? 0) - (r.ss_extraido ?? 0) - (r.irs_extraido ?? 0)
+                                  : null;
+                                const sinal = calculado != null && r.liquido_extraido != null
+                                  ? parseFloat((r.liquido_extraido - calculado).toFixed(2))
+                                  : 0;
+                                return <DivergenciaBadge sinal={sinal} />;
+                              })() : <span className="text-slate-300">—</span>}
                             </td>
                             <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                               <div className="flex items-center justify-center gap-1.5">
