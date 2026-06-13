@@ -103,6 +103,7 @@ export function useWorkerCorrections({ currentUser, correctionItems, setCorrecti
           workerName: currentUser?.name,
           date: deleteConfirm.date,
           before: {
+            log_id: log.id,
             startTime: log.startTime,
             endTime: log.endTime,
             breakStart: log.breakStart,

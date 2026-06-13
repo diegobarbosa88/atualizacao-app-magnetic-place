@@ -18,24 +18,35 @@ export default function MovMesCard({ mes, txs, pagamentos, justificacoes, intern
           onClick={() => setOpen(o => !o)}
           className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-slate-50 transition-colors text-left"
         >
-          <div className="flex items-center gap-3">
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-            <span
-              onClick={e => { e.stopPropagation(); onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id); }}
-              className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
-              title="Clique para ver este mês num extrato específico"
-              role="button"
-              tabIndex={0}
-              onKeyDown={e => e.key === 'Enter' && onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id)}
-            >{fmtMes(mes)}</span>
-            <span className="text-[10px] text-slate-400">{txs.length} transacção(ões)</span>
+          <div className="flex-1 min-w-0">
+            {/* linha principal */}
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full flex-shrink-0 ${allOk ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+              <span
+                onClick={e => { e.stopPropagation(); onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id); }}
+                className="text-sm font-bold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+                title="Clique para ver este mês num extrato específico"
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => e.key === 'Enter' && onSelectRun && txs[0]?.run_id && onSelectRun(txs[0].run_id)}
+              >{fmtMes(mes)}</span>
+            </div>
+            {/* linha secundária */}
+            <div className="flex items-center gap-2 mt-0.5 pl-4">
+              <span className="text-[10px] text-slate-400">{txs.length} transacção(ões)</span>
+              {!allOk && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+                  · {semCliente} s/ resolver
+                </span>
+              )}
+              {allOk && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">· Tudo Ok</span>
+              )}
+            </div>
           </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className={`text-[11px] font-black ${totalMes < 0 ? 'text-rose-600' : 'text-slate-600'}`}>
             {totalMes < 0 ? '-' : ''}{fmtEur(Math.abs(totalMes))}
-          </span>
-          <span className={`text-[10px] font-black uppercase tracking-widest ${allOk ? 'text-emerald-600' : 'text-amber-600'}`}>
-            {allOk ? 'Tudo Ok' : `${semCliente} s/ resolver`}
           </span>
           {open ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
         </div>

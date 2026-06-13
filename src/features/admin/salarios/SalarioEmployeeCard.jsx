@@ -49,73 +49,78 @@ export default function SalarioEmployeeCard({
               : 'bg-amber-100 text-amber-700';
 
             return (
-              <div key={`${m.month}-${index}`} className="px-4 py-3">
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <div key={`${m.month}-${index}`} className="px-4 py-3 space-y-2">
+                {/* Linha 1: mês + badge de estado */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-black uppercase tracking-widest text-slate-600 flex-shrink-0">
                       {MESES_PT_SAL[mm]} {ano}
                     </span>
                     <span
                       onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-80 ${badgeClass}`}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-80 flex-shrink-0 ${badgeClass}`}
                     >
                       {isMatch || isJustified ? <CheckCircle size={9} /> : <AlertCircle size={9} />} {displayStatus}
                     </span>
-                    {isJustified && (
-                      <>
-                        <span className="text-[9px] text-slate-400 italic max-w-[180px] truncate" title={justEntry.justification}>
-                          "{justEntry.justification}"
-                        </span>
-                        <button
-                          onClick={() => onRemoverJustificacao({ employee_name: employee.employee_name, month: m.month })}
-                          className="flex items-center gap-0.5 px-2 py-0.5 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors"
-                          title="Desfazer justificação"
-                        >
-                          <Undo2 size={9} /> Desfazer
-                        </button>
-                      </>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <div className="flex items-center gap-3 text-[11px] text-slate-600">
-                      <span>Recibo: <strong>{fmtEur(m.expected_amount)}</strong></span>
-                      <span>Pago: <strong>{fmtEur(m.total_paid)}</strong></span>
-                      {Math.abs(m.balance) > tolerancia && (
-                        <span className={`font-black text-[10px] px-2 py-0.5 rounded-full ${m.balance > 0 ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
-                          {m.balance > 0
-                            ? `Pagou ${fmtEur(m.balance)} a menos`
-                            : `Pagou ${fmtEur(Math.abs(m.balance))} a mais`}
-                        </span>
-                      )}
-                    </div>
-                    {!isMatch && !isJustified && (
-                      <button
-                        onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                        className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
-                      >
-                        <MessageSquare size={9} /> Justificar
-                      </button>
-                    )}
-                  </div>
+                  {Math.abs(m.balance) > tolerancia && (
+                    <span className={`flex-shrink-0 font-black text-[10px] px-2 py-0.5 rounded-full ${m.balance > 0 ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
+                      {m.balance > 0
+                        ? `−${fmtEur(m.balance)}`
+                        : `+${fmtEur(Math.abs(m.balance))}`}
+                    </span>
+                  )}
                 </div>
+
+                {/* Linha 2: valores financeiros + botão justificar */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-4 text-xs text-slate-600">
+                    <span>Recibo: <strong className="text-slate-800">{fmtEur(m.expected_amount)}</strong></span>
+                    <span>Pago: <strong className="text-slate-800">{fmtEur(m.total_paid)}</strong></span>
+                  </div>
+                  {!isMatch && !isJustified && (
+                    <button
+                      onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors flex-shrink-0"
+                    >
+                      <MessageSquare size={10} /> Justificar
+                    </button>
+                  )}
+                </div>
+
+                {/* Linha 3: justificação (só se existir) */}
+                {isJustified && (
+                  <div className="flex items-center justify-between gap-2 bg-white border border-slate-100 rounded-xl px-3 py-2">
+                    <span className="text-[10px] text-slate-500 italic min-w-0 truncate" title={justEntry.justification}>
+                      "{justEntry.justification}"
+                    </span>
+                    <button
+                      onClick={() => onRemoverJustificacao({ employee_name: employee.employee_name, month: m.month })}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors flex-shrink-0 ml-2"
+                      title="Desfazer justificação"
+                    >
+                      <Undo2 size={9} /> Desfazer
+                    </button>
+                  </div>
+                )}
                 {m.transfers.length > 0 ? (
                   <div className="space-y-1">
                     {m.transfers.map((t, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-1.5">
+                      <div key={i} className="flex items-center justify-between bg-white border border-slate-100 rounded-xl px-3 py-2">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => window.__toggleTipoLink(t, supabase, onTipoUpdate)}
-                            className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
+                            className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0 ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
-                          <span className="text-[11px] text-slate-500">{t.date}</span>
+                          <span className="text-xs text-slate-500">{t.date}</span>
                         </div>
-                        <span className="text-[12px] font-bold text-slate-700">{fmtEur(t.amount)}</span>
+                        <span className="text-sm font-bold text-slate-700">{fmtEur(t.amount)}</span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-slate-400 italic">Nenhuma transferência identificada</p>
+                  <p className="text-xs text-slate-400 italic">Nenhuma transferência identificada</p>
                 )}
               </div>
             );

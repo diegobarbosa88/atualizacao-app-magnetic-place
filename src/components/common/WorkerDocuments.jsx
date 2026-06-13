@@ -216,91 +216,82 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
   }, [historico]);
 
   return (
-    <div className="bg-white rounded-3xl p-6 shadow-xl border border-indigo-50/50 mt-8">
-      <div className="flex items-center gap-3 mb-6 border-b border-slate-100 pb-4">
-        <FileText size={20} className="text-indigo-600" />
-        <h3 className="font-black text-lg uppercase tracking-tight text-slate-800">
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6">
+      {/* Header */}
+      <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-2">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
           {pendingOnly ? 'Documentos Por Assinar' : 'Os Meus Documentos'}
-        </h3>
+        </p>
+        {!pendingOnly && (
+          <div className="flex gap-0.5 bg-slate-200/60 p-0.5 rounded-lg shrink-0">
+            <button onClick={() => setActiveTab('pendentes')} className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'pendentes' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              Pendentes {pendentes.length > 0 && `(${pendentes.length})`}
+            </button>
+            <button onClick={() => setActiveTab('historico')} className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1 ${activeTab === 'historico' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+              Histórico {historico.length > 0 && `(${historico.length})`}
+              {activeTab === 'historico' && <button onClick={e => { e.stopPropagation(); setShowFilters(!showFilters); }} className={`ml-0.5 ${showFilters ? 'text-indigo-600' : 'text-slate-400'}`}><Filter size={11} /></button>}
+            </button>
+          </div>
+        )}
       </div>
 
-      {!pendingOnly && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <button onClick={() => setActiveTab('pendentes')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'pendentes' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}`}>
-            Pendentes ({pendentes.length})
-          </button>
-          <button onClick={() => setActiveTab('historico')} className={`px-4 py-2 rounded-xl font-bold text-sm ${activeTab === 'historico' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-            Histórico ({historico.length})
-          </button>
-          {activeTab === 'historico' && (
-            <button onClick={() => setShowFilters(!showFilters)}
-              className={`ml-auto p-2 rounded-xl ${showFilters ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
-              <Filter size={16} />
-            </button>
-          )}
-        </div>
-      )}
-
       {!pendingOnly && activeTab === 'historico' && showFilters && (
-        <div className="bg-slate-50 rounded-xl p-4 mb-4 flex flex-wrap gap-4 items-center">
+        <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 uppercase">Tipo:</label>
+            <label className="text-[9px] font-black text-slate-400 uppercase">Tipo:</label>
             <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-bold">
+              className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs font-bold">
               <option value="all">Todos</option>
               {uniqueTypes.map(type => <option key={type} value={type}>{type}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 uppercase">Ordenar:</label>
+            <label className="text-[9px] font-black text-slate-400 uppercase">Ordenar:</label>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-bold">
+              className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-xs font-bold">
               <option value="date_desc">Mais Recentes</option>
               <option value="date_asc">Mais Antigos</option>
               <option value="name_asc">Nome (A-Z)</option>
               <option value="name_desc">Nome (Z-A)</option>
             </select>
           </div>
-          <span className="text-xs text-slate-400 ml-auto">{docList.length} documento(s)</span>
+          <span className="text-[9px] text-slate-400 ml-auto">{docList.length} doc(s)</span>
         </div>
       )}
 
       {docList.length === 0 ? (
-        <p className="text-slate-400 text-center py-8">{pendingOnly ? 'Nenhum documento por assinar.' : 'Nenhum documento.'}</p>
+        <p className="text-slate-400 text-center py-8 text-xs">{pendingOnly ? 'Nenhum documento por assinar.' : 'Nenhum documento.'}</p>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-slate-100">
           {docList.map(doc => (
-            <div key={doc.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-3">
-                {doc.templateId ? <FileSignature size={18} className="text-purple-500" /> : <FileText size={18} className="text-indigo-500" />}
-                <div>
-                  <p className="text-sm font-bold text-slate-700">{doc.tipo || doc.title}</p>
-                  <div className="flex items-center gap-2">
+            <div key={doc.id} className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors">
+              <div className="flex items-center gap-2.5 min-w-0">
+                {doc.templateId ? <FileSignature size={15} className="text-purple-500 shrink-0" /> : <FileText size={15} className="text-indigo-500 shrink-0" />}
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-700 truncate">{doc.tipo || doc.title}</p>
+                  <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-[10px] text-slate-400">Emitido: {formatDocDate(doc.dataEmissao || doc.created_at)}</p>
                     {isSigned(doc.status) && (doc.dataAssinatura || doc.signed_at) && (
-                      <>
-                        <span className="text-slate-300">|</span>
-                        <p className="text-[10px] text-emerald-600 font-bold">
-                          Assinado: {new Date(doc.dataAssinatura || doc.signed_at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </>
+                      <p className="text-[10px] text-emerald-600 font-bold">
+                        · Assinado: {new Date(doc.dataAssinatura || doc.signed_at).toLocaleDateString('pt-PT')}
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`px-2 py-1 rounded-full text-[9px] font-bold uppercase ${isPending(doc.status) ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+              <div className="flex items-center gap-2 shrink-0 ml-2">
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${isPending(doc.status) ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
                   {isPending(doc.status) ? 'Pendente' : 'Assinado'}
                 </span>
                 {isPending(doc.status) ? (
                   <button onClick={() => openDoc(doc)}
-                    className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl"
+                    className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
                     title="Assinar documento">
-                    <Pencil size={18} />
+                    <Pencil size={14} />
                   </button>
                 ) : (
                   <a href={doc.pdfAssinadoUrl || doc.signed_pdf_url || doc.url} target="_blank" rel="noopener noreferrer"
-                    className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl">
+                    className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-lg transition-all">
                     <Download size={14} />
                   </a>
                 )}

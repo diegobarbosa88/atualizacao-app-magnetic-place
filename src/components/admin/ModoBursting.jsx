@@ -255,8 +255,8 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
       {/* Tabela de resultados */}
       {resultado && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-[10px] font-black text-slate-500 tracking-widest flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:flex-wrap">
+            <p className="text-[10px] font-black text-slate-500 tracking-widest sm:flex-1">
               {totalResultados} RECIBO{totalResultados !== 1 ? 'S' : ''}
               {totalOrfaos > 0 && ` · ${totalOrfaos} ÓRFÃO${totalOrfaos !== 1 ? 'S' : ''}`}
               {selecionados.size > 0 && ` · ${selecionados.size} SEL.`}
@@ -290,7 +290,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
           {erroAdicionar && <p className="text-[10px] text-red-500 font-medium px-1">{erroAdicionar}</p>}
           {erroPortal    && <p className="text-[10px] text-red-500 font-medium px-1">{erroPortal}</p>}
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <select value={tipoDoc} onChange={e => {
               const tipo = e.target.value;
               setTipoDoc(tipo);
@@ -311,7 +311,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
               value={prefixo}
               onChange={e => setPrefixo(e.target.value)}
               placeholder="Nome base (ex: Mapa de Ajuda de Custo)"
-              className="flex-1 min-w-48 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 bg-white text-slate-700 placeholder:text-slate-300"
+              className="flex-1 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 bg-white text-slate-700 placeholder:text-slate-300"
             />
             <button onClick={aplicarPrefixo} disabled={!prefixo.trim()}
               className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-40">

@@ -2,8 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
 import {
-  Clock, CheckCircle, LogIn, Edit2, AlertCircle,
-  ChevronUp, ChevronDown, Trash2, Plus, Zap,
+  CheckCircle, Edit2,
+  ChevronUp, ChevronDown, Trash2, Plus, Zap, X,
 } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
@@ -19,6 +19,9 @@ import { useWorkerGeo } from './worker-dashboard/useWorkerGeo';
 import { useWorkerCorrections } from './worker-dashboard/useWorkerCorrections';
 import PendingCorrectionsPanel from './worker-dashboard/PendingCorrectionsPanel';
 import DeleteConfirmModal from './worker-dashboard/DeleteConfirmModal';
+import TimeEntryModal from './worker-dashboard/TimeEntryModal';
+import PendingAlertsModal from './worker-dashboard/PendingAlertsModal';
+import AbsenceRequestModal from './worker-dashboard/AbsenceRequestModal';
 import WorkerNavBar from './worker-dashboard/WorkerNavBar';
 import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
@@ -39,14 +42,22 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     monthLogs, todayHours, totalMonthHours,
     activeWorkerSchedule, expectedHours,
     daysList, assigned, currentMonthStr,
-    myApproval, pendingApprovals,
+    myApproval, pendingApprovals, previousOpenLogs,
     handleOpenInlineForm, handleQuickRegister,
     setDefaultSchedule, handleSaveEntry,
     saveToDb, handleDelete, handleApproveMonth,
   } = useWorker();
 
-  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase } = useApp();
+  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase, absenceRequests } = useApp();
   const [workerTab, setWorkerTab] = useState('home');
+  const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
+  const [timeEntryInitialLogId, setTimeEntryInitialLogId] = useState(null);
+  const [alertsModalOpen, setAlertsModalOpen] = useState(false);
+  const [alertsModalDismissed, setAlertsModalDismissed] = useState(false);
+  const [absenceModalOpen, setAbsenceModalOpen] = useState(false);
+  const [approvedAbsencesExpanded, setApprovedAbsencesExpanded] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -96,6 +107,71 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     return next;
   });
 
+  const openIncompleteLogModal = (log) => {
+    setInlineEditingDate(log.date);
+    setInlineFormData({
+      id: log.id,
+      date: log.date,
+      clientId: log.clientId || currentUser?.defaultClientId || '',
+      startTime: log.startTime || '',
+      breakStart: log.breakStart || '',
+      breakEnd: log.breakEnd || '',
+      endTime: '',
+      description: log.description || '',
+    });
+    setTimeEntryModalOpen(true);
+  };
+
+  const openTimeEntryModal = (ds, logId = null) => {
+    setInlineEditingDate(ds);
+    setTimeEntryInitialLogId(logId);
+    setInlineFormData({
+      id: null, date: ds, clientId: currentUser?.defaultClientId || '',
+      startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '',
+    });
+    setTimeEntryModalOpen(true);
+  };
+
+  const handleBulkSave = async (formData, dates) => {
+    for (const date of dates) {
+      await handleSaveEntry({ ...formData, date }, false, date);
+    }
+    setSuccessMsg(`${dates.length} registo${dates.length !== 1 ? 's' : ''} guardado${dates.length !== 1 ? 's' : ''} com sucesso!`);
+    setTimeout(() => setSuccessMsg(''), 6000);
+  };
+
+  const handleAbsenceSubmit = async (dates, reason, notes) => {
+    const id = `abs_${Date.now()}`;
+    await saveToDb('absence_requests', id, {
+      id,
+      worker_id: currentUser.id,
+      worker_name: currentUser.name,
+      client_id: currentUser.defaultClientId || null,
+      dates,
+      reason,
+      notes: notes || null,
+      status: 'pending',
+      created_at: new Date().toISOString(),
+    });
+    const notifId = `notif_abs_${Date.now()}`;
+    await saveToDb('app_notifications', notifId, {
+      id: notifId,
+      title: 'Aviso de Falta',
+      message: `${currentUser.name} avisou falta (${dates.length} dia${dates.length !== 1 ? 's' : ''}): ${reason}`,
+      type: 'warning',
+      target_type: 'admin',
+      payload: { absenceId: id, kind: 'absence' },
+      is_dismissible: true,
+      is_active: true,
+      viewed_by_ids: [],
+      dismissed_by_ids: [],
+      read_by_admin_ids: [],
+      created_at: new Date().toISOString(),
+    });
+    setSuccessMsg('Aviso de falta enviado com sucesso!');
+    setTimeout(() => setSuccessMsg(''), 6000);
+  };
+
   const workerStartDate = currentUser?.dataInicio ? new Date(currentUser.dataInicio) : null;
   const todayStr = toISODateLocal(new Date());
   const todayOpenLog = !myApproval && logs.find(l =>
@@ -108,6 +184,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     return pendingMonthStart >= workerStartDate;
   });
 
+  const pendingSignaturesCount = (documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id && d.status !== 'Rascunho').length;
+  const alertCount = filteredPendingApprovals.length + (pendingSignaturesCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
+
+  useEffect(() => {
+    if (alertCount > 0 && !alertsModalDismissed) setAlertsModalOpen(true);
+  }, [alertCount, alertsModalDismissed]);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-32 font-sans relative">
       <WorkerNavBar
@@ -118,6 +201,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         workerChangeRequests={workerChangeRequests}
         onLogin={onLogin}
         onLogout={onLogout}
+        alertCount={alertCount}
+        onOpenAlerts={() => setAlertsModalOpen(true)}
+        onOpenAbsenceModal={() => setAbsenceModalOpen(true)}
+        onOpenScheduleModal={() => setScheduleModalOpen(true)}
+        onOpenProfileModal={() => setProfileModalOpen(true)}
+        isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
       />
 
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
@@ -146,71 +235,21 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         )}
 
         {workerTab === 'home' && (<>
-          {/* Pending approval banners */}
-          {filteredPendingApprovals.map((pending) => {
-            const isViewingThisMonth = pending.monthStr === currentMonthStr;
-            return (
-              <div key={`pending-${pending.monthStr}`} className="mb-8 animate-in slide-in-from-top-4 duration-700">
-                <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2.5rem] p-1 shadow-2xl ring-4 ring-indigo-500/20">
-                  <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                      <div className="flex items-center gap-5">
-                        <div className="bg-indigo-100 p-4 rounded-2xl text-indigo-600 shadow-inner animate-pulse"><Clock size={32} /></div>
-                        <div>
-                          <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">
-                            Validar Horas de {pending.date.toLocaleDateString('pt-PT', { month: 'long' })}
-                          </h3>
-                          <p className="text-sm font-bold text-slate-500 mt-1">
-                            {isViewingThisMonth
-                              ? 'O mês terminou. Verifica os teus registos e submete para aprovação.'
-                              : 'Ainda tens horas de um mês anterior por validar. Por favor, revê e submete.'}
-                          </p>
-                        </div>
-                      </div>
-                      {isViewingThisMonth ? (
-                        <button
-                          onClick={() => handleApproveMonth(currentUser?.id)}
-                          className="w-full md:w-auto px-10 py-4 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-indigo-200 active:scale-95 flex items-center justify-center gap-3"
-                        >
-                          <CheckCircle size={18} /> Confirmar e Enviar
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
-                          className="w-full md:w-auto px-10 py-4 bg-orange-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
-                        >
-                          <Clock size={18} /> Rever e Validar
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
 
-          {/* Pending signatures banner */}
-          {(documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id && d.status !== 'Rascunho').length > 0 && (
-            <div className="mb-8 animate-in slide-in-from-top-4 duration-700">
-              <div className="bg-gradient-to-br from-amber-500 to-orange-600 rounded-[2.5rem] p-1 shadow-lg">
-                <div className="bg-white/95 backdrop-blur-sm rounded-[2.4rem] p-6 sm:p-8">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-5">
-                      <div className="bg-amber-100 p-4 rounded-2xl text-amber-600 shadow-inner"><AlertCircle size={32} /></div>
-                      <div>
-                        <h3 className="text-xl font-black text-slate-800 uppercase tracking-tighter">Assinaturas Pendentes</h3>
-                        <p className="text-sm font-bold text-slate-500 mt-1">Tens documentos importantes que requerem a tua validação e assinatura digital.</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => { const el = document.getElementById('secao-documentos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
-                      className="w-full md:w-auto px-10 py-4 bg-orange-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-xl shadow-orange-200 active:scale-95 flex items-center justify-center gap-3"
-                    >
-                      <Edit2 size={18} /> Assinar Agora
-                    </button>
-                  </div>
-                </div>
+          {filteredPendingApprovals.some(p => p.monthStr === currentMonthStr) && (
+            <div className="mb-6 bg-indigo-50 border border-indigo-200 rounded-2xl px-5 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle size={20} className="text-indigo-500 shrink-0" />
+                <p className="text-sm font-black text-indigo-800">
+                  Revê os registos abaixo e confirma as horas de {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}.
+                </p>
               </div>
+              <button
+                onClick={() => handleApproveMonth(currentUser?.id)}
+                className="w-full sm:w-auto shrink-0 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
+              >
+                <CheckCircle size={14} /> Confirmar e Enviar
+              </button>
             </div>
           )}
 
@@ -220,7 +259,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             myApproval={myApproval} showProgress={showProgress} setShowProgress={setShowProgress}
           />
 
-          {currentUser?.gps_enabled && (
+          {currentUser?.gps_enabled && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
             <InServiceCard
               todayOpenLog={todayOpenLog} clients={clients}
               handleRegistarPausa={handleRegistarPausa} handleRegistarSaida={handleRegistarSaida}
@@ -228,11 +267,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             />
           )}
 
-          <GeoSuggestionCard
-            geoSuggestion={geoSuggestion} geoSuggestionDismissed={geoSuggestionDismissed}
-            setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
-            geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
-          />
+          {currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && !(todayOpenLog && geoSuggestion?.type === 'saida') && (
+            <GeoSuggestionCard
+              geoSuggestion={geoSuggestion} geoSuggestionDismissed={geoSuggestionDismissed}
+              setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
+              geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
+            />
+          )}
 
           {myApproval ? (
             <div className="mb-10 bg-emerald-50/80 border border-emerald-200 rounded-[3rem] p-12 text-center text-emerald-800 shadow-inner animate-in zoom-in-95">
@@ -246,12 +287,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             </div>
           ) : (
             <div className="mb-8">
-              {successMsg && (
-                <div className="mb-6 p-4 bg-emerald-50 text-emerald-600 font-bold rounded-2xl flex items-center justify-center gap-3 border border-emerald-100 shadow-sm animate-in fade-in zoom-in-95 duration-300">
-                  <CheckCircle size={24} className="text-emerald-500" /><span>{successMsg}</span>
-                </div>
-              )}
-              {isLimitedWorker ? (
+              {(currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()) && (isLimitedWorker ? (
                 <RequestEntryCard
                   currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
                   onSuccess={() => { setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
@@ -271,7 +307,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   onCancel={() => setMainFormData({ id: null, date: toISODateLocal(new Date()), clientId: currentUser?.defaultClientId || '', startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '' })}
                   showDate systemSettings={systemSettings} title="Novo Registo de Atividade"
                 />
-              )}
+              ))}
             </div>
           )}
 
@@ -294,10 +330,10 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 const toggleExpand = () => {
                   if (isExpanded) {
                     setExpandedDays(prev => prev.filter(d => d !== ds));
-                    if (isCurrentInline) setInlineEditingDate(null);
-                  } else {
+                  } else if (dayLogs.length > 0) {
                     setExpandedDays(prev => [...prev, ds]);
-                    if (dayLogs.length === 0) handleOpenInlineForm(ds);
+                  } else {
+                    openTimeEntryModal(ds);
                   }
                 };
 
@@ -305,51 +341,45 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                   <React.Fragment key={ds}>
                     <div
                       onClick={toggleExpand}
-                      className={`p-4 md:px-8 md:py-6 transition-all border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${dObj.getDay() === 0 || dObj.getDay() === 6 ? 'bg-slate-50/40' : ''} ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                      className={`px-3 py-2.5 md:px-8 md:py-5 transition-all border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${dObj.getDay() === 0 || dObj.getDay() === 6 ? 'bg-slate-50/40' : ''} ${isExpanded ? 'bg-indigo-50/20' : ''}`}
                     >
-                      <div className="flex items-center justify-between gap-2 md:grid md:grid-cols-[120px_1fr_220px]">
-                        <div className="flex md:flex-col items-baseline md:items-start gap-2 md:gap-0">
-                          <span className="text-2xl font-black text-slate-800">{dObj.getDate()}</span>
-                          <span className="text-[10px] uppercase font-bold text-slate-400">{['DOM','SEG','TER','QUA','QUI','SEX','SÁB'][dObj.getDay()]}</span>
-                        </div>
-                        <div className="flex-1 flex flex-col items-start gap-1">
-                          <div className="flex items-center gap-2">
-                            {dayTotalTotal > 0 ? (
-                              <>
-                                <span className="text-[10px] font-black text-indigo-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
-                                {!isExpanded && <span className="text-[10px] text-slate-300 font-bold hidden lg:inline">• Detalhes</span>}
-                              </>
-                            ) : (
-                              <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Sem registos</span>
-                            )}
-                          </div>
+                      <div className="flex items-center gap-2.5">
+                        {/* Dia */}
+                        <span className="text-base font-black text-slate-800 w-5 text-right shrink-0">{dObj.getDate()}</span>
+                        <span className="text-[10px] uppercase font-black text-slate-400 w-7 shrink-0">{['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dObj.getDay()]}</span>
+
+                        {/* Horas / estado */}
+                        <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                          {dayTotalTotal > 0 ? (
+                            <span className="text-xs font-black text-teal-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">—</span>
+                          )}
                           {(dayRequestsByDate[ds] || []).map(({ item, corr }) => {
                             if (corr.status !== 'submitted' && corr.status !== 'under_review') return null;
                             const isDeletion = corr.type === 'deletion_request';
-                            const hasProposed = item.proposed && (item.proposed.startTime || item.proposed.endTime);
-                            const label = isDeletion ? 'Pedido de eliminação' : item.before?.startTime ? 'Pedido de ajuste' : 'Pedido de registo';
+                            const label = isDeletion ? 'Eliminação' : item.before?.startTime ? 'Ajuste' : 'Registo';
                             return (
-                              <span key={item.id} className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-700">
+                              <span key={item.id} className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">
                                 ⏳ {label}
-                                {hasProposed && <span className="font-mono ml-1">{item.proposed.startTime}–{item.proposed.endTime}</span>}
                               </span>
                             );
                           })}
                         </div>
-                        <div className="flex justify-end items-center gap-2">
+
+                        {/* Ações */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                           {!myApproval && !isDayBeforeStart && !isLimitedWorker && (
-                            <div className="flex gap-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Zap size={16} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
-                            </div>
+                            <>
+                              <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-lg transition-all"><Zap size={13} /></button>
+                              <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"><Plus size={13} /></button>
+                            </>
                           )}
                           {isLimitedWorker && (
-                            <button onClick={(e) => { e.stopPropagation(); handleOpenInlineForm(ds); }} className="p-2 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-xl transition-all shadow-sm"><Plus size={16} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-lg transition-all"><Plus size={13} /></button>
                           )}
-                          {isDayBeforeStart && <span className="text-[10px] text-slate-300 font-bold">Indisponível</span>}
-                          <div className="ml-1 border-l border-slate-100 pl-3">
-                            {isExpanded ? <ChevronUp size={20} className="text-indigo-400" /> : <ChevronDown size={20} className="text-slate-300" />}
-                          </div>
+                          {isDayBeforeStart && <span className="text-[9px] text-slate-300 font-bold">—</span>}
+                          {isExpanded ? <ChevronUp size={14} className="text-indigo-400 ml-1" /> : <ChevronDown size={14} className="text-slate-300 ml-1" />}
                         </div>
                       </div>
                     </div>
@@ -360,50 +390,31 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                           {dayLogs.length > 0 && (
                             <div className="space-y-3">
                               {dayLogs.map(log => (
-                                <div key={log.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm w-full">
-                                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-lg border border-indigo-100 uppercase">{clients.find(c => c.id === log.clientId)?.name || 'Cliente'}</span>
-                                    <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-100">{log.startTime}-{log.endTime}</div>
+                                <div
+                                  key={log.id}
+                                  onClick={() => isLimitedWorker ? openTimeEntryModal(ds, log.id) : openIncompleteLogModal(log)}
+                                  className="bg-white px-3 py-2.5 sm:p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm w-full cursor-pointer hover:bg-indigo-50/40 transition-all"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg border border-indigo-100 uppercase shrink-0 max-w-[90px] truncate">{clients.find(c => c.id === log.clientId)?.name || 'Cliente'}</span>
+                                    <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">{log.startTime}–{log.endTime}</div>
                                     {(log.breakStart || log.breakEnd) && (
-                                      <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1.5 rounded-lg border border-orange-100">
-                                        Pausa: {log.breakStart || '--:--'} às {log.breakEnd || '--:--'}
+                                      <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100 hidden sm:block shrink-0">
+                                        Pausa: {log.breakStart || '--:--'}–{log.breakEnd || '--:--'}
                                       </div>
                                     )}
                                   </div>
-                                  <div className="flex flex-row items-center justify-between sm:justify-end gap-4 sm:border-l sm:pl-4 border-slate-100 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 mt-2 sm:mt-0">
-                                    <span className="text-lg sm:text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
+                                  <div className="flex items-center gap-2 shrink-0 border-l border-slate-100 pl-3">
+                                    <span className="text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
                                     {!myApproval && !isLimitedWorker && (
-                                      <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={18} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
                                     )}
                                     {isLimitedWorker && (
-                                      <div className="flex gap-1">
-                                        <button onClick={() => handleOpenInlineForm(ds)} className="p-2 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={16} /></button>
-                                        <button onClick={() => setDeleteConfirm({ date: ds, logId: log.id })} className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
-                                      </div>
+                                      <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds, log.id); }} className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={14} /></button>
                                     )}
                                   </div>
                                 </div>
                               ))}
-                            </div>
-                          )}
-                          {isLimitedWorker && isCurrentInline && (
-                            <div className="mt-4 pt-4 border-t border-slate-100">
-                              <RequestEntryCard
-                                currentUser={currentUser} logs={logs} clients={clients} monthLogs={monthLogs}
-                                initialDate={ds} isInline={true}
-                                onSuccess={() => { setInlineEditingDate(null); setSuccessMsg('Pedido submetido com sucesso!'); setTimeout(() => setSuccessMsg(''), 6000); }}
-                              />
-                            </div>
-                          )}
-                          {!isLimitedWorker && isCurrentInline && (
-                            <div className="mt-4 pt-4 border-t border-slate-100">
-                              <EntryForm
-                                isInline data={inlineFormData} clients={clients} assignedClients={currentUser?.assignedClients}
-                                onChange={setInlineFormData}
-                                onSave={async () => { await handleSaveWithGeoCheck(inlineFormData, false, ds); setInlineEditingDate(null); }}
-                                onCancel={() => setInlineEditingDate(null)}
-                                systemSettings={systemSettings}
-                              />
                             </div>
                           )}
                         </div>
@@ -415,16 +426,193 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             </div>
           </div>
 
+          {(() => {
+            const statusMap = {
+              approved: { label: 'Confirmado', cls: 'bg-emerald-100 text-emerald-700' },
+              seen:     { label: 'Visto',      cls: 'bg-slate-100 text-slate-500' },
+              pending:  { label: 'Aguarda',    cls: 'bg-orange-100 text-orange-600' },
+            };
+            const renderRow = (r) => {
+              const s = statusMap[r.status] || statusMap.pending;
+              const sortedDates = (r.dates || []).slice().sort();
+              return (
+                <div key={r.id} className="px-4 py-3 space-y-2 border-b border-slate-50 last:border-b-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-bold text-slate-700">{r.reason}</p>
+                    <span className={`shrink-0 text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${s.cls}`}>{s.label}</span>
+                  </div>
+                  {sortedDates.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {sortedDates.map(ds => {
+                        const d = new Date(ds + 'T00:00:00');
+                        const weekday = d.toLocaleDateString('pt-PT', { weekday: 'short' });
+                        const dayNum = d.getDate();
+                        const month = d.toLocaleDateString('pt-PT', { month: 'short' });
+                        const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+                        return (
+                          <span key={ds} className={`inline-flex flex-col items-center px-2.5 py-1.5 rounded-xl text-center leading-none ${isWeekend ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700'}`}>
+                            <span className="text-[8px] font-black uppercase tracking-wider">{weekday}</span>
+                            <span className="text-sm font-black">{dayNum}</span>
+                            <span className="text-[8px] font-bold opacity-70">{month}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            };
+
+            const myAbsences = (absenceRequests || [])
+              .filter(r => r.worker_id === currentUser?.id && r.status !== 'archived')
+              .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            if (!myAbsences.length) return null;
+
+            const pendingOnes = myAbsences.filter(r => r.status !== 'approved');
+            const approvedOnes = myAbsences.filter(r => r.status === 'approved');
+            const mostRecentApproved = approvedOnes[0];
+            const restApproved = approvedOnes.slice(1);
+
+            return (
+              <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden mb-6">
+                <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Os meus avisos de falta</p>
+                </div>
+                <div>
+                  {pendingOnes.map(renderRow)}
+                  {mostRecentApproved && renderRow(mostRecentApproved)}
+                  {restApproved.length > 0 && (
+                    <>
+                      <button
+                        onClick={() => setApprovedAbsencesExpanded(p => !p)}
+                        className="w-full px-4 py-2 flex items-center gap-2 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                      >
+                        {approvedAbsencesExpanded ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                        {approvedAbsencesExpanded ? 'Mostrar menos' : `Ver mais ${restApproved.length} confirmado${restApproved.length !== 1 ? 's' : ''}`}
+                      </button>
+                      {approvedAbsencesExpanded && restApproved.map(renderRow)}
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           <div id="secao-documentos">
             <WorkerDocuments currentUser={currentUser} documents={documents} saveToDb={saveToDb} pendingOnly={false} />
           </div>
+
+          <PendingAlertsModal
+            isOpen={alertsModalOpen}
+            onClose={() => { setAlertsModalOpen(false); setAlertsModalDismissed(true); }}
+            pendingApprovals={filteredPendingApprovals}
+            currentMonthStr={currentMonthStr}
+            pendingSignaturesCount={pendingSignaturesCount}
+            previousOpenLogs={previousOpenLogs}
+            clients={clients}
+            onApproveMonth={() => handleApproveMonth(currentUser?.id)}
+            onReviewMonth={(pending) => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
+            onSignDocuments={() => { const el = document.getElementById('secao-documentos'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}
+            onCompleteLog={openIncompleteLogModal}
+          />
+
+          <TimeEntryModal
+            isOpen={timeEntryModalOpen}
+            onClose={() => { setTimeEntryModalOpen(false); setInlineEditingDate(null); setTimeEntryInitialLogId(null); }}
+            initialDate={inlineEditingDate}
+            initialLogId={timeEntryInitialLogId}
+            daysList={daysList}
+            formData={inlineFormData}
+            onFormChange={setInlineFormData}
+            onSave={async (formData, date) => { await handleSaveWithGeoCheck(formData, false, date); }}
+            onBulkSave={handleBulkSave}
+            clients={clients}
+            assignedClients={currentUser?.assignedClients}
+            currentUser={currentUser}
+            systemSettings={systemSettings}
+            monthLogs={monthLogs}
+            logs={logs}
+            isLimitedWorker={isLimitedWorker}
+            onLimitedSuccess={() => {
+              setTimeEntryModalOpen(false);
+              setInlineEditingDate(null);
+              setSuccessMsg('Pedido submetido com sucesso!');
+              setTimeout(() => setSuccessMsg(''), 6000);
+            }}
+          />
 
           <DeleteConfirmModal
             deleteConfirm={deleteConfirm} setDeleteConfirm={setDeleteConfirm}
             deleteSubmitting={deleteSubmitting} onConfirm={handleSubmitDeletion}
           />
+
+          <AbsenceRequestModal
+            isOpen={absenceModalOpen}
+            onClose={() => setAbsenceModalOpen(false)}
+            daysList={daysList}
+            monthLogs={monthLogs}
+            currentUser={currentUser}
+            systemSettings={systemSettings}
+            onSubmit={handleAbsenceSubmit}
+          />
         </>)}
       </main>
+
+      {/* Toast de confirmação */}
+      {successMsg && (
+        <div className="fixed bottom-20 sm:bottom-6 left-1/2 -translate-x-1/2 z-[99999] pointer-events-none">
+          <div className="flex items-center gap-3 bg-slate-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-300 whitespace-nowrap">
+            <CheckCircle size={18} className="text-emerald-400 shrink-0" />
+            <span className="text-sm font-bold">{successMsg}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Horários — mobile */}
+      {scheduleModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] flex flex-col sm:hidden">
+          <button className="flex-shrink-0 h-16" onClick={() => setScheduleModalOpen(false)} aria-label="Fechar" />
+          <div className="flex-1 bg-white rounded-t-3xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Meus Horários</h2>
+              <button onClick={() => setScheduleModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-4 py-4">
+              <WorkerScheduleTab
+                assigned={assigned}
+                currentUser={currentUser}
+                expandedSchedules={expandedSchedules}
+                toggleScheduleExpand={toggleScheduleExpand}
+                setDefaultSchedule={setDefaultSchedule}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Perfil — mobile */}
+      {profileModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] flex flex-col sm:hidden">
+          <button className="flex-shrink-0 h-16" onClick={() => setProfileModalOpen(false)} aria-label="Fechar" />
+          <div className="flex-1 bg-white rounded-t-3xl overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Meu Perfil</h2>
+              <button onClick={() => setProfileModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-4 py-4">
+              <WorkerProfile
+                worker={currentUser}
+                changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
+                documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

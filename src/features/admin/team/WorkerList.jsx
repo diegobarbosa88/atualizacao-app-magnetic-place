@@ -18,9 +18,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50">
               <th onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor/H</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Horário {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th onClick={() => setWorkersSort(prev => ({ key: 'unit', direction: prev.key === 'unit' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Unidade {workersSort.key === 'unit' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
+              <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor/H</th>
               <th onClick={() => setWorkersSort(prev => ({ key: 'status', direction: prev.key === 'status' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Acesso {workersSort.key === 'status' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
               <th className="text-left px-4 py-3 text-[10px] font-black text-amber-400 uppercase tracking-widest">Pedido Registo</th>
               <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
@@ -33,9 +33,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                   <p className="font-black text-slate-800 text-sm uppercase truncate">{w.name}</p>
                   <p className="text-xs text-slate-400">{w.profissao || 'Staff'}</p>
                 </td>
-                <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
-                <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
-                <td className="px-4 py-3 text-sm font-bold text-slate-500">{w.valorHora ? `${w.valorHora}€` : 'N/A'}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500 truncate">{schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500 truncate">{clients.find(c => c.id === w.defaultClientId)?.name || 'N/A'}</td>
+                <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500">{w.valorHora ? `${w.valorHora}€` : 'N/A'}</td>
                 <td className="px-4 py-3">
                   <button onClick={() => saveToDb('workers', w.id, { ...w, status: w.status === 'inativo' ? 'ativo' : 'inativo' })} title={w.status === 'inativo' ? 'Inativo — clique para ativar' : 'Ativo — clique para desativar'} className={`p-1.5 rounded-lg transition-all ${w.status === 'inativo' ? 'text-rose-400 hover:bg-rose-50' : 'text-emerald-500 hover:bg-emerald-50'}`}>
                     {w.status === 'inativo' ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}

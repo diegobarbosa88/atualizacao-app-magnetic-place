@@ -149,9 +149,10 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
     resolvedItems.map(async (it) => {
       const final = it.final || it.proposed;
       if (!final) return;
-      const existing = logs.find(
-        (l) => String(l.workerId) === String(it.worker_id) && l.date === it.date
-      );
+      const existing = it.before?.log_id
+        ? logs.find((l) => l.id === it.before.log_id)
+        : logs.find((l) => String(l.workerId) === String(it.worker_id) && l.date === it.date && l.startTime === it.before?.startTime)
+          ?? logs.find((l) => String(l.workerId) === String(it.worker_id) && l.date === it.date);
       const isRemove = !final.startTime && !final.endTime && !final.breakStart && !final.breakEnd;
       if (isRemove) {
         if (existing) {
@@ -313,12 +314,19 @@ export async function applyCreationRequest(supabase, { correction, items, client
     // deletion_request: proposed is null - delete the log entirely
     if (!item.proposed || (item.proposed && !item.proposed.startTime && !item.proposed.endTime)) {
       if (item.before && item.worker_id && item.date) {
-        const { error } = await supabase
-          .from('logs')
-          .delete()
-          .eq('workerId', item.worker_id)
-          .eq('date', item.date);
-        if (error) throw error;
+        if (item.before.log_id) {
+          // Delete the specific log by ID — safe when there are multiple logs on the same day
+          const { error } = await supabase.from('logs').delete().eq('id', item.before.log_id);
+          if (error) throw error;
+        } else {
+          // Fallback for older requests that don't carry log_id
+          const { error } = await supabase
+            .from('logs')
+            .delete()
+            .eq('workerId', item.worker_id)
+            .eq('date', item.date);
+          if (error) throw error;
+        }
       }
       continue;
     }

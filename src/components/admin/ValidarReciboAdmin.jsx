@@ -11,7 +11,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
   const [modo, setModo] = useState('validar');
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-2xl">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-slate-100 p-1 rounded-2xl">
         {[
           { id: 'validar',    icon: ReceiptText, label: 'Validar' },
           { id: 'historico',  icon: History,     label: 'Histórico' },

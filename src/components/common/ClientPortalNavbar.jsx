@@ -119,7 +119,7 @@ export default function ClientPortalNavbar({
             </button>
 
             {showNotifDropdown && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
+              <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1rem)] bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden">
                 <div className="p-4 border-b border-slate-100 bg-indigo-50 flex items-center gap-2">
                   <Bell size={16} className="text-indigo-600" />
                   <span className="font-black text-slate-800 text-sm uppercase tracking-widest">{nt('notifications')}</span>

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, CheckCircle, BarChart3, Coins, Receipt, TrendingUp } from 'lucide-react';
+import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, TrendingUp, BarChart2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -17,7 +17,7 @@ import { fetchPublicIp } from '../../utils/deviceUtils';
 import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
 import UploadManualModal from './documents/UploadManualModal';
-import ReportsEmbedded from './documents/ReportsEmbedded';
+
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
@@ -27,19 +27,67 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const navigate = useNavigate();
   const location = useLocation();
 
-  const activeSubTab = useMemo(() => {
-    const match = location.pathname.match(/^\/admin\/documentos\/([^/]+)/);
-    return match ? match[1] : 'documentos';
+  const GROUPS = [
+    {
+      id: 'arquivo', label: 'Arquivo', icon: FolderOpen, color: 'indigo',
+      sections: [
+        { id: 'documentos', label: 'Documentos', icon: FileText },
+        { id: 'templates',  label: 'Templates',  icon: FileSignature },
+      ],
+    },
+    {
+      id: 'faturas', label: 'Faturas', icon: Receipt, color: 'blue',
+      sections: [
+        { id: 'importar',     label: 'Importar',     icon: Mail },
+        { id: 'fornecedores', label: 'Fornecedores', icon: Building2 },
+      ],
+    },
+    {
+      id: 'reconciliacao', label: 'Reconciliação', icon: BarChart2, color: 'emerald',
+      sections: [
+        { id: 'recibos',        label: 'Recibos',        icon: ReceiptText },
+        { id: 'salarios',       label: 'Salários',       icon: Coins },
+        { id: 'movimentacoes',  label: 'Movimentações',  icon: TrendingUp },
+      ],
+    },
+  ];
+
+  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos' };
+
+  const GROUP_COLOR = {
+    indigo:  { active: 'bg-indigo-600 text-white shadow-indigo-200',  text: 'text-indigo-600',  icon: 'bg-indigo-50 text-indigo-600' },
+    blue:    { active: 'bg-blue-600 text-white shadow-blue-200',      text: 'text-blue-600',    icon: 'bg-blue-50 text-blue-600' },
+    emerald: { active: 'bg-emerald-600 text-white shadow-emerald-200',text: 'text-emerald-600', icon: 'bg-emerald-50 text-emerald-600' },
+  };
+
+  const activeGroup = useMemo(() => {
+    const parts = location.pathname.replace(/^\/admin\/documentos\/?/, '').split('/').filter(Boolean);
+    const first = parts[0] || 'documentos';
+    if (['documentos', 'templates'].includes(first)) return 'arquivo';
+    if (first === 'faturas') return 'faturas';
+    if (first === 'reconciliacao') return 'reconciliacao';
+    // compatibilidade com rotas antigas /validar/*
+    if (first === 'validar') return 'reconciliacao';
+    return 'arquivo';
   }, [location.pathname]);
 
-  const setActiveSubTab = (tab) => navigate(`/admin/documentos/${tab}`);
+  const activeSection = useMemo(() => {
+    const parts = location.pathname.replace(/^\/admin\/documentos\/?/, '').split('/').filter(Boolean);
+    if (activeGroup === 'arquivo') return parts[0] || 'documentos';
+    // compatibilidade: /validar/entradas → movimentacoes
+    if (parts[0] === 'validar') {
+      const old = parts[1];
+      if (old === 'entradas') return 'movimentacoes';
+      if (old === 'faturas')  return 'fornecedores';
+      return old || DEFAULT_SECTION.reconciliacao;
+    }
+    return parts[1] || DEFAULT_SECTION[activeGroup];
+  }, [location.pathname, activeGroup]);
 
-  const validarSubTab = useMemo(() => {
-    const match = location.pathname.match(/^\/admin\/documentos\/validar\/([^/]+)/);
-    return match ? match[1] : 'recibos';
-  }, [location.pathname]);
-
-  const setValidarSubTab = (tab) => navigate(`/admin/documentos/validar/${tab}`);
+  const navigateTo = (groupId, sectionId) => {
+    if (groupId === 'arquivo') navigate(`/admin/documentos/${sectionId}`);
+    else navigate(`/admin/documentos/${groupId}/${sectionId}`);
+  };
 
   const {
     generatedDocs,
@@ -285,64 +333,82 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     }
   };
 
+  const currentGroup = GROUPS.find(g => g.id === activeGroup);
+  const gc = GROUP_COLOR[currentGroup?.color || 'indigo'];
+
   return (
     <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 border-b border-slate-50 pb-4">
+
+      {/* Header + grupos (linha 1) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-slate-50 pb-4">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
-            <FileText size={20} />
+          <div className={`p-2 rounded-xl transition-colors duration-200 ${gc.icon}`}>
+            {currentGroup ? <currentGroup.icon size={20} /> : <FolderOpen size={20} />}
           </div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Centro de Documentos</h3>
         </div>
 
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto w-full sm:w-auto" style={{ scrollbarWidth: 'none' }}>
-          {[
-            { id: 'documentos', icon: FileText, label: 'Documentos' },
-            { id: 'faturas', icon: FileText, label: 'Faturas' },
-            { id: 'relatorios', icon: BarChart3, label: 'Relatórios' },
-            { id: 'templates', icon: FileSignature, label: 'Templates' },
-            { id: 'validar', icon: CheckCircle, label: 'Validar' },
-          ].map(({ id, icon: Icon, label }) => (
-            <button
-              key={id}
-              onClick={() => setActiveSubTab(id)}
-              className={`flex-shrink-0 flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeSubTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-            >
-              <Icon size={13} /> {label}
-            </button>
-          ))}
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {GROUPS.map(group => {
+            const Icon = group.icon;
+            const isActive = activeGroup === group.id;
+            const c = GROUP_COLOR[group.color];
+            return (
+              <button
+                key={group.id}
+                onClick={() => navigateTo(group.id, DEFAULT_SECTION[group.id])}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm ${
+                  isActive ? `${c.active} shadow-sm` : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <Icon size={13} /> {group.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {activeSubTab === 'validar' ? (
-        <>
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl mb-4 max-w-lg">
-            {[
-              { id: 'recibos',  label: 'Recibos',  icon: CheckCircle },
-              { id: 'salarios', label: 'Salários', icon: Coins },
-              { id: 'faturas',  label: 'Faturas',  icon: Receipt },
-              { id: 'entradas', label: 'Movimentações', icon: TrendingUp },
-            ].map(t => (
-              <button key={t.id} onClick={() => setValidarSubTab(t.id)}
-                className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  validarSubTab === t.id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                }`}>
-                <t.icon size={12} /> {t.label}
+      {/* Secções do grupo ativo (linha 2) */}
+      {currentGroup && (
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl mb-5 w-full sm:w-auto inline-flex overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+          {currentGroup.sections.map(sec => {
+            const Icon = sec.icon;
+            const isActive = activeSection === sec.id;
+            return (
+              <button
+                key={sec.id}
+                onClick={() => navigateTo(activeGroup, sec.id)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  isActive ? `bg-white ${gc.text} shadow-sm` : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <Icon size={13} /> {sec.label}
               </button>
-            ))}
-          </div>
-          {validarSubTab === 'recibos' && <ValidarReciboAdmin workers={workers} />}
-          {validarSubTab === 'salarios' && <SalariosTab />}
-          {validarSubTab === 'faturas' && <FaturasTab />}
-          {validarSubTab === 'entradas' && <MovimentacoesTab />}
-        </>
-      ) : activeSubTab === 'templates' ? (
+            );
+          })}
+        </div>
+      )}
+
+      {/* Conteúdo */}
+      {activeGroup === 'arquivo' && activeSection === 'templates' && (
         <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} />
-      ) : activeSubTab === 'relatorios' ? (
-        <ReportsEmbedded {...props} />
-      ) : activeSubTab === 'faturas' ? (
+      )}
+      {activeGroup === 'faturas' && activeSection === 'importar' && (
         <FaturasAdmin />
-      ) : (
+      )}
+      {activeGroup === 'faturas' && activeSection === 'fornecedores' && (
+        <FaturasTab />
+      )}
+      {activeGroup === 'reconciliacao' && activeSection === 'recibos' && (
+        <ValidarReciboAdmin workers={workers} />
+      )}
+      {activeGroup === 'reconciliacao' && activeSection === 'salarios' && (
+        <SalariosTab />
+      )}
+      {activeGroup === 'reconciliacao' && activeSection === 'movimentacoes' && (
+        <MovimentacoesTab />
+      )}
+      {(activeGroup === 'arquivo' && activeSection === 'documentos') && (
         <>
           <DocumentsFilters
             stateFilter={stateFilter}

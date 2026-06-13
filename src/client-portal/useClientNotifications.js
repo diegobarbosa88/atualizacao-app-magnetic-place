@@ -147,11 +147,10 @@ export function useClientNotifications({
     try {
       for (const item of items) {
         if (correction.type === 'deletion_request') {
-          const { error: delError } = await supabase
-            .from('logs')
-            .delete()
-            .eq('workerId', item.worker_id)
-            .eq('date', item.date);
+          const delQuery = item.before?.log_id
+            ? supabase.from('logs').delete().eq('id', item.before.log_id)
+            : supabase.from('logs').delete().eq('workerId', item.worker_id).eq('date', item.date);
+          const { error: delError } = await delQuery;
           if (delError) throw delError;
         } else if (item.proposed) {
           const existingLog = logs.find(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
@@ -197,7 +196,10 @@ export function useClientNotifications({
         for (const item of items) {
           const existingIdx = updated.findIndex(l => String(l.workerId) === String(item.worker_id) && l.date === item.date);
           if (correction.type === 'deletion_request') {
-            if (existingIdx >= 0) updated.splice(existingIdx, 1);
+            const idxToDel = item.before?.log_id
+              ? updated.findIndex(l => l.id === item.before.log_id)
+              : existingIdx;
+            if (idxToDel >= 0) updated.splice(idxToDel, 1);
           } else if (existingIdx >= 0 && item.proposed) {
             updated[existingIdx] = { ...updated[existingIdx], ...item.proposed };
           } else if (!item.before && item.proposed) {

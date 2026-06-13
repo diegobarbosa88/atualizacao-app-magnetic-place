@@ -425,7 +425,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
 
       {/* Sumário */}
       {resultados.length > 0 && (
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center">
             <p className="text-lg font-black text-emerald-600">{validos}</p>
             <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500">Válidos</p>
@@ -452,14 +452,14 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
                 <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Trabalhador</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto PDF</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">SS</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">IRS</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
+                <th className="hidden sm:table-cell px-4 py-2.5 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                <th className="hidden md:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto</th>
+                <th className="hidden lg:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Bruto PDF</th>
+                <th className="hidden lg:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">SS</th>
+                <th className="hidden lg:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">IRS</th>
+                <th className="hidden md:table-cell px-4 py-2.5 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Líquido</th>
                 <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
-                <th className="px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Envio</th>
+                <th className="hidden sm:table-cell px-4 py-2.5 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Envio</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -473,12 +473,12 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                       <p className="font-bold text-slate-800">{r.worker?.name ?? <span className="text-amber-500 font-bold">Não encontrado</span>}</p>
                       {!r.worker && <p className="text-[10px] text-slate-400 truncate max-w-[160px]">{r.nomeExtraido}</p>}
                     </td>
-                    <td className="px-4 py-3 text-slate-600 font-medium">{r.mes !== '—' ? formatarMes(r.mes) : '—'}</td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">{r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'}</td>
-                    <td className="px-4 py-3 text-right font-bold text-indigo-700">{r.abonosExtraidos != null ? `${r.abonosExtraidos.toFixed(2)}€` : '—'}</td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">{r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'}</td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">{r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'}</td>
-                    <td className="px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
+                    <td className="hidden sm:table-cell px-4 py-3 text-slate-600 font-medium">{r.mes !== '—' ? formatarMes(r.mes) : '—'}</td>
+                    <td className="hidden md:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.bruto > 0 ? `${r.bruto.toFixed(2)}€` : '—'}</td>
+                    <td className="hidden lg:table-cell px-4 py-3 text-right font-bold text-indigo-700">{r.abonosExtraidos != null ? `${r.abonosExtraidos.toFixed(2)}€` : '—'}</td>
+                    <td className="hidden lg:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.ssExtraido != null ? `${r.ssExtraido.toFixed(2)}€` : '—'}</td>
+                    <td className="hidden lg:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.irsExtraido != null ? `${r.irsExtraido.toFixed(2)}€` : '—'}</td>
+                    <td className="hidden md:table-cell px-4 py-3 text-right font-bold text-slate-700">{r.liquidoExtraido != null ? `${r.liquidoExtraido.toFixed(2)}€` : '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
                         <EstadoPicker
@@ -496,7 +496,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                         )}
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="hidden sm:table-cell px-4 py-3 text-center">
                       {enviandoRecibos && !r.envioStatus
                         ? <Loader2 size={13} className="animate-spin text-indigo-400 mx-auto" />
                         : r.envioStatus === 'enviado'    ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black uppercase"><CheckCircle size={10} />Enviado</span>
@@ -552,7 +552,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
       {/* Ações pós-processamento */}
       {resultados.length > 0 && (
         <div className="flex flex-col gap-2">
-          <div className="flex gap-3 justify-end flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:justify-end sm:flex-wrap gap-2">
             <button onClick={handleAdicionarACustos} disabled={adicionando || adicionado || Object.keys(totaisPorMes).length === 0}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {adicionando ? <Loader2 size={13} className="animate-spin" /> : <Coins size={13} />}
@@ -594,15 +594,15 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
                     className="text-[9px] font-bold uppercase text-slate-400 hover:text-slate-600 px-1.5 py-0.5 rounded">Cancelar</button>
                 </div>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-3">
                 {burstResultados.map(r => (
-                  <label key={r.nif} className={`flex items-center gap-1.5 cursor-pointer ${r.jaEnviado ? 'opacity-50' : ''}`}>
+                  <label key={r.nif} className={`flex items-center gap-2 cursor-pointer ${r.jaEnviado ? 'opacity-50' : ''}`}>
                     <input
                       type="checkbox"
                       checked={selecionadosEnvio.has(r.nif)}
                       onChange={() => !r.jaEnviado && toggleEnvio(r.nif)}
                       disabled={r.jaEnviado}
-                      className="accent-indigo-600 w-3.5 h-3.5"
+                      className="accent-indigo-600 w-4 h-4 flex-shrink-0"
                     />
                     <span className="text-xs font-bold text-slate-700">{r.worker?.name ?? r.nome ?? r.nif}</span>
                     {r.jaEnviado && <span className="text-[9px] text-slate-400">(já enviado)</span>}

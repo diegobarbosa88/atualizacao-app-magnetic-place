@@ -310,8 +310,8 @@ export default function SalariosTab({ month }) {
       ) : (
         <>
           {/* Header: sumário + exportar */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="grid grid-cols-3 gap-3 flex-1">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-slate-700', bg: 'bg-slate-50' },
                 { label: 'Match Exato', value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
@@ -324,7 +324,7 @@ export default function SalariosTab({ month }) {
               ))}
             </div>
 
-            <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1 self-start sm:flex-shrink-0">
               <label className="text-[9px] font-black uppercase tracking-widest text-slate-400">Tolerância (€)</label>
               <div className="flex items-center gap-1">
                 <input
@@ -351,7 +351,7 @@ export default function SalariosTab({ month }) {
                 <Download size={13} /> Exportar
               </button>
               {showExportMenu && (
-                <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px]">
+                <div className="absolute right-0 top-full mt-1 bg-white rounded-2xl shadow-xl border border-slate-100 py-1 z-20 min-w-[130px] max-w-[calc(100vw-2rem)]">
                   <button onClick={handleExportCsv} className="w-full flex items-center gap-2 px-4 py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors">
                     <FileText size={13} className="text-emerald-600" /> CSV
                   </button>
@@ -405,7 +405,7 @@ export default function SalariosTab({ month }) {
 
           {/* Resumo de diferenças */}
           {(totaisDiferencas.aMais > 0.01 || totaisDiferencas.aMenos > 0.01) && (
-            <div className="mt-2 grid grid-cols-2 gap-3">
+            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="bg-sky-50 border border-sky-100 rounded-2xl px-4 py-3">
                 <p className="text-[9px] font-black uppercase tracking-widest text-sky-500 mb-1">Total Pago a Mais</p>
                 <p className="text-xl font-black text-sky-700">{fmtEur(totaisDiferencas.aMais)}</p>

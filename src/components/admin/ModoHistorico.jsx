@@ -389,16 +389,16 @@ const ModoHistorico = ({ workers, saveToDb, systemSettings }) => {
   return (
     <div className="space-y-4">
       {/* Filtros */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-col sm:flex-row gap-2">
         <select value={filtroWorker} onChange={e => setFiltroWorker(e.target.value)}
-          className="flex-1 min-w-[180px] p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+          className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Todos os trabalhadores</option>
           {workers.filter(w => !w.isAdmin).sort((a,b) => a.name.localeCompare(b.name)).map(w => (
             <option key={w.id} value={w.id}>{w.name}</option>
           ))}
         </select>
         <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)}
-          className="flex-1 min-w-[160px] p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+          className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
           <option value="">Todos os meses</option>
           {mesesDisponiveis.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
         </select>
