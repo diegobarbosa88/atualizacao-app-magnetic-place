@@ -17,6 +17,8 @@ export const AppProvider = ({ children }) => {
       companyName: 'MAGNETIC PLACE',
       companyAddress: '',
       companyNif: '',
+      companyEmail: '',
+      companyPhone: '',
       darkMode: false,
       appWidth: '1920',
       geminiApiKey: '',
@@ -51,7 +53,7 @@ export const AppProvider = ({ children }) => {
   // --- VIEW & AUTH STATE ---
   const [view, setView] = useState(() => {
     const params = new URLSearchParams(window.location.search);
-    const isClientPortalDomain = window.location.hostname.includes('painelcliente');
+    const isClientPortalDomain = window.location.hostname.includes('painelcliente') || params.has('client');
     if (isClientPortalDomain) return 'client_portal';
     return params.get('view') || localStorage.getItem('magnetic_view') || 'login';
   });
@@ -92,6 +94,7 @@ export const AppProvider = ({ children }) => {
   const [clientApprovals, setClientApprovals] = useState([]);
   const [appNotifications, setAppNotifications] = useState([]);
   const [workerChangeRequests, setWorkerChangeRequests] = useState([]);
+  const [absenceRequests, setAbsenceRequests] = useState([]);
   const [isDbReady, setIsDbReady] = useState(false);
   const [gmailQueryConfig, setGmailQueryConfig] = useState(null);
 
@@ -190,6 +193,10 @@ export const AppProvider = ({ children }) => {
         fetchTable('correction_items', setCorrectionItems),
         fetchTable('worker_change_requests', setWorkerChangeRequests),
         (async () => {
+          const { data: absData } = await supabaseInstance.from('absence_requests').select('*').order('created_at', { ascending: false });
+          if (absData) setAbsenceRequests(absData);
+        })(),
+        (async () => {
           const { data, error } = await supabaseInstance
             .from('system_settings')
             .select('*')
@@ -212,6 +219,8 @@ export const AppProvider = ({ children }) => {
               ...(data.company_name && { companyName: data.company_name }),
               ...(data.company_address !== undefined && { companyAddress: data.company_address }),
               ...(data.company_nif !== undefined && { companyNif: data.company_nif }),
+              ...(data.company_email !== undefined && { companyEmail: data.company_email }),
+              ...(data.company_phone !== undefined && { companyPhone: data.company_phone }),
               ...(data.dark_mode !== undefined && { darkMode: data.dark_mode }),
               ...(data.app_width && { appWidth: data.app_width }),
               ...(data.gemini_api_key !== undefined && { geminiApiKey: data.gemini_api_key }),
@@ -219,6 +228,8 @@ export const AppProvider = ({ children }) => {
               ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
               ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),
               ...(data.entry_tolerance_minutes != null && { entryToleranceMinutes: Number(data.entry_tolerance_minutes) }),
+              ...(data.nav_mode && { navMode: data.nav_mode }),
+              ...(data.absence_config && { absenceConfig: data.absence_config }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
             if (data.notification_preferences) setNotificationPreferences(data.notification_preferences);
@@ -318,6 +329,14 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
+    const channelAbsences = supabaseInstance
+      .channel('realtime-absences')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'absence_requests' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setAbsenceRequests)(payload.old);
+        else upsertById(setAbsenceRequests)(payload.new);
+      })
+      .subscribe();
+
     const channelWorkers = supabaseInstance
       .channel('realtime-workers')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workers' }, (payload) => {
@@ -339,6 +358,7 @@ export const AppProvider = ({ children }) => {
       supabaseInstance.removeChannel(channelApprovals);
       supabaseInstance.removeChannel(channelLogs);
       supabaseInstance.removeChannel(channelChangeReqs);
+      supabaseInstance.removeChannel(channelAbsences);
       supabaseInstance.removeChannel(channelWorkers);
     };
   }, [isDbReady]);
@@ -364,6 +384,7 @@ export const AppProvider = ({ children }) => {
     }
     else if (colName === 'correction_items') prependState(setCorrectionItems);
     else if (colName === 'documents' || colName === 'documentos') updateState(setDocuments);
+    else if (colName === 'absence_requests') prependState(setAbsenceRequests);
 
     // Supabase Persistence
     if (!supabaseInstance) return;
@@ -387,6 +408,10 @@ export const AppProvider = ({ children }) => {
         breakStart: data.breakStart,
         breakEnd: data.breakEnd,
         hours: data.hours || data.totalHours,
+        description: data.description ?? null,
+        source: data.source ?? null,
+        edited_at: data.edited_at ?? null,
+        edited_source: data.edited_source ?? null,
         check_in_lat: data.check_in_lat ?? null,
         check_in_lng: data.check_in_lng ?? null,
         geo_verified: data.geo_verified ?? null,
@@ -583,6 +608,15 @@ export const AppProvider = ({ children }) => {
     });
   };
 
+  const saveAbsenceConfig = async (config) => {
+    setSystemSettings(prev => ({ ...prev, absenceConfig: config }));
+    if (!supabaseInstance) return;
+    const { error } = await supabaseInstance
+      .from('system_settings')
+      .upsert({ id: 1, absence_config: config, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) console.error('Erro ao gravar absence_config:', error);
+  };
+
   const saveGmailQueryConfig = async (config) => {
     setGmailQueryConfig(config);
     if (!supabaseInstance) return;
@@ -601,6 +635,8 @@ export const AppProvider = ({ children }) => {
       company_name: newSettings.companyName ?? '',
       company_address: newSettings.companyAddress ?? '',
       company_nif: newSettings.companyNif ?? '',
+      company_email: newSettings.companyEmail ?? '',
+      company_phone: newSettings.companyPhone ?? '',
       dark_mode: newSettings.darkMode ?? false,
       app_width: newSettings.appWidth ?? '1920',
       gemini_api_key: newSettings.geminiApiKey ?? '',
@@ -608,6 +644,7 @@ export const AppProvider = ({ children }) => {
       tolerancia_aviso:  newSettings.toleranciaAviso  ?? 10,
       minute_interval: newSettings.minuteInterval ?? 30,
       entry_tolerance_minutes: newSettings.entryToleranceMinutes ?? 10,
+      nav_mode: newSettings.navMode ?? 'sidebar',
       updated_at: new Date().toISOString(),
     };
     const { error } = await supabaseInstance
@@ -639,13 +676,15 @@ export const AppProvider = ({ children }) => {
     clientApprovals, setClientApprovals,
     appNotifications, setAppNotifications,
     workerChangeRequests, setWorkerChangeRequests,
+    absenceRequests, setAbsenceRequests,
     isDbReady,
     adminStats,
     saveToDb,
     handleDelete,
     handleApproveMonth,
     supabase: supabaseInstance,
-    notificationPreferences, updateNotificationPreferences
+    notificationPreferences, updateNotificationPreferences,
+    saveAbsenceConfig,
   };
 
   return (

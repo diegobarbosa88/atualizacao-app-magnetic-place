@@ -1,42 +1,49 @@
 {
   "version": "1.0",
-  "timestamp": "2026-05-21T00:28:49.427Z",
+  "timestamp": "2026-06-09T00:00:00.000Z",
   "phase": null,
-  "phase_name": "Ad-hoc UI fixes — Portal Cliente & Validação",
+  "phase_name": "ad-hoc: ajudas calculadora + TOConline + refatoracao-v2",
   "phase_dir": null,
   "plan": null,
   "task": null,
   "total_tasks": null,
   "status": "paused",
+  "branch": "refatoracao-v2",
   "completed_tasks": [
-    {"id": 1, "name": "Fix responsividade mobile modais email + rejeitar (app.jsx)", "status": "done", "commit": "eab11fc"},
-    {"id": 2, "name": "Remover ecrã seleção modo — ir direto para editor precisão", "status": "done", "commit": "a8641e5"},
-    {"id": 3, "name": "Redesenhar editor precisão — worker tabs, Entrada/Saída + pausa expansível", "status": "done", "commit": "a8641e5"},
-    {"id": 4, "name": "Mostrar total horas por trabalhador + antes/depois na edição", "status": "done", "commit": "5f5b096"},
-    {"id": 5, "name": "Fix service worker — forçar activação imediata para evitar página em branco", "status": "done", "commit": "b35efce"}
+    {"id": 1, "name": "Redistribuir button na tabela estimativa", "status": "done", "commit": "4d01aec"},
+    {"id": 2, "name": "Confirmar salva valores modificados (sem redistribuir)", "status": "done", "commit": "4d01aec"},
+    {"id": 3, "name": "Historico: read-only para meses TOConline", "status": "done", "commit": "4d01aec"},
+    {"id": 4, "name": "Selecao por checkbox para redistribuicao granular", "status": "done", "commit": "4d01aec"},
+    {"id": 5, "name": "Estimativa de ajudas de meses anteriores (AjudasCalculadora + FaturarClienteModal)", "status": "done", "commit": "4d01aec"},
+    {"id": 6, "name": "Fix extrairValorObs prioriza simbolo EUR para extracao correta", "status": "done", "commit": "4d01aec"},
+    {"id": 7, "name": "Offset de mes: faturas do mes M referem-se a horas do mes M-1", "status": "done", "commit": "4d01aec"},
+    {"id": 8, "name": "Fix valor recibo a mostrar corretamente apos offset", "status": "done", "commit": "4d01aec"},
+    {"id": 9, "name": "Fix horas na estimativa sao do mes anterior", "status": "done", "commit": "4d01aec"},
+    {"id": 10, "name": "Redistribuir usa diferenca (alvo - total) e distribui proporcionalmente", "status": "done", "commit": "4d01aec"}
   ],
-  "remaining_tasks": [],
-  "blockers": [
-    {
-      "description": "Portal do cliente mostra página em branco — causa suspeita: SW antigo a servir ficheiros cacheados com hashes desactualizados",
-      "type": "technical",
-      "workaround": "SW fix deployed (b35efce). User should hard refresh (Ctrl+Shift+R) once. Se persistir, adicionar React ErrorBoundary para capturar o crash exacto."
-    }
+  "remaining_tasks": [
+    {"id": 11, "name": "Commit ficheiros restantes: TOConlinePanel.jsx (+462 linhas), AppContext.jsx, package.json, vercel.json, .gitignore, public/version.json, STATE.md", "status": "not_started"}
   ],
+  "blockers": [],
   "human_actions_pending": [
-    {
-      "action": "Testar portal do cliente após deploy b35efce — verificar se página em branco foi resolvida",
-      "context": "Fix ao service worker foi deployed mas não confirmado pelo utilizador",
-      "blocking": false
-    }
+    {"action": "Aplicar migracao SQL em producao: supabase/migrations/20260610_ajudas_total_fatura.sql", "context": "Adiciona coluna total_fatura em ajudas_faturadas_clientes — necessaria para guardar total por cliente no handleConfirmar", "blocking": false},
+    {"action": "Testar AjudasCalculadora em producao para validar offset de mes e redistribuicao", "context": "Logica de offset (mesAnterior/mesSeguinte) implementada mas nao testada em producao com dados reais", "blocking": false}
   ],
   "decisions": [
-    {"decision": "Remover step de seleção de modo (Quick vs Precision) — ir direto para editor precisão", "rationale": "Utilizador pediu simplificação do fluxo", "phase": "ad-hoc"},
-    {"decision": "Worker tabs horizontais em vez de painel lateral", "rationale": "Melhor para mobile, mais intuitivo", "phase": "ad-hoc"},
-    {"decision": "Campos Entrada/Saída em destaque + pausa como toggle expansível", "rationale": "Ordem pedida pelo utilizador — simplifica UX sem perder funcionalidade", "phase": "ad-hoc"},
-    {"decision": "Service worker com SKIP_WAITING + controllerchange reload", "rationale": "Evitar conflito entre SW antigo e novos hashes após deploy", "phase": "ad-hoc"}
+    {"decision": "Faturas do mes M referem-se a horas do mes M-1 (offset)", "rationale": "Confirmado pelo utilizador — as faturas de maio sao das horas de abril", "phase": "ad-hoc"},
+    {"decision": "Redistribuir distribui a diferenca (ajudasEfetivoMes - totalAjudasMes) proporcionalmente por fatura", "rationale": "Comportamento pedido: nao redistribuir o total, apenas a diferenca", "phase": "ad-hoc"},
+    {"decision": "Historico: meses TOConline (sem logs) sao read-only", "rationale": "Valores extraidos de faturas TOConline nao devem ser editaveis no historico", "phase": "ad-hoc"},
+    {"decision": "extrairValorObs prioriza padrao EUR+VALOR antes de fallback numerico", "rationale": "Texto das notas TOConline contem multiplos numeros; valor de ajudas esta sempre apos simbolo EUR", "phase": "ad-hoc"}
   ],
-  "uncommitted_files": [".planning/STATE.md", "public/version.json"],
-  "next_action": "Confirmar com utilizador se portal do cliente já abre correctamente. Se persistir, adicionar React ErrorBoundary em app.jsx para capturar o erro exacto.",
-  "context_notes": "Sessão de melhorias ad-hoc ao portal do cliente e portal de validação. Todas as mudanças estão deployed em app-magnetic.vercel.app. Phase 18 (reconciliação) completa. Phase 14 (editor blocos JSON) em planning. Próximo trabalho formal: /gsd-execute-phase 14."
+  "uncommitted_files": [
+    ".gitignore",
+    ".planning/STATE.md",
+    "package.json",
+    "public/version.json",
+    "src/context/AppContext.jsx",
+    "src/features/admin/faturas/TOConlinePanel.jsx",
+    "vercel.json"
+  ],
+  "next_action": "Commit dos ficheiros restantes (TOConlinePanel.jsx e outros), depois testar em producao",
+  "context_notes": "Branch refatoracao-v2. Toda a logica de ajudas esta em AjudasCalculadora.jsx. Fonte dos valores: tabela receipt_validations.ajudas_custo_extraidas. TOConlinePanel.jsx tem mudancas significativas nao commitadas (+462 linhas)."
 }

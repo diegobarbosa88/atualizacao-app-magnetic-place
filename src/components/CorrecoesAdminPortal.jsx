@@ -81,7 +81,9 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
                 endTime: normEnd,
                 breakStart: editedBreakStart,
                 breakEnd: editedBreakEnd,
-                hours
+                hours,
+                edited_at: new Date().toISOString(),
+                edited_source: 'batch',
               });
             } else if (normStart && normEnd && day.rawDate) {
               const newId = `l${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -94,7 +96,8 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
                 endTime: normEnd,
                 breakStart: editedBreakStart || null,
                 breakEnd: editedBreakEnd || null,
-                hours
+                hours,
+                source: 'batch',
               });
             }
           }
@@ -245,7 +248,9 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
                 endTime: normEnd,
                 breakStart: newBreakStart,
                 breakEnd: newBreakEnd,
-                hours
+                hours,
+                edited_at: new Date().toISOString(),
+                edited_source: 'batch',
               });
             }
           } else if (normStart && normEnd && rowDate) {
@@ -259,7 +264,8 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
               endTime: normEnd,
               breakStart: newBreakStart || null,
               breakEnd: newBreakEnd || null,
-              hours
+              hours,
+              source: 'batch',
             });
           }
         }
@@ -434,7 +440,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
       </div>
 
       {draft && (
-        <div className="fixed bottom-8 right-8 z-50 bg-white rounded-[2rem] shadow-2xl border border-slate-200 p-6 w-80 animate-fade-in">
+        <div className="fixed bottom-4 right-4 sm:bottom-8 sm:right-8 z-50 bg-white rounded-[2rem] shadow-2xl border border-slate-200 p-6 w-80 max-w-[calc(100vw-2rem)] animate-fade-in">
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Editando</p>

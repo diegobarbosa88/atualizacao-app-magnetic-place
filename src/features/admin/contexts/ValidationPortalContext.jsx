@@ -3,7 +3,9 @@ import { toISODateLocal } from '../../../utils/dateUtils';
 
 const ValidationPortalContext = createContext();
 
-export const ValidationPortalProvider = ({ children, portalSubTab, setPortalSubTab, portalMonth, setPortalMonth }) => {
+export const ValidationPortalProvider = ({ children, defaultTab = 'envios' }) => {
+  const [portalSubTab, setPortalSubTab] = useState(defaultTab);
+  const [portalMonth, setPortalMonth] = useState(new Date());
   const [portalWorkersSort, setPortalWorkersSort] = useState({ key: 'name', direction: 'asc' });
   const [valSortConfig, setValSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [clientPortalLinkFilter, setClientPortalLinkFilter] = useState({

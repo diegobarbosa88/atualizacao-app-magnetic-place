@@ -1,4 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import {
   AlertCircle, CheckCircle, ChevronLeft, ChevronRight, LogOut, Mail,
@@ -90,9 +91,15 @@ export default function App() {
     return () => clearTimeout(t);
   }, [updateAvailable]);
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const navigate = useNavigate();
+  const location = useLocation();
+
   const [portalMonth, setPortalMonth] = useState(new Date());
-  const [portalSubTab, setPortalSubTab] = useState('envios');
+  const portalSubTab = useMemo(() => {
+    const match = location.pathname.match(/^\/admin\/portal_validacao\/([^/]+)/);
+    return match ? match[1] : 'envios';
+  }, [location.pathname]);
+  const setPortalSubTab = (tab) => navigate(`/admin/portal_validacao/${tab}`);
   const [printingReport, setPrintingReport] = useState(null);
   const [clienteSelecionado, setClienteSelecionado] = useState(null);
   const [modalEmailAberto, setModalEmailAberto] = useState(false);
@@ -167,20 +174,18 @@ export default function App() {
   }, [currentUser?.id, myNotifications, supabase]);
 
   useEffect(() => {
-    if (activeTab === 'portal_validacao' && portalSubTab === 'correcoes' && currentUser?.role === 'admin' && myNotifications.length > 0) {
+    if ((location.pathname.startsWith('/admin/team') || location.pathname.startsWith('/admin/clients')) && currentUser?.role === 'admin' && myNotifications.length > 0) {
       const toDismiss = myNotifications.filter(n => n.title?.includes('Pedido de Correção') || n.title?.includes('MENSAGEM DE DIVERGÊNCIA'));
       if (toDismiss.length > 0) {
         toDismiss.forEach(n => handleDismissNotif(n.id));
       }
     }
-  }, [activeTab, portalSubTab, myNotifications, currentUser?.role]);
+  }, [location.pathname, myNotifications, currentUser?.role]);
 
   const handleBannerClick = (notif) => {
     handleDismissNotif(notif.id);
     if ((notif.title?.includes('Pedido de Correção') || notif.title?.includes('Divergência Reportada') || notif.title?.includes('MENSAGEM DE DIVERGÊNCIA')) && currentUser.role === 'admin') {
-      setActiveTab('portal_validacao');
-      setPortalSubTab('correcoes');
-      setView('admin');
+      navigate('/admin/team?source=workers');
     }
   };
 
@@ -190,6 +195,8 @@ export default function App() {
     setView(role);
     localStorage.setItem('magnetic_view', role);
     localStorage.setItem('magnetic_user', JSON.stringify(userData));
+    if (role === 'admin') navigate('/admin/overview');
+    else if (role === 'worker') navigate('/worker');
   };
 
   const handleLogout = () => {
@@ -197,7 +204,17 @@ export default function App() {
     setView('login');
     localStorage.removeItem('magnetic_view');
     localStorage.removeItem('magnetic_user');
+    navigate('/login');
   };
+
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname === '') {
+      if (view === 'admin') navigate('/admin/overview', { replace: true });
+      else if (view === 'worker') navigate('/worker', { replace: true });
+      else if (view === 'client_portal') { /* permanece em / com ?client= */ }
+      else navigate('/login', { replace: true });
+    }
+  }, []);
 
   const toClientLinkId = (id) => {
     if (!id) return null;
@@ -299,6 +316,7 @@ export default function App() {
     const dateToSave = isMain ? formData.date : inlineDate;
     const wId = (view === 'admin' && auditWorkerId) ? auditWorkerId : currentUser.id;
     const logId = formData.id || `l${Date.now()}`;
+    const isEdit = !!formData.id;
     const toMins = (t) => { if (!t || t === '--:--') return 0; const [h, m] = t.split(':'); return parseInt(h) * 60 + parseInt(m); };
     const newStart = toMins(formData.startTime);
     const newEnd = toMins(formData.endTime);
@@ -308,7 +326,11 @@ export default function App() {
       const existingEnd = toMins(log.endTime);
       if (newStart < existingEnd && newEnd >= existingStart) { alert(`Já existe um registo das ${log.startTime} às ${log.endTime} nesse dia.`); return; }
     }
-    saveToDb('logs', logId, { ...formData, startTime: formData.startTime, endTime: formData.endTime, breakStart: formData.breakStart, breakEnd: formData.breakEnd, date: dateToSave, hours, workerId: wId, id: logId });
+    const actorSource = view === 'admin' ? 'manual_admin' : 'manual_worker';
+    const sourceFields = isEdit
+      ? { edited_at: new Date().toISOString(), edited_source: actorSource }
+      : { source: actorSource };
+    saveToDb('logs', logId, { ...formData, startTime: formData.startTime, endTime: formData.endTime, breakStart: formData.breakStart, breakEnd: formData.breakEnd, date: dateToSave, hours, workerId: wId, id: logId, ...sourceFields });
     if (isMain && onResetMainForm) { const resetClientId = view === 'worker' ? (currentUser.defaultClientId || '') : ''; onResetMainForm(resetClientId); }
   };
 
@@ -345,7 +367,7 @@ export default function App() {
           </button>
         </div>
       )}
-      {(view === 'admin' || view === 'worker') && currentUser && myNotifications.length > 0 && (
+      {(location.pathname.startsWith('/admin') || location.pathname.startsWith('/worker')) && currentUser && myNotifications.length > 0 && (
         <div className="fixed top-4 left-4 right-4 z-[9999] pointer-events-none space-y-3 max-w-xl mx-auto">
           {myNotifications.map(notif => (
             <div key={notif.id} onClick={() => handleBannerClick(notif)} className={`pointer-events-auto animate-in slide-in-from-top-4 duration-700 ${notif.title?.includes('Pedido de Correção') ? 'cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-all' : ''}`}>
@@ -375,8 +397,6 @@ export default function App() {
           currentUser={currentUser}
           currentMonth={currentMonth}
           setCurrentMonth={setCurrentMonth}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
           auditWorkerId={auditWorkerId}
           setAuditWorkerId={setAuditWorkerId}
           setShowFinReport={setShowFinReport}
