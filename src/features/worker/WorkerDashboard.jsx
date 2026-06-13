@@ -27,6 +27,7 @@ import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
 import GeoSuggestionCard from './worker-dashboard/GeoSuggestionCard';
 import WorkerScheduleTab from './worker-dashboard/WorkerScheduleTab';
+import WorkerCalendar from './worker-dashboard/WorkerCalendar';
 import ScheduleModal from './worker-dashboard/ScheduleModal';
 import ProfileModal from './worker-dashboard/ProfileModal';
 
@@ -313,120 +314,20 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             </div>
           )}
 
-          {/* Day log list */}
-          <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden mb-12">
-            <div className="hidden md:grid grid-cols-[120px_1fr_150px] gap-6 bg-slate-50 border-b border-slate-100 px-8 py-5">
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Dia</div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">Actividades</div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-right">Ação</div>
-            </div>
-            <div className="divide-y divide-slate-100">
-              {daysList.map(ds => {
-                const dayLogs = monthLogs.filter(l => l.date === ds);
-                const dayTotalTotal = dayLogs.reduce((acc, l) => acc + (l.hours || 0), 0);
-                const isCurrentInline = inlineEditingDate === ds;
-                const isExpanded = expandedDays.includes(ds);
-                const dObj = new Date(ds);
-                const isDayBeforeStart = workerStartDate && new Date(ds) < workerStartDate;
-
-                const toggleExpand = () => {
-                  if (isExpanded) {
-                    setExpandedDays(prev => prev.filter(d => d !== ds));
-                  } else if (dayLogs.length > 0) {
-                    setExpandedDays(prev => [...prev, ds]);
-                  } else {
-                    openTimeEntryModal(ds);
-                  }
-                };
-
-                return (
-                  <React.Fragment key={ds}>
-                    <div
-                      onClick={toggleExpand}
-                      className={`px-3 py-2.5 md:px-8 md:py-5 transition-all border-b border-slate-100 cursor-pointer hover:bg-slate-50 ${dObj.getDay() === 0 || dObj.getDay() === 6 ? 'bg-slate-50/40' : ''} ${isExpanded ? 'bg-indigo-50/20' : ''}`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        {/* Dia */}
-                        <span className="text-base font-black text-slate-800 w-5 text-right shrink-0">{dObj.getDate()}</span>
-                        <span className="text-[10px] uppercase font-black text-slate-400 w-7 shrink-0">{['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][dObj.getDay()]}</span>
-
-                        {/* Horas / estado */}
-                        <div className="flex-1 flex items-center gap-1.5 min-w-0">
-                          {dayTotalTotal > 0 ? (
-                            <span className="text-xs font-black text-teal-600 uppercase tracking-wide">{formatHours(dayTotalTotal)} registradas</span>
-                          ) : (
-                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">—</span>
-                          )}
-                          {(dayRequestsByDate[ds] || []).map(({ item, corr }) => {
-                            if (corr.status !== 'submitted' && corr.status !== 'under_review') return null;
-                            const isDeletion = corr.type === 'deletion_request';
-                            const label = isDeletion ? 'Eliminação' : item.before?.startTime ? 'Ajuste' : 'Registo';
-                            return (
-                              <span key={item.id} className="inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 shrink-0">
-                                ⏳ {label}
-                              </span>
-                            );
-                          })}
-                        </div>
-
-                        {/* Ações */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {!myApproval && !isDayBeforeStart && !isLimitedWorker && (
-                            <>
-                              <button onClick={(e) => { e.stopPropagation(); handleQuickRegister(ds); }} title="Registo Rápido" className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-lg transition-all"><Zap size={13} /></button>
-                              <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"><Plus size={13} /></button>
-                            </>
-                          )}
-                          {isLimitedWorker && (
-                            <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds); }} className="p-1.5 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-lg transition-all"><Plus size={13} /></button>
-                          )}
-                          {isDayBeforeStart && <span className="text-[9px] text-slate-300 font-bold">—</span>}
-                          {isExpanded ? <ChevronUp size={14} className="text-indigo-400 ml-1" /> : <ChevronDown size={14} className="text-slate-300 ml-1" />}
-                        </div>
-                      </div>
-                    </div>
-
-                    {isExpanded && (
-                      <div className="p-4 md:px-12 md:py-8 bg-slate-50/50 border-b border-slate-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <div className="space-y-4">
-                          {dayLogs.length > 0 && (
-                            <div className="space-y-3">
-                              {dayLogs.map(log => (
-                                <div
-                                  key={log.id}
-                                  onClick={() => isLimitedWorker ? openTimeEntryModal(ds, log.id) : openIncompleteLogModal(log)}
-                                  className="bg-white px-3 py-2.5 sm:p-4 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm w-full cursor-pointer hover:bg-indigo-50/40 transition-all"
-                                >
-                                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg border border-indigo-100 uppercase shrink-0 max-w-[90px] truncate">{clients.find(c => c.id === log.clientId)?.name || 'Cliente'}</span>
-                                    <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">{log.startTime}–{log.endTime}</div>
-                                    {(log.breakStart || log.breakEnd) && (
-                                      <div className="text-[9px] font-bold text-orange-500 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100 hidden sm:block shrink-0">
-                                        Pausa: {log.breakStart || '--:--'}–{log.breakEnd || '--:--'}
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2 shrink-0 border-l border-slate-100 pl-3">
-                                    <span className="text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
-                                    {!myApproval && !isLimitedWorker && (
-                                      <button onClick={(e) => { e.stopPropagation(); handleDelete('logs', log.id); }} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all shadow-sm"><Trash2 size={16} /></button>
-                                    )}
-                                    {isLimitedWorker && (
-                                      <button onClick={(e) => { e.stopPropagation(); openTimeEntryModal(ds, log.id); }} className="p-1.5 text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-xl transition-all shadow-sm"><Edit2 size={14} /></button>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </React.Fragment>
-                );
-              })}
-            </div>
-          </div>
+          <WorkerCalendar
+            daysList={daysList}
+            monthLogs={monthLogs}
+            dayRequestsByDate={dayRequestsByDate}
+            clients={clients}
+            myApproval={myApproval}
+            isLimitedWorker={isLimitedWorker}
+            workerStartDate={workerStartDate}
+            onAddEntry={openTimeEntryModal}
+            onEditLog={openIncompleteLogModal}
+            onDeleteLog={(log) => handleDelete('logs', log.id)}
+            onEditLimitedLog={openTimeEntryModal}
+            onQuickRegister={handleQuickRegister}
+          />
 
           {(() => {
             const statusMap = {
