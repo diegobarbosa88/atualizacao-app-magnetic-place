@@ -27,6 +27,8 @@ import WorkerHeroStats from './worker-dashboard/WorkerHeroStats';
 import InServiceCard from './worker-dashboard/InServiceCard';
 import GeoSuggestionCard from './worker-dashboard/GeoSuggestionCard';
 import WorkerScheduleTab from './worker-dashboard/WorkerScheduleTab';
+import ScheduleModal from './worker-dashboard/ScheduleModal';
+import ProfileModal from './worker-dashboard/ProfileModal';
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const {
@@ -568,51 +570,23 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         </div>
       )}
 
-      {/* Modal Horários — mobile */}
-      {scheduleModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] flex flex-col sm:hidden">
-          <button className="flex-shrink-0 h-16" onClick={() => setScheduleModalOpen(false)} aria-label="Fechar" />
-          <div className="flex-1 bg-white rounded-t-3xl overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Meus Horários</h2>
-              <button onClick={() => setScheduleModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 px-4 py-4">
-              <WorkerScheduleTab
-                assigned={assigned}
-                currentUser={currentUser}
-                expandedSchedules={expandedSchedules}
-                toggleScheduleExpand={toggleScheduleExpand}
-                setDefaultSchedule={setDefaultSchedule}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <ScheduleModal
+        isOpen={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        assigned={assigned}
+        currentUser={currentUser}
+        expandedSchedules={expandedSchedules}
+        toggleScheduleExpand={toggleScheduleExpand}
+        setDefaultSchedule={setDefaultSchedule}
+      />
 
-      {/* Modal Perfil — mobile */}
-      {profileModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9998] flex flex-col sm:hidden">
-          <button className="flex-shrink-0 h-16" onClick={() => setProfileModalOpen(false)} aria-label="Fechar" />
-          <div className="flex-1 bg-white rounded-t-3xl overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
-              <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm">Meu Perfil</h2>
-              <button onClick={() => setProfileModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
-                <X size={18} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 px-4 py-4">
-              <WorkerProfile
-                worker={currentUser}
-                changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
-                documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <ProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        worker={currentUser}
+        changeRequests={(workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id)}
+        documents={(documents || []).filter(d => (d.workerId === currentUser?.id || d.worker_id === currentUser?.id) && d.status !== 'Rascunho')}
+      />
     </div>
   );
 };
