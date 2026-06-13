@@ -16,7 +16,7 @@ export default function WorkerCalendar({
 
   useEffect(() => {
     if (selectedDay && detailRef.current) {
-      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   }, [selectedDay]);
 
