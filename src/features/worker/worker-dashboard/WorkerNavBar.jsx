@@ -115,20 +115,6 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             )}
           </div>
 
-          {/* Perfil — visível apenas no mobile (desktop usa o botão na secção sm:flex) */}
-          <button
-            onClick={onOpenProfileModal}
-            className="relative p-1.5 text-slate-400 hover:text-indigo-600 transition-all sm:hidden"
-            title="Meu Perfil"
-          >
-            <UserCircle size={16} />
-            {pendingRequests > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-400 rounded-full text-[7px] font-black text-white flex items-center justify-center">
-                {pendingRequests}
-              </span>
-            )}
-          </button>
-
           {/* Logout — sempre visível */}
           <button onClick={onLogout} className="p-2 text-slate-400 hover:text-red-600 transition-all">
             <LogOut size={18} />
@@ -178,6 +164,13 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </span>
           }
           label="Documentos"
+        />
+        <TabButton
+          active={false}
+          onClick={onOpenProfileModal}
+          icon={<UserCircle size={20} />}
+          label="Perfil"
+          badge={pendingRequests}
         />
         {currentUser?.isAdmin && !currentUser?.isAdminImpersonating && (
           <TabButton
