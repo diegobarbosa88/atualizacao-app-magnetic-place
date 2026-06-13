@@ -50,6 +50,9 @@ export default function WorkerCalendar({
 
       {/* Calendar grid */}
       <div className="p-4 sm:p-6">
+        <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3 capitalize">
+          {new Date(daysList[0] + 'T00:00:00').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
+        </p>
         <div className="grid grid-cols-7 gap-1 mb-2">
           {WEEKDAYS.map(d => (
             <div key={d} className="text-center text-[9px] font-black uppercase tracking-widest text-slate-400 py-1">{d}</div>
