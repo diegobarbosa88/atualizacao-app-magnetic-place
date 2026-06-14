@@ -216,11 +216,6 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       />
 
       <main className="mx-auto px-4 sm:px-6 md:px-10 lg:px-16 mt-6 md:mt-8" style={{ maxWidth: 'var(--app-max-width)' }}>
-        <PendingCorrectionsPanel
-          pendingItems={pendingItems} resolvedItems={resolvedItems}
-          pendingCollapsed={pendingCollapsed} setPendingCollapsed={setPendingCollapsed}
-          dismissCorrection={dismissCorrection} labelKind={labelKind} corrections={corrections}
-        />
 
         {workerTab === 'perfil' && (
           <WorkerProfile
@@ -326,6 +321,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             onDeleteLog={(log) => handleDelete('logs', log.id)}
             onEditLimitedLog={openTimeEntryModal}
             onQuickRegister={handleQuickRegister}
+          />
+
+          <PendingCorrectionsPanel
+            pendingItems={pendingItems} resolvedItems={resolvedItems}
+            pendingCollapsed={pendingCollapsed} setPendingCollapsed={setPendingCollapsed}
+            dismissCorrection={dismissCorrection} labelKind={labelKind} corrections={corrections}
           />
 
           <PendingAlertsModal
