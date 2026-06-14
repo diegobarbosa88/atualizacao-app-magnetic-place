@@ -348,6 +348,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             monthLogs={monthLogs}
             logs={logs}
             isLimitedWorker={isLimitedWorker}
+            onQuickRegister={handleQuickRegister}
             onLimitedSuccess={() => {
               setTimeEntryModalOpen(false);
               setInlineEditingDate(null);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Users } from 'lucide-react';
+import { Calendar, Users, Zap } from 'lucide-react';
 import EntryForm from '../../../components/common/EntryForm';
 import RequestEntryCard from '../../../components/worker/RequestEntryCard';
 import ModalShell from '../../../components/common/ModalShell';
@@ -11,6 +11,7 @@ export default function TimeEntryModal({
   formData, onFormChange, onSave, onBulkSave,
   clients, assignedClients, currentUser, systemSettings,
   monthLogs, logs, isLimitedWorker, onLimitedSuccess,
+  onQuickRegister,
 }) {
   const [selectedDays, setSelectedDays] = useState([]);
   const [bulkMode, setBulkMode] = useState(false);
@@ -54,9 +55,9 @@ export default function TimeEntryModal({
       accent="indigo"
     >
       <div onClick={e => e.stopPropagation()}>
-        {/* Bulk mode toggle — non-limited workers only */}
+        {/* Toolbar — non-limited workers only */}
         {!isLimitedWorker && (
-          <div className="px-5 py-3 border-b border-slate-100 shrink-0">
+          <div className="px-5 py-3 border-b border-slate-100 shrink-0 flex items-center gap-2 flex-wrap">
             <button
               onClick={() => {
                 setBulkMode(v => !v);
@@ -69,8 +70,21 @@ export default function TimeEntryModal({
               }`}
             >
               <Users size={14} />
-              {bulkMode ? 'Modo Múltiplos Dias Ativo' : 'Registar em Múltiplos Dias'}
+              {bulkMode ? 'Modo Múltiplos Dias Ativo' : 'Múltiplos Dias'}
             </button>
+
+            {!bulkMode && onQuickRegister && (
+              <button
+                onClick={() => {
+                  const saved = onQuickRegister(initialDate);
+                  if (saved !== false) onClose();
+                }}
+                className="flex items-center gap-2 text-xs font-black uppercase tracking-widest px-4 py-2 rounded-xl bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-100 transition-all"
+              >
+                <Zap size={14} />
+                Registo Rápido
+              </button>
+            )}
           </div>
         )}
 
