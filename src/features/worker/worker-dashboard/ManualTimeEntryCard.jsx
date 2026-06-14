@@ -29,6 +29,8 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
     [monthLogs, todayStr]
   );
 
+  const hasDefaults = !!(currentUser?.defaultClientId && currentUser?.defaultScheduleId);
+
   const dayName = DAY_NAMES[today.getDay()];
   const dateLabel = `${today.getDate()} de ${today.toLocaleDateString('pt-PT', { month: 'long' })} · ${dayName}`;
 
@@ -52,10 +54,16 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
 
   const handleQuickRegister = async (e) => {
     e.stopPropagation();
+    if (!hasDefaults) {
+      setExpanded(true);
+      return;
+    }
     await onQuickRegister(todayStr);
     setQuickSaved(true);
     setTimeout(() => setQuickSaved(false), 4000);
   };
+
+  const showZap = todayLogs.length === 0;
 
   return (
     <div className="mb-6">
@@ -85,14 +93,16 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
           </button>
 
           <div className="flex items-center gap-2 shrink-0 ml-3">
-            <button
-              onClick={handleQuickRegister}
-              title="Registo rápido com horário padrão"
-              className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl border border-amber-100 transition-colors text-[10px] font-black uppercase tracking-wide"
-            >
-              <Zap size={13} />
-              <span className="hidden sm:inline">Rápido</span>
-            </button>
+            {showZap && (
+              <button
+                onClick={handleQuickRegister}
+                title={hasDefaults ? 'Registo rápido com horário padrão' : 'Preencher horário manualmente'}
+                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl border border-amber-100 transition-colors text-[10px] font-black uppercase tracking-wide"
+              >
+                <Zap size={13} />
+                <span className="hidden sm:inline">Rápido</span>
+              </button>
+            )}
             <button onClick={handleToggle} className="p-2 hover:bg-slate-50 rounded-xl transition-colors">
               {expanded
                 ? <ChevronUp size={16} className="text-slate-400" />
