@@ -296,6 +296,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               clients={clients}
               currentUser={currentUser}
               onSave={handleSaveEntry}
+              onQuickRegister={handleQuickRegister}
               monthLogs={monthLogs}
               systemSettings={systemSettings}
             />
