@@ -295,8 +295,19 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             <ManualTimeEntryCard
               clients={clients}
               currentUser={currentUser}
-              onSave={handleSaveEntry}
-              onQuickRegister={handleQuickRegister}
+              onSave={async (formData, date) => {
+                await handleSaveEntry(formData, false, date);
+                setSuccessMsg('Horário registado com sucesso!');
+                setTimeout(() => setSuccessMsg(''), 4000);
+              }}
+              onQuickRegister={(date) => {
+                const saved = handleQuickRegister(date);
+                if (saved !== false) {
+                  setSuccessMsg('Registo rápido guardado!');
+                  setTimeout(() => setSuccessMsg(''), 4000);
+                }
+                return saved;
+              }}
               monthLogs={monthLogs}
               systemSettings={systemSettings}
             />
@@ -339,7 +350,11 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             daysList={daysList}
             formData={inlineFormData}
             onFormChange={setInlineFormData}
-            onSave={async (formData, date) => { await handleSaveWithGeoCheck(formData, false, date); }}
+            onSave={async (formData, date) => {
+              await handleSaveWithGeoCheck(formData, false, date);
+              setSuccessMsg('Horário registado com sucesso!');
+              setTimeout(() => setSuccessMsg(''), 4000);
+            }}
             onBulkSave={handleBulkSave}
             clients={clients}
             assignedClients={currentUser?.assignedClients}
@@ -348,7 +363,14 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             monthLogs={monthLogs}
             logs={logs}
             isLimitedWorker={isLimitedWorker}
-            onQuickRegister={handleQuickRegister}
+            onQuickRegister={(date) => {
+              const saved = handleQuickRegister(date);
+              if (saved !== false) {
+                setSuccessMsg('Registo rápido guardado!');
+                setTimeout(() => setSuccessMsg(''), 4000);
+              }
+              return saved;
+            }}
             onLimitedSuccess={() => {
               setTimeEntryModalOpen(false);
               setInlineEditingDate(null);
