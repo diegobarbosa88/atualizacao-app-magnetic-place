@@ -398,7 +398,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           {validarSubTab === 'entradas' && <MovimentacoesTab />}
         </>
       ) : activeSubTab === 'templates' ? (
-        <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={supabase} />
+        <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} supabase={clientSupabase} />
       ) : activeSubTab === 'relatorios' ? (
         <ReportsEmbedded {...props} />
       ) : activeSubTab === 'faturas' ? (

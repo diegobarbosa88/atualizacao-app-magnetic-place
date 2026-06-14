@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     const erros = [];
 
     let body = {};
-    try { body = req.body || {}; } catch {}
+    try { body = req.body || {}; } catch (_) { /* body not parseable */ }
     const query = (body.query && body.query.trim()) ? body.query.trim() : GMAIL_QUERY;
 
     let listRes;
