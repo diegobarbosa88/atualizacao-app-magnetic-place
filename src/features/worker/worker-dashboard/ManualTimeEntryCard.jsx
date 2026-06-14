@@ -29,8 +29,6 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
     [monthLogs, todayStr]
   );
 
-  const hasDefaults = !!(currentUser?.defaultClientId && currentUser?.defaultScheduleId);
-
   const dayName = DAY_NAMES[today.getDay()];
   const dateLabel = `${today.getDate()} de ${today.toLocaleDateString('pt-PT', { month: 'long' })} · ${dayName}`;
 
@@ -54,13 +52,14 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
 
   const handleQuickRegister = async (e) => {
     e.stopPropagation();
-    if (!hasDefaults) {
+    const saved = onQuickRegister(todayStr);
+    if (saved === false) {
+      // sem horário padrão configurado para hoje — abre formulário manual
       setExpanded(true);
-      return;
+    } else {
+      setQuickSaved(true);
+      setTimeout(() => setQuickSaved(false), 4000);
     }
-    await onQuickRegister(todayStr);
-    setQuickSaved(true);
-    setTimeout(() => setQuickSaved(false), 4000);
   };
 
   const showZap = todayLogs.length === 0;
@@ -96,7 +95,7 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
             {showZap && (
               <button
                 onClick={handleQuickRegister}
-                title={hasDefaults ? 'Registo rápido com horário padrão' : 'Preencher horário manualmente'}
+                title="Registo rápido com horário padrão"
                 className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl border border-amber-100 transition-colors text-[10px] font-black uppercase tracking-wide"
               >
                 <Zap size={13} />

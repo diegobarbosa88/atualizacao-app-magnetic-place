@@ -175,18 +175,19 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     const s = schedules.find(s => s.id === currentUser?.defaultScheduleId) || myPersonals.find(p => p.id === currentUser?.defaultScheduleId);
     if (!currentUser?.defaultClientId || !s) {
       handleOpenInlineForm(ds);
-      return;
+      return false;
     }
     const dsConfig = getScheduleForDay(s, ds);
-    if (!dsConfig) { handleOpenInlineForm(ds); return; }
+    if (!dsConfig) { handleOpenInlineForm(ds); return false; }
     handleSaveEntry({
-      clientId: currentUser.defaultClientId, 
-      startTime: dsConfig.startTime, 
-      breakStart: dsConfig.breakStart, 
-      breakEnd: dsConfig.breakEnd, 
-      endTime: dsConfig.endTime, 
+      clientId: currentUser.defaultClientId,
+      startTime: dsConfig.startTime,
+      breakStart: dsConfig.breakStart,
+      breakEnd: dsConfig.breakEnd,
+      endTime: dsConfig.endTime,
       description: 'Registo Rápido (Padrão)'
     }, false, ds);
+    return true;
   }, [currentUser, schedules, myPersonals, handleSaveEntry, handleOpenInlineForm]);
 
   const savePersonalSchedule = useCallback(() => {
