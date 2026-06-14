@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutorial — Dashboard do Trabalhador · Magnetic Place</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f1f5f9; color: #1e293b; }
+
+  /* ── Layout ── */
+  .page { max-width: 960px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 22px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px; }
+  .subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
+  .section-title { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin: 36px 0 12px; }
+
+  /* ── Card base ── */
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }
+
+  /* ── Annotated wrapper ── */
+  .annotated { position: relative; }
+  .annotated .note {
+    position: absolute;
+    background: #0f172a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    z-index: 10;
+    line-height: 1.3;
+  }
+  .annotated .note::before {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    background: #0f172a;
+    border-radius: 1px;
+  }
+  .annotated .note.right::before  { left: -4px; top: 50%; transform: translateY(-50%) rotate(45deg); }
+  .annotated .note.left::before   { right: -4px; top: 50%; transform: translateY(-50%) rotate(45deg); }
+  .annotated .note.bottom::before { top: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); }
+  .annotated .note.top::before    { bottom: -4px; left: 50%; transform: translateX(-50%) rotate(45deg); }
+
+  .connector { position: absolute; z-index: 9; pointer-events: none; }
+
+  /* ── NavBar ── */
+  .navbar { background: #111827; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+  .navbar-brand { display: flex; align-items: center; gap: 8px; }
+  .navbar-logo { width: 28px; height: 28px; background: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: #111827; }
+  .navbar-name { color: #fff; font-size: 13px; font-weight: 800; }
+  .navbar-user { display: flex; align-items: center; gap: 10px; }
+  .navbar-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#6366f1,#8b5cf6); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 900; }
+  .navbar-username { color: #94a3b8; font-size: 12px; font-weight: 700; }
+  .bottom-tabs { background: #111827; border-top: 1px solid #1f2937; padding: 8px 0 12px; display: flex; }
+  .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px; cursor: pointer; position: relative; }
+  .tab-icon { font-size: 18px; }
+  .tab-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; }
+  .tab-item.active .tab-label { color: #fff; }
+  .tab-item.active .tab-icon { filter: brightness(10); }
+  .tab-badge { position: absolute; top: 4px; right: 18px; background: #ef4444; color: #fff; font-size: 8px; font-weight: 900; border-radius: 999px; padding: 1px 5px; }
+
+  /* ── Hero Stats ── */
+  .hero { padding: 16px 20px 20px; }
+  .hero-month { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .hero-month-label { font-size: 14px; font-weight: 900; color: #0f172a; }
+  .hero-month-nav { display: flex; gap: 4px; }
+  .hero-month-btn { width: 28px; height: 28px; border-radius: 8px; background: #f1f5f9; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #64748b; cursor: pointer; }
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .stat-box { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 12px; padding: 10px 12px; }
+  .stat-label { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; color: #94a3b8; margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: 900; color: #0f172a; line-height: 1; }
+  .stat-sub { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+  .progress-bar { height: 6px; background: #e2e8f0; border-radius: 99px; margin-top: 12px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #6366f1, #8b5cf6); border-radius: 99px; width: 67%; }
+
+  /* ── Manual Entry Card ── */
+  .entry-card { padding: 0; }
+  .entry-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid #f1f5f9; }
+  .entry-icon { width: 36px; height: 36px; background: #fef3c7; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .entry-title { font-size: 13px; font-weight: 900; color: #0f172a; }
+  .entry-sub { font-size: 11px; color: #94a3b8; margin-top: 1px; }
+  .entry-zap { margin-left: auto; background: #fef3c7; border: none; border-radius: 99px; padding: 7px 14px; font-size: 11px; font-weight: 900; color: #b45309; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+  .entry-body { padding: 14px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field-label { font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+  .field-input { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 700; color: #0f172a; }
+  .field-input.placeholder { color: #cbd5e1; }
+  .save-btn { margin: 0 20px 16px; background: #0f172a; color: #fff; border: none; border-radius: 12px; padding: 11px; font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; width: calc(100% - 40px); }
+
+  /* ── Calendar ── */
+  .calendar { padding: 16px; }
+  .cal-header { display: flex; gap: 0; margin-bottom: 8px; }
+  .cal-day-name { flex: 1; text-align: center; font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; padding: 4px 0; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .cal-cell { border-radius: 10px; padding: 5px 3px; min-height: 54px; background: #f8fafc; border: 1px solid #f1f5f9; display: flex; flex-direction: column; gap: 2px; }
+  .cal-cell.empty { background: transparent; border-color: transparent; }
+  .cal-cell.today { background: #eff6ff; border-color: #bfdbfe; }
+  .cal-cell.has-log { background: #f0fdf4; border-color: #bbf7d0; }
+  .cal-cell.weekend { background: #fafafa; }
+  .cal-num { font-size: 10px; font-weight: 900; color: #64748b; text-align: center; }
+  .cal-cell.today .cal-num { color: #2563eb; }
+  .cal-log { background: #dcfce7; border-radius: 5px; padding: 2px 4px; font-size: 8px; font-weight: 900; color: #15803d; text-align: center; }
+  .cal-log-time { font-size: 7px; color: #4ade80; font-weight: 700; }
+  .cal-add { background: #f1f5f9; border-radius: 6px; text-align: center; font-size: 11px; color: #cbd5e1; padding: 2px; cursor: pointer; margin-top: auto; }
+  .cal-cell.today .cal-add { background: #dbeafe; color: #93c5fd; }
+
+  /* ── Corrections Panel ── */
+  .corr-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px; cursor: pointer; }
+  .corr-icon { width: 32px; height: 32px; background: #fef3c7; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .corr-title { font-size: 12px; font-weight: 900; color: #0f172a; flex: 1; }
+  .corr-badge { background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 900; padding: 3px 10px; border-radius: 99px; }
+  .corr-chevron { color: #94a3b8; font-size: 14px; }
+
+  /* ── Tutorial Steps ── */
+  .steps { display: flex; flex-direction: column; gap: 20px; margin-top: 8px; }
+  .step { display: flex; gap: 16px; align-items: flex-start; }
+  .step-num { width: 32px; height: 32px; background: #0f172a; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 900; flex-shrink: 0; }
+  .step-body { flex: 1; }
+  .step-title { font-size: 14px; font-weight: 900; color: #0f172a; margin-bottom: 4px; }
+  .step-text { font-size: 13px; color: #475569; line-height: 1.6; }
+  .step-tag { display: inline-block; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; color: #475569; margin: 3px 2px; }
+  .step-tag.amber { background: #fef3c7; border-color: #fde68a; color: #92400e; }
+  .step-tag.green { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+  .step-tag.blue  { background: #dbeafe; border-color: #bfdbfe; color: #1e40af; }
+  .step-tag.rose  { background: #ffe4e6; border-color: #fecdd3; color: #9f1239; }
+
+  /* ── Tip box ── */
+  .tip { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px 16px; display: flex; gap: 10px; align-items: flex-start; margin-top: 8px; }
+  .tip-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .tip-text { font-size: 13px; color: #166534; line-height: 1.6; }
+  .tip-text strong { font-weight: 900; }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 32px 0; }
+
+  /* ── Overlay labels ── */
+  .label-group { position: absolute; display: flex; align-items: center; gap: 6px; }
+  .label-pill { background: rgba(15,23,42,.85); backdrop-filter: blur(4px); color: #fff; font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 99px; white-space: nowrap; letter-spacing: 0.3px; }
+  .label-line { height: 1px; background: rgba(15,23,42,.4); width: 24px; flex-shrink: 0; }
+  .label-dot  { width: 6px; height: 6px; border-radius: 50%; background: #f59e0b; border: 2px solid #fff; flex-shrink: 0; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Title -->
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <div style="width:40px;height:40px;background:#111827;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#fff;">M</div>
+    <div>
+      <h1>Magnetic Place — Tutorial</h1>
+      <p class="subtitle">Dashboard do Trabalhador · Guia rápido de funcionalidades</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 1 · NAVBAR
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">① Barra de Navegação</p>
+
+  <div class="card annotated" style="margin-bottom:32px;">
+    <!-- NavBar top -->
+    <div class="navbar">
+      <div class="navbar-brand">
+        <div class="navbar-logo">M</div>
+        <span class="navbar-name">Magnetic Place</span>
+      </div>
+      <div class="navbar-user">
+        <span class="navbar-username">Ana Silva</span>
+        <div class="navbar-avatar">AS</div>
+      </div>
+    </div>
+    <!-- Bottom tabs -->
+    <div class="bottom-tabs">
+      <div class="tab-item active"><span class="tab-icon">🏠</span><span class="tab-label">Início</span></div>
+      <div class="tab-item"><span class="tab-icon">📅</span><span class="tab-label">Horários</span></div>
+      <div class="tab-item" style="position:relative;"><span class="tab-icon">📄</span><span class="tab-label">Documentos</span><span class="tab-badge">2</span></div>
+      <div class="tab-item"><span class="tab-icon">👤</span><span class="tab-label">Perfil</span></div>
+      <div class="tab-item"><span class="tab-icon">⚡</span><span class="tab-label">Falta</span></div>
+    </div>
+  </div>
+
+  <!-- Steps for NavBar -->
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">A</div>
+      <div class="step-body">
+        <p class="step-title">Abas de navegação (parte inferior)</p>
+        <p class="step-text">
+          <span class="step-tag blue">🏠 Início</span> — dashboard com registo de horas e calendário<br>
+          <span class="step-tag">📅 Horários</span> — consulta os teus turnos e horários atribuídos<br>
+          <span class="step-tag">📄 Documentos</span> — acede e assina recibos e contratos <em>(badge vermelho = pendente)</em><br>
+          <span class="step-tag">👤 Perfil</span> — dados pessoais e histórico de alterações<br>
+          <span class="step-tag amber">⚡ Falta</span> — submete um aviso de falta rapidamente
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 2 · HERO STATS
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">② Resumo do Mês</p>
+
+  <div class="card annotated" style="margin-bottom:32px;">
+    <div class="hero">
+      <div class="hero-month">
+        <span class="hero-month-label">Junho 2026</span>
+        <div class="hero-month-nav">
+          <div class="hero-month-btn">‹</div>
+          <div class="hero-month-btn">›</div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <p class="stat-label">Hoje</p>
+          <p class="stat-value">8h</p>
+          <p class="stat-sub">entrada 09:00</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-label">Este mês</p>
+          <p class="stat-value">107h</p>
+          <p class="stat-sub">de 160h</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-label">Previsto</p>
+          <p class="stat-value">160h</p>
+          <p class="stat-sub">15 dias úteis</p>
+        </div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill"></div></div>
+      <p style="font-size:10px;color:#94a3b8;margin-top:6px;text-align:right;">67% concluído</p>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">B</div>
+      <div class="step-body">
+        <p class="step-title">Visão geral do mês atual</p>
+        <p class="step-text">
+          Mostra as horas registadas <strong>hoje</strong>, o total acumulado no <strong>mês</strong> e as horas <strong>previstas</strong> pelo teu horário. A barra de progresso indica % de cumprimento. Usa as setas <strong>‹ ›</strong> para consultar meses anteriores.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 3 · REGISTO MANUAL
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">③ Registar Horário de Hoje</p>
+
+  <div class="card annotated" style="margin-bottom:32px;">
+    <div class="entry-card">
+      <div class="entry-header">
+        <div class="entry-icon">⏱️</div>
+        <div>
+          <p class="entry-title">Registar horário de hoje</p>
+          <p class="entry-sub">Domingo, 14 de junho</p>
+        </div>
+        <button class="entry-zap">⚡ Registo Rápido</button>
+      </div>
+      <div class="entry-body">
+        <div class="field">
+          <p class="field-label">Cliente</p>
+          <div class="field-input">Magnetic Place</div>
+        </div>
+        <div class="field">
+          <p class="field-label">Entrada</p>
+          <div class="field-input">09:00</div>
+        </div>
+        <div class="field">
+          <p class="field-label">Pausa início</p>
+          <div class="field-input placeholder">--:--</div>
+        </div>
+        <div class="field">
+          <p class="field-label">Pausa fim</p>
+          <div class="field-input placeholder">--:--</div>
+        </div>
+        <div class="field" style="grid-column:1/-1">
+          <p class="field-label">Saída</p>
+          <div class="field-input">18:00</div>
+        </div>
+      </div>
+      <button class="save-btn">Guardar registo</button>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">C</div>
+      <div class="step-body">
+        <p class="step-title">Registo manual do dia</p>
+        <p class="step-text">
+          Card disponível apenas <strong>no mês atual</strong>. Preenche os campos de entrada, pausa e saída, depois prime <strong>Guardar</strong>. Uma mensagem de confirmação verde aparece no topo.
+        </p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">D</div>
+      <div class="step-body">
+        <p class="step-title">⚡ Registo Rápido</p>
+        <p class="step-text">
+          O botão <span class="step-tag amber">⚡ Registo Rápido</span> preenche automaticamente as horas com base no teu <strong>horário padrão</strong> configurado pelo admin. Útil quando trabalhaste no horário normal — um clique e está feito. Se não houver horário padrão definido para hoje, o formulário abre para preenchimento manual.
+        </p>
+        <div class="tip">
+          <span class="tip-icon">💡</span>
+          <p class="tip-text">O botão ⚡ também está disponível no <strong>modal de ponto</strong> (ao clicar num dia no calendário) para registos em datas anteriores.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 4 · CALENDÁRIO
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">④ Calendário Mensal</p>
+
+  <div class="card" style="margin-bottom:32px;">
+    <div class="calendar">
+      <div class="cal-header">
+        <div class="cal-day-name">Seg</div><div class="cal-day-name">Ter</div>
+        <div class="cal-day-name">Qua</div><div class="cal-day-name">Qui</div>
+        <div class="cal-day-name">Sex</div><div class="cal-day-name">Sáb</div>
+        <div class="cal-day-name">Dom</div>
+      </div>
+      <div class="cal-grid">
+        <!-- Week 1 — empties + days -->
+        <div class="cal-cell empty"></div>
+        <div class="cal-cell empty"></div>
+        <div class="cal-cell empty"></div>
+        <div class="cal-cell empty"></div>
+        <div class="cal-cell empty"></div>
+        <div class="cal-cell weekend"><p class="cal-num">1</p></div>
+        <div class="cal-cell weekend"><p class="cal-num">2</p></div>
+        <!-- Week 2 -->
+        <div class="cal-cell has-log"><p class="cal-num">3</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">4</p><div class="cal-log">9:00 – 17:30</div><div class="cal-log-time">7h30</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">5</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">6</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">7</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell weekend"><p class="cal-num">8</p></div>
+        <div class="cal-cell weekend"><p class="cal-num">9</p></div>
+        <!-- Week 3 -->
+        <div class="cal-cell has-log"><p class="cal-num">10</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">11</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">12</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell has-log"><p class="cal-num">13</p><div class="cal-log">9:00 – 18:00</div><div class="cal-log-time">8h</div></div>
+        <div class="cal-cell today"><p class="cal-num">14</p><div class="cal-add">+ registo</div></div>
+        <div class="cal-cell weekend"><p class="cal-num">15</p></div>
+        <div class="cal-cell weekend"><p class="cal-num">16</p></div>
+        <!-- Week 4 -->
+        <div class="cal-cell"><p class="cal-num">17</p><div class="cal-add">+</div></div>
+        <div class="cal-cell"><p class="cal-num">18</p><div class="cal-add">+</div></div>
+        <div class="cal-cell"><p class="cal-num">19</p><div class="cal-add">+</div></div>
+        <div class="cal-cell"><p class="cal-num">20</p><div class="cal-add">+</div></div>
+        <div class="cal-cell"><p class="cal-num">21</p><div class="cal-add">+</div></div>
+        <div class="cal-cell weekend"><p class="cal-num">22</p></div>
+        <div class="cal-cell weekend"><p class="cal-num">23</p></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;">
+        <div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:3px;"></div><span style="font-size:10px;color:#64748b;font-weight:700;">Com registo</span></div>
+        <div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:3px;"></div><span style="font-size:10px;color:#64748b;font-weight:700;">Hoje</span></div>
+        <div style="display:flex;align-items:center;gap:5px;"><div style="width:10px;height:10px;background:#fafafa;border:1px solid #f1f5f9;border-radius:3px;"></div><span style="font-size:10px;color:#64748b;font-weight:700;">Fim de semana</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">E</div>
+      <div class="step-body">
+        <p class="step-title">Ver e editar registos no calendário</p>
+        <p class="step-text">
+          <span class="step-tag green">Verde</span> = dia com registo. Clica em qualquer dia para ver o detalhe, editar ou apagar o registo.<br><br>
+          <span class="step-tag blue">Azul (hoje)</span> = dia atual, com botão <strong>+ registo</strong> para registar rapidamente.<br><br>
+          Os dias sem cor ainda não têm registo — clica no <strong>+</strong> para adicionar.
+        </p>
+        <div class="tip">
+          <span class="tip-icon">📝</span>
+          <p class="tip-text">Em meses anteriores, ainda podes <strong>solicitar correção</strong> de um registo: clica no dia e usa a opção de correção. O admin recebe o pedido e pode aceitar ou rejeitar.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 5 · PEDIDOS DE CORREÇÃO
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">⑤ Pedidos de Correção</p>
+
+  <div class="card" style="margin-bottom:32px;">
+    <!-- Pending header -->
+    <div class="corr-header">
+      <div class="corr-icon">⏰</div>
+      <p class="corr-title">2 pedidos pendentes</p>
+      <span class="corr-badge">2</span>
+      <span class="corr-chevron">∨</span>
+    </div>
+    <div style="border-top:1px solid #f1f5f9;padding:12px 16px;display:flex;flex-direction:column;gap:10px;">
+      <!-- Pending item -->
+      <div class="card" style="border-color:#e2e8f0;">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #f1f5f9;">
+          <div style="padding:6px;background:#fef3c7;border-radius:10px;font-size:13px;">✏️</div>
+          <div style="flex:1;">
+            <p style="font-size:11px;font-weight:900;color:#0f172a;">2026-06-05</p>
+            <p style="font-size:10px;color:#f59e0b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Alteração</p>
+          </div>
+          <span style="font-size:9px;color:#94a3b8;font-weight:700;">✉ há 2 dias</span>
+        </div>
+        <div style="display:flex;gap:8px;padding:10px 14px;align-items:center;">
+          <div style="flex:1;background:#f8fafc;border-radius:10px;padding:8px 10px;">
+            <p style="font-size:8px;color:#94a3b8;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Original</p>
+            <span style="font-family:monospace;font-size:11px;font-weight:900;color:#374151;">09:00 → 17:00</span>
+          </div>
+          <span style="color:#fbbf24;font-size:13px;">→</span>
+          <div style="flex:1;background:#fef3c7;border-radius:10px;padding:8px 10px;">
+            <p style="font-size:8px;color:#f59e0b;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Solicitado</p>
+            <span style="font-family:monospace;font-size:11px;font-weight:900;color:#374151;">09:00 → 18:00</span>
+          </div>
+        </div>
+      </div>
+      <!-- Separator -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;height:1px;background:#f1f5f9;"></div>
+        <span style="font-size:9px;color:#cbd5e1;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;">Respondidos</span>
+        <div style="flex:1;height:1px;background:#f1f5f9;"></div>
+      </div>
+      <!-- Resolved accepted -->
+      <div style="background:#fff;border:1px solid #a7f3d0;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05);">
+        <div style="height:4px;background:#34d399;"></div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;">
+          <div style="padding:6px;background:#d1fae5;border-radius:10px;font-size:14px;">✅</div>
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-size:10px;font-weight:900;background:#d1fae5;color:#065f46;border-radius:99px;padding:2px 10px;text-transform:uppercase;letter-spacing:.5px;">Aceite</span>
+              <span style="font-family:monospace;font-size:11px;font-weight:900;color:#064e3b;">2026-06-03</span>
+            </div>
+            <p style="font-size:9px;color:#10b981;margin-top:3px;font-weight:700;">✉ 10 jun · ✓ 12 jun</p>
+          </div>
+          <button style="background:none;border:none;padding:6px;background:#d1fae5;border-radius:10px;cursor:pointer;font-size:12px;">✕</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">F</div>
+      <div class="step-body">
+        <p class="step-title">Pedidos de correção — abaixo do calendário</p>
+        <p class="step-text">
+          Este painel aparece apenas quando há correções submetidas. Mostra:
+        </p>
+        <p class="step-text" style="margin-top:8px;">
+          <span class="step-tag amber">⏰ Pendentes</span> — correções enviadas ao admin, aguardam resposta. Mostra a data, o registo original e o que foi solicitado.<br><br>
+          <span class="step-tag green">✅ Aceite</span> — pedido aprovado pelo admin. A barra verde no topo identifica visualmente.<br><br>
+          <span class="step-tag rose">✕ Rejeitado</span> — pedido recusado. Podes fechar com o botão <strong>✕</strong> para limpar a notificação.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 6 · AVISOS DE FALTA
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">⑥ Avisar Falta</p>
+
+  <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:20px;margin-bottom:32px;display:flex;align-items:center;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+    <div style="width:44px;height:44px;background:#fff7ed;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🏥</div>
+    <div style="flex:1;">
+      <p style="font-size:14px;font-weight:900;color:#0f172a;margin-bottom:3px;">Aviso de Falta</p>
+      <p style="font-size:12px;color:#64748b;line-height:1.5;">Informa o admin quando não consegues trabalhar — doença, urgência, férias ou outro motivo. O admin recebe o aviso e pode aprová-lo ou rejeitá-lo.</p>
+    </div>
+    <button style="background:#f97316;color:#fff;border:none;border-radius:12px;padding:10px 16px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;cursor:pointer;white-space:nowrap;">⚡ Avisar</button>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">G</div>
+      <div class="step-body">
+        <p class="step-title">Como submeter um aviso de falta</p>
+        <p class="step-text">
+          1. Toca no tab <span class="step-tag amber">⚡ Falta</span> na barra inferior<br>
+          2. Seleciona a data, o motivo (<em>doença, urgência, etc.</em>) e adiciona uma observação opcional<br>
+          3. Submete — o admin recebe imediatamente a notificação<br>
+          4. O estado do aviso (<span class="step-tag green">aprovado</span> / <span class="step-tag rose">rejeitado</span>) fica visível nos teus avisos
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       SECÇÃO 7 · CONFIRMAÇÃO DO MÊS
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">⑦ Confirmar e Enviar o Mês</p>
+
+  <div style="background:#eef2ff;border:1px solid #c7d2fe;border-radius:16px;padding:18px 20px;margin-bottom:32px;display:flex;align-items:center;justify-content:space-between;gap:16px;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span style="font-size:20px;">✅</span>
+      <p style="font-size:13px;font-weight:900;color:#3730a3;">Revê os registos e confirma as horas de junho 2026.</p>
+    </div>
+    <button style="background:#4f46e5;color:#fff;border:none;border-radius:12px;padding:10px 18px;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1px;cursor:pointer;white-space:nowrap;">✅ Confirmar e Enviar</button>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">H</div>
+      <div class="step-body">
+        <p class="step-title">Validação mensal</p>
+        <p class="step-text">
+          No final do mês, o admin solicita a tua confirmação. Um banner azul aparece no topo do dashboard — revê os teus registos e prime <strong>Confirmar e Enviar</strong>. Depois da confirmação, o mês fica marcado como <span class="step-tag green">✓ Validado</span> e não pode ser editado sem pedido de correção.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- ═══════════════════════════════════════════════
+       RESUMO RÁPIDO
+  ════════════════════════════════════════════════ -->
+  <p class="section-title">Resumo — Fluxo diário</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:40px;">
+    <div class="card" style="padding:16px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">☀️</div>
+      <p style="font-size:12px;font-weight:900;color:#0f172a;margin-bottom:4px;">Manhã</p>
+      <p style="font-size:11px;color:#64748b;">Regista a entrada ou usa ⚡ Rápido</p>
+    </div>
+    <div class="card" style="padding:16px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">🌙</div>
+      <p style="font-size:12px;font-weight:900;color:#0f172a;margin-bottom:4px;">Fim do dia</p>
+      <p style="font-size:11px;color:#64748b;">Confirma ou preenche as horas de saída</p>
+    </div>
+    <div class="card" style="padding:16px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">📅</div>
+      <p style="font-size:12px;font-weight:900;color:#0f172a;margin-bottom:4px;">Semana</p>
+      <p style="font-size:11px;color:#64748b;">Verifica o calendário — todos os dias preenchidos?</p>
+    </div>
+    <div class="card" style="padding:16px;text-align:center;">
+      <div style="font-size:28px;margin-bottom:8px;">📊</div>
+      <p style="font-size:12px;font-weight:900;color:#0f172a;margin-bottom:4px;">Fim do mês</p>
+      <p style="font-size:11px;color:#64748b;">Confirma e envia para o admin validar</p>
+    </div>
+  </div>
+
+  <div style="text-align:center;padding:24px;background:#f8fafc;border-radius:16px;border:1px solid #e2e8f0;">
+    <p style="font-size:11px;color:#94a3b8;font-weight:700;">Magnetic Place · App de Gestão de Equipa</p>
+    <p style="font-size:10px;color:#cbd5e1;margin-top:2px;">Para suporte contacta o teu administrador</p>
+  </div>
+
+</div>
+</body>
+</html>
