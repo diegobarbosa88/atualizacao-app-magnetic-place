@@ -25,6 +25,7 @@ import InServiceCard from './worker-dashboard/InServiceCard';
 import GeoSuggestionCard from './worker-dashboard/GeoSuggestionCard';
 import WorkerScheduleTab from './worker-dashboard/WorkerScheduleTab';
 import WorkerCalendar from './worker-dashboard/WorkerCalendar';
+import ManualTimeEntryCard from './worker-dashboard/ManualTimeEntryCard';
 import ScheduleModal from './worker-dashboard/ScheduleModal';
 import ProfileModal from './worker-dashboard/ProfileModal';
 import DocumentsModal from './worker-dashboard/DocumentsModal';
@@ -288,6 +289,16 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
                 — {new Date(currentMonth).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
               </span>
             </div>
+          )}
+
+          {!isLimitedWorker && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+            <ManualTimeEntryCard
+              clients={clients}
+              currentUser={currentUser}
+              onSave={handleSaveEntry}
+              monthLogs={monthLogs}
+              systemSettings={systemSettings}
+            />
           )}
 
           <WorkerCalendar
