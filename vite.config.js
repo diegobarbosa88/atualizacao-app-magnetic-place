@@ -47,6 +47,7 @@ export default defineConfig({
       },
       workbox: {
         clientsClaim: true,
+        skipWaiting: true,
         globIgnores: ['version.json'],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],

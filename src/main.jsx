@@ -17,36 +17,33 @@ createRoot(document.getElementById('root')).render(
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.ready.then(registration => {
+    // Verificar update ao focar a janela e periodicamente
     const checkUpdate = () => registration.update();
-
-    // Verificar update a cada 30s e quando a janela volta ao foco
-    setInterval(checkUpdate, 30 * 1000);
     window.addEventListener('focus', checkUpdate);
+    setInterval(checkUpdate, 60 * 1000);
 
+    // Quando um novo SW é encontrado, activá-lo imediatamente
     registration.addEventListener('updatefound', () => {
       const newSW = registration.installing;
       if (!newSW) return;
       newSW.addEventListener('statechange', () => {
-        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-          // Forçar activação imediata sem esperar por tabs fechadas
+        if (newSW.state === 'installed') {
           newSW.postMessage({ type: 'SKIP_WAITING' });
-        }
-        if (newSW.state === 'activated') {
-          window.location.reload();
         }
       });
     });
-  });
 
-  // Se houver um SW em espera (waiting), activá-lo imediatamente
-  navigator.serviceWorker.ready.then(registration => {
+    // Se já há um SW em espera, activá-lo
     if (registration.waiting) {
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
     }
   });
 
-  // Recarregar quando o SW tomar controlo
+  // Recarregar uma vez quando o SW tomar controlo (evita loop)
+  let refreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
     window.location.reload();
   });
 }

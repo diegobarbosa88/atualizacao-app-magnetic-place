@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { useApp } from './context/AppContext';
+import { useAutoUpdate } from './hooks/useAutoUpdate';
 import ClientPortal from './ClientPortal.jsx';
 import { WorkerDashboard } from './features/worker';
 import AdminDashboard from './features/admin/AdminDashboard';
@@ -36,6 +37,8 @@ const CLIENT_PORTAL_URL = (import.meta.env.VITE_CLIENT_PORTAL_URL || 'https://pa
 
 // --- App Principal ---
 export default function App() {
+  useAutoUpdate();
+
   const {
     systemSettings, setSystemSettings,
     view, setView,
