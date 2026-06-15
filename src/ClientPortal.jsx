@@ -350,13 +350,10 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         );
     }
 
-    // Sessão válida mas cliente não existe na DB — limpar sessão e redirecionar para login
-    if (effectiveClientId && !clients.find(c => c.id === effectiveClientId) && (clientSession || initialClientId || initialTokenClientId)) {
-        if (clientSession) {
-            localStorage.removeItem('magnetic_client_session');
-            setClientSession(null);
-        }
-        return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={'Sessão expirada. Por favor, inicie sessão novamente.'} handleLogin={handleLogin} clients={clients} systemSettings={systemSettings} />;
+    // Sessão obsoleta — clientId não corresponde a nenhum cliente na DB
+    // Mostrar login; handleLogin vai sobrescrever a sessão ao autenticar com sucesso
+    if (clientSession && effectiveClientId && !clients.find(c => c.id === effectiveClientId)) {
+        return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={loginError || 'Sessão expirada. Por favor, inicie sessão novamente.'} handleLogin={handleLogin} clients={clients} systemSettings={systemSettings} />;
     }
 
     return (
