@@ -68,10 +68,12 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [lang, setLang] = useState(() => localStorage.getItem('magnetic_lang') || 'pt');
     const t = (key) => (TRANSLATIONS[lang] || TRANSLATIONS.pt)[key] || key;
 
-    const rawClientId = initialTokenClientId || clientSession?.clientId || initialClientId || null;
-    const effectiveClientId = rawClientId?.startsWith('c') && !rawClientId.startsWith('client_')
-        ? 'client_' + rawClientId.slice(1)
-        : rawClientId;
+    // A transformação 'c5' → 'client_5' só se aplica ao ID vindo do URL (?client=c5).
+    // IDs da sessão e do token já são os IDs reais da DB — não transformar.
+    const urlOnlyId = initialClientId?.startsWith('c') && !initialClientId.startsWith('client_')
+        ? 'client_' + initialClientId.slice(1)
+        : initialClientId;
+    const effectiveClientId = initialTokenClientId || clientSession?.clientId || urlOnlyId || null;
 
     const todayStr = new Date().toLocaleDateString('en-CA');
     const activeNow = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime && !l.endTime);
