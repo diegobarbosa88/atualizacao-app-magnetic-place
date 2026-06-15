@@ -81,15 +81,15 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                         <p className="text-slate-400 text-sm font-medium mt-3 leading-relaxed">{t('sign_in_desc')}</p>
                     </div>
 
-                    <div className="space-y-4">
+                    <form className="space-y-4" onSubmit={e => { e.preventDefault(); handleLogin(); }}>
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Email</label>
-                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder={t('email_placeholder')}
+                            <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)} placeholder={t('email_placeholder')} autoComplete="email"
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2">Senha (NIF)</label>
-                            <input type="password" value={loginNif} onChange={e => setLoginNif(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="••••••••"
+                            <input type="password" value={loginNif} onChange={e => setLoginNif(e.target.value)} placeholder="••••••••" autoComplete="current-password"
                                 className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-slate-800 placeholder-slate-300 font-bold text-sm focus:outline-none focus:border-indigo-400 focus:bg-white focus:ring-2 focus:ring-indigo-100 transition-all" />
                         </div>
                         {loginError && (
@@ -97,11 +97,11 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                                 <AlertCircle size={14} className="flex-shrink-0" /> {loginError}
                             </div>
                         )}
-                        <button onClick={handleLogin} disabled={clients.length === 0}
+                        <button type="submit" disabled={clients.length === 0}
                             className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-[0.15em] transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
                             {clients.length === 0 ? t('loading') : t('enter')}
                         </button>
-                    </div>
+                    </form>
                 </div>
             </div>
         </div>

@@ -338,6 +338,27 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={loginError} handleLogin={handleLogin} clients={clients} systemSettings={systemSettings} />;
     }
 
+    // Dados ainda a carregar do Supabase — mostrar spinner em vez de "Cliente Não Encontrado"
+    if (clients.length === 0) {
+        return (
+            <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-widest">A carregar...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Sessão válida mas cliente não existe na DB — limpar sessão e redirecionar para login
+    if (effectiveClientId && !clients.find(c => c.id === effectiveClientId) && (clientSession || initialClientId || initialTokenClientId)) {
+        if (clientSession) {
+            localStorage.removeItem('magnetic_client_session');
+            setClientSession(null);
+        }
+        return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={'Sessão expirada. Por favor, inicie sessão novamente.'} handleLogin={handleLogin} clients={clients} systemSettings={systemSettings} />;
+    }
+
     return (
         <div className={`min-h-screen bg-slate-50 text-slate-900 selection:bg-indigo-200 font-sans ${printingWorker ? 'pb-0 bg-white' : 'pb-20'}`}>
             {!printingWorker && <ClientPortalHeader systemSettings={systemSettings} lang={lang} changeLang={changeLang} selectedTab={selectedTab} t={t} activeNow={activeNow} workers={workers} showNotifDropdown={showNotifDropdown} setShowNotifDropdown={setShowNotifDropdown} notifRef={notifRef} clientSession={clientSession} handleLogout={handleLogout} />}
