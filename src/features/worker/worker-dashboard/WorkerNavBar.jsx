@@ -78,39 +78,73 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           )}
 
           {/* Botões de navegação — só desktop */}
-          <div className="hidden sm:flex items-center gap-2 sm:gap-4">
+          <div className="hidden sm:flex items-center gap-2">
             <button
               onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')}
-              className={`flex items-center gap-2 p-2 sm:px-4 sm:py-2 rounded-xl text-xs font-black shadow-sm ${workerTab === 'horarios' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
             >
               {activeWorkerSchedule && (
-                <span className="hidden sm:inline-block text-[9px] sm:text-xs opacity-70 border-r border-indigo-200 pr-2 mr-1 leading-tight text-right uppercase">
+                <span className="text-[9px] opacity-70 border-r border-indigo-200 pr-2 mr-1 leading-tight text-right uppercase">
                   <span className="block">{formatTimeCompact(activeWorkerSchedule.startTime)} - {formatTimeCompact(activeWorkerSchedule.endTime)}</span>
                   {activeWorkerSchedule.breakStart && (
-                    <span className="block text-[8px] sm:text-[9px] font-bold text-indigo-400/80">
+                    <span className="block text-[8px] font-bold text-indigo-400/80">
                       P: {formatTimeCompact(activeWorkerSchedule.breakStart)}-{formatTimeCompact(activeWorkerSchedule.breakEnd)}
                     </span>
                   )}
                 </span>
               )}
-              <Timer size={16} className="shrink-0" />
-              <span className="hidden sm:inline">Meus Horários</span>
+              <Timer size={15} className="shrink-0" />
+              <span>Horários</span>
             </button>
+
+            {isCurrentMonth && (
+              <button
+                onClick={onOpenAbsenceModal}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-orange-50 text-orange-500 hover:bg-orange-100 relative"
+                title="Avisar Falta"
+              >
+                <CalendarX size={15} className="shrink-0" />
+                <span>Falta</span>
+                {absencePendingCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-orange-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                    {absencePendingCount}
+                  </span>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={onOpenDocumentsModal}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 relative"
+              title="Documentos"
+            >
+              <FileText size={15} className="shrink-0" />
+              <span>Documentos</span>
+              {documentsPendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                  {documentsPendingCount}
+                </span>
+              )}
+            </button>
+
             <button
               onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
-              className={`p-2 rounded-xl transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
               title="Meu Perfil"
             >
-              <UserCircle size={18} />
+              <UserCircle size={15} />
+              <span>Perfil</span>
               {pendingRequests > 0 && (
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
                   {pendingRequests}
                 </span>
               )}
             </button>
+
             {currentUser?.isAdmin && !currentUser?.isAdminImpersonating && (
-              <button onClick={() => onLogin('admin', currentUser)} className="flex items-center justify-center p-2 bg-indigo-600 text-white rounded-xl shadow-sm hover:bg-indigo-700 transition-all">
-                <Users size={18} />
+              <button onClick={() => onLogin('admin', currentUser)} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl shadow-sm hover:bg-indigo-700 transition-all text-xs font-black">
+                <Users size={15} />
+                <span>Admin</span>
               </button>
             )}
           </div>
