@@ -224,6 +224,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
       const res = await fetch('/api/toconline/auth-init');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
+      if (!data.authUrl) throw new Error(`Resposta inválida: ${JSON.stringify(data)}`);
       window.location.href = data.authUrl;
     } catch (e) {
       setErroAuth(e.message);
