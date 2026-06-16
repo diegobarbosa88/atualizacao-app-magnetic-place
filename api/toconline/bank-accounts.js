@@ -10,7 +10,25 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    const { id } = req.query;
+    const { id, action, page = 1, data_de, data_ate } = req.query;
+
+    if (action === 'extrato' && id) {
+      try {
+        const params = new URLSearchParams({
+          'filter[bank_account_id]': id,
+          'page[number]': page,
+          'page[size]': 50,
+        });
+        if (data_de) params.set('filter[date_from]', data_de);
+        if (data_ate) params.set('filter[date_to]', data_ate);
+        const data = await tocFetch(`/api/bank_account_entries?${params}`, accessToken);
+        const lista = Array.isArray(data) ? data : (data.data || []);
+        return res.status(200).json({ data: lista, meta: data.meta || {} });
+      } catch (e) {
+        return res.status(500).json({ error: e.message });
+      }
+    }
+
     const path = id ? `/api/bank_accounts/${id}` : '/api/bank_accounts';
     try {
       const data = await tocFetch(path, accessToken);
