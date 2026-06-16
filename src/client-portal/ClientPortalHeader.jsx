@@ -11,7 +11,7 @@ export default function ClientPortalHeader({
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-4 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <img
-            src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
+            src={systemSettings?.companyLogo || '/MAGNETIC (3).png'}
             alt="Logo"
             className="h-14 w-auto object-contain"
             onError={(e) => { e.target.style.display = 'none'; }}

@@ -50,7 +50,7 @@ export default function AppLayout() {
     document.title = "Magnetic Place | Gestão"
     const link = document.querySelector("link[rel~='icon']") || document.createElement('link')
     link.rel = 'icon'
-    link.href = 'MAGNETIC (3).png'
+    link.href = '/MAGNETIC (3).png'
     if (!document.querySelector("link[rel~='icon']")) document.head.appendChild(link)
   }, [])
 

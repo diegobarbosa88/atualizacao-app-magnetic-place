@@ -67,7 +67,7 @@ export default function ClientPortalNavbar({
         <div className="flex items-center justify-between w-full md:w-auto">
           <div className="flex items-center gap-3 font-black text-xl tracking-tighter uppercase shrink-0">
             <img
-              src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
+              src={systemSettings?.companyLogo || '/MAGNETIC (3).png'}
               alt="Logo"
               className="h-8 w-auto object-contain"
               onError={(e) => { e.target.style.display = 'none'; }}

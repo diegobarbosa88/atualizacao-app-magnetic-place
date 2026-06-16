@@ -16,10 +16,10 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                 {/* Logo + nome */}
                 <div className="relative z-10 flex items-center gap-3">
                     <img
-                        src={systemSettings?.companyLogo || 'MAGNETIC (3).png'}
+                        src={systemSettings?.companyLogo || '/MAGNETIC (3).png'}
                         alt="Logo"
                         className="h-10 w-auto object-contain flex-shrink-0"
-                        onError={e => { e.target.src = 'MAGNETIC (3).png'; }}
+                        onError={e => { e.target.src = '/MAGNETIC (3).png'; }}
                     />
                     <span className="text-white/80 font-bold text-sm uppercase tracking-widest">Magnetic Place Unipessoal Lda</span>
                 </div>
@@ -68,7 +68,7 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
 
                     {/* Logo visível em todos os tamanhos no formulário */}
                     <div className="flex items-center gap-3 mb-8">
-                        <img src={systemSettings?.companyLogo || 'MAGNETIC (3).png'} alt="Logo" className="h-10 w-auto object-contain" onError={e => e.target.style.display = 'none'} />
+                        <img src={systemSettings?.companyLogo || '/MAGNETIC (3).png'} alt="Logo" className="h-10 w-auto object-contain" onError={e => e.target.style.display = 'none'} />
                         <div>
                             <p className="font-black text-slate-900 text-sm uppercase tracking-tight leading-none">Magnetic Place</p>
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Unipessoal Lda</p>

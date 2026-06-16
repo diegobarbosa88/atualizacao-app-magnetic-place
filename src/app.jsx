@@ -66,7 +66,7 @@ export default function App() {
       link.rel = 'icon';
       document.head.appendChild(link);
     }
-    link.href = 'MAGNETIC (3).png';
+    link.href = '/MAGNETIC (3).png';
   }, []);
 
   // WR-01 fix: Use state for baseVersion instead of closure variable to properly detect updates
