@@ -165,6 +165,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
   const [ligando, setLigando] = useState(false);
   const [subtab, setSubtab] = useState('relatorios');
   const [erroAuth, setErroAuth] = useState(null);
+  const connectedFromCallback = React.useRef(false);
 
   // Import state
   const [tipos, setTipos] = useState(['vendas', 'compras', 'recibos']);
@@ -197,8 +198,9 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (connected) {
+      connectedFromCallback.current = true;
       setLigado(true);
-      return; // token já está na BD, não sobrescrever com query assíncrona
+      return;
     }
     if (errorParam) {
       setErroAuth(decodeURIComponent(errorParam));
@@ -207,8 +209,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
 
   useEffect(() => {
     if (!supabase) return;
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('toconline_connected')) return; // já tratado acima
+    if (connectedFromCallback.current) return; // OAuth acabou de concluir — não sobrescrever
     supabase
       .from('system_settings')
       .select('toconline_access_token')
