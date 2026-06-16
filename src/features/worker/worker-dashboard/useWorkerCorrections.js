@@ -82,12 +82,10 @@ export function useWorkerCorrections({ currentUser, correctionItems, setCorrecti
       if (i.date !== deleteConfirm.date) return false;
       if (i.item_status !== 'pending') return false;
       const corr = (corrections || []).find((c) => c.id === i.correction_id);
-      if (!corr) return false;
-      if (corr.status === 'applied' || corr.status === 'rejected') return false;
-      return corr.client_id === String(log.clientId);
+      return corr && corr.status !== 'applied' && corr.status !== 'rejected';
     });
     if (dup) {
-      alert('Já existe um pedido pendente para esta data e cliente. Aguarde resposta do administrador.');
+      alert('Já existe um pedido pendente para este dia. Aguarda a resposta do administrador antes de submeter outro.');
       return;
     }
     setDeleteSubmitting(true);

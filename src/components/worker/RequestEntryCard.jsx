@@ -6,7 +6,17 @@ import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../ut
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, initialLogId, isInline = false, openInDeleteMode = false }) => {
-  const { supabase, saveToDb, minuteInterval, systemSettings } = useApp();
+  const { supabase, saveToDb, minuteInterval, systemSettings, correctionItems, corrections } = useApp();
+
+  const hasPendingCorrectionForDate = (date) => {
+    return (correctionItems || []).some(item => {
+      if (item.worker_id !== String(currentUser?.id)) return false;
+      if (item.date !== date) return false;
+      if (item.item_status !== 'pending') return false;
+      const corr = (corrections || []).find(c => c.id === item.correction_id);
+      return corr && corr.status !== 'applied' && corr.status !== 'rejected';
+    });
+  };
   const [collapsed, setCollapsed] = useState(!isInline);
   const [showBreaks, setShowBreaks] = useState(false);
   const [showComments, setShowComments] = useState(false);
@@ -93,7 +103,10 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
 
   const handleDeleteRequest = async () => {
     if (!supabase || !selectedDate || !existingLog) return;
-
+    if (hasPendingCorrectionForDate(selectedDate)) {
+      alert('Já existe um pedido pendente para este dia. Aguarda a resposta do administrador antes de submeter outro.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const correctionId = `corr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -183,7 +196,10 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       alert('Preencha Entrada e Saída');
       return;
     }
-
+    if (hasPendingCorrectionForDate(selectedDate)) {
+      alert('Já existe um pedido pendente para este dia. Aguarda a resposta do administrador antes de submeter outro.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const correctionId = `corr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
