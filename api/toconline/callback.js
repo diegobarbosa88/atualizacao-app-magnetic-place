@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   const { code, state, error: oauthError } = req.query || {};
 
   if (oauthError) {
-    return res.redirect(`${APP_URL}/?toconline_error=${encodeURIComponent(oauthError)}`);
+    return res.redirect(`${APP_URL}/admin/toconline?toconline_error=${encodeURIComponent(oauthError)}`);
   }
 
   if (!code) {
@@ -39,8 +39,8 @@ export default async function handler(req, res) {
       toconline_oauth_state: null,
     }).eq('id', 1);
 
-    return res.redirect(`${APP_URL}/?toconline_connected=1`);
+    return res.redirect(`${APP_URL}/admin/toconline?toconline_connected=1`);
   } catch (e) {
-    return res.redirect(`${APP_URL}/?toconline_error=${encodeURIComponent(e.message)}`);
+    return res.redirect(`${APP_URL}/admin/toconline?toconline_error=${encodeURIComponent(e.message)}`);
   }
 }
