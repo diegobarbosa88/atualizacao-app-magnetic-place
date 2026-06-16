@@ -210,6 +210,26 @@ export default function App() {
     navigate('/login');
   };
 
+  // Fallback: tratar OAuth callback no SPA quando a função serverless não é chamada
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const code = params.get('code');
+    const state = params.get('state');
+    if (!code || !state) return;
+    // Tem code+state — é um callback OAuth do ToConline
+    fetch('/api/toconline/token-exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) navigate('/admin/toconline?toconline_error=' + encodeURIComponent(data.error), { replace: true });
+        else navigate('/admin/toconline?toconline_connected=1', { replace: true });
+      })
+      .catch(e => navigate('/admin/toconline?toconline_error=' + encodeURIComponent(e.message), { replace: true }));
+  }, [location.search]);
+
   useEffect(() => {
     if (location.pathname === '/' || location.pathname === '') {
       if (view === 'admin') navigate('/admin/overview', { replace: true });
