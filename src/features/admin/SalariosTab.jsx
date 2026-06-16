@@ -373,7 +373,7 @@ export default function SalariosTab({ month }) {
       const res = await fetch('/api/salarios/exportar-sepa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trabalhadores, instant: isInstant }),
+        body: JSON.stringify({ trabalhadores, urgente: isInstant }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }));

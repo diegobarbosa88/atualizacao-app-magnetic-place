@@ -1,11 +1,11 @@
-import { gerarSEPAXml } from './_sepaXml.js';
+import { gerarSepaSalariosXML } from '../../services/sepaSalariosService.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
 
-  const { trabalhadores, instant = false } = req.body || {};
+  const { trabalhadores, urgente = false } = req.body || {};
 
   if (!Array.isArray(trabalhadores) || trabalhadores.length === 0) {
     return res.status(400).json({
@@ -13,25 +13,28 @@ export default async function handler(req, res) {
     });
   }
 
-  // Validação mínima de cada registo
-  for (let i = 0; i < trabalhadores.length; i++) {
-    const t = trabalhadores[i];
-    if (!t.nome || !t.iban || t.salario == null || !t.mes || !t.ano) {
-      return res.status(400).json({
-        error: `Registo ${i + 1} incompleto. Campos obrigatórios: nome, iban, salario, mes, ano.`,
-      });
-    }
+  const ibanEmpresa = process.env.MINHA_CONTA_IBAN;
+  const bicEmpresa  = process.env.MINHA_CONTA_BIC;
+
+  if (!ibanEmpresa || !bicEmpresa) {
+    return res.status(500).json({
+      error: 'Configuração em falta: defina MINHA_CONTA_IBAN e MINHA_CONTA_BIC nas variáveis de ambiente.',
+    });
   }
 
   try {
-    const xmlString = gerarSEPAXml(trabalhadores, { instant });
+    const xmlString = gerarSepaSalariosXML(
+      { iban: ibanEmpresa, bic: bicEmpresa },
+      trabalhadores,
+      Boolean(urgente),
+    );
 
-    const filename = instant
-      ? 'transferencias_imediatas_magnetic_place.xml'
-      : 'salarios_magnetic_place.xml';
+    const nomeArquivo = urgente
+      ? 'salarios_URGENTE_MESMO_DIA.xml'
+      : 'salarios_AGENDADO_NORMAL.xml';
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
 
     return res.status(200).send(xmlString);
   } catch (erro) {
