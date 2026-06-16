@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     .maybeSingle();
 
   if (state && settings?.toconline_oauth_state && settings.toconline_oauth_state !== state) {
-    return res.status(400).json({ error: 'Invalid OAuth state — possível ataque CSRF' });
+    return res.redirect(`${APP_URL}/admin/toconline?toconline_error=${encodeURIComponent('Estado OAuth inválido. Tente novamente.')}`);
   }
 
   try {

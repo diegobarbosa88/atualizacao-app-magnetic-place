@@ -164,6 +164,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
   const [ligado, setLigado] = useState(false);
   const [ligando, setLigando] = useState(false);
   const [subtab, setSubtab] = useState('relatorios');
+  const [erroAuth, setErroAuth] = useState(null);
 
   // Import state
   const [tipos, setTipos] = useState(['vendas', 'compras', 'recibos']);
@@ -190,18 +191,24 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('toconline_connected')) {
-      setLigado(true);
+    const connected = params.get('toconline_connected');
+    const errorParam = params.get('toconline_error');
+    if (connected || errorParam) {
       window.history.replaceState({}, '', window.location.pathname);
     }
-    if (params.get('toconline_error')) {
-      setImportResult({ error: decodeURIComponent(params.get('toconline_error')) });
-      window.history.replaceState({}, '', window.location.pathname);
+    if (connected) {
+      setLigado(true);
+      return; // token já está na BD, não sobrescrever com query assíncrona
+    }
+    if (errorParam) {
+      setErroAuth(decodeURIComponent(errorParam));
     }
   }, []);
 
   useEffect(() => {
     if (!supabase) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('toconline_connected')) return; // já tratado acima
     supabase
       .from('system_settings')
       .select('toconline_access_token')
@@ -212,13 +219,14 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
 
   const handleLigar = async () => {
     setLigando(true);
+    setErroAuth(null);
     try {
       const res = await fetch('/api/toconline/auth-init');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       window.location.href = data.authUrl;
     } catch (e) {
-      setImportResult({ error: e.message });
+      setErroAuth(e.message);
       setLigando(false);
     }
   };
@@ -361,6 +369,13 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
           )}
         </div>
       </div>
+
+      {/* Erro de autenticação — visível mesmo quando não ligado */}
+      {erroAuth && (
+        <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-2xl text-xs font-semibold">
+          Erro ao ligar: {erroAuth}
+        </div>
+      )}
 
       {/* Subtabs */}
       {ligado && (
