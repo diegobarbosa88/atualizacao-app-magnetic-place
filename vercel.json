@@ -57,6 +57,6 @@
     { "source": "/api/toconline/status", "destination": "/api/toconline/proxy?action=status" },
     { "source": "/api/toconline/auth-init", "destination": "/api/toconline/proxy?action=auth-init" },
     { "source": "/api/toconline/token-exchange", "destination": "/api/toconline/proxy?action=token-exchange" },
-    { "source": "/((?!api/)(?!@)[^.]*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
