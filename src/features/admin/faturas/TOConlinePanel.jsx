@@ -49,16 +49,20 @@ const FIELD_LABELS_TOC = {
 const VALOR_KEYS = ['total_amount', 'total_tax_amount', 'net_amount', 'received_value', 'gross_total'];
 
 function getNomeEntidade(attrs, tipo) {
-  if (tipo === 'compras') return attrs.supplier_name || attrs.entity_name || '';
-  return attrs.customer_name || attrs.entity_name || '';
+  if (tipo === 'compras') return attrs.supplier_business_name || attrs.supplier_name || attrs.entity_name || '';
+  return attrs.customer_name || attrs.customer_business_name || attrs.entity_name || '';
+}
+
+function getDocNumero(attrs) {
+  return attrs.document_no || attrs.document_number || attrs.number || attrs.doc_number || attrs.reference || null;
 }
 
 function getValorTotal(attrs) {
-  return attrs.total_amount ?? attrs.gross_total ?? attrs.received_value ?? null;
+  return attrs.gross_total ?? attrs.total_amount ?? attrs.net_amount ?? attrs.total_value ?? attrs.received_value ?? null;
 }
 
 function getIva(attrs) {
-  return attrs.total_tax_amount ?? null;
+  return attrs.tax_payable ?? attrs.total_tax_amount ?? attrs.tax_total ?? attrs.total_tax ?? null;
 }
 
 function ModalDocToc({ doc, tipo, onClose }) {
@@ -66,7 +70,7 @@ function ModalDocToc({ doc, tipo, onClose }) {
   const [carregandoPdf, setCarregandoPdf] = useState(false);
 
   if (!doc) return null;
-  const attrs = doc.attributes || {};
+  const attrs = doc.attributes || doc;
 
   const campos = Object.entries(attrs)
     .filter(([, v]) => v != null && v !== '' && typeof v !== 'object')
@@ -117,7 +121,7 @@ function ModalDocToc({ doc, tipo, onClose }) {
         <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100">
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{tipoLabel}</p>
-            <p className="text-sm font-bold text-slate-700">{attrs.document_number || `Doc #${doc.id}`}</p>
+            <p className="text-sm font-bold text-slate-700">{getDocNumero(attrs) || `Doc #${doc.id}`}</p>
             {entidade && <p className="text-xs text-slate-500 mt-0.5">{entidade}</p>}
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors ml-3">
@@ -290,12 +294,12 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
 
   // Derived filter options
   const anosDisponiveisRel = useMemo(() => {
-    const anos = new Set(docsRel.map(d => (d.attributes?.date || '').slice(0, 4)).filter(a => a && a.length === 4));
+    const anos = new Set(docsRel.map(d => ((d.attributes || d).date || '').slice(0, 4)).filter(a => a && a.length === 4));
     return [...anos].sort().reverse();
   }, [docsRel]);
 
   const entidadesDisponiveisRel = useMemo(() => {
-    return [...new Set(docsRel.map(d => getNomeEntidade(d.attributes || {}, tipoRel)).filter(Boolean))].sort();
+    return [...new Set(docsRel.map(d => getNomeEntidade(d.attributes || d, tipoRel)).filter(Boolean))].sort();
   }, [docsRel, tipoRel]);
 
   const toggleOrdemRel = (campo) => setOrdemRel(prev =>
@@ -306,16 +310,17 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
     let lista = [...docsRel];
     const q = pesquisaRel.toLowerCase().trim();
     if (q) lista = lista.filter(d => {
-      const a = d.attributes || {};
+      const a = d.attributes || d;
       const ent = getNomeEntidade(a, tipoRel).toLowerCase();
-      return ent.includes(q) || (a.document_number || '').toLowerCase().includes(q);
+      const num = (getDocNumero(a) || '').toLowerCase();
+      return ent.includes(q) || num.includes(q);
     });
-    if (filtroAnoRel) lista = lista.filter(d => (d.attributes?.date || '').slice(0, 4) === filtroAnoRel);
-    if (filtroMesRel) lista = lista.filter(d => (d.attributes?.date || '').slice(5, 7) === filtroMesRel);
-    if (filtroEntidadeRel) lista = lista.filter(d => getNomeEntidade(d.attributes || {}, tipoRel) === filtroEntidadeRel);
+    if (filtroAnoRel) lista = lista.filter(d => ((d.attributes || d).date || '').slice(0, 4) === filtroAnoRel);
+    if (filtroMesRel) lista = lista.filter(d => ((d.attributes || d).date || '').slice(5, 7) === filtroMesRel);
+    if (filtroEntidadeRel) lista = lista.filter(d => getNomeEntidade(d.attributes || d, tipoRel) === filtroEntidadeRel);
 
     lista.sort((a, b) => {
-      const aa = a.attributes || {}, ba = b.attributes || {};
+      const aa = a.attributes || a, ba = b.attributes || b;
       let va, vb;
       if (ordemRel.campo === 'entidade') { va = getNomeEntidade(aa, tipoRel); vb = getNomeEntidade(ba, tipoRel); }
       else if (ordemRel.campo === 'total') { va = getValorTotal(aa) ?? -1; vb = getValorTotal(ba) ?? -1; }
@@ -544,7 +549,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                     </thead>
                     <tbody>
                       {docsFiltrados.map((doc, i) => {
-                        const a = doc.attributes || {};
+                        const a = doc.attributes || doc;
                         const entidade = getNomeEntidade(a, tipoRel);
                         const total = getValorTotal(a);
                         const iva = getIva(a);
@@ -552,7 +557,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                           <tr key={doc.id}
                             className={`border-b border-slate-50 transition-colors cursor-pointer ${i % 2 === 0 ? 'hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-100/60'}`}
                             onClick={() => setDocDetalhe(doc)}>
-                            <td className="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">{a.document_number || `#${doc.id}`}</td>
+                            <td className="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">{getDocNumero(a) || `#${doc.id}`}</td>
                             <td className="px-4 py-3 text-xs text-slate-700 max-w-[160px] truncate">{entidade || '—'}</td>
                             <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{a.date || '—'}</td>
                             <td className="px-4 py-3 text-xs font-semibold text-slate-700 whitespace-nowrap">
