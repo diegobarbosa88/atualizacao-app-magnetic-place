@@ -2,10 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 import { exchangeCode } from './_token.js';
 
 const REDIRECT_URI = process.env.TOCONLINE_REDIRECT_URI || 'https://trabalhador.magneticplace.pt/api/toconline/callback';
-const APP_URL = process.env.TOCONLINE_APP_URL || 'https://trabalhador.magneticplace.pt';
+
+function getAppUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
+}
 
 export default async function handler(req, res) {
   const { code, state, error: oauthError } = req.query || {};
+  const APP_URL = getAppUrl(req);
 
   if (oauthError) {
     return res.redirect(`${APP_URL}/admin/toconline?toconline_error=${encodeURIComponent(oauthError)}`);
