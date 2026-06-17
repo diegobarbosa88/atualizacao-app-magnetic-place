@@ -272,6 +272,7 @@ export default async function handler(req, res) {
                 type: 'UNSTRUCTURED',
                 value: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140)
               },
+              market: 'PT',
               redirectUri: callbackUrl
             })
           });
