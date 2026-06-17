@@ -34,3 +34,4 @@ dist-ssr
 # Google Service Account credentials — never commit
 credentials.json
 service-account*.json
+.claude/worktrees/
