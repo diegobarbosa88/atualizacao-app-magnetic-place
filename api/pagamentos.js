@@ -347,6 +347,10 @@ export default async function handler(req, res) {
 
         if (updateErr) return res.status(500).json({ error: updateErr.message });
 
+        if (p.fatura_id) {
+          await db.from('faturas').update({ status: 'PAGO' }).eq('id', p.fatura_id);
+        }
+
         return res.json({ ok: true, status: 'EXECUTED', message: 'Pagamento simulado com sucesso!' });
       }
 
@@ -372,22 +376,126 @@ export default async function handler(req, res) {
           finalStatus = 'falhado_tink';
         }
 
-        const { error: updateErr } = await db
+        const { data: pag, error: updateErr } = await db
           .from('pagamentos_fornecedores')
           .update({
             status: finalStatus,
             tink_status: tinkState,
             enviado_em: (finalStatus === 'confirmado') ? new Date().toISOString() : null
           })
-          .eq('tink_payment_request_id', paymentRequestId);
+          .eq('tink_payment_request_id', paymentRequestId)
+          .select('fatura_id')
+          .single();
 
         if (updateErr) return res.status(500).json({ error: updateErr.message });
+
+        if (finalStatus === 'confirmado' && pag?.fatura_id) {
+          await db.from('faturas').update({ status: 'PAGO' }).eq('id', pag.fatura_id);
+        }
 
         return res.json({ ok: true, status: tinkState });
 
       } catch (err) {
         return res.status(500).json({ error: `Erro ao verificar estado Tink: ${err.message}` });
       }
+    }
+
+    // ─── TINK PIS: PAGAR FATURA DIRECTAMENTE (CRIAR + INICIAR TINK EM UM PASSO) ───
+    if (action === 'tink-pagar-fatura') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { fatura_id, fornecedor_nome, fornecedor_iban, fornecedor_nif, valor, referencia, data_pagamento } = req.body || {};
+
+      if (!fatura_id || !fornecedor_nome || !fornecedor_iban || !valor || !data_pagamento) {
+        return res.status(400).json({ error: 'Campos obrigatórios: fatura_id, fornecedor_nome, fornecedor_iban, valor, data_pagamento' });
+      }
+
+      const ibanLimpo = String(fornecedor_iban).replace(/\s/g, '').toUpperCase();
+      if (!/^[A-Z]{2}\d{2}[A-Z0-9]{4,}$/.test(ibanLimpo)) {
+        return res.status(400).json({ error: 'IBAN inválido' });
+      }
+
+      // 1. Criar registo em pagamentos_fornecedores
+      const { data: pagamento, error: criandoErr } = await db
+        .from('pagamentos_fornecedores')
+        .insert({
+          fatura_id,
+          fornecedor_nome,
+          fornecedor_iban: ibanLimpo,
+          fornecedor_nif: fornecedor_nif || null,
+          valor: Number(valor),
+          referencia: referencia || null,
+          data_pagamento,
+          status: 'pendente',
+        })
+        .select()
+        .single();
+
+      if (criandoErr) return res.status(500).json({ error: criandoErr.message });
+
+      // 2. Iniciar Tink PIS
+      const p = pagamento;
+      let redirectUrl = '';
+      let tinkRequestId = '';
+
+      const useRealTink = TINK_CLIENT_ID && TINK_CLIENT_SECRET && process.env.TINK_USE_MOCK !== 'true';
+
+      if (useRealTink) {
+        try {
+          const accessToken = await getTinkClientCredentialsToken('payment:write');
+
+          const host = req.headers.host || 'localhost:3000';
+          const protocol = req.headers['x-forwarded-proto'] || 'http';
+          const callbackUrl = `${protocol}://${host}/callback`;
+
+          const paymentRes = await fetch(`${TINK_BASE_URL}/api/v1/payments/requests`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              destinations: [{ accountNumber: ibanLimpo, type: 'IBAN' }],
+              amount: Number(p.valor),
+              currency: 'EUR',
+              recipientName: p.fornecedor_nome,
+              sourceMessage: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140),
+              remittanceInformation: {
+                type: 'UNSTRUCTURED',
+                value: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140)
+              },
+              market: 'PT',
+              redirectUri: callbackUrl
+            })
+          });
+
+          if (!paymentRes.ok) {
+            const errData = await paymentRes.json();
+            throw new Error(errData.errorMessage || errData.error || 'Erro ao criar pedido Tink');
+          }
+
+          const paymentData = await paymentRes.json();
+          tinkRequestId = paymentData.id;
+          redirectUrl = paymentData.paymentRequestUrl;
+        } catch (err) {
+          await db.from('pagamentos_fornecedores').delete().eq('id', p.id);
+          return res.status(500).json({ error: `Erro na integração Tink: ${err.message}` });
+        }
+      } else {
+        const mockId = `mock-tink-req-${Date.now()}`;
+        tinkRequestId = mockId;
+        const host = req.headers.host || 'localhost:3000';
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        redirectUrl = `${protocol}://${host}/admin/pagamentos?tink=callback&mock_request_id=${mockId}&mock_payment_id=${p.id}`;
+      }
+
+      await db.from('pagamentos_fornecedores').update({
+        status: 'iniciado_tink',
+        tink_payment_request_id: tinkRequestId,
+        tink_auth_url: redirectUrl,
+        tink_status: 'PENDING'
+      }).eq('id', p.id);
+
+      return res.json({ redirectUrl, paymentRequestId: tinkRequestId, paymentId: p.id });
     }
 
     // ─── TINK AIS: TROCAR CÓDIGO POR TOKENS (SINCRONIZAÇÃO DE CONTAS) ───

@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
-  X, Loader2, Download, FileText, MessageSquare, Undo2,
+  X, Loader2, Download, FileText, MessageSquare, Undo2, CreditCard, Search,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -16,7 +16,140 @@ function fmtData(d) {
   try { return new Date(d).toLocaleDateString('pt-PT'); } catch { return d; }
 }
 
-function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar, onRemoverJustificacao }) {
+function PagarFaturaModal({ fatura, onClose, onPago }) {
+  const fornecedorNome = fatura.dados?.fornecedor || fatura.entidade || '';
+  const valor = fatura.dados?.valor_total || fatura.valor || '';
+  const referencia = fatura.dados?.numero_fatura || '';
+
+  const [iban, setIban] = useState('');
+  const [nif, setNif] = useState('');
+  const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().slice(0, 10));
+  const [buscandoIban, setBuscandoIban] = useState(false);
+  const [iniciando, setIniciando] = useState(false);
+  const [erro, setErro] = useState(null);
+
+  const buscarIban = async () => {
+    if (!fornecedorNome || fornecedorNome.length < 2) return;
+    setBuscandoIban(true);
+    try {
+      const res = await fetch(`/api/toconline?action=fornecedores&q=${encodeURIComponent(fornecedorNome)}`);
+      const data = await res.json();
+      const f = (data.data || [])[0];
+      if (f?.attributes?.iban) setIban(f.attributes.iban);
+      if (f?.attributes?.tax_registration_number) setNif(f.attributes.tax_registration_number);
+      if (!f?.attributes?.iban) setErro('IBAN não encontrado no TOConline — preencha manualmente.');
+    } catch {
+      setErro('Erro ao pesquisar fornecedor.');
+    } finally {
+      setBuscandoIban(false);
+    }
+  };
+
+  const handlePagar = async () => {
+    setErro(null);
+    if (!iban.trim()) { setErro('IBAN obrigatório.'); return; }
+    setIniciando(true);
+    try {
+      const res = await fetch('/api/pagamentos?action=tink-pagar-fatura', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fatura_id: fatura.id,
+          fornecedor_nome: fornecedorNome,
+          fornecedor_iban: iban.replace(/\s/g, '').toUpperCase(),
+          fornecedor_nif: nif || null,
+          valor: Number(valor),
+          referencia: referencia || null,
+          data_pagamento: dataPagamento,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || `Erro ${res.status}`);
+      onPago(fatura.id);
+      window.location.href = d.redirectUrl;
+    } catch (err) {
+      setErro(err.message);
+      setIniciando(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-violet-50 rounded-xl"><CreditCard size={14} className="text-violet-600" /></div>
+            <h3 className="text-sm font-black text-slate-800">Pagar via Tink</h3>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+        </div>
+
+        {/* Resumo da fatura */}
+        <div className="bg-amber-50 rounded-2xl px-4 py-3 space-y-0.5">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Fatura a pagar</p>
+          <p className="text-sm font-bold text-slate-800">{fornecedorNome || '—'}</p>
+          <p className="text-[11px] text-slate-500">
+            {referencia && <>Nº {referencia} · </>}
+            Valor: <strong className="text-slate-700">{(parseFloat(valor) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €</strong>
+          </p>
+        </div>
+
+        {/* IBAN */}
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">IBAN do Fornecedor *</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={iban}
+              onChange={e => setIban(e.target.value.toUpperCase())}
+              placeholder="PT50 0000 0000 0000 0000 0000 0"
+              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
+            />
+            <button
+              type="button"
+              onClick={buscarIban}
+              disabled={buscandoIban}
+              title="Buscar IBAN no TOConline"
+              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 transition-colors disabled:opacity-40"
+            >
+              {buscandoIban ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Data */}
+        <div className="space-y-1">
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de pagamento *</p>
+          <input
+            type="date"
+            value={dataPagamento}
+            onChange={e => setDataPagamento(e.target.value)}
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
+          />
+        </div>
+
+        {erro && <div className="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>}
+
+        <div className="flex gap-2 pt-1">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            disabled={iniciando || !iban.trim()}
+            onClick={handlePagar}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+          >
+            {iniciando ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
+            {iniciando ? 'A redirecionar...' : 'Pagar via Tink'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar, onRemoverJustificacao, onPagarTink }) {
   const [open, setOpen] = useState(false);
 
   const pendingCount = faturas.filter(f =>
@@ -84,12 +217,20 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-[12px] font-bold text-slate-700">{fmtEur(f.dados?.valor_total)}</span>
                     {!isPago && !isJustified && (
-                      <button
-                        onClick={() => onJustificar({ fatura_id: f.id, fornecedor, numero: f.dados?.numero_fatura, valor: f.dados?.valor_total })}
-                        className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
-                      >
-                        <MessageSquare size={9} /> Justificar
-                      </button>
+                      <>
+                        <button
+                          onClick={() => onPagarTink(f)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+                        >
+                          <CreditCard size={9} /> Pagar
+                        </button>
+                        <button
+                          onClick={() => onJustificar({ fatura_id: f.id, fornecedor, numero: f.dados?.numero_fatura, valor: f.dados?.valor_total })}
+                          className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors"
+                        >
+                          <MessageSquare size={9} /> Justificar
+                        </button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -112,6 +253,7 @@ export default function FaturasTab() {
   const [justText, setJustText] = useState('');
   const [justSaving, setJustSaving] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [pagarModal, setPagarModal] = useState(null); // fatura object
   const exportRef = useRef(null);
 
   useEffect(() => {
@@ -307,6 +449,7 @@ export default function FaturasTab() {
               justificacoes={justificacoes}
               onJustificar={setJustModal}
               onRemoverJustificacao={handleRemoverJustificacao}
+              onPagarTink={setPagarModal}
             />
           ))
       )}
@@ -317,6 +460,18 @@ export default function FaturasTab() {
           <p className="text-[9px] font-black uppercase tracking-widest text-amber-500">Total em Aberto</p>
           <p className="text-xl font-black text-amber-700">{fmtEur(totalPendente)}</p>
         </div>
+      )}
+
+      {/* Modal: pagar via Tink */}
+      {pagarModal && (
+        <PagarFaturaModal
+          fatura={pagarModal}
+          onClose={() => setPagarModal(null)}
+          onPago={(faturaId) => {
+            setFaturas(prev => prev.map(f => f.id === faturaId ? { ...f, status: 'PAGO' } : f));
+            setPagarModal(null);
+          }}
+        />
       )}
 
       {/* Modal: justificar fatura */}
