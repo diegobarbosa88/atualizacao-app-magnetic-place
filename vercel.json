@@ -15,9 +15,6 @@
     "api/reconciliacao/process.js": {
       "maxDuration": 30
     },
-    "api/reconciliacao/reprocess.js": {
-      "maxDuration": 30
-    },
     "api/toconline/import.js": {
       "maxDuration": 300
     },
