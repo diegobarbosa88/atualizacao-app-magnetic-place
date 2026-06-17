@@ -1,8 +1,106 @@
 import { createClient } from '@supabase/supabase-js';
 import { gerarSEPAXml } from './salarios/_sepaXml.js';
 
+const TINK_CLIENT_ID = process.env.TINK_CLIENT_ID;
+const TINK_CLIENT_SECRET = process.env.TINK_CLIENT_SECRET;
+const TINK_BASE_URL = process.env.TINK_BASE_URL || 'https://api.tink.com';
+
 function supabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+// Helper: Obter Token de Iniciação de Pagamentos (Client Credentials)
+async function getTinkClientCredentialsToken(scope) {
+  const res = await fetch(`${TINK_BASE_URL}/api/v1/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: TINK_CLIENT_ID,
+      client_secret: TINK_CLIENT_SECRET,
+      grant_type: 'client_credentials',
+      scope: scope
+    })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro Tink client credentials (${res.status}): ${text}`);
+  }
+
+  const data = await res.json();
+  return data.access_token;
+}
+
+// Helper: Trocar Código por Token de Utilizador (AIS - Sincronização)
+async function exchangeAuthorizationCode(code) {
+  const res = await fetch(`${TINK_BASE_URL}/api/v1/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: TINK_CLIENT_ID,
+      client_secret: TINK_CLIENT_SECRET,
+      grant_type: 'authorization_code'
+    })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro Tink token exchange (${res.status}): ${text}`);
+  }
+
+  return res.json();
+}
+
+// Helper: Renovar Token de Utilizador (AIS)
+async function refreshUserTokens(refreshToken) {
+  const res = await fetch(`${TINK_BASE_URL}/api/v1/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      refresh_token: refreshToken,
+      client_id: TINK_CLIENT_ID,
+      client_secret: TINK_CLIENT_SECRET,
+      grant_type: 'refresh_token'
+    })
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Erro Tink token refresh (${res.status}): ${text}`);
+  }
+
+  return res.json();
+}
+
+// Helper: Obter Token AIS de Utilizador Válido
+async function getValidUserToken(db) {
+  const { data, error } = await db
+    .from('system_settings')
+    .select('tink_access_token, tink_refresh_token, tink_token_expires_at')
+    .eq('id', 1)
+    .maybeSingle();
+
+  if (error) throw new Error(`system_settings: ${error.message}`);
+  if (!data?.tink_access_token) {
+    throw new Error('Conta bancária Tink não está ligada. Por favor autentique primeiro.');
+  }
+
+  const expiresAt = data.tink_token_expires_at ? new Date(data.tink_token_expires_at) : null;
+  const isExpired = !expiresAt || expiresAt <= new Date(Date.now() + 60_000);
+
+  if (!isExpired) return data.tink_access_token;
+
+  const tokens = await refreshUserTokens(data.tink_refresh_token);
+  const newExpires = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+
+  await db.from('system_settings').update({
+    tink_access_token: tokens.access_token,
+    tink_refresh_token: tokens.refresh_token || data.tink_refresh_token,
+    tink_token_expires_at: newExpires,
+  }).eq('id', 1);
+
+  return tokens.access_token;
 }
 
 export default async function handler(req, res) {
@@ -120,6 +218,7 @@ export default async function handler(req, res) {
     return res.json({ ok: true });
   }
 
+  // ─── TINK PIS: INICIAR PAGAMENTO REAL (TRANSFERÊNCIA) ───
   if (action === 'tink-iniciar') {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
     const { ids } = req.body || {};
@@ -138,44 +237,22 @@ export default async function handler(req, res) {
       return res.status(404).json({ error: 'Nenhum pagamento pendente encontrado para iniciar com Tink' });
     }
 
-    // Iniciamos o primeiro pagamento do lote para demonstração/fluxo simplificado e seguro (SCA individual)
     const p = pagamentos[0];
-
-    const clientId = process.env.TINK_CLIENT_ID;
-    const clientSecret = process.env.TINK_CLIENT_SECRET;
-    const baseUrl = process.env.TINK_BASE_URL || 'https://api.tink.com';
 
     let redirectUrl = '';
     let tinkRequestId = '';
 
-    if (clientId && clientSecret) {
+    if (TINK_CLIENT_ID && TINK_CLIENT_SECRET) {
       try {
-        // 1. Obter Token de Acesso Tink (client_credentials)
-        const tokenRes = await fetch(`${baseUrl}/api/v1/oauth/token`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: clientId,
-            client_secret: clientSecret,
-            grant_type: 'client_credentials',
-            scope: 'payment:write'
-          })
-        });
+        // 1. Obter Token Client Credentials
+        const accessToken = await getTinkClientCredentialsToken('payment:write');
 
-        if (!tokenRes.ok) {
-          const errData = await tokenRes.json();
-          throw new Error(errData.errorMessage || errData.error || 'Erro na autenticação Tink');
-        }
-
-        const tokenData = await tokenRes.json();
-        const accessToken = tokenData.access_token;
-
-        // 2. Criar Iniciação de Pagamento na Tink
+        // 2. Criar Iniciação de Pagamento
         const host = req.headers.host || 'localhost:3000';
         const protocol = req.headers['x-forwarded-proto'] || 'http';
         const callbackUrl = `${protocol}://${host}/admin/pagamentos?tink=callback`;
 
-        const paymentRes = await fetch(`${baseUrl}/api/v1/payments/requests`, {
+        const paymentRes = await fetch(`${TINK_BASE_URL}/api/v1/payments/requests`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -207,7 +284,7 @@ export default async function handler(req, res) {
         return res.status(500).json({ error: `Erro na integração Tink real: ${err.message}` });
       }
     } else {
-      // ─── MOCK SANDBOX FLOW (Caso não existam credenciais reais configuradas) ───
+      // MOCK SANDBOX FLOW
       const mockId = `mock-tink-req-${Date.now()}`;
       tinkRequestId = mockId;
 
@@ -231,6 +308,7 @@ export default async function handler(req, res) {
     return res.json({ redirectUrl, paymentRequestId: tinkRequestId, paymentId: p.id });
   }
 
+  // ─── TINK PIS: VERIFICAR ESTADO DO PAGAMENTO ───
   if (action === 'tink-verificar') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
     const { paymentRequestId } = req.query;
@@ -264,31 +342,14 @@ export default async function handler(req, res) {
       return res.json({ ok: true, status: 'EXECUTED', message: 'Pagamento simulado com sucesso!' });
     }
 
-    const clientId = process.env.TINK_CLIENT_ID;
-    const clientSecret = process.env.TINK_CLIENT_SECRET;
-    const baseUrl = process.env.TINK_BASE_URL || 'https://api.tink.com';
-
-    if (!clientId || !clientSecret) {
+    if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
       return res.status(400).json({ error: 'Credenciais Tink não configuradas para verificação real' });
     }
 
     try {
-      const tokenRes = await fetch(`${baseUrl}/api/v1/oauth/token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: clientId,
-          client_secret: clientSecret,
-          grant_type: 'client_credentials',
-          scope: 'payment:read'
-        })
-      });
+      const accessToken = await getTinkClientCredentialsToken('payment:read');
 
-      if (!tokenRes.ok) throw new Error('Erro ao autenticar com a API Tink');
-      const tokenData = await tokenRes.json();
-      const accessToken = tokenData.access_token;
-
-      const statusRes = await fetch(`${baseUrl}/api/v1/payments/requests/${paymentRequestId}`, {
+      const statusRes = await fetch(`${TINK_BASE_URL}/api/v1/payments/requests/${paymentRequestId}`, {
         headers: { 'Authorization': `Bearer ${accessToken}` }
       });
 
@@ -318,6 +379,95 @@ export default async function handler(req, res) {
 
     } catch (err) {
       return res.status(500).json({ error: `Erro ao verificar estado Tink: ${err.message}` });
+    }
+  }
+
+  // ─── TINK AIS: TROCAR CÓDIGO POR TOKENS (SINCRONIZAÇÃO DE CONTAS) ───
+  if (action === 'tink-exchange-code') {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    const { code } = req.body || {};
+    if (!code) return res.status(400).json({ error: 'Código de autorização obrigatório.' });
+
+    if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
+      return res.status(400).json({ error: 'Credenciais Tink não configuradas.' });
+    }
+
+    try {
+      const tokens = await exchangeAuthorizationCode(code);
+      const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
+
+      const { error } = await db
+        .from('system_settings')
+        .update({
+          tink_access_token: tokens.access_token,
+          tink_refresh_token: tokens.refresh_token,
+          tink_token_expires_at: expiresAt
+        })
+        .eq('id', 1);
+
+      if (error) throw error;
+
+      return res.status(200).json({ ok: true, message: 'Conta bancária Tink ligada com sucesso!' });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ─── TINK AIS: LISTAR CONTAS CONECTADAS ───
+  if (action === 'tink-list-accounts') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+    if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
+      return res.status(400).json({ error: 'Credenciais Tink não configuradas.' });
+    }
+
+    try {
+      const accessToken = await getValidUserToken(db);
+
+      const response = await fetch(`${TINK_BASE_URL}/api/v1/accounts/list`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Erro Tink ao listar contas (${response.status}): ${text}`);
+      }
+
+      const data = await response.json();
+      return res.status(200).json({ data: data.accounts || [] });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // ─── TINK AIS: LISTAR TRANSAÇÕES DA CONTA ───
+  if (action === 'tink-list-transactions') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+    const { accountId } = req.query;
+
+    if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
+      return res.status(400).json({ error: 'Credenciais Tink não configuradas.' });
+    }
+
+    try {
+      const accessToken = await getValidUserToken(db);
+
+      const params = new URLSearchParams();
+      if (accountId) params.set('accountId', accountId);
+
+      const response = await fetch(`${TINK_BASE_URL}/api/v1/transactions?${params}`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Erro Tink ao listar transações (${response.status}): ${text}`);
+      }
+
+      const data = await response.json();
+      return res.status(200).json({ data: data.transactions || [] });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
   }
 
