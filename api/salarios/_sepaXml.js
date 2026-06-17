@@ -48,7 +48,7 @@ function gerarId(prefixo = 'MSG', indice = '') {
  * @param {Array<{nome: string, iban: string, salario: number, mes: string, ano: string}>} trabalhadores
  * @returns {string} XML UTF-8 pronto a descarregar
  */
-export function gerarSEPAXml(trabalhadores, { instant = false } = {}) {
+export function gerarSEPAXml(trabalhadores, { instant = false, ctgyPurp = 'SALA' } = {}) {
   const ibanEmpresa = process.env.MINHA_CONTA_IBAN;
   const bicEmpresa = process.env.MINHA_CONTA_BIC;
 
@@ -104,7 +104,7 @@ export function gerarSEPAXml(trabalhadores, { instant = false } = {}) {
   if (instant) {
     pmtTpInf.ele('LclInstrm').ele('Cd').txt('INST').up().up();
   }
-  pmtTpInf.ele('CtgyPurp').ele('Cd').txt('SALA').up().up();
+  pmtTpInf.ele('CtgyPurp').ele('Cd').txt(ctgyPurp).up().up();
 
   const doc = root
           .ele('ReqdExctnDt').txt(dataExecucao).up()
@@ -128,7 +128,7 @@ export function gerarSEPAXml(trabalhadores, { instant = false } = {}) {
   trabalhadores.forEach((trabalhador, i) => {
     const endToEndId = gerarId('E2E', i + 1);
     const valorFormatado = Number(trabalhador.salario).toFixed(2);
-    const descritivo = `Vencimento ${trabalhador.mes}/${trabalhador.ano}`;
+    const descritivo = trabalhador.descritivo || `Vencimento ${trabalhador.mes}/${trabalhador.ano}`;
 
     doc
       .ele('CdtTrfTxInf')

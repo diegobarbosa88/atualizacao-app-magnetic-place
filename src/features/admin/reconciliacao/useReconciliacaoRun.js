@@ -748,7 +748,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     e.stopPropagation();
     setReprocessando(runId);
     try {
-      const res = await fetch('/api/reconciliacao/reprocess', {
+      const res = await fetch('/api/reconciliacao/process?action=reprocess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ runId }),

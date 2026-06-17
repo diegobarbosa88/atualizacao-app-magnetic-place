@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, TrendingUp, BarChart2 } from 'lucide-react';
+import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, TrendingUp, BarChart2, ArrowRightLeft } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -12,6 +12,7 @@ import SalariosTab from './SalariosTab';
 import FaturasTab from './FaturasTab';
 import MovimentacoesTab from './MovimentacoesTab';
 import FaturasAdmin from './FaturasAdmin';
+import PagamentosTab from './pagamentos/PagamentosTab';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 
 import DocumentsFilters from './documents/DocumentsFilters';
@@ -50,14 +51,21 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         { id: 'movimentacoes',  label: 'Movimentações',  icon: TrendingUp },
       ],
     },
+    {
+      id: 'pagamentos', label: 'Pagamentos', icon: ArrowRightLeft, color: 'violet',
+      sections: [
+        { id: 'pagamentos-fornecedores', label: 'Fornecedores', icon: ArrowRightLeft },
+      ],
+    },
   ];
 
-  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos' };
+  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos', pagamentos: 'pagamentos-fornecedores' };
 
   const GROUP_COLOR = {
     indigo:  { active: 'bg-indigo-600 text-white shadow-indigo-200',  text: 'text-indigo-600',  icon: 'bg-indigo-50 text-indigo-600' },
     blue:    { active: 'bg-blue-600 text-white shadow-blue-200',      text: 'text-blue-600',    icon: 'bg-blue-50 text-blue-600' },
     emerald: { active: 'bg-emerald-600 text-white shadow-emerald-200',text: 'text-emerald-600', icon: 'bg-emerald-50 text-emerald-600' },
+    violet:  { active: 'bg-violet-600 text-white shadow-violet-200',  text: 'text-violet-600',  icon: 'bg-violet-50 text-violet-600' },
   };
 
   const activeGroup = useMemo(() => {
@@ -66,6 +74,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     if (['documentos', 'templates'].includes(first)) return 'arquivo';
     if (first === 'faturas') return 'faturas';
     if (first === 'reconciliacao') return 'reconciliacao';
+    if (first === 'pagamentos') return 'pagamentos';
     // compatibilidade com rotas antigas /validar/*
     if (first === 'validar') return 'reconciliacao';
     return 'arquivo';
@@ -407,6 +416,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {activeGroup === 'reconciliacao' && activeSection === 'movimentacoes' && (
         <MovimentacoesTab />
+      )}
+      {activeGroup === 'pagamentos' && activeSection === 'pagamentos-fornecedores' && (
+        <PagamentosTab />
       )}
       {(activeGroup === 'arquivo' && activeSection === 'documentos') && (
         <>
