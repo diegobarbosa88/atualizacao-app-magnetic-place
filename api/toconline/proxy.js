@@ -197,5 +197,74 @@ export default async function handler(req, res) {
     }
   }
 
+  // Pagamentos de compras
+  if (action === 'pagamentos-compra') {
+    const docId = req.query.doc_id || req.body?.doc_id;
+    if (req.method === 'GET') {
+      try {
+        const params = docId ? `?filter[commercial_purchases_document_id]=${docId}` : '';
+        const data = await tocFetch(`/api/v1/commercial_purchases_payments${params}`, accessToken);
+        return res.status(200).json(data);
+      } catch (e) {
+        return res.status(500).json({ error: e.message });
+      }
+    }
+    if (req.method === 'POST') {
+      const { doc_id: dId, valor, metodo, data: d } = req.body || {};
+      const attrs = {
+        commercial_purchases_document_id: dId,
+        value: Number(valor),
+      };
+      if (metodo) attrs.payment_method_id = metodo;
+      if (d) attrs.date = d;
+      const payload = { data: { type: 'commercial_purchases_payments', attributes: attrs } };
+      try {
+        const data = await tocFetch('/api/v1/commercial_purchases_payments', accessToken, 'POST', payload);
+        return res.status(201).json(data);
+      } catch (e) {
+        return res.status(500).json({ error: e.message });
+      }
+    }
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ error: 'Parâmetro obrigatório: id' });
+      try {
+        const data = await tocFetch(`/api/v1/commercial_purchases_payments/${id}`, accessToken, 'DELETE');
+        return res.status(200).json(data || {});
+      } catch (e) {
+        return res.status(500).json({ error: e.message });
+      }
+    }
+    if (req.method === 'PATCH') {
+      const { id } = req.query;
+      if (!id) return res.status(400).json({ error: 'Parâmetro obrigatório: id' });
+      try {
+        const data = await tocFetch(
+          `/api/v1/commercial_purchases_payments/${id}`,
+          accessToken,
+          'PATCH',
+          { data: { type: 'commercial_purchases_payments', id, attributes: { finalize: 1 } } }
+        );
+        return res.status(200).json(data);
+      } catch (e) {
+        return res.status(500).json({ error: e.message });
+      }
+    }
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  // PDF de compras
+  if (action === 'pdf-compra') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ error: 'Parâmetro obrigatório: id' });
+    try {
+      const data = await tocFetch(`/api/v1/url_for_print/${id}`, accessToken);
+      return res.status(200).json(data);
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   return res.status(400).json({ error: `Acção desconhecida: ${action || '(não definida)'}` });
 }
