@@ -230,6 +230,25 @@ export default function App() {
       .catch(e => navigate('/admin/toconline?toconline_error=' + encodeURIComponent(e.message), { replace: true }));
   }, [location.search]);
 
+  // Tratar o callback do Tink Link quando a redirect_uri é /callback
+  useEffect(() => {
+    if (location.pathname === '/callback') {
+      const params = new URLSearchParams(location.search);
+      const code = params.get('code');
+      const paymentRequestId = params.get('payment_request_id');
+
+      if (code) {
+        // É um callback de AIS (Conexão de Contas Tink)
+        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?tink=callback&code=${code}`, { replace: true });
+      } else if (paymentRequestId) {
+        // É um callback de PIS (Iniciação de Pagamentos Tink)
+        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?tink=callback&payment_request_id=${paymentRequestId}`, { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [location.pathname, location.search, navigate]);
+
   useEffect(() => {
     if (location.pathname === '/' || location.pathname === '') {
       if (view === 'admin') navigate('/admin/overview', { replace: true });
