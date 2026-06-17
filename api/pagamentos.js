@@ -238,12 +238,14 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Nenhum pagamento pendente encontrado para iniciar com Tink' });
       }
 
-      const p = pagamentos[0];
+    const p = pagamentos[0];
 
-      let redirectUrl = '';
-      let tinkRequestId = '';
+    let redirectUrl = '';
+    let tinkRequestId = '';
 
-      if (TINK_CLIENT_ID && TINK_CLIENT_SECRET) {
+    const useRealTink = TINK_CLIENT_ID && TINK_CLIENT_SECRET && process.env.TINK_USE_MOCK !== 'true';
+
+    if (useRealTink) {
         try {
           // 1. Obter Token Client Credentials
           const accessToken = await getTinkClientCredentialsToken('payment:write');
