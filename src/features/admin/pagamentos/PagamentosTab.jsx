@@ -54,37 +54,61 @@ export default function PagamentosTab() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Tratar Callback de Iniciação de Pagamento Tink PSD2
+  // Tratar Callback de Iniciação de Pagamento ou Ligação de Contas Tink PSD2
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tinkFlag = params.get('tink');
+    const code = params.get('code');
     const mockRequestId = params.get('mock_request_id');
     const paymentRequestId = params.get('payment_request_id') || mockRequestId;
 
-    if (tinkFlag === 'callback') {
-      if (paymentRequestId) {
-        // Limpar parâmetros da URL de forma limpa para não repetir a chamada
-        window.history.replaceState({}, document.title, window.location.pathname);
-        
-        setLoading(true);
-        fetch(`/api/pagamentos?action=tink-verificar&paymentRequestId=${paymentRequestId}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data.ok) {
-              alert(data.message || `Pagamento verificado com sucesso! Estado actual: ${data.status}`);
-            } else {
-              alert(`Erro ao verificar pagamento Tink: ${data.error}`);
-            }
-            carregar();
-          })
-          .catch(err => {
-            alert(`Erro na ligação ao banco: ${err.message}`);
-            carregar();
-          })
-          .finally(() => {
-            setLoading(false);
-          });
-      }
+    if (code) {
+      // Limpar parâmetros da URL de forma limpa para não repetir a chamada
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      setLoading(true);
+      fetch('/api/pagamentos?action=tink-exchange-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            alert(data.message || 'Conta bancária Tink ligada com sucesso!');
+          } else {
+            alert(`Erro ao ligar conta Tink: ${data.error}`);
+          }
+          carregar();
+        })
+        .catch(err => {
+          alert(`Erro na ligação ao banco: ${err.message}`);
+          carregar();
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    } else if (paymentRequestId) {
+      // Limpar parâmetros da URL de forma limpa para não repetir a chamada
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      setLoading(true);
+      fetch(`/api/pagamentos?action=tink-verificar&paymentRequestId=${paymentRequestId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            alert(data.message || `Pagamento verificado com sucesso! Estado actual: ${data.status}`);
+          } else {
+            alert(`Erro ao verificar pagamento Tink: ${data.error}`);
+          }
+          carregar();
+        })
+        .catch(err => {
+          alert(`Erro na ligação ao banco: ${err.message}`);
+          carregar();
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [carregar]);
 

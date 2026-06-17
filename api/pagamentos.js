@@ -483,7 +483,11 @@ export default async function handler(req, res) {
       const protocol = req.headers['x-forwarded-proto'] || 'http';
       const redirectUri = `${protocol}://${host}/admin/pagamentos`;
 
-      const url = `https://link.tink.com/1.0/business-transactions/connect-accounts/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&market=PT&locale=pt_PT`;
+      // Se for a conta de testes/sandbox, ou se a variável TINK_SANDBOX estiver ativa
+      const isSandbox = !TINK_CLIENT_ID || process.env.TINK_SANDBOX === 'true' || clientId === 'a9eeac4d05fa425d9e8f67b114ec70cf';
+      const sandboxParam = isSandbox ? '&test=true' : '';
+
+      const url = `https://link.tink.com/1.0/business-transactions/connect-accounts/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&market=PT&locale=pt_PT${sandboxParam}`;
       return res.status(200).json({ url });
     }
 
