@@ -144,7 +144,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
 
   const handleConectarTink = async () => {
     try {
-      const res = await fetch('/api/pagamentos?action=tink-get-link');
+      const res = await fetch('/api/pagamentos?action=saltedge-get-link');
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao obter link Tink');
       if (data.url) {

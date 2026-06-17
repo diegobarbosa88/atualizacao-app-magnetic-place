@@ -230,19 +230,19 @@ export default function App() {
       .catch(e => navigate('/admin/toconline?toconline_error=' + encodeURIComponent(e.message), { replace: true }));
   }, [location.search]);
 
-  // Tratar o callback do Tink Link quando a redirect_uri é /callback
+  // Tratar callback Salt Edge quando a return_to é /callback
   useEffect(() => {
     if (location.pathname === '/callback') {
       const params = new URLSearchParams(location.search);
-      const code = params.get('code');
-      const paymentRequestId = params.get('payment_request_id');
+      const paymentId = params.get('payment_id');
+      const connectionId = params.get('connection_id');
 
-      if (code) {
-        // É um callback de AIS (Conexão de Contas Tink)
-        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?tink=callback&code=${code}`, { replace: true });
-      } else if (paymentRequestId) {
-        // É um callback de PIS (Iniciação de Pagamentos Tink)
-        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?tink=callback&payment_request_id=${paymentRequestId}`, { replace: true });
+      if (paymentId) {
+        // Callback de PIS (Iniciação de Pagamento Salt Edge)
+        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?saltedge=callback&payment_id=${paymentId}`, { replace: true });
+      } else if (connectionId) {
+        // Callback de AIS (Ligação de Conta Salt Edge)
+        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?saltedge=callback&connection_id=${connectionId}`, { replace: true });
       } else {
         navigate('/', { replace: true });
       }

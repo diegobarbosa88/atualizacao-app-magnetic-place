@@ -1,107 +1,52 @@
 import { createClient } from '@supabase/supabase-js';
 import { gerarSEPAXml } from './salarios/_sepaXml.js';
 
-const TINK_CLIENT_ID = process.env.TINK_CLIENT_ID;
-const TINK_CLIENT_SECRET = process.env.TINK_CLIENT_SECRET;
-const TINK_BASE_URL = process.env.TINK_BASE_URL || 'https://api.tink.com';
+const SALTEDGE_APP_ID = process.env.SALTEDGE_APP_ID;
+const SALTEDGE_SECRET = process.env.SALTEDGE_SECRET;
+const SALTEDGE_BASE_URL = 'https://www.saltedge.com';
 
 function supabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// Helper: Obter Token de Iniciação de Pagamentos (Client Credentials)
-async function getTinkClientCredentialsToken(scope) {
-  const res = await fetch(`${TINK_BASE_URL}/api/v1/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      client_id: TINK_CLIENT_ID,
-      client_secret: TINK_CLIENT_SECRET,
-      grant_type: 'client_credentials',
-      scope: scope
-    })
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Erro Tink client credentials (${res.status}): ${text}`);
-  }
-
-  const data = await res.json();
-  return data.access_token;
+// Headers base Salt Edge (sem assinatura — obrigatória apenas em Live)
+function saltEdgeHeaders() {
+  return {
+    'App-id': SALTEDGE_APP_ID,
+    'Secret': SALTEDGE_SECRET,
+    'Content-Type': 'application/json',
+  };
 }
 
-// Helper: Trocar Código por Token de Utilizador (AIS - Sincronização)
-async function exchangeAuthorizationCode(code) {
-  const res = await fetch(`${TINK_BASE_URL}/api/v1/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      code,
-      client_id: TINK_CLIENT_ID,
-      client_secret: TINK_CLIENT_SECRET,
-      grant_type: 'authorization_code'
-    })
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Erro Tink token exchange (${res.status}): ${text}`);
-  }
-
-  return res.json();
-}
-
-// Helper: Renovar Token de Utilizador (AIS)
-async function refreshUserTokens(refreshToken) {
-  const res = await fetch(`${TINK_BASE_URL}/api/v1/oauth/token`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      refresh_token: refreshToken,
-      client_id: TINK_CLIENT_ID,
-      client_secret: TINK_CLIENT_SECRET,
-      grant_type: 'refresh_token'
-    })
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Erro Tink token refresh (${res.status}): ${text}`);
-  }
-
-  return res.json();
-}
-
-// Helper: Obter Token AIS de Utilizador Válido
-async function getValidUserToken(db) {
-  const { data, error } = await db
+// Criar ou recuperar o customer Salt Edge da empresa (guardado em system_settings)
+async function getOrCreateCustomer(db) {
+  const { data: settings } = await db
     .from('system_settings')
-    .select('tink_access_token, tink_refresh_token, tink_token_expires_at')
+    .select('saltedge_customer_id')
     .eq('id', 1)
     .maybeSingle();
 
-  if (error) throw new Error(`system_settings: ${error.message}`);
-  if (!data?.tink_access_token) {
-    throw new Error('Conta bancária Tink não está ligada. Por favor autentique primeiro.');
+  if (settings?.saltedge_customer_id) return settings.saltedge_customer_id;
+
+  const res = await fetch(`${SALTEDGE_BASE_URL}/api/v6/customers`, {
+    method: 'POST',
+    headers: saltEdgeHeaders(),
+    body: JSON.stringify({ data: { identifier: 'magnetic_place_main' } }),
+  });
+
+  if (!res.ok) {
+    const txt = await res.text();
+    // Se já existe, tentar obter por identifier não é suportado — erro é expectável em re-runs
+    throw new Error(`Salt Edge criar customer (${res.status}): ${txt}`);
   }
 
-  const expiresAt = data.tink_token_expires_at ? new Date(data.tink_token_expires_at) : null;
-  const isExpired = !expiresAt || expiresAt <= new Date(Date.now() + 60_000);
+  const { data } = await res.json();
+  const customerId = data.id;
 
-  if (!isExpired) return data.tink_access_token;
-
-  const tokens = await refreshUserTokens(data.tink_refresh_token);
-  const newExpires = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
-
-  await db.from('system_settings').update({
-    tink_access_token: tokens.access_token,
-    tink_refresh_token: tokens.refresh_token || data.tink_refresh_token,
-    tink_token_expires_at: newExpires,
-  }).eq('id', 1);
-
-  return tokens.access_token;
+  await db.from('system_settings').update({ saltedge_customer_id: customerId }).eq('id', 1);
+  return customerId;
 }
+
 
 export default async function handler(req, res) {
   try {
@@ -219,8 +164,8 @@ export default async function handler(req, res) {
       return res.json({ ok: true });
     }
 
-    // ─── TINK PIS: INICIAR PAGAMENTO REAL (TRANSFERÊNCIA) ───
-    if (action === 'tink-iniciar') {
+    // ─── SALT EDGE PIS: INICIAR PAGAMENTO (A PARTIR DE PAGAMENTOS_FORNECEDORES) ───
+    if (action === 'saltedge-iniciar') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
       const { ids } = req.body || {};
       if (!Array.isArray(ids) || ids.length === 0) {
@@ -235,173 +180,139 @@ export default async function handler(req, res) {
 
       if (error) return res.status(500).json({ error: error.message });
       if (!pagamentos || pagamentos.length === 0) {
-        return res.status(404).json({ error: 'Nenhum pagamento pendente encontrado para iniciar com Tink' });
+        return res.status(404).json({ error: 'Nenhum pagamento pendente encontrado' });
       }
 
-    const p = pagamentos[0];
+      const p = pagamentos[0];
+      const host = req.headers.host || 'localhost:3000';
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const returnTo = `${protocol}://${host}/callback`;
 
-    let redirectUrl = '';
-    let tinkRequestId = '';
+      const useMock = !SALTEDGE_APP_ID || !SALTEDGE_SECRET || process.env.SALTEDGE_USE_MOCK === 'true';
 
-    const useRealTink = TINK_CLIENT_ID && TINK_CLIENT_SECRET && process.env.TINK_USE_MOCK !== 'true';
+      let redirectUrl = '';
+      let saltedgePaymentId = '';
 
-    if (useRealTink) {
+      if (!useMock) {
         try {
-          // 1. Obter Token Client Credentials
-          const accessToken = await getTinkClientCredentialsToken('payment:write');
-
-          // 2. Criar Iniciação de Pagamento
-          const host = req.headers.host || 'localhost:3000';
-          const protocol = req.headers['x-forwarded-proto'] || 'http';
-          const callbackUrl = `${protocol}://${host}/callback`;
-
-          const paymentRes = await fetch(`${TINK_BASE_URL}/api/v1/payments/requests`, {
+          const customerId = await getOrCreateCustomer(db);
+          const payRes = await fetch(`${SALTEDGE_BASE_URL}/api/v6/payments/create`, {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
-            },
+            headers: saltEdgeHeaders(),
             body: JSON.stringify({
-              destinations: [{
-                accountNumber: p.fornecedor_iban,
-                type: 'IBAN'
-              }],
-              amount: Number(p.valor),
-              currency: 'EUR',
-              recipientName: p.fornecedor_nome,
-              sourceMessage: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140),
-              remittanceInformation: {
-                type: 'UNSTRUCTURED',
-                value: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140)
+              data: {
+                customer_id: customerId,
+                payment_attributes: {
+                  amount: Number(p.valor),
+                  currency_code: 'EUR',
+                  creditor_name: p.fornecedor_nome,
+                  creditor_iban: p.fornecedor_iban,
+                  description: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140),
+                },
+                attempt: { return_to: returnTo, locale: 'pt' },
               },
-              market: 'PT',
-              redirectUri: callbackUrl
-            })
+            }),
           });
 
-          if (!paymentRes.ok) {
-            const errData = await paymentRes.json();
-            throw new Error(errData.errorMessage || errData.error || 'Erro ao criar pedido Tink');
+          if (!payRes.ok) {
+            const txt = await payRes.text();
+            throw new Error(`Salt Edge criar pagamento (${payRes.status}): ${txt}`);
           }
 
-          const paymentData = await paymentRes.json();
-          tinkRequestId = paymentData.id;
-          redirectUrl = paymentData.paymentRequestUrl;
-
+          const { data: payData } = await payRes.json();
+          saltedgePaymentId = payData.id;
+          redirectUrl = payData.payment_url;
         } catch (err) {
-          return res.status(500).json({ error: `Erro na integração Tink real: ${err.message}` });
+          return res.status(500).json({ error: err.message });
         }
       } else {
-        // MOCK SANDBOX FLOW
-        const mockId = `mock-tink-req-${Date.now()}`;
-        tinkRequestId = mockId;
-
-        const host = req.headers.host || 'localhost:3000';
-        const protocol = req.headers['x-forwarded-proto'] || 'http';
-        redirectUrl = `${protocol}://${host}/admin/pagamentos?tink=callback&mock_request_id=${mockId}&mock_payment_id=${p.id}`;
+        saltedgePaymentId = `mock-se-pay-${Date.now()}`;
+        redirectUrl = `${protocol}://${host}/callback?payment_id=${saltedgePaymentId}&mock_payment_id=${p.id}`;
       }
 
       const { error: updateErr } = await db
         .from('pagamentos_fornecedores')
         .update({
-          status: 'iniciado_tink',
-          tink_payment_request_id: tinkRequestId,
-          tink_auth_url: redirectUrl,
-          tink_status: 'PENDING'
+          status: 'iniciado_saltedge',
+          saltedge_payment_id: saltedgePaymentId,
+          saltedge_auth_url: redirectUrl,
+          saltedge_status: 'created',
         })
         .eq('id', p.id);
 
-      if (updateErr) return res.status(500).json({ error: `Erro ao atualizar base de dados: ${updateErr.message}` });
+      if (updateErr) return res.status(500).json({ error: updateErr.message });
 
-      return res.json({ redirectUrl, paymentRequestId: tinkRequestId, paymentId: p.id });
+      return res.json({ redirectUrl, paymentId: saltedgePaymentId, pagamentoId: p.id });
     }
 
-    // ─── TINK PIS: VERIFICAR ESTADO DO PAGAMENTO ───
-    if (action === 'tink-verificar') {
+    // ─── SALT EDGE PIS: VERIFICAR ESTADO DO PAGAMENTO ───
+    if (action === 'saltedge-verificar') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-      const { paymentRequestId } = req.query;
+      const { paymentId } = req.query;
+      if (!paymentId) return res.status(400).json({ error: 'paymentId obrigatório' });
 
-      if (!paymentRequestId) {
-        return res.status(400).json({ error: 'paymentRequestId obrigatório' });
-      }
-
-      if (paymentRequestId.startsWith('mock-tink-req-')) {
-        const { data: p, error: fetchErr } = await db
+      if (paymentId.startsWith('mock-se-pay-')) {
+        const { data: pag, error: fetchErr } = await db
           .from('pagamentos_fornecedores')
           .select('*')
-          .eq('tink_payment_request_id', paymentRequestId)
+          .eq('saltedge_payment_id', paymentId)
           .single();
 
-        if (fetchErr || !p) {
-          return res.status(404).json({ error: 'Pagamento mock não encontrado.' });
-        }
+        if (fetchErr || !pag) return res.status(404).json({ error: 'Pagamento mock não encontrado.' });
 
         const { error: updateErr } = await db
           .from('pagamentos_fornecedores')
-          .update({
-            status: 'confirmado',
-            tink_status: 'EXECUTED',
-            enviado_em: new Date().toISOString()
-          })
-          .eq('tink_payment_request_id', paymentRequestId);
+          .update({ status: 'confirmado', saltedge_status: 'succeeded', enviado_em: new Date().toISOString() })
+          .eq('saltedge_payment_id', paymentId);
 
         if (updateErr) return res.status(500).json({ error: updateErr.message });
+        if (pag.fatura_id) await db.from('faturas').update({ status: 'PAGO' }).eq('id', pag.fatura_id);
 
-        if (p.fatura_id) {
-          await db.from('faturas').update({ status: 'PAGO' }).eq('id', p.fatura_id);
-        }
-
-        return res.json({ ok: true, status: 'EXECUTED', message: 'Pagamento simulado com sucesso!' });
+        return res.json({ ok: true, status: 'succeeded', message: 'Pagamento simulado com sucesso!' });
       }
 
-      if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
-        return res.status(400).json({ error: 'Credenciais Tink não configuradas para verificação real' });
+      if (!SALTEDGE_APP_ID || !SALTEDGE_SECRET) {
+        return res.status(400).json({ error: 'Credenciais Salt Edge não configuradas.' });
       }
 
       try {
-        const accessToken = await getTinkClientCredentialsToken('payment:read');
-
-        const statusRes = await fetch(`${TINK_BASE_URL}/api/v1/payments/requests/${paymentRequestId}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
+        const statusRes = await fetch(`${SALTEDGE_BASE_URL}/api/v6/payments/${paymentId}`, {
+          headers: saltEdgeHeaders(),
         });
 
-        if (!statusRes.ok) throw new Error('Erro ao consultar estado na API Tink');
-        const paymentData = await statusRes.json();
-        const tinkState = paymentData.status;
+        if (!statusRes.ok) throw new Error(`Salt Edge verificar pagamento (${statusRes.status})`);
 
-        let finalStatus = 'iniciado_tink';
-        if (tinkState === 'EXECUTED' || tinkState === 'SETTLED') {
-          finalStatus = 'confirmado';
-        } else if (tinkState === 'FAILED' || tinkState === 'CANCELLED') {
-          finalStatus = 'falhado_tink';
-        }
+        const { data: payData } = await statusRes.json();
+        const seStatus = payData.status;
+
+        let finalStatus = 'iniciado_saltedge';
+        if (seStatus === 'succeeded' || seStatus === 'completed') finalStatus = 'confirmado';
+        else if (seStatus === 'failed' || seStatus === 'cancelled' || seStatus === 'rejected') finalStatus = 'falhado_saltedge';
 
         const { data: pag, error: updateErr } = await db
           .from('pagamentos_fornecedores')
           .update({
             status: finalStatus,
-            tink_status: tinkState,
-            enviado_em: (finalStatus === 'confirmado') ? new Date().toISOString() : null
+            saltedge_status: seStatus,
+            enviado_em: finalStatus === 'confirmado' ? new Date().toISOString() : null,
           })
-          .eq('tink_payment_request_id', paymentRequestId)
+          .eq('saltedge_payment_id', paymentId)
           .select('fatura_id')
           .single();
 
         if (updateErr) return res.status(500).json({ error: updateErr.message });
-
         if (finalStatus === 'confirmado' && pag?.fatura_id) {
           await db.from('faturas').update({ status: 'PAGO' }).eq('id', pag.fatura_id);
         }
 
-        return res.json({ ok: true, status: tinkState });
-
+        return res.json({ ok: true, status: seStatus });
       } catch (err) {
-        return res.status(500).json({ error: `Erro ao verificar estado Tink: ${err.message}` });
+        return res.status(500).json({ error: err.message });
       }
     }
 
-    // ─── TINK PIS: PAGAR FATURA DIRECTAMENTE (CRIAR + INICIAR TINK EM UM PASSO) ───
-    if (action === 'tink-pagar-fatura') {
+    // ─── SALT EDGE PIS: PAGAR FATURA (CRIAR PAGAMENTO + INICIAR EM UM PASSO) ───
+    if (action === 'saltedge-pagar-fatura') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
       const { fatura_id, fornecedor_nome, fornecedor_iban, fornecedor_nif, valor, referencia, data_pagamento } = req.body || {};
 
@@ -414,7 +325,6 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'IBAN inválido' });
       }
 
-      // 1. Criar registo em pagamentos_fornecedores
       const { data: pagamento, error: criandoErr } = await db
         .from('pagamentos_fornecedores')
         .insert({
@@ -432,174 +342,164 @@ export default async function handler(req, res) {
 
       if (criandoErr) return res.status(500).json({ error: criandoErr.message });
 
-      // 2. Iniciar Tink PIS
       const p = pagamento;
+      const host = req.headers.host || 'localhost:3000';
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const returnTo = `${protocol}://${host}/callback`;
+
+      const useMock = !SALTEDGE_APP_ID || !SALTEDGE_SECRET || process.env.SALTEDGE_USE_MOCK === 'true';
+
       let redirectUrl = '';
-      let tinkRequestId = '';
+      let saltedgePaymentId = '';
 
-      const useRealTink = TINK_CLIENT_ID && TINK_CLIENT_SECRET && process.env.TINK_USE_MOCK !== 'true';
-
-      if (useRealTink) {
+      if (!useMock) {
         try {
-          const accessToken = await getTinkClientCredentialsToken('payment:write');
-
-          const host = req.headers.host || 'localhost:3000';
-          const protocol = req.headers['x-forwarded-proto'] || 'http';
-          const callbackUrl = `${protocol}://${host}/callback`;
-
-          const paymentRes = await fetch(`${TINK_BASE_URL}/api/v1/payments/requests`, {
+          const customerId = await getOrCreateCustomer(db);
+          const payRes = await fetch(`${SALTEDGE_BASE_URL}/api/v6/payments/create`, {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json'
-            },
+            headers: saltEdgeHeaders(),
             body: JSON.stringify({
-              destinations: [{ accountNumber: ibanLimpo, type: 'IBAN' }],
-              amount: Number(p.valor),
-              currency: 'EUR',
-              recipientName: p.fornecedor_nome,
-              sourceMessage: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140),
-              remittanceInformation: {
-                type: 'UNSTRUCTURED',
-                value: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140)
+              data: {
+                customer_id: customerId,
+                payment_attributes: {
+                  amount: Number(p.valor),
+                  currency_code: 'EUR',
+                  creditor_name: p.fornecedor_nome,
+                  creditor_iban: ibanLimpo,
+                  description: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140),
+                },
+                attempt: { return_to: returnTo, locale: 'pt' },
               },
-              market: 'PT',
-              redirectUri: callbackUrl
-            })
+            }),
           });
 
-          if (!paymentRes.ok) {
-            const errData = await paymentRes.json();
-            throw new Error(errData.errorMessage || errData.error || 'Erro ao criar pedido Tink');
+          if (!payRes.ok) {
+            const txt = await payRes.text();
+            throw new Error(`Salt Edge criar pagamento (${payRes.status}): ${txt}`);
           }
 
-          const paymentData = await paymentRes.json();
-          tinkRequestId = paymentData.id;
-          redirectUrl = paymentData.paymentRequestUrl;
+          const { data: payData } = await payRes.json();
+          saltedgePaymentId = payData.id;
+          redirectUrl = payData.payment_url;
         } catch (err) {
           await db.from('pagamentos_fornecedores').delete().eq('id', p.id);
-          return res.status(500).json({ error: `Erro na integração Tink: ${err.message}` });
+          return res.status(500).json({ error: err.message });
         }
       } else {
-        const mockId = `mock-tink-req-${Date.now()}`;
-        tinkRequestId = mockId;
-        const host = req.headers.host || 'localhost:3000';
-        const protocol = req.headers['x-forwarded-proto'] || 'http';
-        redirectUrl = `${protocol}://${host}/admin/pagamentos?tink=callback&mock_request_id=${mockId}&mock_payment_id=${p.id}`;
+        saltedgePaymentId = `mock-se-pay-${Date.now()}`;
+        redirectUrl = `${protocol}://${host}/callback?payment_id=${saltedgePaymentId}&mock_payment_id=${p.id}`;
       }
 
       await db.from('pagamentos_fornecedores').update({
-        status: 'iniciado_tink',
-        tink_payment_request_id: tinkRequestId,
-        tink_auth_url: redirectUrl,
-        tink_status: 'PENDING'
+        status: 'iniciado_saltedge',
+        saltedge_payment_id: saltedgePaymentId,
+        saltedge_auth_url: redirectUrl,
+        saltedge_status: 'created',
       }).eq('id', p.id);
 
-      return res.json({ redirectUrl, paymentRequestId: tinkRequestId, paymentId: p.id });
+      return res.json({ redirectUrl, paymentId: saltedgePaymentId, pagamentoId: p.id });
     }
 
-    // ─── TINK AIS: TROCAR CÓDIGO POR TOKENS (SINCRONIZAÇÃO DE CONTAS) ───
-    if (action === 'tink-exchange-code') {
+    // ─── SALT EDGE AIS: GUARDAR CONNECTION_ID APÓS CALLBACK ───
+    if (action === 'saltedge-save-connection') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-      const { code } = req.body || {};
-      if (!code) return res.status(400).json({ error: 'Código de autorização obrigatório.' });
+      const { connection_id } = req.body || {};
+      if (!connection_id) return res.status(400).json({ error: 'connection_id obrigatório.' });
 
-      if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
-        return res.status(400).json({ error: 'Credenciais Tink não configuradas.' });
-      }
+      const { error } = await db
+        .from('system_settings')
+        .update({ saltedge_connection_id: connection_id })
+        .eq('id', 1);
 
-      try {
-        const tokens = await exchangeAuthorizationCode(code);
-        const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
-
-        const { error } = await db
-          .from('system_settings')
-          .update({
-            tink_access_token: tokens.access_token,
-            tink_refresh_token: tokens.refresh_token,
-            tink_token_expires_at: expiresAt
-          })
-          .eq('id', 1);
-
-        if (error) throw error;
-
-        return res.status(200).json({ ok: true, message: 'Conta bancária Tink ligada com sucesso!' });
-      } catch (err) {
-        return res.status(500).json({ error: err.message });
-      }
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ ok: true, message: 'Conta bancária Salt Edge ligada com sucesso!' });
     }
 
-    // ─── TINK AIS: LISTAR CONTAS CONECTADAS ───
-    if (action === 'tink-list-accounts') {
+    // ─── SALT EDGE AIS: LISTAR CONTAS ───
+    if (action === 'saltedge-list-accounts') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-
-      if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
-        return res.status(400).json({ error: 'Credenciais Tink não configuradas.' });
-      }
+      if (!SALTEDGE_APP_ID || !SALTEDGE_SECRET) return res.status(400).json({ error: 'Credenciais Salt Edge não configuradas.' });
 
       try {
-        const accessToken = await getValidUserToken(db);
+        const { data: settings } = await db
+          .from('system_settings')
+          .select('saltedge_connection_id')
+          .eq('id', 1)
+          .maybeSingle();
 
-        const response = await fetch(`${TINK_BASE_URL}/api/v1/accounts/list`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
-
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`Erro Tink ao listar contas (${response.status}): ${text}`);
+        if (!settings?.saltedge_connection_id) {
+          throw new Error('Conta bancária não ligada. Por favor conecte primeiro via Salt Edge.');
         }
 
-        const data = await response.json();
-        return res.status(200).json({ data: data.accounts || [] });
+        const r = await fetch(
+          `${SALTEDGE_BASE_URL}/api/v6/accounts?connection_id=${settings.saltedge_connection_id}`,
+          { headers: saltEdgeHeaders() }
+        );
+        if (!r.ok) throw new Error(`Salt Edge listar contas (${r.status})`);
+        const { data } = await r.json();
+        return res.json({ data: data || [] });
       } catch (err) {
         return res.status(500).json({ error: err.message });
       }
     }
 
-    // ─── TINK AIS: LISTAR TRANSAÇÕES DA CONTA ───
-    if (action === 'tink-list-transactions') {
+    // ─── SALT EDGE AIS: LISTAR TRANSAÇÕES ───
+    if (action === 'saltedge-list-transactions') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
       const { accountId } = req.query;
-
-      if (!TINK_CLIENT_ID || !TINK_CLIENT_SECRET) {
-        return res.status(400).json({ error: 'Credenciais Tink não configuradas.' });
-      }
+      if (!SALTEDGE_APP_ID || !SALTEDGE_SECRET) return res.status(400).json({ error: 'Credenciais Salt Edge não configuradas.' });
 
       try {
-        const accessToken = await getValidUserToken(db);
-
         const params = new URLSearchParams();
-        if (accountId) params.set('accountId', accountId);
+        if (accountId) params.set('account_id', accountId);
 
-        const response = await fetch(`${TINK_BASE_URL}/api/v1/transactions?${params}`, {
-          headers: { 'Authorization': `Bearer ${accessToken}` }
+        const r = await fetch(`${SALTEDGE_BASE_URL}/api/v6/transactions?${params}`, {
+          headers: saltEdgeHeaders(),
         });
-
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`Erro Tink ao listar transações (${response.status}): ${text}`);
-        }
-
-        const data = await response.json();
-        return res.status(200).json({ data: data.transactions || [] });
+        if (!r.ok) throw new Error(`Salt Edge listar transações (${r.status})`);
+        const { data } = await r.json();
+        return res.json({ data: data || [] });
       } catch (err) {
         return res.status(500).json({ error: err.message });
       }
     }
 
-    // ─── TINK AIS: OBTER LINK DE CONEXÃO DE CONTAS ───
-    if (action === 'tink-get-link') {
-      const clientId = TINK_CLIENT_ID || 'a9eeac4d05fa425d9e8f67b114ec70cf';
+    // ─── SALT EDGE AIS: OBTER LINK DE CONEXÃO DE CONTAS ───
+    if (action === 'saltedge-get-link') {
+      if (!SALTEDGE_APP_ID || !SALTEDGE_SECRET) return res.status(400).json({ error: 'Credenciais Salt Edge não configuradas.' });
+
       const host = req.headers.host || 'localhost:3000';
       const protocol = req.headers['x-forwarded-proto'] || 'http';
-      const redirectUri = `${protocol}://${host}/callback`;
+      const returnTo = `${protocol}://${host}/callback`;
 
-      // Se for a conta de testes/sandbox, ou se a variável TINK_SANDBOX estiver ativa
-      const isSandbox = !TINK_CLIENT_ID || process.env.TINK_SANDBOX === 'true' || clientId === 'a9eeac4d05fa425d9e8f67b114ec70cf';
-      const sandboxParam = isSandbox ? '&test=true' : '';
+      try {
+        const customerId = await getOrCreateCustomer(db);
 
-      const url = `https://link.tink.com/1.0/business-transactions/connect-accounts/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&market=PT&locale=pt_PT${sandboxParam}`;
-      return res.status(200).json({ url });
+        const r = await fetch(`${SALTEDGE_BASE_URL}/api/v6/connections/connect`, {
+          method: 'POST',
+          headers: saltEdgeHeaders(),
+          body: JSON.stringify({
+            data: {
+              customer_id: customerId,
+              consent: {
+                scopes: ['accounts', 'transactions', 'balance'],
+                period_days: 90,
+              },
+              attempt: { return_to: returnTo, locale: 'pt' },
+            },
+          }),
+        });
+
+        if (!r.ok) {
+          const txt = await r.text();
+          throw new Error(`Salt Edge connect (${r.status}): ${txt}`);
+        }
+
+        const { data } = await r.json();
+        return res.json({ url: data.connect_url });
+      } catch (err) {
+        return res.status(500).json({ error: err.message });
+      }
     }
 
     return res.status(400).json({ error: `Acção desconhecida: ${action || '(não definida)'}` });

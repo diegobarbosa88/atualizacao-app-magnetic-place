@@ -3,21 +3,21 @@ import { ArrowRightLeft, Plus, Loader2, RefreshCw, Download, CheckCircle, Trash2
 import NovoPagamentoModal from './NovoPagamentoModal';
 
 const STATUS_BADGE = {
-  pendente:      'bg-amber-50 text-amber-700 border-amber-100',
-  exportado:     'bg-blue-50 text-blue-700 border-blue-100',
-  enviado:       'bg-indigo-50 text-indigo-700 border-indigo-100',
-  iniciado_tink: 'bg-violet-50 text-violet-700 border-violet-100 animate-pulse',
-  falhado_tink:  'bg-rose-50 text-rose-700 border-rose-100',
-  confirmado:    'bg-emerald-50 text-emerald-700 border-emerald-100',
+  pendente:           'bg-amber-50 text-amber-700 border-amber-100',
+  exportado:          'bg-blue-50 text-blue-700 border-blue-100',
+  enviado:            'bg-indigo-50 text-indigo-700 border-indigo-100',
+  iniciado_saltedge:  'bg-violet-50 text-violet-700 border-violet-100 animate-pulse',
+  falhado_saltedge:   'bg-rose-50 text-rose-700 border-rose-100',
+  confirmado:         'bg-emerald-50 text-emerald-700 border-emerald-100',
 };
 
 const STATUS_LABEL = {
-  pendente:      'Pendente',
-  exportado:     'Exportado',
-  enviado:       'Enviado',
-  iniciado_tink: 'Iniciado (Tink)',
-  falhado_tink:  'Falhado (Tink)',
-  confirmado:    'Confirmado',
+  pendente:           'Pendente',
+  exportado:          'Exportado',
+  enviado:            'Enviado',
+  iniciado_saltedge:  'Iniciado (Salt Edge)',
+  falhado_saltedge:   'Falhado (Salt Edge)',
+  confirmado:         'Confirmado',
 };
 
 function fmt(val) {
@@ -33,7 +33,7 @@ export default function PagamentosTab() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [marcando, setMarcando] = useState(false);
-  const [iniciandoTink, setIniciandoTink] = useState(false);
+  const [iniciandoSaltedge, setIniciandoSaltedge] = useState(false);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -54,61 +54,43 @@ export default function PagamentosTab() {
 
   useEffect(() => { carregar(); }, [carregar]);
 
-  // Tratar Callback de Iniciação de Pagamento ou Ligação de Contas Tink PSD2
+  // Tratar callback Salt Edge (PIS e AIS)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const code = params.get('code');
-    const mockRequestId = params.get('mock_request_id');
-    const paymentRequestId = params.get('payment_request_id') || mockRequestId;
+    if (params.get('saltedge') !== 'callback') return;
 
-    if (code) {
-      // Limpar parâmetros da URL de forma limpa para não repetir a chamada
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
-      setLoading(true);
-      fetch('/api/pagamentos?action=tink-exchange-code', {
+    const paymentId = params.get('payment_id');
+    const connectionId = params.get('connection_id');
+
+    window.history.replaceState({}, document.title, window.location.pathname);
+    setLoading(true);
+
+    if (paymentId) {
+      fetch(`/api/pagamentos?action=saltedge-verificar&paymentId=${paymentId}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok) alert(d.message || `Pagamento verificado! Estado: ${d.status}`);
+          else alert(`Erro ao verificar pagamento: ${d.error}`);
+          carregar();
+        })
+        .catch(err => { alert(err.message); carregar(); })
+        .finally(() => setLoading(false));
+    } else if (connectionId) {
+      fetch('/api/pagamentos?action=saltedge-save-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code })
+        body: JSON.stringify({ connection_id: connectionId }),
       })
-        .then(res => res.json())
-        .then(data => {
-          if (data.ok) {
-            alert(data.message || 'Conta bancária Tink ligada com sucesso!');
-          } else {
-            alert(`Erro ao ligar conta Tink: ${data.error}`);
-          }
+        .then(r => r.json())
+        .then(d => {
+          if (d.ok) alert(d.message || 'Conta bancária Salt Edge ligada com sucesso!');
+          else alert(`Erro ao ligar conta: ${d.error}`);
           carregar();
         })
-        .catch(err => {
-          alert(`Erro na ligação ao banco: ${err.message}`);
-          carregar();
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else if (paymentRequestId) {
-      // Limpar parâmetros da URL de forma limpa para não repetir a chamada
-      window.history.replaceState({}, document.title, window.location.pathname);
-      
-      setLoading(true);
-      fetch(`/api/pagamentos?action=tink-verificar&paymentRequestId=${paymentRequestId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.ok) {
-            alert(data.message || `Pagamento verificado com sucesso! Estado actual: ${data.status}`);
-          } else {
-            alert(`Erro ao verificar pagamento Tink: ${data.error}`);
-          }
-          carregar();
-        })
-        .catch(err => {
-          alert(`Erro na ligação ao banco: ${err.message}`);
-          carregar();
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+        .catch(err => { alert(err.message); carregar(); })
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
   }, [carregar]);
 
@@ -159,21 +141,19 @@ export default function PagamentosTab() {
     }
   };
 
-  const handleIniciarTink = async () => {
+  const handleIniciarSaltedge = async () => {
     const ids = [...selecionados];
     if (ids.length === 0) return;
-    setIniciandoTink(true);
+    setIniciandoSaltedge(true);
     try {
-      const res = await fetch('/api/pagamentos?action=tink-iniciar', {
+      const res = await fetch('/api/pagamentos?action=saltedge-iniciar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
       });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Erro ao iniciar pagamento com Tink');
-      
+      if (!res.ok) throw new Error(d.error || 'Erro ao iniciar pagamento com Salt Edge');
       setSelecionados(new Set());
-      
       if (d.redirectUrl) {
         window.location.href = d.redirectUrl;
       } else {
@@ -182,7 +162,7 @@ export default function PagamentosTab() {
     } catch (e) {
       alert(e.message);
     } finally {
-      setIniciandoTink(false);
+      setIniciandoSaltedge(false);
     }
   };
 
@@ -243,8 +223,8 @@ export default function PagamentosTab() {
             <option value="pendente">Pendente</option>
             <option value="exportado">Exportado</option>
             <option value="enviado">Enviado</option>
-            <option value="iniciado_tink">Iniciado (Tink)</option>
-            <option value="falhado_tink">Falhado (Tink)</option>
+            <option value="iniciado_saltedge">Iniciado (Salt Edge)</option>
+            <option value="falhado_saltedge">Falhado (Salt Edge)</option>
             <option value="confirmado">Confirmado</option>
           </select>
           <button onClick={carregar}
@@ -265,10 +245,10 @@ export default function PagamentosTab() {
             {selecionados.size} selecionado{selecionados.size > 1 ? 's' : ''} — {fmt(totalSelecionado)}
           </span>
           <div className="flex items-center gap-2">
-            <button onClick={handleIniciarTink} disabled={iniciandoTink}
+            <button onClick={handleIniciarSaltedge} disabled={iniciandoSaltedge}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-60 shadow-sm">
-              {iniciandoTink ? <Loader2 size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
-              Pagar Banco (Tink)
+              {iniciandoSaltedge ? <Loader2 size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
+              Pagar Banco (Salt Edge)
             </button>
             <button onClick={handleExportarSEPA} disabled={exportando}
               className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 transition-all disabled:opacity-60">

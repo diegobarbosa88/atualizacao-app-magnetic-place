@@ -50,7 +50,7 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
     if (!iban.trim()) { setErro('IBAN obrigatório.'); return; }
     setIniciando(true);
     try {
-      const res = await fetch('/api/pagamentos?action=tink-pagar-fatura', {
+      const res = await fetch('/api/pagamentos?action=saltedge-pagar-fatura', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
