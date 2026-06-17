@@ -31,15 +31,15 @@ function NovaConta({ onClose, onSalva }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
           <h2 className="text-sm font-black uppercase tracking-widest text-slate-700">Nova Conta Bancária</h2>
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
             <X size={16} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3">
+        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-3">
           {[
             { key: 'nome', label: 'Nome *', required: true },
             { key: 'iban', label: 'IBAN' },
@@ -82,7 +82,7 @@ function NovaConta({ onClose, onSalva }) {
             </div>
           </div>
 
-          {erro && <p className="text-xs text-red-600">{erro}</p>}
+          {erro && <p className="text-xs text-red-600 font-semibold">{erro}</p>}
 
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose}
@@ -142,26 +142,30 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   };
 
-  const handleSalva = (nova) => {
-    setContas(prev => [nova, ...prev]);
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex-1" />
-        <button onClick={carregar}
-          className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
-          <RefreshCw size={13} /> Sincronizar
-        </button>
-        <button onClick={() => setMostrarModal(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all">
-          <Plus size={13} /> Nova Conta
-        </button>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-emerald-50 rounded-xl">
+            <Landmark size={16} className="text-emerald-600" />
+          </div>
+          <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={carregar}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+            <RefreshCw size={13} /> Sincronizar
+          </button>
+          <button onClick={() => setMostrarModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm">
+            <Plus size={13} /> Nova Conta
+          </button>
+        </div>
       </div>
 
       {erro && (
-        <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
+        <div className="mx-5 my-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
       )}
 
       {loading ? (
@@ -169,11 +173,11 @@ export default function TOConlineBankAccounts({ onDesligado }) {
           <Loader2 size={20} className="animate-spin" />
         </div>
       ) : !erro && contas.length === 0 ? (
-        <div className="text-center py-12 text-slate-400 text-xs font-semibold">
+        <div className="px-5 py-12 text-center text-slate-400 text-xs font-semibold">
           Sem contas bancárias — sincronize ou crie uma nova
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-100">
+        <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
@@ -196,7 +200,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
                           {a.description && <p className="text-[10px] text-slate-400 font-normal">{a.description}</p>}
                         </div>
                         {a.is_connected && (
-                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-full uppercase">ligado</span>
+                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 text-[9px] font-black rounded-full uppercase">ligado</span>
                         )}
                       </div>
                     </td>
@@ -215,7 +219,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
                       <button
                         onClick={() => handleRemover(c.id, a.name)}
                         disabled={removendo === c.id}
-                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all disabled:opacity-40"
+                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-40"
                       >
                         {removendo === c.id
                           ? <Loader2 size={13} className="animate-spin" />
@@ -231,7 +235,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
       )}
 
       {mostrarModal && (
-        <NovaConta onClose={() => setMostrarModal(false)} onSalva={handleSalva} />
+        <NovaConta onClose={() => setMostrarModal(false)} onSalva={nova => setContas(prev => [nova, ...prev])} />
       )}
     </div>
   );
