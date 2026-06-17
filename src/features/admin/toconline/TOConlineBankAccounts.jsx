@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Landmark, Plus, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
+import { Landmark, Plus, Loader2, RefreshCw, Trash2, X, Wifi, WifiOff } from 'lucide-react';
 
 function NovaConta({ onClose, onSalva }) {
   const [form, setForm] = useState({ nome: '', iban: '', banco: '', moeda: 'EUR', saldo_inicial: '' });
@@ -101,12 +101,36 @@ function NovaConta({ onClose, onSalva }) {
   );
 }
 
+function fmtEur(val, currency = 'EUR') {
+  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).format(val ?? 0);
+}
+
 export default function TOConlineBankAccounts({ onDesligado }) {
   const [contas, setContas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [removendo, setRemovendo] = useState(null);
+
+  const [saltedgeContas, setSaltedgeContas] = useState([]);
+  const [saltedgeLoading, setSaltedgeLoading] = useState(false);
+  const [saltedgeErro, setSaltedgeErro] = useState(null);
+
+  const carregarSaltedge = useCallback(async () => {
+    setSaltedgeLoading(true);
+    setSaltedgeErro(null);
+    try {
+      const res = await fetch('/api/pagamentos?action=saltedge-list-accounts');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
+      setSaltedgeContas(data.data || []);
+    } catch (e) {
+      setSaltedgeErro(e.message);
+      setSaltedgeContas([]);
+    } finally {
+      setSaltedgeLoading(false);
+    }
+  }, []);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -125,7 +149,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   }, [onDesligado]);
 
-  useEffect(() => { carregar(); }, [carregar]);
+  useEffect(() => { carregar(); carregarSaltedge(); }, [carregar, carregarSaltedge]);
 
   const handleRemover = async (id, nome) => {
     if (!window.confirm(`Remover a conta "${nome}" do Toconline?`)) return;
@@ -142,14 +166,12 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   };
 
-  const handleConectarTink = async () => {
+  const handleConectarSaltedge = async () => {
     try {
       const res = await fetch('/api/pagamentos?action=saltedge-get-link');
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao obter link Tink');
-      if (data.url) {
-        window.location.href = data.url;
-      }
+      if (!res.ok) throw new Error(data.error || 'Erro ao obter link Salt Edge');
+      if (data.url) window.location.href = data.url;
     } catch (e) {
       alert(e.message);
     }
@@ -166,11 +188,11 @@ export default function TOConlineBankAccounts({ onDesligado }) {
           <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={handleConectarTink}
+          <button onClick={handleConectarSaltedge}
             className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm">
-            <RefreshCw size={13} /> Conectar Tink
+            <Wifi size={13} /> Conectar Salt Edge
           </button>
-          <button onClick={carregar}
+          <button onClick={() => { carregar(); carregarSaltedge(); }}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
             <RefreshCw size={13} /> Sincronizar
           </button>
@@ -250,6 +272,55 @@ export default function TOConlineBankAccounts({ onDesligado }) {
           </table>
         </div>
       )}
+
+      {/* ── Secção Salt Edge: saldo real ── */}
+      <div className="border-t border-slate-100">
+        <div className="px-5 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wifi size={13} className="text-violet-500" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Saldo Real (Salt Edge)</span>
+          </div>
+          {saltedgeLoading && <Loader2 size={13} className="animate-spin text-slate-400" />}
+        </div>
+
+        {saltedgeErro ? (
+          <div className="px-5 pb-4 flex items-center gap-2 text-xs text-slate-400">
+            <WifiOff size={13} className="text-slate-300 shrink-0" />
+            <span>
+              {saltedgeErro.includes('não ligada')
+                ? 'Nenhuma conta bancária conectada — clique em "Conectar Salt Edge" para ligar.'
+                : saltedgeErro}
+            </span>
+          </div>
+        ) : saltedgeContas.length === 0 && !saltedgeLoading ? (
+          <div className="px-5 pb-4 text-xs text-slate-400 flex items-center gap-2">
+            <WifiOff size={13} className="text-slate-300 shrink-0" />
+            Nenhuma conta Salt Edge conectada.
+          </div>
+        ) : (
+          <div className="px-5 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {saltedgeContas.map(conta => (
+              <div key={conta.id} className="bg-violet-50 border border-violet-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-slate-800 truncate">{conta.name || '—'}</p>
+                  {conta.iban && (
+                    <p className="text-[10px] font-mono text-slate-400 truncate">{conta.iban}</p>
+                  )}
+                  <p className="text-[9px] font-black uppercase tracking-widest text-violet-400 mt-0.5">
+                    {conta.nature || conta.account_type || 'Conta'}
+                  </p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-lg font-black text-violet-700">
+                    {fmtEur(conta.balance, conta.currency_code || 'EUR')}
+                  </p>
+                  <p className="text-[9px] text-slate-400">{conta.currency_code || 'EUR'}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {mostrarModal && (
         <NovaConta onClose={() => setMostrarModal(false)} onSalva={nova => setContas(prev => [nova, ...prev])} />
