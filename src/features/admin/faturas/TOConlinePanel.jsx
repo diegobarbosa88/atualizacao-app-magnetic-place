@@ -1,18 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronDown, ChevronUp, Link2, Link2Off, Loader2, Download,
   Search, X, Eye, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-
-const MESES = [
-  { val: '01', label: 'Janeiro' }, { val: '02', label: 'Fevereiro' },
-  { val: '03', label: 'Março' }, { val: '04', label: 'Abril' },
-  { val: '05', label: 'Maio' }, { val: '06', label: 'Junho' },
-  { val: '07', label: 'Julho' }, { val: '08', label: 'Agosto' },
-  { val: '09', label: 'Setembro' }, { val: '10', label: 'Outubro' },
-  { val: '11', label: 'Novembro' }, { val: '12', label: 'Dezembro' },
-];
+import { MESES, getAttrs, getNomeEntidade, getValorTotal, getIva, getDocNum } from '../toconline/utils/tocUtils';
+import { useTableFilters } from '../toconline/hooks/useTableFilters';
+import { useTocRelatorios } from '../toconline/hooks/useTocRelatorios';
+import ModalDocToc from '../toconline/components/ModalDocToc';
 
 const TIPOS_IMPORT = [
   { key: 'vendas', label: 'Faturas de vendas' },
@@ -20,148 +15,7 @@ const TIPOS_IMPORT = [
   { key: 'recibos', label: 'Recibos de venda' },
 ];
 
-const FIELD_LABELS_TOC = {
-  document_number: 'Nº Documento',
-  date: 'Data',
-  due_date: 'Data Vencimento',
-  customer_name: 'Cliente',
-  customer_tax_number: 'NIF Cliente',
-  supplier_name: 'Fornecedor',
-  supplier_tax_number: 'NIF Fornecedor',
-  entity_name: 'Entidade',
-  entity_tax_number: 'NIF Entidade',
-  total_amount: 'Total (€)',
-  total_tax_amount: 'IVA (€)',
-  net_amount: 'Líquido (€)',
-  received_value: 'Valor Recebido (€)',
-  document_type_name: 'Tipo de Documento',
-  status: 'Estado',
-  notes: 'Notas',
-  series: 'Série',
-  payment_method: 'Forma de Pagamento',
-  payment_status: 'Estado Pagamento',
-  currency: 'Moeda',
-  description: 'Descrição',
-  gross_total: 'Total Bruto (€)',
-  discount: 'Desconto',
-};
-
-const VALOR_KEYS = ['total_amount', 'total_tax_amount', 'net_amount', 'received_value', 'gross_total'];
-
-function getNomeEntidade(attrs, tipo) {
-  if (tipo === 'compras') return attrs.supplier_business_name || attrs.supplier_name || attrs.entity_name || '';
-  return attrs.customer_name || attrs.customer_business_name || attrs.entity_name || '';
-}
-
-function getDocNumero(attrs) {
-  return attrs.document_no || attrs.document_number || attrs.number || attrs.doc_number || attrs.reference || null;
-}
-
-function getValorTotal(attrs) {
-  return attrs.gross_total ?? attrs.total_amount ?? attrs.net_amount ?? attrs.total_value ?? attrs.received_value ?? null;
-}
-
-function getIva(attrs) {
-  return attrs.tax_payable ?? attrs.total_tax_amount ?? attrs.tax_total ?? attrs.total_tax ?? null;
-}
-
-function ModalDocToc({ doc, tipo, onClose }) {
-  const [pdfUrl, setPdfUrl] = useState(null);
-  const [carregandoPdf, setCarregandoPdf] = useState(false);
-
-  if (!doc) return null;
-  const attrs = doc.attributes || doc;
-
-  const campos = Object.entries(attrs)
-    .filter(([, v]) => v != null && v !== '' && typeof v !== 'object')
-    .sort(([a], [b]) => {
-      const order = ['document_number', 'date', 'customer_name', 'supplier_name', 'entity_name', 'total_amount', 'total_tax_amount'];
-      const ia = order.indexOf(a), ib = order.indexOf(b);
-      if (ia >= 0 && ib >= 0) return ia - ib;
-      if (ia >= 0) return -1;
-      if (ib >= 0) return 1;
-      return a.localeCompare(b);
-    });
-
-  const formatVal = (k, v) => {
-    if (VALOR_KEYS.includes(k)) {
-      const n = parseFloat(v);
-      return isNaN(n) ? String(v) : n.toFixed(2) + ' €';
-    }
-    return String(v);
-  };
-
-  const handleBaixarPdf = async () => {
-    if (pdfUrl) { window.open(pdfUrl, '_blank'); return; }
-    setCarregandoPdf(true);
-    try {
-      const tipoDoc = tipo === 'compras' ? 'compra' : tipo === 'recibos' ? 'recibo' : 'venda';
-      const res = await fetch(`/api/toconline/documento?id=${doc.id}&tipo=${tipoDoc}`);
-      const data = await res.json();
-      if (data.pdf_url) {
-        setPdfUrl(data.pdf_url);
-        window.open(data.pdf_url, '_blank');
-      } else {
-        alert('PDF não disponível para este documento.');
-      }
-    } catch (e) {
-      alert('Erro ao obter PDF: ' + e.message);
-    } finally {
-      setCarregandoPdf(false);
-    }
-  };
-
-  const entidade = getNomeEntidade(attrs, tipo);
-  const tipoLabel = tipo === 'compras' ? 'Documento de Compra' : tipo === 'recibos' ? 'Recibo' : 'Documento de Venda';
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-      <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-slate-100">
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{tipoLabel}</p>
-            <p className="text-sm font-bold text-slate-700">{getDocNumero(attrs) || `Doc #${doc.id}`}</p>
-            {entidade && <p className="text-xs text-slate-500 mt-0.5">{entidade}</p>}
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors ml-3">
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          {campos.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Sem dados disponíveis.</p>
-          ) : (
-            <div className="space-y-3">
-              {campos.map(([k, v]) => (
-                <div key={k} className="flex gap-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-36 shrink-0 pt-0.5">
-                    {FIELD_LABELS_TOC[k] || k.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-sm text-slate-700 font-semibold flex-1 break-words">
-                    {formatVal(k, v)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="px-6 pb-6 pt-4 border-t border-slate-100">
-          <button
-            onClick={handleBaixarPdf}
-            disabled={carregandoPdf}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm disabled:opacity-60"
-          >
-            {carregandoPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-            {pdfUrl ? 'Abrir PDF' : 'Baixar PDF Original'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white";
 
 export default function TOConlinePanel({ onImportDone, importing, setImporting, importResult, setImportResult }) {
   const { supabase } = useApp();
@@ -180,19 +34,22 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
   const [tipoRel, setTipoRel] = useState('vendas');
   const [dataDeRel, setDataDeRel] = useState(() => `${new Date().getFullYear()}-01-01`);
   const [dataAteRel, setDataAteRel] = useState(() => new Date().toISOString().slice(0, 10));
-  const [docsRel, setDocsRel] = useState([]);
-  const [carregandoRel, setCarregandoRel] = useState(false);
-  const [erroRel, setErroRel] = useState(null);
-  const [temMais, setTemMais] = useState(false);
-
-  // Client-side filters
-  const [pesquisaRel, setPesquisaRel] = useState('');
-  const [filtroMesRel, setFiltroMesRel] = useState('');
-  const [filtroAnoRel, setFiltroAnoRel] = useState('');
-  const [filtroEntidadeRel, setFiltroEntidadeRel] = useState('');
-  const [mostrarFiltrosRel, setMostrarFiltrosRel] = useState(false);
-  const [ordemRel, setOrdemRel] = useState({ campo: 'date', dir: 'desc' });
   const [docDetalhe, setDocDetalhe] = useState(null);
+
+  const { docs: docsRel, loading: carregandoRel, erro: erroRel, temMais, carregar: carregarRelatorio } = useTocRelatorios();
+  const {
+    pesquisa: pesquisaRel, setPesquisa: setPesquisaRel,
+    filtroMes: filtroMesRel, setFiltroMes: setFiltroMesRel,
+    filtroAno: filtroAnoRel, setFiltroAno: setFiltroAnoRel,
+    filtroEntidade: filtroEntidadeRel, setFiltroEntidade: setFiltroEntidadeRel,
+    mostrarFiltros: mostrarFiltrosRel, setMostrarFiltros: setMostrarFiltrosRel,
+    ordem: ordemRel, toggleOrdem: toggleOrdemRel,
+    anosDisponiveis: anosDisponiveisRel,
+    entidadesDisponiveis: entidadesDisponiveisRel,
+    docsFiltrados,
+    filtrosAtivos: filtrosRelAtivos,
+    limparFiltros: limparFiltrosRel,
+  } = useTableFilters({ docs: docsRel, tipo: tipoRel });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -213,7 +70,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
 
   useEffect(() => {
     if (!supabase) return;
-    if (connectedFromCallback.current) return; // OAuth acabou de concluir — não sobrescrever
+    if (connectedFromCallback.current) return;
     supabase
       .from('system_settings')
       .select('toconline_access_token')
@@ -267,73 +124,12 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
     }
   };
 
-  const carregarRelatorio = async () => {
-    setCarregandoRel(true);
-    setErroRel(null);
-    setDocsRel([]);
-    setTemMais(false);
-    try {
-      const params = new URLSearchParams({ tipo: tipoRel, page: 1 });
-      if (dataDeRel) params.set('data_de', dataDeRel);
-      if (dataAteRel) params.set('data_ate', dataAteRel);
-      const res = await fetch(`/api/toconline/relatorio?${params}`);
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const lista = data.data || [];
-      setDocsRel(lista);
-      setTemMais(lista.length === 50);
-    } catch (e) {
-      setErroRel(e.message);
-    } finally {
-      setCarregandoRel(false);
-    }
+  const handleCarregarRelatorio = () => {
+    carregarRelatorio({ tipo: tipoRel, dataDe: dataDeRel, dataAte: dataAteRel });
   };
 
   const toggleTipo = (key) =>
     setTipos(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
-
-  // Derived filter options
-  const anosDisponiveisRel = useMemo(() => {
-    const anos = new Set(docsRel.map(d => ((d.attributes || d).date || '').slice(0, 4)).filter(a => a && a.length === 4));
-    return [...anos].sort().reverse();
-  }, [docsRel]);
-
-  const entidadesDisponiveisRel = useMemo(() => {
-    return [...new Set(docsRel.map(d => getNomeEntidade(d.attributes || d, tipoRel)).filter(Boolean))].sort();
-  }, [docsRel, tipoRel]);
-
-  const toggleOrdemRel = (campo) => setOrdemRel(prev =>
-    prev.campo === campo ? { campo, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { campo, dir: 'asc' }
-  );
-
-  const docsFiltrados = useMemo(() => {
-    let lista = [...docsRel];
-    const q = pesquisaRel.toLowerCase().trim();
-    if (q) lista = lista.filter(d => {
-      const a = d.attributes || d;
-      const ent = getNomeEntidade(a, tipoRel).toLowerCase();
-      const num = (getDocNumero(a) || '').toLowerCase();
-      return ent.includes(q) || num.includes(q);
-    });
-    if (filtroAnoRel) lista = lista.filter(d => ((d.attributes || d).date || '').slice(0, 4) === filtroAnoRel);
-    if (filtroMesRel) lista = lista.filter(d => ((d.attributes || d).date || '').slice(5, 7) === filtroMesRel);
-    if (filtroEntidadeRel) lista = lista.filter(d => getNomeEntidade(d.attributes || d, tipoRel) === filtroEntidadeRel);
-
-    lista.sort((a, b) => {
-      const aa = a.attributes || a, ba = b.attributes || b;
-      let va, vb;
-      if (ordemRel.campo === 'entidade') { va = getNomeEntidade(aa, tipoRel); vb = getNomeEntidade(ba, tipoRel); }
-      else if (ordemRel.campo === 'total') { va = getValorTotal(aa) ?? -1; vb = getValorTotal(ba) ?? -1; }
-      else { va = aa.date || ''; vb = ba.date || ''; }
-      if (va < vb) return ordemRel.dir === 'asc' ? -1 : 1;
-      if (va > vb) return ordemRel.dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return lista;
-  }, [docsRel, pesquisaRel, filtroAnoRel, filtroMesRel, filtroEntidadeRel, ordemRel, tipoRel]);
-
-  const filtrosRelAtivos = pesquisaRel || filtroMesRel || filtroAnoRel || filtroEntidadeRel;
-  const limparFiltrosRel = () => { setPesquisaRel(''); setFiltroMesRel(''); setFiltroAnoRel(''); setFiltroEntidadeRel(''); };
 
   const ThSortRel = ({ campo, label }) => (
     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors"
@@ -347,8 +143,6 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
       </span>
     </th>
   );
-
-  const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white";
 
   return (
     <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-5 space-y-4">
@@ -377,14 +171,12 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
         </div>
       </div>
 
-      {/* Erro de autenticação — visível mesmo quando não ligado */}
       {erroAuth && (
         <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 rounded-2xl text-xs font-semibold">
           Erro ao ligar: {erroAuth}
         </div>
       )}
 
-      {/* Subtabs */}
       {ligado && (
         <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
           {[
@@ -446,7 +238,6 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
       {/* ── Tab: Relatórios ── */}
       {ligado && subtab === 'relatorios' && (
         <div className="border-t border-slate-100 pt-4 space-y-4">
-          {/* Controlos de pesquisa */}
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">
               {[
@@ -454,7 +245,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                 { key: 'compras', label: 'Compras' },
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
-                <button key={key} onClick={() => { setTipoRel(key); setDocsRel([]); }}
+                <button key={key} onClick={() => setTipoRel(key)}
                   className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tipoRel === key ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
                   {label}
                 </button>
@@ -472,7 +263,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             </div>
-            <button onClick={carregarRelatorio} disabled={carregandoRel}
+            <button onClick={handleCarregarRelatorio} disabled={carregandoRel}
               className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 disabled:opacity-60 self-end">
               {carregandoRel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               Carregar
@@ -485,7 +276,6 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
 
           {docsRel.length > 0 && (
             <>
-              {/* Pesquisa + filtros */}
               <div className="space-y-3">
                 <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
@@ -533,7 +323,6 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                 )}
               </div>
 
-              {/* Tabela */}
               <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
@@ -549,7 +338,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                     </thead>
                     <tbody>
                       {docsFiltrados.map((doc, i) => {
-                        const a = doc.attributes || doc;
+                        const a = getAttrs(doc);
                         const entidade = getNomeEntidade(a, tipoRel);
                         const total = getValorTotal(a);
                         const iva = getIva(a);
@@ -557,7 +346,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
                           <tr key={doc.id}
                             className={`border-b border-slate-50 transition-colors cursor-pointer ${i % 2 === 0 ? 'hover:bg-slate-50' : 'bg-slate-50/40 hover:bg-slate-100/60'}`}
                             onClick={() => setDocDetalhe(doc)}>
-                            <td className="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">{getDocNumero(a) || `#${doc.id}`}</td>
+                            <td className="px-4 py-3 text-xs font-mono text-slate-600 whitespace-nowrap">{getDocNum(doc, a) || `#${doc.id}`}</td>
                             <td className="px-4 py-3 text-xs text-slate-700 max-w-[160px] truncate">{entidade || '—'}</td>
                             <td className="px-4 py-3 text-xs text-slate-500 whitespace-nowrap">{a.date || '—'}</td>
                             <td className="px-4 py-3 text-xs font-semibold text-slate-700 whitespace-nowrap">
@@ -601,7 +390,7 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
         </div>
       )}
 
-      <ModalDocToc doc={docDetalhe} tipo={tipoRel} onClose={() => setDocDetalhe(null)} />
+      <ModalDocToc item={docDetalhe} tipo={tipoRel} onClose={() => setDocDetalhe(null)} />
     </div>
   );
 }

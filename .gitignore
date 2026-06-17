@@ -35,3 +35,4 @@ dist-ssr
 credentials.json
 service-account*.json
 .env*.local
+.claude/worktrees/
