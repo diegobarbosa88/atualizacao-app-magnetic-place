@@ -175,7 +175,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     setTimeout(() => setSuccessMsg(''), 6000);
   };
 
-  const workerStartDate = currentUser?.dataInicio ? new Date(currentUser.dataInicio) : null;
+  const workerStartDate = currentUser?.dataInicio ? new Date(currentUser.dataInicio + 'T00:00:00') : null;
   const todayStr = toISODateLocal(new Date());
   const todayOpenLog = !myApproval && logs.find(l =>
     l.date === todayStr && String(l.workerId) === String(currentUser?.id) && l.startTime && !l.endTime
