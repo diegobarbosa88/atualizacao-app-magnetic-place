@@ -4,6 +4,7 @@ import { gerarSEPAXml } from './salarios/_sepaXml.js';
 const SALTEDGE_APP_ID = process.env.SALTEDGE_APP_ID;
 const SALTEDGE_SECRET = process.env.SALTEDGE_SECRET;
 const SALTEDGE_BASE_URL = 'https://www.saltedge.com';
+const SALTEDGE_SANDBOX = process.env.SALTEDGE_SANDBOX === 'true';
 
 function supabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -202,6 +203,7 @@ export default async function handler(req, res) {
             body: JSON.stringify({
               data: {
                 customer_id: customerId,
+                ...(SALTEDGE_SANDBOX && { provider: { include_sandboxes: true } }),
                 payment_attributes: {
                   amount: Number(p.valor),
                   currency_code: 'EUR',
@@ -361,6 +363,7 @@ export default async function handler(req, res) {
             body: JSON.stringify({
               data: {
                 customer_id: customerId,
+                ...(SALTEDGE_SANDBOX && { provider: { include_sandboxes: true } }),
                 payment_attributes: {
                   amount: Number(p.valor),
                   currency_code: 'EUR',
@@ -481,6 +484,7 @@ export default async function handler(req, res) {
           body: JSON.stringify({
             data: {
               customer_id: customerId,
+              ...(SALTEDGE_SANDBOX && { provider: { include_sandboxes: true } }),
               consent: {
                 scopes: ['accounts', 'transactions', 'balance'],
                 period_days: 90,
