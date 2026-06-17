@@ -267,7 +267,11 @@ export default async function handler(req, res) {
               amount: Number(p.valor),
               currency: 'EUR',
               recipientName: p.fornecedor_nome,
-              sourceMessage: p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`,
+              sourceMessage: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140),
+              remittanceInformation: {
+                type: 'UNSTRUCTURED',
+                value: (p.referencia || `Pagam. Magnetic ${p.id.slice(0, 8)}`).slice(0, 140)
+              },
               redirectUri: callbackUrl
             })
           });
