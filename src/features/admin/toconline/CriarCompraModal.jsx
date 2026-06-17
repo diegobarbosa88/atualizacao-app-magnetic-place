@@ -84,7 +84,7 @@ export default function CriarCompraModal({ onClose, onCriado }) {
     setCriando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/create-compra', {
+      const res = await fetch('/api/toconline?action=criar-compra', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fornecedor, data, linhas: linhasValidas, referencia }),
