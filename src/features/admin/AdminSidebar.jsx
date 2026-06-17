@@ -5,7 +5,7 @@ import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, ChevronRight, ChevronDown,
-  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen,
+  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 
@@ -39,6 +39,7 @@ const MENU_STRUCTURE = [
       { id: 'rec-recibos',   label: 'Recibos',       icon: ReceiptText,   path: '/admin/documentos/reconciliacao/recibos',         color: 'emerald' },
       { id: 'rec-salarios',  label: 'Salários',      icon: Coins,         path: '/admin/documentos/reconciliacao/salarios',        color: 'emerald' },
       { id: 'rec-movs',      label: 'Movimentações', icon: TrendingUp,    path: '/admin/documentos/reconciliacao/movimentacoes',   color: 'emerald' },
+      { id: 'pag-fornecedores', label: 'Pagamentos', icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores', color: 'violet' },
     ],
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },
@@ -60,6 +61,7 @@ const ACCENT = {
   emerald: 'text-emerald-600',
   amber: 'text-amber-500',
   blue: 'text-blue-600',
+  violet: 'text-violet-600',
 };
 
 function resolveBadge(badgeType, counts) {
