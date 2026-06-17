@@ -142,6 +142,19 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   };
 
+  const handleConectarTink = async () => {
+    try {
+      const res = await fetch('/api/pagamentos?action=tink-get-link');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao obter link Tink');
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       {/* Header */}
@@ -153,6 +166,10 @@ export default function TOConlineBankAccounts({ onDesligado }) {
           <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={handleConectarTink}
+            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm">
+            <RefreshCw size={13} /> Conectar Tink
+          </button>
           <button onClick={carregar}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
             <RefreshCw size={13} /> Sincronizar

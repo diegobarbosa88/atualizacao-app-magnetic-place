@@ -476,6 +476,17 @@ export default async function handler(req, res) {
       }
     }
 
+    // ─── TINK AIS: OBTER LINK DE CONEXÃO DE CONTAS ───
+    if (action === 'tink-get-link') {
+      const clientId = TINK_CLIENT_ID || 'a9eeac4d05fa425d9e8f67b114ec70cf';
+      const host = req.headers.host || 'localhost:3000';
+      const protocol = req.headers['x-forwarded-proto'] || 'http';
+      const redirectUri = `${protocol}://${host}/admin/pagamentos?tink=callback`;
+
+      const url = `https://link.tink.com/1.0/business-transactions/connect-accounts/?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&market=PT&locale=pt_PT`;
+      return res.status(200).json({ url });
+    }
+
     return res.status(400).json({ error: `Acção desconhecida: ${action || '(não definida)'}` });
 
   } catch (err) {
