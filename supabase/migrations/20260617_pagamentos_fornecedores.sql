@@ -14,6 +14,7 @@ create table if not exists pagamentos_fornecedores (
 
 alter table pagamentos_fornecedores enable row level security;
 
+drop policy if exists "Service role full access" on pagamentos_fornecedores;
 create policy "Service role full access"
   on pagamentos_fornecedores
   for all

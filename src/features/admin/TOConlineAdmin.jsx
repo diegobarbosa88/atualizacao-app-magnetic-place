@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FileText, Users, Package, BarChart2, Link2, Plus, Loader2, Zap, Landmark, ShoppingCart } from 'lucide-react';
+import { FileText, Users, BarChart2, Link2, Plus, Loader2, Zap, Landmark } from 'lucide-react';
 import TOConlinePanel from './faturas/TOConlinePanel';
 import TOConlineClientes from './toconline/TOConlineClientes';
-import TOConlineArtigos from './toconline/TOConlineArtigos';
 import TOConlineRelatorios from './toconline/TOConlineRelatorios';
 import TOConlineBankAccounts from './toconline/TOConlineBankAccounts';
 import CriarDocumentoModal from './toconline/CriarDocumentoModal';
-import CriarCompraModal from './toconline/CriarCompraModal';
 import FaturarClienteModal from './toconline/FaturarClienteModal';
 
 const TABS = [
   { id: 'documentos', label: 'Documentos', icon: FileText },
   { id: 'clientes', label: 'Clientes', icon: Users },
-  { id: 'artigos', label: 'Artigos', icon: Package },
   { id: 'relatorios', label: 'Relatórios', icon: BarChart2 },
   { id: 'contas', label: 'Contas Bancárias', icon: Landmark },
 ];
@@ -26,11 +23,8 @@ export default function TOConlineAdmin() {
 
   const [ligado, setLigado] = useState(false);
   const [verificando, setVerificando] = useState(true);
-  const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState(null);
   const [mostrarCriar, setMostrarCriar] = useState(false);
   const [mostrarFaturar, setMostrarFaturar] = useState(false);
-  const [mostrarCompra, setMostrarCompra] = useState(false);
 
   useEffect(() => {
     fetch('/api/toconline/status')
@@ -68,10 +62,6 @@ export default function TOConlineAdmin() {
               className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
               <Plus size={14} /> Criar Documento
             </button>
-            <button onClick={() => setMostrarCompra(true)}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-amber-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 transition-all shadow-md shadow-amber-100">
-              <ShoppingCart size={14} /> Registar Compra
-            </button>
           </div>
         )}
       </div>
@@ -102,22 +92,12 @@ export default function TOConlineAdmin() {
           <>
             {subtab === 'documentos' && (
               <div className="space-y-4">
-                <TOConlinePanel
-                  onImportDone={() => {}}
-                  importing={importing}
-                  setImporting={setImporting}
-                  importResult={importResult}
-                  setImportResult={setImportResult}
-                />
+                <TOConlinePanel />
               </div>
             )}
 
             {subtab === 'clientes' && (
               ligado ? <TOConlineClientes onDesligado={() => setLigado(false)} /> : <NaoLigado />
-            )}
-
-            {subtab === 'artigos' && (
-              ligado ? <TOConlineArtigos onDesligado={() => setLigado(false)} /> : <NaoLigado />
             )}
 
             {subtab === 'relatorios' && (
@@ -145,12 +125,6 @@ export default function TOConlineAdmin() {
         />
       )}
 
-      {mostrarCompra && (
-        <CriarCompraModal
-          onClose={() => setMostrarCompra(false)}
-          onCriado={() => setMostrarCompra(false)}
-        />
-      )}
     </div>
   );
 }

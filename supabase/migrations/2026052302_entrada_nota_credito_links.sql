@@ -11,14 +11,18 @@ CREATE TABLE IF NOT EXISTS entrada_nota_credito_links (
 
 ALTER TABLE entrada_nota_credito_links ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow anon select entrada_nota_credito_links" ON entrada_nota_credito_links;
 CREATE POLICY "Allow anon select entrada_nota_credito_links"
   ON entrada_nota_credito_links FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow anon insert entrada_nota_credito_links" ON entrada_nota_credito_links;
 CREATE POLICY "Allow anon insert entrada_nota_credito_links"
   ON entrada_nota_credito_links FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon update entrada_nota_credito_links" ON entrada_nota_credito_links;
 CREATE POLICY "Allow anon update entrada_nota_credito_links"
   ON entrada_nota_credito_links FOR UPDATE USING (true) WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon delete entrada_nota_credito_links" ON entrada_nota_credito_links;
 CREATE POLICY "Allow anon delete entrada_nota_credito_links"
   ON entrada_nota_credito_links FOR DELETE USING (true);

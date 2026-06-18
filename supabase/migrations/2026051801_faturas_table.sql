@@ -18,6 +18,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS faturas_message_filename_idx
 -- RLS: only service role can insert; admin can read
 ALTER TABLE faturas ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin can read faturas" ON faturas;
 CREATE POLICY "Admin can read faturas"
   ON faturas FOR SELECT
   USING (true);

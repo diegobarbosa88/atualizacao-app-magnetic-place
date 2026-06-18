@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  ChevronDown, ChevronUp, Link2, Link2Off, Loader2, Download,
+  ChevronDown, ChevronUp, Link2, Link2Off, Loader2,
   Search, X, Eye, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
@@ -9,26 +9,14 @@ import { useTableFilters } from '../toconline/hooks/useTableFilters';
 import { useTocRelatorios } from '../toconline/hooks/useTocRelatorios';
 import ModalDocToc from '../toconline/components/ModalDocToc';
 
-const TIPOS_IMPORT = [
-  { key: 'vendas', label: 'Faturas de vendas' },
-  { key: 'compras', label: 'Faturas de compras' },
-  { key: 'recibos', label: 'Recibos de venda' },
-];
-
 const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white";
 
-export default function TOConlinePanel({ onImportDone, importing, setImporting, importResult, setImportResult }) {
+export default function TOConlinePanel() {
   const { supabase } = useApp();
   const [ligado, setLigado] = useState(false);
   const [ligando, setLigando] = useState(false);
-  const [subtab, setSubtab] = useState('relatorios');
   const [erroAuth, setErroAuth] = useState(null);
   const connectedFromCallback = React.useRef(false);
-
-  // Import state
-  const [tipos, setTipos] = useState(['vendas', 'compras', 'recibos']);
-  const [dataDe, setDataDe] = useState('');
-  const [dataAte, setDataAte] = useState('');
 
   // Relatórios state
   const [tipoRel, setTipoRel] = useState('vendas');
@@ -102,34 +90,11 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
       toconline_token_expires_at: null,
     }).eq('id', 1);
     setLigado(false);
-    setImportResult(null);
-  };
-
-  const handleImportar = async () => {
-    setImporting(true);
-    setImportResult(null);
-    try {
-      const res = await fetch('/api/toconline/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tipos, data_de: dataDe || undefined, data_ate: dataAte || undefined }),
-      });
-      const data = await res.json();
-      setImportResult(data);
-      if (!data.error) onImportDone?.();
-    } catch (e) {
-      setImportResult({ error: e.message });
-    } finally {
-      setImporting(false);
-    }
   };
 
   const handleCarregarRelatorio = () => {
     carregarRelatorio({ tipo: tipoRel, dataDe: dataDeRel, dataAte: dataAteRel });
   };
-
-  const toggleTipo = (key) =>
-    setTipos(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
 
   const ThSortRel = ({ campo, label }) => (
     <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors"
@@ -177,66 +142,8 @@ export default function TOConlinePanel({ onImportDone, importing, setImporting, 
         </div>
       )}
 
+      {/* ── Relatórios ── */}
       {ligado && (
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
-          {[
-            { key: 'relatorios', label: 'Relatórios' },
-            { key: 'importar', label: 'Importar' },
-          ].map(({ key, label }) => (
-            <button key={key} onClick={() => setSubtab(key)}
-              className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${subtab === key ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* ── Tab: Importar ── */}
-      {ligado && subtab === 'importar' && (
-        <div className="border-t border-slate-100 pt-4 space-y-4">
-          <div className="space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipos de documentos</p>
-            <div className="flex gap-3 flex-wrap">
-              {TIPOS_IMPORT.map(({ key, label }) => (
-                <label key={key} className="flex items-center gap-2 cursor-pointer select-none">
-                  <input type="checkbox" checked={tipos.includes(key)} onChange={() => toggleTipo(key)}
-                    className="rounded border-slate-300 text-blue-600 focus:ring-blue-300 cursor-pointer" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-600">{label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-3">
-            <div className="space-y-1 flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de</p>
-              <input type="date" value={dataDe} onChange={e => setDataDe(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-            </div>
-            <div className="space-y-1 flex-1">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data até</p>
-              <input type="date" value={dataAte} onChange={e => setDataAte(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
-            </div>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <button onClick={handleImportar} disabled={importing || tipos.length === 0}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 disabled:opacity-60">
-              {importing ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-              Importar do TOConline
-            </button>
-            {importResult && (
-              <span className={`text-xs font-semibold ${importResult.error ? 'text-red-600' : 'text-emerald-700'}`}>
-                {importResult.error
-                  ? `Erro: ${importResult.error}`
-                  : `Vendas: ${importResult.vendas ?? 0} · Compras: ${importResult.compras ?? 0} · Recibos: ${importResult.recibos ?? 0}${importResult.duplicados ? ` · ${importResult.duplicados} dup.` : ''}${importResult.erros?.length ? ` · ${importResult.erros.length} erro(s)` : ''}`}
-              </span>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── Tab: Relatórios ── */}
-      {ligado && subtab === 'relatorios' && (
         <div className="border-t border-slate-100 pt-4 space-y-4">
           <div className="flex flex-wrap gap-3 items-end">
             <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">

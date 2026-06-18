@@ -15,8 +15,16 @@ CREATE TABLE IF NOT EXISTS absence_requests (
 
 ALTER TABLE absence_requests DISABLE ROW LEVEL SECURITY;
 
--- Habilitar realtime para a tabela
-ALTER PUBLICATION supabase_realtime ADD TABLE absence_requests;
+-- Habilitar realtime para a tabela (idempotente)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND tablename = 'absence_requests'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE absence_requests;
+  END IF;
+END $$;
 
 -- Coluna absence_config na tabela system_settings (JSONB com motivos e toggle)
 ALTER TABLE system_settings

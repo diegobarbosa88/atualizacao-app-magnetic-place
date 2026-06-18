@@ -8,11 +8,14 @@ CREATE TABLE IF NOT EXISTS entrada_internos (
 
 ALTER TABLE entrada_internos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow anon select entrada_internos" ON entrada_internos;
 CREATE POLICY "Allow anon select entrada_internos"
   ON entrada_internos FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow anon insert entrada_internos" ON entrada_internos;
 CREATE POLICY "Allow anon insert entrada_internos"
   ON entrada_internos FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon delete entrada_internos" ON entrada_internos;
 CREATE POLICY "Allow anon delete entrada_internos"
   ON entrada_internos FOR DELETE USING (true);

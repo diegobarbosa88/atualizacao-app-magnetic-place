@@ -16,10 +16,12 @@ insert into reconciliation_classificacao_tags (nome, cor) values
 
 alter table reconciliation_classificacao_tags enable row level security;
 
+drop policy if exists "allow read tags" on reconciliation_classificacao_tags;
 create policy "allow read tags"
   on reconciliation_classificacao_tags for select
   using (true);
 
+drop policy if exists "allow insert tags" on reconciliation_classificacao_tags;
 create policy "allow insert tags"
   on reconciliation_classificacao_tags for insert
   with check (true);

@@ -34,21 +34,25 @@ DROP POLICY IF EXISTS "document-templates auth insert" ON storage.objects;
 DROP POLICY IF EXISTS "document-templates auth update" ON storage.objects;
 DROP POLICY IF EXISTS "document-templates auth delete" ON storage.objects;
 
+DROP POLICY IF EXISTS "document-templates auth read" ON storage;
 CREATE POLICY "document-templates auth read"
   ON storage.objects FOR SELECT
   TO authenticated
   USING (bucket_id = 'document-templates');
 
+DROP POLICY IF EXISTS "document-templates auth insert" ON storage;
 CREATE POLICY "document-templates auth insert"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'document-templates');
 
+DROP POLICY IF EXISTS "document-templates auth update" ON storage;
 CREATE POLICY "document-templates auth update"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (bucket_id = 'document-templates');
 
+DROP POLICY IF EXISTS "document-templates auth delete" ON storage;
 CREATE POLICY "document-templates auth delete"
   ON storage.objects FOR DELETE
   TO authenticated

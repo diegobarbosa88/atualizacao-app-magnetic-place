@@ -7,13 +7,15 @@
 
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'document-templates') THEN
+  IF EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'document-templates')
+     AND NOT EXISTS (SELECT 1 FROM storage.buckets WHERE id = 'document_templates') THEN
+    -- Renomear bucket antigo (hyphen) para novo (underscore)
     UPDATE storage.buckets SET id = 'document_templates', name = 'document_templates'
     WHERE id = 'document-templates';
-
     UPDATE storage.objects SET bucket_id = 'document_templates'
     WHERE bucket_id = 'document-templates';
   ELSE
+    -- Bucket de destino já existe (ou nenhum dos dois existe) — garantir que existe
     INSERT INTO storage.buckets (id, name, public)
     VALUES ('document_templates', 'document_templates', false)
     ON CONFLICT (id) DO NOTHING;

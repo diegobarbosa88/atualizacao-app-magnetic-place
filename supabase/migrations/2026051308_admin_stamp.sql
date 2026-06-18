@@ -48,6 +48,10 @@ COMMENT ON COLUMN worker_documents.admin_signed_at IS 'Timestamp when the admin/
 -- 4. RLS Policies for system_settings
 ALTER TABLE system_settings ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Allow public read system_settings" ON system_settings FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow public read system_settings"   ON system_settings;
+DROP POLICY IF EXISTS "Allow public insert system_settings" ON system_settings;
+DROP POLICY IF EXISTS "Allow public update system_settings" ON system_settings;
+
+CREATE POLICY "Allow public read system_settings"   ON system_settings FOR SELECT USING (true);
 CREATE POLICY "Allow public insert system_settings" ON system_settings FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public update system_settings" ON system_settings FOR UPDATE USING (true);

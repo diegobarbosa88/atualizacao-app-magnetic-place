@@ -16,10 +16,12 @@ CREATE TABLE IF NOT EXISTS reconciliation_runs (
 -- RLS: only authenticated admin users can read
 ALTER TABLE reconciliation_runs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Admin can read reconciliation_runs" ON reconciliation_runs;
 CREATE POLICY "Admin can read reconciliation_runs"
   ON reconciliation_runs FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Service role can insert reconciliation_runs" ON reconciliation_runs;
 CREATE POLICY "Service role can insert reconciliation_runs"
   ON reconciliation_runs FOR INSERT
   WITH CHECK (true);

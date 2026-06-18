@@ -15,18 +15,22 @@ DROP POLICY IF EXISTS "document_templates public insert" ON storage.objects;
 DROP POLICY IF EXISTS "document_templates public update" ON storage.objects;
 DROP POLICY IF EXISTS "document_templates public delete" ON storage.objects;
 
+DROP POLICY IF EXISTS "document_templates public read" ON storage;
 CREATE POLICY "document_templates public read"
   ON storage.objects FOR SELECT TO public
   USING (bucket_id = 'document_templates');
 
+DROP POLICY IF EXISTS "document_templates public insert" ON storage;
 CREATE POLICY "document_templates public insert"
   ON storage.objects FOR INSERT TO public
   WITH CHECK (bucket_id = 'document_templates');
 
+DROP POLICY IF EXISTS "document_templates public update" ON storage;
 CREATE POLICY "document_templates public update"
   ON storage.objects FOR UPDATE TO public
   USING (bucket_id = 'document_templates');
 
+DROP POLICY IF EXISTS "document_templates public delete" ON storage;
 CREATE POLICY "document_templates public delete"
   ON storage.objects FOR DELETE TO public
   USING (bucket_id = 'document_templates');

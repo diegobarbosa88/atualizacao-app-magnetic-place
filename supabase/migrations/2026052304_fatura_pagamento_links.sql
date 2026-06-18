@@ -11,19 +11,23 @@ CREATE TABLE IF NOT EXISTS fatura_pagamento_links (
 
 ALTER TABLE fatura_pagamento_links ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow anon select fatura_pagamento_links" ON fatura_pagamento_links;
 CREATE POLICY "Allow anon select fatura_pagamento_links"
   ON fatura_pagamento_links FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Allow anon insert fatura_pagamento_links" ON fatura_pagamento_links;
 CREATE POLICY "Allow anon insert fatura_pagamento_links"
   ON fatura_pagamento_links FOR INSERT
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon update fatura_pagamento_links" ON fatura_pagamento_links;
 CREATE POLICY "Allow anon update fatura_pagamento_links"
   ON fatura_pagamento_links FOR UPDATE
   USING (true)
   WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon delete fatura_pagamento_links" ON fatura_pagamento_links;
 CREATE POLICY "Allow anon delete fatura_pagamento_links"
   ON fatura_pagamento_links FOR DELETE
   USING (true);

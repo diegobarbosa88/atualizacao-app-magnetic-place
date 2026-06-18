@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { gerarSEPAXml } from './salarios/_sepaXml.js';
+import { gerarSEPAXml } from '../salarios/_sepaXml.js';
 
 const SALTEDGE_APP_ID = process.env.SALTEDGE_APP_ID;
 const SALTEDGE_SECRET = process.env.SALTEDGE_SECRET;
@@ -37,7 +37,6 @@ async function getOrCreateCustomer(db) {
 
   if (!res.ok) {
     const txt = await res.text();
-    // Se já existe, tentar obter por identifier não é suportado — erro é expectável em re-runs
     throw new Error(`Salt Edge criar customer (${res.status}): ${txt}`);
   }
 

@@ -14,8 +14,12 @@ CREATE TABLE IF NOT EXISTS faturacao_clientes_pagamentos (
 );
 
 ALTER TABLE faturacao_clientes_pagamentos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "allow_all_faturacao_pagamentos" ON faturacao_clientes_pagamentos;
 CREATE POLICY "allow_all_faturacao_pagamentos" ON faturacao_clientes_pagamentos
   FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE faturacao_clientes_pagamentos
+  ADD COLUMN IF NOT EXISTS reconciliation_run_id UUID REFERENCES reconciliation_runs(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_fat_pag_client_period
   ON faturacao_clientes_pagamentos (client_id, period);

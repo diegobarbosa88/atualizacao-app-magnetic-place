@@ -8,12 +8,15 @@ CREATE TABLE IF NOT EXISTS entrada_impostos (
 
 ALTER TABLE entrada_impostos ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Allow anon select entrada_impostos" ON entrada_impostos;
 CREATE POLICY "Allow anon select entrada_impostos"
   ON entrada_impostos FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Allow anon insert entrada_impostos" ON entrada_impostos;
 CREATE POLICY "Allow anon insert entrada_impostos"
   ON entrada_impostos FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Allow anon delete entrada_impostos" ON entrada_impostos;
 CREATE POLICY "Allow anon delete entrada_impostos"
   ON entrada_impostos FOR DELETE USING (true);
 

@@ -8,5 +8,6 @@ CREATE TABLE IF NOT EXISTS reconciliacao_entity_aliases (
 
 ALTER TABLE reconciliacao_entity_aliases ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role only" ON reconciliacao_entity_aliases;
 CREATE POLICY "Service role only" ON reconciliacao_entity_aliases
   USING (auth.role() = 'service_role');

@@ -2,11 +2,14 @@
 ALTER TABLE ajudas_faturadas_clientes ENABLE ROW LEVEL SECURITY;
 
 -- Utilizadores autenticados podem ler, inserir e atualizar
+DROP POLICY IF EXISTS "auth_select" ON ajudas_faturadas_clientes;
 CREATE POLICY "auth_select" ON ajudas_faturadas_clientes
   FOR SELECT TO authenticated USING (true);
 
+DROP POLICY IF EXISTS "auth_insert" ON ajudas_faturadas_clientes;
 CREATE POLICY "auth_insert" ON ajudas_faturadas_clientes
   FOR INSERT TO authenticated WITH CHECK (true);
 
+DROP POLICY IF EXISTS "auth_update" ON ajudas_faturadas_clientes;
 CREATE POLICY "auth_update" ON ajudas_faturadas_clientes
   FOR UPDATE TO authenticated USING (true) WITH CHECK (true);

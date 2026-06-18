@@ -1,17 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
 import { getValidToken, exchangeCode } from './_token.js';
-import { tocFetch, obterUrlPdf } from './_fetch.js';
+import { tocFetch } from './_fetch.js';
 
 const OAUTH_URL = process.env.TOCONLINE_OAUTH_URL || 'https://app12.toconline.pt/oauth';
 const CLIENT_ID = process.env.TOCONLINE_CLIENT_ID;
 const REDIRECT_URI = process.env.TOCONLINE_REDIRECT_URI || 'https://trabalhador.magneticplace.pt/api/toconline/callback';
-
-const DOC_ENDPOINTS = {
-  venda: '/api/v1/commercial_sales_documents',
-  compra: '/api/v1/commercial_purchases_documents',
-  recibo: '/api/v1/commercial_sales_receipts',
-};
 
 const REL_ENDPOINTS = {
   vendas: '/v1/commercial_sales_documents',
@@ -82,36 +76,6 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: e.message });
   }
 
-  if (action === 'artigos') {
-    if (req.method === 'GET') {
-      const { page = 1 } = req.query;
-      try {
-        const [prodData, svcData] = await Promise.all([
-          tocFetch(`/api/products?page[number]=${page}&page[size]=50`, accessToken),
-          tocFetch(`/api/services?page[number]=${page}&page[size]=50`, accessToken),
-        ]);
-        const produtos = (Array.isArray(prodData) ? prodData : (prodData.data || [])).map(i => ({ ...i, _kind: 'product' }));
-        const servicos = (Array.isArray(svcData) ? svcData : (svcData.data || [])).map(i => ({ ...i, _kind: 'service' }));
-        return res.status(200).json({ data: [...servicos, ...produtos], meta: {} });
-      } catch (e) {
-        return res.status(500).json({ error: e.message });
-      }
-    }
-    if (req.method === 'POST') {
-      const { descricao, codigo, preco_unitario, tipo = 'Service' } = req.body || {};
-      if (!descricao) return res.status(400).json({ error: 'Campo obrigatório: descricao' });
-      const endpoint = tipo === 'Product' ? '/api/products' : '/api/services';
-      const payload = { data: { type: tipo === 'Product' ? 'products' : 'services', attributes: { item_code: codigo || undefined, item_description: descricao, sales_price: preco_unitario ?? undefined } } };
-      try {
-        const data = await tocFetch(endpoint, accessToken, 'POST', payload);
-        return res.status(201).json({ data: data.data });
-      } catch (e) {
-        return res.status(500).json({ error: e.message });
-      }
-    }
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   if (action === 'clientes') {
     if (req.method === 'GET') {
       const { page = 1 } = req.query;
@@ -147,31 +111,6 @@ export default async function handler(req, res) {
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
-  }
-
-  if (action === 'documento') {
-    const { id, tipo = 'venda' } = req.method === 'GET' ? req.query : (req.body || {});
-    if (!id) return res.status(400).json({ error: 'Parâmetro obrigatório: id' });
-    const base = DOC_ENDPOINTS[tipo];
-    if (!base) return res.status(400).json({ error: `Tipo inválido: ${tipo}. Use venda, compra ou recibo.` });
-    if (req.method === 'GET') {
-      try {
-        const data = await tocFetch(`${base}/${id}`, accessToken);
-        const pdfUrl = await obterUrlPdf(id, tipo, accessToken);
-        return res.status(200).json({ data: data.data || data, pdf_url: pdfUrl });
-      } catch (e) {
-        return res.status(500).json({ error: e.message });
-      }
-    }
-    if (req.method === 'DELETE') {
-      try {
-        const data = await tocFetch(`${base}/${id}/cancel`, accessToken, 'POST');
-        return res.status(200).json({ anulado: true, data: data.data || data });
-      } catch (e) {
-        return res.status(500).json({ error: e.message });
-      }
-    }
-    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (action === 'relatorio') {
@@ -251,94 +190,6 @@ export default async function handler(req, res) {
       }
     }
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  // PDF de compras
-  if (action === 'pdf-compra') {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-    const { id } = req.query;
-    if (!id) return res.status(400).json({ error: 'Parâmetro obrigatório: id' });
-    try {
-      const data = await tocFetch(`/api/v1/url_for_print/${id}`, accessToken);
-      return res.status(200).json(data);
-    } catch (e) {
-      return res.status(500).json({ error: e.message });
-    }
-  }
-
-  if (action === 'criar-compra') {
-    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-    const { fornecedor, data: dataDoc, linhas, referencia, observacoes } = req.body || {};
-    if (!fornecedor || (!fornecedor.id && !fornecedor.nome)) {
-      return res.status(400).json({ error: 'Fornecedor obrigatório' });
-    }
-    if (!linhas || linhas.length === 0) {
-      return res.status(400).json({ error: 'Pelo menos uma linha é obrigatória' });
-    }
-    try {
-      const cabecalhoAttrs = { date: dataDoc || new Date().toISOString().slice(0, 10) };
-      if (fornecedor.id) {
-        cabecalhoAttrs.supplier_id = fornecedor.id;
-      } else {
-        cabecalhoAttrs.supplier_business_name = fornecedor.nome;
-        if (fornecedor.nif) cabecalhoAttrs.supplier_tax_registration_number = fornecedor.nif;
-      }
-      if (referencia) cabecalhoAttrs.notes = referencia;
-      if (observacoes) cabecalhoAttrs.description = observacoes;
-
-      let cabecalhoData;
-      try {
-        cabecalhoData = await tocFetch('/api/v1/commercial_purchases_documents', accessToken, 'POST', {
-          data: { type: 'commercial_purchases_documents', attributes: cabecalhoAttrs },
-        });
-      } catch (e) {
-        let msg = e.message;
-        try {
-          const match = msg.match(/\d{3}: (.+)$/s);
-          if (match) {
-            const parsed = JSON.parse(match[1]);
-            const apiErrors = parsed?.errors;
-            if (Array.isArray(apiErrors) && apiErrors.length) {
-              msg = apiErrors.map(err => err.detail || err.title || JSON.stringify(err)).join('; ');
-            }
-          }
-        } catch { /* manter msg original */ }
-        return res.status(422).json({ error: msg });
-      }
-
-      const docId = cabecalhoData.data?.id;
-      if (!docId) return res.status(500).json({ error: 'Documento criado mas sem ID na resposta' });
-
-      for (const linha of linhas) {
-        if (!linha.descricao && !linha.item_id) continue;
-        const linhaAttrs = {
-          commercial_purchases_document_id: docId,
-          description: linha.descricao || '',
-          quantity: Number(linha.quantidade) || 1,
-          unit_price: Number(linha.preco_unitario) || 0,
-        };
-        if (linha.item_id) linhaAttrs.item_id = linha.item_id;
-        if (linha.unidade) linhaAttrs.unit = linha.unidade;
-        if (linha.taxa_iva != null) linhaAttrs.tax_percentage = Number(linha.taxa_iva);
-        try {
-          await tocFetch('/api/v1/commercial_purchases_document_lines/', accessToken, 'POST', {
-            data: { type: 'commercial_purchases_document_lines', attributes: linhaAttrs },
-          });
-        } catch (err) {
-          console.warn('[criar-compra] linha falhou:', err.message);
-        }
-      }
-
-      let docData;
-      try {
-        docData = await tocFetch(`/api/v1/commercial_purchases_documents/${docId}`, accessToken);
-      } catch {
-        docData = cabecalhoData;
-      }
-      return res.status(201).json({ doc_id: docId, documento: docData.data || docData });
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
-    }
   }
 
   return res.status(400).json({ error: `Acção desconhecida: ${action || '(não definida)'}` });
