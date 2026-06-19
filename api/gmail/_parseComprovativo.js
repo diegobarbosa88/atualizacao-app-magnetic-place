@@ -1,8 +1,5 @@
 import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-// Importa directamente da lib para evitar o carregamento de ficheiros de teste
-// que pdf-parse faz no entry-point principal (falha em ambientes serverless)
-const pdfParse = require('pdf-parse/lib/pdf-parse.js');
+const _require = createRequire(import.meta.url);
 
 // Query Gmail para emails de comprovativo do novobanco
 export const COMPROVATIVO_QUERY =
@@ -88,9 +85,10 @@ export function extractFromText(text) {
 
 /**
  * Extrai campos de um buffer PDF usando pdf-parse.
- * Lança erro se o parse falhar.
+ * O require é lazy (dentro da função) para não falhar ao carregar o módulo.
  */
 export async function extractFromPdf(buffer) {
+  const pdfParse = _require('pdf-parse');
   const parsed = await pdfParse(buffer);
   return extractFromText(parsed.text);
 }
