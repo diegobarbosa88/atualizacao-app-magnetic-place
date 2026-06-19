@@ -1,12 +1,11 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
-import {
-  COMPROVATIVO_QUERY,
-  extractFromPdf,
-  extractFromText,
-  extractBodyText,
-  findPdfParts,
-} from './_parseComprovativo.js';
+
+// Import dinâmico: evita que uma falha de inicialização do pdf-parse
+// (que ocorre no Vercel ao carregar ficheiros de teste) quebre o modo faturas.
+async function getParser() {
+  return import('./_parseComprovativo.js');
+}
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'application/xml', 'text/xml'];
 const FATURAS_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
@@ -60,7 +59,8 @@ export default async function handler(req, res) {
       result.faturas = await importarFaturas(gmail, supabase, userId, body.query);
     }
     if (mode === 'comprovativos' || mode === 'all') {
-      result.comprovativos = await importarComprovativos(gmail, supabase, userId, body.query);
+      const parser = await getParser();
+      result.comprovativos = await importarComprovativos(gmail, supabase, userId, body.query, parser);
     }
 
     return res.status(200).json(mode === 'all' ? result : (result.faturas ?? result.comprovativos));
@@ -151,7 +151,8 @@ async function importarFaturas(gmail, supabase, userId, queryOverride) {
 // ---------------------------------------------------------------------------
 // Modo "comprovativos": emails novobanco → tabela faturas_centro_documentos
 // ---------------------------------------------------------------------------
-async function importarComprovativos(gmail, supabase, userId, queryOverride) {
+async function importarComprovativos(gmail, supabase, userId, queryOverride, parser) {
+  const { COMPROVATIVO_QUERY, extractFromPdf, extractFromText, extractBodyText, findPdfParts } = parser;
   const query = queryOverride?.trim() || COMPROVATIVO_QUERY;
   let listRes;
   try {

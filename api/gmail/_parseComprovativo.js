@@ -1,6 +1,8 @@
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
+// Importa directamente da lib para evitar o carregamento de ficheiros de teste
+// que pdf-parse faz no entry-point principal (falha em ambientes serverless)
+const pdfParse = require('pdf-parse/lib/pdf-parse.js');
 
 // Query Gmail para emails de comprovativo do novobanco
 export const COMPROVATIVO_QUERY =
