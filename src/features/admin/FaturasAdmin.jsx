@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -135,6 +135,8 @@ export default function FaturasAdmin() {
   const [importResult, setImportResult] = useState(null);
   const [importandoToc, setImportandoToc] = useState(false);
   const [importResultToc, setImportResultToc] = useState(null);
+  const [importandoComp, setImportandoComp] = useState(false);
+  const [importResultComp, setImportResultComp] = useState(null);
   const [extraindo, setExtraindo] = useState(false);
   const [extraindoErros, setExtraindoErros] = useState([]);
 
@@ -213,6 +215,20 @@ export default function FaturasAdmin() {
     }
     setExtraindoErros(erros);
     setExtraindo(false);
+  };
+
+  const handleImportarComprovativos = async () => {
+    setImportandoComp(true); setImportResultComp(null);
+    try {
+      const res = await fetch('/api/gmail/import-faturas', {
+        method: 'POST',
+        headers: { 'x-import-secret': import.meta.env.VITE_GMAIL_IMPORT_SECRET || '', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: 'comprovativos' }),
+      });
+      const data = await res.json();
+      setImportResultComp(data);
+    } catch (e) { setImportResultComp({ error: e.message }); }
+    finally { setImportandoComp(false); }
   };
 
   const handleImportar = async () => {
@@ -413,6 +429,37 @@ export default function FaturasAdmin() {
         importing={importando}
         importResult={importResult}
       />
+
+      {/* Comprovativos novobanco */}
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-3">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0">
+              <Receipt size={18} className="text-rose-500" />
+            </div>
+            <div>
+              <p className="text-sm font-black text-slate-700">Comprovativos novobanco</p>
+              <p className="text-[10px] text-slate-400 font-semibold">Débitos confirmados de alertas@novobanco.pt / comprovativos@novobanco.pt</p>
+            </div>
+          </div>
+          <button
+            onClick={handleImportarComprovativos}
+            disabled={importandoComp}
+            className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-all disabled:opacity-50 shadow-sm"
+          >
+            {importandoComp ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />}
+            {importandoComp ? 'A importar...' : 'Importar Comprovativos'}
+          </button>
+        </div>
+        {importResultComp && (
+          <div className={`px-4 py-3 rounded-2xl text-xs font-semibold ${importResultComp.error ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
+            {importResultComp.error
+              ? `Erro: ${importResultComp.error}`
+              : `${importResultComp.processados ?? 0} comprovativo(s) importado(s)${importResultComp.erros?.length ? ` · ${importResultComp.erros.length} aviso(s)` : ''}`
+            }
+          </div>
+        )}
+      </div>
 
       <TOConlinePanel
         onImportDone={carregar}
