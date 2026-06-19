@@ -3,9 +3,6 @@
     "api/gmail/import-faturas.js": {
       "maxDuration": 60
     },
-    "api/gmail/import-comprovativos.js": {
-      "maxDuration": 60
-    },
     "api/parse-fatura.js": {
       "maxDuration": 30
     },
