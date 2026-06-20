@@ -152,7 +152,7 @@ async function importarFaturas(gmail, supabase, userId, queryOverride) {
 // Modo "comprovativos": emails novobanco → tabela faturas_centro_documentos
 // ---------------------------------------------------------------------------
 async function importarComprovativos(gmail, supabase, userId, queryOverride, parser) {
-  const { COMPROVATIVO_QUERY, extractFromPdf, extractFromText, extractBodyText, findPdfParts } = parser;
+  const { COMPROVATIVO_QUERY, extractFromText, extractBodyText, findPdfParts, extractPdfText } = parser;
   const query = queryOverride?.trim() || COMPROVATIVO_QUERY;
   let listRes;
   try {
@@ -176,6 +176,7 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
       let storagePath = null;
       let publicUrl = null;
       let fonte = 'corpo';
+      let textoExtraido = '';
 
       const pdfParts = findPdfParts(payload?.parts || []);
       if (pdfParts.length > 0) {
@@ -197,7 +198,8 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
         publicUrl = url;
 
         try {
-          campos = await extractFromPdf(buffer);
+          textoExtraido = await extractPdfText(buffer);
+          campos = extractFromText(textoExtraido);
           fonte = 'pdf';
         } catch (pdfErr) {
           erros.push({ messageId: msg.id, aviso: `pdf-parse falhou, a usar corpo: ${pdfErr.message}` });
@@ -205,12 +207,13 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
       }
 
       if (!campos) {
-        campos = extractFromText(extractBodyText(payload));
+        textoExtraido = extractBodyText(payload);
+        campos = extractFromText(textoExtraido);
         fonte = 'corpo';
       }
 
       if (!campos.valor || campos.valor <= 0) {
-        erros.push({ messageId: msg.id, subject, aviso: 'Montante não encontrado — registo ignorado.' });
+        erros.push({ messageId: msg.id, subject, fonte, campos_extraidos: campos, texto_debug: textoExtraido.slice(0, 1000), aviso: 'Montante não encontrado — registo ignorado.' });
         await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } });
         continue;
       }
