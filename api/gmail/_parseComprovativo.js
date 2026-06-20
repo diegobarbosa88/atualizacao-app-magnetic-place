@@ -1,15 +1,14 @@
 import { createRequire } from 'module';
+import { inflateSync } from 'zlib';
 const _require = createRequire(import.meta.url);
 
 // pdfjs-dist v5 requer DOMMatrix (Web API ausente no Node.js < 21 e no Vercel).
-// Polyfill mínimo funcional — garante que a inicialização do pdfjs não falha
-// e que as operações 2D usadas na extracção de texto produzem resultados correctos.
-if (typeof globalThis.DOMMatrix === 'undefined') {
-  globalThis.DOMMatrix = class DOMMatrix {
+// Polyfill mínimo funcional — garante que a inicialização do pdfjs não falha.
+function _buildDomMatrixPolyfill() {
+  return class DOMMatrix {
     constructor(init) {
-      const v = Array.isArray(init) && init.length >= 6
-        ? init : [1, 0, 0, 1, 0, 0];
-      [this.a, this.b, this.c, this.d, this.e, this.f] = v;
+      const v = Array.isArray(init) && init.length >= 6 ? init : [1,0,0,1,0,0];
+      [this.a,this.b,this.c,this.d,this.e,this.f] = v;
       this.m11=this.a; this.m12=this.b; this.m13=0; this.m14=0;
       this.m21=this.c; this.m22=this.d; this.m23=0; this.m24=0;
       this.m31=0; this.m32=0; this.m33=1; this.m34=0;
@@ -17,7 +16,7 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
       this.is2D=true;
       this.isIdentity=(this.a===1&&this.b===0&&this.c===0&&this.d===1&&this.e===0&&this.f===0);
     }
-    static fromMatrix(m) { return new globalThis.DOMMatrix(m?[m.a,m.b,m.c,m.d,m.e,m.f]:undefined); }
+    static fromMatrix(m) { const P=globalThis.DOMMatrix; return new P(m?[m.a,m.b,m.c,m.d,m.e,m.f]:undefined); }
     static fromFloat32Array(a) { return new globalThis.DOMMatrix([...a]); }
     static fromFloat64Array(a) { return new globalThis.DOMMatrix([...a]); }
     multiply(m) {
@@ -30,22 +29,24 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
     translate(tx=0,ty=0) { return this.multiply(new globalThis.DOMMatrix([1,0,0,1,tx,ty])); }
     scale(sx=1,sy=sx)   { return this.multiply(new globalThis.DOMMatrix([sx,0,0,sy,0,0])); }
     rotate(deg=0) {
-      const r=deg*Math.PI/180, cos=Math.cos(r), sin=Math.sin(r);
+      const r=deg*Math.PI/180,cos=Math.cos(r),sin=Math.sin(r);
       return this.multiply(new globalThis.DOMMatrix([cos,sin,-sin,cos,0,0]));
     }
     inverse() {
       const det=this.a*this.d-this.b*this.c;
       if(!det) return new globalThis.DOMMatrix();
-      return new globalThis.DOMMatrix([
-        this.d/det,-this.b/det,-this.c/det,this.a/det,
-        (this.c*this.f-this.d*this.e)/det,(this.b*this.e-this.a*this.f)/det,
-      ]);
+      return new globalThis.DOMMatrix([this.d/det,-this.b/det,-this.c/det,this.a/det,(this.c*this.f-this.d*this.e)/det,(this.b*this.e-this.a*this.f)/det]);
     }
     transformPoint(p={}) { return {x:this.a*(p.x||0)+this.c*(p.y||0)+this.e,y:this.b*(p.x||0)+this.d*(p.y||0)+this.f,z:0,w:1}; }
     toFloat32Array() { return new Float32Array([this.a,this.b,this.c,this.d,this.e,this.f]); }
     toFloat64Array() { return new Float64Array([this.a,this.b,this.c,this.d,this.e,this.f]); }
     toString() { return `matrix(${this.a},${this.b},${this.c},${this.d},${this.e},${this.f})`; }
   };
+}
+
+// Aplica ao carregar o módulo (cold start)
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  globalThis.DOMMatrix = _buildDomMatrixPolyfill();
 }
 
 // Query Gmail para emails de comprovativo do novobanco
@@ -208,13 +209,138 @@ function extractFromInlineFormat(text) {
   };
 }
 
-/** Devolve o texto bruto extraído de um PDF.
- *  pagerender personalizado: agrupa items por posição Y e ordena por X
- *  dentro de cada linha — evita "DOMMatrix is not defined" no Vercel e
- *  produz texto inline "Label Valor" em vez de colunas separadas. */
-export async function extractPdfText(buffer) {
-  const pdfParse = _require('pdf-parse');
+// ---------------------------------------------------------------------------
+// Extrator nativo de PDF — puro Node.js, sem pdfjs-dist / DOMMatrix
+// Suporta PDFs com fontes CID 2-byte (ToUnicode bfrange/bfchar embedding)
+// como os gerados pelo EvoPdf para o novobanco.
+// ---------------------------------------------------------------------------
 
+function _buildCMapFromPdf(raw) {
+  const cmap = new Map();
+  const rangeRe = /beginbfrange([\s\S]*?)endbfrange/g;
+  let m;
+  while ((m = rangeRe.exec(raw)) !== null) {
+    const block = m[1];
+    const entryRe = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
+    let entry;
+    while ((entry = entryRe.exec(block)) !== null) {
+      const start = parseInt(entry[1], 16);
+      const end   = parseInt(entry[2], 16);
+      const uStart = parseInt(entry[3], 16);
+      for (let i = 0; i <= (end - start); i++) cmap.set(start + i, String.fromCodePoint(uStart + i));
+    }
+  }
+  const charRe = /beginbfchar([\s\S]*?)endbfchar/g;
+  while ((m = charRe.exec(raw)) !== null) {
+    const block = m[1];
+    const entryRe = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
+    let entry;
+    while ((entry = entryRe.exec(block)) !== null) {
+      cmap.set(parseInt(entry[1], 16), String.fromCodePoint(parseInt(entry[2], 16)));
+    }
+  }
+  return cmap;
+}
+
+function _parsePdfStringBytes(raw) {
+  // Resolve PDF string escape sequences → Buffer de bytes lógicos
+  const bytes = [];
+  for (let i = 0; i < raw.length; i++) {
+    const c = raw.charCodeAt(i);
+    if (c === 0x5C) {
+      i++;
+      if (i >= raw.length) break;
+      const n = raw.charCodeAt(i);
+      if (n >= 0x30 && n <= 0x37) {
+        let oct = String.fromCharCode(n);
+        for (let j = 0; j < 2 && i + 1 < raw.length; j++) {
+          const nx = raw.charCodeAt(i + 1);
+          if (nx < 0x30 || nx > 0x37) break;
+          oct += String.fromCharCode(nx); i++;
+        }
+        bytes.push(parseInt(oct, 8));
+      } else {
+        const ESC = { 0x6E:0x0A, 0x72:0x0D, 0x74:0x09, 0x62:0x08, 0x66:0x0C, 0x28:0x28, 0x29:0x29, 0x5C:0x5C };
+        bytes.push(ESC[n] ?? (n & 0xFF));
+      }
+    } else {
+      bytes.push(c & 0xFF);
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+function _decodeGlyphs2Byte(rawStr, cmap) {
+  const buf = _parsePdfStringBytes(rawStr);
+  let result = '';
+  for (let i = 0; i + 1 < buf.length; i += 2) result += cmap.get((buf[i] << 8) | buf[i + 1]) || '';
+  return result;
+}
+
+function _extractTextItems(content, cmap) {
+  const items = [];
+  const btRe = /BT([\s\S]*?)ET/g;
+  let m;
+  while ((m = btRe.exec(content)) !== null) {
+    const block = m[1];
+    let x = 0, y = 0;
+    const td = block.match(/([\d.-]+)\s+([\d.-]+)\s+Td/);
+    if (td) { x = parseFloat(td[1]); y = parseFloat(td[2]); }
+    let text = '';
+    const tjRe = /\(((?:[^()\\]|\\.)*)\)\s*Tj/g;
+    let tj;
+    while ((tj = tjRe.exec(block)) !== null) text += _decodeGlyphs2Byte(tj[1], cmap);
+    const t = text.trim();
+    if (t) items.push({ x, y, text: t });
+  }
+  return items;
+}
+
+/** Extrai texto de um PDF usando apenas Node.js nativo (zlib + regex).
+ *  Não depende de pdfjs-dist nem de DOMMatrix — funciona no Vercel. */
+export function extractPdfTextNative(buffer) {
+  const raw = buffer.toString('latin1');
+  const cmap = _buildCMapFromPdf(raw);
+  if (cmap.size === 0) return '';
+
+  const allItems = [];
+  const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let m;
+  while ((m = streamRe.exec(raw)) !== null) {
+    let content = m[1];
+    if (!content.includes('BT')) {
+      try { content = inflateSync(Buffer.from(content, 'latin1')).toString('latin1'); } catch {
+        try { content = inflateSync(Buffer.from(content, 'latin1').slice(2)).toString('latin1'); } catch { continue; }
+      }
+    }
+    if (content.includes('BT')) allItems.push(..._extractTextItems(content, cmap));
+  }
+
+  if (allItems.length === 0) return '';
+
+  // Ordena por Y decrescente; agrupa itens cujo Y difere ≤ 2 (label+valor estão 1 pt afastados)
+  allItems.sort((a, b) => b.y - a.y || a.x - b.x);
+  const groups = [];
+  let cur = null;
+  for (const item of allItems) {
+    if (!cur || Math.abs(cur.y - item.y) > 2) { cur = { y: item.y, items: [] }; groups.push(cur); }
+    cur.items.push(item);
+  }
+  return groups.map(g => g.items.sort((a, b) => a.x - b.x).map(i => i.text).join(' ')).join('\n');
+}
+
+/** Devolve o texto bruto extraído de um PDF.
+ *  Tenta primeiro o extrator nativo (sem dependências externas).
+ *  Fallback para pdf-parse com pagerender Y-based caso o nativo não produza texto. */
+export async function extractPdfText(buffer) {
+  const nativeText = extractPdfTextNative(buffer);
+  if (nativeText.trim().length > 20) return nativeText;
+
+  // Fallback: pdf-parse via pdfjs-dist (requer DOMMatrix — pode falhar no Vercel)
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    globalThis.DOMMatrix = _buildDomMatrixPolyfill();
+  }
+  const pdfParse = _require('pdf-parse');
   const renderPage = async (pageData) => {
     const content = await pageData.getTextContent();
     const lineMap = {};
@@ -224,14 +350,9 @@ export async function extractPdfText(buffer) {
       if (!lineMap[y]) lineMap[y] = [];
       lineMap[y].push({ x: item.transform?.[4] ?? 0, str: item.str });
     }
-    // Y decresce de cima para baixo na página (maior Y = topo)
-    return Object.keys(lineMap)
-      .map(Number)
-      .sort((a, b) => b - a)
-      .map(y => lineMap[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' '))
-      .join('\n');
+    return Object.keys(lineMap).map(Number).sort((a, b) => b - a)
+      .map(y => lineMap[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' ')).join('\n');
   };
-
   const parsed = await pdfParse(buffer, { pagerender: renderPage });
   return parsed.text;
 }
