@@ -1,6 +1,53 @@
 import { createRequire } from 'module';
 const _require = createRequire(import.meta.url);
 
+// pdfjs-dist v5 requer DOMMatrix (Web API ausente no Node.js < 21 e no Vercel).
+// Polyfill mínimo funcional — garante que a inicialização do pdfjs não falha
+// e que as operações 2D usadas na extracção de texto produzem resultados correctos.
+if (typeof globalThis.DOMMatrix === 'undefined') {
+  globalThis.DOMMatrix = class DOMMatrix {
+    constructor(init) {
+      const v = Array.isArray(init) && init.length >= 6
+        ? init : [1, 0, 0, 1, 0, 0];
+      [this.a, this.b, this.c, this.d, this.e, this.f] = v;
+      this.m11=this.a; this.m12=this.b; this.m13=0; this.m14=0;
+      this.m21=this.c; this.m22=this.d; this.m23=0; this.m24=0;
+      this.m31=0; this.m32=0; this.m33=1; this.m34=0;
+      this.m41=this.e; this.m42=this.f; this.m43=0; this.m44=1;
+      this.is2D=true;
+      this.isIdentity=(this.a===1&&this.b===0&&this.c===0&&this.d===1&&this.e===0&&this.f===0);
+    }
+    static fromMatrix(m) { return new globalThis.DOMMatrix(m?[m.a,m.b,m.c,m.d,m.e,m.f]:undefined); }
+    static fromFloat32Array(a) { return new globalThis.DOMMatrix([...a]); }
+    static fromFloat64Array(a) { return new globalThis.DOMMatrix([...a]); }
+    multiply(m) {
+      return new globalThis.DOMMatrix([
+        this.a*m.a+this.b*m.c, this.a*m.b+this.b*m.d,
+        this.c*m.a+this.d*m.c, this.c*m.b+this.d*m.d,
+        this.e*m.a+this.f*m.c+m.e, this.e*m.b+this.f*m.d+m.f,
+      ]);
+    }
+    translate(tx=0,ty=0) { return this.multiply(new globalThis.DOMMatrix([1,0,0,1,tx,ty])); }
+    scale(sx=1,sy=sx)   { return this.multiply(new globalThis.DOMMatrix([sx,0,0,sy,0,0])); }
+    rotate(deg=0) {
+      const r=deg*Math.PI/180, cos=Math.cos(r), sin=Math.sin(r);
+      return this.multiply(new globalThis.DOMMatrix([cos,sin,-sin,cos,0,0]));
+    }
+    inverse() {
+      const det=this.a*this.d-this.b*this.c;
+      if(!det) return new globalThis.DOMMatrix();
+      return new globalThis.DOMMatrix([
+        this.d/det,-this.b/det,-this.c/det,this.a/det,
+        (this.c*this.f-this.d*this.e)/det,(this.b*this.e-this.a*this.f)/det,
+      ]);
+    }
+    transformPoint(p={}) { return {x:this.a*(p.x||0)+this.c*(p.y||0)+this.e,y:this.b*(p.x||0)+this.d*(p.y||0)+this.f,z:0,w:1}; }
+    toFloat32Array() { return new Float32Array([this.a,this.b,this.c,this.d,this.e,this.f]); }
+    toFloat64Array() { return new Float64Array([this.a,this.b,this.c,this.d,this.e,this.f]); }
+    toString() { return `matrix(${this.a},${this.b},${this.c},${this.d},${this.e},${this.f})`; }
+  };
+}
+
 // Query Gmail para emails de comprovativo do novobanco
 export const COMPROVATIVO_QUERY =
   'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt OR info@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida" OR "pagamento executado")';
