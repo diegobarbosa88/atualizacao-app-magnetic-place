@@ -213,7 +213,8 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
       }
 
       if (!campos.valor || campos.valor <= 0) {
-        erros.push({ messageId: msg.id, subject, fonte, campos_extraidos: campos, texto_debug: textoExtraido.slice(0, 1000), aviso: 'Montante não encontrado — registo ignorado.' });
+        const flatParts = (function flat(ps) { return ps.flatMap(p => [{ mimeType: p.mimeType, filename: p.filename, hasId: !!p.body?.attachmentId }, ...flat(p.parts || [])]); })(payload?.parts || []);
+        erros.push({ messageId: msg.id, subject, fonte, campos_extraidos: campos, texto_debug: textoExtraido.slice(0, 800), partes: flatParts, aviso: 'Montante não encontrado — registo ignorado.' });
         await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } });
         continue;
       }

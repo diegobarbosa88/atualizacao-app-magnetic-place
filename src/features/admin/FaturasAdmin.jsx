@@ -465,7 +465,8 @@ export default function FaturasAdmin() {
                     {e.subject && <div><span className="text-slate-400">subject:</span> {e.subject}</div>}
                     {e.fonte && <div><span className="text-slate-400">fonte:</span> {e.fonte}</div>}
                     {e.campos_extraidos && <div><span className="text-slate-400">campos:</span> {JSON.stringify(e.campos_extraidos)}</div>}
-                    {e.texto_debug && <div><span className="text-slate-400">texto PDF:</span> {e.texto_debug}</div>}
+                    {e.partes && <div><span className="text-slate-400">partes email:</span> {JSON.stringify(e.partes)}</div>}
+                    {e.texto_debug && <div><span className="text-slate-400">texto:</span> {e.texto_debug}</div>}
                   </div>
                 ))}
               </div>

@@ -202,11 +202,15 @@ export function extractBodyText(payload) {
   return '';
 }
 
-/** Encontra partes com anexo PDF num payload Gmail (recursivo). */
+/** Encontra partes com anexo PDF num payload Gmail (recursivo).
+ *  Aceita application/pdf, application/octet-stream ou qualquer parte
+ *  cujo filename termine em .pdf. */
 export function findPdfParts(parts = []) {
   const found = [];
   for (const part of parts) {
-    if (part.mimeType === 'application/pdf' && part.body?.attachmentId) {
+    const looksLikePdf = part.mimeType === 'application/pdf'
+      || part.filename?.toLowerCase().endsWith('.pdf');
+    if (looksLikePdf && part.body?.attachmentId) {
       found.push(part);
     }
     if (part.parts) found.push(...findPdfParts(part.parts));
