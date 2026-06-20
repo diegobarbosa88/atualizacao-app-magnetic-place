@@ -457,6 +457,19 @@ export default function FaturasAdmin() {
               ? `Erro: ${importResultComp.error}`
               : `${importResultComp.processados ?? 0} comprovativo(s) importado(s)${importResultComp.erros?.length ? ` · ${importResultComp.erros.length} aviso(s)` : ''}`
             }
+            {importResultComp.erros?.length > 0 && (
+              <div className="mt-2 space-y-2">
+                {importResultComp.erros.map((e, i) => (
+                  <div key={i} className="bg-white/60 rounded-xl p-2 text-[10px] font-mono break-all whitespace-pre-wrap">
+                    <div className="font-black text-slate-600 mb-1">{e.aviso || e.error}</div>
+                    {e.subject && <div><span className="text-slate-400">subject:</span> {e.subject}</div>}
+                    {e.fonte && <div><span className="text-slate-400">fonte:</span> {e.fonte}</div>}
+                    {e.campos_extraidos && <div><span className="text-slate-400">campos:</span> {JSON.stringify(e.campos_extraidos)}</div>}
+                    {e.texto_debug && <div><span className="text-slate-400">texto PDF:</span> {e.texto_debug}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
