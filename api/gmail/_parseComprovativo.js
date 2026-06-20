@@ -3,7 +3,7 @@ const _require = createRequire(import.meta.url);
 
 // Query Gmail para emails de comprovativo do novobanco
 export const COMPROVATIVO_QUERY =
-  'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt OR info@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida")';
+  'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt OR info@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida" OR "pagamento executado")';
 
 /**
  * Extrai campos financeiros do texto bruto (PDF ou corpo do email).
@@ -14,50 +14,69 @@ export const COMPROVATIVO_QUERY =
 export function extractFromText(text) {
   const t = text || '';
 
-  // Tipo de operação (linha após "seguinte operação:")
+  // Tipo de operação — "seguinte operação:" (comprovativos) ou "pagamento executado" no título
   const operacaoMatch = t.match(/seguinte opera[cç][aã]o:\s*(.+?)(?:\r?\n|$)/i);
   const tipoOperacao = operacaoMatch?.[1]?.trim() || null;
 
-  // Montante — aceita vírgula decimal e ponto como milhar
-  // Ex: "Montante ,729,00 EUR" ou "Montante: 1.200,50 EUR"
-  const montanteMatch = t.match(/Montante\s*[,:\s]+\s*([\d.,]+)\s*EUR/i);
-  let valor = null;
-  if (montanteMatch) {
-    const raw = montanteMatch[1];
-    // Se tem ponto E vírgula, ponto é milhar; se só vírgula, vírgula é decimal
+  // Montante/Valor — cobre vários rótulos usados pelo novobanco
+  // "Montante ,729,00 EUR" / "Montante: 1.200,50 EUR" / "Valor: 500,00 EUR" / "Valor do Pagamento 100,00"
+  function parseValor(raw) {
+    if (!raw) return null;
     const normalised = raw.includes('.') && raw.includes(',')
       ? raw.replace(/\./g, '').replace(',', '.')
       : raw.replace(',', '.');
-    valor = parseFloat(normalised);
-    if (isNaN(valor)) valor = null;
+    const n = parseFloat(normalised);
+    return isNaN(n) ? null : n;
+  }
+  let valor = null;
+  const valorPatterns = [
+    /Montante\s*[,:\s]+\s*([\d.,]+)\s*EUR/i,
+    /Valor\s+(?:do\s+)?(?:Pagamento|Transfer[eê]ncia|Opera[cç][aã]o)?\s*[,:\s]+\s*([\d.,]+)\s*(?:EUR)?/i,
+    /Quantia\s*[,:\s]+\s*([\d.,]+)\s*(?:EUR)?/i,
+    /Valor\s*[,:\s]+\s*([\d.,]+)\s*(?:EUR)?/i,
+  ];
+  for (const p of valorPatterns) {
+    const m = t.match(p);
+    if (m) { valor = parseValor(m[1]); if (valor !== null) break; }
   }
 
-  // Data do pedido — DD-MM-YYYY ou DD/MM/YYYY
-  const dataMatch = t.match(/Data do Pedido\s*[,:\s]+\s*(\d{2}[-/]\d{2}[-/]\d{4})/i);
+  // Data — "Data do Pedido", "Data de Execução", "Data de Pagamento", "Data Valor", "Data:"
   let data_documento = null;
-  if (dataMatch) {
-    const [d, m, y] = dataMatch[1].split(/[-/]/);
-    data_documento = `${y}-${m}-${d}`;
+  const dataPatterns = [
+    /Data\s+do\s+Pedido\s*[,:\s]+\s*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+    /Data\s+(?:de\s+)?(?:Execu[cç][aã]o|Pagamento|Processamento|Valuta)\s*[,:\s]+\s*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+    /Data\s+Valor\s*[,:\s]+\s*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+    /Data\s*[,:\s]+\s*(\d{2}[-/]\d{2}[-/]\d{4})/i,
+  ];
+  for (const p of dataPatterns) {
+    const m = t.match(p);
+    if (m) {
+      const [d, mo, y] = m[1].split(/[-/]/);
+      data_documento = `${y}-${mo}-${d}`;
+      break;
+    }
   }
 
-  // Referência (sequência numérica ou alfanumérica)
-  const refMatch = t.match(/Refer[eê]ncia\s*[,:\s]+\s*(\S+)/i);
+  // Referência
+  const refMatch = t.match(/Refer[eê]ncia\s*(?:do\s+Pagamento\s*)?[,:\s]+\s*(\S+)/i);
   const referencia = refMatch?.[1] || null;
 
   // NIF / Número Contribuinte
-  const nifMatch = t.match(/N[uú]mero Contribuinte\s*[,:\s]+\s*([\d\s]+)/i);
+  const nifMatch = t.match(/N[uú]mero\s+Contribuinte\s*[,:\s]+\s*([\d\s]+)/i);
   const fornecedor_nif = nifMatch?.[1]?.replace(/\s/g, '') || null;
 
-  // Beneficiário (transferências para terceiros)
-  const benefMatch = t.match(/Benefici[aá]rio\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i);
+  // Beneficiário — "Beneficiário:", "Nome do Beneficiário:", "Entidade:"
+  const benefMatch = t.match(/(?:Nome\s+do\s+)?Benefici[aá]rio\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i)
+    || t.match(/Entidade\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i);
   const beneficiario = benefMatch?.[1]?.trim() || null;
 
-  // IBAN / NIB do beneficiário
-  const ibanMatch = t.match(/NIB\/IBAN\s*[,:\s]+\s*([A-Z0-9 ]+?)(?:\r?\n|$)/i);
+  // IBAN — "NIB/IBAN:", "IBAN do Beneficiário:", "IBAN:"
+  const ibanMatch = t.match(/(?:NIB\/)?IBAN\s*(?:do\s+Benefici[aá]rio\s*)?[,:\s]+\s*([A-Z]{2}[0-9A-Z ]+?)(?:\r?\n|$)/i);
   const fornecedor_iban = ibanMatch?.[1]?.replace(/\s/g, '') || null;
 
-  // Descrição (campo explícito no corpo)
-  const descMatch = t.match(/Descri[cç][aã]o\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i);
+  // Descrição
+  const descMatch = t.match(/Descri[cç][aã]o\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i)
+    || t.match(/Motivo\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i);
   const descricao = descMatch?.[1]?.trim() || tipoOperacao || null;
 
   // Resolver fornecedor em cascata
@@ -79,7 +98,7 @@ export function extractFromText(text) {
     referencia,
     descricao,
     moeda: 'EUR',
-    _tipo_operacao: tipoOperacao, // informativo, não persiste como coluna separada
+    _tipo_operacao: tipoOperacao,
   };
 }
 
