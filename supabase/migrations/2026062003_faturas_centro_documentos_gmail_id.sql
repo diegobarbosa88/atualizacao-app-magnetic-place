@@ -3,5 +3,4 @@ ALTER TABLE faturas_centro_documentos
   ADD COLUMN IF NOT EXISTS gmail_message_id TEXT;
 
 CREATE UNIQUE INDEX IF NOT EXISTS faturas_centro_documentos_gmail_message_id_unique
-  ON faturas_centro_documentos (gmail_message_id)
-  WHERE gmail_message_id IS NOT NULL;
+  ON faturas_centro_documentos (gmail_message_id);
