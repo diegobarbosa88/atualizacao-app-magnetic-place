@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Loader2, RefreshCw, ExternalLink, Landmark, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, Landmark, Filter, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -35,6 +35,7 @@ export default function MovimentacoesBancariasTab() {
   const [importResult, setImportResult] = useState(null);
   const [filtroMes, setFiltroMes] = useState('');
   const [collapsedMonths, setCollapsedMonths] = useState(new Set());
+  const [apagandoId, setApagandoId] = useState(null);
 
   const carregarMovs = async () => {
     if (!supabase) return;
@@ -99,6 +100,23 @@ export default function MovimentacoesBancariasTab() {
   }, [movsFiltered]);
 
   const totalGeral = useMemo(() => movsFiltered.reduce((acc, m) => acc + Number(m.valor || 0), 0), [movsFiltered]);
+
+  const handleApagar = async (mov) => {
+    if (!window.confirm(`Apagar movimentação de ${formatValor(mov.valor)} — ${mov.fornecedor}?`)) return;
+    setApagandoId(mov.id);
+    try {
+      if (mov.storage_path) {
+        await supabase.storage.from('faturas').remove([mov.storage_path]);
+      }
+      const { error } = await supabase.from('faturas_centro_documentos').delete().eq('id', mov.id);
+      if (error) throw error;
+      setMovs(prev => prev.filter(m => m.id !== mov.id));
+    } catch (e) {
+      alert(`Erro ao apagar: ${e.message}`);
+    } finally {
+      setApagandoId(null);
+    }
+  };
 
   const toggleMonth = (key) => {
     setCollapsedMonths(prev => {
@@ -245,6 +263,14 @@ export default function MovimentacoesBancariasTab() {
                         <ExternalLink size={13} />
                       </a>
                     )}
+                    <button
+                      onClick={() => handleApagar(mov)}
+                      disabled={apagandoId === mov.id}
+                      className="p-2 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0 disabled:opacity-40"
+                      title="Apagar movimentação"
+                    >
+                      {apagandoId === mov.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                    </button>
                   </div>
                 ))}
               </div>

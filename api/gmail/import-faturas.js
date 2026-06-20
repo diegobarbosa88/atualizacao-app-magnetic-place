@@ -164,7 +164,23 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
   const processados = [];
   const erros = [];
 
+  // Fetch all already-imported gmail_message_ids to skip duplicates
+  const { data: existingRows } = await supabase
+    .from('faturas_centro_documentos')
+    .select('gmail_message_id')
+    .not('gmail_message_id', 'is', null);
+  const importedIds = new Set((existingRows || []).map(r => r.gmail_message_id));
+
+  let skipped = 0;
+
   for (const msg of listRes.data.messages || []) {
+    if (importedIds.has(msg.id)) {
+      // Already imported — just ensure email is marked as read
+      try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch (_) {}
+      skipped++;
+      continue;
+    }
+
     try {
       const full = await gmail.users.messages.get({ userId, id: msg.id, format: 'full' });
       const payload = full.data.payload;
@@ -220,6 +236,7 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
       }
 
       const { error: dbError } = await supabase.from('faturas_centro_documentos').insert({
+        gmail_message_id: msg.id,
         fornecedor: campos.fornecedor,
         fornecedor_nif: campos.fornecedor_nif || null,
         fornecedor_iban: campos.fornecedor_iban || null,
@@ -246,5 +263,5 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
     }
   }
 
-  return { processados: processados.length, detalhes: processados, erros };
+  return { importados: processados.length, skipped, detalhes: processados, erros };
 }
