@@ -16,7 +16,7 @@ function parsePortugueseNumber(raw) {
   return isNaN(n) ? null : n;
 }
 
-// Converte DD-MM-YYYY (aceita U+2010 non-breaking hyphen e /) em YYYY-MM-DD
+// Converte DD-MM-YYYY (aceita hífen normal, U+2010 e /) em YYYY-MM-DD
 function parseDate(raw) {
   if (!raw) return null;
   const m = String(raw).match(/(\d{2})[-‐\/](\d{2})[-‐\/](\d{4})/);
@@ -38,20 +38,19 @@ function resolveFornecedor(beneficiario, tipoOperacao) {
 /**
  * Extrai campos financeiros do texto bruto (PDF ou corpo do email).
  *
- * O pdf-parse extrai PDFs novobanco em layout de 2 colunas como dois blocos:
- *   Bloco 1 (esquerda): todos os labels (Número do Pedido, Montante, …)
- *   Separador: "De acordo com as suas instruções…"
- *   Bloco 2 (direita): todos os valores na mesma ordem
+ * Com o pagerender personalizado (Y-based), o texto sai inline:
+ *   "Montante 729,00 EUR" — labels e valores na mesma linha.
+ * Com o pdf-parse padrão (quando funciona), os labels ficam antes de
+ *   "De acordo com as suas instruções…" e os valores depois (layout de tabela).
  *
- * Quando esse padrão é detetado usamos mapeamento posicional.
- * Caso contrário, tentamos regex inline (corpo HTML/texto).
+ * Detetamos o layout de tabela verificando se "Montante" ou "Referência"
+ * aparecem ANTES da linha "De acordo…". Caso contrário, usa inline.
  */
 export function extractFromText(text) {
   const t = text || '';
-  if (/de acordo com as suas instru[cç][oõ]es/i.test(t)) {
-    return extractFromTableLayout(t);
-  }
-  return extractFromInlineFormat(t);
+  const sepIdx = t.search(/de acordo com as suas instru[cç][oõ]es/i);
+  const isTableLayout = sepIdx > 0 && /Montante|Refer[eê]ncia/i.test(t.slice(0, sepIdx));
+  return isTableLayout ? extractFromTableLayout(t) : extractFromInlineFormat(t);
 }
 
 function extractFromTableLayout(text) {
@@ -162,10 +161,31 @@ function extractFromInlineFormat(text) {
   };
 }
 
-/** Devolve o texto bruto extraído de um PDF (para debug ou parsing). */
+/** Devolve o texto bruto extraído de um PDF.
+ *  pagerender personalizado: agrupa items por posição Y e ordena por X
+ *  dentro de cada linha — evita "DOMMatrix is not defined" no Vercel e
+ *  produz texto inline "Label Valor" em vez de colunas separadas. */
 export async function extractPdfText(buffer) {
   const pdfParse = _require('pdf-parse');
-  const parsed = await pdfParse(buffer);
+
+  const renderPage = async (pageData) => {
+    const content = await pageData.getTextContent();
+    const lineMap = {};
+    for (const item of content.items) {
+      if (!item.str) continue;
+      const y = Math.round(item.transform?.[5] ?? 0);
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push({ x: item.transform?.[4] ?? 0, str: item.str });
+    }
+    // Y decresce de cima para baixo na página (maior Y = topo)
+    return Object.keys(lineMap)
+      .map(Number)
+      .sort((a, b) => b - a)
+      .map(y => lineMap[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' '))
+      .join('\n');
+  };
+
+  const parsed = await pdfParse(buffer, { pagerender: renderPage });
   return parsed.text;
 }
 
