@@ -439,7 +439,7 @@ export default function FaturasAdmin() {
             </div>
             <div>
               <p className="text-sm font-black text-slate-700">Comprovativos novobanco</p>
-              <p className="text-[10px] text-slate-400 font-semibold">Débitos confirmados de alertas@novobanco.pt / comprovativos@novobanco.pt</p>
+              <p className="text-[10px] text-slate-400 font-semibold">Débitos confirmados de alertas@novobanco.pt / comprovativos@novobanco.pt / info@novobanco.pt</p>
             </div>
           </div>
           <button

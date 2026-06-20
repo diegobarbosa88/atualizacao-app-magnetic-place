@@ -3,7 +3,7 @@ const _require = createRequire(import.meta.url);
 
 // Query Gmail para emails de comprovativo do novobanco
 export const COMPROVATIVO_QUERY =
-  'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida")';
+  'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt OR info@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida")';
 
 /**
  * Extrai campos financeiros do texto bruto (PDF ou corpo do email).
