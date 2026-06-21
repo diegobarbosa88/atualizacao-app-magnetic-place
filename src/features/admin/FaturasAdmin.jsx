@@ -359,11 +359,31 @@ export default function FaturasAdmin() {
 
   const handleApagarUm = (f) => { if (!confirm(`Apagar "${f.filename}"?`)) return; apagarFaturas([f.id]); };
 
+  const [debitoNifs, setDebitoNifs] = useState(new Set());
+
+  useEffect(() => {
+    fetch('/api/pagamentos?action=listar-fornecedores-debito')
+      .then(r => r.json())
+      .then(d => setDebitoNifs(new Set((d.data || []).map(f => f.nif))))
+      .catch(() => {});
+  }, []);
+
   const toggleDebitoAutomatico = async (f) => {
-    const novo = !f.debito_automatico;
-    const { error } = await supabase.from('faturas').update({ debito_automatico: novo }).eq('id', f.id);
-    if (error) { alert(`Erro: ${error.message}`); return; }
-    setFaturas(prev => prev.map(x => x.id === f.id ? { ...x, debito_automatico: novo } : x));
+    const nif = f.dados?.nif_fornecedor;
+    if (!nif) { alert('Esta fatura não tem NIF do fornecedor extraído — extrai com IA primeiro.'); return; }
+    const nome = f.dados?.fornecedor || nif;
+    const res = await fetch('/api/pagamentos?action=toggle-fornecedor-debito', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nif, nome }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert(`Erro: ${data.error}`); return; }
+    setDebitoNifs(prev => {
+      const next = new Set(prev);
+      data.ativo ? next.add(nif) : next.delete(nif);
+      return next;
+    });
+    setFaturas(prev => prev.map(x => x.dados?.nif_fornecedor === nif ? { ...x, debito_automatico: data.ativo } : x));
   };
   const handleApagarSelecionados = () => { if (!selecionados.size || !confirm(`Apagar ${selecionados.size} fatura(s)?`)) return; apagarFaturas([...selecionados]); };
 
@@ -676,8 +696,8 @@ export default function FaturasAdmin() {
                           )}
                           <button
                             onClick={() => toggleDebitoAutomatico(f)}
-                            title={f.debito_automatico ? 'Débito Automático (clique para remover)' : 'Marcar como Débito Automático'}
-                            className={`p-1.5 transition-colors rounded ${f.debito_automatico ? 'text-violet-600 bg-violet-50 hover:bg-violet-100' : 'text-slate-400 hover:text-violet-600'}`}
+                            title={debitoNifs.has(f.dados?.nif_fornecedor) ? `Fornecedor marcado como Déb. Automático — clique para remover` : 'Marcar fornecedor como Débito Automático (todas as faturas)'}
+                            className={`p-1.5 transition-colors rounded ${debitoNifs.has(f.dados?.nif_fornecedor) ? 'text-violet-600 bg-violet-50 hover:bg-violet-100' : 'text-slate-400 hover:text-violet-600'}`}
                           >
                             <Repeat size={14} />
                           </button>

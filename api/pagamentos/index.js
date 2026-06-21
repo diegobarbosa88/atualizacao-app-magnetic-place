@@ -524,6 +524,31 @@ export default async function handler(req, res) {
       try { return res.status(200).json(JSON.parse(jsonStr)); } catch { return res.status(200).json({ raw }); }
     }
 
+    // ─── FORNECEDORES DÉBITO AUTOMÁTICO: LISTAR ───
+    if (action === 'listar-fornecedores-debito') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      const { data, error } = await db.from('fornecedores_debito_automatico').select('nif, nome').order('nome');
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ data: data || [] });
+    }
+
+    // ─── FORNECEDORES DÉBITO AUTOMÁTICO: TOGGLE ───
+    if (action === 'toggle-fornecedor-debito') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { nif, nome } = req.body || {};
+      if (!nif) return res.status(400).json({ error: 'nif obrigatório' });
+      const { data: existing } = await db.from('fornecedores_debito_automatico').select('nif').eq('nif', nif).maybeSingle();
+      if (existing) {
+        await db.from('fornecedores_debito_automatico').delete().eq('nif', nif);
+        await db.from('faturas').update({ debito_automatico: false }).eq('dados->>nif_fornecedor', nif);
+        return res.json({ ativo: false });
+      } else {
+        await db.from('fornecedores_debito_automatico').insert({ nif, nome: nome || nif });
+        await db.from('faturas').update({ debito_automatico: true }).eq('dados->>nif_fornecedor', nif);
+        return res.json({ ativo: true });
+      }
+    }
+
     // ─── FATURAS GMAIL: LISTAR ELEGÍVEIS PARA FILA ───
     if (action === 'listar-faturas-fila') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
