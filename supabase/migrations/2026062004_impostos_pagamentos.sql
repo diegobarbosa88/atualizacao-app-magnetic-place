@@ -1,18 +1,22 @@
-CREATE TABLE IF NOT EXISTS impostos_pagamentos (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  tipo TEXT NOT NULL,
-  periodo TEXT,
-  valor NUMERIC(12,2) NOT NULL,
-  data_vencimento DATE,
-  referencia TEXT,
-  iban_destino TEXT NOT NULL,
-  descricao TEXT,
-  status TEXT NOT NULL DEFAULT 'pendente',
-  storage_path TEXT,
-  url TEXT,
-  notas_rejeicao TEXT,
-  sepa_msg_id TEXT,
-  CONSTRAINT impostos_valor_positivo CHECK (valor > 0),
-  CONSTRAINT impostos_status_valido CHECK (status IN ('pendente', 'rejeitado', 'exportado'))
+create table if not exists impostos_pagamentos (
+  id uuid primary key default gen_random_uuid(),
+  created_at timestamptz not null default now(),
+  tipo text not null,
+  periodo text,
+  valor numeric(12,2) not null,
+  data_vencimento date,
+  referencia text,
+  iban_destino text not null,
+  descricao text,
+  status text not null default 'pendente',
+  storage_path text,
+  url text,
+  notas_rejeicao text,
+  sepa_msg_id text
 );
+
+alter table impostos_pagamentos
+  add constraint if not exists chk_impostos_valor check (valor > 0);
+
+alter table impostos_pagamentos
+  add constraint if not exists chk_impostos_status check (status in ('pendente', 'rejeitado', 'exportado'));
