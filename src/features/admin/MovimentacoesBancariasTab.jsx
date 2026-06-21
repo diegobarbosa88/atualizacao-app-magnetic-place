@@ -44,6 +44,14 @@ function formatValor(valor) {
   return Number(valor).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
+function formatConta(conta) {
+  if (!conta) return '—';
+  // Mostra só os últimos 4 dígitos para IBANs longos, ou o valor completo se curto
+  const clean = conta.replace(/\s/g, '');
+  if (clean.length > 10) return `···${clean.slice(-4)}`;
+  return clean;
+}
+
 function monthKey(dateStr) {
   if (!dateStr) return 'sem-data';
   return dateStr.substring(0, 7);
@@ -63,6 +71,7 @@ export default function MovimentacoesBancariasTab() {
   const [importando, setImportando] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [filtroMes, setFiltroMes] = useState('');
+  const [filtroConta, setFiltroConta] = useState('');
   const [collapsedMonths, setCollapsedMonths] = useState(new Set());
   const [apagandoId, setApagandoId] = useState(null);
 
@@ -133,10 +142,18 @@ export default function MovimentacoesBancariasTab() {
     return [...set].sort().reverse();
   }, [movs]);
 
+  const contasDisponiveis = useMemo(() => {
+    const set = new Set(movs.map(m => m.conta_origem).filter(Boolean));
+    return [...set].sort();
+  }, [movs]);
+
   const movsFiltered = useMemo(() => {
-    if (!filtroMes) return movs;
-    return movs.filter(m => monthKey(m.data_documento) === filtroMes);
-  }, [movs, filtroMes]);
+    return movs.filter(m => {
+      if (filtroMes && monthKey(m.data_documento) !== filtroMes) return false;
+      if (filtroConta && m.conta_origem !== filtroConta) return false;
+      return true;
+    });
+  }, [movs, filtroMes, filtroConta]);
 
   const groupedByMonth = useMemo(() => {
     const groups = {};
@@ -185,6 +202,22 @@ export default function MovimentacoesBancariasTab() {
           <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Comprovativos importados do NovoBanco via email</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {contasDisponiveis.length > 1 && (
+            <div className="relative">
+              <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                value={filtroConta}
+                onChange={e => setFiltroConta(e.target.value)}
+                className="pl-8 pr-3 py-2 text-[11px] font-bold border border-slate-200 rounded-xl bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                <option value="">Todas as contas</option>
+                {contasDisponiveis.map(c => (
+                  <option key={c} value={c}>{formatConta(c)}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="relative">
             <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <select
@@ -344,7 +377,7 @@ export default function MovimentacoesBancariasTab() {
 
       {/* Summary */}
       {movsFiltered.length > 0 && (
-        <div className="flex items-center gap-6 px-5 py-3 bg-slate-50 rounded-2xl border border-slate-100">
+        <div className="flex flex-wrap items-center gap-6 px-5 py-3 bg-slate-50 rounded-2xl border border-slate-100">
           <div>
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total movimentos</p>
             <p className="text-lg font-black text-slate-800">{movsFiltered.length}</p>
@@ -354,6 +387,32 @@ export default function MovimentacoesBancariasTab() {
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total saídas</p>
             <p className="text-lg font-black text-rose-600">{formatValor(totalGeral)}</p>
           </div>
+          {contasDisponiveis.length > 1 && !filtroConta && (
+            <>
+              <div className="w-px h-8 bg-slate-200" />
+              <div className="flex flex-wrap gap-3">
+                {contasDisponiveis.map(conta => {
+                  const total = movsFiltered.filter(m => m.conta_origem === conta).reduce((s, m) => s + Number(m.valor || 0), 0);
+                  const count = movsFiltered.filter(m => m.conta_origem === conta).length;
+                  return (
+                    <div key={conta}>
+                      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Conta ···{conta.replace(/\s/g, '').slice(-4)}</p>
+                      <p className="text-sm font-black text-rose-500">{formatValor(total)} <span className="text-slate-400 text-[10px] font-bold">({count})</span></p>
+                    </div>
+                  );
+                })}
+                {movsFiltered.some(m => !m.conta_origem) && (
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Conta desconhecida</p>
+                    <p className="text-sm font-black text-slate-500">
+                      {formatValor(movsFiltered.filter(m => !m.conta_origem).reduce((s, m) => s + Number(m.valor || 0), 0))}
+                      <span className="text-slate-400 text-[10px] font-bold"> ({movsFiltered.filter(m => !m.conta_origem).length})</span>
+                    </p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -401,7 +460,14 @@ export default function MovimentacoesBancariasTab() {
                       <p className="text-[10px] font-black text-slate-500">{formatDatePT(mov.data_documento)}</p>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-black text-slate-800 truncate">{mov.fornecedor || '—'}</p>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{mov.fornecedor || '—'}</p>
+                        {mov.conta_origem && contasDisponiveis.length > 1 && (
+                          <span className="shrink-0 px-1.5 py-0.5 rounded-md text-[9px] font-black bg-indigo-50 text-indigo-500 border border-indigo-100">
+                            ···{mov.conta_origem.replace(/\s/g, '').slice(-4)}
+                          </span>
+                        )}
+                      </div>
                       {(mov.referencia || mov.descricao) && (
                         <p className="text-[10px] text-slate-400 truncate">{mov.referencia || mov.descricao}</p>
                       )}

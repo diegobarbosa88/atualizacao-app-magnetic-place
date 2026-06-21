@@ -142,10 +142,14 @@ function extractFromTableLayout(text) {
   const ibanRaw = get('IBAN do Destinatário') || get('IBAN do Destinatario') || get('IBAN do Beneficiário') || get('IBAN do Beneficiario') || get('NIB/IBAN') || null;
   const fornecedor_iban = ibanRaw ? ibanRaw.replace(/\s/g, '') : null;
 
+  const contaOrigemRaw = get('Conta Origem') || get('Conta de Débito') || get('Conta Debitada') || get('IBAN de Origem') || get('NIB/IBAN de Origem') || get('Conta Ordenante') || null;
+  const conta_origem = contaOrigemRaw ? contaOrigemRaw.replace(/\s/g, '') : null;
+
   return {
     fornecedor,
     fornecedor_nif: fornecedor_nif || null,
     fornecedor_iban,
+    conta_origem,
     valor,
     data_documento,
     referencia,
@@ -207,10 +211,15 @@ function extractFromInlineFormat(text) {
     || t.match(/Motivo\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i);
   const descricao = descMatch?.[1]?.trim() || tipoOperacao || null;
 
+  const contaOrigemMatch = t.match(/Conta\s+(?:de\s+)?(?:Origem|D[eé]bito|Debitada|Ordenante)\s*[,:\s]+\s*([A-Z0-9][^\r\n]+?)(?:\r?\n|$)/i)
+    || t.match(/(?:NIB\/)?IBAN\s+de\s+Origem\s*[,:\s]+\s*([A-Z]{2}[0-9A-Z ]+?)(?:\r?\n|$)/i);
+  const conta_origem = contaOrigemMatch?.[1]?.trim().replace(/\s/g, '') || null;
+
   return {
     fornecedor: resolveFornecedor(beneficiario, tipoOperacao),
     fornecedor_nif,
     fornecedor_iban,
+    conta_origem,
     valor,
     data_documento,
     referencia,

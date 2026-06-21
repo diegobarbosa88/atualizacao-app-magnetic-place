@@ -240,6 +240,7 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
         fornecedor: campos.fornecedor,
         fornecedor_nif: campos.fornecedor_nif || null,
         fornecedor_iban: campos.fornecedor_iban || null,
+        conta_origem: campos.conta_origem || null,
         valor: campos.valor,
         data_documento: campos.data_documento || null,
         referencia: campos.referencia || null,
