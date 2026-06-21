@@ -524,6 +524,20 @@ export default async function handler(req, res) {
       try { return res.status(200).json(JSON.parse(jsonStr)); } catch { return res.status(200).json({ raw }); }
     }
 
+    // ─── FATURAS GMAIL: LISTAR ELEGÍVEIS PARA FILA ───
+    if (action === 'listar-faturas-fila') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      const { data, error } = await db
+        .from('faturas')
+        .select('id, dados, status, url, importado_em, filename')
+        .eq('status', 'PENDENTE')
+        .not('dados', 'is', null)
+        .order('importado_em', { ascending: false });
+      if (error) return res.status(500).json({ error: error.message });
+      const elegiveis = (data || []).filter(f => f.dados?.iban && f.dados?.valor_total);
+      return res.json({ data: elegiveis });
+    }
+
     // ─── IMPOSTOS: LISTAR ───
     if (action === 'listar-impostos') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -601,8 +615,8 @@ export default async function handler(req, res) {
     // ─── GERAR SEPA XML MISTO (FORNECEDORES + IMPOSTOS) ───
     if (action === 'gerar-sepa-lote') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-      const { pagamentos_ids = [], impostos_ids = [], data_pagamento } = req.body || {};
-      if (pagamentos_ids.length === 0 && impostos_ids.length === 0) {
+      const { pagamentos_ids = [], impostos_ids = [], faturas_gmail_ids = [], data_pagamento } = req.body || {};
+      if (pagamentos_ids.length === 0 && impostos_ids.length === 0 && faturas_gmail_ids.length === 0) {
         return res.status(400).json({ error: 'Nenhum item selecionado' });
       }
 
@@ -650,6 +664,28 @@ export default async function handler(req, res) {
         }
       }
 
+      if (faturas_gmail_ids.length > 0) {
+        const { data: fats, error } = await db
+          .from('faturas')
+          .select('id, dados, filename')
+          .in('id', faturas_gmail_ids)
+          .eq('status', 'PENDENTE');
+        if (error) return res.status(500).json({ error: error.message });
+        for (const f of fats || []) {
+          if (!f.dados?.iban || !f.dados?.valor_total) continue;
+          registos.push({
+            nome: f.dados.fornecedor || f.filename || 'Fornecedor',
+            iban: f.dados.iban,
+            salario: Number(f.dados.valor_total),
+            mes: '',
+            ano: '',
+            descritivo: f.dados.numero_fatura || `Fatura ${f.dados.fornecedor || ''}`.trim(),
+            _fonte: 'fatura-gmail',
+            _id: f.id,
+          });
+        }
+      }
+
       if (registos.length === 0) {
         return res.status(404).json({ error: 'Nenhum registo pendente encontrado para os IDs fornecidos' });
       }
@@ -667,6 +703,7 @@ export default async function handler(req, res) {
 
       const fornecedoresIds = registos.filter(r => r._fonte === 'fornecedor').map(r => r._id);
       const impostosIds = registos.filter(r => r._fonte === 'imposto').map(r => r._id);
+      const faturasGmailIds = registos.filter(r => r._fonte === 'fatura-gmail').map(r => r._id);
 
       if (fornecedoresIds.length > 0) {
         await db.from('pagamentos_fornecedores')
@@ -677,6 +714,11 @@ export default async function handler(req, res) {
         await db.from('impostos_pagamentos')
           .update({ status: 'exportado', sepa_msg_id: msgId })
           .in('id', impostosIds);
+      }
+      if (faturasGmailIds.length > 0) {
+        await db.from('faturas')
+          .update({ status: 'PAGO' })
+          .in('id', faturasGmailIds);
       }
 
       const totalFmt = somaTotal.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

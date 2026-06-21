@@ -59,6 +59,7 @@ function RejeitarModal({ item, onConfirm, onClose }) {
 export default function FilaAprovacaoTab() {
   const [fornecedores, setFornecedores] = useState([]);
   const [impostos, setImpostos] = useState([]);
+  const [faturasGmail, setFaturasGmail] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState('');
   const [tab, setTab] = useState('pendente');
@@ -72,15 +73,17 @@ export default function FilaAprovacaoTab() {
     setLoading(true);
     setErro('');
     try {
-      const [rPag, rImp] = await Promise.all([
+      const [rPag, rImp, rFat] = await Promise.all([
         fetch('/api/pagamentos?action=listar'),
         fetch('/api/pagamentos?action=listar-impostos'),
+        fetch('/api/pagamentos?action=listar-faturas-fila'),
       ]);
-      const [dPag, dImp] = await Promise.all([rPag.json(), rImp.json()]);
+      const [dPag, dImp, dFat] = await Promise.all([rPag.json(), rImp.json(), rFat.json()]);
       if (!rPag.ok) throw new Error(dPag.error || 'Erro fornecedores');
       if (!rImp.ok) throw new Error(dImp.error || 'Erro impostos');
       setFornecedores(dPag.data || []);
       setImpostos(dImp.data || []);
+      setFaturasGmail(dFat.data || []);
       setSelecionados(new Set());
     } catch (e) {
       setErro(e.message);
@@ -129,18 +132,35 @@ export default function FilaAprovacaoTab() {
         status: imp.status,
       }));
 
-    return [...fItems, ...iItems].sort((a, b) => {
+    const gItems = faturasGmail
+      .filter(f => tab === 'pendente' ? f.status === 'PENDENTE' : f.status === 'PAGO')
+      .map(f => ({
+        key: `g-${f.id}`,
+        id: f.id,
+        fonte: 'fatura-gmail',
+        label: f.dados?.fornecedor || f.filename || '—',
+        subtipo: null,
+        valor: f.dados?.valor_total,
+        data_vencimento: f.dados?.prazo_pagamento || null,
+        iban: f.dados?.iban,
+        referencia: f.dados?.numero_fatura || null,
+        url: f.url,
+        status: f.status === 'PENDENTE' ? 'pendente' : 'exportado',
+      }));
+
+    return [...fItems, ...iItems, ...gItems].sort((a, b) => {
       if (!a.data_vencimento && !b.data_vencimento) return 0;
       if (!a.data_vencimento) return 1;
       if (!b.data_vencimento) return -1;
       return new Date(a.data_vencimento) - new Date(b.data_vencimento);
     });
-  }, [fornecedores, impostos, tab]);
+  }, [fornecedores, impostos, faturasGmail, tab]);
 
   const pendenteCount = useMemo(() => {
     return fornecedores.filter(p => p.status === 'pendente').length +
-           impostos.filter(i => i.status === 'pendente').length;
-  }, [fornecedores, impostos]);
+           impostos.filter(i => i.status === 'pendente').length +
+           faturasGmail.filter(f => f.status === 'PENDENTE').length;
+  }, [fornecedores, impostos, faturasGmail]);
 
   const toggleItem = (key) => {
     setSelecionados(prev => {
@@ -170,8 +190,9 @@ export default function FilaAprovacaoTab() {
     const itens = listaUnificada.filter(i => selecionados.has(i.key));
     const pagamentos_ids = itens.filter(i => i.fonte === 'fornecedor').map(i => i.id);
     const impostos_ids = itens.filter(i => i.fonte === 'imposto').map(i => i.id);
+    const faturas_gmail_ids = itens.filter(i => i.fonte === 'fatura-gmail').map(i => i.id);
 
-    if (pagamentos_ids.length === 0 && impostos_ids.length === 0) return;
+    if (pagamentos_ids.length === 0 && impostos_ids.length === 0 && faturas_gmail_ids.length === 0) return;
 
     setExportando(true);
     setExportResult(null);
@@ -179,7 +200,7 @@ export default function FilaAprovacaoTab() {
       const res = await fetch('/api/pagamentos?action=gerar-sepa-lote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pagamentos_ids, impostos_ids }),
+        body: JSON.stringify({ pagamentos_ids, impostos_ids, faturas_gmail_ids }),
       });
 
       if (!res.ok) {
@@ -377,9 +398,11 @@ export default function FilaAprovacaoTab() {
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest shrink-0 ${
                   item.fonte === 'imposto'
                     ? 'bg-orange-100 text-orange-700'
+                    : item.fonte === 'fatura-gmail'
+                    ? 'bg-indigo-100 text-indigo-700'
                     : 'bg-blue-100 text-blue-700'
                 }`}>
-                  {item.fonte === 'imposto' ? (item.subtipo || 'Imp.') : 'Forn.'}
+                  {item.fonte === 'imposto' ? (item.subtipo || 'Imp.') : item.fonte === 'fatura-gmail' ? 'Gmail' : 'Forn.'}
                 </span>
 
                 {/* Main info */}
