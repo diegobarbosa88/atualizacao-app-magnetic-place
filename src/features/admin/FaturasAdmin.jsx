@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt, Repeat } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -358,6 +358,13 @@ export default function FaturasAdmin() {
   };
 
   const handleApagarUm = (f) => { if (!confirm(`Apagar "${f.filename}"?`)) return; apagarFaturas([f.id]); };
+
+  const toggleDebitoAutomatico = async (f) => {
+    const novo = !f.debito_automatico;
+    const { error } = await supabase.from('faturas').update({ debito_automatico: novo }).eq('id', f.id);
+    if (error) { alert(`Erro: ${error.message}`); return; }
+    setFaturas(prev => prev.map(x => x.id === f.id ? { ...x, debito_automatico: novo } : x));
+  };
   const handleApagarSelecionados = () => { if (!selecionados.size || !confirm(`Apagar ${selecionados.size} fatura(s)?`)) return; apagarFaturas([...selecionados]); };
 
   const handleGerarPDF = async (listaOverride = null) => {
@@ -667,6 +674,13 @@ export default function FaturasAdmin() {
                               <Download size={14} />
                             </a>
                           )}
+                          <button
+                            onClick={() => toggleDebitoAutomatico(f)}
+                            title={f.debito_automatico ? 'Débito Automático (clique para remover)' : 'Marcar como Débito Automático'}
+                            className={`p-1.5 transition-colors rounded ${f.debito_automatico ? 'text-violet-600 bg-violet-50 hover:bg-violet-100' : 'text-slate-400 hover:text-violet-600'}`}
+                          >
+                            <Repeat size={14} />
+                          </button>
                           <button onClick={() => handleApagarUm(f)} disabled={apagando} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50" title="Apagar">
                             {apagando ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                           </button>

@@ -531,6 +531,7 @@ export default async function handler(req, res) {
         .from('faturas')
         .select('id, dados, status, url, importado_em, filename')
         .eq('status', 'PENDENTE')
+        .eq('debito_automatico', false)
         .not('dados', 'is', null)
         .order('importado_em', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
