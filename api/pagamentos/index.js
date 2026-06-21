@@ -505,6 +505,174 @@ export default async function handler(req, res) {
       }
     }
 
+    // ─── IMPOSTOS: LISTAR ───
+    if (action === 'listar-impostos') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      const { status } = req.query;
+      let query = db.from('impostos_pagamentos').select('*').order('data_vencimento', { ascending: true });
+      if (status) query = query.eq('status', status);
+      const { data, error } = await query;
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ data: data || [] });
+    }
+
+    // ─── IMPOSTOS: IMPORTAR (GUARDAR REGISTO + PDF OPCIONAL) ───
+    if (action === 'importar-imposto-pdf') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { tipo, periodo, valor, data_vencimento, referencia, iban_destino, descricao, pdf_base64, filename } = req.body || {};
+      if (!tipo || !valor || !iban_destino) {
+        return res.status(400).json({ error: 'Campos obrigatórios: tipo, valor, iban_destino' });
+      }
+
+      const ibanLimpo = String(iban_destino).replace(/\s/g, '').toUpperCase();
+
+      let storagePath = null;
+      let publicUrl = null;
+
+      if (pdf_base64 && filename) {
+        try {
+          const buffer = Buffer.from(pdf_base64, 'base64');
+          const safeName = filename.replace(/[^a-zA-Z0-9.\-_()]/g, '_');
+          storagePath = `impostos/${Date.now()}_${safeName}`;
+          const { error: upErr } = await db.storage
+            .from('faturas')
+            .upload(storagePath, buffer, { contentType: 'application/pdf', upsert: false });
+          if (upErr) throw new Error(upErr.message);
+          const { data: { publicUrl: url } } = db.storage.from('faturas').getPublicUrl(storagePath);
+          publicUrl = url;
+        } catch (e) {
+          return res.status(500).json({ error: `Erro ao guardar PDF: ${e.message}` });
+        }
+      }
+
+      const { data, error } = await db
+        .from('impostos_pagamentos')
+        .insert({
+          tipo,
+          periodo: periodo || null,
+          valor: Number(valor),
+          data_vencimento: data_vencimento || null,
+          referencia: referencia || null,
+          iban_destino: ibanLimpo,
+          descricao: descricao || null,
+          storage_path: storagePath,
+          url: publicUrl,
+          status: 'pendente',
+        })
+        .select()
+        .single();
+
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(201).json({ data });
+    }
+
+    // ─── IMPOSTOS: REJEITAR ───
+    if (action === 'rejeitar-imposto') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { id, motivo } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'id obrigatório' });
+      const { error } = await db
+        .from('impostos_pagamentos')
+        .update({ status: 'rejeitado', notas_rejeicao: motivo || null })
+        .eq('id', id);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ ok: true });
+    }
+
+    // ─── GERAR SEPA XML MISTO (FORNECEDORES + IMPOSTOS) ───
+    if (action === 'gerar-sepa-lote') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { pagamentos_ids = [], impostos_ids = [], data_pagamento } = req.body || {};
+      if (pagamentos_ids.length === 0 && impostos_ids.length === 0) {
+        return res.status(400).json({ error: 'Nenhum item selecionado' });
+      }
+
+      const registos = [];
+
+      if (pagamentos_ids.length > 0) {
+        const { data: pags, error } = await db
+          .from('pagamentos_fornecedores')
+          .select('*')
+          .in('id', pagamentos_ids)
+          .eq('status', 'pendente');
+        if (error) return res.status(500).json({ error: error.message });
+        for (const p of pags || []) {
+          registos.push({
+            nome: p.fornecedor_nome,
+            iban: p.fornecedor_iban,
+            salario: p.valor,
+            mes: '',
+            ano: '',
+            descritivo: p.referencia || `Pagamento ${p.fornecedor_nome}`,
+            _fonte: 'fornecedor',
+            _id: p.id,
+          });
+        }
+      }
+
+      if (impostos_ids.length > 0) {
+        const { data: imps, error } = await db
+          .from('impostos_pagamentos')
+          .select('*')
+          .in('id', impostos_ids)
+          .eq('status', 'pendente');
+        if (error) return res.status(500).json({ error: error.message });
+        for (const imp of imps || []) {
+          registos.push({
+            nome: `${imp.tipo}${imp.periodo ? ' ' + imp.periodo : ''}`,
+            iban: imp.iban_destino,
+            salario: imp.valor,
+            mes: '',
+            ano: '',
+            descritivo: imp.referencia || imp.descricao || `${imp.tipo} ${imp.periodo || ''}`.trim(),
+            _fonte: 'imposto',
+            _id: imp.id,
+          });
+        }
+      }
+
+      if (registos.length === 0) {
+        return res.status(404).json({ error: 'Nenhum registo pendente encontrado para os IDs fornecidos' });
+      }
+
+      let xmlStr;
+      try {
+        xmlStr = gerarSEPAXml(registos, { instant: false, ctgyPurp: 'SUPP' });
+      } catch (err) {
+        return res.status(500).json({ error: err.message });
+      }
+
+      const msgId = `LOTE-${Date.now()}`;
+      const somaTotal = registos.reduce((acc, r) => acc + Number(r.salario), 0);
+      const count = registos.length;
+
+      const fornecedoresIds = registos.filter(r => r._fonte === 'fornecedor').map(r => r._id);
+      const impostosIds = registos.filter(r => r._fonte === 'imposto').map(r => r._id);
+
+      if (fornecedoresIds.length > 0) {
+        await db.from('pagamentos_fornecedores')
+          .update({ status: 'exportado', sepa_msg_id: msgId })
+          .in('id', fornecedoresIds);
+      }
+      if (impostosIds.length > 0) {
+        await db.from('impostos_pagamentos')
+          .update({ status: 'exportado', sepa_msg_id: msgId })
+          .in('id', impostosIds);
+      }
+
+      const totalFmt = somaTotal.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      await db.from('app_notifications').insert({
+        target_type: 'admin',
+        title: `SEPA XML gerado — ${count} pagamento${count !== 1 ? 's' : ''}`,
+        body: `Total: ${totalFmt} € • Faça download e upload no portal NovoBanco`,
+        payload: { kind: 'sepa_pronto', total: somaTotal, count, msg_id: msgId },
+      });
+
+      res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="pagamentos_lote_${msgId}.xml"`);
+      return res.status(200).send(xmlStr);
+    }
+
     return res.status(400).json({ error: `Acção desconhecida: ${action || '(não definida)'}` });
 
   } catch (err) {

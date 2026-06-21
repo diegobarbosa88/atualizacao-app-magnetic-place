@@ -5,7 +5,7 @@ import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, ChevronRight, ChevronDown,
-  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark,
+  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 
@@ -39,8 +39,9 @@ const MENU_STRUCTURE = [
       { id: 'rec-recibos',   label: 'Recibos',       icon: ReceiptText,   path: '/admin/documentos/reconciliacao/recibos',         color: 'emerald' },
       { id: 'rec-salarios',  label: 'Salários',      icon: Coins,         path: '/admin/documentos/reconciliacao/salarios',        color: 'emerald' },
       { id: 'rec-movs',      label: 'Movimentações', icon: TrendingUp,    path: '/admin/documentos/reconciliacao/movimentacoes',   color: 'emerald' },
-      { id: 'pag-fornecedores', label: 'Pagamentos', icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores', color: 'violet' },
-      { id: 'banco-movs',      label: 'Conta Bancária', icon: Landmark,      path: '/admin/documentos/banco/movimentacoes',               color: 'blue' },
+      { id: 'pag-fornecedores', label: 'Pagamentos',    icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores', color: 'violet' },
+      { id: 'pag-fila',        label: 'Fila de Pag.',  icon: ListChecks,    path: '/admin/documentos/pagamentos/fila',                    color: 'violet' },
+      { id: 'banco-movs',      label: 'Conta Bancária', icon: Landmark,     path: '/admin/documentos/banco/movimentacoes',               color: 'blue' },
     ],
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },

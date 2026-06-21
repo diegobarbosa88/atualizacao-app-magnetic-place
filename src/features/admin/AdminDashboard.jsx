@@ -6,7 +6,7 @@ import ClientTimesheetReport from '../../components/common/ClientTimesheetReport
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
-  Settings, FileText, Sparkles, Bell, Pencil
+  Settings, FileText, Sparkles, Bell, Pencil, FileDown
 } from 'lucide-react';
 
 const SOURCE_CFG = {
@@ -618,17 +618,41 @@ function AdminDashboard(props) {
                 if (dismissedAdminNotifs.includes(n.id)) return false;
                 return true;
               });
-              return appNotifs.map(n => (
-                <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-slate-100 text-slate-500 shrink-0 mt-0.5"><Bell size={14} /></div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black text-slate-800">{n.title || 'Notificação'}</p>
-                    {n.body && <p className="text-[10px] text-slate-500 mt-0.5 truncate">{n.body}</p>}
-                    {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+              return appNotifs.map(n => {
+                if (n.payload?.kind === 'sepa_pronto') {
+                  return (
+                    <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
+                      <div className="p-2 rounded-xl bg-emerald-50 text-emerald-600 shrink-0 mt-0.5"><FileDown size={14} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black text-slate-800">{n.title || 'SEPA XML Pronto'}</p>
+                        {n.body && <p className="text-[10px] text-slate-500 mt-0.5">{n.body}</p>}
+                        {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => { markNotifRead(n.id); navigate('/admin/documentos/pagamentos/fila'); setShowNotifDropdown(false); }}
+                            className="flex-1 py-1.5 text-[10px] font-black bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 uppercase tracking-widest">
+                            Ver Fila
+                          </button>
+                          <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }}
+                            className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">
+                            Ignorar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-slate-100 text-slate-500 shrink-0 mt-0.5"><Bell size={14} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-black text-slate-800">{n.title || 'Notificação'}</p>
+                      {n.body && <p className="text-[10px] text-slate-500 mt-0.5 truncate">{n.body}</p>}
+                      {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                    </div>
+                    <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="p-1 text-slate-300 hover:text-slate-500"><X size={12} /></button>
                   </div>
-                  <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="p-1 text-slate-300 hover:text-slate-500"><X size={12} /></button>
-                </div>
-              ));
+                );
+              });
             })()}
             {unreadCount === 0 && notificacoesDeCorrecao.filter(n => !isViewed(n)).length === 0 && (
               <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>

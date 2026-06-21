@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, TrendingUp, BarChart2, ArrowRightLeft, Landmark } from 'lucide-react';
+import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, TrendingUp, BarChart2, ArrowRightLeft, Landmark, ListChecks } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -13,6 +13,7 @@ import FaturasTab from './FaturasTab';
 import MovimentacoesTab from './MovimentacoesTab';
 import FaturasAdmin from './FaturasAdmin';
 import PagamentosTab from './pagamentos/PagamentosTab';
+import FilaAprovacaoTab from './pagamentos/FilaAprovacaoTab';
 import MovimentacoesBancariasTab from './MovimentacoesBancariasTab';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 
@@ -56,6 +57,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       id: 'pagamentos', label: 'Pagamentos', icon: ArrowRightLeft, color: 'violet',
       sections: [
         { id: 'pagamentos-fornecedores', label: 'Fornecedores', icon: ArrowRightLeft },
+        { id: 'fila', label: 'Fila de Pag.', icon: ListChecks },
       ],
     },
     {
@@ -66,7 +68,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     },
   ];
 
-  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos', pagamentos: 'pagamentos-fornecedores', banco: 'movimentacoes' };
+  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos', pagamentos: 'fila', banco: 'movimentacoes' };
 
   const GROUP_COLOR = {
     indigo:  { active: 'bg-indigo-600 text-white shadow-indigo-200',  text: 'text-indigo-600',  icon: 'bg-indigo-50 text-indigo-600' },
@@ -428,6 +430,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {activeGroup === 'pagamentos' && activeSection === 'pagamentos-fornecedores' && (
         <PagamentosTab />
+      )}
+      {activeGroup === 'pagamentos' && activeSection === 'fila' && (
+        <FilaAprovacaoTab />
       )}
       {activeGroup === 'banco' && activeSection === 'movimentacoes' && (
         <MovimentacoesBancariasTab />
