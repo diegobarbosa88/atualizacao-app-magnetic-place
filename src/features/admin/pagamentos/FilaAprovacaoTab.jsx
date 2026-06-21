@@ -194,6 +194,12 @@ export default function FilaAprovacaoTab() {
 
     if (pagamentos_ids.length === 0 && impostos_ids.length === 0 && faturas_gmail_ids.length === 0) return;
 
+    const semIban = itens.filter(i => i.fonte === 'fatura-gmail' && !i.iban);
+    if (semIban.length > 0) {
+      setExportResult({ erro: `${semIban.length} fatura(s) sem IBAN — adiciona o IBAN em Faturas antes de exportar.` });
+      return;
+    }
+
     setExportando(true);
     setExportResult(null);
     try {
@@ -412,7 +418,10 @@ export default function FilaAprovacaoTab() {
                     {item.referencia && (
                       <span className="text-[10px] text-slate-400 truncate">{item.referencia}</span>
                     )}
-                    <span className="text-[10px] text-slate-300">{maskIban(item.iban)}</span>
+                    {item.iban
+                      ? <span className="text-[10px] text-slate-300">{maskIban(item.iban)}</span>
+                      : <span className="flex items-center gap-1 text-[10px] text-orange-400 font-bold"><AlertTriangle size={10} /> Sem IBAN</span>
+                    }
                   </div>
                 </div>
 

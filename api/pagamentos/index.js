@@ -534,7 +534,7 @@ export default async function handler(req, res) {
         .not('dados', 'is', null)
         .order('importado_em', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
-      const elegiveis = (data || []).filter(f => f.dados?.iban && f.dados?.valor_total);
+      const elegiveis = (data || []).filter(f => f.dados?.valor_total);
       return res.json({ data: elegiveis });
     }
 
