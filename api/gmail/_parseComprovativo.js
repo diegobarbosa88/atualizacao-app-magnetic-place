@@ -51,7 +51,7 @@ if (typeof globalThis.DOMMatrix === 'undefined') {
 
 // Query Gmail para emails de comprovativo do novobanco
 export const COMPROVATIVO_QUERY =
-  'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt OR info@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida" OR "pagamento executado")';
+  'is:unread from:(alertas@novobanco.pt OR comprovativos@novobanco.pt OR info@novobanco.pt) (comprovativo OR "operação submetida" OR "operacao submetida" OR "pagamento executado" OR "transferência executada" OR "transferencia executada")';
 
 // Normalisa número português: "1.200,50" → 1200.50 / "729,00" → 729.00
 function parsePortugueseNumber(raw) {
@@ -124,20 +124,28 @@ function extractFromTableLayout(text) {
   const get = key => fieldMap[normalize(key)];
 
   // Montante: "729,00 EUR" → extrair a parte numérica
-  const montanteRaw = get('Montante') || '';
+  const montanteRaw = get('Montante') || get('Valor') || get('Valor da Transferência') || get('Valor da transferencia') || '';
   const montanteNum = montanteRaw.match(/([\d.,]+)/);
   const valor = montanteNum ? parsePortugueseNumber(montanteNum[1]) : null;
 
-  const data_documento = parseDate(get('Data do Pedido') || '');
-  const referencia = get('Referência') || get('Referencia') || null;
+  const data_documento = parseDate(
+    get('Data do Pedido') || get('Data de Execução') || get('Data de Execucao') ||
+    get('Data de Valor') || get('Data da Transferência') || get('Data da transferencia') || ''
+  );
+  const referencia = get('Referência') || get('Referencia') || get('Referência do Movimento') || null;
   const nifRaw = get('Número Contribuinte') || get('Numero Contribuinte') || '';
   const fornecedor_nif = nifRaw.replace(/\s/g, '') || null;
-  const fornecedor = resolveFornecedor(null, tipoOperacao);
+  // Transferências usam "Destinatário"; pagamentos usam "Beneficiário" / "Entidade"
+  const destinatarioRaw = get('Destinatário') || get('Destinatario') || get('Nome do Destinatário') || get('Nome do Destinatario') || null;
+  const beneficiarioRaw = get('Beneficiário') || get('Beneficiario') || null;
+  const fornecedor = resolveFornecedor(destinatarioRaw || beneficiarioRaw, tipoOperacao);
+  const ibanRaw = get('IBAN do Destinatário') || get('IBAN do Destinatario') || get('IBAN do Beneficiário') || get('IBAN do Beneficiario') || get('NIB/IBAN') || null;
+  const fornecedor_iban = ibanRaw ? ibanRaw.replace(/\s/g, '') : null;
 
   return {
     fornecedor,
     fornecedor_nif: fornecedor_nif || null,
-    fornecedor_iban: null,
+    fornecedor_iban,
     valor,
     data_documento,
     referencia,
@@ -172,6 +180,8 @@ function extractFromInlineFormat(text) {
   const dataPatterns = [
     new RegExp(`Data\\s+do\\s+Pedido\\s*[,:\\s]+\\s*${dateRe.source}`, 'i'),
     new RegExp(`Data\\s+(?:de\\s+)?(?:Execu[cç][aã]o|Pagamento|Processamento|Valuta)\\s*[,:\\s]+\\s*${dateRe.source}`, 'i'),
+    new RegExp(`Data\\s+(?:da\\s+)?Transfer[eê]ncia\\s*[,:\\s]+\\s*${dateRe.source}`, 'i'),
+    new RegExp(`Data\\s+(?:de\\s+)?Valor\\s*[,:\\s]+\\s*${dateRe.source}`, 'i'),
     new RegExp(`Data\\s*[,:\\s]+\\s*${dateRe.source}`, 'i'),
   ];
   for (const p of dataPatterns) {
@@ -185,11 +195,12 @@ function extractFromInlineFormat(text) {
   const nifMatch = t.match(/N[uú]mero\s+Contribuinte\s*[,:\s]+\s*([\d\s]+)/i);
   const fornecedor_nif = nifMatch?.[1]?.replace(/\s/g, '') || null;
 
-  const benefMatch = t.match(/(?:Nome\s+do\s+)?Benefici[aá]rio\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i)
+  const benefMatch = t.match(/(?:Nome\s+do\s+)?Destinat[aá]rio\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i)
+    || t.match(/(?:Nome\s+do\s+)?Benefici[aá]rio\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i)
     || t.match(/Entidade\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i);
   const beneficiario = benefMatch?.[1]?.trim() || null;
 
-  const ibanMatch = t.match(/(?:NIB\/)?IBAN\s*(?:do\s+Benefici[aá]rio\s*)?[,:\s]+\s*([A-Z]{2}[0-9A-Z ]+?)(?:\r?\n|$)/i);
+  const ibanMatch = t.match(/(?:NIB\/)?IBAN\s*(?:do\s+(?:Destinat[aá]rio|Benefici[aá]rio)\s*)?[,:\s]+\s*([A-Z]{2}[0-9A-Z ]+?)(?:\r?\n|$)/i);
   const fornecedor_iban = ibanMatch?.[1]?.replace(/\s/g, '') || null;
 
   const descMatch = t.match(/Descri[cç][aã]o\s*[,:\s]+\s*(.+?)(?:\r?\n|$)/i)

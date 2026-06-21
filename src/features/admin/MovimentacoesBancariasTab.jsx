@@ -7,7 +7,7 @@ const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho',
 const LS_KEY = 'gmail_comprovativo_config';
 const DEFAULT_CONFIG = {
   remetentes: 'alertas@novobanco.pt,comprovativos@novobanco.pt,info@novobanco.pt',
-  palavras: 'comprovativo,"operação submetida","operacao submetida","pagamento executado"',
+  palavras: 'comprovativo,"operação submetida","operacao submetida","pagamento executado","transferência executada","transferencia executada"',
   apenasNaoLidos: true,
 };
 
