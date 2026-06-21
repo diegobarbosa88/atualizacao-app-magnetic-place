@@ -1,8 +1,37 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Loader2, RefreshCw, ExternalLink, Landmark, Filter, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, Landmark, Filter, ChevronDown, ChevronUp, Trash2, Settings, X, Save, Eye } from 'lucide-react';
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+const LS_KEY = 'gmail_comprovativo_config';
+const DEFAULT_CONFIG = {
+  remetentes: 'alertas@novobanco.pt,comprovativos@novobanco.pt,info@novobanco.pt',
+  palavras: 'comprovativo,"operação submetida","operacao submetida","pagamento executado"',
+  apenasNaoLidos: true,
+};
+
+function buildGmailQuery({ remetentes, palavras, apenasNaoLidos }) {
+  const froms = remetentes.split(',').map(s => s.trim()).filter(Boolean);
+  const kws = palavras.split(',').map(s => s.trim()).filter(Boolean);
+  const parts = [];
+  if (apenasNaoLidos) parts.push('is:unread');
+  if (froms.length > 0) {
+    parts.push(froms.length === 1 ? `from:${froms[0]}` : `from:(${froms.join(' OR ')})`);
+  }
+  if (kws.length > 0) {
+    parts.push(kws.length === 1 ? kws[0] : `(${kws.join(' OR ')})`);
+  }
+  return parts.join(' ');
+}
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) return { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+  } catch (_) {}
+  return { ...DEFAULT_CONFIG };
+}
 
 function formatDatePT(dateStr) {
   if (!dateStr) return '—';
@@ -37,6 +66,15 @@ export default function MovimentacoesBancariasTab() {
   const [collapsedMonths, setCollapsedMonths] = useState(new Set());
   const [apagandoId, setApagandoId] = useState(null);
 
+  // Config panel
+  const [configOpen, setConfigOpen] = useState(false);
+  const [config, setConfig] = useState(loadConfig);
+  const [draftConfig, setDraftConfig] = useState(loadConfig);
+  const [showQueryPreview, setShowQueryPreview] = useState(false);
+
+  const queryPreview = useMemo(() => buildGmailQuery(draftConfig), [draftConfig]);
+  const activeQuery = useMemo(() => buildGmailQuery(config), [config]);
+
   const carregarMovs = async () => {
     if (!supabase) return;
     setLoading(true);
@@ -57,6 +95,17 @@ export default function MovimentacoesBancariasTab() {
 
   useEffect(() => { carregarMovs(); }, [supabase]);
 
+  const handleSaveConfig = () => {
+    setConfig({ ...draftConfig });
+    try { localStorage.setItem(LS_KEY, JSON.stringify(draftConfig)); } catch (_) {}
+    setConfigOpen(false);
+    setImportResult(null);
+  };
+
+  const handleResetConfig = () => {
+    setDraftConfig({ ...DEFAULT_CONFIG });
+  };
+
   const handleImportar = async () => {
     setImportando(true);
     setImportResult(null);
@@ -67,7 +116,7 @@ export default function MovimentacoesBancariasTab() {
           'x-import-secret': import.meta.env.VITE_GMAIL_IMPORT_SECRET || '',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ mode: 'comprovativos' }),
+        body: JSON.stringify({ mode: 'comprovativos', query: activeQuery }),
       });
       const data = await res.json();
       setImportResult(data);
@@ -159,6 +208,14 @@ export default function MovimentacoesBancariasTab() {
           </button>
 
           <button
+            onClick={() => { setDraftConfig({ ...config }); setConfigOpen(v => !v); setShowQueryPreview(false); }}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black transition-all ${configOpen ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            title="Configurar pesquisa Gmail"
+          >
+            <Settings size={13} /> Configurar
+          </button>
+
+          <button
             onClick={handleImportar}
             disabled={importando}
             className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-60"
@@ -169,6 +226,95 @@ export default function MovimentacoesBancariasTab() {
         </div>
       </div>
 
+      {/* Config panel */}
+      {configOpen && (
+        <div className="border border-indigo-100 rounded-2xl bg-indigo-50/40 p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <h5 className="text-xs font-black text-indigo-800 uppercase tracking-wide">Configuração da pesquisa Gmail</h5>
+            <button onClick={() => setConfigOpen(false)} className="p-1 rounded-lg text-slate-400 hover:text-slate-600">
+              <X size={14} />
+            </button>
+          </div>
+
+          {/* Remetentes */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Remetentes <span className="text-slate-400 normal-case font-semibold">(separados por vírgula)</span>
+            </label>
+            <input
+              type="text"
+              value={draftConfig.remetentes}
+              onChange={e => setDraftConfig(p => ({ ...p, remetentes: e.target.value }))}
+              placeholder="ex: alertas@novobanco.pt,info@novobanco.pt"
+              className="w-full px-3 py-2 text-[11px] font-mono border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-slate-300"
+            />
+            <p className="text-[10px] text-slate-400">Endereços de email do banco a monitorizar. Deixar vazio para pesquisar todos os remetentes.</p>
+          </div>
+
+          {/* Palavras-chave */}
+          <div className="space-y-1.5">
+            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Palavras-chave <span className="text-slate-400 normal-case font-semibold">(separadas por vírgula, use aspas para frases)</span>
+            </label>
+            <input
+              type="text"
+              value={draftConfig.palavras}
+              onChange={e => setDraftConfig(p => ({ ...p, palavras: e.target.value }))}
+              placeholder='ex: comprovativo,"pagamento executado"'
+              className="w-full px-3 py-2 text-[11px] font-mono border border-slate-200 rounded-xl bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 placeholder:text-slate-300"
+            />
+            <p className="text-[10px] text-slate-400">O Gmail procura estas palavras no assunto e corpo do email. Pelo menos uma tem de estar presente.</p>
+          </div>
+
+          {/* Apenas não lidos */}
+          <div className="flex items-start gap-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={draftConfig.apenasNaoLidos}
+                onChange={e => setDraftConfig(p => ({ ...p, apenasNaoLidos: e.target.checked }))}
+                className="w-4 h-4 rounded accent-indigo-600"
+              />
+              <div>
+                <span className="text-[11px] font-black text-slate-700">Apenas emails não lidos</span>
+                <p className="text-[10px] text-slate-400 mt-0.5">Desativar para incluir emails já abertos anteriormente (útil para recuperar comprovativos perdidos).</p>
+              </div>
+            </label>
+          </div>
+
+          {/* Query preview */}
+          <div className="space-y-1.5">
+            <button
+              onClick={() => setShowQueryPreview(v => !v)}
+              className="flex items-center gap-1.5 text-[10px] font-black text-indigo-600 hover:text-indigo-800 transition-colors"
+            >
+              <Eye size={12} /> {showQueryPreview ? 'Ocultar' : 'Ver'} query Gmail gerada
+            </button>
+            {showQueryPreview && (
+              <div className="px-3 py-2.5 bg-slate-800 rounded-xl">
+                <p className="text-[11px] font-mono text-emerald-400 break-all">{queryPreview || <span className="text-slate-500 italic">query vazia</span>}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={handleSaveConfig}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm"
+            >
+              <Save size={12} /> Guardar configuração
+            </button>
+            <button
+              onClick={handleResetConfig}
+              className="px-3 py-2 rounded-xl text-[11px] font-bold text-slate-500 hover:bg-slate-100 transition-all"
+            >
+              Repor padrões
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Import result */}
       {importResult && (
         <div className={`px-4 py-3 rounded-xl text-[11px] font-bold border ${importResult.error ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
@@ -176,6 +322,18 @@ export default function MovimentacoesBancariasTab() {
             ? `Erro: ${importResult.error}`
             : `${importResult.importados ?? 0} comprovativo(s) importado(s).${importResult.skipped > 0 ? ` ${importResult.skipped} já existia(m).` : ''}`
           }
+          {importResult.erros?.length > 0 && (
+            <details className="mt-2">
+              <summary className="cursor-pointer text-amber-700 font-black">{importResult.erros.length} aviso(s)</summary>
+              <ul className="mt-1 space-y-1">
+                {importResult.erros.map((e, i) => (
+                  <li key={i} className="text-amber-600 font-mono text-[10px]">
+                    {e.aviso || e.error || JSON.stringify(e)}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          )}
         </div>
       )}
 
