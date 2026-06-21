@@ -5,7 +5,7 @@ import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, ChevronRight, ChevronDown,
-  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
+  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 
@@ -26,6 +26,12 @@ const MENU_STRUCTURE = [
       { id: 'list', label: 'Clientes', icon: Building2, path: '/admin/clients?subtab=list' },
       { id: 'envios', label: 'Envios', icon: Send, path: '/admin/clients?subtab=envios', color: 'blue' },
       { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/clients?subtab=correcoes', badgeType: 'clientCorrections', color: 'orange' },
+    ],
+  },
+  {
+    id: 'fornecedores', label: 'Fornecedores', icon: Truck,
+    subtabs: [
+      { id: 'forn-list', label: 'Fornecedores', icon: Truck, path: '/admin/fornecedores?subtab=list' },
     ],
   },
   { id: 'schedules', label: 'Horários', icon: Clock },

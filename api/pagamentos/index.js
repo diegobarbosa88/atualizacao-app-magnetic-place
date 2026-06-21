@@ -549,13 +549,56 @@ export default async function handler(req, res) {
       }
     }
 
-    // ─── FORNECEDORES: GUARDAR IBAN ───
+    // ─── FORNECEDORES: GUARDAR IBAN (legacy) ───
     if (action === 'guardar-iban-fornecedor') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
       const { nif, nome, iban } = req.body || {};
       if (!nif || !iban) return res.status(400).json({ error: 'nif e iban obrigatórios' });
-      const { error } = await db.from('fornecedores_debito_automatico')
-        .upsert({ nif, nome: nome || nif, iban }, { onConflict: 'nif' });
+      // Upsert na tabela fornecedores (nova) e na legacy
+      await db.from('fornecedores').upsert({ nif, nome: nome || nif, iban, updated_at: new Date().toISOString() }, { onConflict: 'nif' });
+      await db.from('fornecedores_debito_automatico').upsert({ nif, nome: nome || nif, iban }, { onConflict: 'nif' });
+      return res.json({ ok: true });
+    }
+
+    // ─── FORNECEDORES: LISTAR ───
+    if (action === 'listar-fornecedores') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      const { data, error } = await db.from('fornecedores').select('*').order('nome');
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ data: data || [] });
+    }
+
+    // ─── FORNECEDORES: GUARDAR (criar ou editar) ───
+    if (action === 'guardar-fornecedor') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { id, nome, nif, email, telefone, morada, iban, swift, website, notas, status, debito_automatico } = req.body || {};
+      if (!nome) return res.status(400).json({ error: 'nome obrigatório' });
+      const payload = {
+        nome, nif: nif || null, email: email || null, telefone: telefone || null,
+        morada: morada || null, iban: iban || null, swift: swift || null,
+        website: website || null, notas: notas || null,
+        status: status || 'ativo', debito_automatico: !!debito_automatico,
+        updated_at: new Date().toISOString(),
+      };
+      let result;
+      if (id) {
+        result = await db.from('fornecedores').update(payload).eq('id', id).select().single();
+      } else {
+        result = await db.from('fornecedores').insert(payload).select().single();
+      }
+      if (result.error) return res.status(500).json({ error: result.error.message });
+      if (nif) {
+        await db.from('faturas').update({ debito_automatico: !!debito_automatico }).eq('dados->>nif_fornecedor', nif);
+      }
+      return res.json({ data: result.data });
+    }
+
+    // ─── FORNECEDORES: APAGAR ───
+    if (action === 'apagar-fornecedor') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { id } = req.body || {};
+      if (!id) return res.status(400).json({ error: 'id obrigatório' });
+      const { error } = await db.from('fornecedores').delete().eq('id', id);
       if (error) return res.status(500).json({ error: error.message });
       return res.json({ ok: true });
     }
@@ -578,12 +621,12 @@ export default async function handler(req, res) {
         elegiveis.filter(f => !f.dados?.iban && f.dados?.nif_fornecedor).map(f => f.dados.nif_fornecedor)
       )];
       if (nifsComFaturasSemIban.length > 0) {
-        const { data: fornecedores } = await db
-          .from('fornecedores_debito_automatico')
+        const { data: fns } = await db
+          .from('fornecedores')
           .select('nif, iban')
           .in('nif', nifsComFaturasSemIban)
           .not('iban', 'is', null);
-        const ibanByNif = Object.fromEntries((fornecedores || []).map(f => [f.nif, f.iban]));
+        const ibanByNif = Object.fromEntries((fns || []).map(f => [f.nif, f.iban]));
         elegiveis.forEach(f => {
           if (!f.dados?.iban && f.dados?.nif_fornecedor && ibanByNif[f.dados.nif_fornecedor]) {
             f.dados = { ...f.dados, iban: ibanByNif[f.dados.nif_fornecedor] };

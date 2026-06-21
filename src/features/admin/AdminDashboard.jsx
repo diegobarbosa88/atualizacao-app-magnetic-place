@@ -39,6 +39,7 @@ function LogSourceBadge({ log }) {
 }
 import TeamManager from './TeamManager';
 import ClientManager from './ClientManager';
+import FornecedorManager from './FornecedorManager';
 import ScheduleManager from './ScheduleManager';
 import CostReports from './CostReports';
 import DocumentsAdmin from './DocumentsAdmin';
@@ -406,6 +407,8 @@ function AdminDashboard(props) {
           setPortalMonth={setPortalMonth}
         />
       )}
+
+      {!auditWorkerId && activeTab === 'fornecedores' && <FornecedorManager />}
 
       {!auditWorkerId && activeTab === 'schedules' && <ScheduleManager />}
 
