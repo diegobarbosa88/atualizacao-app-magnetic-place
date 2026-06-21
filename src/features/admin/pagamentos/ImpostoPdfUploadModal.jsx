@@ -64,7 +64,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
         texto += content.items.map(it => it.str).join(' ') + '\n';
       }
 
-      const res = await fetch('/api/parse-imposto', {
+      const res = await fetch('/api/pagamentos?action=parse-imposto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto }),
