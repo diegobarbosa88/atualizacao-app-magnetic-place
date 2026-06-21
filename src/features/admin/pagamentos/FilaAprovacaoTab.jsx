@@ -68,6 +68,8 @@ export default function FilaAprovacaoTab() {
   const [exportResult, setExportResult] = useState(null);
   const [rejeitarItem, setRejeitarItem] = useState(null);
   const [mostrarModalImposto, setMostrarModalImposto] = useState(false);
+  const [ibanModal, setIbanModal] = useState(null);
+  const [ibanInputVal, setIbanInputVal] = useState('');
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -143,6 +145,7 @@ export default function FilaAprovacaoTab() {
         valor: f.dados?.valor_total,
         data_vencimento: f.dados?.prazo_pagamento || null,
         iban: f.dados?.iban,
+        nif: f.dados?.nif_fornecedor || null,
         referencia: f.dados?.numero_fatura || null,
         url: f.url,
         status: f.status === 'PENDENTE' ? 'pendente' : 'exportado',
@@ -247,6 +250,18 @@ export default function FilaAprovacaoTab() {
       return;
     }
     await carregar();
+  };
+
+  const guardarIbanInline = async () => {
+    if (!ibanModal || !ibanInputVal.trim()) return;
+    const iban = ibanInputVal.replace(/\s/g, '').toUpperCase();
+    const res = await fetch('/api/pagamentos?action=guardar-iban-fornecedor', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
+    });
+    if (!res.ok) { const d = await res.json(); alert(`Erro: ${d.error}`); return; }
+    setIbanModal(null);
+    carregar();
   };
 
   const handleImpostoSaved = (record) => {
@@ -420,7 +435,14 @@ export default function FilaAprovacaoTab() {
                     )}
                     {item.iban
                       ? <span className="text-[10px] text-slate-300">{maskIban(item.iban)}</span>
-                      : <span className="flex items-center gap-1 text-[10px] text-orange-400 font-bold"><AlertTriangle size={10} /> Sem IBAN</span>
+                      : item.fonte === 'fatura-gmail' && item.nif
+                        ? <button
+                            onClick={() => { setIbanModal({ nif: item.nif, nome: item.label }); setIbanInputVal(''); }}
+                            className="flex items-center gap-1 text-[10px] text-orange-400 font-bold hover:text-orange-600 underline underline-offset-2"
+                          >
+                            <AlertTriangle size={10} /> Sem IBAN — Definir
+                          </button>
+                        : <span className="flex items-center gap-1 text-[10px] text-orange-400 font-bold"><AlertTriangle size={10} /> Sem IBAN</span>
                     }
                   </div>
                 </div>
@@ -473,6 +495,42 @@ export default function FilaAprovacaoTab() {
           onClose={() => setMostrarModalImposto(false)}
           onSaved={handleImpostoSaved}
         />
+      )}
+
+      {ibanModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setIbanModal(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">IBAN do Fornecedor</p>
+            <p className="text-sm font-bold text-slate-700 mb-4">{ibanModal.nome}</p>
+            <input
+              type="text"
+              placeholder="PT50..."
+              value={ibanInputVal}
+              onChange={e => setIbanInputVal(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && guardarIbanInline()}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              autoFocus
+            />
+            {ibanModal.nif && (
+              <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            )}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={guardarIbanInline}
+                className="flex-1 py-2 text-xs font-black bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 uppercase tracking-widest"
+              >
+                Guardar
+              </button>
+              <button
+                onClick={() => setIbanModal(null)}
+                className="px-4 py-2 text-xs font-black bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -527,7 +527,7 @@ export default async function handler(req, res) {
     // ─── FORNECEDORES DÉBITO AUTOMÁTICO: LISTAR ───
     if (action === 'listar-fornecedores-debito') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-      const { data, error } = await db.from('fornecedores_debito_automatico').select('nif, nome').order('nome');
+      const { data, error } = await db.from('fornecedores_debito_automatico').select('nif, nome, iban').order('nome');
       if (error) return res.status(500).json({ error: error.message });
       return res.json({ data: data || [] });
     }
@@ -549,6 +549,17 @@ export default async function handler(req, res) {
       }
     }
 
+    // ─── FORNECEDORES: GUARDAR IBAN ───
+    if (action === 'guardar-iban-fornecedor') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const { nif, nome, iban } = req.body || {};
+      if (!nif || !iban) return res.status(400).json({ error: 'nif e iban obrigatórios' });
+      const { error } = await db.from('fornecedores_debito_automatico')
+        .upsert({ nif, nome: nome || nif, iban }, { onConflict: 'nif' });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ ok: true });
+    }
+
     // ─── FATURAS GMAIL: LISTAR ELEGÍVEIS PARA FILA ───
     if (action === 'listar-faturas-fila') {
       if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
@@ -561,6 +572,25 @@ export default async function handler(req, res) {
         .order('importado_em', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
       const elegiveis = (data || []).filter(f => f.dados?.valor_total);
+
+      // Enriquecer com IBAN do fornecedor quando dados.iban é nulo
+      const nifsComFaturasSemIban = [...new Set(
+        elegiveis.filter(f => !f.dados?.iban && f.dados?.nif_fornecedor).map(f => f.dados.nif_fornecedor)
+      )];
+      if (nifsComFaturasSemIban.length > 0) {
+        const { data: fornecedores } = await db
+          .from('fornecedores_debito_automatico')
+          .select('nif, iban')
+          .in('nif', nifsComFaturasSemIban)
+          .not('iban', 'is', null);
+        const ibanByNif = Object.fromEntries((fornecedores || []).map(f => [f.nif, f.iban]));
+        elegiveis.forEach(f => {
+          if (!f.dados?.iban && f.dados?.nif_fornecedor && ibanByNif[f.dados.nif_fornecedor]) {
+            f.dados = { ...f.dados, iban: ibanByNif[f.dados.nif_fornecedor] };
+          }
+        });
+      }
+
       return res.json({ data: elegiveis });
     }
 

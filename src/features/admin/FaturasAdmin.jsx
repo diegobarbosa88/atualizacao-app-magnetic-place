@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt, Repeat } from 'lucide-react';
+import { FileText, Download, Loader2, RefreshCw, ExternalLink, Trash2, Search, ChevronDown, ChevronUp, X, ArrowUpDown, ArrowUp, ArrowDown, Sparkles, CheckCircle, Printer, Eye, Receipt, Repeat, CreditCard } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -360,13 +360,33 @@ export default function FaturasAdmin() {
   const handleApagarUm = (f) => { if (!confirm(`Apagar "${f.filename}"?`)) return; apagarFaturas([f.id]); };
 
   const [debitoNifs, setDebitoNifs] = useState(new Set());
+  const [fornecedoresIban, setFornecedoresIban] = useState({});
+  const [ibanModal, setIbanModal] = useState(null);
+  const [ibanInputVal, setIbanInputVal] = useState('');
 
   useEffect(() => {
     fetch('/api/pagamentos?action=listar-fornecedores-debito')
       .then(r => r.json())
-      .then(d => setDebitoNifs(new Set((d.data || []).map(f => f.nif))))
+      .then(d => {
+        setDebitoNifs(new Set((d.data || []).map(f => f.nif)));
+        const map = {};
+        (d.data || []).forEach(f => { if (f.iban) map[f.nif] = f.iban; });
+        setFornecedoresIban(map);
+      })
       .catch(() => {});
   }, []);
+
+  const guardarIbanFornecedor = async () => {
+    if (!ibanModal || !ibanInputVal.trim()) return;
+    const iban = ibanInputVal.replace(/\s/g, '').toUpperCase();
+    const res = await fetch('/api/pagamentos?action=guardar-iban-fornecedor', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
+    });
+    if (!res.ok) { const d = await res.json(); alert(`Erro: ${d.error}`); return; }
+    setFornecedoresIban(prev => ({ ...prev, [ibanModal.nif]: iban }));
+    setIbanModal(null);
+  };
 
   const toggleDebitoAutomatico = async (f) => {
     const nif = f.dados?.nif_fornecedor;
@@ -701,6 +721,20 @@ export default function FaturasAdmin() {
                           >
                             <Repeat size={14} />
                           </button>
+                          {f.dados?.nif_fornecedor && (
+                            <button
+                              onClick={() => {
+                                const nif = f.dados.nif_fornecedor;
+                                const currentIban = fornecedoresIban[nif] || '';
+                                setIbanModal({ nif, nome: f.dados?.fornecedor || nif });
+                                setIbanInputVal(currentIban);
+                              }}
+                              title={fornecedoresIban[f.dados?.nif_fornecedor] ? `IBAN guardado: ${fornecedoresIban[f.dados?.nif_fornecedor]}` : 'Guardar IBAN do fornecedor'}
+                              className={`p-1.5 transition-colors rounded ${fornecedoresIban[f.dados?.nif_fornecedor] ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 hover:text-emerald-600'}`}
+                            >
+                              <CreditCard size={14} />
+                            </button>
+                          )}
                           <button onClick={() => handleApagarUm(f)} disabled={apagando} className="p-1.5 text-slate-400 hover:text-red-500 transition-colors disabled:opacity-50" title="Apagar">
                             {apagando ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                           </button>
@@ -723,6 +757,40 @@ export default function FaturasAdmin() {
       )}
 
       <ModalDetalhe fatura={faturaDetalhe} onClose={() => setFaturaDetalhe(null)} />
+
+      {ibanModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setIbanModal(null)}>
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6" onClick={e => e.stopPropagation()}>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">IBAN do Fornecedor</p>
+            <p className="text-sm font-bold text-slate-700 mb-4">{ibanModal.nome}</p>
+            <input
+              type="text"
+              placeholder="PT50..."
+              value={ibanInputVal}
+              onChange={e => setIbanInputVal(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && guardarIbanFornecedor()}
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              autoFocus
+            />
+            <p className="text-[10px] text-slate-400 mt-1">Aplicado a todas as faturas deste fornecedor (NIF: {ibanModal.nif})</p>
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={guardarIbanFornecedor}
+                className="flex-1 py-2 text-xs font-black bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 uppercase tracking-widest"
+              >
+                Guardar
+              </button>
+              <button
+                onClick={() => setIbanModal(null)}
+                className="px-4 py-2 text-xs font-black bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 uppercase tracking-widest"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
