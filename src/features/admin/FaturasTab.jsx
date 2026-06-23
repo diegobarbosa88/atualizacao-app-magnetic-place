@@ -44,7 +44,9 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          faturas_ids: [fatura.id],
+          iban_direto: ibanLimpo,
+          valor_direto: parseFloat(valor) || 0,
+          fornecedor_direto: fornecedorNome,
           descricao: referencia
             ? `Fatura ${referencia} — ${fornecedorNome}`
             : `Pagamento ${fornecedorNome}`,

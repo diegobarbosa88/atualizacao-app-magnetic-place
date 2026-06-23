@@ -94,34 +94,60 @@ async function handleConnect(req, res) {
 // Body: { faturas_ids: string[], descricao?: string }
 // Response: { redirect_url, pagamento_id, total, transfer_id }
 async function handlePay(req, res) {
-  const { faturas_ids, descricao: descricaoOverride } = req.body || {};
+  const {
+    faturas_ids,
+    descricao: descricaoOverride,
+    iban_direto,
+    valor_direto,
+    fornecedor_direto,
+  } = req.body || {};
 
-  if (!Array.isArray(faturas_ids) || faturas_ids.length === 0) {
-    return res.status(400).json({ error: 'faturas_ids é obrigatório e não pode estar vazio' });
+  // Modo directo: IBAN + valor passados pelo caller (sem lookup na DB)
+  const modoDireto = !!iban_direto;
+
+  if (!modoDireto && (!Array.isArray(faturas_ids) || faturas_ids.length === 0)) {
+    return res.status(400).json({ error: 'faturas_ids ou iban_direto+valor_direto são obrigatórios' });
+  }
+  if (modoDireto && (!valor_direto || Number(valor_direto) <= 0)) {
+    return res.status(400).json({ error: 'valor_direto inválido' });
   }
 
   const supabase = db();
 
+  let faturas = [];
+
   try {
-    const { data: faturas, error: fetchErr } = await supabase
-      .from('faturas_centro_documentos')
-      .select('id, fornecedor, fornecedor_iban, valor, descricao, estado_pagamento')
-      .in('id', faturas_ids);
+    if (!modoDireto) {
+      const { data, error: fetchErr } = await supabase
+        .from('faturas_centro_documentos')
+        .select('id, fornecedor, fornecedor_iban, valor, descricao, estado_pagamento')
+        .in('id', faturas_ids);
 
-    if (fetchErr) throw new Error(`Supabase fetch faturas: ${fetchErr.message}`);
-    if (!faturas?.length) {
-      return res.status(404).json({ error: 'Nenhuma fatura encontrada para os IDs fornecidos' });
-    }
+      if (fetchErr) throw new Error(`Supabase fetch faturas: ${fetchErr.message}`);
+      if (!data?.length) {
+        return res.status(404).json({ error: 'Nenhuma fatura encontrada para os IDs fornecidos' });
+      }
 
-    for (const f of faturas) {
-      if (!f.fornecedor_iban) {
-        return res.status(400).json({
-          error: `Fatura ${f.id} sem IBAN do fornecedor. Actualize o registo antes de pagar.`,
-        });
+      for (const f of data) {
+        if (!f.fornecedor_iban) {
+          return res.status(400).json({
+            error: `Fatura ${f.id} sem IBAN do fornecedor. Actualize o registo antes de pagar.`,
+          });
+        }
+        if (!f.valor || Number(f.valor) <= 0) {
+          return res.status(400).json({ error: `Fatura ${f.id} com valor inválido: ${f.valor}` });
+        }
       }
-      if (!f.valor || Number(f.valor) <= 0) {
-        return res.status(400).json({ error: `Fatura ${f.id} com valor inválido: ${f.valor}` });
-      }
+      faturas = data;
+    } else {
+      // Fatura sintética com os dados passados directamente
+      faturas = [{
+        id: null,
+        fornecedor: fornecedor_direto || 'Fornecedor',
+        fornecedor_iban: iban_direto.replace(/\s/g, '').toUpperCase(),
+        valor: Number(valor_direto),
+        descricao: descricaoOverride || `Pagamento ${fornecedor_direto || ''}`,
+      }];
     }
 
     const totalLote = faturas.reduce((s, f) => s + Number(f.valor), 0);
@@ -186,7 +212,7 @@ async function handlePay(req, res) {
       .insert({
         powens_transfer_id: powensTransferId,
         powens_state: state,
-        faturas_ids,
+        faturas_ids: faturas_ids || [],
         faturas_snapshot: faturas,
         total: totalLote,
         descricao: descricaoFinal,
@@ -200,14 +226,17 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    await supabase
-      .from('faturas_centro_documentos')
-      .update({
-        powens_transfer_id: powensTransferId,
-        estado_pagamento: 'processando',
-        updated_at: new Date().toISOString(),
-      })
-      .in('id', faturas_ids);
+    // Só actualiza faturas_centro_documentos se houver IDs válidos
+    if (faturas_ids?.length) {
+      await supabase
+        .from('faturas_centro_documentos')
+        .update({
+          powens_transfer_id: powensTransferId,
+          estado_pagamento: 'processando',
+          updated_at: new Date().toISOString(),
+        })
+        .in('id', faturas_ids);
+    }
 
     const redirect_url = buildWebviewUrl('pay', {
       token: userToken,
