@@ -91,11 +91,21 @@ export default async function handler(req, res) {
       try {
         connectionDetails = await powensRequest(
           'GET',
-          `/users/${conexao.powens_user_id}/connections/${connection_id}?expand=connector`
+          `/users/${conexao.powens_user_id}/connections/${connection_id}?expand=connector,accounts`
         );
       } catch (e) {
         console.warn('[powens/callback] Não foi possível obter detalhes da conexão:', e.message);
       }
+
+      // Mapear saldos das contas — currency vem como objecto {id, symbol, ...}
+      const saldos = (connectionDetails?.accounts ?? []).map(a => ({
+        id: a.id,
+        nome: a.name,
+        iban: a.iban,
+        saldo: a.balance,
+        moeda: a.currency?.id ?? a.currency ?? 'EUR',
+        tipo: a.type,
+      }));
 
       const { error: updateErr } = await supabase
         .from('conexoes_bancarias')
@@ -104,6 +114,8 @@ export default async function handler(req, res) {
           powens_connection_id: String(connection_id),
           powens_connector: connectionDetails?.connector?.name ?? null,
           dados: connectionDetails ?? null,
+          saldos: saldos.length ? saldos : null,
+          ultima_sincronizacao: new Date().toISOString(),
           erro_detalhe: null,
           updated_at: new Date().toISOString(),
         })

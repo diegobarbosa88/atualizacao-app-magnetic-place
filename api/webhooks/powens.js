@@ -161,14 +161,15 @@ async function _processarEvento(payload) {
       const rows = transactions.map(t => ({
         powens_transaction_id: String(t.id),
         conexao_id: conexaoId,
-        banco: bancoDaConexao ?? t.bank_name ?? 'desconhecido',
+        banco: bancoDaConexao ?? 'desconhecido',
         data: t.date ?? null,
         data_valor: t.rdate ?? t.date ?? null,
         valor: t.value ?? null,
         descricao: t.original_wording || t.wording || '',
         tipo: t.type ?? null,
         estado: t.state ?? null,
-        categoria: t.category ?? null,
+        // category pode vir como string ou como objecto {id, name}
+        categoria: typeof t.category === 'object' ? t.category?.name ?? null : t.category ?? null,
         dados_raw: t,
       }));
 

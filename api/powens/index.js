@@ -15,9 +15,10 @@ import { createClient } from '@supabase/supabase-js';
 import { getUserToken, buildWebviewUrl, powensRequest } from './_client.js';
 
 // IDs de conector Powens para bancos PT suportados
+// Confirmado via API: GET /connectors ou painel Powens Dashboard
 const CONNECTOR_IDS = {
   novobanco: '338',
-  santander: '315',
+  santander: '2499', // Santander Totta (PT) — slug "BST"
 };
 
 function db() {
@@ -273,7 +274,7 @@ async function handleSync(req, res) {
               nome: a.name,
               iban: a.iban,
               saldo: a.balance,
-              moeda: a.currency,
+              moeda: a.currency?.id ?? a.currency ?? 'EUR',
               tipo: a.type,
             })),
             ultima_sincronizacao: new Date().toISOString(),
@@ -301,7 +302,7 @@ async function handleSync(req, res) {
             descricao: t.original_wording || t.wording || '',
             tipo: t.type ?? null,
             estado: t.state ?? null,
-            categoria: t.category ?? null,
+            categoria: typeof t.category === 'object' ? t.category?.name ?? null : t.category ?? null,
             dados_raw: t,
             created_at: new Date().toISOString(),
           }));
