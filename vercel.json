@@ -15,17 +15,23 @@
     "api/reconciliacao/process.js": {
       "maxDuration": 30
     },
-    "api/toconline/create-fatura.js": {
-      "maxDuration": 30
-    },
-    "api/toconline/proxy.js": {
-      "maxDuration": 30
-    },
     "api/pagamentos/index.js": {
       "maxDuration": 30
     },
     "api/pagamentos/processar-lote.js": {
       "maxDuration": 30
+    },
+    "api/powens/connect.js": {
+      "maxDuration": 30
+    },
+    "api/powens/callback.js": {
+      "maxDuration": 30
+    },
+    "api/powens/payments.js": {
+      "maxDuration": 30
+    },
+    "api/powens/sync.js": {
+      "maxDuration": 60
     }
   },
   "headers": [
@@ -49,12 +55,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
-    { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },
-    { "source": "/api/toconline/relatorio", "destination": "/api/toconline/proxy?action=relatorio" },
-    { "source": "/api/toconline/status", "destination": "/api/toconline/proxy?action=status" },
-    { "source": "/api/toconline/auth-init", "destination": "/api/toconline/proxy?action=auth-init" },
-    { "source": "/api/toconline/token-exchange", "destination": "/api/toconline/proxy?action=token-exchange" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
