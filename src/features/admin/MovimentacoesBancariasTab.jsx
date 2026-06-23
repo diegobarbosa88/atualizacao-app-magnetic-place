@@ -132,10 +132,11 @@ export default function MovimentacoesBancariasTab() {
     if (!supabase) return;
     setLoadingConexoes(true);
     try {
-      const { data } = await supabase
+      const { data, error: erroConexoes } = await supabase
         .from('conexoes_bancarias')
         .select('*')
         .order('updated_at', { ascending: false });
+      if (erroConexoes) console.error('[conexoes_bancarias]', erroConexoes.message);
       setConexoes(data || []);
     } finally {
       setLoadingConexoes(false);

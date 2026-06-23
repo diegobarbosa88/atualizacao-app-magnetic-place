@@ -42,8 +42,8 @@ export default async function handler(req, res) {
       await _atualizarEstadoPorState(supabase, state, 'cancelado_pelo_utilizador', error_description);
 
       const destino = connection_id !== undefined
-        ? `${APP_URL}/admin/banco?powens=cancelado`
-        : `${APP_URL}/admin/pagamentos?powens=cancelado`;
+        ? `${APP_URL}/admin/documentos/banco/movimentacoes?powens=cancelado`
+        : `${APP_URL}/admin/documentos/pagamentos/pagamentos-fornecedores?powens=cancelado`;
 
       return res.redirect(302, destino);
     }
@@ -55,8 +55,8 @@ export default async function handler(req, res) {
       await _atualizarEstadoPorState(supabase, state, 'erro_banco', error_description);
 
       const destino = connection_id !== undefined
-        ? `${APP_URL}/admin/banco?powens=erro_banco`
-        : `${APP_URL}/admin/pagamentos?powens=erro_banco`;
+        ? `${APP_URL}/admin/documentos/banco/movimentacoes?powens=erro_banco`
+        : `${APP_URL}/admin/documentos/pagamentos/pagamentos-fornecedores?powens=erro_banco`;
 
       return res.redirect(302, destino);
     }
@@ -64,7 +64,7 @@ export default async function handler(req, res) {
     // Erro desconhecido — registar e redirecionar para ecrã genérico de erro
     console.error('[powens/callback] Erro desconhecido:', { error, error_description, state });
     await _atualizarEstadoPorState(supabase, state, 'erro', `${error}: ${error_description || ''}`);
-    return res.redirect(302, `${APP_URL}/admin?powens=erro`);
+    return res.redirect(302, `${APP_URL}/admin/documentos/banco/movimentacoes?powens=erro`);
   }
 
   // ──────────────────────────────────────────────────────────────────────────
@@ -131,10 +131,10 @@ export default async function handler(req, res) {
       if (updateErr) throw new Error(`Supabase update: ${updateErr.message}`);
 
       console.info('[powens/callback] Conexão AIS activada:', { banco: conexao.banco, connection_id });
-      return res.redirect(302, `${APP_URL}/admin/banco?powens=sucesso&banco=${conexao.banco}`);
+      return res.redirect(302, `${APP_URL}/admin/documentos/banco/movimentacoes?powens=sucesso&banco=${conexao.banco}`);
     } catch (err) {
       console.error('[powens/callback] Erro a processar callback AIS:', err);
-      return res.redirect(302, `${APP_URL}/admin/banco?powens=erro`);
+      return res.redirect(302, `${APP_URL}/admin/documentos/banco/movimentacoes?powens=erro`);
     }
   }
 
@@ -195,16 +195,16 @@ export default async function handler(req, res) {
       }
 
       console.info('[powens/callback] PIS processado:', { transfer_id, estado: estadoFinal });
-      return res.redirect(302, `${APP_URL}/admin/pagamentos?powens=sucesso&transfer_id=${transfer_id}`);
+      return res.redirect(302, `${APP_URL}/admin/documentos/pagamentos/pagamentos-fornecedores?powens=sucesso&transfer_id=${transfer_id}`);
     } catch (err) {
       console.error('[powens/callback] Erro a processar callback PIS:', err);
-      return res.redirect(302, `${APP_URL}/admin/pagamentos?powens=erro`);
+      return res.redirect(302, `${APP_URL}/admin/documentos/pagamentos/pagamentos-fornecedores?powens=erro`);
     }
   }
 
   // Callback sem parâmetros reconhecíveis
   console.warn('[powens/callback] Callback recebido sem connection_id, transfer_id ou error.', params);
-  return res.redirect(302, `${APP_URL}/admin?powens=desconhecido`);
+  return res.redirect(302, `${APP_URL}/admin/documentos/banco/movimentacoes?powens=desconhecido`);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
