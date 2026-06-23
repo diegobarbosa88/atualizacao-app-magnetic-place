@@ -86,13 +86,24 @@ export default async function handler(req, res) {
         return res.redirect(302, `${APP_URL}/admin/banco?powens=erro`);
       }
 
-      // AIS não disponível no sandbox (apenas PIS) — não chamamos /connections nem /accounts.
-      // Guardar apenas o connection_id devolvido pelo webview e marcar como ativa.
+      // Tentar obter id_user via GET /connections/{id} (endpoint básico, sem expand AIS)
+      let powensUserId = conexao.powens_user_id || null;
+      try {
+        const connInfo = await powensRequest('GET', `/connections/${connection_id}`);
+        if (connInfo?.id_user) {
+          powensUserId = String(connInfo.id_user);
+          console.info('[powens/callback] powens_user_id obtido:', powensUserId);
+        }
+      } catch (e) {
+        console.warn('[powens/callback] Não foi possível obter id_user:', e.message);
+      }
+
       const { error: updateErr } = await supabase
         .from('conexoes_bancarias')
         .update({
           estado: 'ativa',
           powens_connection_id: String(connection_id),
+          powens_user_id: powensUserId,
           ultima_sincronizacao: new Date().toISOString(),
           erro_detalhe: null,
           updated_at: new Date().toISOString(),

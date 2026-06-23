@@ -190,32 +190,48 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    // POST /payment-requests → Powens devolve o URL correcto do webview PIS
-    const paymentReq = await powensRequest('POST', '/payment-requests', {
-      recipient_iban: f.fornecedor_iban.replace(/\s/g, ''),
-      recipient_name: (f.fornecedor || 'Fornecedor').slice(0, 70),
+    // Obter user_id da conexão activa para endpoint PIS user-level
+    const { data: conexao } = await supabase
+      .from('conexoes_bancarias')
+      .select('powens_user_id, powens_connection_id')
+      .eq('estado', 'ativa')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!conexao?.powens_user_id) {
+      throw new Error(
+        'powens_user_id em falta — reconecte o banco em Admin → Banco para obter o ID de utilizador Powens.'
+      );
+    }
+
+    const userId = conexao.powens_user_id;
+
+    // POST /users/{id}/transfers — endpoint PIS user-level (requer user_id)
+    const transfer = await powensRequest('POST', `/users/${userId}/transfers`, {
+      account_id: conexao.powens_connection_id
+        ? parseInt(conexao.powens_connection_id, 10)
+        : undefined,
+      recipient: {
+        iban: f.fornecedor_iban.replace(/\s/g, ''),
+        label: (f.fornecedor || 'Fornecedor').slice(0, 70),
+      },
       amount: Number(f.valor),
       currency: 'EUR',
       label: descricaoFinal.slice(0, 140),
-      redirect_uri: CALLBACK_URI,
-      state,
     });
 
-    const redirect_url = paymentReq.webview_url
-      || paymentReq.redirect_url
-      || paymentReq.url;
+    const powensTransferId = String(transfer.id);
 
-    if (!redirect_url) {
-      throw new Error(`Powens não devolveu URL de pagamento. Resposta: ${JSON.stringify(paymentReq)}`);
-    }
+    // Guardar transfer_id
+    await supabase
+      .from('powens_pagamentos_pendentes')
+      .update({ powens_transfer_id: powensTransferId })
+      .eq('id', pagamento.id);
 
-    // Guardar transfer_id se a API o devolver imediatamente
-    if (paymentReq.id) {
-      await supabase
-        .from('powens_pagamentos_pendentes')
-        .update({ powens_transfer_id: String(paymentReq.id) })
-        .eq('id', pagamento.id);
-    }
+    // Webview PIS com transfer_id (fluxo de aprovação)
+    const redirect_url = transfer.webview_url
+      || buildWebviewUrl('pay', { transfer_id: powensTransferId, state });
 
     return res.status(200).json({
       redirect_url,
