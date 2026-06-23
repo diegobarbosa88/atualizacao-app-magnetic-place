@@ -27,7 +27,13 @@ export default async function handler(req, res) {
     state,
     error,
     error_description,
+    id_user,
+    user_id,
+    id_connection,
   } = params || {};
+
+  // id_user pode vir como parâmetro directo do webview Powens
+  const powensUserIdFromCallback = id_user || user_id || null;
 
   const supabase = db();
 
@@ -86,23 +92,28 @@ export default async function handler(req, res) {
         return res.redirect(302, `${APP_URL}/admin/banco?powens=erro`);
       }
 
-      // Tentar obter id_user via GET /connections/{id} (endpoint básico, sem expand AIS)
-      let powensUserId = conexao.powens_user_id || null;
-      try {
-        const connInfo = await powensRequest('GET', `/connections/${connection_id}`);
-        if (connInfo?.id_user) {
-          powensUserId = String(connInfo.id_user);
-          console.info('[powens/callback] powens_user_id obtido:', powensUserId);
+      // id_user: 1) parâmetro do callback, 2) já na DB, 3) tentativa API (pode falhar com scope payments)
+      let powensUserId = powensUserIdFromCallback
+        || conexao.powens_user_id
+        || null;
+
+      if (!powensUserId) {
+        try {
+          const connId = connection_id || id_connection;
+          const connInfo = await powensRequest('GET', `/connections/${connId}`);
+          if (connInfo?.id_user) powensUserId = String(connInfo.id_user);
+        } catch (e) {
+          console.warn('[powens/callback] GET /connections falhou:', e.message);
         }
-      } catch (e) {
-        console.warn('[powens/callback] Não foi possível obter id_user:', e.message);
       }
+
+      console.info('[powens/callback] powens_user_id:', powensUserId, '| params:', JSON.stringify(params));
 
       const { error: updateErr } = await supabase
         .from('conexoes_bancarias')
         .update({
           estado: 'ativa',
-          powens_connection_id: String(connection_id),
+          powens_connection_id: String(connection_id || id_connection),
           powens_user_id: powensUserId,
           ultima_sincronizacao: new Date().toISOString(),
           erro_detalhe: null,
