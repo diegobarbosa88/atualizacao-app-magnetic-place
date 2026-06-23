@@ -21,17 +21,11 @@
     "api/pagamentos/processar-lote.js": {
       "maxDuration": 30
     },
-    "api/powens/connect.js": {
-      "maxDuration": 30
+    "api/powens/index.js": {
+      "maxDuration": 60
     },
     "api/powens/callback.js": {
       "maxDuration": 30
-    },
-    "api/powens/payments.js": {
-      "maxDuration": 30
-    },
-    "api/powens/sync.js": {
-      "maxDuration": 60
     },
     "api/webhooks/powens.js": {
       "maxDuration": 60

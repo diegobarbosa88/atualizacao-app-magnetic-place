@@ -202,7 +202,7 @@ export default function PagamentosTab() {
     if (ids.length === 0) return;
     setIniciandoPowens(true);
     try {
-      const res = await fetch('/api/powens/payments', {
+      const res = await fetch('/api/powens?action=pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ faturas_ids: ids }),

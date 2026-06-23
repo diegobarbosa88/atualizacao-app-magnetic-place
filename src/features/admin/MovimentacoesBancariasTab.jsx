@@ -186,7 +186,7 @@ export default function MovimentacoesBancariasTab() {
   const handleConectar = async (banco) => {
     setConectando(banco);
     try {
-      const res = await fetch('/api/powens/connect', {
+      const res = await fetch('/api/powens?action=connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ banco }),
@@ -205,7 +205,7 @@ export default function MovimentacoesBancariasTab() {
     setSincronizando(true);
     setSyncResult(null);
     try {
-      const res = await fetch('/api/powens/sync', { method: 'POST' });
+      const res = await fetch('/api/powens?action=sync', { method: 'POST' });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Erro na sincronização');
       setSyncResult(d);
