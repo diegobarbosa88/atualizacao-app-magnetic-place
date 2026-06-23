@@ -19,8 +19,8 @@ export default async function handler(req, res) {
     if (!f.id_origem || !f.fonte || !f.iban || f.valor == null) {
       return res.status(400).json({ error: 'Cada fatura deve ter: id_origem, fonte, iban, valor.' });
     }
-    if (!['toconline', 'centro_documentos'].includes(f.fonte)) {
-      return res.status(400).json({ error: `fonte inválida: "${f.fonte}". Use "toconline" ou "centro_documentos".` });
+    if (f.fonte !== 'centro_documentos') {
+      return res.status(400).json({ error: `fonte inválida: "${f.fonte}". Use "centro_documentos".` });
     }
     if (Number(f.valor) <= 0) {
       return res.status(400).json({ error: `valor inválido para id_origem "${f.id_origem}": deve ser positivo.` });
@@ -32,9 +32,8 @@ export default async function handler(req, res) {
   }
 
   const totalLote = faturas_para_pagar.reduce((sum, f) => sum + Number(f.valor), 0);
-  const host = req.headers.host || 'localhost:3000';
-  const protocol = req.headers['x-forwarded-proto'] || 'http';
-  const returnTo = `${protocol}://${host}/admin/pagamentos?saltedge=callback`;
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const returnTo = `${appUrl}/admin/pagamentos?saltedge=callback`;
 
   let saltEdgeData;
   try {
@@ -75,22 +74,11 @@ export default async function handler(req, res) {
 
   for (const f of faturas_para_pagar) {
     try {
-      if (f.fonte === 'centro_documentos') {
-        const { error } = await db
-          .from('faturas_centro_documentos')
-          .update({ salt_edge_payment_id: saltPaymentId, estado_pagamento: 'processando' })
-          .eq('id', f.id_origem);
-        if (error) throw error;
-      } else {
-        const { error } = await db
-          .from('toconline_pagamentos_pendentes')
-          .insert({
-            salt_edge_payment_id: saltPaymentId,
-            toconline_doc_id: f.id_origem,
-            estado: 'processando',
-          });
-        if (error) throw error;
-      }
+      const { error } = await db
+        .from('faturas_centro_documentos')
+        .update({ salt_edge_payment_id: saltPaymentId, estado_pagamento: 'processando' })
+        .eq('id', f.id_origem);
+      if (error) throw error;
     } catch (err) {
       // Registo falhado — o pagamento já foi iniciado, não bloquear o utilizador
       console.error(`processar-lote: erro ao registar fatura ${f.id_origem}:`, err.message);

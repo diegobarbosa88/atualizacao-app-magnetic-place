@@ -24,8 +24,24 @@ import UploadManualModal from './documents/UploadManualModal';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
-const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings, onSwitchTab, ...rest }) => {
-  const props = { workers, documents, setDocuments, systemSettings, onSwitchTab, ...rest };
+function parseRoute(pathname) {
+  const parts = pathname.replace(/^\/admin\/documentos\/?/, '').split('/').filter(Boolean);
+  const first = parts[0] || 'documentos';
+  if (first === 'validar') {
+    const sub = parts[1];
+    if (sub === 'entradas') return { group: 'reconciliacao', section: 'movimentacoes' };
+    if (sub === 'faturas')  return { group: 'reconciliacao', section: 'fornecedores' };
+    return { group: 'reconciliacao', section: sub || 'recibos' };
+  }
+  if (['documentos', 'templates'].includes(first)) return { group: 'arquivo',       section: first };
+  if (first === 'faturas')       return { group: 'faturas',       section: parts[1] || 'importar' };
+  if (first === 'reconciliacao') return { group: 'reconciliacao', section: parts[1] || 'recibos' };
+  if (first === 'pagamentos')    return { group: 'pagamentos',    section: parts[1] || 'fila' };
+  if (first === 'banco')         return { group: 'banco',         section: parts[1] || 'movimentacoes' };
+  return { group: 'arquivo', section: 'documentos' };
+}
+
+const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSettings }) => {
   const { supabase: clientSupabase, companySignature, stampStyle } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
@@ -78,31 +94,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     sky:     { active: 'bg-sky-600 text-white shadow-sky-200',        text: 'text-sky-600',     icon: 'bg-sky-50 text-sky-600' },
   };
 
-  const activeGroup = useMemo(() => {
-    const parts = location.pathname.replace(/^\/admin\/documentos\/?/, '').split('/').filter(Boolean);
-    const first = parts[0] || 'documentos';
-    if (['documentos', 'templates'].includes(first)) return 'arquivo';
-    if (first === 'faturas') return 'faturas';
-    if (first === 'reconciliacao') return 'reconciliacao';
-    if (first === 'pagamentos') return 'pagamentos';
-    if (first === 'banco') return 'banco';
-    // compatibilidade com rotas antigas /validar/*
-    if (first === 'validar') return 'reconciliacao';
-    return 'arquivo';
-  }, [location.pathname]);
-
-  const activeSection = useMemo(() => {
-    const parts = location.pathname.replace(/^\/admin\/documentos\/?/, '').split('/').filter(Boolean);
-    if (activeGroup === 'arquivo') return parts[0] || 'documentos';
-    // compatibilidade: /validar/entradas → movimentacoes
-    if (parts[0] === 'validar') {
-      const old = parts[1];
-      if (old === 'entradas') return 'movimentacoes';
-      if (old === 'faturas')  return 'fornecedores';
-      return old || DEFAULT_SECTION.reconciliacao;
-    }
-    return parts[1] || DEFAULT_SECTION[activeGroup];
-  }, [location.pathname, activeGroup]);
+  const { group: activeGroup, section: activeSection } = parseRoute(location.pathname);
 
   const navigateTo = (groupId, sectionId) => {
     if (groupId === 'arquivo') navigate(`/admin/documentos/${sectionId}`);

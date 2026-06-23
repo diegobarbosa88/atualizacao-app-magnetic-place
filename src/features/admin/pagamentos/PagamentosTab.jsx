@@ -3,21 +3,32 @@ import { ArrowRightLeft, Plus, Loader2, RefreshCw, Download, CheckCircle, Trash2
 import NovoPagamentoModal from './NovoPagamentoModal';
 
 const STATUS_BADGE = {
-  pendente:           'bg-amber-50 text-amber-700 border-amber-100',
-  exportado:          'bg-blue-50 text-blue-700 border-blue-100',
-  enviado:            'bg-indigo-50 text-indigo-700 border-indigo-100',
-  iniciado_saltedge:  'bg-violet-50 text-violet-700 border-violet-100 animate-pulse',
-  falhado_saltedge:   'bg-rose-50 text-rose-700 border-rose-100',
-  confirmado:         'bg-emerald-50 text-emerald-700 border-emerald-100',
+  pendente:                   'bg-amber-50 text-amber-700 border-amber-100',
+  exportado:                  'bg-blue-50 text-blue-700 border-blue-100',
+  enviado:                    'bg-indigo-50 text-indigo-700 border-indigo-100',
+  iniciado_saltedge:          'bg-violet-50 text-violet-700 border-violet-100 animate-pulse',
+  falhado_saltedge:           'bg-rose-50 text-rose-700 border-rose-100',
+  confirmado:                 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  // Powens PIS
+  iniciado_powens:            'bg-violet-50 text-violet-700 border-violet-100 animate-pulse',
+  processando:                'bg-sky-50 text-sky-700 border-sky-100 animate-pulse',
+  concluido:                  'bg-emerald-50 text-emerald-700 border-emerald-100',
+  cancelado_pelo_utilizador:  'bg-slate-100 text-slate-500 border-slate-200',
+  erro_banco:                 'bg-rose-50 text-rose-700 border-rose-100',
 };
 
 const STATUS_LABEL = {
-  pendente:           'Pendente',
-  exportado:          'Exportado',
-  enviado:            'Enviado',
-  iniciado_saltedge:  'Iniciado (Salt Edge)',
-  falhado_saltedge:   'Falhado (Salt Edge)',
-  confirmado:         'Confirmado',
+  pendente:                   'Pendente',
+  exportado:                  'Exportado',
+  enviado:                    'Enviado',
+  iniciado_saltedge:          'Iniciado (Salt Edge)',
+  falhado_saltedge:           'Falhado (Salt Edge)',
+  confirmado:                 'Confirmado',
+  iniciado_powens:            'Iniciado (Powens)',
+  processando:                'A processar',
+  concluido:                  'Concluído',
+  cancelado_pelo_utilizador:  'Cancelado',
+  erro_banco:                 'Erro banco',
 };
 
 function fmt(val) {
@@ -34,6 +45,8 @@ export default function PagamentosTab() {
   const [exportando, setExportando] = useState(false);
   const [marcando, setMarcando] = useState(false);
   const [iniciandoSaltedge, setIniciandoSaltedge] = useState(false);
+  const [iniciandoPowens, setIniciandoPowens] = useState(false);
+  const [toastPowens, setToastPowens] = useState(null); // { tipo: 'sucesso'|'cancelado'|'erro', msg }
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -53,6 +66,24 @@ export default function PagamentosTab() {
   }, [filtroStatus]);
 
   useEffect(() => { carregar(); }, [carregar]);
+
+  // Tratar callback Powens (?powens=sucesso|cancelado|erro_banco|erro)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const powensParam = params.get('powens');
+    if (!powensParam) return;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    if (powensParam === 'sucesso') {
+      setToastPowens({ tipo: 'sucesso', msg: 'Pagamento aprovado pelo banco. A aguardar liquidação.' });
+      carregar();
+    } else if (powensParam === 'cancelado') {
+      setToastPowens({ tipo: 'cancelado', msg: 'Pagamento cancelado pelo utilizador.' });
+    } else if (powensParam === 'erro_banco') {
+      setToastPowens({ tipo: 'erro', msg: 'Erro técnico reportado pelo banco. Tente novamente.' });
+    } else {
+      setToastPowens({ tipo: 'erro', msg: `Resultado desconhecido: ${powensParam}` });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tratar callback Salt Edge (PIS e AIS)
   useEffect(() => {
@@ -166,6 +197,31 @@ export default function PagamentosTab() {
     }
   };
 
+  const handleIniciarPowens = async () => {
+    const ids = [...selecionados];
+    if (ids.length === 0) return;
+    setIniciandoPowens(true);
+    try {
+      const res = await fetch('/api/powens/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ faturas_ids: ids }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Erro ao iniciar pagamento Powens');
+      setSelecionados(new Set());
+      if (d.redirect_url) {
+        window.location.href = d.redirect_url;
+      } else {
+        await carregar();
+      }
+    } catch (e) {
+      alert(e.message);
+    } finally {
+      setIniciandoPowens(false);
+    }
+  };
+
   const handleMarcarEnviado = async () => {
     const ids = [...selecionados];
     if (ids.length === 0) return;
@@ -226,6 +282,11 @@ export default function PagamentosTab() {
             <option value="iniciado_saltedge">Iniciado (Salt Edge)</option>
             <option value="falhado_saltedge">Falhado (Salt Edge)</option>
             <option value="confirmado">Confirmado</option>
+            <option value="iniciado_powens">Iniciado (Powens)</option>
+            <option value="processando">A processar (Powens)</option>
+            <option value="concluido">Concluído (Powens)</option>
+            <option value="cancelado_pelo_utilizador">Cancelado</option>
+            <option value="erro_banco">Erro banco</option>
           </select>
           <button onClick={carregar}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
@@ -245,6 +306,11 @@ export default function PagamentosTab() {
             {selecionados.size} selecionado{selecionados.size > 1 ? 's' : ''} — {fmt(totalSelecionado)}
           </span>
           <div className="flex items-center gap-2">
+            <button onClick={handleIniciarPowens} disabled={iniciandoPowens}
+              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-sky-700 hover:to-indigo-700 transition-all disabled:opacity-60 shadow-sm">
+              {iniciandoPowens ? <Loader2 size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
+              Pagar via Powens
+            </button>
             <button onClick={handleIniciarSaltedge} disabled={iniciandoSaltedge}
               className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-60 shadow-sm">
               {iniciandoSaltedge ? <Loader2 size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
@@ -261,6 +327,17 @@ export default function PagamentosTab() {
               Marcar Enviado
             </button>
           </div>
+        </div>
+      )}
+
+      {toastPowens && (
+        <div className={`mx-5 my-3 flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-xs font-semibold ${
+          toastPowens.tipo === 'sucesso'   ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+          toastPowens.tipo === 'cancelado' ? 'bg-slate-50 border-slate-200 text-slate-500' :
+                                             'bg-rose-50 border-rose-100 text-rose-600'
+        }`}>
+          <span>{toastPowens.msg}</span>
+          <button onClick={() => setToastPowens(null)} className="shrink-0 opacity-60 hover:opacity-100 text-xs">✕</button>
         </div>
       )}
 

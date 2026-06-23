@@ -51,7 +51,6 @@ import AdminSettings from './AdminSettings';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminClassicNav from './AdminClassicNav';
-import TOConlineAdmin from './TOConlineAdmin';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -415,18 +414,14 @@ function AdminDashboard(props) {
       {!auditWorkerId && activeTab === 'costs' && <CostReports />}
 
       {!auditWorkerId && activeTab === 'documentos' && (
-        <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} handleGenerateClientReport={handleGenerateClientReport} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} logs={logs} clientApprovals={clientApprovals} />
+        <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} />
       )}
 
       {!auditWorkerId && activeTab === 'notificacoes' && (
         <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
       )}
 
-      {!auditWorkerId && activeTab === 'toconline' && (
-        <TOConlineAdmin />
-      )}
-
-      {!auditWorkerId && activeTab === 'settings' && (
+{!auditWorkerId && activeTab === 'settings' && (
         <AdminSettings />
       )}
     </>

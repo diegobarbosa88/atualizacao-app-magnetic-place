@@ -30,7 +30,7 @@ export const AppProvider = ({ children }) => {
     const saved = localStorage.getItem('magnetic_settings');
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
+        const { geminiApiKey: _old, ...parsed } = JSON.parse(saved);
         return { ...defaults, ...parsed };
       } catch (e) {
         return defaults;
@@ -40,7 +40,8 @@ export const AppProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    localStorage.setItem('magnetic_settings', JSON.stringify(systemSettings));
+    const { geminiApiKey: _omit, ...settingsToSave } = systemSettings;
+    localStorage.setItem('magnetic_settings', JSON.stringify(settingsToSave));
     const root = document.documentElement;
     root.style.setProperty('--app-max-width', `${systemSettings.appWidth}px`);
     if (systemSettings.darkMode) {

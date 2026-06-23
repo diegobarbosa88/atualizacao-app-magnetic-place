@@ -35,7 +35,7 @@ export default function AppLayout() {
     clients, setClients, workers,
     logs,
     expenses,
-    correcoesCorrections,
+    corrections: correcoesCorrections,
     approvals,
     documents, setDocuments,
     clientApprovals,

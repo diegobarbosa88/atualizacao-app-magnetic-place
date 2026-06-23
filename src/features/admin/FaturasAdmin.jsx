@@ -5,7 +5,6 @@ import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturas/faturasUtils';
 import GmailConfigPanel from './faturas/GmailConfigPanel';
-import TOConlinePanel from './faturas/TOConlinePanel';
 import FaturaConfigPanel from './faturas/FaturaConfigPanel';
 import CelEditTd from './faturas/CelEditTd';
 import { gerarRelatorioFaturasPDF } from './faturas/faturasExport';
@@ -133,9 +132,7 @@ export default function FaturasAdmin() {
   const [cfg, setCfg] = useState(() => gmailQueryConfig || DEFAULT_GMAIL_CONFIG);
   const [importando, setImportando] = useState(false);
   const [importResult, setImportResult] = useState(null);
-  const [importandoToc, setImportandoToc] = useState(false);
-  const [importResultToc, setImportResultToc] = useState(null);
-  const [importandoComp, setImportandoComp] = useState(false);
+const [importandoComp, setImportandoComp] = useState(false);
   const [importResultComp, setImportResultComp] = useState(null);
   const [extraindo, setExtraindo] = useState(false);
   const [extraindoErros, setExtraindoErros] = useState([]);
@@ -522,15 +519,7 @@ export default function FaturasAdmin() {
         )}
       </div>
 
-      <TOConlinePanel
-        onImportDone={carregar}
-        importing={importandoToc}
-        setImporting={setImportandoToc}
-        importResult={importResultToc}
-        setImportResult={setImportResultToc}
-      />
-
-      {erro && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-2xl text-sm font-semibold">Erro: {erro}</div>}
+{erro && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-2xl text-sm font-semibold">Erro: {erro}</div>}
 
       {/* Pesquisa + filtros */}
       <div className="space-y-3">

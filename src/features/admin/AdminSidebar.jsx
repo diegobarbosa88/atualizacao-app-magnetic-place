@@ -5,7 +5,7 @@ import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, ChevronRight, ChevronDown,
-  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck,
+  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, ArrowRightLeft, Landmark, ListChecks, Truck,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 
@@ -52,15 +52,6 @@ const MENU_STRUCTURE = [
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },
   { id: 'costs', label: 'Custos', icon: Wallet },
-  {
-    id: 'toconline', label: 'TOConline', icon: BookOpen,
-    subtabs: [
-      { id: 'toc-documentos', label: 'Documentos',  icon: FileText,  path: '/admin/toconline?subtab=documentos', color: 'blue' },
-      { id: 'toc-clientes',   label: 'Clientes',    icon: Users,     path: '/admin/toconline?subtab=clientes',   color: 'blue' },
-      { id: 'toc-artigos',    label: 'Artigos',      icon: Receipt,   path: '/admin/toconline?subtab=artigos',    color: 'blue' },
-      { id: 'toc-relatorios', label: 'Relatórios',  icon: BarChart2, path: '/admin/toconline?subtab=relatorios', color: 'blue' },
-    ],
-  },
   { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 

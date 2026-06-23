@@ -1,6 +1,33 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
-import { Loader2, RefreshCw, ExternalLink, Landmark, Filter, ChevronDown, ChevronUp, Trash2, Settings, X, Save, Eye } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, Landmark, Filter, ChevronDown, ChevronUp, Trash2, Settings, X, Save, Eye, Link2, Unlink, Building2, ArrowDownUp, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+
+// ─── Helpers Powens ──────────────────────────────────────────────────────────
+
+const BANCOS_POWENS = ['novobanco', 'santander'];
+
+const BANCO_LABEL = { novobanco: 'NovoBanco', santander: 'Santander' };
+
+const CONEXAO_BADGE = {
+  ativa:                    'bg-emerald-50 text-emerald-700 border-emerald-200',
+  pendente:                 'bg-amber-50 text-amber-700 border-amber-200',
+  cancelado_pelo_utilizador:'bg-slate-100 text-slate-500 border-slate-200',
+  erro_banco:               'bg-rose-50 text-rose-700 border-rose-200',
+  erro:                     'bg-rose-50 text-rose-700 border-rose-200',
+  inativa:                  'bg-slate-100 text-slate-400 border-slate-200',
+};
+
+const CONEXAO_ICON = {
+  ativa:   CheckCircle2,
+  pendente: Clock,
+  erro_banco: AlertCircle,
+  erro:    AlertCircle,
+};
+
+function formatSaldo(s) {
+  if (s == null) return '—';
+  return Number(s).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+}
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -65,6 +92,22 @@ function monthLabel(key) {
 
 export default function MovimentacoesBancariasTab() {
   const { supabase } = useApp();
+
+  // ── Tab activa ──────────────────────────────────────────────────────────────
+  const [abaActiva, setAbaActiva] = useState('powens'); // 'powens' | 'gmail'
+
+  // ── Powens: conexões e movimentos ───────────────────────────────────────────
+  const [conexoes, setConexoes] = useState([]);
+  const [loadingConexoes, setLoadingConexoes] = useState(false);
+  const [conectando, setConectando] = useState(null); // banco a ligar
+  const [sincronizando, setSincronizando] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
+  const [toastPowens, setToastPowens] = useState(null); // { tipo, msg }
+  const [movimentosPowens, setMovimentosPowens] = useState([]);
+  const [loadingMovPowens, setLoadingMovPowens] = useState(false);
+  const [filtroBancoPowens, setFiltroBancoPowens] = useState('');
+
+  // ── Gmail comprovativos ─────────────────────────────────────────────────────
   const [movs, setMovs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
@@ -75,7 +118,7 @@ export default function MovimentacoesBancariasTab() {
   const [collapsedMonths, setCollapsedMonths] = useState(new Set());
   const [apagandoId, setApagandoId] = useState(null);
 
-  // Config panel
+  // Config panel Gmail
   const [configOpen, setConfigOpen] = useState(false);
   const [config, setConfig] = useState(loadConfig);
   const [draftConfig, setDraftConfig] = useState(loadConfig);
@@ -83,6 +126,108 @@ export default function MovimentacoesBancariasTab() {
 
   const queryPreview = useMemo(() => buildGmailQuery(draftConfig), [draftConfig]);
   const activeQuery = useMemo(() => buildGmailQuery(config), [config]);
+
+  // ── Powens: carregar conexões ───────────────────────────────────────────────
+  const carregarConexoes = useCallback(async () => {
+    if (!supabase) return;
+    setLoadingConexoes(true);
+    try {
+      const { data } = await supabase
+        .from('conexoes_bancarias')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      setConexoes(data || []);
+    } finally {
+      setLoadingConexoes(false);
+    }
+  }, [supabase]);
+
+  // ── Powens: carregar movimentos ─────────────────────────────────────────────
+  const carregarMovimentosPowens = useCallback(async () => {
+    if (!supabase) return;
+    setLoadingMovPowens(true);
+    try {
+      const query = supabase
+        .from('movimentos_bancarios')
+        .select('*')
+        .order('data', { ascending: false })
+        .limit(500);
+      if (filtroBancoPowens) query.eq('banco', filtroBancoPowens);
+      const { data } = await query;
+      setMovimentosPowens(data || []);
+    } finally {
+      setLoadingMovPowens(false);
+    }
+  }, [supabase, filtroBancoPowens]);
+
+  useEffect(() => { carregarConexoes(); }, [carregarConexoes]);
+  useEffect(() => { if (abaActiva === 'powens') carregarMovimentosPowens(); }, [abaActiva, carregarMovimentosPowens]);
+
+  // ── Callback Powens ─────────────────────────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const powensParam = params.get('powens');
+    const banco = params.get('banco') || '';
+    if (!powensParam) return;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    if (powensParam === 'sucesso') {
+      setToastPowens({ tipo: 'sucesso', msg: `Conta ${BANCO_LABEL[banco] || banco} conectada com sucesso.` });
+      carregarConexoes();
+    } else if (powensParam === 'cancelado') {
+      setToastPowens({ tipo: 'cancelado', msg: 'Ligação cancelada pelo utilizador.' });
+    } else if (powensParam === 'erro_banco') {
+      setToastPowens({ tipo: 'erro', msg: 'Erro técnico reportado pelo banco. Tente novamente.' });
+    } else {
+      setToastPowens({ tipo: 'erro', msg: `Resultado inesperado: ${powensParam}` });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Conectar banco via Powens Webview ───────────────────────────────────────
+  const handleConectar = async (banco) => {
+    setConectando(banco);
+    try {
+      const res = await fetch('/api/powens/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ banco }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Erro ao iniciar ligação');
+      window.location.href = d.redirect_url;
+    } catch (e) {
+      alert(e.message);
+      setConectando(null);
+    }
+  };
+
+  // ── Sincronizar movimentos via Powens AIS ───────────────────────────────────
+  const handleSincronizar = async () => {
+    setSincronizando(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/powens/sync', { method: 'POST' });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Erro na sincronização');
+      setSyncResult(d);
+      await carregarMovimentosPowens();
+      await carregarConexoes();
+    } catch (e) {
+      setSyncResult({ error: e.message });
+    } finally {
+      setSincronizando(false);
+    }
+  };
+
+  // ── Dados agrupados movimentos Powens ───────────────────────────────────────
+  const movPowensGrouped = useMemo(() => {
+    const groups = {};
+    movimentosPowens.forEach(m => {
+      const key = monthKey(m.data);
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(m);
+    });
+    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
+  }, [movimentosPowens]);
 
   const carregarMovs = async () => {
     if (!supabase) return;
@@ -195,10 +340,226 @@ export default function MovimentacoesBancariasTab() {
 
   return (
     <div className="space-y-5">
+
+      {/* ── Toast Powens ─────────────────────────────────────────────────────── */}
+      {toastPowens && (
+        <div className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border text-xs font-semibold ${
+          toastPowens.tipo === 'sucesso'   ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+          toastPowens.tipo === 'cancelado' ? 'bg-slate-50 border-slate-200 text-slate-500' :
+                                             'bg-rose-50 border-rose-200 text-rose-600'
+        }`}>
+          <span>{toastPowens.msg}</span>
+          <button onClick={() => setToastPowens(null)} className="shrink-0 opacity-60 hover:opacity-100">✕</button>
+        </div>
+      )}
+
+      {/* ── Painel Conexões Bancárias (Powens) ──────────────────────────────── */}
+      <div className="border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="px-5 py-3 bg-slate-50 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Building2 size={14} className="text-slate-500" />
+            <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Contas Bancárias (Powens)</span>
+            {loadingConexoes && <Loader2 size={12} className="animate-spin text-slate-400" />}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSincronizar}
+              disabled={sincronizando || !conexoes.some(c => c.estado === 'ativa')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black bg-sky-600 text-white hover:bg-sky-700 transition-all disabled:opacity-50"
+            >
+              <ArrowDownUp size={12} className={sincronizando ? 'animate-spin' : ''} />
+              {sincronizando ? 'A sincronizar...' : 'Sincronizar'}
+            </button>
+            <button
+              onClick={carregarConexoes}
+              disabled={loadingConexoes}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={loadingConexoes ? 'animate-spin' : ''} />
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 py-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {BANCOS_POWENS.map(banco => {
+            const cx = conexoes.find(c => c.banco === banco);
+            const estado = cx?.estado || 'desconectado';
+            const IconEstado = CONEXAO_ICON[estado] || Unlink;
+            return (
+              <div key={banco} className={`flex items-center justify-between gap-3 p-3 rounded-xl border ${cx ? CONEXAO_BADGE[estado] || 'border-slate-100 bg-white' : 'border-dashed border-slate-200 bg-slate-50'}`}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <IconEstado size={14} className="shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-black">{BANCO_LABEL[banco]}</p>
+                    {cx ? (
+                      <p className="text-[10px] opacity-75 capitalize">
+                        {estado.replace(/_/g, ' ')}
+                        {cx.ultima_sincronizacao && ` · ${new Date(cx.ultima_sincronizacao).toLocaleDateString('pt-PT')}`}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] opacity-60">Não conectado</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {cx?.saldos?.length > 0 && (
+                    <span className="text-[10px] font-black">
+                      {formatSaldo(cx.saldos.reduce((s, a) => s + Number(a.saldo || 0), 0))}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleConectar(banco)}
+                    disabled={conectando === banco}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black transition-all ${
+                      estado === 'ativa'
+                        ? 'bg-white/60 hover:bg-white border border-current'
+                        : 'bg-white/80 hover:bg-white border border-current'
+                    }`}
+                  >
+                    {conectando === banco
+                      ? <Loader2 size={10} className="animate-spin" />
+                      : <Link2 size={10} />}
+                    {estado === 'ativa' ? 'Renovar' : 'Conectar'}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Resultado da sincronização */}
+        {syncResult && (
+          <div className={`mx-5 mb-4 px-4 py-2.5 rounded-xl text-[11px] font-bold border ${syncResult.error ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-sky-50 border-sky-100 text-sky-700'}`}>
+            {syncResult.error
+              ? `Erro: ${syncResult.error}`
+              : syncResult.resultados?.map((r, i) => (
+                  <span key={i} className="mr-3">
+                    {BANCO_LABEL[r.banco] || r.banco}: {r.ok ? `${r.transacoes} transacções, ${r.contas} contas` : `erro — ${r.erro}`}
+                  </span>
+                ))
+            }
+          </div>
+        )}
+      </div>
+
+      {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        {[
+          { id: 'powens', label: 'Movimentos Bancários' },
+          { id: 'gmail',  label: 'Comprovativos Gmail' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setAbaActiva(tab.id)}
+            className={`px-4 py-1.5 rounded-lg text-[11px] font-black transition-all ${abaActiva === tab.id ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ══ TAB: Movimentos Powens ══════════════════════════════════════════════ */}
+      {abaActiva === 'powens' && (
+        <div className="space-y-4">
+          {/* Filtros */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight flex-1">Movimentos Bancários</h4>
+            <div className="relative">
+              <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <select
+                value={filtroBancoPowens}
+                onChange={e => setFiltroBancoPowens(e.target.value)}
+                className="pl-8 pr-3 py-2 text-[11px] font-bold border border-slate-200 rounded-xl bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-300"
+              >
+                <option value="">Todos os bancos</option>
+                {BANCOS_POWENS.map(b => <option key={b} value={b}>{BANCO_LABEL[b]}</option>)}
+              </select>
+            </div>
+            <button
+              onClick={carregarMovimentosPowens}
+              disabled={loadingMovPowens}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-60"
+            >
+              <RefreshCw size={13} className={loadingMovPowens ? 'animate-spin' : ''} /> Atualizar
+            </button>
+          </div>
+
+          {loadingMovPowens && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 size={24} className="animate-spin text-slate-400" />
+            </div>
+          )}
+
+          {!loadingMovPowens && movimentosPowens.length === 0 && (
+            <div className="text-center py-12">
+              <ArrowDownUp size={32} className="text-slate-200 mx-auto mb-3" />
+              <p className="text-sm font-black text-slate-400">Nenhum movimento sincronizado</p>
+              <p className="text-[11px] text-slate-300 mt-1">Conecte uma conta bancária e clique em Sincronizar.</p>
+            </div>
+          )}
+
+          {!loadingMovPowens && movPowensGrouped.map(([key, items]) => {
+            const total = items.reduce((s, m) => s + Number(m.valor || 0), 0);
+            const isCollapsed = collapsedMonths.has('p:' + key);
+            return (
+              <div key={key} className="border border-slate-100 rounded-2xl overflow-hidden">
+                <button
+                  onClick={() => toggleMonth('p:' + key)}
+                  className="w-full flex items-center justify-between px-5 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-black text-slate-700 uppercase tracking-wide">{monthLabel(key)}</span>
+                    <span className="text-[10px] font-bold text-slate-400">{items.length} mov.</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`text-sm font-black ${total < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatValor(total)}</span>
+                    {isCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
+                  </div>
+                </button>
+
+                {!isCollapsed && (
+                  <div className="divide-y divide-slate-50">
+                    {items.map(mov => (
+                      <div key={mov.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors">
+                        <div className="w-20 shrink-0">
+                          <p className="text-[10px] font-black text-slate-500">{formatDatePT(mov.data)}</p>
+                        </div>
+                        <div className="shrink-0">
+                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-sky-50 text-sky-600 border border-sky-100">
+                            {BANCO_LABEL[mov.banco] || mov.banco}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-black text-slate-800 truncate">{mov.descricao || '—'}</p>
+                          {mov.tipo && (
+                            <p className="text-[10px] text-slate-400 capitalize">{mov.tipo}</p>
+                          )}
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <p className={`text-sm font-black ${Number(mov.valor) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {formatValor(mov.valor)}
+                          </p>
+                          {mov.estado && mov.estado !== 'active' && (
+                            <p className="text-[9px] text-amber-500 uppercase font-bold">{mov.estado}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ══ TAB: Gmail comprovativos ═══════════════════════════════════════════ */}
+      {abaActiva === 'gmail' && (
+      <div className="space-y-5">
       {/* Header / actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Movimentações Bancárias</h4>
+          <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight">Comprovativos Gmail</h4>
           <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Comprovativos importados do NovoBanco via email</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -502,6 +863,9 @@ export default function MovimentacoesBancariasTab() {
           </div>
         );
       })}
+      </div>
+      )}
+
     </div>
   );
 }

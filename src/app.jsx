@@ -47,7 +47,7 @@ export default function App() {
     clients, setClients, workers,
     logs,
     expenses,
-    correcoesCorrections,
+    corrections: correcoesCorrections,
     approvals,
     documents, setDocuments,
     clientApprovals,
