@@ -192,13 +192,12 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    const userId = conexao.powens_user_id;
+    const connectionId = conexao.powens_connection_id;
+    if (!connectionId) {
+      throw new Error('Nenhuma conta bancária conectada. Conecte primeiro uma conta em Admin → Banco.');
+    }
 
-    // POST /users/{id}/transfers — endpoint PIS user-level (requer user_id)
-    const transfer = await powensRequest('POST', `/users/${userId}/transfers`, {
-      account_id: conexao.powens_connection_id
-        ? parseInt(conexao.powens_connection_id, 10)
-        : undefined,
+    const transferBody = {
       recipient: {
         iban: f.fornecedor_iban.replace(/\s/g, ''),
         label: (f.fornecedor || 'Fornecedor').slice(0, 70),
@@ -206,19 +205,46 @@ async function handlePay(req, res) {
       amount: Number(f.valor),
       currency: 'EUR',
       label: descricaoFinal.slice(0, 140),
-    });
+    };
 
-    const powensTransferId = String(transfer.id);
+    // Tentar endpoints por ordem: connection-level primeiro, depois user-level se user_id disponível
+    const endpointsCandidatos = [
+      `/connections/${connectionId}/transfers`,
+      `/connections/${connectionId}/initiations`,
+      ...(conexao.powens_user_id ? [`/users/${conexao.powens_user_id}/transfers`] : []),
+    ];
 
-    // Guardar transfer_id
-    await supabase
-      .from('powens_pagamentos_pendentes')
-      .update({ powens_transfer_id: powensTransferId })
-      .eq('id', pagamento.id);
+    let transfer;
+    let erroFinal;
+    for (const endpoint of endpointsCandidatos) {
+      try {
+        transfer = await powensRequest('POST', endpoint, transferBody);
+        console.info('[powens/pay] OK via', endpoint);
+        break;
+      } catch (e) {
+        erroFinal = e;
+        console.warn('[powens/pay] falhou', endpoint, ':', e.message);
+      }
+    }
 
-    // Webview PIS com transfer_id (fluxo de aprovação)
+    if (!transfer) throw erroFinal || new Error('Nenhum endpoint PIS disponível neste sandbox');
+
+    const powensTransferId = transfer.id ? String(transfer.id) : null;
+
+    if (powensTransferId) {
+      await supabase
+        .from('powens_pagamentos_pendentes')
+        .update({ powens_transfer_id: powensTransferId })
+        .eq('id', pagamento.id);
+    }
+
     const redirect_url = transfer.webview_url
-      || buildWebviewUrl('pay', { transfer_id: powensTransferId, state });
+      || transfer.redirect_url
+      || (powensTransferId ? buildWebviewUrl('pay', { transfer_id: powensTransferId, state }) : null);
+
+    if (!redirect_url) {
+      throw new Error(`Powens não devolveu URL de pagamento. Resposta: ${JSON.stringify(transfer)}`);
+    }
 
     return res.status(200).json({
       redirect_url,
