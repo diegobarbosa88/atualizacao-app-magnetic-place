@@ -105,7 +105,7 @@ async function handlePay(req, res) {
   try {
     const { data: faturas, error: fetchErr } = await supabase
       .from('faturas_centro_documentos')
-      .select('id, fornecedor_nome, fornecedor_iban, valor_total, descricao, estado_pagamento')
+      .select('id, fornecedor, fornecedor_iban, valor, descricao, estado_pagamento')
       .in('id', faturas_ids);
 
     if (fetchErr) throw new Error(`Supabase fetch faturas: ${fetchErr.message}`);
@@ -119,15 +119,15 @@ async function handlePay(req, res) {
           error: `Fatura ${f.id} sem IBAN do fornecedor. Actualize o registo antes de pagar.`,
         });
       }
-      if (!f.valor_total || Number(f.valor_total) <= 0) {
-        return res.status(400).json({ error: `Fatura ${f.id} com valor inválido: ${f.valor_total}` });
+      if (!f.valor || Number(f.valor) <= 0) {
+        return res.status(400).json({ error: `Fatura ${f.id} com valor inválido: ${f.valor}` });
       }
     }
 
-    const totalLote = faturas.reduce((s, f) => s + Number(f.valor_total), 0);
+    const totalLote = faturas.reduce((s, f) => s + Number(f.valor), 0);
     const descricaoFinal = descricaoOverride
       || (faturas.length === 1
-        ? (faturas[0].descricao || `Pagamento ${faturas[0].fornecedor_nome}`)
+        ? (faturas[0].descricao || `Pagamento ${faturas[0].fornecedor}`)
         : `Magnetic Place — ${faturas.length} faturas`);
 
     const { data: conexao } = await supabase
@@ -154,9 +154,9 @@ async function handlePay(req, res) {
         account_id: parseInt(conexao.powens_connection_id, 10),
         recipient: {
           iban: f.fornecedor_iban.replace(/\s/g, ''),
-          label: (f.fornecedor_nome || 'Fornecedor').slice(0, 70),
+          label: (f.fornecedor || 'Fornecedor').slice(0, 70),
         },
-        amount: Number(f.valor_total),
+        amount: Number(f.valor),
         currency: 'EUR',
         label: descricaoFinal.slice(0, 140),
       });
@@ -168,11 +168,11 @@ async function handlePay(req, res) {
           account_id: parseInt(conexao.powens_connection_id, 10),
           recipient: {
             iban: f.fornecedor_iban.replace(/\s/g, ''),
-            label: (f.fornecedor_nome || 'Fornecedor').slice(0, 70),
+            label: (f.fornecedor || 'Fornecedor').slice(0, 70),
           },
-          amount: Number(f.valor_total),
+          amount: Number(f.valor),
           currency: 'EUR',
-          label: (f.descricao || `Pagamento ${f.fornecedor_nome}`).slice(0, 140),
+          label: (f.descricao || `Pagamento ${f.fornecedor}`).slice(0, 140),
         });
         ids.push(String(td.id));
       }
