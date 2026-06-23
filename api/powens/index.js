@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { buildWebviewUrl, powensRequest } from './_client.js';
+import { buildWebviewUrl, powensRequest, CALLBACK_URI } from './_client.js';
 
 // IDs de conector Powens para bancos PT suportados
 // Confirmado via API: GET /connectors ou painel Powens Dashboard
@@ -190,15 +190,32 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    // Webview Pay by Bank — detalhes do pagamento como query params
-    const redirect_url = buildWebviewUrl('pay', {
-      state,
-      amount: String(Number(f.valor).toFixed(2)),
-      currency: 'EUR',
+    // POST /payment-requests → Powens devolve o URL correcto do webview PIS
+    const paymentReq = await powensRequest('POST', '/payment-requests', {
       recipient_iban: f.fornecedor_iban.replace(/\s/g, ''),
       recipient_name: (f.fornecedor || 'Fornecedor').slice(0, 70),
+      amount: Number(f.valor),
+      currency: 'EUR',
       label: descricaoFinal.slice(0, 140),
+      redirect_uri: CALLBACK_URI,
+      state,
     });
+
+    const redirect_url = paymentReq.webview_url
+      || paymentReq.redirect_url
+      || paymentReq.url;
+
+    if (!redirect_url) {
+      throw new Error(`Powens não devolveu URL de pagamento. Resposta: ${JSON.stringify(paymentReq)}`);
+    }
+
+    // Guardar transfer_id se a API o devolver imediatamente
+    if (paymentReq.id) {
+      await supabase
+        .from('powens_pagamentos_pendentes')
+        .update({ powens_transfer_id: String(paymentReq.id) })
+        .eq('id', pagamento.id);
+    }
 
     return res.status(200).json({
       redirect_url,
