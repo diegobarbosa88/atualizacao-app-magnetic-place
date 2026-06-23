@@ -168,10 +168,8 @@ async function handlePay(req, res) {
       .limit(1)
       .maybeSingle();
 
-    if (!conexao?.powens_user_id) {
-      throw new Error(
-        'powens_user_id em falta — reconecte o banco em Admin → Banco para obter o ID de utilizador Powens.'
-      );
+    if (!conexao?.powens_connection_id) {
+      throw new Error('Nenhuma conta bancária conectada. Conecte primeiro uma conta em Admin → Banco.');
     }
 
     const { data: pagamento, error: insertErr } = await supabase
