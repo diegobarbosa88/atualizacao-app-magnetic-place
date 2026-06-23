@@ -41,26 +41,27 @@ export async function getAppToken() {
 
   // Tentativas em ordem: endpoints × encodings
   // Powens sandbox pode usar /auth/token ou /auth/token/new, JSON ou form-encoded
+  // /auth/token com grant_type=client_credentials — scope obrigatório na Powens
   const tentativas = [
     {
-      path: '/auth/token/new',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET }),
-    },
-    {
       path: '/auth/token',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }),
-    },
-    {
-      path: '/auth/token/new',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET }).toString(),
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'all' }),
     },
     {
       path: '/auth/token',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }).toString(),
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'all' }).toString(),
+    },
+    {
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'connections accounts transactions transfers' }),
+    },
+    {
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'connections accounts transactions transfers' }).toString(),
     },
   ];
 
