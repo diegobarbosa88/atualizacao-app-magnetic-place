@@ -36,21 +36,48 @@ export async function getAppToken() {
     throw new Error('POWENS_DOMAIN não configurado');
   }
 
-  const tokenUrl = `${POWENS_BASE}/auth/token/new`;
-  console.info('[powens/_client] getAppToken →', tokenUrl);
-
-  const res = await fetch(tokenUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET }),
+  // client_id é inteiro na API Powens; grant_type obrigatório na versão actual
+  const clientIdInt = parseInt(CLIENT_ID, 10) || CLIENT_ID;
+  const body = JSON.stringify({
+    client_id: clientIdInt,
+    client_secret: CLIENT_SECRET,
+    grant_type: 'client_credentials',
   });
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Powens auth/token/new falhou (${res.status}) URL=${tokenUrl} : ${txt}`);
+  // Tentar /auth/token primeiro (endpoint actual); fallback para /auth/token/new (legacy)
+  let access_token;
+  for (const path of ['/auth/token', '/auth/token/new']) {
+    const tokenUrl = `${POWENS_BASE}${path}`;
+    console.info('[powens/_client] getAppToken →', tokenUrl);
+
+    const res = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+
+    if (res.status === 404) {
+      console.warn('[powens/_client] 404 em', tokenUrl, '— a tentar próximo endpoint');
+      continue;
+    }
+
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(`Powens ${path} falhou (${res.status}): ${txt}`);
+    }
+
+    const data = await res.json();
+    // A Powens pode devolver access_token ou token
+    access_token = data.access_token ?? data.token;
+    if (!access_token) {
+      throw new Error(`Powens ${path} não devolveu token. Resposta: ${JSON.stringify(data)}`);
+    }
+    break;
   }
 
-  const { access_token } = await res.json();
+  if (!access_token) {
+    throw new Error('Nenhum endpoint Powens de autenticação respondeu com sucesso');
+  }
   _cachedAppToken = access_token;
   _tokenExpiresAt = Date.now() + 50 * 60 * 1000;
   return access_token;
