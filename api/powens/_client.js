@@ -41,27 +41,32 @@ export async function getAppToken() {
 
   // Tentativas em ordem: endpoints × encodings
   // Powens sandbox pode usar /auth/token ou /auth/token/new, JSON ou form-encoded
-  // /auth/token com grant_type=client_credentials — scope obrigatório na Powens
+  // /auth/token com grant_type=client_credentials
+  // scope=all e scopes de pagamento são rejeitados pela Powens com INVALIDVALUE.
+  // Tentativas em ordem: sem scope (sandbox com acesso total por defeito),
+  // depois apenas os scopes de agregação AIS (accounts + transactions).
   const tentativas = [
     {
+      // Sem scope — sandbox Powens pode ter acesso total por defeito
       path: '/auth/token',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'all' }),
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }),
     },
     {
       path: '/auth/token',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'all' }).toString(),
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }).toString(),
     },
     {
+      // Apenas scopes AIS (leitura de contas e transações, sem pagamentos)
       path: '/auth/token',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'connections accounts transactions transfers' }),
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'accounts transactions' }),
     },
     {
       path: '/auth/token',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'connections accounts transactions transfers' }).toString(),
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'accounts transactions' }).toString(),
     },
   ];
 
