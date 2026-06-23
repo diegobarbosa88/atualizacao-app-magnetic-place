@@ -12,7 +12,14 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { buildWebviewUrl, powensRequest, CALLBACK_URI } from './_client.js';
+import {
+  buildWebviewUrl,
+  powensRequest,
+  powensUserRequest,
+  createPowensUser,
+  renewUserToken,
+  CALLBACK_URI,
+} from './_client.js';
 
 // IDs de conector Powens para bancos PT suportados
 // Confirmado via API: GET /connectors ou painel Powens Dashboard
@@ -61,6 +68,10 @@ async function handleConnect(req, res) {
   try {
     const state = crypto.randomUUID();
 
+    // Criar utilizador Powens ANTES do webview — assim sabemos o id_user logo aqui.
+    // O userToken é passado ao webview via access_token para associar a conexão ao utilizador.
+    const { userId: powensUserId, userToken } = await createPowensUser();
+
     const { data: conexao, error: upsertErr } = await supabase
       .from('conexoes_bancarias')
       .upsert(
@@ -68,6 +79,7 @@ async function handleConnect(req, res) {
           banco,
           estado: 'pendente',
           powens_state: state,
+          powens_user_id: powensUserId,   // Guardado ANTES do webview
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'banco' },
@@ -77,10 +89,11 @@ async function handleConnect(req, res) {
 
     if (upsertErr) throw new Error(`Supabase upsert: ${upsertErr.message}`);
 
-    // Webview sem user token — Powens cria sessão nova e devolve connection_id no callback
+    // Webview com access_token do utilizador criado — a conexão fica associada a este user
     const redirect_url = buildWebviewUrl('connect', {
       state,
       'connector_ids[]': CONNECTOR_IDS[banco],
+      access_token: userToken,
     });
 
     return res.status(200).json({ redirect_url, conexao_id: conexao.id });
@@ -190,9 +203,8 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    const connectionId = conexao.powens_connection_id;
-    if (!connectionId) {
-      throw new Error('Nenhuma conta bancária conectada. Conecte primeiro uma conta em Admin → Banco.');
+    if (!conexao.powens_user_id) {
+      throw new Error('powens_user_id em falta — reconecte o banco em Admin → Banco para obter o ID de utilizador Powens.');
     }
 
     const transferBody = {
@@ -205,27 +217,17 @@ async function handlePay(req, res) {
       label: descricaoFinal.slice(0, 140),
     };
 
-    // Tentar endpoints por ordem: connection-level primeiro, depois user-level se user_id disponível
-    const endpointsCandidatos = [
-      `/connections/${connectionId}/transfers`,
-      `/connections/${connectionId}/initiations`,
-      ...(conexao.powens_user_id ? [`/users/${conexao.powens_user_id}/transfers`] : []),
-    ];
+    // Obter user token e iniciar transferência com autenticação de utilizador
+    const userToken = await renewUserToken(conexao.powens_user_id);
+    console.info('[powens/pay] user token obtido para user_id:', conexao.powens_user_id);
 
-    let transfer;
-    let erroFinal;
-    for (const endpoint of endpointsCandidatos) {
-      try {
-        transfer = await powensRequest('POST', endpoint, transferBody);
-        console.info('[powens/pay] OK via', endpoint);
-        break;
-      } catch (e) {
-        erroFinal = e;
-        console.warn('[powens/pay] falhou', endpoint, ':', e.message);
-      }
-    }
-
-    if (!transfer) throw erroFinal || new Error('Nenhum endpoint PIS disponível neste sandbox');
+    const transfer = await powensUserRequest(
+      'POST',
+      `/users/${conexao.powens_user_id}/transfers`,
+      userToken,
+      transferBody,
+    );
+    console.info('[powens/pay] transferência iniciada:', transfer?.id);
 
     const powensTransferId = transfer.id ? String(transfer.id) : null;
 

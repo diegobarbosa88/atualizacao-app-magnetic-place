@@ -104,47 +104,75 @@ export async function getAppToken() {
 }
 
 /**
- * Cria (ou recupera) um utilizador Powens e devolve o seu user_token.
- * @param {string|null} powensUserId  ID já guardado no Supabase (null = criar novo)
- * @returns {{ userToken: string, userId: string }}
+ * Cria um novo utilizador Powens via POST /auth/init.
+ * Devolve { userId, userToken } — o userToken é permanente (client_id + secret enviados).
  */
-export async function getUserToken(powensUserId = null) {
-  const appToken = await getAppToken();
-
-  if (!powensUserId) {
-    // Criar utilizador anónimo Powens
-    const res = await fetch(`${POWENS_BASE}/users/`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${appToken}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!res.ok) {
-      const txt = await res.text();
-      throw new Error(`Powens criar utilizador falhou (${res.status}): ${txt}`);
-    }
-    const user = await res.json();
-    powensUserId = String(user.id);
-  }
-
-  // Obter token do utilizador
-  const res = await fetch(`${POWENS_BASE}/users/${powensUserId}/token`, {
+export async function createPowensUser() {
+  const clientIdInt = parseInt(CLIENT_ID, 10) || CLIENT_ID;
+  const res = await fetch(`${POWENS_BASE}/auth/init`, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${appToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ client_id: CLIENT_ID }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET }),
   });
-
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Powens user token falhou (${res.status}): ${txt}`);
+    throw new Error(`Powens /auth/init falhou (${res.status}): ${txt}`);
   }
+  // Resposta: { auth_token, type, id_user, expires_in }
+  const data = await res.json();
+  if (!data.id_user || !data.auth_token) {
+    throw new Error(`Powens /auth/init resposta inesperada: ${JSON.stringify(data)}`);
+  }
+  console.info('[powens/_client] utilizador criado, id_user:', data.id_user);
+  return { userId: String(data.id_user), userToken: data.auth_token };
+}
 
-  const { access_token } = await res.json();
-  return { userToken: access_token, userId: powensUserId };
+/**
+ * Obtém token de utilizador existente via POST /auth/renew.
+ * Alternativa ao createPowensUser quando o utilizador já existe.
+ */
+export async function renewUserToken(userId) {
+  const clientIdInt = parseInt(CLIENT_ID, 10) || CLIENT_ID;
+  const res = await fetch(`${POWENS_BASE}/auth/renew`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'client_credentials',
+      client_id: clientIdInt,
+      client_secret: CLIENT_SECRET,
+      id_user: parseInt(userId, 10),
+    }),
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Powens /auth/renew falhou (${res.status}): ${txt}`);
+  }
+  const data = await res.json();
+  const token = data.access_token || data.auth_token;
+  if (!token) throw new Error(`Powens /auth/renew sem token: ${JSON.stringify(data)}`);
+  return token;
+}
+
+/**
+ * Chamada autenticada à API Powens como utilizador (user token).
+ */
+export async function powensUserRequest(method, path, userToken, body = null) {
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${userToken}`,
+      'Content-Type': 'application/json',
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${POWENS_BASE}${path}`, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      `Powens ${method} ${path} falhou (${res.status}): ${data.message || JSON.stringify(data)}`,
+    );
+  }
+  return data;
 }
 
 /**
@@ -197,4 +225,4 @@ export async function powensRequest(method, path, body = null) {
   return data;
 }
 
-export { APP_URL, CLIENT_ID, DOMAIN };
+export { APP_URL, CLIENT_ID, CLIENT_SECRET, DOMAIN };
