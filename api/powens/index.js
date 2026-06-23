@@ -156,13 +156,14 @@ async function handlePay(req, res) {
         ? (faturas[0].descricao || `Pagamento ${faturas[0].fornecedor}`)
         : `Magnetic Place — ${faturas.length} faturas`);
 
-    // Para PIS puro (Pay by Bank), a transferência é criada ao nível da app
-    // com token de aplicação (scope=payments). Não é necessário powens_user_id
-    // — o utilizador autentica e autoriza directamente no webview Powens.
-    let powensTransferId;
-    let bancoDaConexao = null;
+    // Pay by Bank (PIS puro): NÃO pré-criamos transferência via API.
+    // Os detalhes do pagamento vão directamente como parâmetros no webview.
+    // O webview Powens cria a transferência internamente após o utilizador autenticar.
+    const f = faturas[0]; // Para lotes, usa apenas a primeira (PIS single-transfer)
 
-    // Obter banco activo (opcional — apenas para registar no histórico)
+    const state = crypto.randomUUID();
+
+    // Obter banco activo (opcional — para registar no histórico)
     const { data: conexao } = await supabase
       .from('conexoes_bancarias')
       .select('banco')
@@ -170,42 +171,16 @@ async function handlePay(req, res) {
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
-    bancoDaConexao = conexao?.banco || null;
-
-    // Criar transferência ao nível da app (endpoint PIS sem user_id)
-    const transferPayloads = faturas.map(f => ({
-      recipient: {
-        iban: f.fornecedor_iban.replace(/\s/g, ''),
-        label: (f.fornecedor || 'Fornecedor').slice(0, 70),
-      },
-      amount: Number(f.valor),
-      currency: 'EUR',
-      label: (f.descricao || descricaoFinal).slice(0, 140),
-    }));
-
-    // Powens PIS: POST /transfers (app-level, sem /users/{id})
-    const firstTransfer = await powensRequest('POST', '/transfers', transferPayloads[0]);
-    powensTransferId = String(firstTransfer.id);
-
-    // Se lote com múltiplas faturas, criar as restantes
-    for (let i = 1; i < transferPayloads.length; i++) {
-      await powensRequest('POST', '/transfers', transferPayloads[i]).catch(e =>
-        console.warn('[powens/pay] transferência extra:', e.message)
-      );
-    }
-
-    const state = crypto.randomUUID();
 
     const { data: pagamento, error: insertErr } = await supabase
       .from('powens_pagamentos_pendentes')
       .insert({
-        powens_transfer_id: powensTransferId,
         powens_state: state,
         faturas_ids: faturas_ids || [],
         faturas_snapshot: faturas,
         total: totalLote,
         descricao: descricaoFinal,
-        banco: bancoDaConexao,
+        banco: conexao?.banco || null,
         estado: 'pendente',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -215,29 +190,20 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    // Actualiza faturas_centro_documentos se houver IDs válidos
-    if (faturas_ids?.length) {
-      await supabase
-        .from('faturas_centro_documentos')
-        .update({
-          powens_transfer_id: powensTransferId,
-          estado_pagamento: 'processando',
-          updated_at: new Date().toISOString(),
-        })
-        .in('id', faturas_ids);
-    }
-
-    // Webview PIS — sem token de utilizador; client_id já incluído por buildWebviewUrl
+    // Webview Pay by Bank — detalhes do pagamento como query params
     const redirect_url = buildWebviewUrl('pay', {
-      transfer_id: powensTransferId,
       state,
+      amount: String(Number(f.valor).toFixed(2)),
+      currency: 'EUR',
+      recipient_iban: f.fornecedor_iban.replace(/\s/g, ''),
+      recipient_name: (f.fornecedor || 'Fornecedor').slice(0, 70),
+      label: descricaoFinal.slice(0, 140),
     });
 
     return res.status(200).json({
       redirect_url,
       pagamento_id: pagamento.id,
       total: totalLote,
-      transfer_id: powensTransferId,
     });
   } catch (err) {
     console.error('[powens/pay]', err);
