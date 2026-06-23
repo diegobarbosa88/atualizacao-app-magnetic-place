@@ -156,44 +156,13 @@ async function handlePay(req, res) {
         ? (faturas[0].descricao || `Pagamento ${faturas[0].fornecedor}`)
         : `Magnetic Place — ${faturas.length} faturas`);
 
-    // Pay by Bank (PIS puro): NÃO pré-criamos transferência via API.
-    // Os detalhes do pagamento vão directamente como parâmetros no webview.
-    // O webview Powens cria a transferência internamente após o utilizador autenticar.
-    const f = faturas[0]; // Para lotes, usa apenas a primeira (PIS single-transfer)
-
+    const f = faturas[0];
     const state = crypto.randomUUID();
 
-    // Obter banco activo (opcional — para registar no histórico)
+    // Uma única query — banco + user_id + connection_id
     const { data: conexao } = await supabase
       .from('conexoes_bancarias')
-      .select('banco')
-      .eq('estado', 'ativa')
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    const { data: pagamento, error: insertErr } = await supabase
-      .from('powens_pagamentos_pendentes')
-      .insert({
-        powens_state: state,
-        faturas_ids: faturas_ids || [],
-        faturas_snapshot: faturas,
-        total: totalLote,
-        descricao: descricaoFinal,
-        banco: conexao?.banco || null,
-        estado: 'pendente',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select('id')
-      .single();
-
-    if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
-
-    // Obter user_id da conexão activa para endpoint PIS user-level
-    const { data: conexao } = await supabase
-      .from('conexoes_bancarias')
-      .select('powens_user_id, powens_connection_id')
+      .select('banco, powens_user_id, powens_connection_id')
       .eq('estado', 'ativa')
       .order('updated_at', { ascending: false })
       .limit(1)
@@ -204,6 +173,24 @@ async function handlePay(req, res) {
         'powens_user_id em falta — reconecte o banco em Admin → Banco para obter o ID de utilizador Powens.'
       );
     }
+
+    const { data: pagamento, error: insertErr } = await supabase
+      .from('powens_pagamentos_pendentes')
+      .insert({
+        powens_state: state,
+        faturas_ids: faturas_ids || [],
+        faturas_snapshot: faturas,
+        total: totalLote,
+        descricao: descricaoFinal,
+        banco: conexao.banco || null,
+        estado: 'pendente',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
     const userId = conexao.powens_user_id;
 
