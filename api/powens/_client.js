@@ -32,8 +32,14 @@ export async function getAppToken() {
   if (!CLIENT_ID || !CLIENT_SECRET) {
     throw new Error('POWENS_CLIENT_ID / POWENS_CLIENT_SECRET não configurados');
   }
+  if (!DOMAIN) {
+    throw new Error('POWENS_DOMAIN não configurado');
+  }
 
-  const res = await fetch(`${POWENS_BASE}/auth/token/new`, {
+  const tokenUrl = `${POWENS_BASE}/auth/token/new`;
+  console.info('[powens/_client] getAppToken →', tokenUrl);
+
+  const res = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET }),
@@ -41,7 +47,7 @@ export async function getAppToken() {
 
   if (!res.ok) {
     const txt = await res.text();
-    throw new Error(`Powens auth/token/new falhou (${res.status}): ${txt}`);
+    throw new Error(`Powens auth/token/new falhou (${res.status}) URL=${tokenUrl} : ${txt}`);
   }
 
   const { access_token } = await res.json();
