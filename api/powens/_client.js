@@ -3,7 +3,14 @@
  * Gere tokens de aplicação com cache e constrói URLs de webview.
  */
 
-const DOMAIN = process.env.POWENS_DOMAIN;          // ex: magneticplace
+// Sanitizar POWENS_DOMAIN: aceita "magneticplace", "magneticplace.biapi.pro"
+// ou "https://magneticplace.biapi.pro" — extrai sempre só o subdomínio
+const _rawDomain = (process.env.POWENS_DOMAIN || '')
+  .replace(/^https?:\/\//i, '')   // remover protocolo se presente
+  .replace(/\.biapi\.pro.*$/i, '') // remover sufixo .biapi.pro se presente
+  .replace(/\/$/, '');             // remover trailing slash
+const DOMAIN = _rawDomain;
+
 const CLIENT_ID = process.env.POWENS_CLIENT_ID;
 const CLIENT_SECRET = process.env.POWENS_CLIENT_SECRET;
 const APP_URL = process.env.APP_URL || 'https://trabalhador.magneticplace.pt';
