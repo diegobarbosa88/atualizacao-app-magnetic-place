@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { getUserToken, buildWebviewUrl, powensRequest } from './_client.js';
+import { getUserToken, buildWebviewUrl, powensRequest } from './_client.js'; // getUserToken usado em handlePay
 
 // IDs de conector Powens para bancos PT suportados
 // Confirmado via API: GET /connectors ou painel Powens Dashboard
@@ -44,6 +44,9 @@ export default async function handler(req, res) {
 // ── connect ───────────────────────────────────────────────────────────────────
 // Body: { banco: 'novobanco' | 'santander' }
 // Response: { redirect_url, conexao_id }
+//
+// Não requer token da API Powens — o webview aceita ligações sem user token.
+// A Powens cria uma sessão anónima; o user_id é obtido no callback via connection_id.
 async function handleConnect(req, res) {
   const { banco } = req.body || {};
 
@@ -56,14 +59,6 @@ async function handleConnect(req, res) {
   const supabase = db();
 
   try {
-    const { data: existente } = await supabase
-      .from('conexoes_bancarias')
-      .select('powens_user_id')
-      .eq('banco', banco)
-      .maybeSingle();
-
-    const { userToken, userId } = await getUserToken(existente?.powens_user_id ?? null);
-
     const state = crypto.randomUUID();
 
     const { data: conexao, error: upsertErr } = await supabase
@@ -71,7 +66,6 @@ async function handleConnect(req, res) {
       .upsert(
         {
           banco,
-          powens_user_id: userId,
           estado: 'pendente',
           powens_state: state,
           updated_at: new Date().toISOString(),
@@ -83,8 +77,8 @@ async function handleConnect(req, res) {
 
     if (upsertErr) throw new Error(`Supabase upsert: ${upsertErr.message}`);
 
+    // Webview sem user token — Powens cria sessão nova e devolve connection_id no callback
     const redirect_url = buildWebviewUrl('connect', {
-      token: userToken,
       state,
       'connector_ids[]': CONNECTOR_IDS[banco],
     });

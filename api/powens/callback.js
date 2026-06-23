@@ -86,13 +86,20 @@ export default async function handler(req, res) {
         return res.redirect(302, `${APP_URL}/admin/banco?powens=erro`);
       }
 
-      // Obter detalhes da conexão via Powens (como app-token, user é conhecido)
+      // Obter detalhes da conexão via Powens — tenta per-user se disponível, senão app-level
       let connectionDetails = null;
       try {
-        connectionDetails = await powensRequest(
-          'GET',
-          `/users/${conexao.powens_user_id}/connections/${connection_id}?expand=connector,accounts`
-        );
+        const path = conexao.powens_user_id
+          ? `/users/${conexao.powens_user_id}/connections/${connection_id}?expand=connector,accounts`
+          : `/connections/${connection_id}?expand=connector,accounts`;
+        connectionDetails = await powensRequest('GET', path);
+        // Guardar powens_user_id se ainda não estava preenchido
+        if (!conexao.powens_user_id && connectionDetails?.id_user) {
+          await supabase
+            .from('conexoes_bancarias')
+            .update({ powens_user_id: String(connectionDetails.id_user) })
+            .eq('id', conexao.id);
+        }
       } catch (e) {
         console.warn('[powens/callback] Não foi possível obter detalhes da conexão:', e.message);
       }

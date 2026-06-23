@@ -59,36 +59,32 @@ function lerCorpo(req) {
 // ── Handler principal ────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).end();
   }
 
-  // ── 1. Validação da origem via Bearer token ──────────────────────────────
-  const authHeader = req.headers['authorization'] || '';
-  const receivedToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  // ── 1. Validação Bearer — apenas comparação de string (< 1 ms) ──────────
+  const receivedToken = (req.headers['authorization'] || '')
+    .replace(/^Bearer\s+/i, '')
+    .trim();
 
-  if (!WEBHOOK_SECRET || receivedToken !== WEBHOOK_SECRET) {
-    console.warn('[webhooks/powens] Token Bearer inválido ou ausente');
-    // Devolvemos 401 mas não revelamos o motivo ao exterior
+  if (WEBHOOK_SECRET && receivedToken !== WEBHOOK_SECRET) {
+    console.warn('[webhooks/powens] Token Bearer inválido');
     return res.status(401).end();
   }
-
-  // ── 2. Ler e descomprimir corpo ──────────────────────────────────────────
-  let payload;
-  try {
-    payload = await lerCorpo(req);
-  } catch (e) {
-    console.error('[webhooks/powens] Erro ao ler corpo:', e.message);
-    return res.status(400).end();
+  if (!WEBHOOK_SECRET) {
+    console.warn('[webhooks/powens] POWENS_WEBHOOK_SECRET não configurado — a aceitar sem validação');
   }
 
-  // ── 3. Resposta 200 IMEDIATA — Powens não espera mais de ~5 s ────────────
+  // ── 2. HTTP 200 IMEDIATO ─────────────────────────────────────────────────
+  // Enviado ANTES de qualquer leitura de body ou I/O.
+  // Powens considera timeout se não receber resposta em < 5 s.
   // A função Vercel continua a executar após res.end() até maxDuration.
   res.status(200).end();
 
-  // ── 4. Processamento assíncrono após resposta enviada ────────────────────
-  _processarEvento(payload).catch(err => {
-    console.error('[webhooks/powens] Erro no processamento assíncrono:', err);
-  });
+  // ── 3. Ler body e processar de forma completamente assíncrona ────────────
+  lerCorpo(req)
+    .then(payload => _processarEvento(payload))
+    .catch(err => console.error('[webhooks/powens] Erro:', err));
 }
 
 // ── Processamento de eventos ─────────────────────────────────────────────────

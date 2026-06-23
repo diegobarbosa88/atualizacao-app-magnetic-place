@@ -36,47 +36,65 @@ export async function getAppToken() {
     throw new Error('POWENS_DOMAIN não configurado');
   }
 
-  // client_id é inteiro na API Powens; grant_type obrigatório na versão actual
+  // client_id pode ser inteiro na API Powens
   const clientIdInt = parseInt(CLIENT_ID, 10) || CLIENT_ID;
-  const body = JSON.stringify({
-    client_id: clientIdInt,
-    client_secret: CLIENT_SECRET,
-    grant_type: 'client_credentials',
-  });
 
-  // Tentar /auth/token primeiro (endpoint actual); fallback para /auth/token/new (legacy)
-  let access_token;
-  for (const path of ['/auth/token', '/auth/token/new']) {
-    const tokenUrl = `${POWENS_BASE}${path}`;
-    console.info('[powens/_client] getAppToken →', tokenUrl);
-
-    const res = await fetch(tokenUrl, {
-      method: 'POST',
+  // Tentativas em ordem: endpoints × encodings
+  // Powens sandbox pode usar /auth/token ou /auth/token/new, JSON ou form-encoded
+  const tentativas = [
+    {
+      path: '/auth/token/new',
       headers: { 'Content-Type': 'application/json' },
-      body,
-    });
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET }),
+    },
+    {
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }),
+    },
+    {
+      path: '/auth/token/new',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET }).toString(),
+    },
+    {
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }).toString(),
+    },
+  ];
 
-    if (res.status === 404) {
-      console.warn('[powens/_client] 404 em', tokenUrl, '— a tentar próximo endpoint');
+  let access_token;
+  const erros = [];
+
+  for (const t of tentativas) {
+    const tokenUrl = `${POWENS_BASE}${t.path}`;
+    console.info('[powens/_client] getAppToken →', tokenUrl, t.headers['Content-Type']);
+
+    const res = await fetch(tokenUrl, { method: 'POST', headers: t.headers, body: t.body });
+
+    if (res.status === 404 || res.status === 405) {
+      erros.push(`${t.path} (${t.headers['Content-Type']}): ${res.status}`);
       continue;
     }
 
     if (!res.ok) {
       const txt = await res.text();
-      throw new Error(`Powens ${path} falhou (${res.status}): ${txt}`);
+      erros.push(`${t.path}: ${res.status} ${txt}`);
+      continue;
     }
 
     const data = await res.json();
-    // A Powens pode devolver access_token ou token
     access_token = data.access_token ?? data.token;
-    if (!access_token) {
-      throw new Error(`Powens ${path} não devolveu token. Resposta: ${JSON.stringify(data)}`);
+    if (access_token) {
+      console.info('[powens/_client] token obtido via', tokenUrl);
+      break;
     }
-    break;
+    erros.push(`${t.path}: resposta sem token — ${JSON.stringify(data)}`);
   }
 
   if (!access_token) {
-    throw new Error('Nenhum endpoint Powens de autenticação respondeu com sucesso');
+    throw new Error(`Powens auth falhou em todas as tentativas:\n${erros.join('\n')}`);
   }
   _cachedAppToken = access_token;
   _tokenExpiresAt = Date.now() + 50 * 60 * 1000;
