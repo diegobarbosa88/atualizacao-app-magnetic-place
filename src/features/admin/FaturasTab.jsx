@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
-  X, Loader2, Download, FileText, MessageSquare, Undo2, CreditCard, Search,
+  X, Loader2, Download, FileText, MessageSquare, Undo2, CreditCard,
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 
@@ -17,56 +17,43 @@ function fmtData(d) {
 }
 
 function PagarFaturaModal({ fatura, onClose, onPago }) {
+  const { supabase } = useApp();
   const fornecedorNome = fatura.dados?.fornecedor || fatura.entidade || '';
   const valor = fatura.dados?.valor_total || fatura.valor || '';
   const referencia = fatura.dados?.numero_fatura || '';
 
-  const [iban, setIban] = useState('');
-  const [nif, setNif] = useState('');
-  const [dataPagamento, setDataPagamento] = useState(new Date().toISOString().slice(0, 10));
-  const [buscandoIban, setBuscandoIban] = useState(false);
+  const [iban, setIban] = useState(fatura.fornecedor_iban || '');
   const [iniciando, setIniciando] = useState(false);
   const [erro, setErro] = useState(null);
 
-  const buscarIban = async () => {
-    if (!fornecedorNome || fornecedorNome.length < 2) return;
-    setBuscandoIban(true);
-    try {
-      const res = await fetch(`/api/toconline?action=fornecedores&q=${encodeURIComponent(fornecedorNome)}`);
-      const data = await res.json();
-      const f = (data.data || [])[0];
-      if (f?.attributes?.iban) setIban(f.attributes.iban);
-      if (f?.attributes?.tax_registration_number) setNif(f.attributes.tax_registration_number);
-      if (!f?.attributes?.iban) setErro('IBAN não encontrado no TOConline — preencha manualmente.');
-    } catch {
-      setErro('Erro ao pesquisar fornecedor.');
-    } finally {
-      setBuscandoIban(false);
-    }
-  };
-
   const handlePagar = async () => {
     setErro(null);
-    if (!iban.trim()) { setErro('IBAN obrigatório.'); return; }
+    const ibanLimpo = iban.replace(/\s/g, '').toUpperCase();
+    if (!ibanLimpo) { setErro('IBAN obrigatório.'); return; }
     setIniciando(true);
     try {
-      const res = await fetch('/api/pagamentos?action=saltedge-pagar-fatura', {
+      // Guardar IBAN na fatura para o endpoint Powens poder lê-lo
+      if (ibanLimpo !== fatura.fornecedor_iban) {
+        await supabase
+          .from('faturas_centro_documentos')
+          .update({ fornecedor_iban: ibanLimpo })
+          .eq('id', fatura.id);
+      }
+
+      const res = await fetch('/api/powens?action=pay', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fatura_id: fatura.id,
-          fornecedor_nome: fornecedorNome,
-          fornecedor_iban: iban.replace(/\s/g, '').toUpperCase(),
-          fornecedor_nif: nif || null,
-          valor: Number(valor),
-          referencia: referencia || null,
-          data_pagamento: dataPagamento,
+          faturas_ids: [fatura.id],
+          descricao: referencia
+            ? `Fatura ${referencia} — ${fornecedorNome}`
+            : `Pagamento ${fornecedorNome}`,
         }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || `Erro ${res.status}`);
       onPago(fatura.id);
-      window.location.href = d.redirectUrl;
+      window.location.href = d.redirect_url;
     } catch (err) {
       setErro(err.message);
       setIniciando(false);
@@ -78,8 +65,8 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-violet-50 rounded-xl"><CreditCard size={14} className="text-violet-600" /></div>
-            <h3 className="text-sm font-black text-slate-800">Pagar via Tink</h3>
+            <div className="p-1.5 bg-sky-50 rounded-xl"><CreditCard size={14} className="text-sky-600" /></div>
+            <h3 className="text-sm font-black text-slate-800">Pagar via Powens</h3>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
         </div>
@@ -97,34 +84,12 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
         {/* IBAN */}
         <div className="space-y-1">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">IBAN do Fornecedor *</p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={iban}
-              onChange={e => setIban(e.target.value.toUpperCase())}
-              placeholder="PT50 0000 0000 0000 0000 0000 0"
-              className="flex-1 px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
-            />
-            <button
-              type="button"
-              onClick={buscarIban}
-              disabled={buscandoIban}
-              title="Buscar IBAN no TOConline"
-              className="px-3 py-2 rounded-xl bg-slate-100 hover:bg-violet-100 text-slate-500 hover:text-violet-700 transition-colors disabled:opacity-40"
-            >
-              {buscandoIban ? <Loader2 size={13} className="animate-spin" /> : <Search size={13} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Data */}
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data de pagamento *</p>
           <input
-            type="date"
-            value={dataPagamento}
-            onChange={e => setDataPagamento(e.target.value)}
-            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300"
+            type="text"
+            value={iban}
+            onChange={e => setIban(e.target.value.toUpperCase())}
+            placeholder="PT50 0000 0000 0000 0000 0000 0"
+            className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-mono text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300"
           />
         </div>
 
@@ -138,10 +103,10 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
           <button
             disabled={iniciando || !iban.trim()}
             onClick={handlePagar}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-sky-600 text-white hover:bg-sky-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
           >
             {iniciando ? <Loader2 size={13} className="animate-spin" /> : <CreditCard size={13} />}
-            {iniciando ? 'A redirecionar...' : 'Pagar via Tink'}
+            {iniciando ? 'A redirecionar...' : 'Pagar via Powens'}
           </button>
         </div>
       </div>
@@ -149,7 +114,7 @@ function PagarFaturaModal({ fatura, onClose, onPago }) {
   );
 }
 
-function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar, onRemoverJustificacao, onPagarTink }) {
+function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar, onRemoverJustificacao, onPagarPowens }) {
   const [open, setOpen] = useState(false);
 
   const pendingCount = faturas.filter(f =>
@@ -219,7 +184,7 @@ function FaturaFornecedorCard({ fornecedor, faturas, justificacoes, onJustificar
                     {!isPago && !isJustified && (
                       <>
                         <button
-                          onClick={() => onPagarTink(f)}
+                          onClick={() => onPagarPowens(f)}
                           className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors"
                         >
                           <CreditCard size={9} /> Pagar
@@ -449,7 +414,7 @@ export default function FaturasTab() {
               justificacoes={justificacoes}
               onJustificar={setJustModal}
               onRemoverJustificacao={handleRemoverJustificacao}
-              onPagarTink={setPagarModal}
+              onPagarPowens={setPagarModal}
             />
           ))
       )}
@@ -462,7 +427,7 @@ export default function FaturasTab() {
         </div>
       )}
 
-      {/* Modal: pagar via Tink */}
+      {/* Modal: pagar via Powens */}
       {pagarModal && (
         <PagarFaturaModal
           fatura={pagarModal}
