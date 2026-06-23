@@ -12,7 +12,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js';
-import { getUserToken, buildWebviewUrl, powensRequest } from './_client.js'; // getUserToken usado em handlePay
+import { buildWebviewUrl, powensRequest } from './_client.js';
 
 // IDs de conector Powens para bancos PT suportados
 // Confirmado via API: GET /connectors ou painel Powens Dashboard
@@ -156,53 +156,42 @@ async function handlePay(req, res) {
         ? (faturas[0].descricao || `Pagamento ${faturas[0].fornecedor}`)
         : `Magnetic Place — ${faturas.length} faturas`);
 
+    // Para PIS puro (Pay by Bank), a transferência é criada ao nível da app
+    // com token de aplicação (scope=payments). Não é necessário powens_user_id
+    // — o utilizador autentica e autoriza directamente no webview Powens.
+    let powensTransferId;
+    let bancoDaConexao = null;
+
+    // Obter banco activo (opcional — apenas para registar no histórico)
     const { data: conexao } = await supabase
       .from('conexoes_bancarias')
-      .select('powens_user_id, powens_connection_id, banco')
+      .select('banco')
       .eq('estado', 'ativa')
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();
+    bancoDaConexao = conexao?.banco || null;
 
-    if (!conexao?.powens_user_id) {
-      return res.status(400).json({
-        error: 'Nenhuma conta bancária conectada. Conecte primeiro uma conta em Admin → Banco.',
-      });
-    }
+    // Criar transferência ao nível da app (endpoint PIS sem user_id)
+    const transferPayloads = faturas.map(f => ({
+      recipient: {
+        iban: f.fornecedor_iban.replace(/\s/g, ''),
+        label: (f.fornecedor || 'Fornecedor').slice(0, 70),
+      },
+      amount: Number(f.valor),
+      currency: 'EUR',
+      label: (f.descricao || descricaoFinal).slice(0, 140),
+    }));
 
-    const { userToken, userId } = await getUserToken(conexao.powens_user_id);
+    // Powens PIS: POST /transfers (app-level, sem /users/{id})
+    const firstTransfer = await powensRequest('POST', '/transfers', transferPayloads[0]);
+    powensTransferId = String(firstTransfer.id);
 
-    let powensTransferId;
-
-    if (faturas.length === 1) {
-      const f = faturas[0];
-      const td = await powensRequest('POST', `/users/${userId}/transfers`, {
-        account_id: parseInt(conexao.powens_connection_id, 10),
-        recipient: {
-          iban: f.fornecedor_iban.replace(/\s/g, ''),
-          label: (f.fornecedor || 'Fornecedor').slice(0, 70),
-        },
-        amount: Number(f.valor),
-        currency: 'EUR',
-        label: descricaoFinal.slice(0, 140),
-      });
-      powensTransferId = String(td.id);
-    } else {
-      const ids = [];
-      for (const f of faturas) {
-        const td = await powensRequest('POST', `/users/${userId}/transfers`, {
-          account_id: parseInt(conexao.powens_connection_id, 10),
-          recipient: {
-            iban: f.fornecedor_iban.replace(/\s/g, ''),
-            label: (f.fornecedor || 'Fornecedor').slice(0, 70),
-          },
-          amount: Number(f.valor),
-          currency: 'EUR',
-          label: (f.descricao || `Pagamento ${f.fornecedor}`).slice(0, 140),
-        });
-        ids.push(String(td.id));
-      }
-      powensTransferId = ids[0];
+    // Se lote com múltiplas faturas, criar as restantes
+    for (let i = 1; i < transferPayloads.length; i++) {
+      await powensRequest('POST', '/transfers', transferPayloads[i]).catch(e =>
+        console.warn('[powens/pay] transferência extra:', e.message)
+      );
     }
 
     const state = crypto.randomUUID();
@@ -216,7 +205,7 @@ async function handlePay(req, res) {
         faturas_snapshot: faturas,
         total: totalLote,
         descricao: descricaoFinal,
-        banco: conexao.banco,
+        banco: bancoDaConexao,
         estado: 'pendente',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -226,7 +215,7 @@ async function handlePay(req, res) {
 
     if (insertErr) throw new Error(`Supabase insert pagamento: ${insertErr.message}`);
 
-    // Só actualiza faturas_centro_documentos se houver IDs válidos
+    // Actualiza faturas_centro_documentos se houver IDs válidos
     if (faturas_ids?.length) {
       await supabase
         .from('faturas_centro_documentos')
@@ -238,8 +227,8 @@ async function handlePay(req, res) {
         .in('id', faturas_ids);
     }
 
+    // Webview PIS — sem token de utilizador; client_id já incluído por buildWebviewUrl
     const redirect_url = buildWebviewUrl('pay', {
-      token: userToken,
       transfer_id: powensTransferId,
       state,
     });
