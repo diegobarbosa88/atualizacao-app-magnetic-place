@@ -178,6 +178,8 @@ async function _processarEvento(payload) {
       break;
     }
 
+    // ── Pagamento PIS actualizado (evento alternativo da Powens) ──────────
+    case 'payment_state_updated':
     // ── Transferência PIS actualizada ─────────────────────────────────────
     case 'transfer.updated': {
       const transfer = payload.transfer ?? payload;

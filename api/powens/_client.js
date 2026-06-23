@@ -39,34 +39,30 @@ export async function getAppToken() {
   // client_id pode ser inteiro na API Powens
   const clientIdInt = parseInt(CLIENT_ID, 10) || CLIENT_ID;
 
-  // Tentativas em ordem: endpoints × encodings
-  // Powens sandbox pode usar /auth/token ou /auth/token/new, JSON ou form-encoded
-  // /auth/token com grant_type=client_credentials
-  // scope=all e scopes de pagamento são rejeitados pela Powens com INVALIDVALUE.
-  // Tentativas em ordem: sem scope (sandbox com acesso total por defeito),
-  // depois apenas os scopes de agregação AIS (accounts + transactions).
+  // Sandbox Powens configurado apenas para PIS (Pay by Bank).
+  // Scopes válidos: 'payments' ou 'payments:read-only'.
+  // AIS (accounts/transactions) não está disponível neste ambiente.
   const tentativas = [
     {
-      // Sem scope — sandbox Powens pode ter acesso total por defeito
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'payments' }),
+    },
+    {
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'payments' }).toString(),
+    },
+    {
+      path: '/auth/token',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'payments:read-only' }),
+    },
+    {
+      // Fallback sem scope — caso sandbox aceite acesso total implícito
       path: '/auth/token',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }),
-    },
-    {
-      path: '/auth/token',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials' }).toString(),
-    },
-    {
-      // Apenas scopes AIS (leitura de contas e transações, sem pagamentos)
-      path: '/auth/token',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_id: clientIdInt, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'accounts transactions' }),
-    },
-    {
-      path: '/auth/token',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, client_secret: CLIENT_SECRET, grant_type: 'client_credentials', scope: 'accounts transactions' }).toString(),
     },
   ];
 

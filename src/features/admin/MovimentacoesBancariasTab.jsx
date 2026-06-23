@@ -96,16 +96,15 @@ export default function MovimentacoesBancariasTab() {
   // ── Tab activa ──────────────────────────────────────────────────────────────
   const [abaActiva, setAbaActiva] = useState('powens'); // 'powens' | 'gmail'
 
-  // ── Powens: conexões e movimentos ───────────────────────────────────────────
+  // ── Powens: conexões e histórico de pagamentos PIS ─────────────────────────
   const [conexoes, setConexoes] = useState([]);
   const [loadingConexoes, setLoadingConexoes] = useState(false);
-  const [conectando, setConectando] = useState(null); // banco a ligar
+  const [conectando, setConectando] = useState(null);
   const [sincronizando, setSincronizando] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
   const [toastPowens, setToastPowens] = useState(null); // { tipo, msg }
-  const [movimentosPowens, setMovimentosPowens] = useState([]);
-  const [loadingMovPowens, setLoadingMovPowens] = useState(false);
-  const [filtroBancoPowens, setFiltroBancoPowens] = useState('');
+  const [pagamentosPowens, setPagamentosPowens] = useState([]);
+  const [loadingPagamentos, setLoadingPagamentos] = useState(false);
 
   // ── Gmail comprovativos ─────────────────────────────────────────────────────
   const [movs, setMovs] = useState([]);
@@ -143,26 +142,24 @@ export default function MovimentacoesBancariasTab() {
     }
   }, [supabase]);
 
-  // ── Powens: carregar movimentos ─────────────────────────────────────────────
-  const carregarMovimentosPowens = useCallback(async () => {
+  // ── Powens: carregar histórico de pagamentos PIS ────────────────────────────
+  const carregarPagamentos = useCallback(async () => {
     if (!supabase) return;
-    setLoadingMovPowens(true);
+    setLoadingPagamentos(true);
     try {
-      const query = supabase
-        .from('movimentos_bancarios')
+      const { data } = await supabase
+        .from('powens_pagamentos_pendentes')
         .select('*')
-        .order('data', { ascending: false })
-        .limit(500);
-      if (filtroBancoPowens) query.eq('banco', filtroBancoPowens);
-      const { data } = await query;
-      setMovimentosPowens(data || []);
+        .order('created_at', { ascending: false })
+        .limit(200);
+      setPagamentosPowens(data || []);
     } finally {
-      setLoadingMovPowens(false);
+      setLoadingPagamentos(false);
     }
-  }, [supabase, filtroBancoPowens]);
+  }, [supabase]);
 
   useEffect(() => { carregarConexoes(); }, [carregarConexoes]);
-  useEffect(() => { if (abaActiva === 'powens') carregarMovimentosPowens(); }, [abaActiva, carregarMovimentosPowens]);
+  useEffect(() => { if (abaActiva === 'powens') carregarPagamentos(); }, [abaActiva, carregarPagamentos]);
 
   // ── Callback Powens ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -201,34 +198,20 @@ export default function MovimentacoesBancariasTab() {
     }
   };
 
-  // ── Sincronizar movimentos via Powens AIS ───────────────────────────────────
+  // ── Sincronizar (AIS desactivado — devolve mensagem informativa) ────────────
   const handleSincronizar = async () => {
     setSincronizando(true);
     setSyncResult(null);
     try {
       const res = await fetch('/api/powens?action=sync', { method: 'POST' });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Erro na sincronização');
       setSyncResult(d);
-      await carregarMovimentosPowens();
-      await carregarConexoes();
     } catch (e) {
       setSyncResult({ error: e.message });
     } finally {
       setSincronizando(false);
     }
   };
-
-  // ── Dados agrupados movimentos Powens ───────────────────────────────────────
-  const movPowensGrouped = useMemo(() => {
-    const groups = {};
-    movimentosPowens.forEach(m => {
-      const key = monthKey(m.data);
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(m);
-    });
-    return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
-  }, [movimentosPowens]);
 
   const carregarMovs = async () => {
     if (!supabase) return;
@@ -446,7 +429,7 @@ export default function MovimentacoesBancariasTab() {
       {/* ── Tabs ─────────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
         {[
-          { id: 'powens', label: 'Movimentos Bancários' },
+          { id: 'powens', label: 'Histórico de Pagamentos' },
           { id: 'gmail',  label: 'Comprovativos Gmail' },
         ].map(tab => (
           <button
@@ -459,98 +442,75 @@ export default function MovimentacoesBancariasTab() {
         ))}
       </div>
 
-      {/* ══ TAB: Movimentos Powens ══════════════════════════════════════════════ */}
+      {/* ══ TAB: Histórico de Pagamentos PIS ══════════════════════════════════ */}
       {abaActiva === 'powens' && (
         <div className="space-y-4">
-          {/* Filtros */}
           <div className="flex items-center gap-2 flex-wrap">
-            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight flex-1">Movimentos Bancários</h4>
-            <div className="relative">
-              <Filter size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              <select
-                value={filtroBancoPowens}
-                onChange={e => setFiltroBancoPowens(e.target.value)}
-                className="pl-8 pr-3 py-2 text-[11px] font-bold border border-slate-200 rounded-xl bg-white text-slate-600 focus:outline-none focus:ring-2 focus:ring-sky-300"
-              >
-                <option value="">Todos os bancos</option>
-                {BANCOS_POWENS.map(b => <option key={b} value={b}>{BANCO_LABEL[b]}</option>)}
-              </select>
-            </div>
+            <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight flex-1">Histórico de Pagamentos</h4>
             <button
-              onClick={carregarMovimentosPowens}
-              disabled={loadingMovPowens}
+              onClick={carregarPagamentos}
+              disabled={loadingPagamentos}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all disabled:opacity-60"
             >
-              <RefreshCw size={13} className={loadingMovPowens ? 'animate-spin' : ''} /> Atualizar
+              <RefreshCw size={13} className={loadingPagamentos ? 'animate-spin' : ''} /> Atualizar
             </button>
           </div>
 
-          {loadingMovPowens && (
+          {loadingPagamentos && (
             <div className="flex items-center justify-center py-12">
               <Loader2 size={24} className="animate-spin text-slate-400" />
             </div>
           )}
 
-          {!loadingMovPowens && movimentosPowens.length === 0 && (
+          {!loadingPagamentos && pagamentosPowens.length === 0 && (
             <div className="text-center py-12">
               <ArrowDownUp size={32} className="text-slate-200 mx-auto mb-3" />
-              <p className="text-sm font-black text-slate-400">Nenhum movimento sincronizado</p>
-              <p className="text-[11px] text-slate-300 mt-1">Conecte uma conta bancária e clique em Sincronizar.</p>
+              <p className="text-sm font-black text-slate-400">Nenhum pagamento iniciado ainda</p>
+              <p className="text-[11px] text-slate-300 mt-1">Os pagamentos iniciados via Powens aparecem aqui após aprovação no banco.</p>
             </div>
           )}
 
-          {!loadingMovPowens && movPowensGrouped.map(([key, items]) => {
-            const total = items.reduce((s, m) => s + Number(m.valor || 0), 0);
-            const isCollapsed = collapsedMonths.has('p:' + key);
-            return (
-              <div key={key} className="border border-slate-100 rounded-2xl overflow-hidden">
-                <button
-                  onClick={() => toggleMonth('p:' + key)}
-                  className="w-full flex items-center justify-between px-5 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs font-black text-slate-700 uppercase tracking-wide">{monthLabel(key)}</span>
-                    <span className="text-[10px] font-bold text-slate-400">{items.length} mov.</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`text-sm font-black ${total < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatValor(total)}</span>
-                    {isCollapsed ? <ChevronDown size={14} className="text-slate-400" /> : <ChevronUp size={14} className="text-slate-400" />}
-                  </div>
-                </button>
-
-                {!isCollapsed && (
-                  <div className="divide-y divide-slate-50">
-                    {items.map(mov => (
-                      <div key={mov.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors">
-                        <div className="w-20 shrink-0">
-                          <p className="text-[10px] font-black text-slate-500">{formatDatePT(mov.data)}</p>
-                        </div>
-                        <div className="shrink-0">
-                          <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-sky-50 text-sky-600 border border-sky-100">
-                            {BANCO_LABEL[mov.banco] || mov.banco}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black text-slate-800 truncate">{mov.descricao || '—'}</p>
-                          {mov.tipo && (
-                            <p className="text-[10px] text-slate-400 capitalize">{mov.tipo}</p>
-                          )}
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className={`text-sm font-black ${Number(mov.valor) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
-                            {formatValor(mov.valor)}
-                          </p>
-                          {mov.estado && mov.estado !== 'active' && (
-                            <p className="text-[9px] text-amber-500 uppercase font-bold">{mov.estado}</p>
-                          )}
-                        </div>
+          {!loadingPagamentos && pagamentosPowens.length > 0 && (
+            <div className="border border-slate-100 rounded-2xl overflow-hidden">
+              <div className="divide-y divide-slate-50">
+                {pagamentosPowens.map(pag => {
+                  const estadoCor =
+                    pag.estado === 'concluido'                ? 'text-emerald-600 bg-emerald-50 border-emerald-200' :
+                    pag.estado === 'processando'              ? 'text-amber-600 bg-amber-50 border-amber-200' :
+                    pag.estado === 'cancelado_pelo_utilizador'? 'text-slate-500 bg-slate-50 border-slate-200' :
+                    pag.estado === 'erro_banco' || pag.estado === 'erro' ? 'text-rose-600 bg-rose-50 border-rose-200' :
+                                                                'text-sky-600 bg-sky-50 border-sky-200';
+                  return (
+                    <div key={pag.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors">
+                      <div className="w-20 shrink-0">
+                        <p className="text-[10px] font-black text-slate-500">{formatDatePT(pag.created_at?.slice(0,10))}</p>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <div className="shrink-0">
+                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-sky-50 text-sky-600 border border-sky-100">
+                          {BANCO_LABEL[pag.banco] || pag.banco || '—'}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{pag.descricao || '—'}</p>
+                        {pag.powens_transfer_id && (
+                          <p className="text-[10px] text-slate-400 font-mono truncate">ID: {pag.powens_transfer_id}</p>
+                        )}
+                      </div>
+                      <div className="shrink-0">
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black border capitalize ${estadoCor}`}>
+                          {(pag.estado || 'pendente').replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="text-sm font-black text-rose-600">{formatValor(pag.total)}</p>
+                        <p className="text-[9px] text-slate-400">{pag.faturas_ids?.length || 0} fatura(s)</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       )}
 

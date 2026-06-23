@@ -86,42 +86,13 @@ export default async function handler(req, res) {
         return res.redirect(302, `${APP_URL}/admin/banco?powens=erro`);
       }
 
-      // Obter detalhes da conexão via Powens — tenta per-user se disponível, senão app-level
-      let connectionDetails = null;
-      try {
-        const path = conexao.powens_user_id
-          ? `/users/${conexao.powens_user_id}/connections/${connection_id}?expand=connector,accounts`
-          : `/connections/${connection_id}?expand=connector,accounts`;
-        connectionDetails = await powensRequest('GET', path);
-        // Guardar powens_user_id se ainda não estava preenchido
-        if (!conexao.powens_user_id && connectionDetails?.id_user) {
-          await supabase
-            .from('conexoes_bancarias')
-            .update({ powens_user_id: String(connectionDetails.id_user) })
-            .eq('id', conexao.id);
-        }
-      } catch (e) {
-        console.warn('[powens/callback] Não foi possível obter detalhes da conexão:', e.message);
-      }
-
-      // Mapear saldos das contas — currency vem como objecto {id, symbol, ...}
-      const saldos = (connectionDetails?.accounts ?? []).map(a => ({
-        id: a.id,
-        nome: a.name,
-        iban: a.iban,
-        saldo: a.balance,
-        moeda: a.currency?.id ?? a.currency ?? 'EUR',
-        tipo: a.type,
-      }));
-
+      // AIS não disponível no sandbox (apenas PIS) — não chamamos /connections nem /accounts.
+      // Guardar apenas o connection_id devolvido pelo webview e marcar como ativa.
       const { error: updateErr } = await supabase
         .from('conexoes_bancarias')
         .update({
           estado: 'ativa',
           powens_connection_id: String(connection_id),
-          powens_connector: connectionDetails?.connector?.name ?? null,
-          dados: connectionDetails ?? null,
-          saldos: saldos.length ? saldos : null,
           ultima_sincronizacao: new Date().toISOString(),
           erro_detalhe: null,
           updated_at: new Date().toISOString(),
