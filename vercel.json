@@ -32,6 +32,9 @@
     },
     "api/powens/sync.js": {
       "maxDuration": 60
+    },
+    "api/webhooks/powens.js": {
+      "maxDuration": 60
     }
   },
   "headers": [
