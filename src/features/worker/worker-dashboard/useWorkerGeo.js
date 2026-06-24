@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getCurrentPosition, isWithinGeofence, distanceMeters } from '../../../utils/geoUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../../utils/timeUtils';
 import { calculateDuration } from '../../../utils/formatUtils';
@@ -6,9 +6,9 @@ import { toISODateLocal } from '../../../utils/dateUtils';
 
 export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveToDb, isLimitedWorker, handleSaveEntry, setMainFormData }) {
   const [geoLoading, setGeoLoading] = useState(false);
-  const [geoSuggestion, setGeoSuggestion] = useState(null);
   const [geoSuggestionDismissed, setGeoSuggestionDismissed] = useState(false);
   const [geoActionLoading, setGeoActionLoading] = useState(false);
+  const [geoPosition, setGeoPosition] = useState({ within: null, dist: null, lat: null, lng: null });
 
   const getGpsSilent = async () => {
     try { return await getCurrentPosition(); } catch { return null; }
@@ -66,12 +66,15 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
     });
   };
 
-  // Sugestão de entrada/saída ao abrir o portal — só para workers limitados
-  useEffect(() => {
-    if (!currentUser || geoSuggestionDismissed) return;
-    if (!isLimitedWorker) return;
+  // Sugestão de entrada/saída — derivada sincronamente dos dados actuais.
+  // Usar useMemo em vez de useEffect+useState elimina problemas de timing
+  // (ex: clients carregam antes de logs, efeito corre com logs vazio e fica preso em 'entrada').
+  const baseSuggestion = useMemo(() => {
+    if (!currentUser || geoSuggestionDismissed) return null;
+    if (!isLimitedWorker) return null;
+
     const client = clients.find(c => c.id === currentUser.defaultClientId);
-    if (!client) return;
+    if (!client) return null;
 
     const today = new Date().toLocaleDateString('en-CA');
     const todayWorkerLogs = logs.filter(l =>
@@ -81,37 +84,38 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
     const openLog = todayWorkerLogs.find(l => l.startTime && !l.endTime);
     const hasCompletedLog = todayWorkerLogs.some(l => l.startTime && l.endTime);
 
-    if (isLimitedWorker && currentUser.gps_enabled !== true) {
-      if (openLog) {
-        setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
-      } else if (!hasCompletedLog) {
-        setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
-      } else {
-        setGeoSuggestion(null);
-      }
+    if (openLog) {
+      return { type: 'saida', client, logId: openLog.id, startTime: openLog.startTime };
+    }
+    if (!hasCompletedLog) {
+      return { type: 'entrada', client };
+    }
+    return null;
+  }, [currentUser?.id, currentUser?.defaultClientId, isLimitedWorker, logs, clients, geoSuggestionDismissed]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sugestão final = base + coordenadas GPS (assíncronas)
+  const geoSuggestion = useMemo(() => {
+    if (!baseSuggestion) return null;
+    return { ...baseSuggestion, ...geoPosition };
+  }, [baseSuggestion, geoPosition]);
+
+  // Fetch de posição GPS apenas quando o tipo de sugestão muda
+  useEffect(() => {
+    if (!baseSuggestion || currentUser?.gps_enabled !== true) {
+      setGeoPosition({ within: null, dist: null, lat: null, lng: null });
       return;
     }
-
-    if (currentUser.gps_enabled !== true) return;
-
-    if (openLog) {
-      setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
-    } else if (!hasCompletedLog) {
-      setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
-    } else {
-      setGeoSuggestion(null);
-    }
-
-    if (client.lat != null && client.lng != null) {
+    const client = baseSuggestion.client;
+    if (client?.lat != null && client?.lng != null) {
       getCurrentPosition()
         .then(({ lat, lng }) => {
           const within = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
           const dist = Math.round(distanceMeters(lat, lng, client.lat, client.lng));
-          setGeoSuggestion(prev => prev ? { ...prev, within, dist, lat, lng } : prev);
+          setGeoPosition({ within, dist, lat, lng });
         })
         .catch(() => {});
     }
-  }, [currentUser?.id, logs.length, isLimitedWorker, currentUser?.gps_enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [baseSuggestion?.type, baseSuggestion?.logId, currentUser?.gps_enabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleConfirmGeoSuggestion = async () => {
     if (!geoSuggestion || !currentUser) return;
@@ -123,7 +127,6 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
     try {
       const pos = await getGpsSilent();
       const client = geoSuggestion.client;
-      // fallback para coords já capturadas quando o card carregou
       const lat = pos?.lat ?? geoSuggestion.lat ?? null;
       const lng = pos?.lng ?? geoSuggestion.lng ?? null;
       let verified = null;
@@ -171,7 +174,6 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
         alert('Erro ao guardar registo. Por favor tenta novamente.');
         return;
       }
-      setGeoSuggestion(null);
       setGeoSuggestionDismissed(false);
     } finally {
       setGeoActionLoading(false);
@@ -206,12 +208,14 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
         check_out_lat: pos?.lat ?? null,
         check_out_lng: pos?.lng ?? null,
       });
-      setGeoSuggestion(null);
       setGeoSuggestionDismissed(false);
     } finally {
       setGeoActionLoading(false);
     }
   };
+
+  // setGeoSuggestion mantido por compatibilidade com WorkerDashboard (no-op: sugestão é derivada dos dados)
+  const setGeoSuggestion = () => {};
 
   return {
     geoLoading,
