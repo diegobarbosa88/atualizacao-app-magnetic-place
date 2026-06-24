@@ -399,15 +399,16 @@ export const AppProvider = ({ children }) => {
         source: data.source ?? null,
         edited_at: data.edited_at ?? null,
         edited_source: data.edited_source ?? null,
-        check_in_lat: data.check_in_lat ?? null,
-        check_in_lng: data.check_in_lng ?? null,
-        geo_verified: data.geo_verified ?? null,
-        break_start_lat: data.break_start_lat ?? null,
-        break_start_lng: data.break_start_lng ?? null,
-        break_end_lat: data.break_end_lat ?? null,
-        break_end_lng: data.break_end_lng ?? null,
-        check_out_lat: data.check_out_lat ?? null,
-        check_out_lng: data.check_out_lng ?? null,
+        // Campos GPS — só incluir quando não-nulos para não falhar se as colunas ainda não existirem na DB
+        ...(data.check_in_lat  != null && { check_in_lat:    data.check_in_lat }),
+        ...(data.check_in_lng  != null && { check_in_lng:    data.check_in_lng }),
+        ...(data.geo_verified  != null && { geo_verified:    data.geo_verified }),
+        ...(data.break_start_lat != null && { break_start_lat: data.break_start_lat }),
+        ...(data.break_start_lng != null && { break_start_lng: data.break_start_lng }),
+        ...(data.break_end_lat != null && { break_end_lat:   data.break_end_lat }),
+        ...(data.break_end_lng != null && { break_end_lng:   data.break_end_lng }),
+        ...(data.check_out_lat != null && { check_out_lat:   data.check_out_lat }),
+        ...(data.check_out_lng != null && { check_out_lng:   data.check_out_lng }),
       };
     } else if (tableName === 'clients') {
       // Remover campos calculados em memória que não existem na BD
