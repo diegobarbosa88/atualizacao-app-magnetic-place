@@ -127,6 +127,7 @@ describe('applyCorrection', () => {
             update: vi.fn().mockReturnThis(),
             insert: vi.fn(() => Promise.resolve({ error: null })),
             eq: vi.fn().mockReturnThis(),
+            delete: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
           };
           obj.update.mockReturnValue({ eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })) });
           return obj;
@@ -174,6 +175,7 @@ describe('applyCorrection', () => {
             update: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })) })),
             insert: vi.fn(() => Promise.resolve({ error: null })),
             eq: vi.fn().mockReturnThis(),
+            delete: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
           };
         }),
       };
@@ -205,6 +207,7 @@ describe('applyCorrection', () => {
             update: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })) })),
             insert: vi.fn(() => Promise.resolve({ error: null })),
             eq: vi.fn().mockReturnThis(),
+            delete: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
           };
         }),
       };
@@ -240,6 +243,7 @@ describe('applyCorrection', () => {
           return {
             update: vi.fn(() => ({ eq: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })) })),
             insert: vi.fn(() => Promise.resolve({ error: null })),
+            delete: vi.fn(() => ({ eq: vi.fn(() => Promise.resolve({ error: null })) })),
           };
         }),
       };
