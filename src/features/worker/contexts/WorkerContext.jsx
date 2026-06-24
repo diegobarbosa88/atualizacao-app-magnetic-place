@@ -63,14 +63,16 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
 
   // Computed values
   const todayStr = toISODateLocal(new Date());
-  const monthLogs = logs?.filter(l => String(l.workerId) === String(currentUser?.id) && isSameMonth(l.date, currentMonth)) || [];
+  // workerId pode vir como camelCase, lowercase ou snake_case dependendo de como a coluna foi criada no Supabase
+  const _wId = (l) => String(l.workerId ?? l.workerid ?? l.worker_id ?? '');
+  const monthLogs = logs?.filter(l => _wId(l) === String(currentUser?.id) && isSameMonth(l.date, currentMonth)) || [];
   const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + (b.hours || 0), 0);
   const totalMonthHours = monthLogs.reduce((acc, curr) => acc + (curr.hours || 0), 0);
 
   const previousOpenLogs = useMemo(() => {
     if (!currentUser) return [];
     return (logs || []).filter(l =>
-      String(l.workerId) === String(currentUser.id) &&
+      _wId(l) === String(currentUser.id) &&
       l.startTime && !l.endTime &&
       l.date < todayStr
     );
@@ -82,10 +84,10 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
   const daysList = Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }, (_, i) => toISODateLocal(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i + 1)));
 
   const assigned = schedules.filter(s => currentUser?.assignedSchedules?.includes(s.id));
-  const myPersonals = personalSchedules.filter(ps => ps.workerId === currentUser?.id);
+  const myPersonals = personalSchedules.filter(ps => String(ps.workerId ?? ps.workerid ?? ps.worker_id ?? '') === String(currentUser?.id));
 
   const currentMonthStr = toISODateLocal(currentMonth).substring(0, 7);
-  const myApproval = approvals?.find(a => a.workerId === currentUser?.id && a.month === currentMonthStr);
+  const myApproval = approvals?.find(a => String(a.workerId ?? a.workerid ?? a.worker_id ?? '') === String(currentUser?.id) && a.month === currentMonthStr);
 
   const myNotifications = useMemo(() => {
     if (!appNotifications || !currentUser) return [];
@@ -107,7 +109,7 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
       const lBiz = getLastBusinessDayOfMonth(d);
       lBiz.setHours(0, 0, 0, 0);
       if (today.getTime() >= lBiz.getTime()) {
-        const isApproved = approvals?.some(a => a.workerId === currentUser?.id && a.month === mStr);
+        const isApproved = approvals?.some(a => String(a.workerId ?? a.workerid ?? a.worker_id ?? '') === String(currentUser?.id) && a.month === mStr);
         if (!isApproved) {
           pending.push({ date: d, monthStr: mStr });
         }
