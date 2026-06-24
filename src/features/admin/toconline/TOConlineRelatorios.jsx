@@ -10,6 +10,21 @@ import ModalDocToc from './components/ModalDocToc';
 
 const selectClass = "w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white";
 
+function ThSort({ campo, label, ordem, toggleOrdem }) {
+  return (
+    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors"
+      onClick={() => toggleOrdem(campo)}>
+      <span className="flex items-center gap-1">
+        {label}
+        {ordem.campo !== campo
+          ? <ArrowUpDown size={11} className="text-slate-300" />
+          : ordem.dir === 'asc' ? <ArrowUp size={11} className="text-blue-500" /> : <ArrowDown size={11} className="text-blue-500" />
+        }
+      </span>
+    </th>
+  );
+}
+
 export default function TOConlineRelatorios({ onDesligado }) {
   const [tipo, setTipo] = useState('vendas');
   const [dataDe, setDataDe] = useState(() => `${new Date().getFullYear()}-01-01`);
@@ -38,19 +53,6 @@ export default function TOConlineRelatorios({ onDesligado }) {
 
   const totalValor = docsFiltrados.reduce((sum, d) => sum + (getValorTotal(getAttrs(d)) ?? 0), 0);
   const totalIva = docsFiltrados.reduce((sum, d) => sum + (getIva(getAttrs(d)) ?? 0), 0);
-
-  const ThSort = ({ campo, label }) => (
-    <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400 cursor-pointer select-none hover:text-slate-600 transition-colors"
-      onClick={() => toggleOrdem(campo)}>
-      <span className="flex items-center gap-1">
-        {label}
-        {ordem.campo !== campo
-          ? <ArrowUpDown size={11} className="text-slate-300" />
-          : ordem.dir === 'asc' ? <ArrowUp size={11} className="text-blue-500" /> : <ArrowDown size={11} className="text-blue-500" />
-        }
-      </span>
-    </th>
-  );
 
   return (
     <div className="space-y-5">
@@ -189,9 +191,9 @@ export default function TOConlineRelatorios({ onDesligado }) {
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50">
                       <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Nº Doc.</th>
-                      <ThSort campo="entidade" label={tipo === 'compras' ? 'Fornecedor' : 'Cliente'} />
-                      <ThSort campo="date" label="Data" />
-                      <ThSort campo="total" label="Total" />
+                      <ThSort campo="entidade" label={tipo === 'compras' ? 'Fornecedor' : 'Cliente'} ordem={ordem} toggleOrdem={toggleOrdem} />
+                      <ThSort campo="date" label="Data" ordem={ordem} toggleOrdem={toggleOrdem} />
+                      <ThSort campo="total" label="Total" ordem={ordem} toggleOrdem={toggleOrdem} />
                       <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">IVA</th>
                       <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Observação</th>
                       <th className="px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>

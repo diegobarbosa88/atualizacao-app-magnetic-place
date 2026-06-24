@@ -176,7 +176,7 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
   for (const msg of listRes.data.messages || []) {
     if (importedIds.has(msg.id)) {
       // Already imported — just ensure email is marked as read
-      try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch (_) {}
+      try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch { /* marcar como lido é best-effort — ignorar falhas */ }
       skipped++;
       continue;
     }
