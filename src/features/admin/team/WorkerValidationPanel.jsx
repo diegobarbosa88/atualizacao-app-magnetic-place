@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, UserCheck, RotateCcw, Search,
   Calendar, ChevronLeft, ChevronRight, LayoutList, LayoutGrid,
-  ClipboardList, X, Pencil, MapPin
+  ClipboardList, X, Pencil, MapPin, Trash2
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
@@ -21,7 +21,8 @@ const SOURCE_CFG = {
 
 function WorkerLogsModal({ worker, logs, month, onClose }) {
   const monthStr = toISODateLocal(month).substring(0, 7);
-  const { clients } = useApp();
+  const { clients, handleDelete } = useApp();
+  const [deleting, setDeleting] = useState(null);
 
   const workerLogs = useMemo(() =>
     logs
@@ -126,7 +127,33 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
                               </span>
                             )}
                           </div>
-                          <span className="text-base font-black text-slate-700 shrink-0">{formatHours(hours)}h</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-base font-black text-slate-700">{formatHours(hours)}h</span>
+                            {deleting === log.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={async () => { await handleDelete('logs', log.id); setDeleting(null); }}
+                                  className="px-2 py-1 bg-rose-500 text-white text-[9px] font-black rounded-lg uppercase"
+                                >
+                                  Confirmar
+                                </button>
+                                <button
+                                  onClick={() => setDeleting(null)}
+                                  className="px-2 py-1 bg-slate-200 text-slate-600 text-[9px] font-black rounded-lg uppercase"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setDeleting(log.id)}
+                                className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+                                title="Eliminar registo"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
