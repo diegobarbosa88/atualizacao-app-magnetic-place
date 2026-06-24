@@ -76,8 +76,7 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
     const today = new Date().toLocaleDateString('en-CA');
     const todayWorkerLogs = logs.filter(l =>
       l.date === today &&
-      String(l.workerId) === String(currentUser.id) &&
-      String(l.clientId) === String(currentUser.defaultClientId)
+      String(l.workerId) === String(currentUser.id)
     );
     const openLog = todayWorkerLogs.find(l => l.startTime && !l.endTime);
     const hasCompletedLog = todayWorkerLogs.some(l => l.startTime && l.endTime);
