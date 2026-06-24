@@ -454,7 +454,13 @@ export const AppProvider = ({ children }) => {
     }
 
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
-    if (error) console.error(`Erro ao gravar em ${tableName}:`, error);
+    if (error) {
+      console.error(`Erro ao gravar em ${tableName}:`, error);
+      if (tableName === 'logs') {
+        // Erro visível ao trabalhador — o registo não foi guardado na base de dados
+        window.alert(`Erro ao guardar registo: ${error.message || error.code || 'Erro desconhecido'}. Tenta novamente.`);
+      }
+    }
   };
 
   const handleApproveMonth = async (workerId) => {
