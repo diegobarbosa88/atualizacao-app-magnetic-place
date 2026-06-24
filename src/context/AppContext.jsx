@@ -154,8 +154,6 @@ export const AppProvider = ({ children }) => {
           console.error(`Erro ao carregar ${tableName}:`, error);
           return;
         }
-        // DEBUG TEMPORÁRIO — remover após identificar o bug
-        if (tableName === 'logs') console.log('[DEBUG fetchLogs]', { count: data?.length, error, sample: data?.slice(0, 2) });
         if (data) {
           if (table === 'schedules') {
             const mapped = data.map(d => ({
@@ -180,12 +178,34 @@ export const AppProvider = ({ children }) => {
         }
       };
 
+      // Fetch de logs separado: sem limite de 1000 linhas e com merge de estado
+      // para não sobrescrever updates optimistas feitos durante o carregamento.
+      const fetchLogs = async () => {
+        const currentYear = new Date().getFullYear();
+        const lastYear = currentYear - 1;
+        const { data, error } = await supabaseInstance
+          .from('logs')
+          .select('*')
+          .gte('date', `${lastYear}-01-01`)
+          .order('date', { ascending: false });
+        if (error) { console.error('Erro ao carregar logs:', error); return; }
+        if (!data) return;
+        const unique = [...new Map(data.map(d => [d.id, d])).values()];
+        // Merge: a DB ganha em entradas existentes, mas preserva updates optimistas
+        // que ainda não foram persistidos (ex: salvos durante a fetch em curso).
+        setLogs(prev => {
+          const merged = new Map(unique.map(d => [d.id, d]));
+          prev.forEach(p => { if (!merged.has(p.id)) merged.set(p.id, p); });
+          return [...merged.values()];
+        });
+      };
+
       await Promise.all([
         fetchTable('clients', setClients),
         fetchTable('workers', setWorkers),
         fetchTable('schedules', setSchedules),
         fetchTable('personalschedules', setPersonalSchedules),
-        fetchTable('logs', setLogs),
+        fetchLogs(),
         fetchTable('expenses', setExpenses),
         fetchTable('approvals', setApprovals),
         fetchTable('client_approvals', setClientApprovals),
@@ -297,8 +317,6 @@ export const AppProvider = ({ children }) => {
     const channelLogs = supabaseInstance
       .channel('realtime-logs')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logs' }, (payload) => {
-        // DEBUG TEMPORÁRIO — remover após identificar o bug
-        console.log('[DEBUG realtime-logs]', payload.eventType, payload.new ?? payload.old);
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           setLogs(prev => {
             const exists = prev.some(x => x.id === payload.new.id);
