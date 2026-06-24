@@ -65,7 +65,20 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
   const todayStr = toISODateLocal(new Date());
   // workerId pode vir como camelCase, lowercase ou snake_case dependendo de como a coluna foi criada no Supabase
   const _wId = (l) => String(l.workerId ?? l.workerid ?? l.worker_id ?? '');
-  const monthLogs = logs?.filter(l => _wId(l) === String(currentUser?.id) && isSameMonth(l.date, currentMonth)) || [];
+  const monthLogs = (() => {
+    const all = logs ?? [];
+    const myId = String(currentUser?.id ?? '');
+    // DEBUG TEMPORÁRIO — remover após identificar o bug
+    console.log('[DEBUG monthLogs]', {
+      totalLogs: all.length,
+      currentUserId: myId,
+      currentMonth: currentMonth?.toISOString?.() ?? String(currentMonth),
+      sample: all.slice(0, 3).map(l => ({ id: l.id, wId: _wId(l), date: l.date })),
+    });
+    const filtered = all.filter(l => _wId(l) === myId && isSameMonth(l.date, currentMonth));
+    console.log('[DEBUG monthLogs] resultado:', filtered.length, filtered.map(l => l.id));
+    return filtered;
+  })();
   const todayHours = monthLogs.filter(l => l.date === todayStr).reduce((a, b) => a + (b.hours || 0), 0);
   const totalMonthHours = monthLogs.reduce((acc, curr) => acc + (curr.hours || 0), 0);
 

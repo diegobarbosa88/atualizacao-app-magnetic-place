@@ -154,6 +154,8 @@ export const AppProvider = ({ children }) => {
           console.error(`Erro ao carregar ${tableName}:`, error);
           return;
         }
+        // DEBUG TEMPORÁRIO — remover após identificar o bug
+        if (tableName === 'logs') console.log('[DEBUG fetchLogs]', { count: data?.length, error, sample: data?.slice(0, 2) });
         if (data) {
           if (table === 'schedules') {
             const mapped = data.map(d => ({
@@ -295,6 +297,8 @@ export const AppProvider = ({ children }) => {
     const channelLogs = supabaseInstance
       .channel('realtime-logs')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logs' }, (payload) => {
+        // DEBUG TEMPORÁRIO — remover após identificar o bug
+        console.log('[DEBUG realtime-logs]', payload.eventType, payload.new ?? payload.old);
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           setLogs(prev => {
             const exists = prev.some(x => x.id === payload.new.id);
