@@ -5,6 +5,17 @@ import { toISODateLocal } from '../../utils/dateUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
+const withRetry = async (fn, retries = 3) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (i === retries - 1 || !err.message?.includes('Failed to fetch')) throw err;
+      await new Promise(r => setTimeout(r, 600 * (i + 1)));
+    }
+  }
+};
+
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, initialLogId, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval, systemSettings, correctionItems, corrections } = useApp();
 
@@ -123,7 +134,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         justification: `Pedido de eliminação do registo de ${selectedDate}`
       };
 
-      const { error: e1 } = await supabase.from('corrections').insert(correction);
+      const { error: e1 } = await withRetry(() => supabase.from('corrections').upsert(correction, { onConflict: 'id' }));
       if (e1) throw e1;
 
       const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -145,7 +156,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         item_status: 'pending',
       };
 
-      const { error: e2 } = await supabase.from('correction_items').insert(item);
+      const { error: e2 } = await withRetry(() => supabase.from('correction_items').upsert(item, { onConflict: 'id' }));
       if (e2) throw e2;
 
       await supabase.from('app_notifications').insert({
@@ -218,7 +229,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           : `Criação de registo para ${selectedDate}`
       };
 
-      const { error: e1 } = await supabase.from('corrections').insert(correction);
+      const { error: e1 } = await withRetry(() => supabase.from('corrections').upsert(correction, { onConflict: 'id' }));
       if (e1) throw e1;
 
       const itemId = `citem_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -244,7 +255,7 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         item_status: 'pending',
       };
 
-      const { error: e2 } = await supabase.from('correction_items').insert(item);
+      const { error: e2 } = await withRetry(() => supabase.from('correction_items').upsert(item, { onConflict: 'id' }));
       if (e2) throw e2;
 
       await supabase.from('app_notifications').insert({
