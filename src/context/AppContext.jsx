@@ -408,7 +408,7 @@ export const AppProvider = ({ children }) => {
         endTime: data.endTime,
         breakStart: data.breakStart,
         breakEnd: data.breakEnd,
-        hours: data.hours || data.totalHours,
+        hours: data.hours != null ? data.hours : (data.totalHours ?? 0),
         description: data.description ?? null,
         source: data.source ?? null,
         edited_at: data.edited_at ?? null,
@@ -455,7 +455,11 @@ export const AppProvider = ({ children }) => {
     }
 
     const { error } = await supabaseInstance.from(tableName).upsert(payload, { onConflict: 'id' });
-    if (error) console.error(`Erro ao gravar em ${tableName}:`, error);
+    if (error) {
+      console.error(`Erro ao gravar em ${tableName}:`, error);
+      return error;
+    }
+    return null;
   };
 
   const handleApproveMonth = async (workerId) => {

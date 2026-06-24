@@ -132,9 +132,10 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
         verified = isWithinGeofence(lat, lng, client.lat, client.lng, client.geo_radius_m ?? 200);
       }
 
+      let saveError = null;
       if (geoSuggestion.type === 'entrada') {
         const logId = `l${Date.now()}`;
-        await saveToDb('logs', logId, {
+        saveError = await saveToDb('logs', logId, {
           id: logId,
           date: today,
           workerId: currentUser.id,
@@ -158,7 +159,7 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
           const roundedStart = roundTimeToIntervalTimeUp(existingLog.startTime, interval, tolerance);
           const roundedEnd = roundTimeToIntervalTimeDown(exitTime, interval);
           const hours = calculateDuration(roundedStart, roundedEnd, existingLog.breakStart, existingLog.breakEnd);
-          await saveToDb('logs', existingLog.id, {
+          saveError = await saveToDb('logs', existingLog.id, {
             ...existingLog,
             endTime: exitTime,
             hours,
@@ -166,6 +167,10 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
             check_out_lng: lng,
           });
         }
+      }
+      if (saveError) {
+        alert('Erro ao guardar registo. Por favor tenta novamente.');
+        return;
       }
       setGeoSuggestion(null);
       setGeoSuggestionDismissed(false);
