@@ -9,6 +9,18 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 let supabaseInstance = null;
 
+// PostgreSQL lowercases unquoted identifiers, so SELECT * may return workerid/clientid/starttime.
+// This normaliser maps both variants to camelCase so all downstream code is consistent.
+const normalizeLog = (d) => ({
+  ...d,
+  workerId:   d.workerId   ?? d.workerid   ?? null,
+  clientId:   d.clientId   ?? d.clientid   ?? null,
+  startTime:  d.startTime  ?? d.starttime  ?? null,
+  endTime:    d.endTime    ?? d.endtime    ?? null,
+  breakStart: d.breakStart ?? d.breakstart ?? null,
+  breakEnd:   d.breakEnd   ?? d.breakend   ?? null,
+});
+
 export const AppProvider = ({ children }) => {
   // --- SYSTEM SETTINGS ---
   const [systemSettings, setSystemSettings] = useState(() => {
@@ -171,6 +183,12 @@ export const AppProvider = ({ children }) => {
               status: d.is_active === false ? 'inativo' : 'ativo',
             }));
             setter(mapped);
+          } else if (table === 'logs') {
+            // PostgreSQL stores unquoted camelCase identifiers as lowercase (workerid, clientid, etc.)
+            // Normalise to camelCase so all downstream code works regardless of DB column case.
+            const mapped = data.map(normalizeLog);
+            const unique = [...new Map(mapped.map(d => [d.id, d])).values()];
+            setter(unique);
           } else {
             // Deduplicate by ID to prevent duplicate entries
             const unique = [...new Map(data.map(d => [d.id, d])).values()];
@@ -312,9 +330,10 @@ export const AppProvider = ({ children }) => {
       .channel('realtime-logs')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'logs' }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const normalized = normalizeLog(payload.new);
           setLogs(prev => {
-            const exists = prev.some(x => x.id === payload.new.id);
-            return exists ? prev.map(x => x.id === payload.new.id ? payload.new : x) : [...prev, payload.new];
+            const exists = prev.some(x => x.id === normalized.id);
+            return exists ? prev.map(x => x.id === normalized.id ? normalized : x) : [...prev, normalized];
           });
         } else if (payload.eventType === 'DELETE') {
           setLogs(prev => prev.filter(x => x.id !== payload.old.id));
