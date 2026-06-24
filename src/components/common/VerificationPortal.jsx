@@ -2,9 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CheckCircle, ShieldCheck, XCircle, Globe, FileText, User, Clock, Download } from 'lucide-react';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://ccvxnrnlbipsojbbrzaw.supabase.co';
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_Ze9r5vColmrZGfhxMwDURg_i4EHktEJ';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabase = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const formatDateTime = (iso) => {
   if (!iso) return '—';
@@ -76,6 +76,11 @@ const VerificationPortal = ({ signatureId }) => {
     const fetchSignature = async () => {
       if (!signatureId) {
         setError('ID de assinatura não fornecido.');
+        setLoading(false);
+        return;
+      }
+      if (!supabase) {
+        setError('Configuração do servidor em falta.');
         setLoading(false);
         return;
       }
