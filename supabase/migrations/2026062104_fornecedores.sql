@@ -15,4 +15,14 @@ create table if not exists fornecedores (
   debito_automatico boolean not null default false
 );
 
-alter table fornecedores add constraint if not exists chk_forn_status check (status in ('ativo', 'inativo'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'chk_forn_status'
+    AND conrelid = 'fornecedores'::regclass
+  ) THEN
+    ALTER TABLE fornecedores ADD CONSTRAINT chk_forn_status CHECK (status IN ('ativo', 'inativo'));
+  END IF;
+END;
+$$;
