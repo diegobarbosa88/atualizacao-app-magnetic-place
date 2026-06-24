@@ -124,21 +124,24 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     return pending;
   }, [approvals, currentUser?.id]);
 
+  // Ref para rastrear notificações já enviadas para "visto" — evita re-submissão em loop
+  const workerAttemptedViewedRef = useRef(new Set());
+
   // Auto-mark notifications as viewed
   useEffect(() => {
-    if (!currentUser || !appNotifications || appNotifications.length === 0) return;
-
-    myNotifications.forEach(async (notif) => {
-      const viewedIds = notif.viewed_by_ids || [];
-      if (!viewedIds.includes(currentUser.id)) {
-        if (supabase) {
-          await supabase.from('app_notifications').update({
-            viewed_by_ids: [...viewedIds, currentUser.id]
-          }).eq('id', notif.id);
-        }
-      }
+    if (!currentUser || !supabase || !myNotifications.length) return;
+    const toMark = myNotifications.filter(n => {
+      const viewedIds = n.viewed_by_ids || [];
+      return !viewedIds.includes(currentUser.id) && !workerAttemptedViewedRef.current.has(n.id);
     });
-  }, [currentUser?.id, myNotifications]);
+    if (!toMark.length) return;
+    toMark.forEach(n => workerAttemptedViewedRef.current.add(n.id));
+    toMark.forEach(n => {
+      supabase.from('app_notifications').update({
+        viewed_by_ids: [...(n.viewed_by_ids || []), currentUser.id]
+      }).eq('id', n.id);
+    });
+  }, [currentUser?.id, myNotifications, supabase]);
 
   // Handlers
   const handleDismissNotif = async (id) => {

@@ -245,22 +245,7 @@ export const AppProvider = ({ children }) => {
       .channel('realtime-notifications')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_notifications' }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-          // Se for UPDATE, verificar se viewed_by_ids contém workers não-alvo (bug do trigger)
-          // Apenas aplicar se não houver workers inválidos no viewed_by_ids
           const newNotif = payload.new;
-          const targetIds = typeof newNotif.target_worker_ids === 'string'
-            ? JSON.parse(newNotif.target_worker_ids)
-            : (newNotif.target_worker_ids || []);
-          const viewedIds = typeof newNotif.viewed_by_ids === 'string'
-            ? JSON.parse(newNotif.viewed_by_ids)
-            : (newNotif.viewed_by_ids || []);
-
-          // Se viewed_by_ids contém workers que não são alvo, ignorar este UPDATE
-          const hasInvalidViewed = viewedIds.some(vId => !targetIds.includes(vId));
-          if (hasInvalidViewed && payload.eventType === 'UPDATE') {
-            return;
-          }
-
           setAppNotifications(prev => {
             const exists = prev.some(x => x.id === newNotif.id);
             return exists ? prev.map(x => x.id === newNotif.id ? newNotif : x) : [newNotif, ...prev];
@@ -344,6 +329,8 @@ export const AppProvider = ({ children }) => {
         setWorkers(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
         setCurrentUser(prev => {
           if (!prev || prev.id !== updated.id) return prev;
+          const hasChange = Object.keys(updated).some(k => prev[k] !== updated[k]);
+          if (!hasChange) return prev;
           const merged = { ...prev, ...updated };
           localStorage.setItem('magnetic_user', JSON.stringify(merged));
           return merged;
@@ -494,6 +481,10 @@ export const AppProvider = ({ children }) => {
     const fresh = workers.find(w => w.id === currentUser.id);
     if (!fresh) return;
     setCurrentUser(prev => {
+      if (!prev) return prev;
+      // Só actualizar se algum campo realmente mudou — evita re-renders desnecessários
+      const hasChange = Object.keys(fresh).some(k => prev[k] !== fresh[k]);
+      if (!hasChange) return prev;
       const merged = { ...prev, ...fresh };
       try { localStorage.setItem('magnetic_user', JSON.stringify(merged)); } catch { /* ignore */ }
       return merged;

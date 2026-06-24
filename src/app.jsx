@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from 'react';
+﻿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import {
@@ -57,6 +57,9 @@ export default function App() {
     supabase,
     notificationPreferences
   } = useApp();
+
+  // Ref para rastrear notificações já enviadas para "visto" — evita re-submissão em loop
+  const attemptedViewedRef = useRef(new Set());
 
   useEffect(() => {
     document.title = "Magnetic Place | Gestão";
@@ -165,14 +168,16 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (!currentUser || !myNotifications.length) return;
-    Promise.all(myNotifications.map(async (notif) => {
+    if (!currentUser || !myNotifications.length || !supabase) return;
+    const toMark = myNotifications.filter(notif => {
       const viewedIds = notif.viewed_by_ids || [];
-      if (!viewedIds.includes(currentUser.id)) {
-        if (supabase) {
-          await supabase.from('app_notifications').update({ viewed_by_ids: [...viewedIds, currentUser.id] }).eq('id', notif.id);
-        }
-      }
+      return !viewedIds.includes(currentUser.id) && !attemptedViewedRef.current.has(notif.id);
+    });
+    if (!toMark.length) return;
+    toMark.forEach(n => attemptedViewedRef.current.add(n.id));
+    Promise.all(toMark.map(n => {
+      const current = n.viewed_by_ids || [];
+      return supabase.from('app_notifications').update({ viewed_by_ids: [...current, currentUser.id] }).eq('id', n.id);
     })).catch(err => console.warn('[notifications] Falha ao marcar como vistas:', err));
   }, [currentUser?.id, myNotifications, supabase]);
 
