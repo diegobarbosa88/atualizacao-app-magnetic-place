@@ -80,12 +80,15 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
       String(l.clientId) === String(currentUser.defaultClientId)
     );
     const openLog = todayWorkerLogs.find(l => l.startTime && !l.endTime);
+    const hasCompletedLog = todayWorkerLogs.some(l => l.startTime && l.endTime);
 
     if (isLimitedWorker && currentUser.gps_enabled !== true) {
       if (openLog) {
         setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
-      } else {
+      } else if (!hasCompletedLog) {
         setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
+      } else {
+        setGeoSuggestion(null);
       }
       return;
     }
@@ -94,8 +97,10 @@ export function useWorkerGeo({ currentUser, clients, logs, systemSettings, saveT
 
     if (openLog) {
       setGeoSuggestion({ type: 'saida', within: null, dist: null, lat: null, lng: null, client, logId: openLog.id, startTime: openLog.startTime });
-    } else {
+    } else if (!hasCompletedLog) {
       setGeoSuggestion({ type: 'entrada', within: null, dist: null, lat: null, lng: null, client });
+    } else {
+      setGeoSuggestion(null);
     }
 
     if (client.lat != null && client.lng != null) {
