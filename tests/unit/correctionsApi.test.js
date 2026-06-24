@@ -46,6 +46,8 @@ const makeSupabase = ({ upsertFn, insertFn } = {}) => {
       };
       const updateObj = makeResolvable({ ...obj });
       obj.update = vi.fn(() => updateObj);
+      const deleteObj = makeResolvable({ ...obj });
+      obj.delete = vi.fn(() => deleteObj);
       return obj;
     }),
   };

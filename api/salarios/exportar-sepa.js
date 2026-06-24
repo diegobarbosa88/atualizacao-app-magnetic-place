@@ -5,11 +5,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
 
-  const { trabalhadores, urgente = false } = req.body || {};
+  const { trabalhadores, instant = false, urgente = false } = req.body || {};
+  const isInstant = Boolean(instant || urgente);
 
   if (!Array.isArray(trabalhadores) || trabalhadores.length === 0) {
     return res.status(400).json({
       error: 'O campo "trabalhadores" é obrigatório e deve ser um array não vazio.',
+    });
+  }
+
+  const incompleto = trabalhadores.findIndex(t => !t.nome || !t.iban || t.salario == null || !t.mes || !t.ano);
+  if (incompleto !== -1) {
+    return res.status(400).json({
+      error: `Trabalhador #${incompleto + 1} incompleto. Campos obrigatórios: nome, iban, salario, mes, ano.`,
     });
   }
 
@@ -26,12 +34,12 @@ export default async function handler(req, res) {
     const xmlString = gerarSepaSalariosXML(
       { iban: ibanEmpresa, bic: bicEmpresa },
       trabalhadores,
-      Boolean(urgente),
+      isInstant,
     );
 
-    const nomeArquivo = urgente
-      ? 'salarios_URGENTE_MESMO_DIA.xml'
-      : 'salarios_AGENDADO_NORMAL.xml';
+    const nomeArquivo = isInstant
+      ? 'transferencias_imediatas.xml'
+      : 'salarios_magnetic_place.xml';
 
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${nomeArquivo}"`);

@@ -8,7 +8,7 @@
  * (ficheiro que será criado na fase GREEN).
  */
 import { describe, it, expect } from 'vitest';
-import { runMatchingEngine } from '../../api/reconciliacao/matchingEngine.js';
+import { runMatchingEngine } from '../../api/reconciliacao/_matchingEngine.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
