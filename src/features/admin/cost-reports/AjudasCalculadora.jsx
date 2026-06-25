@@ -60,7 +60,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         jaFaturadoYTD={calculoHook.jaFaturadoYTD}
         saldoDisponivel={calculoHook.saldoDisponivel}
         mesesRestantes={mesesRestantes}
-        ajudasEfetivoMes={calculoHook.ajudasEfetivoMes}
+        ajudasReciboMes={calculoHook.ajudasReciboMes}
         eEstimativa={calculoHook.eEstimativa}
         semHoras={semHoras}
         progressoPct={calculoHook.progressoPct}

@@ -108,8 +108,8 @@ export function calcularLinhasTwoPass({ clientesMesFinal, saldoDisponivel, total
   const linhas = comClass.map(c => {
     const proporcao = totalFaturaMes > 0 ? c.valorFatura / totalFaturaMes : 0;
     const ajudas = c.eFixa
-      ? c.fixo
-      : (totalFatVazias > 0 ? saldoRestante * (c.valorFatura / totalFatVazias) : 0);
+      ? Math.min(c.fixo, c.valorFatura)
+      : Math.min(totalFatVazias > 0 ? saldoRestante * (c.valorFatura / totalFatVazias) : 0, c.valorFatura);
     return { ...c, proporcao, ajudasEstimadas: ajudas };
   });
 

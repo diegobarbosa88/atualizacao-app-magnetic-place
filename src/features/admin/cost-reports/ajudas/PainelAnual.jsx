@@ -2,7 +2,7 @@ import React from 'react';
 import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { fmtEur, fmtPct } from './ajudasUtils';
 
-export default function PainelAnual({ ano, orcamentoAnual, jaFaturadoYTD, saldoDisponivel, mesesRestantes, ajudasEfetivoMes, eEstimativa, semHoras, progressoPct, regraCumprida }) {
+export default function PainelAnual({ ano, orcamentoAnual, jaFaturadoYTD, saldoDisponivel, mesesRestantes, ajudasReciboMes, eEstimativa, semHoras, progressoPct, regraCumprida }) {
   const barCls = progressoPct >= 95 ? 'bg-red-500' : progressoPct >= 75 ? 'bg-yellow-400' : 'bg-emerald-500';
 
   return (
@@ -40,7 +40,7 @@ export default function PainelAnual({ ano, orcamentoAnual, jaFaturadoYTD, saldoD
           { label: 'Já faturado', val: fmtEur(jaFaturadoYTD), cls: 'slate' },
           { label: 'Saldo restante', val: fmtEur(saldoDisponivel), cls: saldoDisponivel < 0 ? 'red' : 'emerald' },
           { label: 'Meses restantes', val: mesesRestantes, cls: 'slate' },
-          { label: eEstimativa ? 'Ajudas (estimativa)' : semHoras ? 'Recibos mês anterior' : 'Recibos deste mês', val: fmtEur(ajudasEfetivoMes), cls: eEstimativa ? 'amber' : 'indigo' },
+          { label: semHoras ? 'Recibos mês anterior' : 'Recibos deste mês', val: fmtEur(ajudasReciboMes), cls: 'indigo' },
         ].map(({ label, val, cls }) => (
           <div key={label} className={`bg-${cls}-50 border border-${cls}-100 rounded-xl p-3 text-center`}>
             <p className={`text-base font-black text-${cls}-700`}>{val}</p>
