@@ -64,6 +64,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         eEstimativa={calculoHook.eEstimativa}
         semHoras={semHoras}
         progressoPct={calculoHook.progressoPct}
+        regraCumprida={calculoHook.regraCumprida}
       />
 
       <TabelaEstimativa
@@ -74,10 +75,12 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         totalFaturaMes={calculoHook.totalFaturaMes}
         totalAjudasMes={calculoHook.totalAjudasMes}
         ajudasEfetivoMes={calculoHook.ajudasEfetivoMes}
-        ajudasEstimadoMes={calculoHook.ajudasEstimadoMes}
-        taxaAjudas={calculoHook.taxaAjudas}
         eEstimativa={calculoHook.eEstimativa}
         ajudasReciboMes={calculoHook.ajudasReciboMes}
+        regraCumprida={calculoHook.regraCumprida}
+        somaFixas={calculoHook.somaFixas}
+        saldoRestante={calculoHook.saldoRestante}
+        nVazias={calculoHook.nVazias}
         confirmado={dataHook.confirmado}
         confirmando={dataHook.confirmando}
         copiado={calculoHook.copiado}

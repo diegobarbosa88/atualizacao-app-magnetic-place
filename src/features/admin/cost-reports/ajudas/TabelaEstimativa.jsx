@@ -6,8 +6,9 @@ import { fmtEur, fmtPct } from './ajudasUtils';
 export default function TabelaEstimativa({
   selectedMonth, semHoras,
   clientesMesFinal, linhas,
-  totalFaturaMes, totalAjudasMes, ajudasEfetivoMes, ajudasEstimadoMes,
-  taxaAjudas, eEstimativa, ajudasReciboMes,
+  totalFaturaMes, totalAjudasMes, ajudasEfetivoMes,
+  eEstimativa, ajudasReciboMes,
+  regraCumprida, somaFixas, saldoRestante, nVazias,
   confirmado, confirmando, copiado,
   tocSemAuth, carregandoToC,
   overrides, setOverrides,
@@ -17,17 +18,16 @@ export default function TabelaEstimativa({
   onExtrairObs, onRedistribuir, onCopiar, onConfirmar,
   onFaturarCliente,
 }) {
+  const nFixas = linhas.filter(l => l.eFixa).length;
   return (
     <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
         <div>
           <h3 className="text-sm font-black text-slate-800">
-            Estimativa — {formatarMes(selectedMonth)}
+            Distribuição — {formatarMes(selectedMonth)}
           </h3>
           <p className="text-[10px] text-slate-400 mt-0.5">
-            {eEstimativa
-              ? `Estimativa por taxa histórica (${fmtPct(taxaAjudas * 100)}) × faturação do mês — ${fmtEur(ajudasEfetivoMes)}${ajudasEstimadoMes < totalFaturaMes * taxaAjudas ? ' (limitado pelo saldo)' : ''}`
-              : `Distribui as ajudas dos recibos do mês (${fmtEur(ajudasReciboMes)}) proporcional à faturação de cada cliente`}
+            Pass 1: {nFixas} fixa(s) {fmtEur(somaFixas)} | Pass 2: saldo {fmtEur(saldoRestante)} p/ {nVazias} estimada(s)
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -41,6 +41,19 @@ export default function TabelaEstimativa({
               <AlertTriangle size={12} className="text-amber-500" />
               <span className="text-[10px] font-bold text-amber-700">TOConline sem autenticação — sem faturas do mês</span>
             </div>
+          )}
+          {clientesMesFinal.length > 0 && (
+            regraCumprida ? (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                <CheckCircle size={12} className="text-emerald-600" />
+                <span className="text-[10px] font-bold text-emerald-700">Regra cumprida</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl" title="O total de ajudas faturadas ficará abaixo do total de recibos processados no ano">
+                <AlertTriangle size={12} className="text-amber-500" />
+                <span className="text-[10px] font-bold text-amber-700">Saldo por absorver</span>
+              </div>
+            )
           )}
           {confirmado && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -75,7 +88,7 @@ export default function TabelaEstimativa({
                 <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Horas</th>
                 <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Valor Fatura</th>
                 <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">% Total</th>
-                <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Incluídas</th>
+                <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas de Custo <span className="font-normal normal-case tracking-normal">Fixa / Estimada</span></th>
                 <th className="px-2 py-2 w-8" />
               </tr>
             </thead>
@@ -98,8 +111,14 @@ export default function TabelaEstimativa({
                   <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(l.proporcao * 100)}</td>
                   <td className="px-3 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {(obsAplicados.has(l.clientId) || (l.daObservacao && overrides[l.clientId] === undefined)) && (
-                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
+                      {l.eFixa && l.daObservacao && (
+                        <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-black uppercase tracking-wider" title="Valor fixo extraído da observação da fatura TOConline">Fixa</span>
+                      )}
+                      {l.eFixa && !l.daObservacao && (
+                        <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[8px] font-black uppercase tracking-wider" title="Valor fixo definido manualmente">Manual</span>
+                      )}
+                      {!l.eFixa && (
+                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded text-[8px] font-black uppercase tracking-wider" title="Valor estimado proporcionalmente ao saldo disponível">Est.</span>
                       )}
                       <input
                         type="number"
@@ -150,9 +169,8 @@ export default function TabelaEstimativa({
 
           <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 gap-2 flex-wrap">
             <p className="text-[10px] text-slate-400">
-              {eEstimativa ? 'Estimativa' : 'Recibos do mês'}:{' '}
-              <span className={`font-bold ${eEstimativa ? 'text-amber-600' : 'text-indigo-600'}`}>{fmtEur(ajudasEfetivoMes)}</span>
-              {eEstimativa && <span className="ml-1 text-amber-500">(taxa {fmtPct(taxaAjudas * 100)})</span>}
+              Saldo disponível:{' '}
+              <span className="font-bold text-indigo-600">{fmtEur(ajudasEfetivoMes)}</span>
               {ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 && (
                 <span className="ml-2 text-amber-500 font-bold">
                   (diferença de {fmtEur(Math.abs(totalAjudasMes - ajudasEfetivoMes))})

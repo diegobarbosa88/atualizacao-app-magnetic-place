@@ -81,3 +81,40 @@ export const histKey = (mes, clientId) => `${mes}|${clientId}`;
 export const histKeyFatura = (mes, clientId, docNum) => `${mes}|${clientId}|${docNum}`;
 export const getHistInvoiceKeys = (histOverrides, mes, clientId) =>
   Object.keys(histOverrides).filter(k => k.startsWith(`${mes}|${clientId}|`));
+
+/**
+ * Two-Pass allocation algorithm.
+ * Pass 1: Classify each invoice as Fixed (ajudasObs or manual override) vs Empty.
+ * Pass 2: saldoRestante = max(0, saldoDisponivel − somaFixas); distribute to empty invoices proportionally.
+ * regraCumprida = true when jaFaturadoYTD + totalAjudasMes >= orcamentoAnual.
+ */
+export function calcularLinhasTwoPass({ clientesMesFinal, saldoDisponivel, totalFaturaMes, overrides, jaFaturadoYTD, orcamentoAnual }) {
+  // Pass 1
+  const comClass = clientesMesFinal.map(c => {
+    const valorStr = overrides[c.clientId];
+    let fixo = null;
+    if (valorStr !== undefined) fixo = parseFloat(String(valorStr).replace(',', '.')) || 0;
+    else if (c.ajudasObs != null) fixo = c.ajudasObs;
+    return { ...c, fixo, eFixa: fixo !== null, daObservacao: c.ajudasObs != null };
+  });
+
+  const somaFixas = comClass.reduce((s, c) => s + (c.fixo ?? 0), 0);
+
+  // Pass 2
+  const saldoRestante = Math.max(0, saldoDisponivel - somaFixas);
+  const vazias = comClass.filter(c => !c.eFixa);
+  const totalFatVazias = vazias.reduce((s, c) => s + c.valorFatura, 0);
+
+  const linhas = comClass.map(c => {
+    const proporcao = totalFaturaMes > 0 ? c.valorFatura / totalFaturaMes : 0;
+    const ajudas = c.eFixa
+      ? c.fixo
+      : (totalFatVazias > 0 ? saldoRestante * (c.valorFatura / totalFatVazias) : 0);
+    return { ...c, proporcao, ajudasEstimadas: ajudas };
+  });
+
+  const totalAjudasMes = linhas.reduce((s, l) => s + l.ajudasEstimadas, 0);
+  const regraCumprida = orcamentoAnual === 0 || (jaFaturadoYTD + totalAjudasMes) >= orcamentoAnual;
+
+  return { linhas, totalAjudasMes, regraCumprida, somaFixas, saldoRestante, nVazias: vazias.length };
+}

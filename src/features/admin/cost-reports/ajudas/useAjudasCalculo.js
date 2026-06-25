@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { extrairValorObs, getObservacao, histKey, getHistInvoiceKeys } from './ajudasUtils';
+import { extrairValorObs, getObservacao, histKey, getHistInvoiceKeys, calcularLinhasTwoPass } from './ajudasUtils';
 import { fetchVendasMes } from './tocFetch';
 
 export function useAjudasCalculo({
@@ -82,42 +82,14 @@ export function useAjudasCalculo({
     return totalFat > 0 ? totalAj / totalFat : 0;
   }, [faturadosAno]);
 
-  const ajudasEstimadoMes = useMemo(
-    () => Math.max(0, totalFaturaMes * taxaAjudas + saldoDisponivel),
-    [taxaAjudas, totalFaturaMes, saldoDisponivel]
+  const ajudasEfetivoMes = saldoDisponivel;
+  const eEstimativa = false; // mantido por compatibilidade; two-pass não usa taxa histórica como alvo
+
+  // — Distribuição de ajudas por cliente (Two-Pass) —
+  const { linhas, totalAjudasMes, regraCumprida, somaFixas, saldoRestante, nVazias } = useMemo(
+    () => calcularLinhasTwoPass({ clientesMesFinal, saldoDisponivel, totalFaturaMes, overrides, jaFaturadoYTD, orcamentoAnual }),
+    [clientesMesFinal, saldoDisponivel, totalFaturaMes, overrides, jaFaturadoYTD, orcamentoAnual]
   );
-
-  const ajudasEfetivoMes = ajudasEstimadoMes > 0 ? ajudasEstimadoMes : ajudasReciboMes;
-  const eEstimativa = taxaAjudas > 0 || saldoDisponivel > 0;
-
-  // — Distribuição de ajudas por cliente —
-  // Override/obs mantém valor fixo. O alvo global é sempre distribuído na íntegra:
-  // o que sobra após os fixos vai proporcionalmente aos restantes.
-  const linhas = useMemo(() => {
-    const comFixo = clientesMesFinal.map(c => {
-      const valorStr = overrides[c.clientId];
-      let fixo = null;
-      if (valorStr !== undefined) fixo = parseFloat(String(valorStr).replace(',', '.')) || 0;
-      else if (c.ajudasObs != null) fixo = c.ajudasObs;
-      return { ...c, fixo, daObservacao: c.ajudasObs != null };
-    });
-    const somaFixos = comFixo.reduce((s, c) => s + (c.fixo ?? 0), 0);
-    const restante = Math.max(0, ajudasEfetivoMes - somaFixos);
-    const faturaNaoFixos = comFixo.filter(c => c.fixo == null).reduce((s, c) => s + c.valorFatura, 0);
-    const todosSaoFixos = faturaNaoFixos === 0;
-    return comFixo.map(c => {
-      const proporcao = totalFaturaMes > 0 ? c.valorFatura / totalFaturaMes : 0;
-      let ajudas;
-      if (c.fixo != null) {
-        ajudas = c.fixo + (todosSaoFixos && restante > 0 ? restante * proporcao : 0);
-      } else {
-        ajudas = faturaNaoFixos > 0 ? restante * (c.valorFatura / faturaNaoFixos) : 0;
-      }
-      return { ...c, proporcao, ajudasEstimadas: ajudas };
-    });
-  }, [clientesMesFinal, totalFaturaMes, ajudasEfetivoMes, overrides]);
-
-  const totalAjudasMes = linhas.reduce((s, l) => s + l.ajudasEstimadas, 0);
 
   // — Histórico anual —
   const historicoAnual = useMemo(() => {
@@ -225,8 +197,9 @@ export function useAjudasCalculo({
   return {
     orcamentoAnual, jaFaturadoYTD, saldoDisponivel, progressoPct, ajudasReciboMes,
     clientesMesFinal, totalFaturaMes, taxaAjudas,
-    ajudasEstimadoMes, ajudasEfetivoMes, eEstimativa,
+    ajudasEfetivoMes, eEstimativa,
     linhas, totalAjudasMes,
+    regraCumprida, somaFixas, saldoRestante, nVazias,
     historicoAnual,
     overrides, setOverrides,
     histOverrides, setHistOverrides,
