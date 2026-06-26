@@ -90,25 +90,20 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
     if (!db || !linhas.length) return;
     setConfirmando(true);
     const porCliente = agruparPorCliente(linhas);
-    const resultados = await Promise.allSettled(Object.entries(porCliente).map(([clientId, v]) =>
-      db.from('ajudas_faturadas_clientes').upsert(
-        {
-          mes: selectedMonth,
-          client_id: clientId,
-          valor_ajudas: Math.round(v.valor * 100) / 100,
-          total_fatura: Math.round(v.fatura * 100) / 100,
-          confirmado: true,
-        },
-        { onConflict: 'mes,client_id' }
-      )
-    ));
-    const erros = resultados
-      .filter(r => r.status === 'rejected' || r.value?.error)
-      .map(r => r.reason?.message || r.value?.error?.message || 'erro desconhecido');
-    if (erros.length) console.error(`handleConfirmar: falha em ${erros.length} registo(s):`, erros[0]);
+    const rows = Object.entries(porCliente).map(([clientId, v]) => ({
+      mes: selectedMonth,
+      client_id: clientId,
+      valor_ajudas: Math.round(v.valor * 100) / 100,
+      total_fatura: Math.round(v.fatura * 100) / 100,
+      confirmado: true,
+    }));
+    const { error: erroDel } = await db.from('ajudas_faturadas_clientes').delete().eq('mes', selectedMonth);
+    if (erroDel) console.error('handleConfirmar DELETE error:', erroDel.message);
+    const { error: erroIns } = await db.from('ajudas_faturadas_clientes').insert(rows);
+    if (erroIns) console.error('handleConfirmar INSERT error:', erroIns.message);
     await carregar(true);
     setConfirmando(false);
-    setConfirmado(true);
+    if (!erroIns) setConfirmado(true);
   }, [selectedMonth, carregar]);
 
   // Grava edições do histórico na BD. Retorna as linhas guardadas para o
@@ -118,23 +113,19 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
     if (!db) return [];
     setGravandoHist(mes);
     const linhasMes = faturadosAno.filter(r => r.mes === mes);
-    const resultadosHist = await Promise.allSettled(linhasMes.map(r => {
+    const rowsHist = linhasMes.map(r => {
       const invoiceKeys = getHistInvoiceKeys(histOverrides, mes, r.client_id);
       const val = invoiceKeys.length > 0
         ? invoiceKeys.reduce((s, k) => s + (parseFloat(String(histOverrides[k]).replace(',', '.')) || 0), 0)
         : histOverrides[histKey(mes, r.client_id)] !== undefined
           ? parseFloat(String(histOverrides[histKey(mes, r.client_id)]).replace(',', '.')) || 0
           : parseFloat(r.valor_ajudas) || 0;
-      return db.from('ajudas_faturadas_clientes')
-        .upsert(
-          { mes, client_id: r.client_id, valor_ajudas: Math.round(val * 100) / 100, total_fatura: parseFloat(r.total_fatura) || 0, confirmado: true },
-          { onConflict: 'mes,client_id' }
-        );
-    }));
-    const errosHist = resultadosHist
-      .filter(r => r.status === 'rejected' || r.value?.error)
-      .map(r => r.reason?.message || r.value?.error?.message || 'erro desconhecido');
-    if (errosHist.length) console.error(`guardarHistDb: falha em ${errosHist.length} registo(s):`, errosHist[0]);
+      return { mes, client_id: r.client_id, valor_ajudas: Math.round(val * 100) / 100, total_fatura: parseFloat(r.total_fatura) || 0, confirmado: true };
+    });
+    const { error: erroDelHist } = await db.from('ajudas_faturadas_clientes').delete().eq('mes', mes);
+    if (erroDelHist) console.error('guardarHistDb DELETE error:', erroDelHist.message);
+    const { error: erroInsHist } = await db.from('ajudas_faturadas_clientes').insert(rowsHist);
+    if (erroInsHist) console.error('guardarHistDb INSERT error:', erroInsHist.message);
     await carregar(true);
     setGravandoHist(null);
     return linhasMes;
