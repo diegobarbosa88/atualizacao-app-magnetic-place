@@ -98,13 +98,9 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
       confirmado: true,
     }));
     const { error: erroDel } = await db.from('ajudas_faturadas_clientes').delete().eq('mes', selectedMonth);
+    if (erroDel) console.error('handleConfirmar DELETE error:', erroDel.message);
     const { error: erroIns } = await db.from('ajudas_faturadas_clientes').insert(rows);
-    const msg = [
-      `linhas: ${rows.length}`,
-      `DELETE: ${erroDel ? erroDel.message : 'ok'}`,
-      `INSERT: ${erroIns ? erroIns.message : 'ok'}`,
-    ].join('\n');
-    alert('[Confirmar mês]\n' + msg);
+    if (erroIns) console.error('handleConfirmar INSERT error:', erroIns.message);
     await carregar(true);
     setConfirmando(false);
     if (!erroIns) setConfirmado(true);
