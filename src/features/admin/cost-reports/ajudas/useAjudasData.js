@@ -19,17 +19,17 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
   const [tocSemAuth, setTocSemAuth] = useState(false);
   const [expandidoHistMes, setExpandidoHistMes] = useState(null);
 
-  const carregar = useCallback(async () => {
+  const carregar = useCallback(async (silencioso = false) => {
     const db = window.supabaseInstance;
     if (!db) return;
-    setCarregando(true);
+    if (!silencioso) setCarregando(true);
     const [{ data: rv }, { data: af }] = await Promise.all([
       db.from('receipt_validations').select('mes, ajudas_custo_extraidas').like('mes', `${ano}-%`),
       db.from('ajudas_faturadas_clientes').select('*').like('mes', `${ano}-%`),
     ]);
     setRecibosAno(rv ?? []);
     setFaturadosAno(af ?? []);
-    setCarregando(false);
+    if (!silencioso) setCarregando(false);
     setConfirmado((af ?? []).some(r => r.mes === selectedMonth && r.confirmado));
   }, [ano, selectedMonth]);
 
@@ -102,9 +102,11 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
         { onConflict: 'mes,client_id' }
       )
     ));
-    const erros = resultados.filter(r => r.status === 'rejected').map(r => r.reason?.message || 'erro');
-    if (erros.length) console.error(`handleConfirmar: falha em ${erros.length} registo(s): ${erros[0]}`);
-    await carregar();
+    const erros = resultados
+      .filter(r => r.status === 'rejected' || r.value?.error)
+      .map(r => r.reason?.message || r.value?.error?.message || 'erro desconhecido');
+    if (erros.length) console.error(`handleConfirmar: falha em ${erros.length} registo(s):`, erros[0]);
+    await carregar(true);
     setConfirmando(false);
     setConfirmado(true);
   }, [selectedMonth, carregar]);
@@ -129,9 +131,11 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
           { onConflict: 'mes,client_id' }
         );
     }));
-    const errosHist = resultadosHist.filter(r => r.status === 'rejected').map(r => r.reason?.message || 'erro');
-    if (errosHist.length) console.error(`guardarHistDb: falha em ${errosHist.length} registo(s): ${errosHist[0]}`);
-    await carregar();
+    const errosHist = resultadosHist
+      .filter(r => r.status === 'rejected' || r.value?.error)
+      .map(r => r.reason?.message || r.value?.error?.message || 'erro desconhecido');
+    if (errosHist.length) console.error(`guardarHistDb: falha em ${errosHist.length} registo(s):`, errosHist[0]);
+    await carregar(true);
     setGravandoHist(null);
     return linhasMes;
   }, [faturadosAno, carregar]);
@@ -142,7 +146,7 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
     if (!confirm(`Apagar as ajudas faturadas de ${formatarMes(mes)}? Esta ação não pode ser desfeita.`)) return;
     setApagandoHist(mes);
     await db.from('ajudas_faturadas_clientes').delete().eq('mes', mes);
-    await carregar();
+    await carregar(true);
     setExpandidoHistMes(prev => (prev === mes ? null : prev));
     setFaturasHist(prev => { const n = { ...prev }; delete n[mes]; return n; });
     if (mes === selectedMonth) setConfirmado(false);
