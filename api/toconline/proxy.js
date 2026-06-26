@@ -130,6 +130,7 @@ export default async function handler(req, res) {
       }
       const data = await tocFetch(`${base}?${filtros.join('&')}`, accessToken);
       const lista = Array.isArray(data) ? data : (data.data || []);
+      res.setHeader('Cache-Control', 'private, max-age=300');
       return res.status(200).json({ data: lista, meta: data.meta || {} });
     } catch (e) {
       return res.status(500).json({ error: e.message });

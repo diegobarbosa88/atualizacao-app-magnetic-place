@@ -29,6 +29,10 @@ function _parseMonetario(s) {
     s = s.replace(/\./g, '').replace(',', '.');
   } else if ((s.match(/\./g) || []).length > 1) {
     s = s.replace(/\./g, '');
+  } else if (lastDot >= 0) {
+    // Ponto único: separador de milhares PT se exactamente 3 dígitos após o ponto (ex: "1.234" → 1234)
+    const afterDot = s.slice(lastDot + 1);
+    if (/^\d{3}$/.test(afterDot)) s = s.replace('.', '');
   }
   const v = parseFloat(s);
   return isNaN(v) || v <= 0 ? null : v;

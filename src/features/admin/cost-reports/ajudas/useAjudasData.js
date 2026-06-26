@@ -77,6 +77,8 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
       const result = await fetchVendasMes(mesSeguinte(selectedMonth));
       if (cancelled) return;
       if (result.status === 401) { setTocSemAuth(true); setCarregandoToC(false); return; }
+      if (!result.ok) { setCarregandoToC(false); return; }
+      if (!Array.isArray(result.data)) { setCarregandoToC(false); return; }
       setFaturasToC(result.data);
       setCarregandoToC(false);
     })();
@@ -88,18 +90,20 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
     if (!db || !linhas.length) return;
     setConfirmando(true);
     const porCliente = agruparPorCliente(linhas);
-    await Promise.all(Object.entries(porCliente).map(([clientId, v]) =>
+    const resultados = await Promise.allSettled(Object.entries(porCliente).map(([clientId, v]) =>
       db.from('ajudas_faturadas_clientes').upsert(
         {
           mes: selectedMonth,
           client_id: clientId,
-          valor_ajudas: parseFloat(v.valor.toFixed(2)),
-          total_fatura: parseFloat(v.fatura.toFixed(2)),
+          valor_ajudas: Math.round(v.valor * 100) / 100,
+          total_fatura: Math.round(v.fatura * 100) / 100,
           confirmado: true,
         },
         { onConflict: 'mes,client_id' }
       )
     ));
+    const erros = resultados.filter(r => r.status === 'rejected').map(r => r.reason?.message || 'erro');
+    if (erros.length) console.error(`handleConfirmar: falha em ${erros.length} registo(s): ${erros[0]}`);
     await carregar();
     setConfirmando(false);
     setConfirmado(true);
@@ -112,7 +116,7 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
     if (!db) return [];
     setGravandoHist(mes);
     const linhasMes = faturadosAno.filter(r => r.mes === mes);
-    await Promise.all(linhasMes.map(r => {
+    const resultadosHist = await Promise.allSettled(linhasMes.map(r => {
       const invoiceKeys = getHistInvoiceKeys(histOverrides, mes, r.client_id);
       const val = invoiceKeys.length > 0
         ? invoiceKeys.reduce((s, k) => s + (parseFloat(String(histOverrides[k]).replace(',', '.')) || 0), 0)
@@ -121,10 +125,12 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
           : parseFloat(r.valor_ajudas) || 0;
       return db.from('ajudas_faturadas_clientes')
         .upsert(
-          { mes, client_id: r.client_id, valor_ajudas: parseFloat(val.toFixed(2)), total_fatura: parseFloat(r.total_fatura) || 0, confirmado: true },
+          { mes, client_id: r.client_id, valor_ajudas: Math.round(val * 100) / 100, total_fatura: parseFloat(r.total_fatura) || 0, confirmado: true },
           { onConflict: 'mes,client_id' }
         );
     }));
+    const errosHist = resultadosHist.filter(r => r.status === 'rejected').map(r => r.reason?.message || 'erro');
+    if (errosHist.length) console.error(`guardarHistDb: falha em ${errosHist.length} registo(s): ${errosHist[0]}`);
     await carregar();
     setGravandoHist(null);
     return linhasMes;
