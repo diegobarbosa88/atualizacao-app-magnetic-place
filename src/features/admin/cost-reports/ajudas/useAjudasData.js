@@ -87,6 +87,7 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
 
   const handleConfirmar = useCallback(async (linhas) => {
     const db = window.supabaseInstance;
+    console.log('[handleConfirmar] inicio — linhas:', linhas.length, 'db:', !!db);
     if (!db || !linhas.length) return;
     setConfirmando(true);
     const porCliente = agruparPorCliente(linhas);
@@ -97,10 +98,11 @@ export function useAjudasData({ ano, selectedMonth, semHoras }) {
       total_fatura: Math.round(v.fatura * 100) / 100,
       confirmado: true,
     }));
-    const { error: erroDel } = await db.from('ajudas_faturadas_clientes').delete().eq('mes', selectedMonth);
-    if (erroDel) console.error('handleConfirmar DELETE error:', erroDel.message);
-    const { error: erroIns } = await db.from('ajudas_faturadas_clientes').insert(rows);
-    if (erroIns) console.error('handleConfirmar INSERT error:', erroIns.message);
+    console.log('[handleConfirmar] rows a inserir:', JSON.stringify(rows));
+    const { error: erroDel, data: dataDel } = await db.from('ajudas_faturadas_clientes').delete().eq('mes', selectedMonth).select();
+    console.log('[handleConfirmar] DELETE result — error:', erroDel, 'data:', dataDel);
+    const { error: erroIns, data: dataIns } = await db.from('ajudas_faturadas_clientes').insert(rows).select();
+    console.log('[handleConfirmar] INSERT result — error:', erroIns, 'data:', dataIns);
     await carregar(true);
     setConfirmando(false);
     if (!erroIns) setConfirmado(true);
