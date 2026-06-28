@@ -11,14 +11,14 @@ const fmtPct = v => (parseFloat(v) || 0).toFixed(2) + '%';
 function mesAnterior(mes) {
   const [y, m] = mes.split('-').map(Number);
   const d = new Date(y, m - 2, 1);
-  return d.toISOString().slice(0, 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // Mês seguinte ao mês fornecido no formato 'YYYY-MM'
 function mesSeguinte(mes) {
   const [y, m] = mes.split('-').map(Number);
   const d = new Date(y, m, 1); // Date usa meses 0-indexed, m já é o próximo
-  return d.toISOString().slice(0, 7);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
 // Observação de uma fatura TOConline
