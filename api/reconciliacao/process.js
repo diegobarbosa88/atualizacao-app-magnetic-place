@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { runMatchingEngine } from './_matchingEngine.js';
 import { getValidToken } from '../toconline/_token.js';
-import { fetchAllPages } from '../toconline/_fetch.js';
+import { fetchAllPages, tocFetch } from '../toconline/_fetch.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -149,14 +149,29 @@ export default async function handler(req, res) {
       for (const conta of contasEmpresa) {
         const a = conta.attributes || conta;
         const nomeConta = a.name || `Conta ${conta.id}`;
-        const txRaw = await fetchAllPages(
-          `/api/bank_transactions?filter[bank_account_id]=${conta.id}&filter[transaction_date_from]=${dateFrom}&filter[transaction_date_to]=${dateTo}&sort=-transaction_date`,
-          accessToken
-        );
+        // Busca paginada com paragem antecipada (API ordena -transaction_date)
+        const txRaw = [];
+        let page = 1;
+        outer: while (true) {
+          const data = await tocFetch(
+            `/api/bank_transactions?filter[bank_account_id]=${conta.id}&sort=-transaction_date&page[number]=${page}&page[size]=100`,
+            accessToken
+          );
+          const items = Array.isArray(data) ? data : (data.data || []);
+          if (!items.length) break;
+          for (const item of items) {
+            const attrs = item.attributes || item;
+            const d = (attrs.transaction_date || attrs.posted_date || '').slice(0, 10);
+            if (d && d < dateFrom) break outer; // mais antigas que o intervalo — parar
+            txRaw.push(item);
+          }
+          if (items.length < 100) break;
+          page++;
+        }
         for (const tx of txRaw) {
           const attrs = tx.attributes || tx;
-          const txDate = attrs.transaction_date || attrs.posted_date || '';
-          if (txDate && (txDate < dateFrom || txDate > dateTo)) continue;
+          const txDate = (attrs.transaction_date || attrs.posted_date || '').slice(0, 10);
+          if (!txDate || txDate < dateFrom || txDate > dateTo) continue;
           const valor = Number(attrs.value ?? 0);
           transacoes.push({
             data: txDate,
