@@ -93,6 +93,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const [obsResult, setObsResult] = useState(null);
   const [obsAplicados, setObsAplicados] = useState(new Set()); // clientIds preenchidos via observação
   const [selecionados, setSelecionados] = useState(new Set()); // clientIds selecionados para redistribuição
+  const [redistribuidos, setRedistribuidos] = useState(new Set()); // clientIds cujo ajudasObs foi explicitamente ignorado
 
   // — Carregar dados da BD —
   const carregar = useCallback(async () => {
@@ -122,7 +123,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   }, [carregar]);
 
   // Reset overrides ao mudar mês
-  useEffect(() => { setOverrides({}); setConfirmado(false); setObsResult(null); setObsAplicados(new Set()); setSelecionados(new Set()); }, [selectedMonth]);
+  useEffect(() => { setOverrides({}); setConfirmado(false); setObsResult(null); setObsAplicados(new Set()); setSelecionados(new Set()); setRedistribuidos(new Set()); }, [selectedMonth]);
 
   // — Cálculos anuais —
   const orcamentoAnual = useMemo(
@@ -277,8 +278,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       const valorStr = overrides[c.clientId];
       let fixo = null;
       if (valorStr !== undefined) fixo = parseFloat(String(valorStr).replace(',', '.')) || 0;
-      else if (c.ajudasObs != null) fixo = c.ajudasObs;
-      return { ...c, fixo, daObservacao: c.ajudasObs != null };
+      else if (c.ajudasObs != null && !redistribuidos.has(c.clientId)) fixo = c.ajudasObs;
+      return { ...c, fixo, daObservacao: c.ajudasObs != null && !redistribuidos.has(c.clientId) };
     });
     const somaFixos = comFixo.reduce((s, c) => s + (c.fixo ?? 0), 0);
     const restante = Math.max(0, ajudasEfetivoMes - somaFixos);
@@ -295,7 +296,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       }
       return { ...c, proporcao, ajudasEstimadas: ajudas };
     });
-  }, [clientesMesFinal, totalFaturaMes, ajudasEfetivoMes, overrides]);
+  }, [clientesMesFinal, totalFaturaMes, ajudasEfetivoMes, overrides, redistribuidos]);
 
   const totalAjudasMes = linhas.reduce((s, l) => s + l.ajudasEstimadas, 0);
 
@@ -400,6 +401,12 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       alvoIds.forEach(id => n.delete(id));
       return n;
     });
+    // Linhas com valor fixo vindo de c.ajudasObs (daObservacao) precisam de ser
+    // marcadas explicitamente para que o useMemo ignore o valor da observação.
+    const obsAlvoIds = alvoIds.filter(id => linhas.find(l => l.clientId === id)?.daObservacao);
+    if (obsAlvoIds.length > 0) {
+      setRedistribuidos(prev => { const n = new Set(prev); obsAlvoIds.forEach(id => n.add(id)); return n; });
+    }
     setSelecionados(new Set());
     setObsResult(null);
   };
@@ -663,6 +670,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                           onChange={e => {
                             setOverrides(prev => ({ ...prev, [l.clientId]: e.target.value }));
                             setObsAplicados(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
+                            setRedistribuidos(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
                           }}
                           className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
                         />
@@ -726,7 +734,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   {extraindoObs ? 'A extrair...' : 'Extrair da observação'}
                 </button>
                 <button onClick={handleRedistribuir}
-                  disabled={selecionados.size === 0 && Object.keys(overrides).filter(k => !obsAplicados.has(k)).length === 0}
+                  disabled={selecionados.size === 0 && Object.keys(overrides).filter(k => !obsAplicados.has(k)).length === 0 && !linhas.some(l => l.daObservacao)}
                   className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-40"
                   title={selecionados.size > 0 ? `Repor distribuição proporcional nos ${selecionados.size} selecionado(s)` : 'Repor distribuição proporcional automática'}>
                   <RotateCcw size={12} />
