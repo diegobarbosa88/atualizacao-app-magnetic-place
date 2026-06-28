@@ -15,6 +15,7 @@ import FaturasAdmin from './FaturasAdmin';
 import PagamentosTab from './pagamentos/PagamentosTab';
 import FilaAprovacaoTab from './pagamentos/FilaAprovacaoTab';
 import MovimentacoesBancariasTab from './MovimentacoesBancariasTab';
+import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 
 import DocumentsFilters from './documents/DocumentsFilters';
@@ -51,6 +52,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         { id: 'recibos',        label: 'Recibos',        icon: ReceiptText },
         { id: 'salarios',       label: 'Salários',       icon: Coins },
         { id: 'movimentacoes',  label: 'Movimentações',  icon: TrendingUp },
+        { id: 'bancaria',       label: 'Bancária',       icon: Landmark },
       ],
     },
     {
@@ -427,6 +429,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {activeGroup === 'reconciliacao' && activeSection === 'movimentacoes' && (
         <MovimentacoesTab />
+      )}
+      {activeGroup === 'reconciliacao' && activeSection === 'bancaria' && (
+        <ReconciliacaoAdmin />
       )}
       {activeGroup === 'pagamentos' && activeSection === 'pagamentos-fornecedores' && (
         <PagamentosTab />
