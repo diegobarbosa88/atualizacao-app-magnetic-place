@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Landmark, Plus, Loader2, RefreshCw, Trash2, X, FlaskConical } from 'lucide-react';
+import { Landmark, Plus, Loader2, RefreshCw, X } from 'lucide-react';
 
 function NovaConta({ onClose, onSalva }) {
   const [form, setForm] = useState({ nome: '', iban: '', banco: '', moeda: 'EUR', saldo_inicial: '' });
@@ -110,10 +110,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
-  const [removendo, setRemovendo] = useState(null);
-  const [probe, setProbe] = useState(null);
-  const [probeLoading, setProbeLoading] = useState(false);
-
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
@@ -131,36 +127,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   }, [onDesligado]);
 
-  const handleProbe = async () => {
-    setProbeLoading(true);
-    setProbe(null);
-    try {
-      const res = await fetch('/api/toconline/bank-accounts?probe=1');
-      const data = await res.json();
-      setProbe(data.results || []);
-    } catch (e) {
-      setProbe([{ path: 'erro', status: 'ERR', error: e.message }]);
-    } finally {
-      setProbeLoading(false);
-    }
-  };
-
   useEffect(() => { carregar(); }, [carregar]);
-
-  const handleRemover = async (id, nome) => {
-    if (!window.confirm(`Remover a conta "${nome}" do Toconline?`)) return;
-    setRemovendo(id);
-    try {
-      const res = await fetch(`/api/toconline/bank-accounts?id=${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao remover');
-      setContas(prev => prev.filter(c => c.id !== id));
-    } catch (e) {
-      alert(e.message);
-    } finally {
-      setRemovendo(null);
-    }
-  };
 
   const totalSaldo = contas.reduce((s, c) => s + (Number(c.saldo_atual ?? 0) || 0), 0);
 
@@ -192,10 +159,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={handleProbe} disabled={probeLoading}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all disabled:opacity-50">
-              {probeLoading ? <Loader2 size={13} className="animate-spin" /> : <FlaskConical size={13} />} Diagnóstico
-            </button>
             <button onClick={carregar}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
               <RefreshCw size={13} /> Sincronizar
@@ -206,23 +169,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             </button>
           </div>
         </div>
-
-        {probe && (
-          <div className="mx-5 my-3 bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Resultado do Diagnóstico</p>
-            {probe.map((r, i) => (
-              <div key={i} className="flex items-center justify-between gap-2 text-xs">
-                <span className="font-mono text-slate-600 truncate">{r.path}</span>
-                <span className={`shrink-0 px-2 py-0.5 rounded-full font-black text-[10px] ${r.status === 'OK' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
-                  {r.status}
-                </span>
-                {r.status === 'OK' && r.sample_keys?.length > 0 && (
-                  <span className="text-[10px] text-slate-400 truncate max-w-[140px]">{r.sample_keys.join(', ')}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
 
         {erro && (
           <div className="mx-5 my-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
@@ -241,8 +187,8 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-slate-50 border-b border-slate-100">
-                  {['Nome / Banco', 'IBAN', 'SWIFT', 'Tipo', 'Saldo', ''].map(h => (
-                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 last:w-10">{h}</th>
+                  {['Nome / Banco', 'IBAN', 'SWIFT', 'Tipo', 'Saldo'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -269,17 +215,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
                       <td className="px-4 py-3 text-slate-500">{a.account_type || '—'}</td>
                       <td className="px-4 py-3 font-bold text-emerald-700">
                         {saldo != null ? fmtEur(saldo) : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleRemover(c.id, a.name)}
-                          disabled={removendo === c.id}
-                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-40"
-                        >
-                          {removendo === c.id
-                            ? <Loader2 size={13} className="animate-spin" />
-                            : <Trash2 size={13} />}
-                        </button>
                       </td>
                     </tr>
                   );

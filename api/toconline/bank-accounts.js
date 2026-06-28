@@ -71,9 +71,30 @@ export default async function handler(req, res) {
 
       const lista = await fetchAllPages('/api/bank_accounts', accessToken);
 
+      // Log temporário para perceber entity_type das contas
+      const tipos = {};
+      lista.forEach(c => {
+        const a = c.attributes || c;
+        const t = a.entity_type || '(vazio)';
+        tipos[t] = (tipos[t] || 0) + 1;
+      });
+      console.log('[bank-accounts] entity_type distribution:', JSON.stringify(tipos));
+      console.log('[bank-accounts] sample com swift/iban:', JSON.stringify(
+        lista.filter(c => { const a = c.attributes || c; return a.swift || a.iban; })
+          .slice(0, 5)
+          .map(c => { const a = c.attributes || c; return { id: c.id, name: a.name, entity_type: a.entity_type, swift: a.swift, iban: a.iban, sub_type: a.sub_type }; })
+      ));
+
+      // Filtrar apenas contas com identificador bancário (IBAN, NIB ou SWIFT)
+      // para excluir contas contabilísticas que não são contas bancárias reais
+      const contasBancarias = lista.filter(c => {
+        const a = c.attributes || c;
+        return a.iban || a.nib || a.swift;
+      });
+
       // ?com_saldo=1 — enriquecer cada conta com o saldo atual via movimentos
       if (com_saldo === '1') {
-        const enriquecida = await Promise.all(lista.map(async (c) => {
+        const enriquecida = await Promise.all(contasBancarias.map(async (c) => {
           const a = c.attributes || c;
           const saldo_atual = await getSaldoAtual(c.id, a.initial_balance, accessToken);
           return { ...c, saldo_atual };
@@ -81,7 +102,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ data: enriquecida });
       }
 
-      return res.status(200).json({ data: lista });
+      return res.status(200).json({ data: contasBancarias });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
