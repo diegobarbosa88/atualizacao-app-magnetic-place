@@ -163,10 +163,13 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   // Meses anteriores ao selecionado com recibos mas sem confirmação em ajudas_faturadas_clientes
   const mesesNaoConfirmados = useMemo(() => {
-    return recibosAno
-      .filter(r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0)
-      .filter(r => !faturadosAno.some(f => f.mes === r.mes && f.confirmado))
-      .map(r => r.mes)
+    const mesesUnicos = [...new Set(
+      recibosAno
+        .filter(r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0)
+        .map(r => r.mes)
+    )];
+    return mesesUnicos
+      .filter(mes => !faturadosAno.some(f => f.mes === mes && f.confirmado))
       .sort();
   }, [recibosAno, faturadosAno, selectedMonth]);
 
