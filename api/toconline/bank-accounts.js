@@ -10,7 +10,34 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    const { id } = req.query;
+    const { id, probe } = req.query;
+
+    // Probe temporário: ?probe=1 — descobrir endpoints de movimentos
+    if (probe === '1') {
+      const CANDIDATES = [
+        '/api/bank_account_transactions',
+        '/api/bank_account_movements',
+        '/api/bank_account_extracts',
+        '/api/bank_extracts',
+        '/api/bank_transactions',
+        '/api/cash_flows',
+        '/api/current_accounts',
+        '/api/bank_account_statements',
+        '/api/bank_statements',
+      ];
+      const results = [];
+      for (const path of CANDIDATES) {
+        try {
+          const data = await tocFetch(`${path}?page[size]=1`, accessToken);
+          const item = Array.isArray(data) ? data[0] : (data.data?.[0]?.attributes || data.data?.[0] || data);
+          results.push({ path, status: 'OK', sample_keys: item ? Object.keys(item) : [], total: data?.meta?.total_records ?? data?.meta?.total ?? '?' });
+        } catch (e) {
+          const code = (e.message || '').match(/→ (\d+)/)?.[1] || 'ERR';
+          results.push({ path, status: code });
+        }
+      }
+      return res.status(200).json({ results });
+    }
 
     try {
       if (id) {
@@ -18,19 +45,6 @@ export default async function handler(req, res) {
         return res.status(200).json({ data: data.data || data });
       }
       const lista = await fetchAllPages('/api/bank_accounts', accessToken);
-      // LOG TEMPORÁRIO — remover após diagnóstico
-      console.log('[bank-accounts] total contas:', lista.length);
-      lista.forEach((c, i) => {
-        const a = c.attributes || c;
-        console.log(`[bank-accounts] conta[${i}]:`, JSON.stringify({
-          id: c.id,
-          name: a.name,
-          current_balance: a.current_balance,
-          initial_balance: a.initial_balance,
-          balance: a.balance,
-          all_keys: Object.keys(a),
-        }));
-      });
       return res.status(200).json({ data: lista });
     } catch (e) {
       return res.status(500).json({ error: e.message });
