@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { runMatchingEngine } from './_matchingEngine.js';
+import { getValidToken } from '../toconline/_token.js';
+import { fetchAllPages } from '../toconline/_fetch.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -121,7 +123,97 @@ export default async function handler(req, res) {
     }
   }
 
-  const { transactions_json, filename } = req.body || {};
+  // ── Modo TOConline: busca movimentos directamente da API ─────────────────
+  const { fonte, de, ate, transactions_json, filename } = req.body || {};
+
+  if (fonte === 'toconline') {
+    if (!de || !ate) {
+      return res.status(400).json({ error: 'Parâmetros de e ate são obrigatórios (YYYY-MM).' });
+    }
+    const dateFrom = `${de}-01`;
+    const [ateY, ateM] = ate.split('-').map(Number);
+    const dateTo = new Date(ateY, ateM, 0).toISOString().split('T')[0];
+
+    try {
+      const accessToken = await getValidToken();
+      const todasContas = await fetchAllPages('/api/bank_accounts', accessToken);
+      const contasEmpresa = todasContas.filter(c => {
+        const a = c.attributes || c;
+        return a.entity_type === 'Company';
+      });
+      if (!contasEmpresa.length) {
+        return res.status(400).json({ error: 'Nenhuma conta da empresa encontrada no TOConline.' });
+      }
+
+      const transacoes = [];
+      for (const conta of contasEmpresa) {
+        const a = conta.attributes || conta;
+        const nomeConta = a.name || `Conta ${conta.id}`;
+        const txRaw = await fetchAllPages(
+          `/api/bank_transactions?filter[bank_account_id]=${conta.id}&filter[transaction_date_from]=${dateFrom}&filter[transaction_date_to]=${dateTo}&sort=-transaction_date`,
+          accessToken
+        );
+        for (const tx of txRaw) {
+          const attrs = tx.attributes || tx;
+          const txDate = attrs.transaction_date || attrs.posted_date || '';
+          if (txDate && (txDate < dateFrom || txDate > dateTo)) continue;
+          const valor = Number(attrs.value ?? 0);
+          transacoes.push({
+            data: txDate,
+            descricao: attrs.description || attrs.annotation || '',
+            valor: Math.abs(valor),
+            tipo: valor >= 0 ? 'credito' : 'debito',
+            conta: nomeConta,
+            iban_origem: attrs.payer_iban || null,
+          });
+        }
+      }
+
+      if (!transacoes.length) {
+        return res.status(400).json({ error: `Sem movimentos TOConline entre ${de} e ${ate}.` });
+      }
+
+      const { faturasNorm, recibosNorm, aliasRows } = await fetchFaturasERecibos(supabaseClient);
+      const { matched, orphan_bank, orphan_system } = runMatchingEngine(
+        transacoes,
+        [...faturasNorm, ...recibosNorm],
+        aliasRows
+      );
+
+      const tocFilename = `TOConline ${de} a ${ate}`;
+      const { data: tocRun, error: tocRunErr } = await supabaseClient
+        .from('reconciliation_runs')
+        .insert({
+          filename: tocFilename,
+          transaction_count: transacoes.length,
+          matched_count: matched.length,
+          orphan_bank_count: orphan_bank.length,
+          orphan_system_count: orphan_system.length,
+          transactions_json: transacoes,
+          results_json: { matched, orphan_bank, orphan_system },
+        })
+        .select('id')
+        .single();
+
+      if (tocRunErr) return res.status(500).json({ error: `Erro ao guardar run: ${tocRunErr.message}` });
+
+      return res.status(200).json({
+        ok: true,
+        run_id: tocRun.id,
+        filename: tocFilename,
+        transaction_count: transacoes.length,
+        matched_count: matched.length,
+        orphan_bank_count: orphan_bank.length,
+        orphan_system_count: orphan_system.length,
+        matched,
+        orphan_bank,
+        orphan_system,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   if (!Array.isArray(transactions_json) || transactions_json.length === 0) {
     return res.status(400).json({ error: 'transactions_json obrigatório e não pode estar vazio.' });
   }

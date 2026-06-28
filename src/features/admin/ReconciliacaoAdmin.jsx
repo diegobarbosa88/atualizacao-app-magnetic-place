@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
-  AlertCircle, FileText, Loader2, Plus, ArrowLeftRight, Pencil
+  AlertCircle, FileText, Loader2, Plus, ArrowLeftRight, Pencil, Zap
 } from 'lucide-react';
 import RelatorioModal from './RelatorioModal';
 import CsvMappingCard from './CsvMappingCard';
@@ -35,6 +35,45 @@ export default function ReconciliacaoAdmin() {
   const [editingTxIdx, setEditingTxIdx] = useState(null);
   const [csvMapping, setCsvMapping] = useState(null);
   const [colMap, setColMap] = useState({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+
+  // ── TOConline import state ────────────────────────────────────────────────
+  const hoje = new Date();
+  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  const [tocPainelAberto, setTocPainelAberto] = useState(false);
+  const [tocDe, setTocDe] = useState(mesAtual);
+  const [tocAte, setTocAte] = useState(mesAtual);
+  const [tocProcessando, setTocProcessando] = useState(false);
+  const [tocErro, setTocErro] = useState(null);
+
+  const importarDoTOConline = async () => {
+    setTocProcessando(true);
+    setTocErro(null);
+    run.setResultado(null);
+    try {
+      const res = await fetch('/api/reconciliacao/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fonte: 'toconline', de: tocDe, ate: tocAte }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setTocErro(data.error || 'Erro ao importar.'); return; }
+      run.setResultado(data);
+      run.setActiveSubTab('matched');
+      setTocPainelAberto(false);
+      carregarHistorico();
+      if (data.run_id) {
+        await run.autoAssociarEntradas(data, data.run_id);
+        const fullResults = { matched: data.matched || [], orphan_bank: data.orphan_bank || [], orphan_system: data.orphan_system || [] };
+        const newMatched = await run.autoConfirmarMatched(data.matched || [], data.run_id, fullResults);
+        run.setResultado(prev => ({ ...prev, matched: newMatched }));
+        await run.carregarPagamentosLinks(data.run_id);
+      }
+    } catch (err) {
+      setTocErro(err.message || 'Erro de rede.');
+    } finally {
+      setTocProcessando(false);
+    }
+  };
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [showForm, setShowForm] = useState(false);
@@ -357,6 +396,52 @@ export default function ReconciliacaoAdmin() {
         {previewing && (
           <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600">
             <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
+          </div>
+        )}
+      </div>
+
+      {/* Importar do TOConline */}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+        <button
+          onClick={() => setTocPainelAberto(v => !v)}
+          className="w-full px-6 sm:px-8 py-5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 rounded-xl"><Zap size={15} className="text-emerald-600" /></div>
+            <div className="text-left">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Importar do TOConline</p>
+              <p className="text-xs text-slate-400">Busca movimentos directamente da API bancária</p>
+            </div>
+          </div>
+          {tocPainelAberto ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+        </button>
+        {tocPainelAberto && (
+          <div className="px-6 sm:px-8 pb-6 space-y-4 border-t border-slate-100">
+            <div className="pt-4 grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">De (mês)</label>
+                <input type="month" value={tocDe} onChange={e => setTocDe(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Até (mês)</label>
+                <input type="month" value={tocAte} onChange={e => setTocAte(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300" />
+              </div>
+            </div>
+            {tocErro && (
+              <div className="flex items-start gap-2 bg-rose-50 text-rose-700 rounded-xl p-3 text-xs">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" /><span>{tocErro}</span>
+              </div>
+            )}
+            <button
+              onClick={importarDoTOConline}
+              disabled={tocProcessando || !tocDe || !tocAte}
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-2xl py-3 hover:bg-emerald-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
+            >
+              {tocProcessando ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+              {tocProcessando ? 'A importar movimentos...' : 'Importar e Reconciliar'}
+            </button>
           </div>
         )}
       </div>
