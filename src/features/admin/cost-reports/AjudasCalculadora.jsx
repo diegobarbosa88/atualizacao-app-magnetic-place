@@ -139,6 +139,15 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const saldoDisponivel = orcamentoAnual - jaFaturadoYTD;
   const progressoPct = orcamentoAnual > 0 ? Math.min((jaFaturadoYTD / orcamentoAnual) * 100, 100) : 0;
 
+  // Meses anteriores ao selecionado com recibos mas sem confirmação em ajudas_faturadas_clientes
+  const mesesNaoConfirmados = useMemo(() => {
+    return recibosAno
+      .filter(r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0)
+      .filter(r => !faturadosAno.some(f => f.mes === r.mes && f.confirmado))
+      .map(r => r.mes)
+      .sort();
+  }, [recibosAno, faturadosAno, selectedMonth]);
+
   // — Faturação por cliente no mês atual —
   // selectedMonth = mês de trabalho; as horas são do próprio mês selecionado.
   const clientesMes = useMemo(() => {
@@ -268,6 +277,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   const ajudasEfetivoMes = ajudasEstimadoMes > 0 ? ajudasEstimadoMes : ajudasReciboMes;
   const eEstimativa = taxaAjudas > 0 || saldoDisponivel > 0;
+  // True quando há clientes no mês mas não há nenhum valor de ajudas calculável
+  const semDadosAjudas = ajudasEfetivoMes === 0;
 
   // — Ajudas por cliente —
   // Override/obs mantém o valor fixo. O alvo global (ajudasEfetivoMes) é sempre
@@ -338,7 +349,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     setExtraindoObs(true);
     setObsResult(null);
     try {
-      const mesFaturas = selectedMonth;
+      // As faturas são emitidas no mês seguinte ao mês de trabalho (igual ao Modo B)
+      const mesFaturas = mesSeguinte(selectedMonth);
       const [y, m] = mesFaturas.split('-').map(Number);
       const ultimoDia = new Date(y, m, 0).getDate();
       const params = new URLSearchParams({
@@ -555,7 +567,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
             { label: 'Já faturado', val: fmtEur(jaFaturadoYTD), cls: 'slate' },
             { label: 'Saldo restante', val: fmtEur(saldoDisponivel), cls: saldoDisponivel < 0 ? 'red' : 'emerald' },
             { label: 'Meses restantes', val: mesesRestantes, cls: 'slate' },
-            { label: eEstimativa ? 'Ajudas (estimativa)' : semHoras ? 'Recibos mês anterior' : 'Recibos deste mês', val: fmtEur(ajudasEfetivoMes), cls: eEstimativa ? 'amber' : 'indigo' },
+            { label: semDadosAjudas ? 'Sem dados' : eEstimativa ? 'Ajudas (estimativa)' : semHoras ? 'Recibos mês anterior' : 'Recibos deste mês', val: fmtEur(ajudasEfetivoMes), cls: semDadosAjudas ? 'slate' : eEstimativa ? 'amber' : 'indigo' },
           ].map(({ label, val, cls }) => (
             <div key={label} className={`bg-${cls}-50 border border-${cls}-100 rounded-xl p-3 text-center`}>
               <p className={`text-base font-black text-${cls}-700`}>{val}</p>
@@ -563,6 +575,23 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
             </div>
           ))}
         </div>
+
+        {/* Aviso de meses anteriores não confirmados */}
+        {mesesNaoConfirmados.length > 0 && (
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+            <AlertTriangle size={13} className="text-amber-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[10px] font-black text-amber-700">
+                {mesesNaoConfirmados.length === 1
+                  ? `${formatarMes(mesesNaoConfirmados[0])} tem ajudas por confirmar`
+                  : `${mesesNaoConfirmados.length} meses anteriores com ajudas por confirmar`}
+              </p>
+              <p className="text-[9px] text-amber-600 mt-0.5">
+                {mesesNaoConfirmados.map(m => formatarMes(m)).join(' · ')}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Barra de progresso */}
         {orcamentoAnual > 0 && (
@@ -586,9 +615,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
               Estimativa — {formatarMes(selectedMonth)}
             </h3>
             <p className="text-[10px] text-slate-400 mt-0.5 max-w-xs sm:max-w-none">
-              {eEstimativa
-                ? `Estimativa por taxa histórica (${fmtPct(taxaAjudas * 100)}) × faturação do mês — ${fmtEur(ajudasEfetivoMes)}${saldoDisponivel > 0 && ajudasEstimadoMes < totalFaturaMes * taxaAjudas ? ' (limitado pelo saldo)' : ''}`
-                : `Distribui as ajudas dos recibos do mês (${fmtEur(ajudasReciboMes)}) proporcional à faturação de cada cliente`}
+              {semDadosAjudas && clientesMesFinal.length > 0
+                ? 'Sem ajudas disponíveis — processe os recibos de vencimento para obter o valor de referência'
+                : eEstimativa
+                  ? `Estimativa por taxa histórica (${fmtPct(taxaAjudas * 100)}) × faturação do mês — ${fmtEur(ajudasEfetivoMes)}${saldoDisponivel > 0 && ajudasEstimadoMes < totalFaturaMes * taxaAjudas ? ' (limitado pelo saldo)' : ''}`
+                  : `Distribui as ajudas dos recibos do mês (${fmtEur(ajudasReciboMes)}) proporcional à faturação de cada cliente`}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -694,6 +725,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   </tr>
                 ))}
               </tbody>
+              {semDadosAjudas && (
+                <caption className="caption-bottom px-4 py-2 text-[10px] text-slate-400 italic border-t border-slate-100 text-left">
+                  Os valores de ajudas aparecem a zero porque ainda não existem recibos de vencimento processados nem histórico de faturação para este mês.
+                </caption>
+              )}
               <tfoot className="border-t-2 border-slate-200 bg-slate-50">
                 <tr>
                   <td className="px-2 py-2.5 w-7" />
@@ -813,6 +849,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                                   Estimativa ({fmtPct(taxaAjudas * 100)}): <span className="font-bold">{fmtEur(h.ajudasEstimado)}</span>
                                 </span>
                               ) : null}
+                              {faturasHist[h.mes] !== undefined && faturasHist[h.mes].length > 0 && (
+                                <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded text-[8px] font-black uppercase tracking-wider shrink-0">
+                                  {faturasHist[h.mes].length} fat. TOC
+                                </span>
+                              )}
                               {temEdicoes && (
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Edições por guardar" />
                               )}
@@ -931,7 +972,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                                     const invVal = histOverrides[invKey] !== undefined ? histOverrides[invKey] : invDefault;
                                     return (
                                       <tr key={inv.docNum} className={subRowCls}>
-                                        <td className="px-3 py-1.5 pl-12 text-[10px] text-slate-400 font-mono">{inv.docNum}</td>
+                                        <td className="px-3 py-1.5 pl-12">
+                                          <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-mono">{inv.docNum}</span>
+                                        </td>
                                         <td className="hidden sm:table-cell" />
                                         <td className="px-3 py-1.5 text-right text-[10px] text-slate-500 hidden sm:table-cell">{fmtEur(inv.valor)}</td>
                                         <td className="hidden sm:table-cell" />
@@ -963,7 +1006,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                                 <tr className={rowCls}>
                                   <td className="px-3 py-2.5 pl-8 font-bold text-slate-800">
                                     {nomeCliente}
-                                    {invoices[0] && <span className="ml-2 text-[9px] font-mono text-slate-400">{invoices[0].docNum}</span>}
+                                    {invoices[0] && <span className="ml-2 px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-mono">{invoices[0].docNum}</span>}
                                   </td>
                                   <td className="px-3 py-2.5 text-right text-slate-500 hidden sm:table-cell">
                                     {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
