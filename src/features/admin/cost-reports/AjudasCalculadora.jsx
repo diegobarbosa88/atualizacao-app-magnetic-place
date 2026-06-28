@@ -133,21 +133,26 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   useEffect(() => { setOverrides({}); setConfirmado(false); setObsResult(null); setObsAplicados(new Set()); setSelecionados(new Set()); setRedistribuidos(new Set()); }, [selectedMonth]);
 
   // — Saldo acumulado de diferenças —
-  // Fatura do mês M refere-se aos recibos do mês M-1.
-  // Só conta meses com recibos E com fatura confirmada na app (meses sem confirmação
-  // ainda não foram faturados — não entram no saldo).
-  // saldo = Σ(recibo_real - ajudas_faturadas) para meses confirmados anteriores
+  // receipt_validations tem uma linha POR TRABALHADOR por mês — agrupa por mês antes
+  // de comparar com o total faturado (que já é o total do mês).
+  // saldo = Σ(total_recibo_mes - total_faturado_mes) para meses confirmados anteriores
   // Positivo → sub-faturado (acrescentar à previsão seguinte)
   // Negativo → sobre-faturado (descontar da previsão seguinte)
   const saldoCarregado = useMemo(() => {
-    return recibosAno
+    // Passo 1: somar todos os trabalhadores por mês
+    const porMes = {};
+    recibosAno
       .filter(r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0)
-      .reduce((s, r) => {
-        const confirmacoesDoMes = faturadosAno.filter(f => f.mes === r.mes && f.confirmado);
-        if (!confirmacoesDoMes.length) return s; // ainda não confirmado → excluir do saldo
-        const faturadoMes = confirmacoesDoMes.reduce((sf, f) => sf + (parseFloat(f.valor_ajudas) || 0), 0);
-        return s + (parseFloat(r.ajudas_custo_extraidas) || 0) - faturadoMes;
-      }, 0);
+      .forEach(r => {
+        porMes[r.mes] = (porMes[r.mes] || 0) + (parseFloat(r.ajudas_custo_extraidas) || 0);
+      });
+    // Passo 2: para cada mês confirmado, calcular diferença (recibo - faturado)
+    return Object.entries(porMes).reduce((s, [mes, totalRecibo]) => {
+      const confirmacoesDoMes = faturadosAno.filter(f => f.mes === mes && f.confirmado);
+      if (!confirmacoesDoMes.length) return s; // ainda não confirmado → excluir do saldo
+      const faturadoMes = confirmacoesDoMes.reduce((sf, f) => sf + (parseFloat(f.valor_ajudas) || 0), 0);
+      return s + totalRecibo - faturadoMes;
+    }, 0);
   }, [recibosAno, faturadosAno, selectedMonth]);
 
   // Informativo: totais do ano actual para o painel
