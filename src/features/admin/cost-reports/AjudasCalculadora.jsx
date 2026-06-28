@@ -132,19 +132,22 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   // Reset overrides ao mudar mês
   useEffect(() => { setOverrides({}); setConfirmado(false); setObsResult(null); setObsAplicados(new Set()); setSelecionados(new Set()); setRedistribuidos(new Set()); }, [selectedMonth]);
 
-  // — Cálculos de saldo acumulado —
-  // Para cada mês anterior com recibos processados: saldo = recibo - faturado
-  // O saldo acumula-se e passa para a previsão do mês corrente.
+  // — Saldo acumulado de diferenças —
+  // Fatura do mês M refere-se aos recibos do mês M-1.
+  // Só conta meses com recibos E com fatura confirmada na app (meses sem confirmação
+  // ainda não foram faturados — não entram no saldo).
+  // saldo = Σ(recibo_real - ajudas_faturadas) para meses confirmados anteriores
+  // Positivo → sub-faturado (acrescentar à previsão seguinte)
+  // Negativo → sobre-faturado (descontar da previsão seguinte)
   const saldoCarregado = useMemo(() => {
-    const mesesComRecibos = recibosAno.filter(
-      r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0
-    );
-    return mesesComRecibos.reduce((s, r) => {
-      const faturadoMes = faturadosAno
-        .filter(f => f.mes === r.mes)
-        .reduce((sf, f) => sf + (parseFloat(f.valor_ajudas) || 0), 0);
-      return s + (parseFloat(r.ajudas_custo_extraidas) || 0) - faturadoMes;
-    }, 0);
+    return recibosAno
+      .filter(r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0)
+      .reduce((s, r) => {
+        const confirmacoesDoMes = faturadosAno.filter(f => f.mes === r.mes && f.confirmado);
+        if (!confirmacoesDoMes.length) return s; // ainda não confirmado → excluir do saldo
+        const faturadoMes = confirmacoesDoMes.reduce((sf, f) => sf + (parseFloat(f.valor_ajudas) || 0), 0);
+        return s + (parseFloat(r.ajudas_custo_extraidas) || 0) - faturadoMes;
+      }, 0);
   }, [recibosAno, faturadosAno, selectedMonth]);
 
   // Informativo: totais do ano actual para o painel
@@ -329,11 +332,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
   const totalFaturaMes = useMemo(() => clientesMesFinal.reduce((s, c) => s + c.valorFatura, 0), [clientesMesFinal]);
 
-  // Taxa histórica de ajudas sobre faturação: total ajudas faturadas / total faturas
-  // Usa apenas meses anteriores ao seleccionado para não contaminar a estimativa corrente.
+  // Taxa histórica: só meses confirmados (fatura criada e registada na app)
   const taxaAjudas = useMemo(() => {
-    const totalFat = faturadosAno.reduce((s, r) => s + (parseFloat(r.total_fatura) || 0), 0);
-    const totalAj  = faturadosAno.reduce((s, r) => s + (parseFloat(r.valor_ajudas) || 0), 0);
+    const confirmados = faturadosAno.filter(r => r.confirmado);
+    const totalFat = confirmados.reduce((s, r) => s + (parseFloat(r.total_fatura) || 0), 0);
+    const totalAj  = confirmados.reduce((s, r) => s + (parseFloat(r.valor_ajudas) || 0), 0);
     return totalFat > 0 ? totalAj / totalFat : 0;
   }, [faturadosAno]);
 
@@ -772,16 +775,16 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-slate-100 gap-2">
           <div>
             <h3 className="text-sm font-black text-slate-800">
-              {temRecibosDoMes ? 'Ajudas de Custo' : 'Estimativa'} — {formatarMes(selectedMonth)}
+              {temRecibosDoMes ? `Ajudas de Custo — ${formatarMes(selectedMonth)}` : `Previsão para fatura de ${formatarMes(mesSeguinte(selectedMonth))} (trabalho de ${formatarMes(selectedMonth)})`}
             </h3>
             <p className="text-[10px] text-slate-400 mt-0.5 max-w-xs sm:max-w-none">
               {semDadosAjudas && clientesMesFinal.length > 0
                 ? 'Sem ajudas disponíveis — confirme meses anteriores para calcular a taxa histórica'
                 : temRecibosDoMes
-                  ? `Recibos processados: ${fmtEur(ajudasReciboMes)} — a diferença face ao faturado entra no saldo do mês seguinte`
+                  ? `Recibos processados: ${fmtEur(ajudasReciboMes)} — diferença face ao faturado entra automaticamente no saldo do próximo mês`
                   : taxaAjudas > 0
-                    ? `Previsão: ${fmtPct(taxaAjudas * 100)} × ${fmtEur(totalFaturaMes)}${saldoCarregado !== 0 ? ` ${saldoCarregado > 0 ? '+' : '−'} ${fmtEur(Math.abs(saldoCarregado))} saldo anterior` : ''} = ${fmtEur(ajudasEfetivoMes)}`
-                    : 'Sem histórico para estimar — confirme meses anteriores para calcular a taxa'}
+                    ? `Taxa histórica ${fmtPct(taxaAjudas * 100)} × ${fmtEur(totalFaturaMes)}${saldoCarregado !== 0 ? ` ${saldoCarregado > 0 ? '+ ' : '− '}${fmtEur(Math.abs(saldoCarregado))} saldo de meses anteriores` : ''} = ${fmtEur(ajudasEfetivoMes)}`
+                    : 'Sem histórico confirmado — confirme meses anteriores para calcular a taxa'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
