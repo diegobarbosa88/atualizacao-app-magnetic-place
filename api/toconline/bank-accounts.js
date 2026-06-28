@@ -26,30 +26,8 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    const { id, com_saldo, movimentos, page = 1, probe_rh } = req.query;
+    const { id, com_saldo, movimentos, page = 1 } = req.query;
 
-    // Probe endpoints de RH/vencimentos
-    if (probe_rh === '1') {
-      const CANDIDATES = [
-        '/api/payrolls', '/api/payroll_documents', '/api/salary_receipts',
-        '/api/employee_receipts', '/api/vencimentos', '/api/employees',
-        '/api/receipts', '/api/salary_slips', '/api/payslips',
-        '/api/rh_documents', '/api/worker_receipts',
-        '/v1/payrolls', '/v1/employees', '/v1/salary_receipts',
-      ];
-      const results = [];
-      for (const path of CANDIDATES) {
-        try {
-          const data = await tocFetch(`${path}?page[size]=1`, accessToken);
-          const item = Array.isArray(data) ? data[0] : (data.data?.[0]?.attributes || data.data?.[0] || data);
-          results.push({ path, status: 'OK', keys: item ? Object.keys(item).slice(0, 8) : [] });
-        } catch (e) {
-          const code = (e.message || '').match(/→ (\d+)/)?.[1] || 'ERR';
-          results.push({ path, status: code });
-        }
-      }
-      return res.status(200).json({ results });
-    }
 
     // ?movimentos=1&id=X — lista movimentos de uma conta
     if (movimentos === '1' && id) {

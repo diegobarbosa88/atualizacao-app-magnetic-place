@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Landmark, Plus, Loader2, RefreshCw, X, ChevronRight, ArrowUpRight, ArrowDownLeft, FlaskConical } from 'lucide-react';
+import { Landmark, Plus, Loader2, RefreshCw, X, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 function fmtEur(val, currency = 'EUR') {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).format(val ?? 0);
@@ -183,23 +183,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
   const [erro, setErro] = useState(null);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [contaMovimentos, setContaMovimentos] = useState(null);
-  const [probeRH, setProbeRH] = useState(null);
-  const [probeRHLoading, setProbeRHLoading] = useState(false);
-
-  const handleProbeRH = async () => {
-    setProbeRHLoading(true);
-    setProbeRH(null);
-    try {
-      const res = await fetch('/api/toconline/bank-accounts?probe_rh=1');
-      const data = await res.json();
-      setProbeRH(data.results || []);
-    } catch (e) {
-      setProbeRH([{ path: 'erro', status: 'ERR' }]);
-    } finally {
-      setProbeRHLoading(false);
-    }
-  };
-
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
@@ -243,11 +226,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             <div className="p-2 bg-emerald-50 rounded-xl"><Landmark size={16} className="text-emerald-600" /></div>
             <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <button onClick={handleProbeRH} disabled={probeRHLoading}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all disabled:opacity-50">
-              {probeRHLoading ? <Loader2 size={13} className="animate-spin" /> : <FlaskConical size={13} />} Probe RH
-            </button>
+          <div className="flex items-center gap-2">
             <button onClick={carregar}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
               <RefreshCw size={13} /> Sincronizar
@@ -258,21 +237,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             </button>
           </div>
         </div>
-
-        {probeRH && (
-          <div className="mx-5 my-3 bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-1.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-2">Endpoints RH/Vencimentos</p>
-            {probeRH.map((r, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs">
-                <span className={`shrink-0 px-2 py-0.5 rounded-full font-black text-[10px] ${r.status === 'OK' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>{r.status}</span>
-                <span className="font-mono text-slate-600 truncate">{r.path}</span>
-                {r.status === 'OK' && r.keys?.length > 0 && (
-                  <span className="text-[10px] text-slate-400 truncate">{r.keys.join(', ')}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
 
         {erro && (
           <div className="mx-5 my-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
