@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Landmark, Plus, Loader2, RefreshCw, Trash2, X, Wifi, WifiOff } from 'lucide-react';
+import { Landmark, Plus, Loader2, RefreshCw, Trash2, X } from 'lucide-react';
 
 function NovaConta({ onClose, onSalva }) {
   const [form, setForm] = useState({ nome: '', iban: '', banco: '', moeda: 'EUR', saldo_inicial: '' });
@@ -112,26 +112,6 @@ export default function TOConlineBankAccounts({ onDesligado }) {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [removendo, setRemovendo] = useState(null);
 
-  const [saltedgeContas, setSaltedgeContas] = useState([]);
-  const [saltedgeLoading, setSaltedgeLoading] = useState(false);
-  const [saltedgeErro, setSaltedgeErro] = useState(null);
-
-  const carregarSaltedge = useCallback(async () => {
-    setSaltedgeLoading(true);
-    setSaltedgeErro(null);
-    try {
-      const res = await fetch('/api/pagamentos?action=saltedge-list-accounts');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
-      setSaltedgeContas(data.data || []);
-    } catch (e) {
-      setSaltedgeErro(e.message);
-      setSaltedgeContas([]);
-    } finally {
-      setSaltedgeLoading(false);
-    }
-  }, []);
-
   const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
@@ -149,7 +129,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   }, [onDesligado]);
 
-  useEffect(() => { carregar(); carregarSaltedge(); }, [carregar, carregarSaltedge]);
+  useEffect(() => { carregar(); }, [carregar]);
 
   const handleRemover = async (id, nome) => {
     if (!window.confirm(`Remover a conta "${nome}" do Toconline?`)) return;
@@ -166,158 +146,113 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   };
 
-  const handleConectarSaltedge = async () => {
-    try {
-      const res = await fetch('/api/pagamentos?action=saltedge-get-link');
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao obter link Salt Edge');
-      if (data.url) window.location.href = data.url;
-    } catch (e) {
-      alert(e.message);
-    }
-  };
+  const totalSaldo = contas.reduce((s, c) => {
+    const a = c.attributes || c;
+    const val = a.current_balance ?? a.initial_balance ?? a.balance ?? 0;
+    return s + (Number(val) || 0);
+  }, 0);
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-50 rounded-xl">
-            <Landmark size={16} className="text-emerald-600" />
+    <div className="space-y-4">
+      {/* Card de saldo total */}
+      {contas.length > 0 && (
+        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl px-5 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-emerald-100 rounded-xl">
+              <Landmark size={16} className="text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Saldo Total</p>
+              <p className="text-2xl font-black text-emerald-800">{fmtEur(totalSaldo)}</p>
+            </div>
           </div>
-          <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={handleConectarSaltedge}
-            className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-violet-700 hover:to-indigo-700 transition-all shadow-sm">
-            <Wifi size={13} /> Conectar Salt Edge
-          </button>
-          <button onClick={() => { carregar(); carregarSaltedge(); }}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
-            <RefreshCw size={13} /> Sincronizar
-          </button>
-          <button onClick={() => setMostrarModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm">
-            <Plus size={13} /> Nova Conta
-          </button>
-        </div>
-      </div>
-
-      {erro && (
-        <div className="mx-5 my-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-slate-400">
-          <Loader2 size={20} className="animate-spin" />
-        </div>
-      ) : !erro && contas.length === 0 ? (
-        <div className="px-5 py-12 text-center text-slate-400 text-xs font-semibold">
-          Sem contas bancárias — sincronize ou crie uma nova
-        </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                {['Nome / Banco', 'IBAN / NIB', 'SWIFT', 'Tipo', 'Saldo Inicial', ''].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 last:w-10">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {contas.map((c) => {
-                const a = c.attributes || c;
-                const saldo = a.initial_balance ?? a.current_balance ?? a.balance ?? null;
-                return (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-slate-800">
-                      <div className="flex items-center gap-2">
-                        <Landmark size={12} className="text-slate-400 shrink-0" />
-                        <div>
-                          <p>{a.name || '—'}</p>
-                          {a.description && <p className="text-[10px] text-slate-400 font-normal">{a.description}</p>}
-                        </div>
-                        {a.is_connected && (
-                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-100 text-[9px] font-black rounded-full uppercase">ligado</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 font-mono text-[10px]">
-                      <p>{a.iban || '—'}</p>
-                      {a.nib && a.nib !== a.iban && <p className="text-slate-400">NIB: {a.nib}</p>}
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 font-mono text-[10px]">{a.swift || '—'}</td>
-                    <td className="px-4 py-3 text-slate-500">{a.account_type || '—'}</td>
-                    <td className="px-4 py-3 font-bold text-slate-700">
-                      {saldo != null
-                        ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldo)
-                        : '—'}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => handleRemover(c.id, a.name)}
-                        disabled={removendo === c.id}
-                        className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-40"
-                      >
-                        {removendo === c.id
-                          ? <Loader2 size={13} className="animate-spin" />
-                          : <Trash2 size={13} />}
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <p className="text-[10px] text-emerald-400 font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
         </div>
       )}
 
-      {/* ── Secção Salt Edge: saldo real ── */}
-      <div className="border-t border-slate-100">
-        <div className="px-5 py-3 flex items-center justify-between">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-emerald-50 rounded-xl">
+              <Landmark size={16} className="text-emerald-600" />
+            </div>
+            <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
+          </div>
           <div className="flex items-center gap-2">
-            <Wifi size={13} className="text-violet-500" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Saldo Real (Salt Edge)</span>
+            <button onClick={carregar}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+              <RefreshCw size={13} /> Sincronizar
+            </button>
+            <button onClick={() => setMostrarModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm">
+              <Plus size={13} /> Nova Conta
+            </button>
           </div>
-          {saltedgeLoading && <Loader2 size={13} className="animate-spin text-slate-400" />}
         </div>
 
-        {saltedgeErro ? (
-          <div className="px-5 pb-4 flex items-center gap-2 text-xs text-slate-400">
-            <WifiOff size={13} className="text-slate-300 shrink-0" />
-            <span>
-              {saltedgeErro.includes('não ligada')
-                ? 'Nenhuma conta bancária conectada — clique em "Conectar Salt Edge" para ligar.'
-                : saltedgeErro}
-            </span>
+        {erro && (
+          <div className="mx-5 my-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12 text-slate-400">
+            <Loader2 size={20} className="animate-spin" />
           </div>
-        ) : saltedgeContas.length === 0 && !saltedgeLoading ? (
-          <div className="px-5 pb-4 text-xs text-slate-400 flex items-center gap-2">
-            <WifiOff size={13} className="text-slate-300 shrink-0" />
-            Nenhuma conta Salt Edge conectada.
+        ) : !erro && contas.length === 0 ? (
+          <div className="px-5 py-12 text-center text-slate-400 text-xs font-semibold">
+            Sem contas bancárias — crie uma nova ou sincronize com o TOConline
           </div>
         ) : (
-          <div className="px-5 pb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {saltedgeContas.map(conta => (
-              <div key={conta.id} className="bg-violet-50 border border-violet-100 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-bold text-slate-800 truncate">{conta.name || '—'}</p>
-                  {conta.iban && (
-                    <p className="text-[10px] font-mono text-slate-400 truncate">{conta.iban}</p>
-                  )}
-                  <p className="text-[9px] font-black uppercase tracking-widest text-violet-400 mt-0.5">
-                    {conta.nature || conta.account_type || 'Conta'}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-lg font-black text-violet-700">
-                    {fmtEur(conta.balance, conta.currency_code || 'EUR')}
-                  </p>
-                  <p className="text-[9px] text-slate-400">{conta.currency_code || 'EUR'}</p>
-                </div>
-              </div>
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  {['Nome / Banco', 'IBAN', 'SWIFT', 'Tipo', 'Saldo', ''].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 last:w-10">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {contas.map((c) => {
+                  const a = c.attributes || c;
+                  const saldo = a.current_balance ?? a.initial_balance ?? a.balance ?? null;
+                  return (
+                    <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-4 py-3 font-semibold text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <Landmark size={12} className="text-slate-400 shrink-0" />
+                          <div>
+                            <p>{a.name || '—'}</p>
+                            {a.description && <p className="text-[10px] text-slate-400 font-normal">{a.description}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 font-mono text-[10px]">
+                        <p>{a.iban || '—'}</p>
+                        {a.nib && a.nib !== a.iban && <p className="text-slate-400">NIB: {a.nib}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500 font-mono text-[10px]">{a.swift || '—'}</td>
+                      <td className="px-4 py-3 text-slate-500">{a.account_type || '—'}</td>
+                      <td className="px-4 py-3 font-bold text-emerald-700">
+                        {saldo != null ? fmtEur(saldo) : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => handleRemover(c.id, a.name)}
+                          disabled={removendo === c.id}
+                          className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all disabled:opacity-40"
+                        >
+                          {removendo === c.id
+                            ? <Loader2 size={13} className="animate-spin" />
+                            : <Trash2 size={13} />}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
