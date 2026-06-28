@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Loader2, CheckCircle, Copy, ChevronDown, ChevronRight, AlertTriangle, FileSearch, Trash2, RotateCcw, Zap } from 'lucide-react';
+import { Loader2, CheckCircle, Copy, ChevronDown, ChevronRight, AlertTriangle, FileSearch, Trash2, RotateCcw, Zap, Download } from 'lucide-react';
+import { useRef } from 'react';
 import FaturarClienteModal from '../toconline/FaturarClienteModal';
 import { MESES_PT, mesesDisponiveis, formatarMes } from '../../../utils/validacaoHelpers';
 
@@ -94,6 +95,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   const [obsAplicados, setObsAplicados] = useState(new Set()); // clientIds preenchidos via observação
   const [selecionados, setSelecionados] = useState(new Set()); // clientIds selecionados para redistribuição
   const [redistribuidos, setRedistribuidos] = useState(new Set()); // clientIds cujo ajudasObs foi explicitamente ignorado
+  const [flashInfo, setFlashInfo] = useState(null);  // { editadoId, prevMap } — destaque visual da redistribuição
+  const flashTimer = useRef(null);
 
   // — Carregar dados da BD —
   const carregar = useCallback(async () => {
@@ -435,6 +438,88 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     setTimeout(() => setCopiado(false), 2000);
   };
 
+  // — Exportar XLS —
+  const handleExportarXLS = () => {
+    const fmtN = (n) => n.toFixed(2).replace('.', ',');
+    const th = (txt, align = 'left') =>
+      `<th style="background:#4F46E5;color:white;padding:10px 14px;text-align:${align};font-size:11px;font-weight:700;">${txt}</th>`;
+    const td = (txt, align = 'left', bold = false) =>
+      `<td style="padding:9px 14px;border-bottom:1px solid #e2e8f0;font-size:11px;text-align:${align};${bold ? 'font-weight:700;' : ''}">${txt}</td>`;
+
+    const linhasRows = linhas.map((l, i) => {
+      const bg = i % 2 ? '#f8fafc' : '#fff';
+      return `<tr style="background:${bg};">
+        ${td(l.nome)} ${td(l.fromToC ? '—' : `${l.horas.toFixed(2)}h`, 'right')}
+        ${td(`${(l.proporcao * 100).toFixed(1)}%`, 'right')} ${td(`${fmtN(l.valorFatura)} €`, 'right')}
+        ${td(`${fmtN(l.ajudasEstimadas)} €`, 'right', true)}
+      </tr>`;
+    }).join('');
+    const totalRow = `<tr style="background:#eef2ff;">
+      ${td('TOTAL', 'left', true)} ${td(semHoras ? '—' : `${linhas.reduce((s,l)=>s+l.horas,0).toFixed(2)}h`, 'right', true)}
+      ${td('100%', 'right', true)} ${td(`${fmtN(totalFaturaMes)} €`, 'right', true)}
+      ${td(`${fmtN(totalAjudasMes)} €`, 'right', true)}
+    </tr>`;
+
+    const histRows = historicoAnual.map((h, i) => {
+      const bg = i % 2 ? '#f8fafc' : '#fff';
+      const okBg = h.confirmado ? '#f0fdf4' : bg;
+      return `<tr style="background:${okBg};">
+        ${td(h.mes)} ${td(h.confirmado ? 'Sim' : 'Não', 'center')}
+        ${td(`${fmtN(h.ajudasRecibo)} €`, 'right')} ${td(`${fmtN(h.ajudasFaturadas)} €`, 'right', true)}
+        ${td(`${fmtN(h.totalFatura)} €`, 'right')}
+      </tr>`;
+    }).join('');
+
+    const hoje = new Date().toLocaleDateString('pt-PT');
+    const html = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><style>
+body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:30px;background:#f8fafc;}
+.header{background:linear-gradient(135deg,#4F46E5,#7C3AED);color:white;padding:22px 30px;border-radius:14px 14px 0 0;}
+.info-bar{background:white;padding:14px 30px;display:flex;gap:30px;border-bottom:1px solid #e2e8f0;}
+.il{font-size:9px;text-transform:uppercase;color:#94a3b8;font-weight:700;letter-spacing:1px;}
+.iv{font-size:13px;font-weight:600;color:#334155;}
+.content{background:white;padding:24px 30px;border-radius:0 0 14px 14px;box-shadow:0 4px 6px -1px rgba(0,0,0,.1);}
+.sec{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:#4F46E5;padding:14px 0 6px;border-bottom:2px solid #4F46E5;margin-bottom:0;}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+</style></head>
+<body>
+<div class="header">
+  <div style="font-size:18px;font-weight:800;text-transform:uppercase;letter-spacing:2px;">Magnetic Place</div>
+  <div style="font-size:11px;opacity:.9;margin-top:2px;">Ajudas de Custo — ${selectedMonth}</div>
+</div>
+<div class="info-bar">
+  <div><div class="il">Mês</div><div class="iv">${selectedMonth}</div></div>
+  <div><div class="il">Total Ajudas</div><div class="iv">${fmtN(totalAjudasMes)} €</div></div>
+  <div><div class="il">Total Fatura</div><div class="iv">${fmtN(totalFaturaMes)} €</div></div>
+  <div><div class="il">Gerado em</div><div class="iv">${hoje}</div></div>
+</div>
+<div class="content">
+  <div class="sec">Distribuição Mensal</div>
+  <table>
+    <thead><tr>${th('Cliente')}${th('Horas','right')}${th('%','right')}${th('Valor Fatura','right')}${th('Ajudas Incluídas','right')}</tr></thead>
+    <tbody>${linhasRows}</tbody>
+    <tfoot>${totalRow}</tfoot>
+  </table>
+  <div class="sec">Histórico Anual</div>
+  <table>
+    <thead><tr>${th('Mês')}${th('Confirmado','center')}${th('Ajudas Recibo','right')}${th('Ajudas Faturadas','right')}${th('Total Fatura','right')}</tr></thead>
+    <tbody>${histRows}</tbody>
+  </table>
+</div>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `ajudas-custo-${selectedMonth}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // — Histórico anual —
   const historicoAnual = useMemo(() => {
     const meses = [...new Set([
@@ -454,7 +539,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       const totalFatura = totalGuardado > 0 ? totalGuardado : totalLogs;
       const ajudasEstimado = ajudasRecibo === 0 ? totalFatura * taxaAjudas : 0;
       const referencia = ajudasRecibo > 0 ? ajudasRecibo : ajudasEstimado;
-      return { mes, ajudasRecibo, ajudasEstimado, ajudasFaturadas, totalFatura, dif: ajudasFaturadas - referencia };
+      const confirmado = linhasMes.some(r => r.confirmado);
+      return { mes, ajudasRecibo, ajudasEstimado, ajudasFaturadas, totalFatura, confirmado, dif: ajudasFaturadas - referencia };
     });
   }, [recibosAno, faturadosAno, logs, clients, taxaAjudas]);
 
@@ -673,8 +759,13 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {linhas.map(l => (
-                  <tr key={l.clientId} className={`transition-colors ${selecionados.has(l.clientId) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                {linhas.map(l => {
+                  const isFlashEdited = flashInfo?.editadoId === l.clientId;
+                  const flashDiff = flashInfo && !isFlashEdited && !l.daObservacao && !obsAplicados.has(l.clientId)
+                    ? l.ajudasEstimadas - (flashInfo.prevMap[l.clientId] ?? l.ajudasEstimadas)
+                    : null;
+                  return (
+                  <tr key={l.clientId} className={`transition-colors ${isFlashEdited ? 'bg-amber-50' : selecionados.has(l.clientId) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
                     <td className="px-2 py-2.5 w-7">
                       <input type="checkbox" checked={selecionados.has(l.clientId)}
                         onChange={e => setSelecionados(prev => { const n = new Set(prev); e.target.checked ? n.add(l.clientId) : n.delete(l.clientId); return n; })}
@@ -691,6 +782,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                     <td className="px-3 py-2.5 text-right text-slate-400 hidden sm:table-cell">{fmtPct(l.proporcao * 100)}</td>
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {flashDiff !== null && Math.abs(flashDiff) >= 0.005 && (
+                          <span className={`px-1 py-0.5 rounded text-[9px] font-black ${flashDiff > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
+                            {flashDiff > 0 ? '▲' : '▼'} {Math.abs(flashDiff).toFixed(2)}
+                          </span>
+                        )}
                         {(obsAplicados.has(l.clientId) || (l.daObservacao && overrides[l.clientId] === undefined)) && (
                           <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
                         )}
@@ -700,6 +796,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                           step="0.01"
                           value={overrides[l.clientId] !== undefined ? overrides[l.clientId] : l.ajudasEstimadas.toFixed(2)}
                           onChange={e => {
+                            // Snapshot antes da actualização para calcular diferença depois
+                            const prevMap = Object.fromEntries(linhas.map(r => [r.clientId, r.ajudasEstimadas]));
+                            clearTimeout(flashTimer.current);
+                            setFlashInfo({ editadoId: l.clientId, prevMap });
+                            flashTimer.current = setTimeout(() => setFlashInfo(null), 1800);
                             setOverrides(prev => ({ ...prev, [l.clientId]: e.target.value }));
                             setObsAplicados(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
                             setRedistribuidos(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
@@ -723,7 +824,8 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
               {semDadosAjudas && (
                 <caption className="caption-bottom px-4 py-2 text-[10px] text-slate-400 italic border-t border-slate-100 text-left">
@@ -782,6 +884,12 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all">
                   <Copy size={12} />
                   {copiado ? 'Copiado!' : 'Copiar'}
+                </button>
+                <button onClick={handleExportarXLS}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all"
+                  title="Exportar tabela e histórico para Excel">
+                  <Download size={12} />
+                  XLS
                 </button>
                 <button onClick={handleConfirmar} disabled={confirmando || confirmado}
                   className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40">

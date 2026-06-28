@@ -191,6 +191,22 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Erro ao emitir fatura');
 
+      // Auto-confirmar ajudas na BD após emissão bem-sucedida
+      if (supabase && clienteId && !clienteId.startsWith('toc:') && periodo) {
+        const valAjudas = ajudasValorInicial != null
+          ? Number(ajudasValorInicial)
+          : (ajudas?.valor_ajudas ?? ajudasEstimado ?? 0);
+        const baseTotal = servicosLinhas.reduce((s, sl) => {
+          const qty = sl.tipo === 'horas' ? totalHoras : (Number(sl.quantidade) || 1);
+          const price = Number(sl.preco_unitario ?? sl.valor_fixo) || 0;
+          return s + qty * price;
+        }, 0);
+        await supabase.from('ajudas_faturadas_clientes').upsert(
+          { mes: periodo, client_id: clienteId, valor_ajudas: parseFloat(Number(valAjudas).toFixed(2)), total_fatura: parseFloat(baseTotal.toFixed(2)), confirmado: true },
+          { onConflict: 'mes,client_id' }
+        );
+      }
+
       setResultado({ sucesso: true, doc_id: data.doc_id, documento: data.documento });
       setPasso(3);
       onFaturado?.();
