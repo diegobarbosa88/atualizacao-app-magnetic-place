@@ -139,10 +139,10 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
   // Positivo → sub-faturado (acrescentar à previsão seguinte)
   // Negativo → sobre-faturado (descontar da previsão seguinte)
   const saldoCarregado = useMemo(() => {
-    // Passo 1: somar todos os trabalhadores por mês
+    // Passo 1: somar todos os trabalhadores por mês (apenas ano atual)
     const porMes = {};
     recibosAno
-      .filter(r => r.mes < selectedMonth && parseFloat(r.ajudas_custo_extraidas) > 0)
+      .filter(r => r.mes < selectedMonth && r.mes.startsWith(ano) && parseFloat(r.ajudas_custo_extraidas) > 0)
       .forEach(r => {
         porMes[r.mes] = (porMes[r.mes] || 0) + (parseFloat(r.ajudas_custo_extraidas) || 0);
       });
@@ -153,7 +153,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
       const faturadoMes = confirmacoesDoMes.reduce((sf, f) => sf + (parseFloat(f.valor_ajudas) || 0), 0);
       return s + totalRecibo - faturadoMes;
     }, 0);
-  }, [recibosAno, faturadosAno, selectedMonth]);
+  }, [recibosAno, faturadosAno, selectedMonth, ano]);
 
   // Informativo: totais do ano actual para o painel
   const orcamentoAnual = useMemo(
