@@ -44,7 +44,6 @@ const MENU_STRUCTURE = [
       { id: 'fat-fornec',    label: 'Fat. Fornec.',  icon: Receipt,       path: '/admin/documentos/faturas/fornecedores',          color: 'blue' },
       { id: 'rec-recibos',   label: 'Recibos',       icon: ReceiptText,   path: '/admin/documentos/reconciliacao/recibos',         color: 'emerald' },
       { id: 'rec-salarios',  label: 'Salários',      icon: Coins,         path: '/admin/documentos/reconciliacao/salarios',        color: 'emerald' },
-      { id: 'rec-movs',      label: 'Movimentações', icon: TrendingUp,    path: '/admin/documentos/reconciliacao/movimentacoes',   color: 'emerald' },
       { id: 'rec-bancaria',  label: 'Bancária',      icon: Landmark,      path: '/admin/documentos/reconciliacao/bancaria',        color: 'emerald' },
       { id: 'pag-fornecedores', label: 'Pagamentos',    icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores', color: 'violet' },
       { id: 'pag-fila',        label: 'Fila de Pag.',  icon: ListChecks,    path: '/admin/documentos/pagamentos/fila',                    color: 'violet' },

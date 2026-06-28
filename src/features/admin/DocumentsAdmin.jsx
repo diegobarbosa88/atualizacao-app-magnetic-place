@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, TrendingUp, BarChart2, ArrowRightLeft, Landmark, ListChecks } from 'lucide-react';
+import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, BarChart2, ArrowRightLeft, Landmark, ListChecks } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -10,7 +10,6 @@ import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmi
 import ValidarReciboAdmin from '../../components/admin/ValidarReciboAdmin';
 import SalariosTab from './SalariosTab';
 import FaturasTab from './FaturasTab';
-import MovimentacoesTab from './MovimentacoesTab';
 import FaturasAdmin from './FaturasAdmin';
 import PagamentosTab from './pagamentos/PagamentosTab';
 import FilaAprovacaoTab from './pagamentos/FilaAprovacaoTab';
@@ -51,7 +50,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       sections: [
         { id: 'recibos',        label: 'Recibos',        icon: ReceiptText },
         { id: 'salarios',       label: 'Salários',       icon: Coins },
-        { id: 'movimentacoes',  label: 'Movimentações',  icon: TrendingUp },
         { id: 'bancaria',       label: 'Bancária',       icon: Landmark },
       ],
     },
@@ -426,9 +424,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {activeGroup === 'reconciliacao' && activeSection === 'salarios' && (
         <SalariosTab />
-      )}
-      {activeGroup === 'reconciliacao' && activeSection === 'movimentacoes' && (
-        <MovimentacoesTab />
       )}
       {activeGroup === 'reconciliacao' && activeSection === 'bancaria' && (
         <ReconciliacaoAdmin />
