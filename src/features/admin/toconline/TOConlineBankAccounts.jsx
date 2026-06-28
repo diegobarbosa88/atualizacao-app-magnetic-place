@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Landmark, Plus, Loader2, RefreshCw, X } from 'lucide-react';
+import { Landmark, Plus, Loader2, RefreshCw, X, FlaskConical } from 'lucide-react';
 
 function NovaConta({ onClose, onSalva }) {
   const [form, setForm] = useState({ nome: '', iban: '', banco: '', moeda: 'EUR', saldo_inicial: '' });
@@ -127,6 +127,23 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   }, [onDesligado]);
 
+  const [debug, setDebug] = useState(null);
+  const [debugLoading, setDebugLoading] = useState(false);
+
+  const handleDebug = async () => {
+    setDebugLoading(true);
+    setDebug(null);
+    try {
+      const res = await fetch('/api/toconline/bank-accounts?debug_types=1');
+      const data = await res.json();
+      setDebug(data);
+    } catch (e) {
+      setDebug({ erro: e.message });
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
   useEffect(() => { carregar(); }, [carregar]);
 
   const totalSaldo = contas.reduce((s, c) => s + (Number(c.saldo_atual ?? 0) || 0), 0);
@@ -159,6 +176,10 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <button onClick={handleDebug} disabled={debugLoading}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-amber-600 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all disabled:opacity-50">
+              {debugLoading ? <Loader2 size={13} className="animate-spin" /> : <FlaskConical size={13} />} Debug Tipos
+            </button>
             <button onClick={carregar}
               className="flex items-center gap-1.5 px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
               <RefreshCw size={13} /> Sincronizar
@@ -169,6 +190,30 @@ export default function TOConlineBankAccounts({ onDesligado }) {
             </button>
           </div>
         </div>
+
+        {debug && (
+          <div className="mx-5 my-3 bg-amber-50 border border-amber-100 rounded-xl p-4 space-y-3 text-xs">
+            <p className="font-black uppercase tracking-widest text-amber-600 text-[10px]">Debug — Tipos ({debug.total} total)</p>
+            <div>
+              <p className="font-bold text-slate-600 mb-1">entity_type:</p>
+              {Object.entries(debug.entity_types || {}).map(([k, v]) => (
+                <div key={k} className="flex gap-2"><span className="font-mono text-slate-500">{k}</span><span className="font-black">{v}</span></div>
+              ))}
+            </div>
+            <div>
+              <p className="font-bold text-slate-600 mb-1">sub_type:</p>
+              {Object.entries(debug.sub_types || {}).map(([k, v]) => (
+                <div key={k} className="flex gap-2"><span className="font-mono text-slate-500">{k}</span><span className="font-black">{v}</span></div>
+              ))}
+            </div>
+            <div>
+              <p className="font-bold text-slate-600 mb-1">Contas com SWIFT:</p>
+              {(debug.contas_com_swift || []).map((c, i) => (
+                <div key={i} className="font-mono text-[10px] text-slate-500 break-all">{c.name} | et: {c.entity_type || '—'} | st: {c.sub_type || '—'} | {c.swift}</div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {erro && (
           <div className="mx-5 my-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>

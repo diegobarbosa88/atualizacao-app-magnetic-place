@@ -71,22 +71,26 @@ export default async function handler(req, res) {
 
       const lista = await fetchAllPages('/api/bank_accounts', accessToken);
 
-      // Log temporário para perceber entity_type das contas
-      const tipos = {};
-      lista.forEach(c => {
-        const a = c.attributes || c;
-        const t = a.entity_type || '(vazio)';
-        tipos[t] = (tipos[t] || 0) + 1;
-      });
-      console.log('[bank-accounts] entity_type distribution:', JSON.stringify(tipos));
-      console.log('[bank-accounts] sample com swift/iban:', JSON.stringify(
-        lista.filter(c => { const a = c.attributes || c; return a.swift || a.iban; })
-          .slice(0, 5)
-          .map(c => { const a = c.attributes || c; return { id: c.id, name: a.name, entity_type: a.entity_type, swift: a.swift, iban: a.iban, sub_type: a.sub_type }; })
-      ));
+      // ?debug_types=1 — mostra distribuição de entity_type e sub_type para afinar filtro
+      if (req.query.debug_types === '1') {
+        const tipos = {};
+        const subtipos = {};
+        lista.forEach(c => {
+          const a = c.attributes || c;
+          const t = a.entity_type || '(vazio)';
+          const s = a.sub_type || '(vazio)';
+          tipos[t] = (tipos[t] || 0) + 1;
+          subtipos[s] = (subtipos[s] || 0) + 1;
+        });
+        // Mostra também as primeiras 5 contas com SWIFT para identificar as contas reais
+        const comSwift = lista
+          .filter(c => { const a = c.attributes || c; return a.swift; })
+          .slice(0, 8)
+          .map(c => { const a = c.attributes || c; return { id: c.id, name: a.name, entity_type: a.entity_type, sub_type: a.sub_type, swift: a.swift, iban: a.iban }; });
+        return res.status(200).json({ entity_types: tipos, sub_types: subtipos, contas_com_swift: comSwift, total: lista.length });
+      }
 
       // Filtrar apenas contas com identificador bancário (IBAN, NIB ou SWIFT)
-      // para excluir contas contabilísticas que não são contas bancárias reais
       const contasBancarias = lista.filter(c => {
         const a = c.attributes || c;
         return a.iban || a.nib || a.swift;
