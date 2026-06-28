@@ -18,6 +18,19 @@ export default async function handler(req, res) {
         return res.status(200).json({ data: data.data || data });
       }
       const lista = await fetchAllPages('/api/bank_accounts', accessToken);
+      // LOG TEMPORÁRIO — remover após diagnóstico
+      console.log('[bank-accounts] total contas:', lista.length);
+      lista.forEach((c, i) => {
+        const a = c.attributes || c;
+        console.log(`[bank-accounts] conta[${i}]:`, JSON.stringify({
+          id: c.id,
+          name: a.name,
+          current_balance: a.current_balance,
+          initial_balance: a.initial_balance,
+          balance: a.balance,
+          all_keys: Object.keys(a),
+        }));
+      });
       return res.status(200).json({ data: lista });
     } catch (e) {
       return res.status(500).json({ error: e.message });
