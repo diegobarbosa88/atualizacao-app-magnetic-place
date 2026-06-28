@@ -1,6 +1,24 @@
 import { getValidToken } from './_token.js';
 import { tocFetch, fetchAllPages } from './_fetch.js';
 
+// Busca o saldo atual de uma conta pelo imported_balance do movimento mais recente.
+// Fallback: initial_balance se não houver movimentos.
+async function getSaldoAtual(contaId, initialBalance, accessToken) {
+  try {
+    const data = await tocFetch(
+      `/api/bank_transactions?filter[bank_account_id]=${contaId}&page[size]=1&sort=-transaction_date`,
+      accessToken
+    );
+    const items = Array.isArray(data) ? data : (data.data || []);
+    if (items.length === 0) return initialBalance ?? 0;
+    const attrs = items[0].attributes || items[0];
+    const bal = attrs.imported_balance ?? attrs.value ?? null;
+    return bal != null ? Number(bal) : (initialBalance ?? 0);
+  } catch {
+    return initialBalance ?? 0;
+  }
+}
+
 export default async function handler(req, res) {
   let accessToken;
   try {
@@ -10,9 +28,9 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'GET') {
-    const { id, probe } = req.query;
+    const { id, probe, com_saldo } = req.query;
 
-    // Probe temporário: ?probe=1 — descobrir endpoints de movimentos
+    // Diagnóstico temporário
     if (probe === '1') {
       const CANDIDATES = [
         '/api/bank_account_transactions',
@@ -42,9 +60,27 @@ export default async function handler(req, res) {
     try {
       if (id) {
         const data = await tocFetch(`/api/bank_accounts/${id}`, accessToken);
-        return res.status(200).json({ data: data.data || data });
+        const conta = data.data || data;
+        if (com_saldo === '1') {
+          const a = conta.attributes || conta;
+          const saldo_atual = await getSaldoAtual(conta.id || id, a.initial_balance, accessToken);
+          return res.status(200).json({ data: { ...conta, saldo_atual } });
+        }
+        return res.status(200).json({ data: conta });
       }
+
       const lista = await fetchAllPages('/api/bank_accounts', accessToken);
+
+      // ?com_saldo=1 — enriquecer cada conta com o saldo atual via movimentos
+      if (com_saldo === '1') {
+        const enriquecida = await Promise.all(lista.map(async (c) => {
+          const a = c.attributes || c;
+          const saldo_atual = await getSaldoAtual(c.id, a.initial_balance, accessToken);
+          return { ...c, saldo_atual };
+        }));
+        return res.status(200).json({ data: enriquecida });
+      }
+
       return res.status(200).json({ data: lista });
     } catch (e) {
       return res.status(500).json({ error: e.message });

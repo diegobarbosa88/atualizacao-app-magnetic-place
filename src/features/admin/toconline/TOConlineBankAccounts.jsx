@@ -118,7 +118,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     setLoading(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/bank-accounts');
+      const res = await fetch('/api/toconline/bank-accounts?com_saldo=1');
       const data = await res.json();
       if (res.status === 401) { onDesligado?.(); return; }
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
@@ -162,11 +162,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     }
   };
 
-  const totalSaldo = contas.reduce((s, c) => {
-    const a = c.attributes || c;
-    const val = a.current_balance ?? a.initial_balance ?? a.balance ?? 0;
-    return s + (Number(val) || 0);
-  }, 0);
+  const totalSaldo = contas.reduce((s, c) => s + (Number(c.saldo_atual ?? 0) || 0), 0);
 
   return (
     <div className="space-y-4">
@@ -253,7 +249,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
               <tbody className="divide-y divide-slate-50">
                 {contas.map((c) => {
                   const a = c.attributes || c;
-                  const saldo = a.current_balance ?? a.initial_balance ?? a.balance ?? null;
+                  const saldo = c.saldo_atual ?? null;
                   return (
                     <tr key={c.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-semibold text-slate-800">

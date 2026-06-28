@@ -31,14 +31,11 @@ export default function TOConlineAdmin() {
   const carregarSaldo = useCallback(async () => {
     setSaldoLoading(true);
     try {
-      const res = await fetch('/api/toconline/bank-accounts');
+      const res = await fetch('/api/toconline/bank-accounts?com_saldo=1');
       const data = await res.json();
       if (!res.ok) { setSaldoContas(null); return; }
       const lista = data.data || [];
-      const total = lista.reduce((s, c) => {
-        const a = c.attributes || c;
-        return s + (Number(a.current_balance ?? a.initial_balance ?? a.balance ?? 0) || 0);
-      }, 0);
+      const total = lista.reduce((s, c) => s + (Number(c.saldo_atual ?? 0) || 0), 0);
       setSaldoContas({ total, n: lista.length });
     } catch {
       setSaldoContas(null);
