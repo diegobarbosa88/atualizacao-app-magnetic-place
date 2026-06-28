@@ -230,6 +230,55 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     return () => { cancelled = true; };
   }, [selectedMonth, semHoras]);
 
+  // Auto-extrair valores das notas TOConline para Modo A (com horas registadas).
+  // Para cada fatura do mês seguinte: se tiver valor monetário nas notas → override fixo para esse cliente.
+  // Clientes sem valor nas notas ficam com distribuição proporcional do restante.
+  useEffect(() => {
+    if (semHoras) return; // Modo B já tem ajudasObs via clientesToC
+    let cancelled = false;
+    (async () => {
+      try {
+        const mesFat = mesSeguinte(selectedMonth);
+        const [y, m] = mesFat.split('-').map(Number);
+        const ultimoDia = new Date(y, m, 0).getDate();
+        const params = new URLSearchParams({
+          tipo: 'vendas',
+          data_de: `${mesFat}-01`,
+          data_ate: `${mesFat}-${String(ultimoDia).padStart(2, '0')}`,
+        });
+        const res = await fetch(`/api/toconline/relatorio?${params}`);
+        if (cancelled) return;
+        if (res.status === 401) { setTocSemAuth(true); return; }
+        if (!res.ok) return;
+        setTocSemAuth(false);
+        const data = await res.json();
+        if (cancelled) return;
+        const faturas = data.data || [];
+        const porCliente = {};
+        faturas.forEach(item => {
+          const a = item.attributes || item;
+          const nome = a.customer_business_name || a.customer_name;
+          if (!nome) return;
+          const valObs = extrairValorObs(getObservacao(a));
+          if (valObs == null) return; // sem valor nas notas → distribuição proporcional
+          const client = clients.find(c => c.name?.toLowerCase().trim() === nome.toLowerCase().trim());
+          const key = client?.id ?? `toc:${nome}`;
+          porCliente[key] = (porCliente[key] || 0) + valObs;
+        });
+        if (cancelled) return;
+        const ids = Object.keys(porCliente);
+        if (!ids.length) return;
+        setOverrides(prev => {
+          const next = { ...prev };
+          ids.forEach(id => { next[id] = porCliente[id].toFixed(2); });
+          return next;
+        });
+        setObsAplicados(new Set(ids));
+      } catch { /* ignora — sem TOConline auth ou sem faturas */ }
+    })();
+    return () => { cancelled = true; };
+  }, [selectedMonth, semHoras]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // — Faturação a partir das faturas TOConline (fallback sem horas) —
   // Uma linha POR FATURA: clientes com várias faturas no mês aparecem separadamente.
   const clientesToC = useMemo(() => {
