@@ -272,14 +272,20 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
     return totalFat > 0 ? totalAj / totalFat : 0;
   }, [faturadosAno]);
 
-  // Total alvo: totalFaturaMes × taxa + saldo. Sempre calculado — saldo incluído mesmo sem taxa histórica.
+  // Estimativa sem saldo: taxa histórica × faturação do mês corrente
   const ajudasEstimadoMes = useMemo(
-    () => Math.max(0, totalFaturaMes * taxaAjudas + saldoDisponivel),
-    [taxaAjudas, totalFaturaMes, saldoDisponivel]
+    () => Math.max(0, totalFaturaMes * taxaAjudas),
+    [taxaAjudas, totalFaturaMes]
   );
 
-  const ajudasEfetivoMes = ajudasEstimadoMes > 0 ? ajudasEstimadoMes : ajudasReciboMes;
-  const eEstimativa = taxaAjudas > 0 || saldoDisponivel > 0;
+  // Regra principal:
+  //   • Mês com recibos processados → total exacto dos recibos (garante que a soma anual bate certa)
+  //   • Mês sem recibos ainda      → estimativa limitada pelo saldo anual restante
+  const temRecibosDoMes = ajudasReciboMes > 0;
+  const ajudasEfetivoMes = temRecibosDoMes
+    ? ajudasReciboMes
+    : Math.min(ajudasEstimadoMes, Math.max(0, saldoDisponivel));
+  const eEstimativa = !temRecibosDoMes;
   // True quando há clientes no mês mas não há nenhum valor de ajudas calculável
   const semDadosAjudas = ajudasEfetivoMes === 0;
 
@@ -653,7 +659,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
             { label: 'Já faturado', val: fmtEur(jaFaturadoYTD), cls: 'slate' },
             { label: 'Saldo restante', val: fmtEur(saldoDisponivel), cls: saldoDisponivel < 0 ? 'red' : 'emerald' },
             { label: 'Meses restantes', val: mesesRestantes, cls: 'slate' },
-            { label: semDadosAjudas ? 'Sem dados' : eEstimativa ? 'Ajudas (estimativa)' : semHoras ? 'Recibos mês anterior' : 'Recibos deste mês', val: fmtEur(ajudasEfetivoMes), cls: semDadosAjudas ? 'slate' : eEstimativa ? 'amber' : 'indigo' },
+            { label: semDadosAjudas ? 'Sem dados' : eEstimativa ? 'Este mês (estimativa)' : 'Este mês (recibos)', val: fmtEur(ajudasEfetivoMes), cls: semDadosAjudas ? 'slate' : eEstimativa ? 'amber' : 'indigo' },
           ].map(({ label, val, cls }) => (
             <div key={label} className={`bg-${cls}-50 border border-${cls}-100 rounded-xl p-3 text-center`}>
               <p className={`text-base font-black text-${cls}-700`}>{val}</p>
@@ -698,14 +704,16 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-slate-100 gap-2">
           <div>
             <h3 className="text-sm font-black text-slate-800">
-              Estimativa — {formatarMes(selectedMonth)}
+              {temRecibosDoMes ? 'Ajudas de Custo' : 'Estimativa'} — {formatarMes(selectedMonth)}
             </h3>
             <p className="text-[10px] text-slate-400 mt-0.5 max-w-xs sm:max-w-none">
               {semDadosAjudas && clientesMesFinal.length > 0
                 ? 'Sem ajudas disponíveis — processe os recibos de vencimento para obter o valor de referência'
-                : eEstimativa
-                  ? `Estimativa por taxa histórica (${fmtPct(taxaAjudas * 100)}) × faturação do mês — ${fmtEur(ajudasEfetivoMes)}${saldoDisponivel > 0 && ajudasEstimadoMes < totalFaturaMes * taxaAjudas ? ' (limitado pelo saldo)' : ''}`
-                  : `Distribui as ajudas dos recibos do mês (${fmtEur(ajudasReciboMes)}) proporcional à faturação de cada cliente`}
+                : temRecibosDoMes
+                  ? `Total exacto dos recibos de vencimento (${fmtEur(ajudasReciboMes)}) — distribuído proporcionalmente à faturação de cada cliente`
+                  : taxaAjudas > 0
+                    ? `Estimativa: taxa histórica ${fmtPct(taxaAjudas * 100)} × faturação do mês${ajudasEstimadoMes > saldoDisponivel ? `, limitada pelo saldo restante (${fmtEur(saldoDisponivel)})` : ''}`
+                    : 'Sem histórico para estimar — confirme meses anteriores para calcular a taxa'}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
