@@ -1,5 +1,5 @@
 import { getValidToken } from './_token.js';
-import { tocFetch } from './_fetch.js';
+import { tocFetch, fetchAllPages } from './_fetch.js';
 
 export default async function handler(req, res) {
   let accessToken;
@@ -12,12 +12,13 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     const { id } = req.query;
 
-    const path = id ? `/api/bank_accounts/${id}` : '/api/bank_accounts';
     try {
-      const data = await tocFetch(path, accessToken);
-      if (id) return res.status(200).json({ data: data.data || data });
-      const lista = Array.isArray(data) ? data : (data.data || []);
-      return res.status(200).json({ data: lista, meta: data.meta || {} });
+      if (id) {
+        const data = await tocFetch(`/api/bank_accounts/${id}`, accessToken);
+        return res.status(200).json({ data: data.data || data });
+      }
+      const lista = await fetchAllPages('/api/bank_accounts', accessToken);
+      return res.status(200).json({ data: lista });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
