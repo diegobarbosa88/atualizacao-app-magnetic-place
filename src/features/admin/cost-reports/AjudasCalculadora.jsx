@@ -549,7 +549,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         </div>
 
         {/* Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {[
             { label: 'Total recibos ano', val: fmtEur(orcamentoAnual), cls: 'indigo' },
             { label: 'Já faturado', val: fmtEur(jaFaturadoYTD), cls: 'slate' },
@@ -580,31 +580,31 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
 
       {/* ── Estimativa do mês atual ── */}
       <div className="rounded-2xl border border-slate-100 bg-white overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-slate-100 gap-2">
           <div>
             <h3 className="text-sm font-black text-slate-800">
               Estimativa — {formatarMes(selectedMonth)}
             </h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">
+            <p className="text-[10px] text-slate-400 mt-0.5 max-w-xs sm:max-w-none">
               {eEstimativa
                 ? `Estimativa por taxa histórica (${fmtPct(taxaAjudas * 100)}) × faturação do mês — ${fmtEur(ajudasEfetivoMes)}${saldoDisponivel > 0 && ajudasEstimadoMes < totalFaturaMes * taxaAjudas ? ' (limitado pelo saldo)' : ''}`
                 : `Distribui as ajudas dos recibos do mês (${fmtEur(ajudasReciboMes)}) proporcional à faturação de cada cliente`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {semHoras && clientesMesFinal.length > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-xl">
-                <span className="text-[10px] font-bold text-blue-700">Valores de faturas TOConline</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-xl">
+                <span className="text-[10px] font-bold text-blue-700">Faturas TOConline</span>
               </div>
             )}
             {tocSemAuth && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 border border-amber-200 rounded-xl">
                 <AlertTriangle size={12} className="text-amber-500" />
-                <span className="text-[10px] font-bold text-amber-700">TOConline sem autenticação — sem faturas do mês</span>
+                <span className="text-[10px] font-bold text-amber-700">TOConline sem auth</span>
               </div>
             )}
             {confirmado && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 border border-emerald-200 rounded-xl">
                 <CheckCircle size={12} className="text-emerald-600" />
                 <span className="text-[10px] font-bold text-emerald-700">Confirmado</span>
               </div>
@@ -623,6 +623,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           </p>
         ) : (
           <>
+            <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
@@ -633,9 +634,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                       className="accent-indigo-600 cursor-pointer" />
                   </th>
                   <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Horas</th>
+                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">Horas</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Valor Fatura</th>
-                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">% Total</th>
+                  <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">% Total</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Incluídas</th>
                   <th className="px-2 py-2 w-8" />
                 </tr>
@@ -654,9 +655,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                         <span className="ml-1.5 font-mono font-normal text-[10px] text-slate-400">{l.docNum}</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-right text-slate-500">{l.fromToC ? '—' : `${l.horas.toFixed(2)}h`}</td>
+                    <td className="px-3 py-2.5 text-right text-slate-500 hidden sm:table-cell">{l.fromToC ? '—' : `${l.horas.toFixed(2)}h`}</td>
                     <td className="px-3 py-2.5 text-right font-bold text-slate-700">{fmtEur(l.valorFatura)}</td>
-                    <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(l.proporcao * 100)}</td>
+                    <td className="px-3 py-2.5 text-right text-slate-400 hidden sm:table-cell">{fmtPct(l.proporcao * 100)}</td>
                     <td className="px-3 py-2.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {(obsAplicados.has(l.clientId) || (l.daObservacao && overrides[l.clientId] === undefined)) && (
@@ -672,7 +673,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                             setObsAplicados(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
                             setRedistribuidos(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
                           }}
-                          className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="w-20 sm:w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
                         />
                       </div>
                     </td>
@@ -697,9 +698,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                 <tr>
                   <td className="px-2 py-2.5 w-7" />
                   <td className="px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">TOTAL</td>
-                  <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-600">{semHoras ? '—' : `${linhas.reduce((s,l)=>s+l.horas,0).toFixed(2)}h`}</td>
+                  <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-600 hidden sm:table-cell">{semHoras ? '—' : `${linhas.reduce((s,l)=>s+l.horas,0).toFixed(2)}h`}</td>
                   <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">{fmtEur(totalFaturaMes)}</td>
-                  <td className="px-3 py-2.5 text-right text-[10px] text-slate-400">100%</td>
+                  <td className="px-3 py-2.5 text-right text-[10px] text-slate-400 hidden sm:table-cell">100%</td>
                   <td className="px-3 py-2.5 text-right">
                     <span className={`text-[10px] font-black ${ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 ? 'text-amber-600' : 'text-emerald-600'}`}>
                       {fmtEur(totalAjudasMes)}
@@ -709,15 +710,16 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                 </tr>
               </tfoot>
             </table>
+            </div>
 
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 gap-2 flex-wrap">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-slate-100 gap-3">
               <p className="text-[10px] text-slate-400">
                 {eEstimativa ? 'Estimativa' : 'Recibos do mês'}:{' '}
                 <span className={`font-bold ${eEstimativa ? 'text-amber-600' : 'text-indigo-600'}`}>{fmtEur(ajudasEfetivoMes)}</span>
                 {eEstimativa && <span className="ml-1 text-amber-500">(taxa {fmtPct(taxaAjudas * 100)})</span>}
                 {ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 && (
                   <span className="ml-2 text-amber-500 font-bold">
-                    (diferença de {fmtEur(Math.abs(totalAjudasMes - ajudasEfetivoMes))})
+                    (dif. {fmtEur(Math.abs(totalAjudasMes - ajudasEfetivoMes))})
                   </span>
                 )}
                 {obsResult && (
@@ -726,12 +728,12 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   </span>
                 )}
               </p>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <button onClick={handleExtrairObs} disabled={extraindoObs}
                   className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all disabled:opacity-40"
                   title="Procura as faturas TOConline do mês e preenche as ajudas com o valor da observação">
                   {extraindoObs ? <Loader2 size={12} className="animate-spin" /> : <FileSearch size={12} />}
-                  {extraindoObs ? 'A extrair...' : 'Extrair da observação'}
+                  {extraindoObs ? 'A extrair...' : 'Extrair obs.'}
                 </button>
                 <button onClick={handleRedistribuir}
                   disabled={selecionados.size === 0 && Object.keys(overrides).filter(k => !obsAplicados.has(k)).length === 0 && !linhas.some(l => l.daObservacao)}
@@ -746,7 +748,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                   {copiado ? 'Copiado!' : 'Copiar'}
                 </button>
                 <button onClick={handleConfirmar} disabled={confirmando || confirmado}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40">
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40">
                   {confirmando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                   {confirmado ? 'Confirmado' : confirmando ? 'A guardar...' : 'Confirmar mês'}
                 </button>
@@ -764,7 +766,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           <ChevronRight size={14} className={`text-slate-400 transition-transform ${historicoAberto ? 'rotate-90' : ''}`} />
         </button>
         {historicoAberto && (
-          <div className="border-t border-slate-100 max-h-[70vh] overflow-y-auto">
+          <div className="border-t border-slate-100 max-h-[70vh] overflow-y-auto overflow-x-auto">
             {historicoAnual.length === 0 ? (
               <p className="text-center text-sm text-slate-400 py-8">Sem dados para {ano}.</p>
             ) : (
@@ -772,9 +774,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                 <thead className="bg-slate-50 border-b border-slate-100 sticky top-0 z-20">
                   <tr>
                     <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Horas</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Valor Fatura</th>
-                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">% Total</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">Horas</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">Valor Fatura</th>
+                    <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">% Total</th>
                     <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400">Ajudas Faturadas</th>
                     <th className="px-3 py-2 w-20"></th>
                   </tr>
@@ -816,7 +818,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2 text-right">
+                          <td className="px-3 py-2 text-right hidden sm:table-cell">
                             <span className={`text-[9px] font-black ${h.dif > 0.5 ? 'text-red-500' : h.dif < -0.5 ? 'text-emerald-600' : 'text-slate-400'}`}>
                               {h.dif !== 0 ? `${h.dif > 0 ? '+' : ''}${fmtEur(h.dif)}` : ''}
                             </span>
@@ -904,13 +906,13 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                                 <React.Fragment key={r.client_id}>
                                   <tr className={rowCls}>
                                     <td className="px-3 py-2.5 pl-8 font-bold text-slate-800">{nomeCliente}</td>
-                                    <td className="px-3 py-2.5 text-right text-slate-500">
+                                    <td className="px-3 py-2.5 text-right text-slate-500 hidden sm:table-cell">
                                       {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
                                     </td>
-                                    <td className="px-3 py-2.5 text-right font-bold text-slate-700">
+                                    <td className="px-3 py-2.5 text-right font-bold text-slate-700 hidden sm:table-cell">
                                       {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
                                     </td>
-                                    <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(pct)}</td>
+                                    <td className="px-3 py-2.5 text-right text-slate-400 hidden sm:table-cell">{fmtPct(pct)}</td>
                                     <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-500">
                                       {fmtEur(invoices.reduce((s, inv) => {
                                         const k = `${h.mes}|${r.client_id}|${inv.docNum}`;
@@ -930,9 +932,9 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                                     return (
                                       <tr key={inv.docNum} className={subRowCls}>
                                         <td className="px-3 py-1.5 pl-12 text-[10px] text-slate-400 font-mono">{inv.docNum}</td>
-                                        <td />
-                                        <td className="px-3 py-1.5 text-right text-[10px] text-slate-500">{fmtEur(inv.valor)}</td>
-                                        <td />
+                                        <td className="hidden sm:table-cell" />
+                                        <td className="px-3 py-1.5 text-right text-[10px] text-slate-500 hidden sm:table-cell">{fmtEur(inv.valor)}</td>
+                                        <td className="hidden sm:table-cell" />
                                         <td className="px-3 py-1.5 text-right">
                                           <input
                                             type="number"
@@ -963,13 +965,13 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                                     {nomeCliente}
                                     {invoices[0] && <span className="ml-2 text-[9px] font-mono text-slate-400">{invoices[0].docNum}</span>}
                                   </td>
-                                  <td className="px-3 py-2.5 text-right text-slate-500">
+                                  <td className="px-3 py-2.5 text-right text-slate-500 hidden sm:table-cell">
                                     {temLogsNoMes ? `${horasCliente.toFixed(2)}h` : '—'}
                                   </td>
-                                  <td className="px-3 py-2.5 text-right font-bold text-slate-700">
+                                  <td className="px-3 py-2.5 text-right font-bold text-slate-700 hidden sm:table-cell">
                                     {totalFaturaCliente > 0 ? fmtEur(totalFaturaCliente) : '—'}
                                   </td>
-                                  <td className="px-3 py-2.5 text-right text-slate-400">{fmtPct(pct)}</td>
+                                  <td className="px-3 py-2.5 text-right text-slate-400 hidden sm:table-cell">{fmtPct(pct)}</td>
                                   <td className="px-3 py-2.5 text-right">
                                     <input
                                       type="number"
@@ -993,11 +995,11 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
                 <tfoot className="border-t-2 border-slate-200 bg-slate-50">
                   <tr>
                     <td className="px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500">TOTAL {ano}</td>
-                    <td />
-                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">
+                    <td className="hidden sm:table-cell" />
+                    <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700 hidden sm:table-cell">
                       {fmtEur(historicoAnual.reduce((s, h) => s + h.totalFatura, 0))}
                     </td>
-                    <td />
+                    <td className="hidden sm:table-cell" />
                     <td className="px-3 py-2.5 text-right text-[10px] font-black text-slate-700">
                       {fmtEur(faturadosAno.reduce((s, r) => s + (parseFloat(r.valor_ajudas) || 0), 0))}
                     </td>
