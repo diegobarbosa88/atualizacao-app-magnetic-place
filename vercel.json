@@ -51,6 +51,7 @@
   "rewrites": [
     { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
     { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },
+    { "source": "/api/toconline/artigos", "destination": "/api/toconline/proxy?action=artigos" },
     { "source": "/api/toconline/relatorio", "destination": "/api/toconline/proxy?action=relatorio" },
     { "source": "/api/toconline/status", "destination": "/api/toconline/proxy?action=status" },
     { "source": "/api/toconline/auth-init", "destination": "/api/toconline/proxy?action=auth-init" },

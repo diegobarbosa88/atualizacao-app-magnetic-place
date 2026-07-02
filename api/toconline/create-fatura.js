@@ -86,43 +86,47 @@ export default async function handler(req, res) {
   try {
     tocData = await tocFetch('/api/v1/commercial_sales_documents', accessToken, 'POST', payload);
   } catch (e) {
-    let msg = e.message;
-    try {
-      const match = msg.match(/\d{3}: (.+)$/s);
-      if (match) {
-        const parsed = JSON.parse(match[1]);
-        const apiErrors = parsed?.errors;
-        if (Array.isArray(apiErrors) && apiErrors.length) {
-          msg = apiErrors.map(err => err.detail || err.title || JSON.stringify(err)).join('; ');
-        }
-      }
-    } catch { /* manter msg original */ }
+    // Erro estruturado de tocFetch: usa errors[] JSON:API quando disponível.
+    const apiErrors = e.tocErrors;
+    const msg = Array.isArray(apiErrors) && apiErrors.length
+      ? apiErrors.map(err => err.detail || err.title || JSON.stringify(err)).join('; ')
+      : e.message;
     return res.status(422).json({ error: msg });
   }
 
   const docId = String(tocData.data?.id || '');
   const docAttrs = tocData.data?.attributes || {};
 
+  let warning;
   if (docId) {
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-    await supabase.from('faturas').insert({
-      toconline_doc_id: docId,
-      fonte: 'toc',
-      tipo: 'cliente',
-      filename: docAttrs.document_number || `${tipo_documento}-${docId}`,
-      dados: {
-        numero_fatura: docAttrs.document_number || null,
-        data_fatura: docAttrs.date || data || null,
-        nif_fornecedor: cliente.nif || null,
-        fornecedor: cliente.nome || cliente.id,
-        valor_total: docAttrs.total_amount ?? null,
-        iva: docAttrs.total_tax_amount ?? null,
-      },
-      valor: docAttrs.total_amount ?? null,
-      data_documento: docAttrs.date || data || null,
-      entidade: cliente.nome || null,
-    });
+    // A fatura JÁ foi emitida no TOConline. Se o espelho local falhar não
+    // revertemos nem devolvemos erro — sinalizamos via warning para
+    // reconciliação posterior.
+    try {
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const { error } = await supabase.from('faturas').insert({
+        toconline_doc_id: docId,
+        fonte: 'toc',
+        tipo: 'cliente',
+        filename: docAttrs.document_number || `${tipo_documento}-${docId}`,
+        dados: {
+          numero_fatura: docAttrs.document_number || null,
+          data_fatura: docAttrs.date || data || null,
+          nif_fornecedor: cliente.nif || null,
+          fornecedor: cliente.nome || cliente.id,
+          valor_total: docAttrs.total_amount ?? null,
+          iva: docAttrs.total_tax_amount ?? null,
+        },
+        valor: docAttrs.total_amount ?? null,
+        data_documento: docAttrs.date || data || null,
+        entidade: cliente.nome || null,
+      });
+      if (error) throw new Error(error.message);
+    } catch (e) {
+      console.error(`Fatura ${docId} emitida no TOConline mas falhou espelho local:`, e.message);
+      warning = 'Fatura emitida no TOConline mas não foi registada localmente. Reconcilie manualmente.';
+    }
   }
 
-  return res.status(201).json({ doc_id: docId, documento: tocData.data });
+  return res.status(201).json({ doc_id: docId, documento: tocData.data, ...(warning ? { warning } : {}) });
 }
