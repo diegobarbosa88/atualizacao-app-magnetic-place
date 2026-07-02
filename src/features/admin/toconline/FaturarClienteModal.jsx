@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { X, Loader2, ChevronRight, CheckCircle, AlertCircle, FileText, Plus, Trash2, Save } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { emitirDocumento } from './utils/emitirDocumento';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -175,21 +176,14 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
       if (!linhas.length) throw new Error('Sem linhas para faturar');
 
-      const res = await fetch('/api/toconline/create-fatura', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo_documento: 'FT',
-          data: dataFatura,
-          data_vencimento: dataVencimento || undefined,
-          cliente: { nome: cliente.name, nif: cliente.nif || undefined },
-          linhas,
-          observacoes: observacoes.trim() || undefined,
-        }),
+      const data = await emitirDocumento({
+        tipo_documento: 'FT',
+        data: dataFatura,
+        data_vencimento: dataVencimento || undefined,
+        cliente: { nome: cliente.name, nif: cliente.nif || undefined },
+        linhas,
+        observacoes: observacoes.trim() || undefined,
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao emitir fatura');
 
       // Auto-confirmar ajudas na BD após emissão bem-sucedida
       if (supabase && clienteId && !clienteId.startsWith('toc:') && periodo) {

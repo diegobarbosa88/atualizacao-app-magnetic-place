@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
+import { emitirDocumento } from './utils/emitirDocumento';
 
 const TIPOS_DOC = [
   { value: 'FT', label: 'FT — Fatura' },
@@ -172,25 +173,19 @@ export default function CriarDocumentoModal({ onClose, onCriado }) {
     setCriando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/create-fatura', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo_documento: tipo,
-          data,
-          cliente,
-          linhas: linhas.map(l => ({
-            ...l,
-            quantidade: Number(l.quantidade),
-            preco_unitario: Number(l.preco_unitario),
-            taxa_iva: Number(l.taxa_iva),
-          })),
-          serie: serie || undefined,
-          observacoes: observacoes || undefined,
-        }),
+      const d = await emitirDocumento({
+        tipo_documento: tipo,
+        data,
+        cliente,
+        linhas: linhas.map(l => ({
+          ...l,
+          quantidade: Number(l.quantidade),
+          preco_unitario: Number(l.preco_unitario),
+          taxa_iva: Number(l.taxa_iva),
+        })),
+        serie: serie || undefined,
+        observacoes: observacoes || undefined,
       });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error || 'Erro ao criar documento');
       onCriado?.(d);
       onClose();
     } catch (e) {

@@ -1,5 +1,37 @@
 const API_URL = process.env.TOCONLINE_API_URL || 'https://api12.toconline.pt';
 
+const MAX_TENTATIVAS = 3;
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Devolve o atraso (ms) antes da próxima tentativa, ou null se não se deve repetir.
+function calcularBackoff(res, tentativa) {
+  // Respeita Retry-After (segundos ou data HTTP) quando presente.
+  const retryAfter = res?.headers?.get?.('retry-after');
+  if (retryAfter) {
+    const segundos = Number(retryAfter);
+    if (Number.isFinite(segundos)) return segundos * 1000;
+    const data = Date.parse(retryAfter);
+    if (!Number.isNaN(data)) return Math.max(0, data - Date.now());
+  }
+  // Backoff exponencial com jitter: ~1s, ~2s, ~4s.
+  return 2 ** (tentativa - 1) * 1000 + Math.floor(Math.random() * 250);
+}
+
+function deveRepetir(status) {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+// Extrai o array errors[] JSON:API do corpo de erro, se existir.
+function parsearTocErrors(text) {
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed?.errors) ? parsed.errors : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function tocFetch(path, accessToken, method = 'GET', body = null) {
   const opts = {
     method,
@@ -11,12 +43,39 @@ export async function tocFetch(path, accessToken, method = 'GET', body = null) {
   };
   if (body) opts.body = JSON.stringify(body);
 
-  const res = await fetch(`${API_URL}${path}`, opts);
-  if (!res.ok) {
+  let ultimoErro;
+  for (let tentativa = 1; tentativa <= MAX_TENTATIVAS; tentativa++) {
+    let res;
+    try {
+      res = await fetch(`${API_URL}${path}`, opts);
+    } catch (e) {
+      // Erro de rede — repetir com backoff enquanto houver tentativas.
+      ultimoErro = e;
+      if (tentativa < MAX_TENTATIVAS) {
+        await sleep(2 ** (tentativa - 1) * 1000 + Math.floor(Math.random() * 250));
+        continue;
+      }
+      throw e;
+    }
+
+    if (res.ok) return res.json();
+
     const text = await res.text();
-    throw new Error(`TOConline API ${method} ${path} → ${res.status}: ${text}`);
+    if (deveRepetir(res.status) && tentativa < MAX_TENTATIVAS) {
+      await sleep(calcularBackoff(res, tentativa));
+      ultimoErro = new Error(`TOConline API ${method} ${path} → ${res.status}: ${text}`);
+      continue;
+    }
+
+    // Erro definitivo: lança erro estruturado (mantém a message para callers
+    // que só usam e.message, mas anexa status e errors[] parseados).
+    const err = new Error(`TOConline API ${method} ${path} → ${res.status}: ${text}`);
+    err.status = res.status;
+    err.tocErrors = parsearTocErrors(text);
+    throw err;
   }
-  return res.json();
+
+  throw ultimoErro || new Error(`TOConline API ${method} ${path} → falhou após ${MAX_TENTATIVAS} tentativas`);
 }
 
 export async function fetchAllPages(basePath, accessToken) {

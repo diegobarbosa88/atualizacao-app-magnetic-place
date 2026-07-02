@@ -15,6 +15,20 @@ const REL_ENDPOINTS = {
 
 const REL_TABLE_PREFIX = { vendas: 'documents', compras: 'purchases_documents', recibos: 'receipts' };
 
+// NIF/código exato → filter[campo]; texto livre → expressão "campo like '%q%'"
+// (mesma sintaxe de filtro já usada na acção `relatorio`). Sem q, pagina tudo.
+function buildListQuery(q, likeField, codeField, page, isCode = t => /^\d{9}$/.test(t)) {
+  const size = 'page[size]=50';
+  const termo = String(q || '').trim();
+  if (!termo) return `page[number]=${page}&${size}`;
+  if (codeField && isCode(termo)) {
+    return `filter[${codeField}]=${encodeURIComponent(termo)}&${size}`;
+  }
+  const escapado = termo.replace(/'/g, "''");
+  const filtro = `filter=${encodeURIComponent(`"${likeField} like '%${escapado}%'"`)}`;
+  return `${filtro}&${size}`;
+}
+
 export default async function handler(req, res) {
   const { action } = req.query;
 
@@ -78,9 +92,9 @@ export default async function handler(req, res) {
 
   if (action === 'clientes') {
     if (req.method === 'GET') {
-      const { page = 1 } = req.query;
+      const { page = 1, q } = req.query;
       try {
-        const data = await tocFetch(`/api/customers?page[number]=${page}&page[size]=50`, accessToken);
+        const data = await tocFetch(`/api/customers?${buildListQuery(q, 'customers.business_name', 'tax_registration_number', page)}`, accessToken);
         const lista = Array.isArray(data) ? data : (data.data || []);
         return res.status(200).json({ data: lista, meta: data.meta || {} });
       } catch (e) {
@@ -106,6 +120,20 @@ export default async function handler(req, res) {
     const { page = 1 } = req.query;
     try {
       const data = await tocFetch(`/api/suppliers?page[number]=${page}&page[size]=50`, accessToken);
+      const lista = Array.isArray(data) ? data : (data.data || []);
+      return res.status(200).json({ data: lista, meta: data.meta || {} });
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  if (action === 'artigos') {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+    const { page = 1, q } = req.query;
+    // Token compacto com dígito → código exato (item_code); senão texto livre.
+    const isCode = t => /^[A-Za-z0-9._/-]+$/.test(t) && /\d/.test(t);
+    try {
+      const data = await tocFetch(`/api/products?${buildListQuery(q, 'products.item_description', 'item_code', page, isCode)}`, accessToken);
       const lista = Array.isArray(data) ? data : (data.data || []);
       return res.status(200).json({ data: lista, meta: data.meta || {} });
     } catch (e) {
