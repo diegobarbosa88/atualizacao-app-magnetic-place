@@ -119,7 +119,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       startTime: log.startTime || '',
       breakStart: log.breakStart || '',
       breakEnd: log.breakEnd || '',
-      endTime: '',
+      endTime: log.endTime || '',
       description: log.description || '',
     });
     setTimeEntryModalOpen(true);

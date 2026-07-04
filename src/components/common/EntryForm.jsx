@@ -9,6 +9,15 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
   const [isImproving, setIsImproving] = useState(false);
   const [showBreaks, setShowBreaks] = useState(!!(data.breakStart || data.breakEnd));
   const [showComments, setShowComments] = useState(!!data.description);
+  const [saveError, setSaveError] = useState('');
+
+  const handleSave = () => {
+    if (!data.clientId) { setSaveError('Selecione o cliente.'); return; }
+    if (!data.startTime) { setSaveError('Preencha o horário de entrada.'); return; }
+    if (!data.endTime) { setSaveError('Preencha o horário de saída.'); return; }
+    setSaveError('');
+    onSave();
+  };
   const filteredClients = useMemo(() => {
     if (!assignedClients || assignedClients.length === 0) return clients;
     return clients.filter(c => assignedClients.includes(c.id));
@@ -96,8 +105,11 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           </div>
         )}
 
+        {saveError && (
+          <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{saveError}</p>
+        )}
         <div className="flex gap-2 sm:gap-3 pt-0.5 sm:pt-2">
-          <button onClick={onSave} className="flex-1 bg-emerald-600 text-white py-2 sm:py-3 rounded-xl shadow-md sm:shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95"><Save size={14} className="sm:w-4 sm:h-4" /> {isEditing ? 'ATUALIZAR' : 'GRAVAR'}</button>
+          <button onClick={handleSave} className="flex-1 bg-emerald-600 text-white py-2 sm:py-3 rounded-xl shadow-md sm:shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95"><Save size={14} className="sm:w-4 sm:h-4" /> {isEditing ? 'ATUALIZAR' : 'GRAVAR'}</button>
           <button onClick={onCancel} className="bg-slate-100 border border-slate-200 text-slate-400 p-2 sm:p-3 rounded-xl hover:text-red-500 transition-all shadow-sm"><X size={16} className="sm:w-[18px] sm:h-[18px]" /></button>
         </div>
       </div>
