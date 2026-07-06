@@ -29,6 +29,8 @@ const CostReports = () => {
   const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [expenseForm, setExpenseForm] = useState({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) });
   const [faturasPago, setFaturasPago] = useState([]);
+  const [workerRateHistory, setWorkerRateHistory] = useState([]);
+  const [clientRateHistory, setClientRateHistory] = useState([]);
   const [showRelatorioMenu, setShowRelatorioMenu] = useState(false);
   const relatorioMenuRef = useRef(null);
   const [faturasExcluidas, setFaturasExcluidas] = useState([]);
@@ -45,6 +47,14 @@ const CostReports = () => {
   const [linkFaturaSaving, setLinkFaturaSaving] = useState(false);
 
   const monthOptions = useMemo(() => generateMonthOptions(), []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('worker_valorhora_history').select('*')
+      .then(({ data }) => setWorkerRateHistory(data || []));
+    supabase.from('client_valorhora_history').select('*')
+      .then(({ data }) => setClientRateHistory(data || []));
+  }, [supabase]);
 
   useEffect(() => {
     if (!supabase || !selectedMonth) return;
@@ -101,6 +111,7 @@ const CostReports = () => {
 
   const { workerCosts, clientCosts, clientMargins, allExpensesSorted, totalAllExpenses } = useCostReportsData({
     logs, workers, clients, expenses, selectedMonth, faturasPago,
+    workerRateHistory, clientRateHistory,
   });
 
   const pagamentosDoCliente = (clientId) => pagamentos.filter(p => p.client_id === clientId);
