@@ -7,7 +7,7 @@ import { toISODateLocal, isSameMonth, getLastBusinessDayOfMonth, formatDocDate, 
 import { formatHours, calculateDuration, calculateExpectedMonthlyHours, calculateExpectedDailyHours, getScheduleForDay, formatCurrency, toTimeInputValue } from '../../utils/formatUtils';
 
 const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions = false }) => {
-  const { client, logs, workers, clients, month, workerId, clientApprovals } = data;
+  const { client, logs, workers, clients, month, workerId, clientApprovals, dates } = data;
 
   const [visibleColumns, setVisibleColumns] = useState({
     day: true,
@@ -83,9 +83,12 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
 
   // Groups logs and metadata for each individual report unit (Client + Worker pair)
   const reportUnits = useMemo(() => {
-    if (!month) return [];
+    if (!month && (!dates || dates.length === 0)) return [];
 
-    let filteredLogs = logs.filter(l => l.date && l.date.startsWith(month));
+    const datesSet = dates && dates.length > 0 ? new Set(dates) : null;
+    let filteredLogs = datesSet
+      ? logs.filter(l => l.date && datesSet.has(l.date))
+      : logs.filter(l => l.date && l.date.startsWith(month));
 
     // Determine the grouping criteria based on the data provided
     let units = [];
@@ -161,9 +164,10 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
       if (cComp !== 0) return cComp;
       return (a.worker?.name || '').localeCompare(b.worker?.name || '');
     });
-  }, [logs, client, month, workerId, workers, clients, data.isGlobal]);
+  }, [logs, client, month, dates, workerId, workers, clients, data.isGlobal]);
 
   const daysInMonthList = useMemo(() => {
+    if (dates && dates.length > 0) return [...dates].sort();
     if (!month || !month.includes('-')) return [];
     const [y, m] = month.split('-').map(Number);
     if (isNaN(y) || isNaN(m)) return [];
@@ -172,7 +176,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
       const d = String(i + 1).padStart(2, '0');
       return `${month}-${d}`;
     });
-  }, [month]);
+  }, [month, dates]);
 
   // Group days by week
   const weeksData = useMemo(() => {
@@ -203,17 +207,25 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
       const clientLabel = unit.isWorkerOnly ? 'Vários Clientes' : (unit.client?.name || 'Empresa');
       const newTitle = `${shortName} - ${clientLabel} - ${monthDisplay}`;
       document.title = newTitle;
-    } else if (month) {
+    } else if (month || (dates && dates.length > 0)) {
       const monthDisplay = daysInMonthList.length > 0
         ? new Date(daysInMonthList[0]).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })
-        : month;
+        : (month || '');
       document.title = `Relatório de Horas - ${monthDisplay}`;
     }
 
     return () => {
       document.title = originalTitle;
     };
-}, [reportUnits, daysInMonthList, month]);
+}, [reportUnits, daysInMonthList, month, dates]);
+
+  const periodLabel = useMemo(() => {
+    if (dates && dates.length > 0) {
+      const sorted = [...dates].sort();
+      return sorted.length === 1 ? sorted[0] : `${sorted[0]}_a_${sorted[sorted.length - 1]}`;
+    }
+    return month || '';
+  }, [dates, month]);
 
   const handleGeneratePDF = async () => {
     const prev = manualZoom;
@@ -294,7 +306,7 @@ const ClientTimesheetReport = ({ data, onBack, isEmbedded = false, hideActions =
       }
 
       const reportClientName = (reportUnits[0]?.client?.name || 'Relatorio').replace(/[^a-zA-Z0-9]/g, '_');
-      pdf.save(`Relatorio_${reportClientName}_${month}.pdf`);
+      pdf.save(`Relatorio_${reportClientName}_${periodLabel}.pdf`);
 
     } catch (error) {
       console.error('Erro ao gerar PDF:', error);
@@ -414,7 +426,7 @@ for (let p = 0; p < correctedTotalPages; p++) {
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `relatorios de horas ${month}.zip`;
+      a.download = `relatorios de horas ${periodLabel}.zip`;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
