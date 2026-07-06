@@ -15,7 +15,24 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const body = req.body || {};
-  const { cliente, data, data_vencimento, linhas, tipo_documento = 'FT', serie, observacoes, finalizar = true } = body;
+  const {
+    cliente,
+    data,
+    data_vencimento,
+    linhas,
+    tipo_documento = 'FT',
+    serie,
+    observacoes,
+    finalizar = true,
+    // Novos campos
+    desconto_global,       // settlement_expression no cabeçalho (ex: "10" ou "3+5")
+    metodo_pagamento,      // payment_mechanism (MO, TR, MB, CC, DC, CH, DDA, OU)
+    referencia_externa,    // external_reference
+    iva_incluido,          // vat_included_prices (bool)
+    retencao,              // { percentagem, tipo: 'IRS'|'IRC', ao_pagar: bool }
+    moeda,                 // { iso: 'USD', taxa: 1.08 }
+    morada_cliente,        // { detalhe, codigo_postal, cidade, pais }
+  } = body;
 
   if (!cliente || !linhas?.length) {
     return res.status(400).json({ error: 'Campos obrigatórios: cliente, linhas' });
@@ -65,10 +82,15 @@ export default async function handler(req, res) {
       } else {
         linha.tax_percentage = l.taxa_iva ?? 23;
       }
+      // Desconto por linha (ex: "10" = 10%, "3+5" = composto)
+      if (l.desconto?.trim()) linha.settlement_expression = l.desconto.trim();
+      // Código do artigo
+      if (l.codigo_artigo?.trim()) linha.item_code = l.codigo_artigo.trim();
       return linha;
     }),
   };
 
+  // Cliente
   if (cliente.id) {
     attrs.customer_id = cliente.id;
   } else {
@@ -76,9 +98,45 @@ export default async function handler(req, res) {
     attrs.customer_tax_number = cliente.nif || undefined;
   }
 
-  if (serie) attrs.serie = serie;
+  // Série
+  if (serie) attrs.document_series_prefix = serie;
+
+  // Observações
   if (observacoes) attrs.notes = observacoes;
+
+  // Vencimento
   if (data_vencimento) attrs.due_date = data_vencimento;
+
+  // Desconto global no cabeçalho
+  if (desconto_global?.trim()) attrs.settlement_expression = desconto_global.trim();
+
+  // Método de pagamento
+  if (metodo_pagamento) attrs.payment_mechanism = metodo_pagamento;
+
+  // Referência externa
+  if (referencia_externa?.trim()) attrs.external_reference = referencia_externa.trim();
+
+  // Preços com IVA incluído
+  if (iva_incluido) attrs.vat_included_prices = true;
+
+  // Retenção na fonte
+  if (retencao?.percentagem > 0) {
+    attrs.retention = Number(retencao.percentagem);
+    attrs.retention_type = retencao.tipo || 'IRS';
+    if (retencao.ao_pagar != null) attrs.apply_retention_when_paid = Boolean(retencao.ao_pagar);
+  }
+
+  // Moeda (apenas se diferente de EUR)
+  if (moeda?.iso && moeda.iso.toUpperCase() !== 'EUR') {
+    attrs.currency_iso_code = moeda.iso.toUpperCase();
+    if (moeda.taxa) attrs.currency_conversion_rate = Number(moeda.taxa);
+  }
+
+  // Morada do cliente
+  if (morada_cliente?.detalhe) attrs.customer_address_detail = morada_cliente.detalhe;
+  if (morada_cliente?.codigo_postal) attrs.customer_postcode = morada_cliente.codigo_postal;
+  if (morada_cliente?.cidade) attrs.customer_city = morada_cliente.cidade;
+  if (morada_cliente?.pais) attrs.customer_country = morada_cliente.pais;
 
   const payload = { data: { type: 'commercial_sales_documents', attributes: attrs } };
 
