@@ -273,6 +273,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
               geoSuggestion={geoSuggestion} geoSuggestionDismissed={geoSuggestionDismissed}
               setGeoSuggestion={setGeoSuggestion} setGeoSuggestionDismissed={setGeoSuggestionDismissed}
               geoActionLoading={geoActionLoading} handleConfirmGeoSuggestion={handleConfirmGeoSuggestion}
+              previousOpenLogs={previousOpenLogs} clients={clients} onCompleteLog={openIncompleteLogModal}
             />
           )}
 

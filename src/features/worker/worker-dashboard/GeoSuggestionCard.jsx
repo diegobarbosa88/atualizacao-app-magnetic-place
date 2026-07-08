@@ -1,10 +1,13 @@
 import React from 'react';
-import { LogIn, LogOut, Loader2, MapPin, Building2 } from 'lucide-react';
+import { LogIn, LogOut, Loader2, MapPin, Building2, AlertTriangle, Edit2 } from 'lucide-react';
 
-export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismissed, setGeoSuggestion, setGeoSuggestionDismissed, geoActionLoading, handleConfirmGeoSuggestion }) {
+export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismissed, setGeoSuggestion, setGeoSuggestionDismissed, geoActionLoading, handleConfirmGeoSuggestion, previousOpenLogs, clients, onCompleteLog }) {
   if (!geoSuggestion || geoSuggestionDismissed) return null;
 
   const isEntry = geoSuggestion.type === 'entrada';
+  const blockedLog = isEntry && previousOpenLogs?.length > 0
+    ? [...previousOpenLogs].sort((a, b) => a.date.localeCompare(b.date))[0]
+    : null;
 
   return (
     <div className="bg-indigo-600 rounded-2xl shadow-xl shadow-indigo-200/30 overflow-hidden mb-4 animate-in slide-in-from-top-4 duration-500">
@@ -34,20 +37,42 @@ export default function GeoSuggestionCard({ geoSuggestion, geoSuggestionDismisse
           }`} />
         </div>
 
-        {/* Botão */}
-        <button
-          onClick={handleConfirmGeoSuggestion}
-          disabled={geoActionLoading}
-          className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50 text-white ${
-            isEntry
-              ? 'bg-emerald-500 hover:bg-emerald-400'
-              : 'bg-rose-500 hover:bg-rose-400'
-          }`}
-          style={isEntry && !geoActionLoading ? { animation: 'pulse-slow 2.5s ease-in-out infinite' } : {}}
-        >
-          {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : isEntry ? <LogIn size={14} /> : <LogOut size={14} />}
-          {geoActionLoading ? 'A registar...' : isEntry ? 'Registar Entrada' : 'Registar Saída'}
-        </button>
+        {/* Botão / Bloqueio */}
+        {blockedLog ? (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-start gap-2 bg-orange-500/20 border border-orange-400/30 rounded-xl px-3 py-2.5">
+              <AlertTriangle size={14} className="text-orange-300 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-orange-100 text-xs font-black leading-snug">
+                  Tens um registo sem saída de {new Date(blockedLog.date + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                </p>
+                <p className="text-orange-200/70 text-[10px] font-bold mt-0.5">
+                  Entrada {blockedLog.startTime} · {(clients || []).find(c => String(c.id) === String(blockedLog.clientId))?.name || 'Unidade'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => onCompleteLog(blockedLog)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide bg-orange-500 hover:bg-orange-400 text-white transition-all active:scale-95"
+            >
+              <Edit2 size={14} /> Completar Registo Anterior
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleConfirmGeoSuggestion}
+            disabled={geoActionLoading}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-black text-xs uppercase tracking-wide transition-all active:scale-95 disabled:opacity-50 text-white ${
+              isEntry
+                ? 'bg-emerald-500 hover:bg-emerald-400'
+                : 'bg-rose-500 hover:bg-rose-400'
+            }`}
+            style={isEntry && !geoActionLoading ? { animation: 'pulse-slow 2.5s ease-in-out infinite' } : {}}
+          >
+            {geoActionLoading ? <Loader2 size={14} className="animate-spin" /> : isEntry ? <LogIn size={14} /> : <LogOut size={14} />}
+            {geoActionLoading ? 'A registar...' : isEntry ? 'Registar Entrada' : 'Registar Saída'}
+          </button>
+        )}
 
         {!isEntry && geoSuggestion.startTime && (
           <p className="text-center text-xs font-bold text-indigo-200/60 -mt-1">
