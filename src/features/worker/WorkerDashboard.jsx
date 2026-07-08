@@ -260,7 +260,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             myApproval={myApproval} showProgress={showProgress} setShowProgress={setShowProgress}
           />
 
-          {currentUser?.gps_enabled && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
+          {(currentUser?.gps_enabled || isLimitedWorker) && currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth() && (
             <InServiceCard
               todayOpenLog={todayOpenLog} clients={clients}
               handleRegistarPausa={handleRegistarPausa} handleRegistarSaida={handleRegistarSaida}
