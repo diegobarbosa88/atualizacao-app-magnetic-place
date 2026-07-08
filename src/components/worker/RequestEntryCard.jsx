@@ -192,7 +192,9 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       alert('Selecione o Cliente/Unidade');
       return;
     }
-    if (!formData.startTime || !formData.endTime) {
+    const todayStr = toISODateLocal(new Date());
+    const isToday = selectedDate === todayStr;
+    if (!formData.startTime || (!formData.endTime && !isToday)) {
       alert('Preencha Entrada e Saída');
       return;
     }
@@ -246,6 +248,23 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
 
       const { error: e2 } = await supabase.from('correction_items').insert(item);
       if (e2) throw e2;
+
+      // Para hoje sem log existente: criar log provisional para InServiceCard aparecer imediatamente
+      if (isToday && !existingLog) {
+        await supabase.from('logs').insert({
+          id: `l${Date.now()}`,
+          workerId: String(currentUser.id),
+          clientId: String(formData.clientId),
+          date: selectedDate,
+          startTime: formData.startTime,
+          endTime: null,
+          breakStart: null,
+          breakEnd: null,
+          hours: 0,
+          description: formData.description || '',
+          source: 'request',
+        });
+      }
 
       await supabase.from('app_notifications').insert({
         id: `notif_${Date.now()}`,

@@ -359,20 +359,42 @@ export async function applyCreationRequest(supabase, { correction, items, client
       }).eq('id', existing.id);
       if (error) throw error;
     } else if (!item.before && item.proposed) {
-      const logId = newId('l');
-      const { error } = await supabase.from('logs').insert({
-        id: logId,
-        workerId: String(item.worker_id),
-        clientId: String(correction.client_id),
-        date: item.date,
-        startTime: item.proposed.startTime,
-        endTime: item.proposed.endTime,
-        breakStart: item.proposed.breakStart,
-        breakEnd: item.proposed.breakEnd,
-        hours: calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
-        source: 'request',
-      });
-      if (error) throw error;
+      // Verificar se existe log provisional criado no momento da submissão
+      const { data: provisional } = await supabase
+        .from('logs').select('id, endTime')
+        .eq('workerId', item.worker_id)
+        .eq('date', item.date)
+        .eq('source', 'request')
+        .maybeSingle();
+
+      if (provisional) {
+        // Actualizar startTime (rounded) mas preservar endTime real registado pelo worker
+        const { error } = await supabase.from('logs').update({
+          startTime: item.proposed.startTime,
+          endTime: provisional.endTime ?? item.proposed.endTime ?? null,
+          breakStart: item.proposed.breakStart ?? null,
+          breakEnd: item.proposed.breakEnd ?? null,
+          hours: calculateDuration(item.proposed.startTime, provisional.endTime ?? item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
+          edited_at: new Date().toISOString(),
+          edited_source: 'request',
+        }).eq('id', provisional.id);
+        if (error) throw error;
+      } else {
+        const logId = newId('l');
+        const { error } = await supabase.from('logs').insert({
+          id: logId,
+          workerId: String(item.worker_id),
+          clientId: String(correction.client_id),
+          date: item.date,
+          startTime: item.proposed.startTime,
+          endTime: item.proposed.endTime,
+          breakStart: item.proposed.breakStart,
+          breakEnd: item.proposed.breakEnd,
+          hours: calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
+          source: 'request',
+        });
+        if (error) throw error;
+      }
     }
   }
 
@@ -409,6 +431,21 @@ export async function applyCreationRequest(supabase, { correction, items, client
 }
 
 export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName, clientEmail, portalBase }) {
+  // Apagar log provisional em aberto se o pedido rejeitado era para hoje
+  const today = new Date().toLocaleDateString('en-CA');
+  const { data: rejectedItems } = await supabase
+    .from('correction_items').select('worker_id, date').eq('correction_id', correctionId);
+  for (const item of rejectedItems || []) {
+    if (item.date === today) {
+      await supabase.from('logs')
+        .delete()
+        .eq('workerId', item.worker_id)
+        .eq('date', item.date)
+        .eq('source', 'request')
+        .is('endTime', null);
+    }
+  }
+
   const { error } = await supabase
     .from('corrections')
     .update({
