@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, ChevronDown, ChevronRight, Filter } from 'lucide-react';
+import { Shield, ChevronDown, ChevronRight, Filter, Building2 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 const ACTION_LABELS = {
-  log_criado: { label: 'Registo Criado', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  log_editado: { label: 'Registo Editado', color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  log_eliminado: { label: 'Registo Eliminado', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-  pedido_aprovado: { label: 'Pedido Aprovado', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  pedido_rejeitado: { label: 'Pedido Rejeitado', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  log_criado:      { label: 'Registo Criado',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  log_editado:     { label: 'Registo Editado',   color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  log_eliminado:   { label: 'Registo Eliminado', color: 'bg-rose-100 text-rose-700 border-rose-200' },
+  pedido_aprovado: { label: 'Pedido Aprovado',   color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  pedido_rejeitado:{ label: 'Pedido Rejeitado',  color: 'bg-orange-100 text-orange-700 border-orange-200' },
 };
 
 function formatDateTime(isoStr) {
@@ -41,12 +41,11 @@ function AuditRow({ entry }) {
     <div className="border-b border-slate-50 last:border-0">
       <button
         onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors text-left"
       >
-        {expanded ? <ChevronDown size={13} className="text-slate-400 shrink-0" /> : <ChevronRight size={13} className="text-slate-400 shrink-0" />}
+        {expanded ? <ChevronDown size={12} className="text-slate-400 shrink-0" /> : <ChevronRight size={12} className="text-slate-400 shrink-0" />}
         <span className="text-[10px] font-bold text-slate-400 w-28 shrink-0">{formatDateTime(entry.created_at)}</span>
-        <span className="font-black text-slate-700 text-xs w-32 shrink-0 truncate">{entry.client_name || entry.client_id}</span>
-        <span className="text-xs text-slate-500 flex-1 min-w-0 truncate">{entry.worker_name || '—'}</span>
+        <span className="text-xs text-slate-600 flex-1 min-w-0 truncate">{entry.worker_name || '—'}</span>
         {dateLabel && <span className="text-[10px] text-slate-400 shrink-0">{dateLabel}</span>}
         <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border shrink-0 ${meta.color}`}>{meta.label}</span>
       </button>
@@ -58,6 +57,44 @@ function AuditRow({ entry }) {
             {entry.after_data && <TimeSnap data={entry.after_data} label="Depois" />}
           </div>
           {entry.log_id && <p className="text-[10px] text-slate-300 font-mono">log: {entry.log_id}</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientGroup({ clientName, clientId, entries }) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-100"
+      >
+        <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
+          <Building2 size={13} className="text-violet-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-black text-slate-800 text-sm truncate">{clientName || clientId}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+            {entries.length} ação{entries.length !== 1 ? 'ões' : ''}
+          </p>
+        </div>
+        <ChevronDown size={14} className={`text-slate-400 shrink-0 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+      </button>
+
+      {expanded && (
+        <div>
+          {/* Mini header */}
+          <div className="flex items-center gap-3 px-4 py-1.5 bg-slate-50 border-b border-slate-100">
+            <span className="w-4 shrink-0" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 w-28 shrink-0">Data/Hora</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex-1">Colaborador</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Data Reg.</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ação</span>
+          </div>
+          {entries.map(e => <AuditRow key={e.id} entry={e} />)}
         </div>
       )}
     </div>
@@ -104,6 +141,17 @@ export default function ClientPortalAuditPanel() {
     });
   }, [entries, filterClient, filterAction, filterDateFrom, filterDateTo]);
 
+  // Agrupar por cliente (mantendo ordem de mais recente)
+  const grouped = useMemo(() => {
+    const map = new Map();
+    for (const e of filtered) {
+      const key = String(e.client_id);
+      if (!map.has(key)) map.set(key, { clientId: e.client_id, clientName: e.client_name, entries: [] });
+      map.get(key).entries.push(e);
+    }
+    return Array.from(map.values());
+  }, [filtered]);
+
   const hasFilters = filterClient || filterAction || filterDateFrom || filterDateTo;
 
   return (
@@ -115,7 +163,9 @@ export default function ClientPortalAuditPanel() {
           </div>
           <div>
             <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Auditoria Portal do Cliente</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filtered.length} registo{filtered.length !== 1 ? 's' : ''}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {filtered.length} ação{filtered.length !== 1 ? 'ões' : ''} · {grouped.length} cliente{grouped.length !== 1 ? 's' : ''}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -157,21 +207,13 @@ export default function ClientPortalAuditPanel() {
           </div>
           <div>
             <label className="text-[9px] font-black uppercase tracking-widest text-violet-500 mb-1 block">De</label>
-            <input
-              type="date"
-              value={filterDateFrom}
-              onChange={e => setFilterDateFrom(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
-            />
+            <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>
           <div>
             <label className="text-[9px] font-black uppercase tracking-widest text-violet-500 mb-1 block">Até</label>
-            <input
-              type="date"
-              value={filterDateTo}
-              onChange={e => setFilterDateTo(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
-            />
+            <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
           </div>
           {hasFilters && (
             <button
@@ -197,24 +239,17 @@ export default function ClientPortalAuditPanel() {
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
         </div>
-      ) : filtered.length === 0 ? (
+      ) : grouped.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">
           <Shield size={24} className="mx-auto text-slate-200 mb-3" />
           <p className="font-black text-slate-300 text-sm uppercase tracking-widest">Sem registos de auditoria</p>
           <p className="text-xs text-slate-200 mt-1">As ações dos clientes no portal aparecem aqui</p>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-          {/* Header da tabela */}
-          <div className="flex items-center gap-3 px-4 py-2.5 border-b border-slate-100 bg-slate-50">
-            <span className="w-4 shrink-0" />
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 w-28 shrink-0">Data/Hora</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 w-32 shrink-0">Cliente</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 flex-1">Colaborador</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Data Reg.</span>
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Ação</span>
-          </div>
-          {filtered.map(e => <AuditRow key={e.id} entry={e} />)}
+        <div className="space-y-3">
+          {grouped.map(g => (
+            <ClientGroup key={g.clientId} clientId={g.clientId} clientName={g.clientName} entries={g.entries} />
+          ))}
         </div>
       )}
     </div>

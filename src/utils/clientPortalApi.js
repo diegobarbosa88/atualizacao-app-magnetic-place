@@ -138,14 +138,6 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
           .eq('date', item.date);
         if (error) throw error;
       }
-      await recordAudit(supabase, {
-        clientId, clientName, action: 'pedido_aprovado',
-        workerId: item.worker_id, workerName: item.worker_name,
-        logId: item.before?.log_id || null, date: item.date,
-        beforeData: item.before || null,
-        afterData: null,
-        note: `Pedido de eliminação aprovado (correction ${correction.id})`,
-      });
       continue;
     }
 
@@ -166,14 +158,6 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
         edited_source: 'client_portal',
       }).eq('id', existing.id);
       if (error) throw error;
-      await recordAudit(supabase, {
-        clientId, clientName, action: 'pedido_aprovado',
-        workerId: item.worker_id, workerName: item.worker_name,
-        logId: existing.id, date: item.date,
-        beforeData: { startTime: existing.startTime, endTime: existing.endTime, breakStart: existing.breakStart, breakEnd: existing.breakEnd },
-        afterData: { ...times, date: item.date },
-        note: `Pedido de edição aprovado (correction ${correction.id})`,
-      });
     } else {
       // Verificar se existe log provisional criado pelo worker
       const { data: provisional } = await supabase.from('logs').select('id, endTime')
@@ -189,13 +173,6 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
           edited_source: 'client_portal',
         }).eq('id', provisional.id);
         if (error) throw error;
-        await recordAudit(supabase, {
-          clientId, clientName, action: 'pedido_aprovado',
-          workerId: item.worker_id, workerName: item.worker_name,
-          logId: provisional.id, date: item.date,
-          beforeData: null, afterData: { ...finalTimes, date: item.date },
-          note: `Pedido de criação aprovado com provisional (correction ${correction.id})`,
-        });
       } else {
         const { error } = await supabase.from('logs').insert({
           id: logId,
@@ -206,13 +183,6 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
           source: 'client_portal',
         });
         if (error) throw error;
-        await recordAudit(supabase, {
-          clientId, clientName, action: 'pedido_aprovado',
-          workerId: item.worker_id, workerName: item.worker_name,
-          logId, date: item.date,
-          beforeData: null, afterData: { ...times, date: item.date },
-          note: `Pedido de criação aprovado (correction ${correction.id})`,
-        });
       }
     }
   }
@@ -223,9 +193,16 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
     reviewed_by: `client:${clientId}`,
   }).eq('id', correction.id);
 
-  // Notificar o trabalhador (mesmo padrão que o admin)
+  // Audit sempre registado ao nível da correction (independente de items)
   const workerId = items[0]?.worker_id;
   const workerName = items[0]?.worker_name;
+  await recordAudit(supabase, {
+    clientId, clientName, action: 'pedido_aprovado',
+    workerId, workerName, date: items[0]?.date || null,
+    note: `Correction ${correction.id} aprovada (${items.length} item(s))`,
+  });
+
+  // Notificar o trabalhador (mesmo padrão que o admin)
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
     title: 'Pedido de Registo Aprovado',
