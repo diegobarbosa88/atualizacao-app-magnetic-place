@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Activity, ChevronLeft, ChevronRight, X, LogOut, LogIn, Coffee, PlayCircle, Navigation, MapPin, CheckCircle } from 'lucide-react';
+import { Calendar, Activity, ChevronLeft, ChevronRight, X, LogOut, LogIn, Coffee, PlayCircle, Navigation, MapPin, CheckCircle, Edit2 } from 'lucide-react';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -30,7 +30,7 @@ const LocationDot = ({ lat, lng, verified }) => {
 const mapsLink = (lat, lng) => `https://www.google.com/maps?q=${lat},${lng}`;
 const moradaMapsLink = (morada) => morada ? `https://www.google.com/maps/search/${encodeURIComponent(morada)}` : null;
 
-export default function DashboardView({ logs, workers, clients, effectiveClientId, selectedMonth, availableMonths, setSelectedMonth, originalWorkersData, originalTotal, clientData, clientObj, todayStr, activeNow, rotatingWorkerIdx, isWorkersModalOpen, setIsWorkersModalOpen, calSelectedDay, setCalSelectedDay, expandedLogLocations, setExpandedLogLocations, now, t }) {
+export default function DashboardView({ logs, workers, clients, effectiveClientId, selectedMonth, availableMonths, setSelectedMonth, originalWorkersData, originalTotal, clientData, clientObj, todayStr, activeNow, rotatingWorkerIdx, isWorkersModalOpen, setIsWorkersModalOpen, calSelectedDay, setCalSelectedDay, expandedLogLocations, setExpandedLogLocations, now, t, onManageLogs }) {
     const todayAllLogs = logs.filter(l => String(l.clientId) === String(effectiveClientId) && l.date === todayStr && l.startTime);
 
     const formatElapsed = (startTimeStr) => {
@@ -370,18 +370,30 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                         <h3 className="font-black text-slate-400 text-xs uppercase tracking-widest">{t('workers')} — {clientData.period}</h3>
                     </div>
                     <div className="divide-y divide-slate-50">
-                        {originalWorkersData.map(worker => (
-                            <div key={worker.id} className="px-5 py-2.5 flex items-center gap-3">
-                                <div className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-xs flex-shrink-0 uppercase">
-                                    {worker.name.charAt(0)}
+                        {originalWorkersData.map(worker => {
+                            const workerObj = workers.find(w => String(w.id) === String(worker.id));
+                            return (
+                                <div key={worker.id} className="px-5 py-2.5 flex items-center gap-3">
+                                    <div className="w-7 h-7 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700 font-black text-xs flex-shrink-0 uppercase">
+                                        {worker.name.charAt(0)}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-black text-slate-700 text-xs truncate">{worker.name}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
+                                    </div>
+                                    <span className="text-sm font-black text-indigo-600">{worker.totalHours}h</span>
+                                    {onManageLogs && (
+                                        <button
+                                            onClick={() => onManageLogs(workerObj || { id: worker.id, name: worker.name, profissao: worker.role })}
+                                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                            title="Gerir registos"
+                                        >
+                                            <Edit2 size={13} />
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-black text-slate-700 text-xs truncate">{worker.name}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">{worker.role}</p>
-                                </div>
-                                <span className="text-sm font-black text-indigo-600">{worker.totalHours}h</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </section>
             )}

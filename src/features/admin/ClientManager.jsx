@@ -3,11 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock, Send, AlertTriangle
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock, Send, AlertTriangle, Shield
 } from 'lucide-react';
 import { getCurrentPosition } from '../../utils/geoUtils';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
+import ClientPortalAuditPanel from './client/ClientPortalAuditPanel';
 
 const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
   const { clients, supabase, corrections } = useApp();
@@ -159,6 +160,12 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${clientSubTab === 'correcoes' ? 'bg-white text-orange-500' : 'bg-red-500 text-white'}`}>{pendingClientCorrections}</span>
           )}
         </button>
+        <button
+          onClick={() => setClientSubTab('auditoria')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'auditoria' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-violet-600'}`}
+        >
+          <Shield size={14} /> Auditoria Portal
+        </button>
       </div>
 
       {clientSubTab === 'envios' && (
@@ -173,6 +180,10 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
 
       {clientSubTab === 'correcoes' && (
         <CorrectionsInbox forcedSource="clients" />
+      )}
+
+      {clientSubTab === 'auditoria' && (
+        <ClientPortalAuditPanel />
       )}
 
       {clientSubTab === 'list' && (<>
