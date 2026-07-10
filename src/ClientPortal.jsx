@@ -535,6 +535,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                                 correctionItems={correctionItems}
                                 supabase={supabase}
                                 onRequestsChange={() => {}}
+                                compact
                             />
                         </div>
                     </div>
