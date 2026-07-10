@@ -68,6 +68,7 @@ export default function ClientPortalAuditPanel() {
   const { supabase, clients } = useApp();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [filterClient, setFilterClient] = useState('');
   const [filterAction, setFilterAction] = useState('');
   const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -77,12 +78,17 @@ export default function ClientPortalAuditPanel() {
   const loadEntries = async () => {
     if (!supabase) return;
     setLoading(true);
+    setLoadError(null);
     const { data, error } = await supabase
       .from('client_portal_audit_logs')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(500);
-    if (!error) setEntries(data || []);
+    if (error) {
+      setLoadError(error.message);
+    } else {
+      setEntries(data || []);
+    }
     setLoading(false);
   };
 
@@ -178,7 +184,16 @@ export default function ClientPortalAuditPanel() {
         </div>
       )}
 
-      {loading ? (
+      {loadError ? (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center space-y-2">
+          <p className="font-black text-rose-700 text-sm uppercase tracking-widest">Erro ao carregar auditoria</p>
+          <p className="text-xs text-rose-500 font-mono">{loadError}</p>
+          <p className="text-xs text-rose-400">Execute a migration <code className="bg-rose-100 px-1 rounded">20260710_client_portal_audit.sql</code> no Supabase.</p>
+          <button onClick={loadEntries} className="mt-2 px-4 py-2 bg-rose-600 text-white font-black text-xs rounded-xl hover:bg-rose-700 transition-all">
+            Tentar novamente
+          </button>
+        </div>
+      ) : loading ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
         </div>

@@ -25,7 +25,7 @@ function buildLogTimes({ startTime, endTime, breakStart, breakEnd }) {
 }
 
 async function recordAudit(supabase, { clientId, clientName, action, workerId, workerName, logId, date, beforeData, afterData, note }) {
-  await supabase.from('client_portal_audit_logs').insert({
+  const { error } = await supabase.from('client_portal_audit_logs').insert({
     id: newId('cpa'),
     client_id: String(clientId),
     client_name: clientName || null,
@@ -39,6 +39,7 @@ async function recordAudit(supabase, { clientId, clientName, action, workerId, w
     note: note || null,
     created_at: new Date().toISOString(),
   });
+  if (error) console.error('[clientPortalApi] recordAudit falhou:', error.message, { action, clientId });
 }
 
 /**
