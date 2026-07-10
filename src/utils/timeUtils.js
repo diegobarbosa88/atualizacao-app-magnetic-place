@@ -83,6 +83,18 @@ export const roundTimeToIntervalTimeDown = (timeStr, intervalMinutes = 30) => {
 };
 
 /**
+ * Lê o intervalo de arredondamento e tolerância das definições guardadas em localStorage.
+ */
+export const getIntervalSettings = () => {
+  try {
+    const s = JSON.parse(localStorage.getItem('magnetic_settings') || '{}');
+    return { interval: s.minuteInterval || 30, tolerance: s.entryToleranceMinutes ?? 0 };
+  } catch {
+    return { interval: 30, tolerance: 0 };
+  }
+};
+
+/**
  * Rounds a given time string "HH:MM" UP to the nearest interval (for entry times).
  * If the time falls within `toleranceMinutes` of the previous interval boundary,
  * rounds DOWN instead (e.g., with interval=30 and tolerance=10: 08:05→08:00, 08:11→08:30).

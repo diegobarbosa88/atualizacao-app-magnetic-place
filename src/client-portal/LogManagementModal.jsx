@@ -1,21 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { X, Plus, Edit2, Trash2, Check, AlertTriangle } from 'lucide-react';
 import { createLogByClient, updateLogByClient, deleteLogByClient } from '../utils/clientPortalApi';
+import { calculateDuration } from '../utils/formatUtils';
+import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from '../utils/timeUtils';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
   if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
-  const [eh, em] = entry.split(':').map(n => parseInt(n, 10) || 0);
-  const [xh, xm] = exit.split(':').map(n => parseInt(n, 10) || 0);
-  let diffMins = (xh * 60 + xm) - (eh * 60 + em);
-  if (diffMins < 0) diffMins += 24 * 60;
-  if (breakStart && breakEnd && breakStart !== '--:--' && breakEnd !== '--:--') {
-    const [bsh, bsm] = breakStart.split(':').map(Number);
-    const [beh, bem] = breakEnd.split(':').map(Number);
-    let bDiff = (beh * 60 + bem) - (bsh * 60 + bsm);
-    if (bDiff < 0) bDiff += 24 * 60;
-    diffMins -= bDiff;
-  }
-  return Number(Math.max(0, diffMins / 60).toFixed(2));
+  const { interval, tolerance } = getIntervalSettings();
+  return calculateDuration(
+    roundTimeToIntervalTimeUp(entry, interval, tolerance),
+    roundTimeToIntervalTimeDown(exit, interval),
+    breakStart && breakStart !== '--:--' ? roundTimeToIntervalTimeUp(breakStart, interval, tolerance) : null,
+    breakEnd && breakEnd !== '--:--' ? roundTimeToIntervalTimeDown(breakEnd, interval) : null,
+  );
 };
 
 const EMPTY_FORM = { date: '', startTime: '', endTime: '', breakStart: '', breakEnd: '' };

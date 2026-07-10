@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronDown, ChevronUp, Edit2, Trash2, Plus } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
-import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, initialLogId, isInline = false, openInDeleteMode = false }) => {
@@ -237,10 +236,10 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
           breakEnd: existingLog.breakEnd,
         } : null,
         proposed: {
-          startTime: roundTimeToIntervalTimeUp(formData.startTime, minuteInterval || 30, systemSettings?.entryToleranceMinutes || 0),
-          endTime: roundTimeToIntervalTimeDown(formData.endTime, minuteInterval || 30),
-          breakStart: formData.breakStart ? roundTimeToIntervalTimeUp(formData.breakStart, minuteInterval || 30, systemSettings?.entryToleranceMinutes || 0) : null,
-          breakEnd: formData.breakEnd ? roundTimeToIntervalTimeDown(formData.breakEnd, minuteInterval || 30) : null,
+          startTime: formData.startTime || null,
+          endTime: formData.endTime || null,
+          breakStart: formData.breakStart || null,
+          breakEnd: formData.breakEnd || null,
         },
         final: null,
         item_status: 'pending',

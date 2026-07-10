@@ -2,6 +2,7 @@
 // Single source of truth for the client→admin correction flow (v2).
 
 import { calculateDuration } from './formatUtils';
+import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from './timeUtils';
 import { sendValidationEmail } from './emailUtils';
 import { DISABLE_CLIENT_NOTIFICATIONS, shouldSendNotification } from '../config';
 
@@ -162,29 +163,49 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
         return;
       }
       if (existing) {
+        const { interval, tolerance } = getIntervalSettings();
+        const ns = normalizeTime(final.startTime);
+        const ne = normalizeTime(final.endTime);
+        const nbs = normalizeTime(final.breakStart);
+        const nbe = normalizeTime(final.breakEnd);
         const { error } = await supabase.from('logs').upsert({
           ...existing,
-          startTime: normalizeTime(final.startTime),
-          endTime: normalizeTime(final.endTime),
-          breakStart: normalizeTime(final.breakStart),
-          breakEnd: normalizeTime(final.breakEnd),
-          hours: calculateDuration(normalizeTime(final.startTime), normalizeTime(final.endTime), normalizeTime(final.breakStart), normalizeTime(final.breakEnd)),
+          startTime: ns,
+          endTime: ne,
+          breakStart: nbs,
+          breakEnd: nbe,
+          hours: calculateDuration(
+            ns ? roundTimeToIntervalTimeUp(ns, interval, tolerance) : null,
+            ne ? roundTimeToIntervalTimeDown(ne, interval) : null,
+            nbs ? roundTimeToIntervalTimeUp(nbs, interval, tolerance) : null,
+            nbe ? roundTimeToIntervalTimeDown(nbe, interval) : null,
+          ),
           edited_at: new Date().toISOString(),
           edited_source: 'correction',
         }, { onConflict: 'id' });
         if (error) throw error;
       } else if (final.startTime && final.endTime && it.date) {
+        const { interval, tolerance } = getIntervalSettings();
+        const ns = normalizeTime(final.startTime);
+        const ne = normalizeTime(final.endTime);
+        const nbs = normalizeTime(final.breakStart);
+        const nbe = normalizeTime(final.breakEnd);
         const logId = newId('l');
         const { error } = await supabase.from('logs').insert({
           id: logId,
           workerId: String(it.worker_id),
           clientId: String(correction.client_id),
           date: it.date,
-          startTime: normalizeTime(final.startTime),
-          endTime: normalizeTime(final.endTime),
-          breakStart: normalizeTime(final.breakStart),
-          breakEnd: normalizeTime(final.breakEnd),
-          hours: calculateDuration(normalizeTime(final.startTime), normalizeTime(final.endTime), normalizeTime(final.breakStart), normalizeTime(final.breakEnd)),
+          startTime: ns,
+          endTime: ne,
+          breakStart: nbs,
+          breakEnd: nbe,
+          hours: calculateDuration(
+            ns ? roundTimeToIntervalTimeUp(ns, interval, tolerance) : null,
+            ne ? roundTimeToIntervalTimeDown(ne, interval) : null,
+            nbs ? roundTimeToIntervalTimeUp(nbs, interval, tolerance) : null,
+            nbe ? roundTimeToIntervalTimeDown(nbe, interval) : null,
+          ),
           source: 'correction',
         });
         if (error) throw error;
@@ -348,12 +369,22 @@ export async function applyCreationRequest(supabase, { correction, items, client
     }
 
     if (item.before && existing) {
+      const { interval, tolerance } = getIntervalSettings();
+      const ps = item.proposed?.startTime || null;
+      const pe = item.proposed?.endTime || null;
+      const pbs = item.proposed?.breakStart || null;
+      const pbe = item.proposed?.breakEnd || null;
       const { error } = await supabase.from('logs').update({
-        startTime: item.proposed?.startTime || null,
-        endTime: item.proposed?.endTime || null,
-        breakStart: item.proposed?.breakStart || null,
-        breakEnd: item.proposed?.breakEnd || null,
-        hours: calculateDuration(item.proposed?.startTime, item.proposed?.endTime, item.proposed?.breakStart, item.proposed?.breakEnd),
+        startTime: ps,
+        endTime: pe,
+        breakStart: pbs,
+        breakEnd: pbe,
+        hours: calculateDuration(
+          ps ? roundTimeToIntervalTimeUp(ps, interval, tolerance) : null,
+          pe ? roundTimeToIntervalTimeDown(pe, interval) : null,
+          pbs ? roundTimeToIntervalTimeUp(pbs, interval, tolerance) : null,
+          pbe ? roundTimeToIntervalTimeDown(pbe, interval) : null,
+        ),
         edited_at: new Date().toISOString(),
         edited_source: 'request',
       }).eq('id', existing.id);
@@ -368,29 +399,49 @@ export async function applyCreationRequest(supabase, { correction, items, client
         .maybeSingle();
 
       if (provisional) {
-        // Actualizar startTime (rounded) mas preservar endTime real registado pelo worker
+        // Preservar endTime real registado pelo worker, mas calcular horas com arredondamento
+        const { interval, tolerance } = getIntervalSettings();
+        const ps = item.proposed.startTime;
+        const pe = provisional.endTime ?? item.proposed.endTime ?? null;
+        const pbs = item.proposed.breakStart ?? null;
+        const pbe = item.proposed.breakEnd ?? null;
         const { error } = await supabase.from('logs').update({
-          startTime: item.proposed.startTime,
-          endTime: provisional.endTime ?? item.proposed.endTime ?? null,
-          breakStart: item.proposed.breakStart ?? null,
-          breakEnd: item.proposed.breakEnd ?? null,
-          hours: calculateDuration(item.proposed.startTime, provisional.endTime ?? item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
+          startTime: ps,
+          endTime: pe,
+          breakStart: pbs,
+          breakEnd: pbe,
+          hours: calculateDuration(
+            ps ? roundTimeToIntervalTimeUp(ps, interval, tolerance) : null,
+            pe ? roundTimeToIntervalTimeDown(pe, interval) : null,
+            pbs ? roundTimeToIntervalTimeUp(pbs, interval, tolerance) : null,
+            pbe ? roundTimeToIntervalTimeDown(pbe, interval) : null,
+          ),
           edited_at: new Date().toISOString(),
           edited_source: 'request',
         }).eq('id', provisional.id);
         if (error) throw error;
       } else {
+        const { interval, tolerance } = getIntervalSettings();
+        const ps = item.proposed.startTime;
+        const pe = item.proposed.endTime;
+        const pbs = item.proposed.breakStart;
+        const pbe = item.proposed.breakEnd;
         const logId = newId('l');
         const { error } = await supabase.from('logs').insert({
           id: logId,
           workerId: String(item.worker_id),
           clientId: String(correction.client_id),
           date: item.date,
-          startTime: item.proposed.startTime,
-          endTime: item.proposed.endTime,
-          breakStart: item.proposed.breakStart,
-          breakEnd: item.proposed.breakEnd,
-          hours: calculateDuration(item.proposed.startTime, item.proposed.endTime, item.proposed.breakStart, item.proposed.breakEnd),
+          startTime: ps,
+          endTime: pe,
+          breakStart: pbs,
+          breakEnd: pbe,
+          hours: calculateDuration(
+            ps ? roundTimeToIntervalTimeUp(ps, interval, tolerance) : null,
+            pe ? roundTimeToIntervalTimeDown(pe, interval) : null,
+            pbs ? roundTimeToIntervalTimeUp(pbs, interval, tolerance) : null,
+            pbe ? roundTimeToIntervalTimeDown(pbe, interval) : null,
+          ),
           source: 'request',
         });
         if (error) throw error;

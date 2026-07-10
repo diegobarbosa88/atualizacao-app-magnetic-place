@@ -2,6 +2,7 @@
 // Cada ação é registada em client_portal_audit_logs para auditoria pelo admin.
 
 import { calculateDuration } from './formatUtils';
+import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from './timeUtils';
 
 // Data de corte: pedidos de trabalhadores submetidos antes desta data não aparecem no portal do cliente
 // (foram tratados pelo admin antes da implementação desta funcionalidade).
@@ -15,12 +16,19 @@ function buildLogTimes({ startTime, endTime, breakStart, breakEnd }) {
   const e = normalizeTime(endTime);
   const bs = normalizeTime(breakStart);
   const be = normalizeTime(breakEnd);
+  // Armazenar tempos reais, mas calcular horas com arredondamento
+  const { interval, tolerance } = getIntervalSettings();
   return {
     startTime: s,
     endTime: e,
     breakStart: bs,
     breakEnd: be,
-    hours: calculateDuration(s, e, bs, be),
+    hours: calculateDuration(
+      s ? roundTimeToIntervalTimeUp(s, interval, tolerance) : null,
+      e ? roundTimeToIntervalTimeDown(e, interval) : null,
+      bs ? roundTimeToIntervalTimeUp(bs, interval, tolerance) : null,
+      be ? roundTimeToIntervalTimeDown(be, interval) : null,
+    ),
   };
 }
 
