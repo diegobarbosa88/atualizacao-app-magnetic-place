@@ -222,17 +222,17 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
     reviewed_by: `client:${clientId}`,
   }).eq('id', correction.id);
 
-  // Notificar o trabalhador
+  // Notificar o trabalhador (mesmo padrão que o admin)
   const workerId = items[0]?.worker_id;
   const workerName = items[0]?.worker_name;
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
-    title: 'Pedido Aprovado pelo Cliente',
-    message: `O seu pedido de registo foi aprovado.`,
+    title: 'Pedido de Registo Aprovado',
+    message: 'O seu pedido de registo foi aprovado.',
     type: 'success',
     target_type: 'specific',
     target_worker_ids: workerId ? [String(workerId)] : [],
-    payload: { correction_id: correction.id, kind: 'client_approved' },
+    payload: { correction_id: correction.id, kind: 'applied' },
     is_active: true,
     is_dismissible: true,
     created_at: new Date().toISOString(),
@@ -272,15 +272,15 @@ export async function rejectWorkerRequest(supabase, { clientId, clientName, corr
     note: reason ? `Motivo: ${reason}` : `Correction ${correction.id} rejeitada`,
   });
 
-  // Notificar o trabalhador
+  // Notificar o trabalhador (mesmo padrão que o admin)
   await supabase.from('app_notifications').insert({
     id: newId('notif'),
-    title: 'Pedido Rejeitado pelo Cliente',
-    message: reason ? `O seu pedido foi rejeitado. Motivo: ${reason}` : 'O seu pedido foi rejeitado.',
+    title: 'Pedido de Registo Rejeitado',
+    message: reason ? `Motivo: ${reason}` : 'O seu pedido de registo foi rejeitado.',
     type: 'error',
     target_type: 'specific',
     target_worker_ids: workerId ? [String(workerId)] : [],
-    payload: { correction_id: correction.id, kind: 'client_rejected' },
+    payload: { correction_id: correction.id, kind: 'rejected' },
     is_active: true,
     is_dismissible: true,
     created_at: new Date().toISOString(),
