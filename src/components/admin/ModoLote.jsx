@@ -29,7 +29,7 @@ import {
 import { DivergenciaBadge, EstadoPicker } from './ValidacaoUI';
 
 // ─── Modo Lote ────────────────────────────────────────────────────────────────
-const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb }) => {
+const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb, workerRateHistory = [] }) => {
   const [files, setFiles] = useState([]);
   const [resultados, setResultados] = useState([]);
   const [processando, setProcessando] = useState(false);
@@ -73,7 +73,7 @@ const ModoLote = ({ workers, logs, systemSettings, saveSystemSettings, saveToDb 
   const processarPagina = async (text, origem) => {
     const { nome, mes } = extrairMetadadosTOConline(text);
     const worker = nome ? encontrarWorker(nome, workers) : null;
-    const bruto = calcularBrutoDeMes(worker, mes, logs);
+    const bruto = calcularBrutoDeMes(worker, mes, logs, workerRateHistory);
     const validacao = aplicarOverrideSempreValido(parseReciboTOConline(text, bruto, tolerancias), worker);
     return { origem, nomeExtraido: nome ?? '—', worker: worker ?? null, mes: mes ?? '—', bruto, ...validacao };
   };

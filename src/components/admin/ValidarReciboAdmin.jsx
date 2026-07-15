@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ReceiptText, Scissors, Files } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import ModoHistorico from './ModoHistorico';
@@ -8,6 +8,15 @@ import ModoDocumentos from './ModoDocumentos';
 const ValidarReciboAdmin = ({ workers = [] }) => {
   const { logs = [], systemSettings, saveSystemSettings, saveToDb } = useApp();
   const [modo, setModo] = useState('recibos');
+  const [workerRateHistory, setWorkerRateHistory] = useState([]);
+
+  useEffect(() => {
+    const db = window.supabaseInstance;
+    if (!db) return;
+    db.from('worker_valorhora_history').select('*').then(({ data }) => {
+      if (data) setWorkerRateHistory(data);
+    });
+  }, []);
 
   return (
     <div className="space-y-5">
@@ -24,8 +33,8 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
         ))}
       </div>
 
-      {modo === 'recibos'    && <ModoHistorico workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} />}
-      {modo === 'burst'      && <ModoBursting  workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} />}
+      {modo === 'recibos'    && <ModoHistorico workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} workerRateHistory={workerRateHistory} />}
+      {modo === 'burst'      && <ModoBursting  workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} workerRateHistory={workerRateHistory} />}
       {modo === 'documentos' && <ModoDocumentos workers={workers} />}
     </div>
   );

@@ -86,7 +86,7 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
 
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSystemSettings }) => {
+const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSystemSettings, workerRateHistory = [] }) => {
   // — Estado da lista mensal —
   const [registos, setRegistos] = useState([]);
   const [carregando, setCarregando] = useState(false);
@@ -188,7 +188,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             for (const texto of secoes) {
               const { nome, mes } = extrairMetadadosTOConline(texto);
               const worker = nome ? encontrarWorker(nome, workers) : null;
-              const bruto  = calcularBrutoDeMes(worker, mes, logs);
+              const bruto  = calcularBrutoDeMes(worker, mes, logs, workerRateHistory);
               const validacao = aplicarOverrideSempreValido(parseReciboTOConline(texto, bruto, tolerancias), worker);
               res.push({ nomeExtraido: nome ?? '—', worker, mes: mes ?? '—', bruto, sucesso: true, ...validacao });
             }

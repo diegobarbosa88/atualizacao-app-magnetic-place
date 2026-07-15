@@ -162,10 +162,25 @@ export function calcularTolerancias(systemSettings) {
   };
 }
 
-export function calcularBrutoDeMes(worker, mes, logs) {
+function getRateAtDate(logDate, history, currentRate) {
+  if (!history || history.length === 0) return Number(currentRate) || 0;
+  const sorted = [...history].sort((a, b) => new Date(a.data_alteracao) - new Date(b.data_alteracao));
+  const firstDate = sorted[0].data_alteracao.substring(0, 10);
+  if (logDate < firstDate) return Number(sorted[0].valor_anterior) || 0;
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    if (logDate >= sorted[i].data_alteracao.substring(0, 10)) return Number(sorted[i].valor_novo) || 0;
+  }
+  return Number(currentRate) || 0;
+}
+
+export function calcularBrutoDeMes(worker, mes, logs, workerRateHistory) {
   if (!worker || !mes) return 0;
   const logsDoMes = (logs ?? []).filter(l => l.workerId === worker.id && l.date?.startsWith(mes));
-  return logsDoMes.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0) * (worker.valorHora || 0);
+  const history = (workerRateHistory ?? []).filter(h => h.worker_id === worker.id);
+  return logsDoMes.reduce((s, l) => {
+    const rate = getRateAtDate(l.date, history, worker.valorHora);
+    return s + (parseFloat(l.hours) || 0) * rate;
+  }, 0);
 }
 
 export function agregarTotaisPorMes(resultados) {

@@ -20,7 +20,7 @@ import {
 } from '../../utils/validacaoHelpers';
 
 // ─── Modo Bursting ────────────────────────────────────────────────────────────
-const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
+const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHistory = [] }) => {
   const [ficheiro,    setFicheiro]    = useState(null);
   const [resultado,   setResultado]   = useState(null);
   const [processando, setProcessando] = useState(false);
@@ -104,7 +104,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb }) => {
       );
       const enriquecidos = res.resultados.map(r => {
         const worker = r.nome ? encontrarWorker(r.nome, workers) : null;
-        const bruto = calcularBrutoDeMes(worker, r.mes, logs);
+        const bruto = calcularBrutoDeMes(worker, r.mes, logs, workerRateHistory);
         const validacao = aplicarOverrideSempreValido(parseReciboTOConline(r.texto, bruto, tolerancias), worker);
         return { ...r, worker, bruto, ...validacao };
       });
