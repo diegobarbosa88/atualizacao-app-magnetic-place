@@ -257,9 +257,12 @@ export default function LogManagementModal({ worker, clientId, clientName, selec
   const [showAddForm, setShowAddForm] = useState(false);
 
   const workerLogs = useMemo(() =>
-    logs.filter(l => String(l.workerId) === String(worker.id) && l.date && l.date.substring(0, 7) === selectedMonth)
-      .sort((a, b) => a.date.localeCompare(b.date)),
-    [logs, worker.id, selectedMonth]
+    logs.filter(l =>
+      String(l.workerId) === String(worker.id) &&
+      String(l.clientId) === String(clientId) &&
+      l.date && l.date.substring(0, 7) === selectedMonth
+    ).sort((a, b) => a.date.localeCompare(b.date)),
+    [logs, worker.id, clientId, selectedMonth]
   );
 
   const totalHours = workerLogs.reduce((acc, l) =>
