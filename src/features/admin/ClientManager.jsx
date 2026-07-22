@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock, Send, AlertTriangle, Shield
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock, Send, AlertTriangle, Shield, Search, MoreVertical
 } from 'lucide-react';
 import { getCurrentPosition } from '../../utils/geoUtils';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
@@ -29,6 +29,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
   const {
     isAddingInTab, setIsAddingInTab,
     clientsView, setClientsView,
+    clientsSearch, setClientsSearch,
     clientsSort, setClientsSort,
     clientForm, setClientForm,
     handleSaveClient,
@@ -42,6 +43,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
   const [editingHistoryDraft, setEditingHistoryDraft] = useState({});
   const [confirmDeleteHistoryId, setConfirmDeleteHistoryId] = useState(null);
   const [confirmDeleteClientId, setConfirmDeleteClientId] = useState(null);
+  const [openMenuId, setOpenMenuId] = useState(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [geocodeLoading, setGeocodeLoading] = useState(false);
 
@@ -126,7 +128,9 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const sortedClients = [...clients].sort((a, b) => {
+  const sortedClients = [...clients].filter(c =>
+    !clientsSearch || c.name.toLowerCase().includes(clientsSearch.toLowerCase()) || (c.nif || '').toLowerCase().includes(clientsSearch.toLowerCase()) || (c.morada || '').toLowerCase().includes(clientsSearch.toLowerCase())
+  ).sort((a, b) => {
     let res = 0;
     if (clientsSort.key === 'name') res = a.name.localeCompare(b.name);
     if (clientsSort.key === 'nif') res = (a.nif || '').localeCompare(b.nif || '');
@@ -187,10 +191,20 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       )}
 
       {clientSubTab === 'list' && (<>
-      <div className="flex justify-between items-center gap-3 mb-5">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Briefcase size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão Comercial</h3>
+        </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Pesquisar cliente..."
+            value={clientsSearch}
+            onChange={e => setClientsSearch(e.target.value)}
+            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 sm:w-64"
+          />
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
@@ -355,33 +369,76 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
 
       {clientsView === 'list' ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="border-b border-slate-100 bg-slate-50">
-              <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Morada</th>
-              <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}</th>
-              <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
-            </tr></thead>
+          <table className="min-w-[480px] w-full text-sm table-fixed">
+            <colgroup>
+              <col className="w-[38%]" />
+              <col className="hidden sm:table-column w-[37%]" />
+              <col className="w-[13%]" />
+              <col className="w-[12%]" />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50">
+                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">
+                  Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Morada</th>
+                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">
+                  Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
+              </tr>
+            </thead>
             <tbody>
               {sortedClients.map(c => (
                 <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-800 text-sm uppercase truncate">{c.name}</p>
-                    <p className="text-xs text-slate-400">NIF: {c.nif || 'N/A'}</p>
+                    <p className="text-xs text-slate-400 truncate">NIF: {c.nif || 'N/A'}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-indigo-600">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Histórico">📊</button>
-                      <button onClick={() => { openEditClient(c); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
-                      {confirmDeleteClientId === c.id ? (
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
-                          <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => setConfirmDeleteClientId(c.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
+                  <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
+                  <td className="px-4 py-3 text-right text-sm font-bold text-indigo-600 whitespace-nowrap">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
+                  <td className="px-3 py-3 text-right">
+                    <div className="relative inline-block">
+                      <button
+                        onClick={() => setOpenMenuId(openMenuId === c.id ? null : c.id)}
+                        className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                        title="Mais ações"
+                      >
+                        <MoreVertical size={15} />
+                      </button>
+                      {openMenuId === c.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
+                          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-[170px]">
+                            <button
+                              onClick={() => { openEditClient(c); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                            >
+                              <Edit2 size={13} className="text-amber-500" /> Editar
+                            </button>
+                            <button
+                              onClick={() => { loadClientValorHoraHistory(c.id, c.name); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 transition-colors"
+                            >
+                              <span className="text-sm">📊</span> Histórico de Valor
+                            </button>
+                            <div className="border-t border-slate-100 mt-1 pt-1">
+                              {confirmDeleteClientId === c.id ? (
+                                <div className="flex items-center gap-1 px-3 py-1">
+                                  <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); setOpenMenuId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
+                                  <button onClick={() => setConfirmDeleteClientId(null)} className="px-2 py-1 bg-slate-200 text-slate-600 text-xs font-bold rounded-lg">Não</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setConfirmDeleteClientId(c.id)}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 transition-colors"
+                                >
+                                  <Trash2 size={13} /> Apagar
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </>
                       )}
                     </div>
                   </td>

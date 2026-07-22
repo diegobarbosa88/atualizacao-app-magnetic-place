@@ -24,9 +24,16 @@ export const ClientProvider = ({ children }) => {
   const { clients, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
-  const [clientsView, setClientsView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
+  const savedView = localStorage.getItem('magnetic_clients_view');
+  const [clientsView, setClientsView] = useState(savedView || (window.innerWidth < 768 ? 'grid' : 'list'));
+  const [clientsSearch, setClientsSearch] = useState('');
   const [clientsSort, setClientsSort] = useState({ key: 'name', direction: 'asc' });
   const [clientForm, setClientForm] = useState(INITIAL_CLIENT_FORM);
+
+  const setClientsViewPersisted = (view) => {
+    localStorage.setItem('magnetic_clients_view', view);
+    setClientsView(view);
+  };
 
   const handleSaveClient = useCallback(async () => {
     if (!clientForm.name) return alert('Nome da empresa é obrigatório');
@@ -77,7 +84,8 @@ export const ClientProvider = ({ children }) => {
 
   const value = {
     isAddingInTab, setIsAddingInTab,
-    clientsView, setClientsView,
+    clientsView, setClientsView: setClientsViewPersisted,
+    clientsSearch, setClientsSearch,
     clientsSort, setClientsSort,
     clientForm, setClientForm,
     handleSaveClient,

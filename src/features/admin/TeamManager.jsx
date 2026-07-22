@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
@@ -24,6 +24,7 @@ const TeamManagerContent = ({ onLogin }) => {
   const {
     isAddingInTab, setIsAddingInTab,
     workersView, setWorkersView,
+    workersSearch, setWorkersSearch,
     workersSort, setWorkersSort,
     workerForm, setWorkerForm,
     handleDeleteWorker,
@@ -43,7 +44,9 @@ const TeamManagerContent = ({ onLogin }) => {
     (c.status === 'submitted' || c.status === 'under_review')
   ).length;
 
-  const displayWorkers = workers.filter(w => showInactive || w.status !== 'inativo');
+  const displayWorkers = workers
+    .filter(w => showInactive || w.status !== 'inativo')
+    .filter(w => !workersSearch || w.name.toLowerCase().includes(workersSearch.toLowerCase()) || (w.profissao || '').toLowerCase().includes(workersSearch.toLowerCase()));
 
   const sortedWorkers = [...displayWorkers].sort((a, b) => {
     let res = 0;
@@ -134,10 +137,20 @@ const TeamManagerContent = ({ onLogin }) => {
       )}
 
       {teamSubTab === 'workers' && (<>
-      <div className="flex justify-between items-center gap-3 mb-5">
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
           <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Users size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Colaboradores</h3>
+        </div>
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Pesquisar colaborador..."
+            value={workersSearch}
+            onChange={e => setWorkersSearch(e.target.value)}
+            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 sm:w-64"
+          />
         </div>
         <div className="flex items-center gap-2">
           {inactiveCount > 0 && (

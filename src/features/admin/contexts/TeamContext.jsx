@@ -63,9 +63,16 @@ export const TeamProvider = ({ children }) => {
   const { workers, saveToDb, handleDelete } = useApp();
 
   const [isAddingInTab, setIsAddingInTab] = useState(false);
-  const [workersView, setWorkersView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
+  const savedView = localStorage.getItem('magnetic_workers_view');
+  const [workersView, setWorkersView] = useState(savedView || (window.innerWidth < 768 ? 'grid' : 'list'));
+  const [workersSearch, setWorkersSearch] = useState('');
   const [workersSort, setWorkersSort] = useState({ key: 'name', direction: 'asc' });
   const [workerForm, setWorkerForm] = useState(INITIAL_WORKER_FORM);
+
+  const setWorkersViewPersisted = (view) => {
+    localStorage.setItem('magnetic_workers_view', view);
+    setWorkersView(view);
+  };
 
   const handleSaveWorker = useCallback(async () => {
     if (!workerForm.name) return alert('Nome é obrigatório');
@@ -125,7 +132,8 @@ export const TeamProvider = ({ children }) => {
 
   const value = {
     isAddingInTab, setIsAddingInTab,
-    workersView, setWorkersView,
+    workersView, setWorkersView: setWorkersViewPersisted,
+    workersSearch, setWorkersSearch,
     workersSort, setWorkersSort,
     workerForm, setWorkerForm,
     handleSaveWorker,
