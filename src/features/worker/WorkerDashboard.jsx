@@ -65,7 +65,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
     if (currentUser.limited_entry_mode) return true;
-    return currentUser.assignedClients?.some(cid => clients.find(c => c.id === cid)?.triggers_limited_mode === true);
+    return clients.find(c => c.id === currentUser.defaultClientId)?.triggers_limited_mode === true;
   }, [currentUser, clients]);
 
   const {
@@ -317,6 +317,8 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             myApproval={myApproval}
             isLimitedWorker={isLimitedWorker}
             workerStartDate={workerStartDate}
+            absenceRequests={absenceRequests}
+            currentUserId={currentUser?.id}
             onAddEntry={openTimeEntryModal}
             onEditLog={openIncompleteLogModal}
             onDeleteLog={(log) => handleDelete('logs', log.id)}

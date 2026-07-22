@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Plus, Zap, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Zap, Trash2, Edit2, Moon } from 'lucide-react';
 import { formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
 
@@ -8,6 +8,7 @@ const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 export default function WorkerCalendar({
   daysList, monthLogs, dayRequestsByDate,
   clients, myApproval, isLimitedWorker, workerStartDate,
+  absenceRequests, currentUserId,
   onAddEntry, onEditLog, onDeleteLog, onEditLimitedLog, onQuickRegister,
 }) {
   const [selectedDay, setSelectedDay] = useState(null);
@@ -44,6 +45,9 @@ export default function WorkerCalendar({
   const selectedLogs = selectedDay ? monthLogs.filter(l => l.date === selectedDay) : [];
   const selectedDayTotal = selectedLogs.reduce((acc, l) => acc + (l.hours || 0), 0);
   const selectedDayBeforeStart = selectedDay && workerStartDate && new Date(selectedDay + 'T00:00:00') < workerStartDate;
+  const selectedDayHasAbsence = selectedDay && (absenceRequests || []).some(
+    r => r.worker_id === String(currentUserId) && r.status === 'approved' && (r.dates || []).includes(selectedDay)
+  );
 
   return (
     <div className="bg-white rounded-3xl md:rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden mb-12">
@@ -74,6 +78,9 @@ export default function WorkerCalendar({
               ({ corr }) => corr.status === 'submitted' || corr.status === 'under_review'
             );
             const hasLog = dayLogs.length > 0;
+            const hasApprovedAbsence = (absenceRequests || []).some(
+              r => r.worker_id === String(currentUserId) && r.status === 'approved' && (r.dates || []).includes(ds)
+            );
 
             return (
               <button
@@ -87,6 +94,8 @@ export default function WorkerCalendar({
                   ${isSelected ? 'ring-2 ring-slate-400 ring-offset-1' : ''}
                   ${hasLog
                     ? 'bg-indigo-50 border border-indigo-200 hover:bg-indigo-100'
+                    : hasApprovedAbsence
+                    ? 'bg-orange-50 border border-orange-200 hover:bg-orange-100'
                     : isWeekend
                     ? 'bg-slate-50'
                     : 'bg-white border border-slate-100 hover:bg-indigo-50/50'
@@ -94,7 +103,7 @@ export default function WorkerCalendar({
                 `}
               >
                 <span className={`text-[11px] font-black leading-none ${
-                  hasLog ? 'text-indigo-700' : isWeekend ? 'text-slate-300' : 'text-slate-500'
+                  hasLog ? 'text-indigo-700' : hasApprovedAbsence ? 'text-orange-600' : isWeekend ? 'text-slate-300' : 'text-slate-500'
                 }`}>
                   {dObj.getDate()}
                 </span>
@@ -102,6 +111,12 @@ export default function WorkerCalendar({
                   <span className="text-[9px] font-black text-indigo-500 leading-none mt-px">
                     {formatHours(dayTotal)}
                   </span>
+                )}
+                {hasApprovedAbsence && !hasLog && (
+                  <Moon size={8} className="text-orange-400 mt-px" />
+                )}
+                {hasApprovedAbsence && hasLog && (
+                  <span className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-orange-400" />
                 )}
                 {hasPending && (
                   <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
