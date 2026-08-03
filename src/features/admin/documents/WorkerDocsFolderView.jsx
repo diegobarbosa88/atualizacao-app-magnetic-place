@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
   FolderOpen, Eye, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
-  Folder, User, ArrowLeft, Search, X, FileSignature, Download,
+  Folder, User, ArrowLeft, Search, X, FileSignature, Download, Trash2,
 } from 'lucide-react';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
 import { formatDocDate } from '../../../utils/dateUtils';
@@ -130,8 +130,9 @@ function DocumentViewerModal({ doc, onClose }) {
   );
 }
 
-function SubPastaCard({ categoria, docs, onOpenDoc }) {
+function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   const [expanded, setExpanded] = useState(docs.length > 0 && docs.length <= 5);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const config = CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"];
   const colors = COLOR_MAP[config.color];
   const Icon = config.icon;
@@ -162,36 +163,60 @@ function SubPastaCard({ categoria, docs, onOpenDoc }) {
       {expanded && (
         <div className="border-t border-slate-100 divide-y divide-slate-100 bg-white">
           {docs.map(d => (
-            <div key={d.id} className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-slate-50 transition-colors">
-              <FileText size={12} className="text-slate-300 flex-shrink-0 mt-1" />
-              <div className="flex-1 min-w-0">
-                {/* Título */}
-                <p className="text-xs font-bold text-slate-800 truncate leading-tight">{d.title || d.tipo}</p>
-                {/* Tipo + Data */}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
-                  {d.tipo && d.tipo !== d.title && (
-                    <span className="text-[10px] text-slate-400">{d.tipo}</span>
-                  )}
-                  {d.createdAt && (
-                    <span className="text-[10px] text-slate-400">
-                      {formatDocDate(d.createdAt.toISOString(), true)}
-                    </span>
-                  )}
+            <div key={d.id} className="px-3 py-2.5 hover:bg-slate-50 transition-colors">
+              {confirmDeleteId === d.id ? (
+                /* Confirmação inline */
+                <div className="flex items-center justify-between gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
+                  <p className="text-[10px] font-black text-rose-700 flex-1">Apagar permanentemente?</p>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => { onDelete(d); setConfirmDeleteId(null); }}
+                      className="px-2.5 py-1 bg-rose-600 text-white text-[10px] font-black rounded-lg hover:bg-rose-700 transition-colors"
+                    >Sim</button>
+                    <button
+                      onClick={() => setConfirmDeleteId(null)}
+                      className="px-2.5 py-1 bg-white border border-slate-200 text-slate-600 text-[10px] font-black rounded-lg hover:bg-slate-50 transition-colors"
+                    >Não</button>
+                  </div>
                 </div>
-                {/* Badges: estado + validade */}
-                <div className="flex flex-wrap gap-1 mt-1">
-                  <StateBadgeSmall state={d.state} />
-                  <ValidadeChip dataValidade={d.data_validade} />
+              ) : (
+                <div className="flex items-start gap-2.5">
+                  <FileText size={12} className="text-slate-300 flex-shrink-0 mt-1" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold text-slate-800 truncate leading-tight">{d.title || d.tipo}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
+                      {d.tipo && d.tipo !== d.title && (
+                        <span className="text-[10px] text-slate-400">{d.tipo}</span>
+                      )}
+                      {d.createdAt && (
+                        <span className="text-[10px] text-slate-400">
+                          {formatDocDate(d.createdAt.toISOString(), true)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <StateBadgeSmall state={d.state} />
+                      <ValidadeChip dataValidade={d.data_validade} />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
+                    <button
+                      onClick={() => onOpenDoc(d)}
+                      className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-colors"
+                      title="Pré-visualizar"
+                    >
+                      <Eye size={13} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(d.id)}
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                      title="Apagar"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-              {/* Botão Eye — sempre visível */}
-              <button
-                onClick={() => onOpenDoc(d)}
-                className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex-shrink-0 mt-0.5"
-                title="Pré-visualizar"
-              >
-                <Eye size={13} />
-              </button>
+              )}
             </div>
           ))}
         </div>
@@ -200,7 +225,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc }) {
   );
 }
 
-function WorkerPastaView({ worker, docs, onBack, onOpenDoc }) {
+function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
   const byCategoria = useMemo(() => {
     const map = {};
     CATEGORIAS_RH_ACT.forEach(c => { map[c] = []; });
@@ -245,7 +270,7 @@ function WorkerPastaView({ worker, docs, onBack, onOpenDoc }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {CATEGORIAS_RH_ACT.map(cat => (
-            <SubPastaCard key={cat} categoria={cat} docs={byCategoria[cat] || []} onOpenDoc={onOpenDoc} />
+            <SubPastaCard key={cat} categoria={cat} docs={byCategoria[cat] || []} onOpenDoc={onOpenDoc} onDelete={onDelete} />
           ))}
         </div>
       )}
@@ -253,11 +278,19 @@ function WorkerPastaView({ worker, docs, onBack, onOpenDoc }) {
   );
 }
 
-export default function WorkerDocsFolderView({ docs, onPreview }) {
+export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, onDeleteGenerated }) {
   const [searchParams] = useSearchParams();
   const [selectedWorker, setSelectedWorker] = useState(() => searchParams.get('worker') || null);
   const [search, setSearch] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
+
+  const handleDelete = (doc) => {
+    if (doc.source === 'manual') {
+      onDeleteManual?.(doc.raw);
+    } else {
+      onDeleteGenerated?.(doc.raw.id);
+    }
+  };
 
   const handleOpenDoc = (doc) => {
     const url = doc.signedPdfUrl || doc.viewUrl || null;
@@ -298,6 +331,7 @@ export default function WorkerDocsFolderView({ docs, onPreview }) {
             docs={workerData.docs}
             onBack={() => setSelectedWorker(null)}
             onOpenDoc={handleOpenDoc}
+            onDelete={handleDelete}
           />
         </>
       );

@@ -554,6 +554,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
               docs={filteredDocs}
               workerName={searchTerm ? `Resultados para "${searchTerm}"` : null}
               onPreview={openGeneratedPreview}
+              onDeleteManual={handleDeleteManual}
+              onDeleteGenerated={handleDeleteGenerated}
             />
           )}
         </>
