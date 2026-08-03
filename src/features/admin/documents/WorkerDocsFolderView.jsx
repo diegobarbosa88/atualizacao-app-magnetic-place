@@ -131,37 +131,66 @@ function DocumentViewerModal({ doc, onClose }) {
   );
 }
 
-function DocRowSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
+function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
+  const url = d.viewUrl || d.signedPdfUrl || null;
+  const isImageUrl = (u) => u && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(u);
+  const temExpirado = getValidadeStatus(d.data_validade) === 'expirado';
+  const temUrgente  = getValidadeStatus(d.data_validade) === 'urgente';
+
   return (
-    <div className="px-3 py-2.5 hover:bg-slate-50 transition-colors">
-      {confirmDeleteId === d.id ? (
-        <div className="flex items-center justify-between gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">
-          <p className="text-[10px] font-black text-rose-700 flex-1">Apagar permanentemente?</p>
-          <div className="flex gap-1.5 flex-shrink-0">
-            <button onClick={() => { onDelete(d); setConfirmDeleteId(null); }} className="px-2.5 py-1 bg-rose-600 text-white text-[10px] font-black rounded-lg hover:bg-rose-700 transition-colors">Sim</button>
-            <button onClick={() => setConfirmDeleteId(null)} className="px-2.5 py-1 bg-white border border-slate-200 text-slate-600 text-[10px] font-black rounded-lg hover:bg-slate-50 transition-colors">Não</button>
-          </div>
+    <div className={`rounded-xl border-2 overflow-hidden ${temExpirado ? 'border-red-200' : temUrgente ? 'border-amber-200' : 'border-slate-200'}`}>
+      {/* Header */}
+      <div className="flex items-start gap-2 px-3 py-2.5 bg-slate-50">
+        <div className="p-1.5 bg-slate-200 text-slate-600 rounded-lg flex-shrink-0 mt-0.5"><FileText size={12} /></div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-black text-slate-800 truncate">{d.tipo || d.title}</p>
+          {d.workerName && <p className="text-[10px] text-slate-500 font-bold truncate">{d.workerName}</p>}
         </div>
-      ) : (
-        <div className="flex items-start gap-2.5">
-          <FileText size={12} className="text-slate-300 flex-shrink-0 mt-1" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-800 truncate leading-tight">{d.title || d.tipo}</p>
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
-              {d.tipo && d.tipo !== d.title && <span className="text-[10px] text-slate-400">{d.tipo}</span>}
-              {d.createdAt && <span className="text-[10px] text-slate-400">{formatDocDate(d.createdAt.toISOString(), true)}</span>}
+        {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
+      </div>
+
+      <div className="px-3 pb-3 space-y-2.5 bg-white">
+        {/* Pré-visualização */}
+        <div className="pt-2.5">
+          {url && isImageUrl(url) ? (
+            <img src={url} alt={d.tipo} className="w-full h-36 object-cover rounded-lg border border-slate-200" />
+          ) : (
+            <div className="w-full h-36 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center">
+              <FileText size={24} className="text-slate-300" />
             </div>
-            <div className="flex flex-wrap gap-1 mt-1">
-              <StateBadgeSmall state={d.state} />
-              <ValidadeChip dataValidade={d.data_validade} />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0 mt-0.5">
-            <button onClick={() => onOpenDoc(d)} className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-colors" title="Pré-visualizar"><Eye size={13} /></button>
-            <button onClick={() => setConfirmDeleteId(d.id)} className="p-1.5 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors" title="Apagar"><Trash2 size={13} /></button>
-          </div>
+          )}
         </div>
-      )}
+
+        {/* Info do documento */}
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1">
+          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
+          {d.workerName && <div><span className="text-[9px] text-slate-400 font-bold">Nome: </span><span className="text-[10px] font-black text-slate-700">{d.workerName}</span></div>}
+          {d.createdAt  && <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{formatDocDate(d.createdAt.toISOString(), true)}</span></div>}
+          {d.data_validade && (
+            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
+              <Calendar size={10} className="text-amber-600 flex-shrink-0" />
+              <span className="text-[9px] text-amber-600 font-bold">Válido até: </span>
+              <span className="text-[10px] font-black text-amber-800">{d.data_validade}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Ações */}
+        {confirmDeleteId === d.id ? (
+          <div className="bg-rose-50 border border-rose-200 rounded-lg p-2 space-y-1.5">
+            <p className="text-[9px] font-black text-rose-700 text-center">Apagar permanentemente?</p>
+            <div className="flex gap-1.5">
+              <button onClick={() => { onDelete(d); setConfirmDeleteId(null); }} className="flex-1 py-1.5 bg-rose-600 text-white text-[9px] font-black rounded-lg hover:bg-rose-700">Sim</button>
+              <button onClick={() => setConfirmDeleteId(null)} className="flex-1 py-1.5 bg-white border border-slate-200 text-slate-600 text-[9px] font-black rounded-lg">Não</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button onClick={() => onOpenDoc(d)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors text-[10px] font-black"><Eye size={12} /> Ver</button>
+            <button onClick={() => setConfirmDeleteId(d.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-slate-400 bg-slate-50 hover:bg-rose-50 hover:text-rose-500 transition-colors text-[10px] font-black"><Trash2 size={12} /> Apagar</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -318,14 +347,15 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
                 />
               </div>
             ) : (
-              <DocRowSingle
-                key={item.doc.id}
-                d={item.doc}
-                onOpenDoc={onOpenDoc}
-                onDelete={onDelete}
-                confirmDeleteId={confirmDeleteId}
-                setConfirmDeleteId={setConfirmDeleteId}
-              />
+              <div key={item.doc.id} className="px-3 py-2.5">
+                <DocCardSingle
+                  d={item.doc}
+                  onOpenDoc={onOpenDoc}
+                  onDelete={onDelete}
+                  confirmDeleteId={confirmDeleteId}
+                  setConfirmDeleteId={setConfirmDeleteId}
+                />
+              </div>
             )
           )}
         </div>
