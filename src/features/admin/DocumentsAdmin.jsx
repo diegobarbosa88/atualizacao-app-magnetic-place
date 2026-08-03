@@ -131,7 +131,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const [tipoFilter, setTipoFilter] = useState('all');
   const [categoriaFilter, setCategoriaFilter] = useState('');
   const [validadeFilter, setValidadeFilter] = useState('');
-  const [viewMode, setViewMode] = useState('table'); // 'table' | 'folder'
+  const [viewMode, setViewMode] = useState('folder'); // 'table' | 'folder'
   const [categoriaOverrides, setCategoriaOverrides] = useState({}); // { [docId]: categoria }
   const [approvingId, setApprovingId] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -553,6 +553,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             <WorkerDocsFolderView
               docs={filteredDocs}
               workerName={searchTerm ? `Resultados para "${searchTerm}"` : null}
+              onPreview={openGeneratedPreview}
             />
           )}
         </>

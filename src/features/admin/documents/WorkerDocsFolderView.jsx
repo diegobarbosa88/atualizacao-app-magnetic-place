@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
   FolderOpen, Eye, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
-  Folder, User, ArrowLeft, Search,
+  Folder, User, ArrowLeft, Search, X, FileSignature, Download,
 } from 'lucide-react';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
 import { formatDocDate } from '../../../utils/dateUtils';
@@ -34,9 +34,9 @@ function ValidadeChip({ dataValidade }) {
   if (!status) return null;
   const dias = getDiasRestantes(dataValidade);
   const map = {
-    expirado: { cls: 'bg-red-100 text-red-700',     icon: <AlertTriangle size={8} />, label: 'Expirado' },
-    urgente:  { cls: 'bg-amber-100 text-amber-700', icon: <Clock size={8} />,         label: `${dias}d` },
-    aviso:    { cls: 'bg-yellow-100 text-yellow-700',icon: <Clock size={8} />,         label: `${dias}d` },
+    expirado: { cls: 'bg-red-100 text-red-700',      icon: <AlertTriangle size={8} />, label: 'Expirado' },
+    urgente:  { cls: 'bg-amber-100 text-amber-700',  icon: <Clock size={8} />,         label: `${dias}d` },
+    aviso:    { cls: 'bg-yellow-100 text-yellow-700', icon: <Clock size={8} />,         label: `${dias}d` },
     ok:       { cls: 'bg-emerald-100 text-emerald-700', icon: <CheckCircle size={8} />, label: 'Válido' },
   };
   const { cls, icon, label } = map[status];
@@ -47,7 +47,89 @@ function ValidadeChip({ dataValidade }) {
   );
 }
 
-function SubPastaCard({ categoria, docs }) {
+function StateBadgeSmall({ state }) {
+  if (state === 'signed') return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700">
+      <CheckCircle size={8} /> Assinado
+    </span>
+  );
+  if (state === 'awaiting_admin') return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 text-indigo-700">
+      <FileSignature size={8} /> Aguarda aprovação
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-700">
+      <Clock size={8} /> Pendente
+    </span>
+  );
+}
+
+function DocumentViewerModal({ doc, onClose }) {
+  if (!doc) return null;
+  const url = doc.previewUrl;
+  const isImage = url && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="relative bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-4xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-black text-slate-800 truncate">{doc.title}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {[doc.workerName, doc.categoria, doc.tipo].filter(Boolean).join(' · ')}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {url && (
+              <a
+                href={url}
+                download
+                className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors"
+                title="Descarregar"
+              >
+                <Download size={14} />
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Corpo */}
+        <div className="flex-1 overflow-auto bg-slate-50">
+          {!url ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-40">
+              <FileText size={40} />
+              <p className="text-sm font-black uppercase tracking-widest">Pré-visualização não disponível</p>
+              <p className="text-xs text-slate-500">Este documento ainda não tem ficheiro associado</p>
+            </div>
+          ) : isImage ? (
+            <div className="flex items-center justify-center p-6">
+              <img src={url} alt={doc.title} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow" />
+            </div>
+          ) : (
+            <iframe
+              src={url}
+              className="w-full min-h-[60vh] h-full border-0"
+              title={doc.title}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubPastaCard({ categoria, docs, onOpenDoc }) {
   const [expanded, setExpanded] = useState(docs.length > 0 && docs.length <= 5);
   const config = CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"];
   const colors = COLOR_MAP[config.color];
@@ -77,23 +159,38 @@ function SubPastaCard({ categoria, docs }) {
       </button>
 
       {expanded && (
-        <div className="border-t border-slate-100 divide-y divide-slate-50">
+        <div className="border-t border-slate-100 divide-y divide-slate-100 bg-white">
           {docs.map(d => (
-            <div key={d.id} className="flex items-center gap-2.5 px-3 py-2 hover:bg-slate-50 transition-colors">
-              <FileText size={12} className="text-slate-300 flex-shrink-0" />
+            <div key={d.id} className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-slate-50 transition-colors">
+              <FileText size={12} className="text-slate-300 flex-shrink-0 mt-1" />
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-slate-700 truncate">{d.title || d.tipo}</p>
-                <p className="text-[10px] text-slate-400">{d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : '—'}</p>
+                {/* Título */}
+                <p className="text-xs font-bold text-slate-800 truncate leading-tight">{d.title || d.tipo}</p>
+                {/* Tipo + Data */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0 mt-0.5">
+                  {d.tipo && d.tipo !== d.title && (
+                    <span className="text-[10px] text-slate-400">{d.tipo}</span>
+                  )}
+                  {d.createdAt && (
+                    <span className="text-[10px] text-slate-400">
+                      {formatDocDate(d.createdAt.toISOString(), true)}
+                    </span>
+                  )}
+                </div>
+                {/* Badges: estado + validade */}
+                <div className="flex flex-wrap gap-1 mt-1">
+                  <StateBadgeSmall state={d.state} />
+                  <ValidadeChip dataValidade={d.data_validade} />
+                </div>
               </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <ValidadeChip dataValidade={d.data_validade} />
-                {(d.viewUrl || d.signedPdfUrl) && (
-                  <a href={d.signedPdfUrl || d.viewUrl} target="_blank" rel="noreferrer"
-                    className="p-1 text-indigo-600 hover:text-indigo-800 transition-colors" title="Abrir">
-                    <Eye size={12} />
-                  </a>
-                )}
-              </div>
+              {/* Botão Eye — sempre visível */}
+              <button
+                onClick={() => onOpenDoc(d)}
+                className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 transition-colors flex-shrink-0 mt-0.5"
+                title="Pré-visualizar"
+              >
+                <Eye size={13} />
+              </button>
             </div>
           ))}
         </div>
@@ -102,7 +199,7 @@ function SubPastaCard({ categoria, docs }) {
   );
 }
 
-function WorkerPastaView({ worker, docs, onBack }) {
+function WorkerPastaView({ worker, docs, onBack, onOpenDoc }) {
   const byCategoria = useMemo(() => {
     const map = {};
     CATEGORIAS_RH_ACT.forEach(c => { map[c] = []; });
@@ -147,7 +244,7 @@ function WorkerPastaView({ worker, docs, onBack }) {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {CATEGORIAS_RH_ACT.map(cat => (
-            <SubPastaCard key={cat} categoria={cat} docs={byCategoria[cat] || []} />
+            <SubPastaCard key={cat} categoria={cat} docs={byCategoria[cat] || []} onOpenDoc={onOpenDoc} />
           ))}
         </div>
       )}
@@ -155,9 +252,21 @@ function WorkerPastaView({ worker, docs, onBack }) {
   );
 }
 
-export default function WorkerDocsFolderView({ docs }) {
+export default function WorkerDocsFolderView({ docs, onPreview }) {
   const [selectedWorker, setSelectedWorker] = useState(null);
   const [search, setSearch] = useState('');
+  const [previewDoc, setPreviewDoc] = useState(null);
+
+  const handleOpenDoc = (doc) => {
+    const url = doc.signedPdfUrl || doc.viewUrl || null;
+    if (url) {
+      setPreviewDoc({ ...doc, previewUrl: url });
+    } else if (onPreview) {
+      onPreview(doc.raw);
+    } else {
+      setPreviewDoc({ ...doc, previewUrl: null });
+    }
+  };
 
   // Agrupar docs por trabalhador
   const byWorker = useMemo(() => {
@@ -180,11 +289,15 @@ export default function WorkerDocsFolderView({ docs }) {
     const workerData = byWorker.find(w => w.workerId === selectedWorker);
     if (workerData) {
       return (
-        <WorkerPastaView
-          worker={workerData}
-          docs={workerData.docs}
-          onBack={() => setSelectedWorker(null)}
-        />
+        <>
+          <DocumentViewerModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+          <WorkerPastaView
+            worker={workerData}
+            docs={workerData.docs}
+            onBack={() => setSelectedWorker(null)}
+            onOpenDoc={handleOpenDoc}
+          />
+        </>
       );
     }
   }
@@ -192,6 +305,8 @@ export default function WorkerDocsFolderView({ docs }) {
   // Vista de lista de trabalhadores
   return (
     <div className="space-y-4">
+      <DocumentViewerModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+
       {/* Pesquisa de trabalhador */}
       <div className="relative">
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
