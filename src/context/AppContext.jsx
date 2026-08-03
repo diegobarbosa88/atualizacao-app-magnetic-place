@@ -245,7 +245,7 @@ export const AppProvider = ({ children }) => {
               ...(data.company_phone !== undefined && { companyPhone: data.company_phone }),
               ...(data.dark_mode !== undefined && { darkMode: data.dark_mode }),
               ...(data.app_width && { appWidth: data.app_width }),
-              ...(data.gemini_api_key !== undefined && { geminiApiKey: data.gemini_api_key }),
+              ...(data.gemini_api_key ? { geminiApiKey: data.gemini_api_key } : {}),
               ...(data.tolerancia_valido != null && { toleranciaValido: Number(data.tolerancia_valido) }),
               ...(data.tolerancia_aviso  != null && { toleranciaAviso:  Number(data.tolerancia_aviso) }),
               ...(data.minute_interval != null && { minuteInterval: Number(data.minute_interval) }),

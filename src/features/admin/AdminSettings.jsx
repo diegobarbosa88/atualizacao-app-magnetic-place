@@ -26,8 +26,13 @@ export default function AdminSettings() {
     absence_notify_client: false,
   };
   const [newReason, setNewReason] = useState('');
+  const [geminiKeyInput, setGeminiKeyInput] = useState(systemSettings.geminiApiKey || '');
 
   const updateSetting = (key, value) => saveSystemSettings({ ...systemSettings, [key]: value });
+
+  React.useEffect(() => {
+    if (systemSettings.geminiApiKey) setGeminiKeyInput(systemSettings.geminiApiKey);
+  }, [systemSettings.geminiApiKey]);
 
   const nonAdminWorkers = workers.filter(w => !w.isAdmin);
 
@@ -277,14 +282,13 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <input
                   type="password"
                   placeholder="AIza..."
-                  defaultValue={systemSettings.geminiApiKey || ''}
+                  value={geminiKeyInput}
+                  onChange={e => setGeminiKeyInput(e.target.value)}
                   className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
-                  id="gemini-api-key"
                 />
                 <button
                   onClick={() => {
-                    const keyEl = document.getElementById('gemini-api-key');
-                    const key = keyEl ? keyEl.value.trim() : '';
+                    const key = geminiKeyInput.trim();
                     updateSetting('geminiApiKey', key);
                     alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.');
                   }}
