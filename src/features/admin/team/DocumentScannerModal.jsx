@@ -223,18 +223,19 @@ const DocumentScannerModal = ({ open, onClose }) => {
 
     const ext = r.file.name.split('.').pop().toLowerCase();
     const categoriaAI  = r.extractedData?.documento?.categoria || '';
-    const tipoDocStr   = r.extractedData?.documento?.tipo_documento || '';
+    const tipoDocStr   = r.extractedData?.documento?.tipo_documento || 'Documento';
     const categoriaACT = MAPA_SCANNER_ACT[categoriaAI] || inferirCategoria(categoriaAI) || inferirCategoria(tipoDocStr) || 'Outros';
-    const ladoLabel    = r.groupRole === 'frente' ? '_frente' : r.groupRole === 'verso' ? '_verso' : '';
-    const tipoDoc      = slugify(tipoDocStr || 'documento');
-    const path         = `${worker.id}/${slugify(categoriaACT)}/${tipoDoc}${ladoLabel}_${Date.now()}.${ext}`;
+    const ladoSufixo   = r.groupRole === 'frente' ? ' (Frente)' : r.groupRole === 'verso' ? ' (Verso)' : '';
+    const tipoLabel    = `${tipoDocStr}${ladoSufixo}`;
+    const ts           = Date.now();
+    // Caminho com nomes exatos como aparecem na UI (categoria e tipo sem slugify)
+    const path         = `${worker.id}/${categoriaACT}/${tipoLabel} ${ts}.${ext}`;
 
     const { error: upErr } = await supabase.storage.from('documentos').upload(path, r.file);
     if (upErr) throw upErr;
 
     const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path);
-    const docId = `doc_${Date.now()}_${idx}`;
-    const tipoLabel = r.groupRole ? `${tipoDocStr} (${r.groupRole === 'frente' ? 'Frente' : 'Verso'})` : tipoDocStr;
+    const docId = `doc_${ts}_${idx}`;
 
     await saveToDb('documents', docId, {
       id: docId,
