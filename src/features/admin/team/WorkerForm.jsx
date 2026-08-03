@@ -1,14 +1,68 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useTeam } from '../contexts/TeamContext';
 import {
   UserCircle, User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro,
-  MapPin, Fingerprint, Mail, Briefcase, Timer, CheckCircle, ShieldOff
+  MapPin, Fingerprint, Mail, Briefcase, Timer, CheckCircle, ShieldOff, CheckCircle2
 } from 'lucide-react';
 
 const WorkerForm = () => {
   const { clients, schedules } = useApp();
   const { workerForm, setWorkerForm, handleSaveWorker, setIsAddingInTab } = useTeam();
+  const [saveSuccessScheduleId, setSaveSuccessScheduleId] = useState(null);
+  const supabase = window.supabaseInstance;
+
+  const [saveSuccessClientId, setSaveSuccessClientId] = useState(null);
+
+  const handleSaveClientDates = async (clientId, dataInicio, dataFim) => {
+    if (!workerForm.id || !supabase) return;
+    await supabase
+      .from('worker_client_history')
+      .update({ data_fim: new Date().toISOString().split('T')[0] })
+      .eq('worker_id', workerForm.id)
+      .eq('client_id', clientId)
+      .is('data_fim', null);
+    await supabase.from('worker_client_history').insert({
+      worker_id: workerForm.id,
+      client_id: clientId,
+      data_inicio: dataInicio,
+      data_fim: dataFim || null
+    });
+    setWorkerForm(prev => ({
+      ...prev,
+      assignedClientDates: {
+        ...(prev.assignedClientDates || {}),
+        [clientId]: { dataInicio, dataFim }
+      }
+    }));
+    setSaveSuccessClientId(clientId);
+    setTimeout(() => setSaveSuccessClientId(null), 3000);
+  };
+
+  const handleSaveScheduleDates = async (scheduleId, dataInicio, dataFim) => {
+    if (!workerForm.id || !supabase) return;
+    await supabase
+      .from('worker_schedule_history')
+      .update({ data_fim: new Date().toISOString().split('T')[0] })
+      .eq('worker_id', workerForm.id)
+      .eq('schedule_id', scheduleId)
+      .is('data_fim', null);
+    await supabase.from('worker_schedule_history').insert({
+      worker_id: workerForm.id,
+      schedule_id: scheduleId,
+      data_inicio: dataInicio,
+      data_fim: dataFim || null
+    });
+    setWorkerForm(prev => ({
+      ...prev,
+      assignedScheduleDates: {
+        ...(prev.assignedScheduleDates || {}),
+        [scheduleId]: { dataInicio, dataFim }
+      }
+    }));
+    setSaveSuccessScheduleId(scheduleId);
+    setTimeout(() => setSaveSuccessScheduleId(null), 3000);
+  };
 
   return (
     <div className="mb-4 sm:mb-6 bg-white p-3 sm:p-4 lg:p-6 rounded-xl sm:rounded-2xl shadow-xl border border-slate-100">
@@ -167,6 +221,56 @@ const WorkerForm = () => {
             </div>
           </div>
 
+          {(workerForm.assignedClients?.length > 0) && (
+            <div className="bg-sky-50/30 p-3 sm:p-4 rounded-2xl border border-sky-100 flex flex-col gap-2">
+              <div className="flex items-center gap-2 mb-1">
+                <CalendarRange size={14} className="text-sky-600" />
+                <h4 className="font-black text-slate-700 text-xs sm:text-sm uppercase tracking-widest">Período de Clientes</h4>
+              </div>
+              {!workerForm.id && (
+                <p className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">Guarde o colaborador primeiro para atribuir datas.</p>
+              )}
+              <div className="space-y-2">
+                {clients.filter(c => workerForm.assignedClients?.includes(c.id)).map(c => {
+                  const dates = workerForm.assignedClientDates?.[c.id] || {};
+                  return (
+                    <div key={c.id} className="bg-white border border-sky-100 rounded-xl p-3 space-y-2 shadow-sm">
+                      <span className="text-[10px] font-black text-sky-800 uppercase tracking-wide">{c.name}</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-0.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><CalendarRange size={9} /> Início</label>
+                          <input
+                            type="date"
+                            value={dates.dataInicio || ''}
+                            onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataInicio: e.target.value } } }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-50 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><CalendarRange size={9} /> Fim</label>
+                          <input
+                            type="date"
+                            value={dates.dataFim || ''}
+                            onChange={e => setWorkerForm(prev => ({ ...prev, assignedClientDates: { ...(prev.assignedClientDates || {}), [c.id]: { ...dates, dataFim: e.target.value } } }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-50 transition-all"
+                          />
+                        </div>
+                      </div>
+                      {workerForm.id && (
+                        <button
+                          onClick={() => handleSaveClientDates(c.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')}
+                          className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg font-black text-[10px] uppercase transition-all ${saveSuccessClientId === c.id ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-sky-600 hover:bg-sky-700 text-white shadow-sky-100'} shadow-md`}
+                        >
+                          {saveSuccessClientId === c.id ? <><CheckCircle2 size={11} /> Gravado</> : <><Save size={11} /> Gravar</>}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div className="bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-100 flex-1 flex flex-col">
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
               <Timer size={14} className="text-indigo-600" />
@@ -198,6 +302,56 @@ const WorkerForm = () => {
               </select>
             </div>
           </div>
+
+          {(workerForm.assignedSchedules?.length > 0) && (
+            <div className="bg-violet-50/30 p-3 sm:p-4 rounded-2xl border border-violet-100 flex flex-col gap-2">
+              <div className="flex items-center gap-2 mb-1">
+                <CalendarRange size={14} className="text-violet-600" />
+                <h4 className="font-black text-slate-700 text-xs sm:text-sm uppercase tracking-widest">Período de Horários</h4>
+              </div>
+              {!workerForm.id && (
+                <p className="text-[10px] text-amber-600 font-bold bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">Guarde o colaborador primeiro para atribuir datas.</p>
+              )}
+              <div className="space-y-2">
+                {schedules.filter(s => workerForm.assignedSchedules?.includes(s.id)).map(s => {
+                  const dates = workerForm.assignedScheduleDates?.[s.id] || {};
+                  return (
+                    <div key={s.id} className="bg-white border border-violet-100 rounded-xl p-3 space-y-2 shadow-sm">
+                      <span className="text-[10px] font-black text-violet-800 uppercase tracking-wide">{s.name}</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-0.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><CalendarRange size={9} /> Início</label>
+                          <input
+                            type="date"
+                            value={dates.dataInicio || ''}
+                            onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataInicio: e.target.value } } }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all"
+                          />
+                        </div>
+                        <div className="space-y-0.5">
+                          <label className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-1"><CalendarRange size={9} /> Fim</label>
+                          <input
+                            type="date"
+                            value={dates.dataFim || ''}
+                            onChange={e => setWorkerForm(prev => ({ ...prev, assignedScheduleDates: { ...(prev.assignedScheduleDates || {}), [s.id]: { ...dates, dataFim: e.target.value } } }))}
+                            className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-bold outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all"
+                          />
+                        </div>
+                      </div>
+                      {workerForm.id && (
+                        <button
+                          onClick={() => handleSaveScheduleDates(s.id, dates.dataInicio || new Date().toISOString().split('T')[0], dates.dataFim || '')}
+                          className={`w-full flex items-center justify-center gap-1 py-1.5 rounded-lg font-black text-[10px] uppercase transition-all ${saveSuccessScheduleId === s.id ? 'bg-emerald-500 text-white shadow-emerald-100' : 'bg-violet-600 hover:bg-violet-700 text-white shadow-violet-100'} shadow-md`}
+                        >
+                          {saveSuccessScheduleId === s.id ? <><CheckCircle2 size={11} /> Gravado</> : <><Save size={11} /> Gravar</>}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="pt-2">
             <button onClick={handleSaveWorker} className="w-full bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl font-black text-xs sm:text-sm uppercase shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 border border-indigo-500">

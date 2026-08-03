@@ -42,12 +42,27 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     description: ''
   });
 
-  // Hidrata clientId com o default do utilizador ao montar/mudar de utilizador
-  useEffect(() => {
-    if (currentUser?.defaultClientId) {
-      setMainFormData(prev => prev.clientId ? prev : { ...prev, clientId: currentUser.defaultClientId });
+  // Devolve o cliente ativo por datas para um dia específico, ou cai no defaultClientId
+  const getEffectiveClientId = useCallback((dateStr) => {
+    const dates = currentUser?.assignedClientDates;
+    if (dates) {
+      const checkDate = dateStr || toISODateLocal(new Date());
+      const active = Object.entries(dates).filter(([, range]) =>
+        range?.dataInicio && range.dataInicio <= checkDate && (!range.dataFim || range.dataFim >= checkDate)
+      );
+      if (active.length === 1) return active[0][0];
     }
-  }, [currentUser?.defaultClientId]);
+    return currentUser?.defaultClientId || '';
+  }, [currentUser?.assignedClientDates, currentUser?.defaultClientId]);
+
+  // Hidrata clientId com o cliente efetivo para hoje ao montar/mudar de utilizador
+  useEffect(() => {
+    const today = toISODateLocal(new Date());
+    const eff = getEffectiveClientId(today);
+    if (eff) {
+      setMainFormData(prev => prev.clientId ? prev : { ...prev, clientId: eff });
+    }
+  }, [getEffectiveClientId]);
   const [showSchedulesModal, setShowSchedulesModal] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [expandedDays, setExpandedDays] = useState([]);
@@ -232,6 +247,7 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     newPersonalForm, setNewPersonalForm,
     dismissedNotifs,
     // Computed
+    getEffectiveClientId,
     monthLogs,
     todayHours,
     totalMonthHours,

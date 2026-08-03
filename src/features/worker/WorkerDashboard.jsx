@@ -45,6 +45,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     activeWorkerSchedule, expectedHours,
     daysList, assigned, currentMonthStr,
     myApproval, pendingApprovals, previousOpenLogs,
+    getEffectiveClientId,
     handleOpenInlineForm, handleQuickRegister,
     setDefaultSchedule, handleSaveEntry,
     saveToDb, handleDelete, handleApproveMonth,
@@ -115,7 +116,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     setInlineFormData({
       id: log.id,
       date: log.date,
-      clientId: log.clientId || currentUser?.defaultClientId || '',
+      clientId: log.clientId || getEffectiveClientId(log.date) || '',
       startTime: log.startTime || '',
       breakStart: log.breakStart || '',
       breakEnd: log.breakEnd || '',
@@ -129,7 +130,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     setInlineEditingDate(ds);
     setTimeEntryInitialLogId(logId);
     setInlineFormData({
-      id: null, date: ds, clientId: currentUser?.defaultClientId || '',
+      id: null, date: ds, clientId: getEffectiveClientId(ds) || '',
       startTime: '', breakStart: '', breakEnd: '', endTime: '', description: '',
     });
     setTimeEntryModalOpen(true);
