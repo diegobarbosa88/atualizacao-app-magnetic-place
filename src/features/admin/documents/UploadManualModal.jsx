@@ -1,5 +1,6 @@
 import React from 'react';
 import { Upload, X, Loader2 } from 'lucide-react';
+import { CATEGORIAS_RH_ACT, AUTO_CATEGORIA_TIPO, CATEGORIAS_COM_VALIDADE } from '../../../constants/rhCategories';
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
 
@@ -8,10 +9,20 @@ export default function UploadManualModal({
   uploading,
   selWorker, setSelWorker,
   selTipo, setSelTipo,
+  selCategoria, setSelCategoria,
+  selValidade, setSelValidade,
   selFile, setSelFile,
   onClose,
   onUpload,
 }) {
+  const handleTipoChange = (val) => {
+    setSelTipo(val);
+    const auto = AUTO_CATEGORIA_TIPO[val];
+    if (auto) setSelCategoria(auto);
+  };
+
+  const mostraValidade = CATEGORIAS_COM_VALIDADE.includes(selCategoria);
+
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-[200] flex items-start justify-center p-4 overflow-y-auto">
       <div className="bg-white w-full max-w-xl rounded-[2rem] p-6 shadow-2xl my-8 animate-in fade-in zoom-in-95 duration-200">
@@ -44,12 +55,13 @@ export default function UploadManualModal({
               ))}
             </select>
           </div>
+
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo</label>
             <select
               className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
               value={selTipo}
-              onChange={(e) => setSelTipo(e.target.value)}
+              onChange={(e) => handleTipoChange(e.target.value)}
               disabled={uploading}
             >
               {TIPOS_MANUAIS.map(t => (
@@ -57,6 +69,57 @@ export default function UploadManualModal({
               ))}
             </select>
           </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+              Categoria RH <span className="text-indigo-500">(ACT)</span>
+            </label>
+            <select
+              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+              value={selCategoria || ''}
+              onChange={(e) => setSelCategoria(e.target.value)}
+              disabled={uploading}
+            >
+              <option value="">Sem categoria</option>
+              {CATEGORIAS_RH_ACT.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            {selCategoria && (
+              <p className="text-[10px] text-indigo-500 font-bold ml-1">Pasta: {selCategoria}</p>
+            )}
+          </div>
+
+          {mostraValidade && (
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                Data de Validade <span className="text-amber-500">⚠ recomendado para esta categoria</span>
+              </label>
+              <input
+                type="date"
+                value={selValidade || ''}
+                onChange={(e) => setSelValidade(e.target.value)}
+                className="w-full p-3 rounded-xl border border-amber-200 bg-amber-50/30 text-sm focus:ring-2 focus:ring-amber-400 outline-none font-medium"
+                disabled={uploading}
+              />
+            </div>
+          )}
+
+          {!mostraValidade && (
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">
+                Data de Validade <span className="text-slate-400">(opcional)</span>
+              </label>
+              <input
+                type="date"
+                value={selValidade || ''}
+                onChange={(e) => setSelValidade(e.target.value)}
+                className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                disabled={uploading}
+              />
+            </div>
+          )}
+
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Ficheiro (PDF)</label>
             <input

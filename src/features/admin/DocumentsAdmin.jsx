@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, BarChart2, ArrowRightLeft, Landmark, ListChecks } from 'lucide-react';
+import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, BarChart2, ArrowRightLeft, Landmark, ListChecks, AlertTriangle, LayoutGrid, List } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -16,10 +16,12 @@ import FilaAprovacaoTab from './pagamentos/FilaAprovacaoTab';
 import MovimentacoesBancariasTab from './MovimentacoesBancariasTab';
 import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import { fetchPublicIp } from '../../utils/deviceUtils';
+import { getValidadeStatus, inferirCategoria } from '../../constants/rhCategories';
 
 import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
 import UploadManualModal from './documents/UploadManualModal';
+import WorkerDocsFolderView from './documents/WorkerDocsFolderView';
 
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
@@ -127,6 +129,10 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const [stateFilter, setStateFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [tipoFilter, setTipoFilter] = useState('all');
+  const [categoriaFilter, setCategoriaFilter] = useState('');
+  const [validadeFilter, setValidadeFilter] = useState('');
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'folder'
+  const [categoriaOverrides, setCategoriaOverrides] = useState({}); // { [docId]: categoria }
   const [approvingId, setApprovingId] = useState(null);
   const [preview, setPreview] = useState(null);
   const [sortKey, setSortKey] = useState('createdAt');
@@ -144,6 +150,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selWorker, setSelWorker] = useState('');
   const [selTipo, setSelTipo] = useState(TIPOS_MANUAIS[0]);
+  const [selCategoria, setSelCategoria] = useState('Remuneração');
+  const [selValidade, setSelValidade] = useState('');
   const [selFile, setSelFile] = useState(null);
   const [uploading, setUploading] = useState(false);
 
@@ -158,6 +166,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         title: d.nomeFicheiro || d.tipo,
         subtitle: d.tipo,
         tipo: d.tipo,
+        categoria: categoriaOverrides[d.id] ?? d.categoria ?? inferirCategoria(d.tipo) ?? null,
+        data_validade: d.data_validade || null,
         state,
         createdAt: d.dataEmissao ? new Date(d.dataEmissao) : null,
         signedAtWorker: d.dataAssinatura ? new Date(d.dataAssinatura) : null,
@@ -178,6 +188,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         title: d.title,
         subtitle: tipo,
         tipo: tipo,
+        categoria: categoriaOverrides[d.id] ?? d.categoria ?? inferirCategoria(tipo) ?? null,
+        data_validade: null,
         state,
         createdAt: d.created_at ? new Date(d.created_at) : null,
         signedAt: d.admin_signed_at ? new Date(d.admin_signed_at) : (d.signed_at ? new Date(d.signed_at) : null),
@@ -188,7 +200,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       };
     });
     return [...manuais, ...gerados];
-  }, [documents, generatedDocs, workerById]);
+  }, [documents, generatedDocs, workerById, categoriaOverrides]);
 
   const filteredDocs = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
@@ -196,6 +208,11 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       if (stateFilter !== 'all' && d.state !== stateFilter) return false;
       if (sourceFilter !== 'all' && d.source !== sourceFilter) return false;
       if (tipoFilter !== 'all' && d.tipo !== tipoFilter) return false;
+      if (categoriaFilter && d.categoria !== categoriaFilter) return false;
+      if (validadeFilter === 'expiring') {
+        const vs = getValidadeStatus(d.data_validade);
+        if (!['expirado', 'urgente'].includes(vs)) return false;
+      }
       if (q) {
         const t = (d.title || '').toLowerCase();
         const w = (d.workerName || '').toLowerCase();
@@ -246,9 +263,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       return alert('A conexão com a base de dados falhou. Por favor, atualize a página (F5) e tente novamente.');
     }
 
-    const cleanTipo = selTipo.replace(/[^a-zA-Z0-9]/g, '_');
+    const slugify = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
     const cleanName = selFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const path = `${selWorker}/${cleanTipo}/${Date.now()}_${cleanName}`;
+    const path = `${selWorker}/${slugify(selCategoria || selTipo)}/${Date.now()}_${cleanName}`;
 
     try {
       const { error: upError } = await clientSupabase.storage.from('documentos').upload(path, selFile);
@@ -263,6 +280,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         nomeFicheiro: selFile.name,
         url: urlData.publicUrl,
         status: 'Pendente',
+        categoria: selCategoria || null,
+        data_validade: selValidade || null,
         dataEmissao: new Date().toISOString(),
       };
 
@@ -280,6 +299,24 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       alert(`Erro: ${err.message}`);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleEditCategoria = async (docId, source, novaCategoria) => {
+    if (!clientSupabase) return;
+    // Atualiza localmente de imediato
+    setCategoriaOverrides(prev => ({ ...prev, [docId]: novaCategoria }));
+    if (source !== 'template' && setDocuments) {
+      setDocuments(prev => prev.map(d => d.id === docId ? { ...d, categoria: novaCategoria } : d));
+    }
+    try {
+      const table = source === 'template' ? 'worker_documents' : 'documents';
+      const { error } = await clientSupabase.from(table).update({ categoria: novaCategoria }).eq('id', docId);
+      if (error) throw error;
+    } catch (err) {
+      // Reverte o override se falhou
+      setCategoriaOverrides(prev => { const n = { ...prev }; delete n[docId]; return n; });
+      alert(`Erro ao guardar categoria: ${err.message}`);
     }
   };
 
@@ -439,6 +476,25 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {(activeGroup === 'arquivo' && activeSection === 'documentos') && (
         <>
+          {/* Banner de alerta de validade */}
+          {(() => {
+            const expiring = documents.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade)));
+            return expiring.length > 0 ? (
+              <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                <AlertTriangle size={16} className="text-red-500 flex-shrink-0" />
+                <p className="text-sm font-black text-red-700 flex-1">
+                  {expiring.length} documento{expiring.length !== 1 ? 's' : ''} expirado{expiring.length !== 1 ? 's' : ''} ou a expirar em 30 dias
+                </p>
+                <button
+                  onClick={() => { setValidadeFilter('expiring'); setViewMode('table'); }}
+                  className="text-xs font-black text-red-600 underline hover:text-red-800 transition-colors whitespace-nowrap"
+                >
+                  Ver todos →
+                </button>
+              </div>
+            ) : null;
+          })()}
+
           <DocumentsFilters
             stateFilter={stateFilter}
             setStateFilter={setStateFilter}
@@ -450,21 +506,55 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             tipoFilter={tipoFilter}
             setTipoFilter={setTipoFilter}
             tipoOptions={tipoOptions}
+            categoriaFilter={categoriaFilter}
+            setCategoriaFilter={setCategoriaFilter}
+            validadeFilter={validadeFilter}
+            setValidadeFilter={setValidadeFilter}
             onShowUpload={() => setShowUploadModal(true)}
           />
-          <DocumentsTable
-            filteredDocs={filteredDocs}
-            loadingDocs={loadingDocs}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={handleSort}
-            onDeleteManual={handleDeleteManual}
-            onDeleteGenerated={handleDeleteGenerated}
-            onApprove={onApprove}
-            onPreview={openGeneratedPreview}
-            approvingId={approvingId}
-            saving={saving}
-          />
+
+          {/* Toggle de modo de vista */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              {filteredDocs.length} documento{filteredDocs.length !== 1 ? 's' : ''}
+            </p>
+            <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <List size={12} /> Lista
+              </button>
+              <button
+                onClick={() => setViewMode('folder')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'folder' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <LayoutGrid size={12} /> Pastas
+              </button>
+            </div>
+          </div>
+
+          {viewMode === 'table' ? (
+            <DocumentsTable
+              filteredDocs={filteredDocs}
+              loadingDocs={loadingDocs}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onDeleteManual={handleDeleteManual}
+              onDeleteGenerated={handleDeleteGenerated}
+              onApprove={onApprove}
+              onPreview={openGeneratedPreview}
+              onEditCategoria={handleEditCategoria}
+              approvingId={approvingId}
+              saving={saving}
+            />
+          ) : (
+            <WorkerDocsFolderView
+              docs={filteredDocs}
+              workerName={searchTerm ? `Resultados para "${searchTerm}"` : null}
+            />
+          )}
         </>
       )}
 
@@ -474,6 +564,8 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
           uploading={uploading}
           selWorker={selWorker} setSelWorker={setSelWorker}
           selTipo={selTipo} setSelTipo={setSelTipo}
+          selCategoria={selCategoria} setSelCategoria={setSelCategoria}
+          selValidade={selValidade} setSelValidade={setSelValidade}
           selFile={selFile} setSelFile={setSelFile}
           onClose={() => setShowUploadModal(false)}
           onUpload={onUpload}

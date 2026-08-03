@@ -1,5 +1,6 @@
 import React from 'react';
-import { LayoutList, Clock, FileSignature, CheckCircle, Search, Plus } from 'lucide-react';
+import { LayoutList, Clock, FileSignature, CheckCircle, Search, Plus, AlertTriangle } from 'lucide-react';
+import { CATEGORIAS_RH_ACT } from '../../../constants/rhCategories';
 
 export default function DocumentsFilters({
   stateFilter, setStateFilter,
@@ -8,11 +9,13 @@ export default function DocumentsFilters({
   sourceFilter, setSourceFilter,
   tipoFilter, setTipoFilter,
   tipoOptions,
+  categoriaFilter, setCategoriaFilter,
+  validadeFilter, setValidadeFilter,
   onShowUpload,
 }) {
   return (
     <>
-      <div className="grid grid-cols-4 gap-1 mb-5 bg-slate-100 p-1 rounded-2xl w-full">
+      <div className="grid grid-cols-4 gap-1 mb-4 bg-slate-100 p-1 rounded-2xl w-full">
         {[
           { key: 'all', label: 'Todos', icon: LayoutList, activeColor: 'text-slate-700' },
           { key: 'pending', label: 'Pendentes', icon: Clock, activeColor: 'text-amber-500' },
@@ -29,6 +32,41 @@ export default function DocumentsFilters({
               <Icon size={13} className={active ? activeColor : 'text-slate-400'} />
               <span className={`text-[9px] font-black uppercase whitespace-nowrap ${active ? activeColor : 'text-slate-400'}`}>{label}</span>
               {counts[key] > 0 && <span className={`text-[9px] font-black tabular-nums ${active ? activeColor : 'text-slate-400'}`}>({counts[key]})</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Filtro rápido "A Expirar" */}
+      <div className="mb-3">
+        <button
+          onClick={() => setValidadeFilter && setValidadeFilter(validadeFilter === 'expiring' ? '' : 'expiring')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all border ${
+            validadeFilter === 'expiring'
+              ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200'
+              : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+          }`}
+        >
+          <AlertTriangle size={11} /> A Expirar / Expirados
+        </button>
+      </div>
+
+      {/* Filtro por categoria ACT */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
+        {['Todas', ...CATEGORIAS_RH_ACT].map(c => {
+          const val = c === 'Todas' ? '' : c;
+          const active = (categoriaFilter || '') === val;
+          return (
+            <button
+              key={c}
+              onClick={() => setCategoriaFilter && setCategoriaFilter(val)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all ${
+                active
+                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              {c}
             </button>
           );
         })}

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
@@ -11,6 +11,7 @@ import WorkerValorHoraHistoryModal from './team/WorkerValorHoraHistoryModal';
 import WorkerEmploymentHistoryModal from './team/WorkerEmploymentHistoryModal';
 import WorkerValidationPanel from './team/WorkerValidationPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
+import DocumentScannerModal from './team/DocumentScannerModal';
 
 const TeamManagerContent = ({ onLogin }) => {
   const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
@@ -33,6 +34,7 @@ const TeamManagerContent = ({ onLogin }) => {
   const [showInactive, setShowInactive] = useState(false);
   const [vhModal, setVhModal] = useState({ show: false, workerId: null, workerName: '' });
   const [empModal, setEmpModal] = useState({ show: false, workerId: null, workerName: '' });
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingAbsences = (absenceRequests || []).filter(r => r.status === 'pending').length;
@@ -164,6 +166,13 @@ const TeamManagerContent = ({ onLogin }) => {
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
           <button
+            onClick={() => setScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-violet-600 hover:bg-violet-700 text-white"
+            title="Scanner de Documentos com IA"
+          >
+            <ScanSearch size={14} /> Scanner
+          </button>
+          <button
             onClick={() => {
               setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0], limited_entry_mode: false });
               setIsAddingInTab(!isAddingInTab);
@@ -177,6 +186,8 @@ const TeamManagerContent = ({ onLogin }) => {
       </div>
 
       {isAddingInTab && <WorkerForm />}
+
+      <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
 
       <ChangeRequestsPanel requests={pendingChangeRequests} />
 

@@ -102,6 +102,7 @@ export async function associarDocumentoAoTrabalhador({ nif, nome, mes, tipo, wor
     nomeFicheiro: `${displayName}.pdf`,
     url:          urlData.publicUrl,
     status,
+    categoria:    'Remuneração',
     dataEmissao:  new Date().toISOString(),
   });
   if (dbErr) throw dbErr;
