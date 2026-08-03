@@ -228,8 +228,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
     const ladoSufixo   = r.groupRole === 'frente' ? ' (Frente)' : r.groupRole === 'verso' ? ' (Verso)' : '';
     const tipoLabel    = `${tipoDocStr}${ladoSufixo}`;
     const ts           = Date.now();
-    // Caminho com nomes exatos como aparecem na UI (categoria e tipo sem slugify)
-    const path         = `${worker.id}/${categoriaACT}/${tipoLabel} ${ts}.${ext}`;
+    // Storage path precisa de ser ASCII válido — nomes reais ficam nos campos DB
+    const path         = `${worker.id}/${slugify(categoriaACT)}/${slugify(tipoLabel)}_${ts}.${ext}`;
 
     const { error: upErr } = await supabase.storage.from('documentos').upload(path, r.file);
     if (upErr) throw upErr;
