@@ -216,7 +216,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
     setStep('results');
   };
 
-  const doSave = async (idx, overrideValidade) => {
+  const doSave = async (idx, overrideValidade, grupoId) => {
     const r = results[idx];
     const worker = r.matchedWorker;
     if (!worker || !r.file || !supabase) return;
@@ -249,6 +249,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
         ? new Date(r.extractedData.documento.data_emissao).toISOString()
         : new Date().toISOString(),
       data_validade: overrideValidade ?? r.extractedData?.documento?.data_validade ?? null,
+      grupo_id: grupoId || null,
+      lado: r.groupRole || null,
     });
 
     return urlData.publicUrl;
@@ -270,10 +272,12 @@ const DocumentScannerModal = ({ open, onClose }) => {
 
     // Validade partilhada: pegar do verso ou do que tiver
     const validade = indices.map(i => results[i].extractedData?.documento?.data_validade).find(Boolean) || null;
+    // Gerar grupo_id único partilhado pelos dois lados
+    const grupoId = `grupo_${Date.now()}`;
 
     setResults(prev => prev.map((x, i) => indices.includes(i) ? { ...x, saving: true, error: null } : x));
     try {
-      await Promise.all(indices.map(i => doSave(i, validade)));
+      await Promise.all(indices.map(i => doSave(i, validade, grupoId)));
       setResults(prev => prev.map((x, i) => indices.includes(i) ? { ...x, saving: false, saved: true } : x));
     } catch (err) {
       setResults(prev => prev.map((x, i) => indices.includes(i) ? { ...x, saving: false, error: 'Erro: ' + (err.message || err) } : x));
