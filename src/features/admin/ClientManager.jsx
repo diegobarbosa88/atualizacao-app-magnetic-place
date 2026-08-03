@@ -11,7 +11,7 @@ import CorrectionsInbox from './corrections/CorrectionsInbox';
 import ClientPortalAuditPanel from './client/ClientPortalAuditPanel';
 
 const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
-  const { clients, supabase, corrections } = useApp();
+  const { clients, schedules, supabase, corrections } = useApp();
 
   const pendingClientCorrections = (corrections || []).filter(c =>
     c.type !== 'creation_request' && c.type !== 'deletion_request' &&
@@ -353,6 +353,35 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     Aplicar morada à geolocalização
                   </button>
                 )}
+              </div>
+
+              {/* HORÁRIOS */}
+              <div className="bg-slate-50 p-4 rounded-[2rem] border border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock size={14} className="text-indigo-600" />
+                  <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest">Horários</h4>
+                </div>
+                <div className="max-h-[200px] overflow-y-auto pr-1 custom-scrollbar space-y-1.5">
+                  {schedules.length === 0 && (
+                    <p className="text-[10px] text-slate-400 font-bold px-1">Sem horários criados.</p>
+                  )}
+                  {[...schedules].sort((a, b) => a.name.localeCompare(b.name)).map(s => {
+                    const isAssigned = !!(clientForm.assignedSchedules || []).includes(s.id);
+                    return (
+                      <label key={s.id} className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-pointer shadow-sm ${isAssigned ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 hover:border-indigo-100'}`}>
+                        <div className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 ${isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
+                          {isAssigned && <Check size={10} className="text-white" />}
+                        </div>
+                        <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
+                          const current = clientForm.assignedSchedules || [];
+                          const updated = current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id];
+                          setClientForm({ ...clientForm, assignedSchedules: updated });
+                        }} />
+                        <span className={`text-[10px] font-black uppercase truncate ${isAssigned ? 'text-indigo-900' : 'text-slate-600'}`}>{s.name}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* AÇÕES */}

@@ -17,7 +17,7 @@ const saveClientValorHoraHistory = async (clients, saveToDb, clientId, valorNovo
 };
 
 const INITIAL_CLIENT_FORM = {
-  id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0], triggers_limited_mode: false, timezone: 'Europe/Madrid'
+  id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0], triggers_limited_mode: false, timezone: 'Europe/Madrid', assignedSchedules: []
 };
 
 export const ClientProvider = ({ children }) => {
