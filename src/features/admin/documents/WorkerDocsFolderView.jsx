@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
   FolderOpen, Eye, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
@@ -253,7 +254,8 @@ function WorkerPastaView({ worker, docs, onBack, onOpenDoc }) {
 }
 
 export default function WorkerDocsFolderView({ docs, onPreview }) {
-  const [selectedWorker, setSelectedWorker] = useState(null);
+  const [searchParams] = useSearchParams();
+  const [selectedWorker, setSelectedWorker] = useState(() => searchParams.get('worker') || null);
   const [search, setSearch] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
 

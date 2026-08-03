@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
 import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch } from 'lucide-react';
@@ -16,6 +16,7 @@ import DocumentScannerModal from './team/DocumentScannerModal';
 const TeamManagerContent = ({ onLogin }) => {
   const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [teamSubTab, setTeamSubTab] = useState(() => searchParams.get('subtab') || 'workers');
 
   useEffect(() => {
@@ -201,6 +202,7 @@ const TeamManagerContent = ({ onLogin }) => {
         onEdit={handleWorkerListAction}
         onOpenVHHistory={(id, name) => setVhModal({ show: true, workerId: id, workerName: name })}
         onOpenEmpHistory={(id, name) => setEmpModal({ show: true, workerId: id, workerName: name })}
+        onVerPasta={(id) => navigate(`/admin/documentos?worker=${id}`)}
       />
 
       <WorkerValorHoraHistoryModal

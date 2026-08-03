@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen } from 'lucide-react';
 
-const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory }) => {
+const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory, onVerPasta }) => {
   const { approvals, currentMonthStr, schedules, clients, saveToDb } = useApp();
   const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -110,6 +110,13 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-indigo-500 group-hover:bg-indigo-200 transition-colors shrink-0"><Search size={13} /></span>
                               <span className="text-xs font-semibold text-slate-700 group-hover:text-indigo-700">Ver Portal</span>
                             </button>
+                            <button
+                              onClick={() => { onVerPasta?.(w.id); setOpenMenuId(null); }}
+                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-emerald-50 group transition-colors"
+                            >
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={13} /></span>
+                              <span className="text-xs font-semibold text-slate-700 group-hover:text-emerald-700">Ver Pasta</span>
+                            </button>
                             <div className="mx-3 my-1 border-t border-slate-100" />
                             <button
                               onClick={() => { onOpenEmpHistory(w.id, w.name); setOpenMenuId(null); }}
@@ -171,6 +178,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               <div className="flex items-center gap-1">
                 <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-indigo-100" title="Ver Portal"><Search size={12} /></button>
                 <button onClick={() => onEdit(w)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
+                <button onClick={() => onVerPasta?.(w.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={12} /></button>
                 <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
                 <button onClick={() => onOpenVHHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
                 {confirmDeleteWorkerId === w.id ? (
