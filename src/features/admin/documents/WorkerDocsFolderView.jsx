@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useApp } from '../../../context/AppContext';
+import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/common/workerDocuments/useDocumentPreview';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
   FolderOpen, Eye, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
@@ -11,7 +13,7 @@ import { formatDocDate } from '../../../utils/dateUtils';
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
-const TIPOS_COM_ASSINATURA = ['recibo', 'mapa de deslocamento', 'contrato de trabalho'];
+const TIPOS_COM_ASSINATURA = ['recibo', 'mapa de deslocamento', 'contrato de trabalho', 'mapa de ajuda de custo'];
 const temFluxoAssinatura = (d) =>
   d.source === 'template' ||
   TIPOS_COM_ASSINATURA.some(t => (d?.tipo || '').toLowerCase().includes(t));
@@ -25,79 +27,57 @@ function buildDocTitle(d) {
 }
 
 function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
+  const { supabase } = useApp();
   const [src, setSrc] = useState(null);
-  const [imgFailed, setImgFailed] = useState(false);
-
-  const isPdf = url && /\.pdf(\?|$)/i.test(url);
+  const blobUrlRef = useRef(null);
 
   useEffect(() => {
-    setImgFailed(false);
     setSrc(null);
+    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
     if (!url) return;
-
     let cancelled = false;
-    let blobUrl = null;
 
     (async () => {
-      // Resolver URL assinada para buckets Supabase
-      let resolved = url;
-      const sb = window.supabaseInstance;
-      if (sb) {
-        const bucket = url.includes('/document_templates/') ? 'document_templates' : 'documentos';
-        const m = url.match(/\/object\/public\/(?:documentos|document_templates)\/(.+?)(\?|$)/);
-        if (m) {
-          try {
-            const { data } = await sb.storage.from(bucket).createSignedUrl(decodeURIComponent(m[1]), 3600);
-            if (data?.signedUrl) resolved = data.signedUrl;
-          } catch {}
+      try {
+        const m = url.match(/\/object\/public\/([^/]+)\/(.+?)(\?|$)/);
+        let blob;
+        if (m && supabase) {
+          const { data, error } = await supabase.storage.from(m[1]).download(decodeURIComponent(m[2]));
+          if (error) throw error;
+          blob = data;
+        } else {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error();
+          blob = await r.blob();
         }
-      }
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (isPdf) {
-        // Fetch como blob para evitar Content-Disposition: attachment
-        try {
-          const resp = await fetch(resolved);
-          if (!resp.ok) throw new Error();
-          const blob = await resp.blob();
-          if (cancelled) return;
-          blobUrl = URL.createObjectURL(blob);
-          setSrc(blobUrl);
-        } catch {
-          if (!cancelled) setSrc(resolved);
+        const isPdf = /\.pdf(\?|$)/i.test(url) || blob.type === 'application/pdf';
+        const buf = await blob.arrayBuffer();
+        if (cancelled) return;
+
+        if (isPdf) {
+          const dataUrl = await renderPdfFirstPage(buf, 0.5);
+          if (!cancelled) setSrc(dataUrl);
+        } else {
+          const ext = url.split('?')[0].split('.').pop().toLowerCase();
+          const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[ext] || blob.type || 'image/jpeg';
+          const blobUrl = URL.createObjectURL(new Blob([buf], { type: mime }));
+          blobUrlRef.current = blobUrl;
+          if (!cancelled) setSrc(blobUrl);
         }
-      } else {
-        setSrc(resolved);
-      }
+      } catch { /* mostra placeholder */ }
     })();
 
     return () => {
       cancelled = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
+      if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
     };
-  }, [url, isPdf]);
+  }, [url, supabase]);
 
   const wrapper = wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100';
-
-  if (!url || !src) {
-    return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
-  }
-
-  if (isPdf) {
-    return (
-      <div className="w-full h-full overflow-hidden relative bg-white" style={{ pointerEvents: 'none' }}>
-        <iframe
-          src={`${src}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&page=1`}
-          title={alt || 'preview'}
-          className="absolute top-0 left-0 border-0"
-          style={{ width: '400%', height: '400%', transform: 'scale(0.25)', transformOrigin: 'top left' }}
-        />
-      </div>
-    );
-  }
-
-  if (imgFailed) return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
-  return <img src={src} alt={alt || ''} onError={() => setImgFailed(true)} className={imgClassName} />;
+  if (!src) return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
+  return <img src={src} alt={alt || ''} className={imgClassName || 'w-full h-full object-cover'} />;
 }
 
 const CATEGORIA_CONFIG = {
@@ -159,7 +139,58 @@ function StateBadgeSmall({ state }) {
 }
 
 export function DocumentViewerModal({ doc, onClose }) {
-  const [imgFailed, setImgFailed] = useState(false);
+  const { supabase } = useApp();
+  const [content, setContent] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const blobUrlRef = useRef(null);
+
+  useEffect(() => {
+    setContent(null);
+    if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
+    const url = doc?.previewUrl;
+    if (!doc || !url) return;
+    let cancelled = false;
+    setLoading(true);
+
+    (async () => {
+      try {
+        const m = url.match(/\/object\/public\/([^/]+)\/(.+?)(\?|$)/);
+        let blob;
+        if (m && supabase) {
+          const { data, error } = await supabase.storage.from(m[1]).download(decodeURIComponent(m[2]));
+          if (error) throw error;
+          blob = data;
+        } else {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error();
+          blob = await r.blob();
+        }
+        if (cancelled) return;
+
+        const isPdf = /\.pdf(\?|$)/i.test(url) || blob.type === 'application/pdf';
+        const buf = await blob.arrayBuffer();
+        if (cancelled) return;
+
+        if (isPdf) {
+          const srcDoc = await renderPdfToSrcDoc(buf);
+          if (!cancelled) setContent({ type: 'srcDoc', value: srcDoc });
+        } else {
+          const ext = url.split('?')[0].split('.').pop().toLowerCase();
+          const mime = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' }[ext] || blob.type || 'image/jpeg';
+          const blobUrl = URL.createObjectURL(new Blob([buf], { type: mime }));
+          blobUrlRef.current = blobUrl;
+          if (!cancelled) setContent({ type: 'imgUrl', value: blobUrl });
+        }
+      } catch { /* content null → mostra "não disponível" */ }
+      finally { if (!cancelled) setLoading(false); }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (blobUrlRef.current) { URL.revokeObjectURL(blobUrlRef.current); blobUrlRef.current = null; }
+    };
+  }, [doc?.previewUrl, supabase]);
+
   if (!doc) return null;
   const url = doc.previewUrl;
   const title = buildDocTitle(doc);
@@ -191,24 +222,24 @@ export function DocumentViewerModal({ doc, onClose }) {
         </div>
 
         {/* Corpo */}
-        <div className="flex-1 overflow-auto bg-slate-50">
-          {!url ? (
+        <div className="flex-1 overflow-auto bg-slate-50 flex items-center justify-center">
+          {loading ? (
+            <div className="flex flex-col items-center gap-3 py-20 opacity-50">
+              <Clock size={28} className="animate-spin text-indigo-400" />
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">A carregar...</p>
+            </div>
+          ) : !url || !content ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-40">
               <FileText size={40} />
               <p className="text-sm font-black uppercase tracking-widest">Pré-visualização não disponível</p>
               <p className="text-xs text-slate-500">Este documento ainda não tem ficheiro associado</p>
             </div>
-          ) : !imgFailed ? (
-            <div className="flex items-center justify-center p-6">
-              <img
-                src={url}
-                alt={title}
-                onError={() => setImgFailed(true)}
-                className="max-w-full max-h-[70vh] object-contain rounded-xl shadow"
-              />
-            </div>
+          ) : content.type === 'srcDoc' ? (
+            <iframe srcDoc={content.value} sandbox="allow-scripts" className="w-full min-h-[60vh] h-full border-0" title={title} />
           ) : (
-            <iframe src={url} className="w-full min-h-[60vh] h-full border-0" title={title} />
+            <div className="flex items-center justify-center p-6 w-full">
+              <img src={content.value} alt={title} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow" />
+            </div>
           )}
         </div>
       </div>
