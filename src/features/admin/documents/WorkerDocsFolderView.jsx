@@ -11,6 +11,11 @@ import { formatDocDate } from '../../../utils/dateUtils';
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
+const TIPOS_COM_ASSINATURA = ['recibo', 'mapa de deslocamento', 'contrato de trabalho'];
+const temFluxoAssinatura = (d) =>
+  d.source === 'template' ||
+  TIPOS_COM_ASSINATURA.some(t => (d?.tipo || '').toLowerCase().includes(t));
+
 function buildDocTitle(d) {
   const base = (d.tipo || d.title || 'Documento').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
   if (d.createdAt) {
@@ -214,7 +219,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
             );
           })()}
           <div className="flex flex-wrap gap-1 pt-0.5">
-            {d.source === 'template' && <StateBadgeSmall state={d.state} />}
+            {temFluxoAssinatura(d) && <StateBadgeSmall state={d.state} />}
             <ValidadeChip dataValidade={d.data_validade} />
           </div>
         </div>
@@ -313,7 +318,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
             );
           })()}
           <div className="flex flex-wrap gap-1 pt-0.5">
-            {frente?.source === 'template' && frente?.state && <StateBadgeSmall state={frente.state} />}
+            {temFluxoAssinatura(frente) && frente?.state && <StateBadgeSmall state={frente.state} />}
             <ValidadeChip dataValidade={validade} />
           </div>
         </div>
