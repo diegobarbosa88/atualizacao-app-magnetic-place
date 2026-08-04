@@ -32,41 +32,71 @@ function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
 
   useEffect(() => {
     setImgFailed(false);
-    if (!url) { setSrc(null); return; }
-    if (isPdf) { setSrc(url); return; }
-    const sb = window.supabaseInstance;
-    if (!sb) { setSrc(url); return; }
-    const bucket = url.includes('/document_templates/') ? 'document_templates' : 'documentos';
-    const match = url.match(/\/object\/public\/(?:documentos|document_templates)\/(.+?)(\?|$)/);
-    if (!match) { setSrc(url); return; }
-    sb.storage.from(bucket)
-      .createSignedUrl(decodeURIComponent(match[1]), 3600)
-      .then(({ data }) => setSrc(data?.signedUrl || url))
-      .catch(() => setSrc(url));
+    setSrc(null);
+    if (!url) return;
+
+    let cancelled = false;
+    let blobUrl = null;
+
+    (async () => {
+      // Resolver URL assinada para buckets Supabase
+      let resolved = url;
+      const sb = window.supabaseInstance;
+      if (sb) {
+        const bucket = url.includes('/document_templates/') ? 'document_templates' : 'documentos';
+        const m = url.match(/\/object\/public\/(?:documentos|document_templates)\/(.+?)(\?|$)/);
+        if (m) {
+          try {
+            const { data } = await sb.storage.from(bucket).createSignedUrl(decodeURIComponent(m[1]), 3600);
+            if (data?.signedUrl) resolved = data.signedUrl;
+          } catch {}
+        }
+      }
+      if (cancelled) return;
+
+      if (isPdf) {
+        // Fetch como blob para evitar Content-Disposition: attachment
+        try {
+          const resp = await fetch(resolved);
+          if (!resp.ok) throw new Error();
+          const blob = await resp.blob();
+          if (cancelled) return;
+          blobUrl = URL.createObjectURL(blob);
+          setSrc(blobUrl);
+        } catch {
+          if (!cancelled) setSrc(resolved);
+        }
+      } else {
+        setSrc(resolved);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
   }, [url, isPdf]);
 
   const wrapper = wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100';
 
-  if (!url) {
+  if (!url || !src) {
     return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
   }
 
-  if (isPdf && src) {
+  if (isPdf) {
     return (
-      <div className="w-full h-full overflow-hidden relative" style={{ pointerEvents: 'none' }}>
+      <div className="w-full h-full overflow-hidden relative bg-white" style={{ pointerEvents: 'none' }}>
         <iframe
-          src={src}
+          src={`${src}#toolbar=0&navpanes=0&scrollbar=0&view=FitH&page=1`}
           title={alt || 'preview'}
-          className="absolute top-0 left-0 border-0 bg-white"
+          className="absolute top-0 left-0 border-0"
           style={{ width: '400%', height: '400%', transform: 'scale(0.25)', transformOrigin: 'top left' }}
         />
       </div>
     );
   }
 
-  if (!src || imgFailed) {
-    return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
-  }
+  if (imgFailed) return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
   return <img src={src} alt={alt || ''} onError={() => setImgFailed(true)} className={imgClassName} />;
 }
 
