@@ -489,11 +489,6 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   const config = CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"];
   const colors = COLOR_MAP[config.color];
   const Icon = config.icon;
-  if (docs.length === 0) return null;
-
-  const temExpirado = docs.some(d => getValidadeStatus(d.data_validade) === 'expirado');
-  const temUrgente  = docs.some(d => getValidadeStatus(d.data_validade) === 'urgente');
-  const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-slate-200';
 
   const renderItems = useMemo(() => {
     const groups = {};
@@ -509,6 +504,12 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
     const paired = Object.values(groups).map(g => ({ type: 'pair', docs: g }));
     return [...paired, ...singles];
   }, [docs]);
+
+  if (docs.length === 0) return null;
+
+  const temExpirado = docs.some(d => getValidadeStatus(d.data_validade) === 'expirado');
+  const temUrgente  = docs.some(d => getValidadeStatus(d.data_validade) === 'urgente');
+  const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-slate-200';
 
   return (
     <>
