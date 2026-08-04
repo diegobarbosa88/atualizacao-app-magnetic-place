@@ -574,7 +574,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
   const categoriasComDocs = CATEGORIAS_RH_ACT.filter(c => (byCategoria[c] || []).length > 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 max-w-4xl">
       {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
@@ -601,7 +601,7 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
           <p className="text-xs font-black uppercase tracking-widest">Sem documentos</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {CATEGORIAS_RH_ACT.map(cat => (
             <SubPastaCard key={cat} categoria={cat} docs={byCategoria[cat] || []} onOpenDoc={onOpenDoc} onDelete={onDelete} />
           ))}
