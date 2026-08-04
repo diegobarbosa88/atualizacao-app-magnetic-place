@@ -3,15 +3,22 @@ import { X } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
+import UploadManualModal from './UploadManualModal';
 import { inferirCategoria } from '../../../constants/rhCategories';
 
 const isSigned = s => ['signed', 'Assinado', 'assinado'].includes(s);
 const isAwaitingAdmin = s => ['awaiting_admin', 'pending_admin'].includes(s);
 
 export default function WorkerFolderModal({ workerId, workerName, onClose }) {
-  const { documents, supabase, workers } = useApp();
+  const { documents, supabase, workers, setDocuments } = useApp();
   const { generatedDocs } = useDocumentTemplates(supabase);
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [showUpload, setShowUpload]     = useState(false);
+  const [selTipo, setSelTipo]           = useState('Recibo de Vencimento');
+  const [selCategoria, setSelCategoria] = useState('Remuneração');
+  const [selValidade, setSelValidade]   = useState('');
+  const [selFile, setSelFile]           = useState(null);
+  const [uploading, setUploading]       = useState(false);
 
   const workerById = useMemo(() => {
     const m = {};
@@ -80,6 +87,40 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
       });
   }, [generatedDocs, workerId, workerName, workerById]);
 
+  const handleUpload = async () => {
+    if (!selFile || !supabase) return;
+    setUploading(true);
+    try {
+      const slugify = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      const cleanName = selFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const path = `${workerId}/${slugify(selCategoria || selTipo)}/${Date.now()}_${cleanName}`;
+      const { error: upError } = await supabase.storage.from('documentos').upload(path, selFile);
+      if (upError) throw upError;
+      const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path);
+      const newDoc = {
+        id: `doc_${Date.now()}`,
+        workerId,
+        tipo: selTipo,
+        nomeFicheiro: selFile.name,
+        url: urlData.publicUrl,
+        status: 'Pendente',
+        categoria: selCategoria || null,
+        data_validade: selValidade || null,
+        dataEmissao: new Date().toISOString(),
+      };
+      const { error: dbError } = await supabase.from('documents').insert([newDoc]);
+      if (dbError) throw dbError;
+      if (setDocuments) setDocuments(prev => [newDoc, ...prev]);
+      setSelFile(null);
+      setSelValidade('');
+      setShowUpload(false);
+    } catch (err) {
+      alert(`Erro: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleOpenDoc = (doc) => {
     const url = doc.signedPdfUrl || doc.viewUrl || null;
     setPreviewDoc({ ...doc, previewUrl: url });
@@ -123,12 +164,30 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
             onBack={onClose}
             onOpenDoc={handleOpenDoc}
             onDelete={handleDelete}
+            onAddDoc={() => setShowUpload(true)}
           />
         </div>
       </div>
 
       {/* Modal de pré-visualização (fixed, sobrepõe tudo) */}
       <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+
+      {/* Modal de upload (fixed, z-[200] sobrepõe tudo) */}
+      {showUpload && (
+        <UploadManualModal
+          hideWorkerSelect
+          workers={[{ id: workerId, name: workerName }]}
+          uploading={uploading}
+          selWorker={workerId}
+          setSelWorker={() => {}}
+          selTipo={selTipo}           setSelTipo={setSelTipo}
+          selCategoria={selCategoria} setSelCategoria={setSelCategoria}
+          selValidade={selValidade}   setSelValidade={setSelValidade}
+          selFile={selFile}           setSelFile={setSelFile}
+          onClose={() => { setShowUpload(false); setSelFile(null); setSelValidade(''); }}
+          onUpload={handleUpload}
+        />
+      )}
     </div>
   );
 }

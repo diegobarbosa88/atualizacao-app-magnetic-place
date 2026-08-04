@@ -6,7 +6,7 @@ import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
   FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
   Folder, User, ArrowLeft, Search, X, FileSignature, Download, Trash2,
-  Layers, Calendar,
+  Layers, Calendar, Plus,
 } from 'lucide-react';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
 import { formatDocDate } from '../../../utils/dateUtils';
@@ -579,7 +579,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   );
 }
 
-export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
+export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onAddDoc }) {
   const byCategoria = useMemo(() => {
     const map = {};
     CATEGORIAS_RH_ACT.forEach(c => { map[c] = []; });
@@ -612,6 +612,14 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
           <span className="flex items-center gap-1 text-xs font-black text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-xl">
             <AlertTriangle size={12} /> {expirados} a expirar
           </span>
+        )}
+        {onAddDoc && (
+          <button
+            onClick={onAddDoc}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-colors"
+          >
+            <Plus size={13} /> Adicionar
+          </button>
         )}
       </div>
 

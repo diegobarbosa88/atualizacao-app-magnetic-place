@@ -14,6 +14,7 @@ export default function UploadManualModal({
   selFile, setSelFile,
   onClose,
   onUpload,
+  hideWorkerSelect = false,
 }) {
   const handleTipoChange = (val) => {
     setSelTipo(val);
@@ -41,20 +42,22 @@ export default function UploadManualModal({
         </div>
 
         <div className="space-y-4">
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Colaborador</label>
-            <select
-              className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
-              value={selWorker}
-              onChange={(e) => setSelWorker(e.target.value)}
-              disabled={uploading}
-            >
-              <option value="">Selecionar...</option>
-              {workers.map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-            </select>
-          </div>
+          {!hideWorkerSelect && (
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Colaborador</label>
+              <select
+                className="w-full p-3 rounded-xl border border-slate-200 bg-white text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-medium"
+                value={selWorker}
+                onChange={(e) => setSelWorker(e.target.value)}
+                disabled={uploading}
+              >
+                <option value="">Selecionar...</option>
+                {workers.map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Tipo</label>
@@ -145,7 +148,7 @@ export default function UploadManualModal({
           </button>
           <button
             onClick={onUpload}
-            disabled={uploading || !selWorker || !selFile}
+            disabled={uploading || (!hideWorkerSelect && !selWorker) || !selFile}
             className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 disabled:opacity-50 transition-all hover:bg-indigo-700 shadow-lg shadow-indigo-200"
           >
             {uploading ? <Loader2 className="animate-spin" size={16} /> : <Upload size={16} />}
