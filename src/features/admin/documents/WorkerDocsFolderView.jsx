@@ -4,7 +4,7 @@ import { useApp } from '../../../context/AppContext';
 import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/common/workerDocuments/useDocumentPreview';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
-  FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
+  FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
   Folder, User, ArrowLeft, Search, X, FileSignature, Download, Trash2,
   Layers, Calendar,
 } from 'lucide-react';
@@ -197,7 +197,7 @@ export function DocumentViewerModal({ doc, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="relative bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -482,7 +482,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
 }
 
 function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
-  const [expanded, setExpanded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const config = CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"];
   const colors = COLOR_MAP[config.color];
@@ -493,7 +493,6 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   const temUrgente  = docs.some(d => getValidadeStatus(d.data_validade) === 'urgente');
   const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-slate-200';
 
-  // Agrupar docs por grupo_id — pares frente/verso ficam juntos
   const renderItems = useMemo(() => {
     const groups = {};
     const singles = [];
@@ -510,10 +509,10 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   }, [docs]);
 
   return (
-    <div className={`border rounded-xl overflow-hidden ${alertBorder}`}>
+    <>
       <button
-        onClick={() => setExpanded(e => !e)}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+        onClick={() => setModalOpen(true)}
+        className={`w-full flex items-center gap-2.5 px-3 py-3 text-left border rounded-xl hover:bg-slate-50 hover:shadow-sm transition-all ${alertBorder}`}
       >
         <div className={`p-1.5 rounded-lg ${colors.bg} ${colors.text} flex-shrink-0`}>
           <Icon size={14} />
@@ -524,37 +523,59 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
         </div>
         {temExpirado && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
         {!temExpirado && temUrgente && <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />}
-        {expanded ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
+        <ChevronRight size={12} className="text-slate-400 flex-shrink-0" />
       </button>
 
-      {expanded && (
-        <div className="border-t border-slate-100 bg-white divide-y divide-slate-100">
-          {renderItems.map((item, i) =>
-            item.type === 'pair' ? (
-              <div key={item.docs[0]?.id} className="px-3 py-2.5">
-                <DocCardPair
-                  pair={item.docs}
-                  onOpenDoc={onOpenDoc}
-                  onDelete={onDelete}
-                  confirmDeleteId={confirmDeleteId}
-                  setConfirmDeleteId={setConfirmDeleteId}
-                />
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={e => { if (e.target === e.currentTarget) setModalOpen(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
+              <div className={`p-2 rounded-xl ${colors.bg} ${colors.text} flex-shrink-0`}><Icon size={16} /></div>
+              <h3 className="flex-1 font-black text-slate-800">{categoria}</h3>
+              <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${colors.bg} ${colors.text}`}>
+                {docs.length} doc{docs.length !== 1 ? 's' : ''}
+              </span>
+              <button
+                onClick={() => setModalOpen(false)}
+                className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {/* Lista de docs completos */}
+            <div className="overflow-y-auto p-4">
+              <div className="grid grid-cols-2 gap-3">
+              {renderItems.map((item, i) =>
+                item.type === 'pair' ? (
+                  <DocCardPair
+                    key={item.docs[0]?.id || i}
+                    pair={item.docs}
+                    onOpenDoc={onOpenDoc}
+                    onDelete={onDelete}
+                    confirmDeleteId={confirmDeleteId}
+                    setConfirmDeleteId={setConfirmDeleteId}
+                  />
+                ) : (
+                  <DocCardSingle
+                    key={item.doc.id}
+                    d={item.doc}
+                    onOpenDoc={onOpenDoc}
+                    onDelete={onDelete}
+                    confirmDeleteId={confirmDeleteId}
+                    setConfirmDeleteId={setConfirmDeleteId}
+                  />
+                )
+              )}
               </div>
-            ) : (
-              <div key={item.doc.id} className="px-3 py-2.5">
-                <DocCardSingle
-                  d={item.doc}
-                  onOpenDoc={onOpenDoc}
-                  onDelete={onDelete}
-                  confirmDeleteId={confirmDeleteId}
-                  setConfirmDeleteId={setConfirmDeleteId}
-                />
-              </div>
-            )
-          )}
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
 
