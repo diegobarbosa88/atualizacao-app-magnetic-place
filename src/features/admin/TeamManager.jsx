@@ -12,6 +12,7 @@ import WorkerEmploymentHistoryModal from './team/WorkerEmploymentHistoryModal';
 import WorkerValidationPanel from './team/WorkerValidationPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 import DocumentScannerModal from './team/DocumentScannerModal';
+import WorkerFolderModal from './documents/WorkerFolderModal';
 
 const TeamManagerContent = ({ onLogin }) => {
   const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
@@ -36,6 +37,7 @@ const TeamManagerContent = ({ onLogin }) => {
   const [vhModal, setVhModal] = useState({ show: false, workerId: null, workerName: '' });
   const [empModal, setEmpModal] = useState({ show: false, workerId: null, workerName: '' });
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [pastaModal, setPastaModal] = useState({ show: false, workerId: null, workerName: '' });
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingAbsences = (absenceRequests || []).filter(r => r.status === 'pending').length;
@@ -190,6 +192,14 @@ const TeamManagerContent = ({ onLogin }) => {
 
       <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
 
+      {pastaModal.show && (
+        <WorkerFolderModal
+          workerId={pastaModal.workerId}
+          workerName={pastaModal.workerName}
+          onClose={() => setPastaModal({ show: false, workerId: null, workerName: '' })}
+        />
+      )}
+
       <ChangeRequestsPanel requests={pendingChangeRequests} />
 
       <WorkerList
@@ -202,7 +212,10 @@ const TeamManagerContent = ({ onLogin }) => {
         onEdit={handleWorkerListAction}
         onOpenVHHistory={(id, name) => setVhModal({ show: true, workerId: id, workerName: name })}
         onOpenEmpHistory={(id, name) => setEmpModal({ show: true, workerId: id, workerName: name })}
-        onVerPasta={(id) => navigate(`/admin/documentos?worker=${id}`)}
+        onVerPasta={(id) => {
+          const w = workers.find(x => x.id === id);
+          setPastaModal({ show: true, workerId: id, workerName: w?.name || '' });
+        }}
       />
 
       <WorkerValorHoraHistoryModal

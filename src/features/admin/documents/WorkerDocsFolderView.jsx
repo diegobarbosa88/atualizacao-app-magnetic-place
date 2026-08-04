@@ -104,7 +104,7 @@ function StateBadgeSmall({ state }) {
   );
 }
 
-function DocumentViewerModal({ doc, onClose }) {
+export function DocumentViewerModal({ doc, onClose }) {
   const [imgFailed, setImgFailed] = useState(false);
   if (!doc) return null;
   const url = doc.previewUrl;
@@ -189,11 +189,32 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
         {/* Info do documento */}
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
-          {d.workerName && <div><span className="text-[9px] text-slate-400 font-bold">Nome: </span><span className="text-[10px] font-black text-slate-700">{d.workerName}</span></div>}
-          {d.createdAt  && <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{formatDocDate(d.createdAt.toISOString(), true)}</span></div>}
-          {d.data_validade && <div><span className="text-[9px] text-slate-400 font-bold">Válido até: </span><span className="text-[10px] font-black text-slate-700">{d.data_validade}</span></div>}
+          {(() => {
+            const ex = d.dados_extraidos;
+            const nome = ex?.trabalhador?.nome_completo || d.workerName;
+            const nif   = ex?.trabalhador?.nif;
+            const niss  = ex?.trabalhador?.niss;
+            const nascimento = ex?.trabalhador?.data_nascimento;
+            const numDoc = ex?.documento?.numero_documento;
+            const emissao = ex?.documento?.data_emissao || (d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : null);
+            const validade = d.data_validade;
+            const infoRow = (label, val) => val ? (
+              <div key={label}><span className="text-[9px] text-slate-400 font-bold">{label}: </span><span className="text-[10px] font-black text-slate-700">{val}</span></div>
+            ) : null;
+            return (
+              <>
+                {infoRow('Nome', nome)}
+                {infoRow('NIF', nif)}
+                {infoRow('NISS', niss)}
+                {infoRow('Data Nasc.', nascimento)}
+                {infoRow('Nº Documento', numDoc)}
+                {infoRow('Emissão', emissao)}
+                {infoRow('Válido até', validade)}
+              </>
+            );
+          })()}
           <div className="flex flex-wrap gap-1 pt-0.5">
-            <StateBadgeSmall state={d.state} />
+            {d.source === 'template' && <StateBadgeSmall state={d.state} />}
             <ValidadeChip dataValidade={d.data_validade} />
           </div>
         </div>
@@ -268,11 +289,31 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
         {/* Info do documento */}
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
-          {workerName && <div><span className="text-[9px] text-slate-400 font-bold">Nome: </span><span className="text-[10px] font-black text-slate-700">{workerName}</span></div>}
-          {emissao    && <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{formatDocDate(emissao.toISOString(), true)}</span></div>}
-          {validade   && <div><span className="text-[9px] text-slate-400 font-bold">Válido até: </span><span className="text-[10px] font-black text-slate-700">{validade}</span></div>}
+          {(() => {
+            const ex = frente?.dados_extraidos || verso?.dados_extraidos;
+            const nome   = ex?.trabalhador?.nome_completo || workerName;
+            const nif    = ex?.trabalhador?.nif;
+            const niss   = ex?.trabalhador?.niss;
+            const nascimento = ex?.trabalhador?.data_nascimento;
+            const numDoc = ex?.documento?.numero_documento;
+            const emissaoStr = ex?.documento?.data_emissao || (emissao ? formatDocDate(emissao.toISOString(), true) : null);
+            const infoRow = (label, val) => val ? (
+              <div key={label}><span className="text-[9px] text-slate-400 font-bold">{label}: </span><span className="text-[10px] font-black text-slate-700">{val}</span></div>
+            ) : null;
+            return (
+              <>
+                {infoRow('Nome', nome)}
+                {infoRow('NIF', nif)}
+                {infoRow('NISS', niss)}
+                {infoRow('Data Nasc.', nascimento)}
+                {infoRow('Nº Documento', numDoc)}
+                {infoRow('Emissão', emissaoStr)}
+                {infoRow('Válido até', validade)}
+              </>
+            );
+          })()}
           <div className="flex flex-wrap gap-1 pt-0.5">
-            {frente?.state && <StateBadgeSmall state={frente.state} />}
+            {frente?.source === 'template' && frente?.state && <StateBadgeSmall state={frente.state} />}
             <ValidadeChip dataValidade={validade} />
           </div>
         </div>
@@ -383,7 +424,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   );
 }
 
-function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
+export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete }) {
   const byCategoria = useMemo(() => {
     const map = {};
     CATEGORIAS_RH_ACT.forEach(c => { map[c] = []; });

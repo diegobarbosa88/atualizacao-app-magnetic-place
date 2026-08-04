@@ -176,6 +176,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         signedPdfUrl: d.pdfAssinadoUrl,
         grupo_id: d.grupo_id || null,
         lado: d.lado || null,
+        dados_extraidos: d.dados_extraidos || null,
         raw: d,
       };
     });

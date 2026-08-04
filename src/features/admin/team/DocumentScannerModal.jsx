@@ -251,6 +251,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
       data_validade: overrideValidade ?? r.extractedData?.documento?.data_validade ?? null,
       grupo_id: grupoId || null,
       lado: r.groupRole || null,
+      dados_extraidos: r.extractedData || null,
     });
 
     return urlData.publicUrl;
