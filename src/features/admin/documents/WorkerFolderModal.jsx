@@ -4,6 +4,7 @@ import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
 import UploadManualModal from './UploadManualModal';
+import DocumentScannerModal from '../team/DocumentScannerModal';
 import { inferirCategoria } from '../../../constants/rhCategories';
 
 const isSigned = s => ['signed', 'Assinado', 'assinado'].includes(s);
@@ -19,6 +20,7 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
   const [selValidade, setSelValidade]   = useState('');
   const [selFile, setSelFile]           = useState(null);
   const [uploading, setUploading]       = useState(false);
+  const [scannerOpen, setScannerOpen]   = useState(false);
 
   const workerById = useMemo(() => {
     const m = {};
@@ -165,12 +167,15 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
             onOpenDoc={handleOpenDoc}
             onDelete={handleDelete}
             onAddDoc={() => setShowUpload(true)}
+            onScan={() => setScannerOpen(true)}
           />
         </div>
       </div>
 
       {/* Modal de pré-visualização (fixed, sobrepõe tudo) */}
       <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+
+      <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
 
       {/* Modal de upload (fixed, z-[200] sobrepõe tudo) */}
       {showUpload && (
