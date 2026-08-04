@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
@@ -20,15 +20,30 @@ function buildDocTitle(d) {
 }
 
 function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
+  const [src, setSrc] = useState(null);
   const [failed, setFailed] = useState(false);
-  if (!url || failed) {
+
+  useEffect(() => {
+    setFailed(false);
+    if (!url) { setSrc(null); return; }
+    const sb = window.supabaseInstance;
+    if (!sb) { setSrc(url); return; }
+    const match = url.match(/\/object\/public\/documentos\/(.+?)(\?|$)/);
+    if (!match) { setSrc(url); return; }
+    sb.storage.from('documentos')
+      .createSignedUrl(decodeURIComponent(match[1]), 3600)
+      .then(({ data }) => setSrc(data?.signedUrl || url))
+      .catch(() => setSrc(url));
+  }, [url]);
+
+  if (!src || failed) {
     return (
       <div className={wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100'}>
         <FileText size={22} className="text-slate-300" />
       </div>
     );
   }
-  return <img src={url} alt={alt || ''} onError={() => setFailed(true)} className={imgClassName} />;
+  return <img src={src} alt={alt || ''} onError={() => setFailed(true)} className={imgClassName} />;
 }
 
 const CATEGORIA_CONFIG = {
@@ -172,17 +187,15 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
         </div>
 
         {/* Info do documento */}
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1">
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
           {d.workerName && <div><span className="text-[9px] text-slate-400 font-bold">Nome: </span><span className="text-[10px] font-black text-slate-700">{d.workerName}</span></div>}
           {d.createdAt  && <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{formatDocDate(d.createdAt.toISOString(), true)}</span></div>}
-          {d.data_validade && (
-            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
-              <Calendar size={10} className="text-amber-600 flex-shrink-0" />
-              <span className="text-[9px] text-amber-600 font-bold">Válido até: </span>
-              <span className="text-[10px] font-black text-amber-800">{d.data_validade}</span>
-            </div>
-          )}
+          {d.data_validade && <div><span className="text-[9px] text-slate-400 font-bold">Válido até: </span><span className="text-[10px] font-black text-slate-700">{d.data_validade}</span></div>}
+          <div className="flex flex-wrap gap-1 pt-0.5">
+            <StateBadgeSmall state={d.state} />
+            <ValidadeChip dataValidade={d.data_validade} />
+          </div>
         </div>
 
         {/* Ações */}
@@ -253,17 +266,15 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
         </div>
 
         {/* Info do documento */}
-        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1">
+        <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
           {workerName && <div><span className="text-[9px] text-slate-400 font-bold">Nome: </span><span className="text-[10px] font-black text-slate-700">{workerName}</span></div>}
           {emissao    && <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{formatDocDate(emissao.toISOString(), true)}</span></div>}
-          {validade && (
-            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
-              <Calendar size={10} className="text-amber-600 flex-shrink-0" />
-              <span className="text-[9px] text-amber-600 font-bold">Válido até: </span>
-              <span className="text-[10px] font-black text-amber-800">{validade}</span>
-            </div>
-          )}
+          {validade   && <div><span className="text-[9px] text-slate-400 font-bold">Válido até: </span><span className="text-[10px] font-black text-slate-700">{validade}</span></div>}
+          <div className="flex flex-wrap gap-1 pt-0.5">
+            {frente?.state && <StateBadgeSmall state={frente.state} />}
+            <ValidadeChip dataValidade={validade} />
+          </div>
         </div>
 
         {/* Ações por lado */}
@@ -296,7 +307,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
 }
 
 function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
-  const [expanded, setExpanded] = useState(docs.length > 0 && docs.length <= 5);
+  const [expanded, setExpanded] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const config = CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"];
   const colors = COLOR_MAP[config.color];
