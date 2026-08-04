@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, ScanSearch } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
@@ -148,12 +148,24 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
     >
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <div>
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
+          <div className="flex-1 min-w-0">
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Pasta de Documentos</p>
-            <h3 className="font-black text-slate-800">{workerName}</h3>
+            <h3 className="font-black text-slate-800 truncate">{workerName}</h3>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors">
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-colors flex-shrink-0"
+          >
+            <ScanSearch size={13} /> Scanner
+          </button>
+          <button
+            onClick={() => setShowUpload(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-colors flex-shrink-0"
+          >
+            <Plus size={13} /> Adicionar
+          </button>
+          <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors flex-shrink-0">
             <X size={14} />
           </button>
         </div>
@@ -166,8 +178,6 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
             onBack={onClose}
             onOpenDoc={handleOpenDoc}
             onDelete={handleDelete}
-            onAddDoc={() => setShowUpload(true)}
-            onScan={() => setScannerOpen(true)}
           />
         </div>
       </div>
