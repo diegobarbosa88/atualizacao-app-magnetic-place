@@ -17,7 +17,7 @@ const temFluxoAssinatura = (d) =>
   TIPOS_COM_ASSINATURA.some(t => (d?.tipo || '').toLowerCase().includes(t));
 
 function buildDocTitle(d) {
-  const base = (d.tipo || d.title || 'Documento').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
+  const base = (d.title || d.tipo || 'Documento').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
   if (d.createdAt) {
     return `${base} - ${MESES_PT[d.createdAt.getMonth()]} ${d.createdAt.getFullYear()}`;
   }
@@ -26,29 +26,48 @@ function buildDocTitle(d) {
 
 function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
   const [src, setSrc] = useState(null);
-  const [failed, setFailed] = useState(false);
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const isPdf = url && /\.pdf(\?|$)/i.test(url);
 
   useEffect(() => {
-    setFailed(false);
+    setImgFailed(false);
     if (!url) { setSrc(null); return; }
+    if (isPdf) { setSrc(url); return; }
     const sb = window.supabaseInstance;
     if (!sb) { setSrc(url); return; }
-    const match = url.match(/\/object\/public\/documentos\/(.+?)(\?|$)/);
+    const bucket = url.includes('/document_templates/') ? 'document_templates' : 'documentos';
+    const match = url.match(/\/object\/public\/(?:documentos|document_templates)\/(.+?)(\?|$)/);
     if (!match) { setSrc(url); return; }
-    sb.storage.from('documentos')
+    sb.storage.from(bucket)
       .createSignedUrl(decodeURIComponent(match[1]), 3600)
       .then(({ data }) => setSrc(data?.signedUrl || url))
       .catch(() => setSrc(url));
-  }, [url]);
+  }, [url, isPdf]);
 
-  if (!src || failed) {
+  const wrapper = wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100';
+
+  if (!url) {
+    return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
+  }
+
+  if (isPdf && src) {
     return (
-      <div className={wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100'}>
-        <FileText size={22} className="text-slate-300" />
+      <div className="w-full h-full overflow-hidden relative" style={{ pointerEvents: 'none' }}>
+        <iframe
+          src={src}
+          title={alt || 'preview'}
+          className="absolute top-0 left-0 border-0 bg-white"
+          style={{ width: '400%', height: '400%', transform: 'scale(0.25)', transformOrigin: 'top left' }}
+        />
       </div>
     );
   }
-  return <img src={src} alt={alt || ''} onError={() => setFailed(true)} className={imgClassName} />;
+
+  if (!src || imgFailed) {
+    return <div className={wrapper}><FileText size={22} className="text-slate-300" /></div>;
+  }
+  return <img src={src} alt={alt || ''} onError={() => setImgFailed(true)} className={imgClassName} />;
 }
 
 const CATEGORIA_CONFIG = {
@@ -196,13 +215,16 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
           {(() => {
             const ex = d.dados_extraidos;
-            const nome = ex?.trabalhador?.nome_completo || d.workerName;
-            const nif   = ex?.trabalhador?.nif;
-            const niss  = ex?.trabalhador?.niss;
+            const nome       = ex?.trabalhador?.nome_completo || d.workerName;
+            const nif        = ex?.trabalhador?.nif    || d.workerNif;
+            const niss       = ex?.trabalhador?.niss   || d.workerNiss;
+            const profissao  = d.workerProfissao;
             const nascimento = ex?.trabalhador?.data_nascimento;
-            const numDoc = ex?.documento?.numero_documento;
-            const emissao = ex?.documento?.data_emissao || (d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : null);
-            const validade = d.data_validade;
+            const numDoc     = ex?.documento?.numero_documento;
+            const emissao    = ex?.documento?.data_emissao || (d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : null);
+            const validade   = d.data_validade;
+            const assinadoEm = d.signedAtWorker ? formatDocDate(d.signedAtWorker.toISOString(), true) : null;
+            const aprovadoEm = d.signedAtAdmin  ? formatDocDate(d.signedAtAdmin.toISOString(), true)  : null;
             const infoRow = (label, val) => val ? (
               <div key={label}><span className="text-[9px] text-slate-400 font-bold">{label}: </span><span className="text-[10px] font-black text-slate-700">{val}</span></div>
             ) : null;
@@ -211,10 +233,13 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
                 {infoRow('Nome', nome)}
                 {infoRow('NIF', nif)}
                 {infoRow('NISS', niss)}
+                {infoRow('Profissão', profissao)}
                 {infoRow('Data Nasc.', nascimento)}
                 {infoRow('Nº Documento', numDoc)}
                 {infoRow('Emissão', emissao)}
                 {infoRow('Válido até', validade)}
+                {infoRow('Assinado em', assinadoEm)}
+                {infoRow('Aprovado em', aprovadoEm)}
               </>
             );
           })()}
@@ -296,12 +321,16 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
           {(() => {
             const ex = frente?.dados_extraidos || verso?.dados_extraidos;
-            const nome   = ex?.trabalhador?.nome_completo || workerName;
-            const nif    = ex?.trabalhador?.nif;
-            const niss   = ex?.trabalhador?.niss;
+            const ref = frente || verso;
+            const nome       = ex?.trabalhador?.nome_completo || workerName;
+            const nif        = ex?.trabalhador?.nif    || ref?.workerNif;
+            const niss       = ex?.trabalhador?.niss   || ref?.workerNiss;
+            const profissao  = ref?.workerProfissao;
             const nascimento = ex?.trabalhador?.data_nascimento;
-            const numDoc = ex?.documento?.numero_documento;
+            const numDoc     = ex?.documento?.numero_documento;
             const emissaoStr = ex?.documento?.data_emissao || (emissao ? formatDocDate(emissao.toISOString(), true) : null);
+            const assinadoEm = ref?.signedAtWorker ? formatDocDate(ref.signedAtWorker.toISOString(), true) : null;
+            const aprovadoEm = ref?.signedAtAdmin  ? formatDocDate(ref.signedAtAdmin.toISOString(), true)  : null;
             const infoRow = (label, val) => val ? (
               <div key={label}><span className="text-[9px] text-slate-400 font-bold">{label}: </span><span className="text-[10px] font-black text-slate-700">{val}</span></div>
             ) : null;
@@ -310,10 +339,13 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
                 {infoRow('Nome', nome)}
                 {infoRow('NIF', nif)}
                 {infoRow('NISS', niss)}
+                {infoRow('Profissão', profissao)}
                 {infoRow('Data Nasc.', nascimento)}
                 {infoRow('Nº Documento', numDoc)}
                 {infoRow('Emissão', emissaoStr)}
                 {infoRow('Válido até', validade)}
+                {infoRow('Assinado em', assinadoEm)}
+                {infoRow('Aprovado em', aprovadoEm)}
               </>
             );
           })()}

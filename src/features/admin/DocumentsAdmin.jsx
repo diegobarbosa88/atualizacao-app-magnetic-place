@@ -177,6 +177,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         grupo_id: d.grupo_id || null,
         lado: d.lado || null,
         dados_extraidos: d.dados_extraidos || null,
+        workerNif:       workerById[d.workerId]?.nif       || null,
+        workerNiss:      workerById[d.workerId]?.nis        || null,
+        workerProfissao: workerById[d.workerId]?.profissao  || null,
         raw: d,
       };
     });
@@ -199,6 +202,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         signedAtWorker: d.signed_at ? new Date(d.signed_at) : null,
         signedAtAdmin: d.admin_signed_at ? new Date(d.admin_signed_at) : null,
         signedPdfUrl: d.signed_pdf_url,
+        workerNif:       workerById[d.worker_id]?.nif       || null,
+        workerNiss:      workerById[d.worker_id]?.nis        || null,
+        workerProfissao: workerById[d.worker_id]?.profissao  || null,
         raw: d,
       };
     });

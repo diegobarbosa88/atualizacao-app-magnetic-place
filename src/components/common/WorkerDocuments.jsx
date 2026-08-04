@@ -131,13 +131,18 @@ const WorkerDocuments = ({ currentUser, documents, saveToDb, pendingOnly = false
     () => documents?.filter(d => d.workerId === currentUser?.id && d.status !== 'Rascunho') || [],
     [documents, currentUser?.id]
   );
+  const TIPOS_WORKER = ['documento', 'recibo de vencimento', 'mapa de ajuda de custo'];
+  const isWorkerTipo = (d) => TIPOS_WORKER.some(t => (d.tipo || '').toLowerCase().includes(t));
+
   const pendentes = useMemo(() => {
-    const combined = docs.filter(d => isPending(d.status)).concat(templateDocs.filter(d => isPending(d.status)));
-    return [...new Map(combined.map(d => [d.id, d])).values()];
+    const manual = docs.filter(d => isPending(d.status) && isWorkerTipo(d));
+    const template = templateDocs.filter(d => isPending(d.status));
+    return [...new Map([...manual, ...template].map(d => [d.id, d])).values()];
   }, [docs, templateDocs]);
   const historico = useMemo(() => {
-    const combined = docs.filter(d => isSigned(d.status)).concat(templateDocs.filter(d => isSigned(d.status)));
-    return [...new Map(combined.map(d => [d.id, d])).values()];
+    const manual = docs.filter(d => isSigned(d.status) && isWorkerTipo(d));
+    const template = templateDocs.filter(d => isSigned(d.status));
+    return [...new Map([...manual, ...template].map(d => [d.id, d])).values()];
   }, [docs, templateDocs]);
 
   const getCoordinates = (e) => {
