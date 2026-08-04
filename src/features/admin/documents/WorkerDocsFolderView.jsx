@@ -548,7 +548,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
             </div>
             {/* Lista de docs completos */}
             <div className="overflow-y-auto p-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {renderItems.map((item, i) =>
                 item.type === 'pair' ? (
                   <DocCardPair
