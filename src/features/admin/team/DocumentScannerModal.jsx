@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { useTeam } from '../contexts/TeamContext';
+import { useSafeTeam } from '../contexts/TeamContext';
 import { callGeminiVision } from '../../../utils/aiUtils';
 import { encontrarWorker } from '../../../utils/validacaoHelpers';
 import { MAPA_SCANNER_ACT, inferirCategoria } from '../../../constants/rhCategories';
@@ -137,7 +137,7 @@ const detectPairs = (results) => {
 
 const DocumentScannerModal = ({ open, onClose }) => {
   const { workers, supabase, systemSettings, saveToDb } = useApp();
-  const { setWorkerForm, setIsAddingInTab } = useTeam();
+  const { setWorkerForm, setIsAddingInTab } = useSafeTeam();
 
   const [step, setStep] = useState('upload');
   const [files, setFiles] = useState([]);

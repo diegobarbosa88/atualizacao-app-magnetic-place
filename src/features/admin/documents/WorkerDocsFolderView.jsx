@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
 import { formatDocDate } from '../../../utils/dateUtils';
+import DocumentScannerModal from '../team/DocumentScannerModal';
+import UploadManualModal from './UploadManualModal';
 
 const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -649,10 +651,52 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
 }
 
 export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, onDeleteGenerated }) {
+  const { supabase, setDocuments } = useApp();
   const [searchParams] = useSearchParams();
   const [selectedWorker, setSelectedWorker] = useState(() => searchParams.get('worker') || null);
   const [search, setSearch] = useState('');
   const [previewDoc, setPreviewDoc] = useState(null);
+  const [scannerOpen, setScannerOpen]   = useState(false);
+  const [showUpload, setShowUpload]     = useState(false);
+  const [selTipo, setSelTipo]           = useState('Recibo de Vencimento');
+  const [selCategoria, setSelCategoria] = useState('Remuneração');
+  const [selValidade, setSelValidade]   = useState('');
+  const [selFile, setSelFile]           = useState(null);
+  const [uploading, setUploading]       = useState(false);
+
+  const handleUpload = async () => {
+    if (!selFile || !supabase || !selectedWorker) return;
+    setUploading(true);
+    try {
+      const slugify = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+      const cleanName = selFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const path = `${selectedWorker}/${slugify(selCategoria || selTipo)}/${Date.now()}_${cleanName}`;
+      const { error: upError } = await supabase.storage.from('documentos').upload(path, selFile);
+      if (upError) throw upError;
+      const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path);
+      const newDoc = {
+        id: `doc_${Date.now()}`,
+        workerId: selectedWorker,
+        tipo: selTipo,
+        nomeFicheiro: selFile.name,
+        url: urlData.publicUrl,
+        status: 'Pendente',
+        categoria: selCategoria || null,
+        data_validade: selValidade || null,
+        dataEmissao: new Date().toISOString(),
+      };
+      const { error: dbError } = await supabase.from('documents').insert([newDoc]);
+      if (dbError) throw dbError;
+      if (setDocuments) setDocuments(prev => [newDoc, ...prev]);
+      setSelFile(null);
+      setSelValidade('');
+      setShowUpload(false);
+    } catch (err) {
+      alert(`Erro: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleDelete = (doc) => {
     if (doc.source === 'manual') {
@@ -702,7 +746,23 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
             onBack={() => setSelectedWorker(null)}
             onOpenDoc={handleOpenDoc}
             onDelete={handleDelete}
+            onAddDoc={() => setShowUpload(true)}
           />
+          {showUpload && (
+            <UploadManualModal
+              hideWorkerSelect
+              workers={[{ id: selectedWorker, name: workerData.workerName }]}
+              uploading={uploading}
+              selWorker={selectedWorker}
+              setSelWorker={() => {}}
+              selTipo={selTipo}           setSelTipo={setSelTipo}
+              selCategoria={selCategoria} setSelCategoria={setSelCategoria}
+              selValidade={selValidade}   setSelValidade={setSelValidade}
+              selFile={selFile}           setSelFile={setSelFile}
+              onClose={() => { setShowUpload(false); setSelFile(null); setSelValidade(''); }}
+              onUpload={handleUpload}
+            />
+          )}
         </>
       );
     }
@@ -712,17 +772,26 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
   return (
     <div className="space-y-4">
       <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+      <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
 
-      {/* Pesquisa de trabalhador */}
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Pesquisar colaborador..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 py-2.5 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
-        />
+      {/* Pesquisa + Scanner */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Pesquisar colaborador..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2.5 text-xs font-bold border border-slate-200 rounded-xl bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
+          />
+        </div>
+        <button
+          onClick={() => setScannerOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-colors flex-shrink-0"
+        >
+          <ScanSearch size={13} /> Scanner
+        </button>
       </div>
 
       {workersFiltrados.length === 0 ? (

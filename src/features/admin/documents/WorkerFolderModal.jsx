@@ -1,10 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus, ScanSearch } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
 import UploadManualModal from './UploadManualModal';
-import DocumentScannerModal from '../team/DocumentScannerModal';
 import { inferirCategoria } from '../../../constants/rhCategories';
 
 const isSigned = s => ['signed', 'Assinado', 'assinado'].includes(s);
@@ -20,7 +19,6 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
   const [selValidade, setSelValidade]   = useState('');
   const [selFile, setSelFile]           = useState(null);
   const [uploading, setUploading]       = useState(false);
-  const [scannerOpen, setScannerOpen]   = useState(false);
 
   const workerById = useMemo(() => {
     const m = {};
@@ -154,12 +152,6 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
             <h3 className="font-black text-slate-800 truncate">{workerName}</h3>
           </div>
           <button
-            onClick={() => setScannerOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-colors flex-shrink-0"
-          >
-            <ScanSearch size={13} /> Scanner
-          </button>
-          <button
             onClick={() => setShowUpload(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-colors flex-shrink-0"
           >
@@ -184,8 +176,6 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
 
       {/* Modal de pré-visualização (fixed, sobrepõe tudo) */}
       <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
-
-      <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
 
       {/* Modal de upload (fixed, z-[200] sobrepõe tudo) */}
       {showUpload && (

@@ -156,4 +156,9 @@ export const useTeam = () => {
   return context;
 };
 
+export const useSafeTeam = () => {
+  const context = useContext(TeamContext);
+  return context || { setWorkerForm: () => {}, setIsAddingInTab: () => {} };
+};
+
 export default TeamContext;
