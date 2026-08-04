@@ -40,6 +40,7 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
         grupo_id: d.grupo_id || null,
         lado: d.lado || null,
         dados_extraidos: d.dados_extraidos || null,
+        visivel_worker: d.visivel_worker ?? false,
         workerNif:       workerById[d.workerId]?.nif       || null,
         workerNiss:      workerById[d.workerId]?.nis        || null,
         workerProfissao: workerById[d.workerId]?.profissao  || null,

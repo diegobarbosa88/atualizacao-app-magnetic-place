@@ -4,7 +4,7 @@ import { useApp } from '../../../context/AppContext';
 import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/common/workerDocuments/useDocumentPreview';
 import {
   FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
-  FolderOpen, Eye, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
+  FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp,
   Folder, User, ArrowLeft, Search, X, FileSignature, Download, Trash2,
   Layers, Calendar,
 } from 'lucide-react';
@@ -248,6 +248,8 @@ export function DocumentViewerModal({ doc, onClose }) {
 }
 
 function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
+  const { supabase } = useApp();
+  const [visivelWorker, setVisivelWorker] = useState(d.visivel_worker ?? false);
   const url = d.viewUrl || d.signedPdfUrl || null;
   const temExpirado = getValidadeStatus(d.data_validade) === 'expirado';
   const temUrgente  = getValidadeStatus(d.data_validade) === 'urgente';
@@ -322,6 +324,19 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
         ) : (
           <div className="flex gap-2">
             <button onClick={() => onOpenDoc(d)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors text-[10px] font-black"><Eye size={12} /> Ver</button>
+            {d.source === 'manual' && (
+              <button
+                onClick={async () => {
+                  const next = !visivelWorker;
+                  setVisivelWorker(next);
+                  await supabase?.from('documents').update({ visivel_worker: next }).eq('id', d.raw.id);
+                }}
+                title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
+                className={`px-2.5 py-2 rounded-lg transition-colors text-[10px] font-black flex items-center gap-1 ${visivelWorker ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+              >
+                {visivelWorker ? <Eye size={12} /> : <EyeOff size={12} />}
+              </button>
+            )}
             <button onClick={() => setConfirmDeleteId(d.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-slate-400 bg-slate-50 hover:bg-rose-50 hover:text-rose-500 transition-colors text-[10px] font-black"><Trash2 size={12} /> Apagar</button>
           </div>
         )}
@@ -331,8 +346,13 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
 }
 
 function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
+  const { supabase } = useApp();
   const frente = pair.find(d => d.lado === 'frente') || pair[0];
   const verso  = pair.find(d => d.lado === 'verso')  || pair[1];
+  const isManual = pair.some(d => d.source === 'manual');
+  const [visivelWorker, setVisivelWorker] = useState(
+    pair.some(d => d.visivel_worker) ?? false
+  );
 
   // Título base sem sufixo (Frente)/(Verso)
   const tipoBase = (frente?.tipo || verso?.tipo || '').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
@@ -368,6 +388,22 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
           {workerName && <p className="text-[10px] text-violet-600 font-bold truncate">{workerName}</p>}
         </div>
         {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
+        {isManual && (
+          <button
+            onClick={async () => {
+              const next = !visivelWorker;
+              setVisivelWorker(next);
+              const ids = pair.filter(d => d.source === 'manual').map(d => d.raw.id);
+              for (const id of ids) {
+                await supabase?.from('documents').update({ visivel_worker: next }).eq('id', id);
+              }
+            }}
+            title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
+            className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 bg-emerald-100 hover:bg-emerald-200' : 'text-slate-400 bg-slate-100 hover:bg-slate-200'}`}
+          >
+            {visivelWorker ? <Eye size={11} /> : <EyeOff size={11} />}
+          </button>
+        )}
       </div>
 
       <div className="px-3 pb-3 space-y-2.5 bg-white">
