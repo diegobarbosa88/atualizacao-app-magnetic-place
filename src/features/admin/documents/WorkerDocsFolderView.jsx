@@ -9,6 +9,28 @@ import {
 import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
 import { formatDocDate } from '../../../utils/dateUtils';
 
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function buildDocTitle(d) {
+  const base = (d.tipo || d.title || 'Documento').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
+  if (d.createdAt) {
+    return `${base} - ${MESES_PT[d.createdAt.getMonth()]} ${d.createdAt.getFullYear()}`;
+  }
+  return base;
+}
+
+function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
+  const [failed, setFailed] = useState(false);
+  if (!url || failed) {
+    return (
+      <div className={wrapperClassName || 'w-full h-full flex items-center justify-center bg-slate-100'}>
+        <FileText size={22} className="text-slate-300" />
+      </div>
+    );
+  }
+  return <img src={url} alt={alt || ''} onError={() => setFailed(true)} className={imgClassName} />;
+}
+
 const CATEGORIA_CONFIG = {
   "Contratual":                    { icon: FileText,       color: 'indigo' },
   "Remuneração":                   { icon: Coins,          color: 'emerald' },
@@ -68,9 +90,10 @@ function StateBadgeSmall({ state }) {
 }
 
 function DocumentViewerModal({ doc, onClose }) {
+  const [imgFailed, setImgFailed] = useState(false);
   if (!doc) return null;
   const url = doc.previewUrl;
-  const isImage = url && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url);
+  const title = buildDocTitle(doc);
 
   return (
     <div
@@ -81,26 +104,18 @@ function DocumentViewerModal({ doc, onClose }) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-slate-800 truncate">{doc.title}</p>
+            <p className="text-sm font-black text-slate-800 truncate">{title}</p>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {[doc.workerName, doc.categoria, doc.tipo].filter(Boolean).join(' · ')}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             {url && (
-              <a
-                href={url}
-                download
-                className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors"
-                title="Descarregar"
-              >
+              <a href={url} download className="p-2 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-500 hover:text-indigo-600 transition-colors" title="Descarregar">
                 <Download size={14} />
               </a>
             )}
-            <button
-              onClick={onClose}
-              className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
-            >
+            <button onClick={onClose} className="p-2 rounded-xl bg-slate-100 hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors">
               <X size={14} />
             </button>
           </div>
@@ -114,16 +129,17 @@ function DocumentViewerModal({ doc, onClose }) {
               <p className="text-sm font-black uppercase tracking-widest">Pré-visualização não disponível</p>
               <p className="text-xs text-slate-500">Este documento ainda não tem ficheiro associado</p>
             </div>
-          ) : isImage ? (
+          ) : !imgFailed ? (
             <div className="flex items-center justify-center p-6">
-              <img src={url} alt={doc.title} className="max-w-full max-h-[70vh] object-contain rounded-xl shadow" />
+              <img
+                src={url}
+                alt={title}
+                onError={() => setImgFailed(true)}
+                className="max-w-full max-h-[70vh] object-contain rounded-xl shadow"
+              />
             </div>
           ) : (
-            <iframe
-              src={url}
-              className="w-full min-h-[60vh] h-full border-0"
-              title={doc.title}
-            />
+            <iframe src={url} className="w-full min-h-[60vh] h-full border-0" title={title} />
           )}
         </div>
       </div>
@@ -133,9 +149,9 @@ function DocumentViewerModal({ doc, onClose }) {
 
 function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDeleteId }) {
   const url = d.viewUrl || d.signedPdfUrl || null;
-  const isImageUrl = (u) => u && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(u);
   const temExpirado = getValidadeStatus(d.data_validade) === 'expirado';
   const temUrgente  = getValidadeStatus(d.data_validade) === 'urgente';
+  const title = buildDocTitle(d);
 
   return (
     <div className={`rounded-xl border-2 overflow-hidden ${temExpirado ? 'border-red-200' : temUrgente ? 'border-amber-200' : 'border-slate-200'}`}>
@@ -143,7 +159,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
       <div className="flex items-start gap-2 px-3 py-2.5 bg-slate-50">
         <div className="p-1.5 bg-slate-200 text-slate-600 rounded-lg flex-shrink-0 mt-0.5"><FileText size={12} /></div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-800 truncate">{d.tipo || d.title}</p>
+          <p className="text-xs font-black text-slate-800 truncate">{title}</p>
           {d.workerName && <p className="text-[10px] text-slate-500 font-bold truncate">{d.workerName}</p>}
         </div>
         {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
@@ -151,14 +167,8 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
 
       <div className="px-3 pb-3 space-y-2.5 bg-white">
         {/* Pré-visualização */}
-        <div className="pt-2.5">
-          {url && isImageUrl(url) ? (
-            <img src={url} alt={d.tipo} className="w-full h-36 object-cover rounded-lg border border-slate-200" />
-          ) : (
-            <div className="w-full h-36 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center">
-              <FileText size={24} className="text-slate-300" />
-            </div>
-          )}
+        <div className="pt-2.5 rounded-lg border border-slate-200 overflow-hidden h-36">
+          <ThumbImg url={url} alt={title} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-slate-100" />
         </div>
 
         {/* Info do documento */}
@@ -207,20 +217,18 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
   const temExpirado = getValidadeStatus(validade) === 'expirado';
   const temUrgente  = getValidadeStatus(validade) === 'urgente';
 
-  const isImageUrl = (url) => url && /\.(png|jpe?g|gif|webp)(\?|$)/i.test(url);
+  const pairTitle = emissao
+    ? `${tipoBase} — Frente & Verso - ${MESES_PT[emissao.getMonth()]} ${emissao.getFullYear()}`
+    : `${tipoBase} — Frente & Verso`;
 
   const PreviewThumb = ({ doc, label }) => {
-    const url = doc?.viewUrl || doc?.signedPdfUrl || null;
+    const thumbUrl = doc?.viewUrl || doc?.signedPdfUrl || null;
     return (
       <div className="flex-1 min-w-0">
         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center mb-1">{label}</p>
-        {url && isImageUrl(url) ? (
-          <img src={url} alt={label} className="w-full h-28 object-cover rounded-lg border border-slate-200" />
-        ) : (
-          <div className="w-full h-28 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center">
-            <FileText size={20} className="text-slate-300" />
-          </div>
-        )}
+        <div className="h-28 rounded-lg border border-slate-200 overflow-hidden">
+          <ThumbImg url={thumbUrl} alt={label} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-slate-100" />
+        </div>
       </div>
     );
   };
@@ -231,7 +239,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
       <div className="flex items-start gap-2 px-3 py-2.5 bg-violet-50">
         <div className="p-1.5 bg-violet-200 text-violet-700 rounded-lg flex-shrink-0 mt-0.5"><Layers size={12} /></div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-violet-800 truncate">{tipoBase} — Frente &amp; Verso</p>
+          <p className="text-xs font-black text-violet-800 truncate">{pairTitle}</p>
           {workerName && <p className="text-[10px] text-violet-600 font-bold truncate">{workerName}</p>}
         </div>
         {(temExpirado || temUrgente) && <AlertTriangle size={12} className={temExpirado ? 'text-red-500' : 'text-amber-500'} />}
@@ -464,7 +472,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
     if (workerData) {
       return (
         <>
-          <DocumentViewerModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+          <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
           <WorkerPastaView
             worker={workerData}
             docs={workerData.docs}
@@ -480,7 +488,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
   // Vista de lista de trabalhadores
   return (
     <div className="space-y-4">
-      <DocumentViewerModal doc={previewDoc} onClose={() => setPreviewDoc(null)} />
+      <DocumentViewerModal key={previewDoc?.id} doc={previewDoc} onClose={() => setPreviewDoc(null)} />
 
       {/* Pesquisa de trabalhador */}
       <div className="relative">
