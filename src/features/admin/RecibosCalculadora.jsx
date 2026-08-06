@@ -306,6 +306,7 @@ export default function RecibosCalculadora() {
       const fmtData = d => d ? d.split('T')[0] : '';
 
       return {
+        workerId:       w.id,
         nome:           w.name || '',
         nif:            w.nif || '',
         nis:            w.nis || '',
@@ -1202,7 +1203,11 @@ ${hdrRow}${bodyRows}${totRow}
 
       {/* ── Resumo Mensal ── */}
       {subTab === 'resumo' && (
-        <ResumoMensalTable rows={resumoRows} mesLabel={`${MESES_PT[parseInt(inputs.mes, 10)] || ''} ${inputs.ano}`} />
+        <ResumoMensalTable
+          rows={resumoRows}
+          mesLabel={`${MESES_PT[parseInt(inputs.mes, 10)] || ''} ${inputs.ano}`}
+          mesStr={`${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`}
+        />
       )}
 
       {/* Grid 2 colunas: inputs + preview + mapa */}
@@ -1691,24 +1696,56 @@ function loadFromLS(key, fallback) {
   catch { return fallback; }
 }
 
-function ResumoMensalTable({ rows, mesLabel }) {
+function ResumoMensalTable({ rows, mesLabel, mesStr }) {
+  const { supabase } = useApp();
+
   const [visibleCols, setVisibleColsRaw] = useState(() =>
     new Set(loadFromLS(LS_COLS, RESUMO_COLS.map((_, i) => i)))
   );
   const [selectedWorkers, setSelectedWorkersRaw] = useState(() =>
     new Set(loadFromLS(LS_WORKERS, []))
   );
-  const [observacoes, setObservacoesRaw] = useState(() => loadFromLS(LS_OBS, {}));
+  const [observacoes, setObservacoes] = useState(() => loadFromLS(LS_OBS, {}));
   const [showColPicker, setShowColPicker] = useState(false);
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
 
-  const updateObs = (nome, valor) => {
-    setObservacoesRaw(prev => {
-      const next = { ...prev, [nome]: valor };
-      localStorage.setItem(LS_OBS, JSON.stringify(next));
-      return next;
-    });
-  };
+  // Carregar do Supabase e subscrever real-time ao mudar o mês
+  useEffect(() => {
+    if (!supabase || !mesStr) return;
+
+    supabase.from('resumo_observacoes').select('worker_id, observacao').eq('mes', mesStr)
+      .then(({ data }) => {
+        if (!data) return;
+        const map = {};
+        data.forEach(r => { map[r.worker_id] = r.observacao; });
+        setObservacoes(prev => {
+          const merged = { ...prev, ...map };
+          localStorage.setItem(LS_OBS, JSON.stringify(merged));
+          return merged;
+        });
+      });
+
+    const channel = supabase
+      .channel(`resumo_obs_${mesStr}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'resumo_observacoes',
+        filter: `mes=eq.${mesStr}`,
+      }, ({ new: row, eventType }) => {
+        if (!row?.worker_id) return;
+        setObservacoes(prev => {
+          const next = eventType === 'DELETE'
+            ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== row.worker_id))
+            : { ...prev, [row.worker_id]: row.observacao || '' };
+          localStorage.setItem(LS_OBS, JSON.stringify(next));
+          return next;
+        });
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [supabase, mesStr]);
 
   const setVisibleCols = (val) => {
     const next = typeof val === 'function' ? val(visibleCols) : val;
@@ -1720,6 +1757,20 @@ function ResumoMensalTable({ rows, mesLabel }) {
     const next = typeof val === 'function' ? val(selectedWorkers) : val;
     setSelectedWorkersRaw(next);
     localStorage.setItem(LS_WORKERS, JSON.stringify([...next]));
+  };
+
+  const updateObs = (workerId, valor) => {
+    setObservacoes(prev => {
+      const next = { ...prev, [workerId]: valor };
+      localStorage.setItem(LS_OBS, JSON.stringify(next));
+      return next;
+    });
+    if (supabase && workerId && mesStr) {
+      supabase.from('resumo_observacoes').upsert(
+        { worker_id: workerId, mes: mesStr, observacao: valor, updated_at: new Date().toISOString() },
+        { onConflict: 'worker_id,mes' }
+      );
+    }
   };
 
   const toggleCol = (ci) => {
@@ -1778,8 +1829,8 @@ function ResumoMensalTable({ rows, mesLabel }) {
   // Set vazio = todos; Set com nomes = apenas os selecionados
   const filteredRows = selectedWorkers.size > 0 ? rows.filter(r => selectedWorkers.has(r.nome)) : rows;
 
-  // Injeta observação em cada linha (para render e para XLS)
-  const displayRows = filteredRows.map(r => ({ ...r, observacao: observacoes[r.nome] || '' }));
+  // Injeta observação em cada linha (para render e para XLS); chave = workerId
+  const displayRows = filteredRows.map(r => ({ ...r, observacao: observacoes[r.workerId] || '' }));
 
   const totals = activeCols.map(({ col }) =>
     col.sumKey ? displayRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
@@ -1977,8 +2028,8 @@ function ResumoMensalTable({ rows, mesLabel }) {
                       {col.editable ? (
                         <input
                           type="text"
-                          value={observacoes[row.nome] || ''}
-                          onChange={e => updateObs(row.nome, e.target.value)}
+                          value={observacoes[row.workerId] || ''}
+                          onChange={e => updateObs(row.workerId, e.target.value)}
                           placeholder="—"
                           className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
                         />
