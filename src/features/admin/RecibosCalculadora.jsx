@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AlertTriangle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Trash2, X } from 'lucide-react';
@@ -149,9 +149,16 @@ export default function RecibosCalculadora() {
   const [mapaRows, setMapaRows] = useState([]);
   const [autoFillInfo, setAutoFillInfo] = useState(null);
   const [workerRateHistory, setWorkerRateHistory] = useState([]);
+  const logoRef = useRef(null);
   const [subTab, setSubTab] = useState('calculadora');
   const [contabData, setContabData] = useState([]);
   let rowCounter = mapaRows.length;
+
+  useEffect(() => {
+    const img = new window.Image();
+    img.onload = () => { logoRef.current = img; };
+    img.src = '/logo-magnetic.png';
+  }, []);
 
   useEffect(() => {
     if (!supabase) return;
@@ -955,79 +962,89 @@ ${hdrRow}${bodyRows}${totRow}
   }
 
   // ── Renderiza UMA página do mapa (A4 paisagem) ───────────────────────────
-  function _renderMapaPagina(doc, { mesLabel, ano, nome, nif, nis, profissao, mapaLinhas, subsAlimTotal }) {
-    const W  = doc.internal.pageSize.getWidth();
-    const H  = doc.internal.pageSize.getHeight();
-    const MX = 12;
+  function _renderMapaPagina(doc, { mesLabel, ano, nome, nif, nis, profissao, mapaLinhas, subsAlimTotal, logo }) {
+    const W  = doc.internal.pageSize.getWidth();   // 297mm
+    const H  = doc.internal.pageSize.getHeight();  // 210mm
+    const MX = 10;
     const TW = W - 2 * MX;
     const NAVY  = [15, 31, 61];
     const GOLD  = [212, 175, 55];
-    const LGRAY = [245, 246, 248];
+    const LGRAY = [242, 244, 247];
     const MGRAY = [90, 105, 125];
-    const fmt = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const fmt   = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const fmtDia  = iso => { const d = new Date(iso + 'T00:00:00'); return `${DIAS_PT[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}`; };
 
-    // ZONA 1: Cabeçalho navy
-    const HEADER_H = 38;
+    // ── ZONA 1: Cabeçalho navy compacto (20mm) ──────────────────────────────
+    const HEADER_H = 20;
     doc.setFillColor(...NAVY);
     doc.rect(0, 0, W, HEADER_H, 'F');
 
-    doc.setTextColor(255, 255, 255);
+    // Logo (16×16mm, centrado verticalmente no cabeçalho)
+    const LOGO_SIZE = 16;
+    const LOGO_X    = MX;
+    const LOGO_Y    = (HEADER_H - LOGO_SIZE) / 2;
+    if (logo) {
+      doc.addImage(logo, 'PNG', LOGO_X, LOGO_Y, LOGO_SIZE, LOGO_SIZE);
+    }
+    const TEXT_X = logo ? MX + LOGO_SIZE + 3 : MX;
+
+    // Nome da empresa + NIF (à esquerda do logo)
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text(EMPRESA.nome.toUpperCase(), MX, 11);
+    doc.setFontSize(7.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text(EMPRESA.nome.toUpperCase(), TEXT_X, 8);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFontSize(5.5);
     doc.setTextColor(170, 185, 210);
-    doc.text(EMPRESA.morada, MX, 17);
-    doc.text(`NIF ${EMPRESA.nif}`, MX, 22);
+    doc.text(`NIF ${EMPRESA.nif}  ·  ${EMPRESA.morada}`, TEXT_X, 13);
 
+    // Título centrado
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
     doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(15);
-    doc.text('MAPA DE AJUDAS DE CUSTO', W / 2, 14.5, { align: 'center' });
-
+    doc.text('MAPA DE AJUDAS DE CUSTO', W / 2, 9, { align: 'center' });
     doc.setDrawColor(...GOLD);
-    doc.setLineWidth(0.5);
-    doc.line(W / 2 - 58, 17.5, W / 2 + 58, 17.5);
-
+    doc.setLineWidth(0.4);
+    doc.line(W / 2 - 52, 11.5, W / 2 + 52, 11.5);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(220, 230, 245);
-    doc.text(`${mesLabel.toUpperCase()}  ${ano}`, W / 2, 24, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setTextColor(215, 228, 248);
+    doc.text(`${mesLabel.toUpperCase()}  ${ano}`, W / 2, 17, { align: 'center' });
 
-    // ZONA 2: Faixa do trabalhador
-    const Y_TRAB = HEADER_H + 2;
+    // ── ZONA 2: Faixa do trabalhador (10mm) ─────────────────────────────────
+    const Y_TRAB = HEADER_H + 1;
     doc.setFillColor(...LGRAY);
-    doc.rect(MX, Y_TRAB, TW, 13, 'F');
+    doc.rect(MX, Y_TRAB, TW, 10, 'F');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
+    doc.setFontSize(9.5);
     doc.setTextColor(...NAVY);
-    doc.text((nome || '—').toUpperCase(), MX + 3, Y_TRAB + 6.5);
+    doc.text((nome || '—').toUpperCase(), MX + 3, Y_TRAB + 5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
+    doc.setFontSize(6);
     doc.setTextColor(...MGRAY);
-    doc.text(profissao || '—', MX + 3, Y_TRAB + 11);
+    doc.text(profissao || '—', MX + 3, Y_TRAB + 9);
 
     const XR = W - MX - 3;
-    doc.text(`NIF: ${nif || '—'}`, XR - 44, Y_TRAB + 5.5);
-    doc.text(`NIS: ${nis || '—'}`, XR - 44, Y_TRAB + 10.5);
+    doc.setFontSize(6);
+    doc.text(`NIF: ${nif || '—'}`, XR - 40, Y_TRAB + 4.5);
+    doc.text(`NIS: ${nis || '—'}`, XR - 40, Y_TRAB + 9);
 
-    // ZONA 3: Tabela — altura adaptativa para caber na página
-    const Y_TABLE  = Y_TRAB + 16;
-    const Y_FOOTER = H - 50;
+    // ── ZONA 3: Tabela adaptativa ────────────────────────────────────────────
+    // Rodapé reserva 42mm: 22mm para totais + 20mm para assinatura
+    const Y_TABLE  = Y_TRAB + 12;
+    const Y_FOOTER = H - 42;
     const availH   = Y_FOOTER - Y_TABLE;
     const nRows    = mapaLinhas.length;
-    const HEADER_ROW_H = 7;
-    const rowH = Math.max(3.8, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
-    const fs   = Math.min(7, Math.max(5.5, rowH * 1.65));
-    const pad  = Math.max(1.0, (rowH - fs * 0.3528) / 2);
+    const HEADER_ROW_H = 6.5;
+    const rowH = Math.max(3.5, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
+    const fs   = Math.min(7, Math.max(5, rowH * 1.6));
+    const pad  = Math.max(0.8, (rowH - fs * 0.3528) / 2);
 
-    // Colunas — soma = TW = 273mm
-    const colW = [28, 46, 48, 38, 26, 24, 18, 16, 29];
+    // Colunas — soma = TW = 277mm
+    const colW = [26, 46, 50, 40, 24, 23, 17, 15, 36];
 
     autoTable(doc, {
       startY: Y_TABLE,
@@ -1049,7 +1066,7 @@ ${hdrRow}${bodyRows}${totRow}
       headStyles: {
         fillColor: NAVY, textColor: 255,
         fontSize: Math.min(7, fs + 0.5), fontStyle: 'bold',
-        cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+        cellPadding: { top: 2, bottom: 2, left: 2, right: 2 },
         minCellHeight: HEADER_ROW_H,
       },
       bodyStyles: {
@@ -1073,51 +1090,51 @@ ${hdrRow}${bodyRows}${totRow}
       pageBreak: 'avoid',
     });
 
-    // ZONA 4: Totais (posição fixa no rodapé)
+    // ── ZONA 4: Totais (posição fixa, nunca sobrepõe tabela) ────────────────
     const mapaTotal   = mapaLinhas.reduce((s, row) => s + row.valor, 0);
     const importancia = mapaTotal - subsAlimTotal;
-
-    const YT = Y_FOOTER + 4;
-    const XT = MX + 142;
+    const XT = MX + 148;
+    const YT = Y_FOOTER + 2;
 
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 75, 95);
-    doc.text('Total ajudas de custo:', XT, YT);
+    doc.text('Total ajudas de custo:', XT, YT + 4);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0, 0, 0);
-    doc.text(fmt(mapaTotal), W - MX, YT, { align: 'right' });
+    doc.setTextColor(15, 31, 61);
+    doc.text(fmt(mapaTotal), W - MX, YT + 4, { align: 'right' });
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 75, 95);
-    doc.text('(−) Subsídio de alimentação:', XT, YT + 7);
-    doc.setTextColor(0, 0, 0);
-    doc.text(fmt(subsAlimTotal), W - MX, YT + 7, { align: 'right' });
+    doc.text('(−) Subsídio de alimentação:', XT, YT + 10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 31, 61);
+    doc.text(fmt(subsAlimTotal), W - MX, YT + 10, { align: 'right' });
 
     doc.setDrawColor(...NAVY);
-    doc.setLineWidth(0.25);
-    doc.line(XT, YT + 10.5, W - MX, YT + 10.5);
+    doc.setLineWidth(0.3);
+    doc.line(XT, YT + 13, W - MX, YT + 13);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...NAVY);
-    doc.text('Importância a receber:', XT, YT + 18);
-    doc.text(fmt(importancia), W - MX, YT + 18, { align: 'right' });
+    doc.text('Importância a receber:', XT, YT + 20);
+    doc.text(fmt(importancia), W - MX, YT + 20, { align: 'right' });
 
-    // ZONA 5: Assinatura
-    const YS = H - 26;
+    // ── ZONA 5: Assinatura ──────────────────────────────────────────────────
+    const YS = H - 20;
     doc.setDrawColor(190, 200, 215);
     doc.setLineWidth(0.2);
-    doc.line(MX, YS - 2, W - MX, YS - 2);
+    doc.line(MX, YS - 1, W - MX, YS - 1);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(55, 65, 80);
-    doc.text(`Recebi a importância de ${fmt(importancia)}, referente a ajudas de custo (${mesLabel} de ${ano}).`, MX, YS + 5);
-    doc.text(`Trofa, _____ de _________________________________ de ${ano}`, MX, YS + 13);
-    doc.text('Assinatura:', MX, YS + 21);
+    doc.text(`Recebi a importância de ${fmt(importancia)}, referente a ajudas de custo (${mesLabel} de ${ano}).`, MX, YS + 4);
+    doc.text(`Trofa, _____ de _________________________________ de ${ano}`, MX, YS + 10);
+    doc.text('Assinatura:', MX, YS + 17);
     doc.setDrawColor(120, 130, 145);
-    doc.line(MX + 28, YS + 21, MX + 165, YS + 21);
+    doc.line(MX + 26, YS + 17, MX + 160, YS + 17);
   }
 
   async function gerarMapasAjudasPDF() {
@@ -1211,6 +1228,7 @@ ${hdrRow}${bodyRows}${totRow}
         nome: w.name, nif: w.nif, nis: w.nis, profissao: w.profissao,
         mapaLinhas,
         subsAlimTotal: subsAlimMapa,
+        logo: logoRef.current,
       });
     });
 
@@ -1247,6 +1265,7 @@ ${hdrRow}${bodyRows}${totRow}
       profissao: inputs.categoria,
       mapaLinhas:    rowsWithVal,
       subsAlimTotal: subsAlimMapaPDF,
+      logo:          logoRef.current,
     });
 
     const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
