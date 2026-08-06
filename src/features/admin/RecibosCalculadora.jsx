@@ -1828,7 +1828,29 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Polling como fallback quando Realtime não dispara
+    const syncData = () =>
+      supabase.from('resumo_observacoes')
+        .select('worker_id, observacao, completo, ajuste_bruto').eq('mes', mesStr)
+        .then(({ data }) => {
+          if (!data) return;
+          const obsMap = {}, compMap = {}, ajMap = {};
+          data.forEach(r => {
+            obsMap[r.worker_id]  = r.observacao || '';
+            compMap[r.worker_id] = !!r.completo;
+            ajMap[r.worker_id]   = parseFloat(r.ajuste_bruto) || 0;
+          });
+          setObservacoes(prev => {
+            const merged = { ...prev, ...obsMap };
+            localStorage.setItem(LS_OBS, JSON.stringify(merged));
+            return merged;
+          });
+          setCompletos(prev => ({ ...prev, ...compMap }));
+          setAjustes(prev =>   ({ ...prev, ...ajMap }));
+        });
+    const poll = setInterval(syncData, 4000);
+
+    return () => { supabase.removeChannel(channel); clearInterval(poll); };
   }, [supabase, mesStr]);
 
   const setVisibleCols = (val) => {

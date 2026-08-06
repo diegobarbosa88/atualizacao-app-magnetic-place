@@ -181,7 +181,25 @@ export default function ResumoMensalPublico() {
       })
       .subscribe();
 
-    return () => { sb.removeChannel(channel); };
+    // Polling como fallback quando Realtime não dispara
+    const syncData = () =>
+      sb.from('resumo_observacoes')
+        .select('worker_id, observacao, completo, ajuste_bruto').eq('mes', ms)
+        .then(({ data }) => {
+          if (!data) return;
+          const obsMap = {}, compMap = {}, ajMap = {};
+          data.forEach(r => {
+            obsMap[r.worker_id]  = r.observacao || '';
+            compMap[r.worker_id] = !!r.completo;
+            ajMap[r.worker_id]   = parseFloat(r.ajuste_bruto) || 0;
+          });
+          setObs(obsMap);
+          setCompletos(compMap);
+          setAjustes(ajMap);
+        });
+    const poll = setInterval(syncData, 4000);
+
+    return () => { sb.removeChannel(channel); clearInterval(poll); };
   }, [ms]);
 
   function navMes(dir) {
