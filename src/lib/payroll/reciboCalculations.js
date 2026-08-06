@@ -333,7 +333,7 @@ export function gerarLinhasMapa({
       pct,
     });
 
-    restante -= valorDia;
+    restante = isLast ? 0 : restante - valorDia;
     cursor.setDate(cursor.getDate() + 1);
     isFirst = false;
   }
