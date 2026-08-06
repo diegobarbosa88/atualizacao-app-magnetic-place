@@ -1684,8 +1684,8 @@ const RESUMO_COLS = [
   { label: 'TSU Patronal 23,75% (€)',key: 'ssPatronal',  align: 'right', sumKey: '_ssPatNum' },
   { label: 'Custo Empresa (€)',     key: 'custoEmpresa', align: 'right', sumKey: '_custoNum' },
   { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
-  { label: 'Completo',              key: 'completo',     align: 'center', tipo: 'toggle' },
   { label: 'Observação',            key: 'observacao',   align: 'center', editable: true },
+  { label: 'Completo',              key: 'completo',     align: 'center', tipo: 'toggle' },
 ];
 
 function CopiarLinkBtn({ mesStr }) {

@@ -39,8 +39,8 @@ const COLS = [
   { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',    sum: '_ssPatNum' },
   { label: 'Custo Empresa (€)',       key: 'custoEmpresa',  sum: '_custoNum' },
   { label: 'Ordenado Bruto (€)',      key: 'brutoAlvo',     sum: '_brutoNum', highlight: true },
-  { label: 'Completo',                key: 'completo',      tipo: 'toggle' },
   { label: 'Observação',              key: 'observacao' },
+  { label: 'Completo',                key: 'completo',      tipo: 'toggle' },
 ];
 
 function parseMes(str) {
