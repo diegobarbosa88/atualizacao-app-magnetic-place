@@ -1162,26 +1162,44 @@ ${hdrRow}${bodyRows}${totRow}
       // Cliente carry-forward por dia
       const clienteParaDia = _clientePorDiaFn(w.id, mesStr);
 
-      // Data de início: primeiro log do trabalhador no mês ou dia 1
-      const primeiroLog = workerLogs.map(l => l.date).sort()[0];
-      const dataInicio  = primeiroLog || `${mesStr}-01`;
+      // Mapa arranca sempre no dia 1 do mês
+      const dataInicio   = `${mesStr}-01`;
+      const limiteDia    = valorDiarioLegal('internacional', 'geral');
+      const valorAlimDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
 
-      const limiteDia = valorDiarioLegal('internacional', 'geral');
+      // Conta dias úteis (Seg–Sex) nas primeiras nDias a partir de dataInicio
+      function contarUteis(nDias) {
+        let c = 0;
+        const d = new Date(dataInicio + 'T00:00:00');
+        for (let i = 0; i < nDias; i++) { if (d.getDay() >= 1 && d.getDay() <= 5) c++; d.setDate(d.getDate() + 1); }
+        return c;
+      }
 
-      const mapaLinhas = gerarLinhasMapa({
-        necessaria:   rc.ajudaCustoNecessaria + rc.subsAlimTotal,
-        limiteDia,
-        dataInicio,
-        horaPartida:  '07:30',
-        horaChegada:  '20:30',
-        territorio:   'internacional',
-        cliente:      '',
-        localidade:   '',
-      }).map(row => ({
-        ...row,
-        cliente: clienteParaDia(row.dia) || '',
-        valor:   limiteDia * (row.pct / 100),
-      }));
+      // Iteração: subsAlimMapa = diasÚteis(mapa) × valorAlimDia
+      let subsAlimMapa = valorAlimDia > 0 ? rc.subsAlimTotal : 0;
+      let mapaLinhas   = [];
+
+      for (let iter = 0; iter < 6; iter++) {
+        mapaLinhas = gerarLinhasMapa({
+          necessaria:  rc.ajudaCustoNecessaria + subsAlimMapa,
+          limiteDia,
+          dataInicio,
+          horaPartida: '07:30',
+          horaChegada: '20:30',
+          territorio:  'internacional',
+          cliente:     '',
+          localidade:  '',
+        }).map(row => ({
+          ...row,
+          cliente: clienteParaDia(row.dia) || '',
+          valor:   limiteDia * (row.pct / 100),
+        }));
+
+        if (mapaLinhas.length === 0) break;
+        const novo = contarUteis(mapaLinhas.length) * valorAlimDia;
+        if (Math.abs(novo - subsAlimMapa) < 0.005) break;
+        subsAlimMapa = novo;
+      }
 
       if (mapaLinhas.length === 0) return;
 
@@ -1192,7 +1210,7 @@ ${hdrRow}${bodyRows}${totRow}
         mesLabel, ano: inputs.ano,
         nome: w.name, nif: w.nif, nis: w.nis, profissao: w.profissao,
         mapaLinhas,
-        subsAlimTotal: rc.subsAlimTotal,
+        subsAlimTotal: subsAlimMapa,
       });
     });
 
@@ -1209,6 +1227,17 @@ ${hdrRow}${bodyRows}${totRow}
       return { ...row, valor: limite * (row.pct / 100) };
     });
 
+    // Subsídio alimentação: contar apenas dias úteis (Seg–Sex) nas linhas do mapa
+    const valorAlimDia = n(inputs.subsAlimValorDia);
+    const diasUteisPDF = valorAlimDia > 0
+      ? rowsWithVal.filter(row => {
+          if (!row.dia) return false;
+          const dow = new Date(row.dia + 'T00:00:00').getDay();
+          return dow >= 1 && dow <= 5;
+        }).length
+      : 0;
+    const subsAlimMapaPDF = diasUteisPDF * valorAlimDia;
+
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     _renderMapaPagina(doc, {
       mesLabel, ano: inputs.ano,
@@ -1217,7 +1246,7 @@ ${hdrRow}${bodyRows}${totRow}
       nis:       inputs.nis,
       profissao: inputs.categoria,
       mapaLinhas:    rowsWithVal,
-      subsAlimTotal: r ? r.subsAlimTotal : 0,
+      subsAlimTotal: subsAlimMapaPDF,
     });
 
     const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
