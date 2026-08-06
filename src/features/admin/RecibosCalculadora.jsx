@@ -298,11 +298,21 @@ export default function RecibosCalculadora() {
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
 
+      const empresa = [...new Set(workerLogs.map(l => l.clientId).filter(Boolean))]
+        .map(id => (clients || []).find(c => c.id === id)?.name || '')
+        .filter(Boolean)
+        .join(' / ');
+
+      const fmtData = d => d ? d.split('T')[0] : '';
+
       return {
-        nome:          w.name || '',
-        nif:           w.nif || '',
-        nis:           w.nis || '',
-        profissao:     w.profissao || '',
+        nome:           w.name || '',
+        nif:            w.nif || '',
+        nis:            w.nis || '',
+        profissao:      w.profissao || '',
+        empresa:        empresa || '—',
+        inicioVinculo:  fmtData(w.dataInicio),
+        cessacaoVinculo:fmtData(w.dataFim),
         tabelaNome,
         nDep:          String(w.n_dependentes ?? 0),
         vencBase:      eur2(parseFloat(w.vencimento_base)),
@@ -337,7 +347,7 @@ export default function RecibosCalculadora() {
         _vencNum:      parseFloat(w.vencimento_base) || 0,
       };
     });
-  }, [workers, logs, workerRateHistory, contabData, inputs.mes, inputs.ano]);
+  }, [workers, logs, clients, workerRateHistory, contabData, inputs.mes, inputs.ano]);
 
   function addRow(data) {
     rowCounter++;
@@ -1643,11 +1653,14 @@ function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
 }
 
 const RESUMO_COLS = [
-  { label: 'Trabalhador',           key: 'nome',         align: 'left' },
-  { label: 'NIF',                   key: 'nif',          align: 'left' },
-  { label: 'NIS',                   key: 'nis',          align: 'left' },
-  { label: 'Profissão',             key: 'profissao',    align: 'left' },
-  { label: 'Tabela IRS',            key: 'tabelaNome',   align: 'left' },
+  { label: 'Trabalhador',           key: 'nome',           align: 'center' },
+  { label: 'NIF',                   key: 'nif',            align: 'center' },
+  { label: 'NIS',                   key: 'nis',            align: 'center' },
+  { label: 'Profissão',             key: 'profissao',      align: 'center' },
+  { label: 'Empresa',               key: 'empresa',        align: 'center' },
+  { label: 'Início Vínculo',        key: 'inicioVinculo',  align: 'center' },
+  { label: 'Cessação Vínculo',      key: 'cessacaoVinculo',align: 'center' },
+  { label: 'Tabela IRS',            key: 'tabelaNome',     align: 'center' },
   { label: 'Nº Dep.',               key: 'nDep',         align: 'center' },
   { label: 'Venc. Base (€)',        key: 'vencBase',     align: 'right', sumKey: '_vencNum' },
   { label: 'Sub. Alim. Dias',       key: 'subsAlimDias', align: 'center' },
