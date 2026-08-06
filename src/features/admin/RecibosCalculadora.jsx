@@ -1683,6 +1683,7 @@ const RESUMO_COLS = [
   { label: 'Líquido (€)',           key: 'liquido',      align: 'right', sumKey: '_liquidoNum' },
   { label: 'TSU Patronal 23,75% (€)',key: 'ssPatronal',  align: 'right', sumKey: '_ssPatNum' },
   { label: 'Custo Empresa (€)',     key: 'custoEmpresa', align: 'right', sumKey: '_custoNum' },
+  { label: 'Ajuste (€)',            key: 'ajuste',       align: 'right', tipo: 'ajuste',      sumKey: '_ajusteNum' },
   { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
   { label: 'Observação',            key: 'observacao',   align: 'center', editable: true },
   { label: 'Completo',              key: 'completo',     align: 'center', tipo: 'toggle' },
@@ -1732,6 +1733,7 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   );
   const [observacoes, setObservacoes] = useState(() => loadFromLS(LS_OBS, {}));
   const [completos, setCompletos] = useState({});
+  const [ajustes,   setAjustes]   = useState({});
   const [showColPicker, setShowColPicker] = useState(false);
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
 
@@ -1782,17 +1784,22 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   useEffect(() => {
     if (!supabase || !mesStr) return;
 
-    supabase.from('resumo_observacoes').select('worker_id, observacao, completo').eq('mes', mesStr)
+    supabase.from('resumo_observacoes').select('worker_id, observacao, completo, ajuste_bruto').eq('mes', mesStr)
       .then(({ data }) => {
         if (!data) return;
-        const obsMap = {}, compMap = {};
-        data.forEach(r => { obsMap[r.worker_id] = r.observacao; compMap[r.worker_id] = !!r.completo; });
+        const obsMap = {}, compMap = {}, ajMap = {};
+        data.forEach(r => {
+          obsMap[r.worker_id]  = r.observacao;
+          compMap[r.worker_id] = !!r.completo;
+          if (r.ajuste_bruto)  ajMap[r.worker_id] = parseFloat(r.ajuste_bruto) || 0;
+        });
         setObservacoes(prev => {
           const merged = { ...prev, ...obsMap };
           localStorage.setItem(LS_OBS, JSON.stringify(merged));
           return merged;
         });
         setCompletos(prev => ({ ...prev, ...compMap }));
+        setAjustes(prev => ({ ...prev, ...ajMap }));
       });
 
     const channel = supabase
@@ -1813,8 +1820,10 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
         });
         if (eventType !== 'DELETE') {
           setCompletos(prev => ({ ...prev, [row.worker_id]: !!row.completo }));
+          setAjustes(prev => ({ ...prev, [row.worker_id]: parseFloat(row.ajuste_bruto) || 0 }));
         } else {
           setCompletos(prev => { const n = { ...prev }; delete n[row.worker_id]; return n; });
+          setAjustes(prev =>   { const n = { ...prev }; delete n[row.worker_id]; return n; });
         }
       })
       .subscribe();
@@ -1842,28 +1851,39 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
     localStorage.setItem(LS_WORKERS, JSON.stringify([...next]));
   };
 
+  const upsertObs = (workerId, patch) => {
+    if (!supabase || !workerId || !mesStr) return;
+    supabase.from('resumo_observacoes').upsert(
+      {
+        worker_id: workerId, mes: mesStr,
+        observacao:   observacoes[workerId] || '',
+        completo:     completos[workerId]   || false,
+        ajuste_bruto: ajustes[workerId]     || 0,
+        updated_at: new Date().toISOString(),
+        ...patch,
+      },
+      { onConflict: 'worker_id,mes' }
+    );
+  };
+
   const updateObs = (workerId, valor) => {
     setObservacoes(prev => {
       const next = { ...prev, [workerId]: valor };
       localStorage.setItem(LS_OBS, JSON.stringify(next));
       return next;
     });
-    if (supabase && workerId && mesStr) {
-      supabase.from('resumo_observacoes').upsert(
-        { worker_id: workerId, mes: mesStr, observacao: valor, completo: completos[workerId] || false, updated_at: new Date().toISOString() },
-        { onConflict: 'worker_id,mes' }
-      );
-    }
+    upsertObs(workerId, { observacao: valor });
   };
 
   const updateCompleto = (workerId, valor) => {
     setCompletos(prev => ({ ...prev, [workerId]: valor }));
-    if (supabase && workerId && mesStr) {
-      supabase.from('resumo_observacoes').upsert(
-        { worker_id: workerId, mes: mesStr, completo: valor, observacao: observacoes[workerId] || '', updated_at: new Date().toISOString() },
-        { onConflict: 'worker_id,mes' }
-      );
-    }
+    upsertObs(workerId, { completo: valor });
+  };
+
+  const updateAjuste = (workerId, valor) => {
+    const v = parseFloat(valor) || 0;
+    setAjustes(prev => ({ ...prev, [workerId]: v }));
+    upsertObs(workerId, { ajuste_bruto: v });
   };
 
   const toggleCol = (ci) => {
@@ -1922,12 +1942,21 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   // Set vazio = todos; Set com nomes = apenas os selecionados
   const filteredRows = selectedWorkers.size > 0 ? rows.filter(r => selectedWorkers.has(r.nome)) : rows;
 
-  // Injeta observação e estado completo em cada linha
-  const displayRows = filteredRows.map(r => ({
-    ...r,
-    observacao: observacoes[r.workerId] || '',
-    completo: completos[r.workerId] || false,
-  }));
+  // Injeta observação, completo e ajuste; recalcula bruto
+  const eur2pub = v => (isNaN(v) ? 0 : v).toFixed(2);
+  const displayRows = filteredRows.map(r => {
+    const ajusteVal    = ajustes[r.workerId] || 0;
+    const brutoEfetivo = r._brutoNum + ajusteVal;
+    return {
+      ...r,
+      observacao:  observacoes[r.workerId] || '',
+      completo:    completos[r.workerId]   || false,
+      ajuste:      ajusteVal,
+      _ajusteNum:  ajusteVal,
+      brutoAlvo:   eur2pub(brutoEfetivo),
+      _brutoNum:   brutoEfetivo,
+    };
+  });
 
   const totals = activeCols.map(({ col }) =>
     col.sumKey ? displayRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
@@ -2128,7 +2157,17 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
                       key={ci}
                       className={`px-1 py-1 text-xs font-bold whitespace-nowrap ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
                     >
-                      {col.tipo === 'toggle' ? (
+                      {col.tipo === 'ajuste' ? (
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={ajustes[row.workerId] ?? ''}
+                          onChange={e => updateAjuste(row.workerId, e.target.value)}
+                          placeholder="0"
+                          className="w-full min-w-24 bg-transparent outline-none text-right text-xs font-bold placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
+                          style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#64748b' }}
+                        />
+                      ) : col.tipo === 'toggle' ? (
                         <div className="flex justify-center px-2">
                           <button
                             onClick={() => updateCompleto(row.workerId, !row.completo)}

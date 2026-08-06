@@ -38,6 +38,7 @@ const COLS = [
   { label: 'Líquido (€)',             key: 'liquido',       sum: '_liquidoNum' },
   { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',    sum: '_ssPatNum' },
   { label: 'Custo Empresa (€)',       key: 'custoEmpresa',  sum: '_custoNum' },
+  { label: 'Ajuste (€)',              key: 'ajusteLabel',   sum: '_ajusteNum' },
   { label: 'Ordenado Bruto (€)',      key: 'brutoAlvo',     sum: '_brutoNum', highlight: true },
   { label: 'Observação',              key: 'observacao' },
   { label: 'Completo',                key: 'completo',      tipo: 'toggle' },
@@ -73,6 +74,7 @@ export default function ResumoMensalPublico() {
   const [contab,    setContab]    = useState([]);
   const [obs,       setObs]       = useState({});
   const [completos, setCompletos] = useState({});
+  const [ajustes,   setAjustes]   = useState({});
   const [loading,   setLoading]   = useState(true);
 
   const ms = toMesStr(ano, mes);
@@ -143,18 +145,23 @@ export default function ResumoMensalPublico() {
     Promise.all([
       sb.from('logs').select('*').gte('date', dataInicio).lt('date', nextMes).limit(5000),
       sb.from('contabilidade_mensal').select('*').eq('mes', ms),
-      sb.from('resumo_observacoes').select('worker_id, observacao, completo').eq('mes', ms),
+      sb.from('resumo_observacoes').select('worker_id, observacao, completo, ajuste_bruto').eq('mes', ms),
     ]).then(([l, c, o]) => {
       setLogs(l.data || []);
       setContab(c.data || []);
-      const obsMap = {}, compMap = {};
-      (o.data || []).forEach(r => { obsMap[r.worker_id] = r.observacao; compMap[r.worker_id] = !!r.completo; });
+      const obsMap = {}, compMap = {}, ajMap = {};
+      (o.data || []).forEach(r => {
+        obsMap[r.worker_id]  = r.observacao;
+        compMap[r.worker_id] = !!r.completo;
+        if (r.ajuste_bruto)  ajMap[r.worker_id] = parseFloat(r.ajuste_bruto) || 0;
+      });
       setObs(obsMap);
       setCompletos(compMap);
+      setAjustes(ajMap);
       setLoading(false);
     });
 
-    // Subscrição real-time das observações e estado completo
+    // Subscrição real-time das observações, completo e ajuste
     const channel = sb.channel(`pub_obs_${ms}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'resumo_observacoes', filter: `mes=eq.${ms}`,
@@ -166,8 +173,10 @@ export default function ResumoMensalPublico() {
         );
         if (eventType !== 'DELETE') {
           setCompletos(prev => ({ ...prev, [row.worker_id]: !!row.completo }));
+          setAjustes(prev =>   ({ ...prev, [row.worker_id]: parseFloat(row.ajuste_bruto) || 0 }));
         } else {
           setCompletos(prev => { const n = { ...prev }; delete n[row.worker_id]; return n; });
+          setAjustes(prev =>   { const n = { ...prev }; delete n[row.worker_id]; return n; });
         }
       })
       .subscribe();
@@ -248,9 +257,11 @@ export default function ResumoMensalPublico() {
         liquido:       eur2(rc.liquido),
         ssPatronal:    eur2(rc.ssPatronal),
         custoEmpresa:  eur2(rc.custoEmpresa),
-        brutoAlvo:     eur2(brutoAlvo),
+        brutoAlvo:     eur2((brutoAlvo || 0) + (ajustes[w.id] || 0)),
         observacao:    obs[w.id] || '',
         completo:      completos[w.id] || false,
+        ajusteLabel:   (() => { const v = ajustes[w.id] || 0; return v !== 0 ? (v > 0 ? '+' : '') + v.toFixed(2) : '—'; })(),
+        _ajusteNum:    ajustes[w.id] || 0,
         _vencNum:      parseFloat(w.vencimento_base) || 0,
         _subsAlimNum:  rc.subsAlimTotal,
         _feriasNum:    rc.subsFerias,
@@ -263,10 +274,10 @@ export default function ResumoMensalPublico() {
         _liquidoNum:   rc.liquido,
         _ssPatNum:     rc.ssPatronal,
         _custoNum:     rc.custoEmpresa,
-        _brutoNum:     brutoAlvo,
+        _brutoNum:     (brutoAlvo || 0) + (ajustes[w.id] || 0),
       };
     });
-  }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ano]);
+  }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ajustes, ano]);
 
   const updateCompleto = (workerId, valor) => {
     setCompletos(prev => ({ ...prev, [workerId]: valor }));
@@ -339,7 +350,11 @@ export default function ResumoMensalPublico() {
                   <tr key={ri} className={row.completo ? 'bg-emerald-50' : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                     {activeCols.map(({ col, ci }) => (
                       <td key={ci} className={`px-3 py-2 text-center whitespace-nowrap font-bold ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}>
-                        {col.tipo === 'toggle' ? (
+                        {col.key === 'ajusteLabel' ? (
+                          <span style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#94a3b8' }}>
+                            {row.ajusteLabel}
+                          </span>
+                        ) : col.tipo === 'toggle' ? (
                           <div className="flex justify-center">
                             <button
                               onClick={() => updateCompleto(row.workerId, !row.completo)}
