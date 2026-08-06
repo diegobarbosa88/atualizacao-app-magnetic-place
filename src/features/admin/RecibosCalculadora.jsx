@@ -39,7 +39,7 @@ const INPUT_DEFAULT = {
   incluirNatal: true,
   subsAlimValorDia: '8.00',
   subsAlimDias: '20',
-  subsAlimTipo: 'cartao',
+  subsAlimTipo: 'dinheiro',
   tabelaKey: 'tabelaI',
   nDependentes: '0',
   brutoAlvo: '',
@@ -147,6 +147,7 @@ export default function RecibosCalculadora() {
   const [inputs, setInputs] = useState(INPUT_DEFAULT);
   const [mapa, setMapa] = useState(MAPA_DEFAULT);
   const [mapaRows, setMapaRows] = useState([]);
+  const [autoFillInfo, setAutoFillInfo] = useState(null);
   const [workerRateHistory, setWorkerRateHistory] = useState([]);
   const [subTab, setSubTab] = useState('calculadora');
   const [contabData, setContabData] = useState([]);
@@ -378,7 +379,31 @@ export default function RecibosCalculadora() {
   function autoFill() {
     if (!r) return;
 
-    // Mapa data → nome do cliente a partir dos logs do trabalhador no mês selecionado
+    const valorNecessario = r.ajudaCustoNecessaria + r.subsAlimTotal;
+    const valorDiario = n(inputs.vdl);
+    if (valorNecessario <= 0 || valorDiario <= 0) return;
+
+    const unidades = valorNecessario / valorDiario;
+
+    // Escolher a fração legal (0%, 25%, 50%) que maximiza o total coberto pelas ajudas
+    let bestF = 0, bestDias = 0, bestTotal = 0;
+    for (const f of [0.50, 0.25, 0.00]) {
+      const dias = Math.floor(unidades - f);
+      if (dias < 0) continue;
+      const total = dias + f;
+      if (total <= unidades + 1e-9 && total > bestTotal) {
+        bestF = f; bestDias = dias; bestTotal = total;
+      }
+    }
+
+    // Hora de chegada conforme fração (editável pelo utilizador depois)
+    const horaChegadaAuto = bestF === 0.50 ? '21:30' : bestF === 0.25 ? '19:00' : '12:00';
+    const horaPartidaAuto = mapa.horaPartida || '07:30';
+
+    // Total de linhas: bestDias dias completos + 1 dia de chegada
+    const nLinhas = bestDias + 1;
+
+    // Mapa data→cliente a partir dos logs do trabalhador no mês selecionado
     const mesStr = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
     const clientePorDia = {};
     (logs || [])
@@ -388,8 +413,6 @@ export default function RecibosCalculadora() {
         const nome = (clients || []).find(c => c.id === l.clientId)?.name || '';
         if (nome) clientePorDia[l.date] = nome;
       });
-
-    // Para um dado dia sem registo, devolve o cliente do último registo anterior
     const datasOrdenadas = Object.keys(clientePorDia).sort();
     function clienteParaDia(data) {
       let ultimo = null;
@@ -397,30 +420,49 @@ export default function RecibosCalculadora() {
         if (d <= data) ultimo = clientePorDia[d];
         else break;
       }
-      // Dias antes do primeiro registo: usa o cliente do primeiro registo do mês
       return ultimo || (datasOrdenadas.length > 0 ? clientePorDia[datasOrdenadas[0]] : null);
     }
 
-    // Data de início: primeiro dia do mês se não definida pelo utilizador
     const dataInicio = mapa.dataInicio || `${mesStr}-01`;
+    let cursor = new Date(dataInicio + 'T00:00:00');
+    const territorioLabel = inputs.territorio === 'nacional' ? 'Nacional' : 'Internacional';
+    const rows = [];
 
-    const rows = gerarLinhasMapa({
-      necessaria: r.ajudaCustoNecessaria + r.subsAlimTotal,
-      limiteDia: n(inputs.vdl),
-      dataInicio,
-      horaPartida: mapa.horaPartida,
-      horaChegada: mapa.horaChegada,
-      territorio: inputs.territorio,
-      cliente: inputs.cliente,
-      localidade: inputs.localidade || inputs.pais,
-    });
+    for (let i = 0; i < nLinhas; i++) {
+      const isFirstRow = i === 0;
+      const isLastRow  = i === nLinhas - 1;
+      const tipo = isFirstRow && !isLastRow ? 'Partida'
+                 : isLastRow && !isFirstRow ? 'Chegada'
+                 : isFirstRow               ? 'Partida'
+                 :                            'Consecutivo';
+      const hora = isFirstRow ? horaPartidaAuto : isLastRow ? horaChegadaAuto : '';
+      const pct  = isLastRow && !isFirstRow ? Math.round(bestF * 100) : 100;
+      const dia  = cursor.toISOString().slice(0, 10);
 
-    setMapaRows(rows.map((row, i) => ({
-      ...row,
-      id: Date.now() + i,
-      // Cliente do log desse dia; se sem registo, propaga o último registo anterior
-      cliente: clienteParaDia(row.dia) || row.cliente,
-    })));
+      rows.push({
+        id: Date.now() + i,
+        dia,
+        servico: 'Serviços de mecânica geral',
+        cliente: clienteParaDia(dia) || inputs.cliente || '',
+        localidade: inputs.localidade || inputs.pais || '',
+        territorio: territorioLabel,
+        tipo,
+        hora,
+        pct,
+      });
+
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    // Resíduo → somar a A008 Prémios
+    const totalAjudas = Math.round(bestTotal * valorDiario * 100) / 100;
+    const residuo     = Math.round((valorNecessario - totalAjudas) * 100) / 100;
+    if (residuo > 0.01) {
+      set('premios', String((n(inputs.premios) + residuo).toFixed(2)));
+    }
+
+    setMapaRows(rows);
+    setAutoFillInfo({ totalAjudas, residuo, valorNecessario });
   }
 
   function navMes(delta) {
@@ -1530,7 +1572,7 @@ ${hdrRow}${bodyRows}${totRow}
           <SectionHeader n="5" label="Mapa de Ajudas de Custo" />
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => setMapaRows([])}
+              onClick={() => { setMapaRows([]); setAutoFillInfo(null); }}
               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all"
             >
               <Trash2 size={12} /> Limpar
@@ -1683,6 +1725,24 @@ ${hdrRow}${bodyRows}${totRow}
                 </div>
               </>
             )}
+          </div>
+        )}
+        {autoFillInfo && (
+          <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-slate-600 flex flex-wrap gap-4">
+            <span>
+              <span className="font-semibold text-slate-700">Ajudas de custo:</span>{' '}
+              {eur(autoFillInfo.totalAjudas)}
+            </span>
+            {autoFillInfo.residuo > 0.01 && (
+              <span>
+                <span className="font-semibold text-slate-700">Complemento A008:</span>{' '}
+                {eur(autoFillInfo.residuo)}
+              </span>
+            )}
+            <span>
+              <span className="font-semibold text-slate-700">Total:</span>{' '}
+              {eur(autoFillInfo.totalAjudas + autoFillInfo.residuo)} = valor necessário ✓
+            </span>
           </div>
         )}
       </Card>
