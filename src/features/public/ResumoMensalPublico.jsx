@@ -90,7 +90,7 @@ export default function ResumoMensalPublico() {
     });
   }, []);
 
-  // Carregar e subscrever colunas visíveis definidas pelo admin
+  // Carregar e sincronizar colunas visíveis definidas pelo admin
   useEffect(() => {
     if (!sb) return;
 
@@ -100,23 +100,33 @@ export default function ResumoMensalPublico() {
       return null;
     };
 
-    sb.from('resumo_config').select('valor').eq('chave', 'visible_cols').maybeSingle()
-      .then(({ data }) => {
-        const arr = parseValor(data?.valor);
-        if (arr) setVisibleCols(new Set(arr));
-      });
+    let lastHash = '';
 
+    const syncCols = () =>
+      sb.from('resumo_config').select('valor').eq('chave', 'visible_cols').maybeSingle()
+        .then(({ data }) => {
+          const arr = parseValor(data?.valor);
+          if (!arr) return;
+          const hash = [...arr].sort().join(',');
+          if (hash === lastHash) return;
+          lastHash = hash;
+          setVisibleCols(new Set(arr));
+        });
+
+    syncCols(); // carrega imediatamente ao montar
+    const interval = setInterval(syncCols, 3000); // polling a cada 3 s como fallback
+
+    // Realtime como complemento (instantâneo quando funciona)
     const ch = sb.channel('pub_config_cols')
-      .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'resumo_config',
-      }, ({ new: row }) => {
-        if (row?.chave !== 'visible_cols') return;
-        const arr = parseValor(row?.valor);
-        if (arr) setVisibleCols(new Set(arr));
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'resumo_config' },
+        ({ new: row }) => {
+          if (row?.chave !== 'visible_cols') return;
+          const arr = parseValor(row?.valor);
+          if (arr) { lastHash = [...arr].sort().join(','); setVisibleCols(new Set(arr)); }
+        })
       .subscribe();
 
-    return () => { sb.removeChannel(ch); };
+    return () => { clearInterval(interval); sb.removeChannel(ch); };
   }, []);
 
   // Carregar logs (filtrados pelo mês), contabilidade e observações quando o mês muda

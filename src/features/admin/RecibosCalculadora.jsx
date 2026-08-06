@@ -1822,7 +1822,9 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
       supabase.from('resumo_config').upsert(
         { chave: 'visible_cols', valor: [...next], updated_at: new Date().toISOString() },
         { onConflict: 'chave' }
-      );
+      ).then(({ error }) => {
+        if (error) console.error('[resumo_config] erro ao guardar colunas:', error.message);
+      });
     }
   };
 
