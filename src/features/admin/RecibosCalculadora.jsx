@@ -2019,10 +2019,18 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
           <strong>⚠️ Erro na base de dados:</strong> {dbError}
           <br />Execute este SQL no Supabase → SQL Editor:
           <pre className="mt-1 bg-red-100 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap select-all">
-{`ALTER TABLE resumo_observacoes
-  ADD COLUMN IF NOT EXISTS completo     BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS ajuste_bruto NUMERIC DEFAULT 0;
-ALTER TABLE resumo_observacoes DISABLE ROW LEVEL SECURITY;`}
+{`DROP TABLE IF EXISTS resumo_observacoes;
+CREATE TABLE resumo_observacoes (
+  worker_id    TEXT        NOT NULL,
+  mes          TEXT        NOT NULL,
+  observacao   TEXT        NOT NULL DEFAULT '',
+  completo     BOOLEAN     NOT NULL DEFAULT FALSE,
+  ajuste_bruto NUMERIC     DEFAULT 0,
+  updated_at   TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (worker_id, mes)
+);
+ALTER TABLE resumo_observacoes DISABLE ROW LEVEL SECURITY;
+ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           </pre>
         </div>
       )}
