@@ -52,6 +52,8 @@ import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminClassicNav from './AdminClassicNav';
 import TOConlineAdmin from './TOConlineAdmin';
+import ContabilidadeTab from './ContabilidadeTab';
+import RecibosCalculadora from './RecibosCalculadora';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -414,6 +416,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'costs' && <CostReports />}
 
+      {!auditWorkerId && activeTab === 'contabilidade' && (
+        <ContabilidadeTab workers={workers} supabase={supabase} systemSettings={systemSettings} />
+      )}
+
       {!auditWorkerId && activeTab === 'documentos' && (
         <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} handleGenerateClientReport={handleGenerateClientReport} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} logs={logs} clientApprovals={clientApprovals} />
       )}
@@ -424,6 +430,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'toconline' && (
         <TOConlineAdmin />
+      )}
+
+      {!auditWorkerId && activeTab === 'recibos' && (
+        <RecibosCalculadora />
       )}
 
       {!auditWorkerId && activeTab === 'settings' && (

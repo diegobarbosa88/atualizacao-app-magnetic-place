@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { parseFaturaValor } from './costReportsUtils';
 
-function getRateAtDate(logDate, history, currentRate) {
+export function getRateAtDate(logDate, history, currentRate) {
   if (!history || history.length === 0) return Number(currentRate) || 0;
   const sorted = [...history].sort(
     (a, b) => new Date(a.data_alteracao) - new Date(b.data_alteracao)

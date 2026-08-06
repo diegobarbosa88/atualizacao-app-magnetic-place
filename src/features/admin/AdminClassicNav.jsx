@@ -12,6 +12,8 @@ const TABS = [
   { id: 'documentos', label: 'Documentos' },
   { id: 'reports', label: 'Folhas' },
   { id: 'costs', label: 'Custos' },
+  { id: 'contabilidade', label: 'Contabilidade' },
+  { id: 'recibos', label: 'Calc. Recibos' },
   { id: 'settings', label: <Settings size={14} /> },
 ];
 

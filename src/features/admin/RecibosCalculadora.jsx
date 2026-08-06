@@ -1691,8 +1691,8 @@ function ResumoMensalTable({ rows, mesLabel }) {
     col.sumKey ? filteredRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
   );
 
-  const thBase = 'px-3 py-2.5 text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-left';
-  const tdAlign = (align) => align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
+  const thBase = 'px-3 py-2.5 text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-center';
+  const tdAlign = () => 'text-center';
 
   return (
     <div className="space-y-3">

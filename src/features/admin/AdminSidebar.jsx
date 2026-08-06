@@ -5,7 +5,7 @@ import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, ChevronRight, ChevronDown,
-  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck, Shield,
+  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck, Shield, Calculator,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 
@@ -53,6 +53,8 @@ const MENU_STRUCTURE = [
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },
   { id: 'costs', label: 'Custos', icon: Wallet },
+  { id: 'contabilidade', label: 'Contabilidade', icon: Calculator },
+  { id: 'recibos', label: 'Calc. Recibos', icon: Receipt },
   {
     id: 'toconline', label: 'TOConline', icon: BookOpen,
     subtabs: [

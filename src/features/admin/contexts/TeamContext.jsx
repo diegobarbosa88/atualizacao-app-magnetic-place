@@ -56,7 +56,8 @@ const INITIAL_WORKER_FORM = {
   profissao: '', nis: '', nif: '', iban: '', status: 'ativo',
   address: '', dni: '', isAdmin: false,
   dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0],
-  limited_entry_mode: false
+  limited_entry_mode: false,
+  vencimento_base: '', subsidio_alimentacao_dia: '',
 };
 
 export const TeamProvider = ({ children }) => {
