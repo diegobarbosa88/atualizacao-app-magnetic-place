@@ -379,32 +379,60 @@ export default function RecibosCalculadora() {
   function autoFill() {
     if (!r) return;
 
-    const valorNecessario = r.ajudaCustoNecessaria + r.subsAlimTotal;
-    const valorDiario = n(inputs.vdl);
-    if (valorNecessario <= 0 || valorDiario <= 0) return;
+    const valorDiario    = n(inputs.vdl);
+    const valorAlim      = n(inputs.subsAlimValorDia);
+    const ajudaNecessaria = r.ajudaCustoNecessaria; // fixo — calculado com os inputs actuais
 
-    const unidades = valorNecessario / valorDiario;
+    if (ajudaNecessaria <= 0 || valorDiario <= 0) return;
 
-    // Escolher a fração legal (0%, 25%, 50%) que maximiza o total coberto pelas ajudas
-    let bestF = 0, bestDias = 0, bestTotal = 0;
-    for (const f of [0.50, 0.25, 0.00]) {
-      const dias = Math.floor(unidades - f);
-      if (dias < 0) continue;
-      const total = dias + f;
-      if (total <= unidades + 1e-9 && total > bestTotal) {
-        bestF = f; bestDias = dias; bestTotal = total;
+    const mesStr     = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
+    const dataInicio = mapa.dataInicio || `${mesStr}-01`;
+
+    // Conta dias úteis (Seg–Sex) nas primeiras nDias da viagem
+    function contarDiasUteis(nDias) {
+      let count = 0;
+      const d = new Date(dataInicio + 'T00:00:00');
+      for (let i = 0; i < nDias; i++) {
+        const dow = d.getDay(); // 0=Dom, 6=Sáb
+        if (dow >= 1 && dow <= 5) count++;
+        d.setDate(d.getDate() + 1);
       }
+      return count;
     }
 
-    // Hora de chegada conforme fração (editável pelo utilizador depois)
+    // Algoritmo iterativo: subsAlimMapa = dias_úteis_no_mapa × valorAlim
+    // O nº de dias do mapa depende de subsAlimMapa, e vice-versa → convergir por iteração
+    let subsAlimMapa  = valorAlim > 0 ? r.subsAlimTotal : 0;
+    let bestF = 0, bestDias = 0, bestTotal = 0, nLinhas = 1, diasUteisCount = 0;
+
+    for (let iter = 0; iter < 6; iter++) {
+      const valorNec = ajudaNecessaria + subsAlimMapa;
+      if (valorNec <= 0) break;
+      const unidades = valorNec / valorDiario;
+
+      bestF = 0; bestDias = 0; bestTotal = 0;
+      for (const f of [0.50, 0.25, 0.00]) {
+        const dias  = Math.floor(unidades - f);
+        if (dias < 0) continue;
+        const total = dias + f;
+        if (total <= unidades + 1e-9 && total > bestTotal) {
+          bestF = f; bestDias = dias; bestTotal = total;
+        }
+      }
+
+      nLinhas = bestDias + 1;
+      diasUteisCount = valorAlim > 0 ? contarDiasUteis(nLinhas) : 0;
+      const novoSubsAlim = diasUteisCount * valorAlim;
+
+      if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+      subsAlimMapa = novoSubsAlim;
+    }
+
+    // Hora de chegada conforme fração legal (editável manualmente depois)
     const horaChegadaAuto = bestF === 0.50 ? '21:30' : bestF === 0.25 ? '19:00' : '12:00';
     const horaPartidaAuto = mapa.horaPartida || '07:30';
 
-    // Total de linhas: bestDias dias completos + 1 dia de chegada
-    const nLinhas = bestDias + 1;
-
     // Mapa data→cliente a partir dos logs do trabalhador no mês selecionado
-    const mesStr = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
     const clientePorDia = {};
     (logs || [])
       .filter(l => l.workerId === selectedWorkerId && l.date?.startsWith(mesStr))
@@ -423,7 +451,6 @@ export default function RecibosCalculadora() {
       return ultimo || (datasOrdenadas.length > 0 ? clientePorDia[datasOrdenadas[0]] : null);
     }
 
-    const dataInicio = mapa.dataInicio || `${mesStr}-01`;
     let cursor = new Date(dataInicio + 'T00:00:00');
     const territorioLabel = inputs.territorio === 'nacional' ? 'Nacional' : 'Internacional';
     const rows = [];
@@ -455,14 +482,15 @@ export default function RecibosCalculadora() {
     }
 
     // Resíduo → somar a A008 Prémios
-    const totalAjudas = Math.round(bestTotal * valorDiario * 100) / 100;
-    const residuo     = Math.round((valorNecessario - totalAjudas) * 100) / 100;
+    const totalAjudas        = Math.round(bestTotal * valorDiario * 100) / 100;
+    const valorNecessarioFinal = ajudaNecessaria + subsAlimMapa;
+    const residuo             = Math.round((valorNecessarioFinal - totalAjudas) * 100) / 100;
     if (residuo > 0.01) {
       set('premios', String((n(inputs.premios) + residuo).toFixed(2)));
     }
 
     setMapaRows(rows);
-    setAutoFillInfo({ totalAjudas, residuo, valorNecessario });
+    setAutoFillInfo({ totalAjudas, subsAlimMapa, diasUteisCount, residuo, valorNecessario: valorNecessarioFinal });
   }
 
   function navMes(delta) {
@@ -1733,6 +1761,12 @@ ${hdrRow}${bodyRows}${totRow}
               <span className="font-semibold text-slate-700">Ajudas de custo:</span>{' '}
               {eur(autoFillInfo.totalAjudas)}
             </span>
+            {autoFillInfo.subsAlimMapa > 0 && (
+              <span>
+                <span className="font-semibold text-slate-700">Sub. alim. ({autoFillInfo.diasUteisCount} dias úteis):</span>{' '}
+                −{eur(autoFillInfo.subsAlimMapa)}
+              </span>
+            )}
             {autoFillInfo.residuo > 0.01 && (
               <span>
                 <span className="font-semibold text-slate-700">Complemento A008:</span>{' '}
@@ -1740,8 +1774,8 @@ ${hdrRow}${bodyRows}${totRow}
               </span>
             )}
             <span>
-              <span className="font-semibold text-slate-700">Total:</span>{' '}
-              {eur(autoFillInfo.totalAjudas + autoFillInfo.residuo)} = valor necessário ✓
+              <span className="font-semibold text-slate-700">Importância a receber:</span>{' '}
+              {eur(autoFillInfo.totalAjudas - autoFillInfo.subsAlimMapa + autoFillInfo.residuo)} ✓
             </span>
           </div>
         )}
