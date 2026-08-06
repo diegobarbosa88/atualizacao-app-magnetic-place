@@ -464,7 +464,7 @@ export default function RecibosCalculadora() {
                  :                            'Consecutivo';
       const hora = isFirstRow ? horaPartidaAuto : isLastRow ? horaChegadaAuto : '';
       const pct  = isLastRow && !isFirstRow ? Math.round(bestF * 100) : 100;
-      const dia  = cursor.toISOString().slice(0, 10);
+      const dia  = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
 
       rows.push({
         id: Date.now() + i,

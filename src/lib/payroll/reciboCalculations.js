@@ -323,7 +323,7 @@ export function gerarLinhasMapa({
 
     rows.push({
       id: rows.length + 1,
-      dia: cursor.toISOString().slice(0, 10),
+      dia: `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`,
       servico: 'Serviços de mecânica geral',
       cliente,
       localidade,
