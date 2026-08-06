@@ -166,13 +166,33 @@ export default function RecibosCalculadora() {
       ctx.drawImage(img, 0, 0);
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const d = imgData.data;
-      // Cor do canto superior-esquerdo = cor de fundo
+      const IW = canvas.width, IH = canvas.height;
+
+      // Cor de fundo = canto superior-esquerdo
       const bgR = d[0], bgG = d[1], bgB = d[2];
-      const tol = 45;
-      for (let i = 0; i < d.length; i += 4) {
-        if (Math.abs(d[i]-bgR) < tol && Math.abs(d[i+1]-bgG) < tol && Math.abs(d[i+2]-bgB) < tol)
-          d[i+3] = 0; // transparente
+      const tol = 40;
+      const similar = px => Math.abs(d[px]-bgR) < tol && Math.abs(d[px+1]-bgG) < tol && Math.abs(d[px+2]-bgB) < tol;
+
+      // Flood fill BFS a partir de todas as bordas — só remove pixels externos conectados
+      const visited = new Uint8Array(IW * IH);
+      const queue = [];
+      let head = 0;
+
+      const seed = idx => { if (!visited[idx] && similar(idx * 4)) { visited[idx] = 1; queue.push(idx); } };
+
+      for (let x = 0; x < IW; x++) { seed(x); seed((IH - 1) * IW + x); }
+      for (let y = 1; y < IH - 1; y++) { seed(y * IW); seed(y * IW + IW - 1); }
+
+      while (head < queue.length) {
+        const idx = queue[head++];
+        d[idx * 4 + 3] = 0; // transparente
+        const x = idx % IW, y = (idx / IW) | 0;
+        if (x > 0)      seed(idx - 1);
+        if (x < IW - 1) seed(idx + 1);
+        if (y > 0)      seed(idx - IW);
+        if (y < IH - 1) seed(idx + IW);
       }
+
       ctx.putImageData(imgData, 0, 0);
       logoRef.current = canvas.toDataURL('image/png');
     };
