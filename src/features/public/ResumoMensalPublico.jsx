@@ -487,7 +487,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       <td
                         key={ci}
                         className={`px-1.5 py-2 text-[10px] font-black whitespace-nowrap text-right ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
-                        style={idx === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', textAlign: 'left' } : {}}
+                        style={idx === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', textAlign: 'center' } : {}}
                       >
                         {idx === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${rows.filter(r => r.completo).length}/${rows.length} ✓` : val !== null ? val.toFixed(2) : ''}
                       </td>
