@@ -275,6 +275,7 @@ export default function RecibosCalculadora() {
 
     return trabalhadores.map(w => {
       const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
+      if (workerLogs.length === 0) return null; // sem registos neste mês
       const hist         = workerRateHistory.filter(h => h.worker_id === w.id);
       const brutoAlvo    = workerLogs.reduce((s, l) => {
         const rate = getRateAtDate(l.date, hist, parseFloat(w.valorHora) || 0);
@@ -347,7 +348,7 @@ export default function RecibosCalculadora() {
         _ssTrabNum:    rc.ssTrabalhador,
         _vencNum:      parseFloat(w.vencimento_base) || 0,
       };
-    });
+    }).filter(Boolean);
   }, [workers, logs, clients, workerRateHistory, contabData, inputs.mes, inputs.ano]);
 
   function addRow(data) {

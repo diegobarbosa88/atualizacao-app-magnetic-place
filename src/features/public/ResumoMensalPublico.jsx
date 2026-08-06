@@ -234,8 +234,8 @@ export default function ResumoMensalPublico() {
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     return ativos.map(w => {
-      // Logs deste trabalhador no mês (campo workerId — camelCase, igual ao admin)
       const workerLogs = logs.filter(l => l.workerId === w.id);
+      if (workerLogs.length === 0) return null; // sem registos neste mês
       const hist       = rateHistory.filter(h => h.worker_id === w.id);
 
       // Bruto alvo: horas × taxa histórica (igual à lógica do admin)
@@ -306,7 +306,7 @@ export default function ResumoMensalPublico() {
         _custoNum:     rc.custoEmpresa,
         _brutoNum:     (brutoAlvo || 0) + (ajustes[w.id] || 0),
       };
-    });
+    }).filter(Boolean);
   }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ajustes, ano]);
 
   const upsertObs = (workerId, patch) => {
