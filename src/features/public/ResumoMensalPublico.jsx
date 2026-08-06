@@ -13,35 +13,35 @@ const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) :
 const EMPRESA = { nome: 'Magnetic Place Unipessoal, Lda', nif: '517379740' };
 
 const COLS = [
-  { label: 'Trabalhador',             key: 'nome' },
-  { label: 'NIF',                     key: 'nif' },
-  { label: 'NIS',                     key: 'nis' },
-  { label: 'Profissão',               key: 'profissao' },
-  { label: 'Empresa',                 key: 'empresa' },
-  { label: 'Início Vínculo',          key: 'inicioVinculo' },
-  { label: 'Cessação Vínculo',        key: 'cessacaoVinculo' },
-  { label: 'Tabela IRS',              key: 'tabelaNome' },
-  { label: 'Nº Dep.',                 key: 'nDep' },
-  { label: 'Venc. Base (€)',          key: 'vencBase',      sum: '_vencNum' },
-  { label: 'Sub. Alim. Dias',         key: 'subsAlimDias' },
-  { label: 'Sub. Alim. €/dia',        key: 'subsAlimDia' },
-  { label: 'Sub. Alim. Total (€)',    key: 'subsAlimTotal', sum: '_subsAlimNum' },
-  { label: 'Sub. Férias / Duod. (€)', key: 'subsFerias',    sum: '_feriasNum' },
-  { label: 'Sub. Natal / Duod. (€)',  key: 'subsNatal',     sum: '_natalNum' },
-  { label: 'Ajudas Custo Inter. (€)', key: 'ajudas',        sum: '_ajudasNum' },
-  { label: 'Base IRS (€)',            key: 'baseIRS' },
-  { label: 'Taxa IRS',                key: 'taxaIRS' },
-  { label: 'IRS (€)',                 key: 'irsTotal',      sum: '_irsNum' },
-  { label: 'SS Trab. 11% (€)',        key: 'ssTrab',        sum: '_ssTrabNum' },
-  { label: 'Total Abonos (€)',        key: 'totalAbonos',   sum: '_abonosNum' },
-  { label: 'Total Descontos (€)',     key: 'totalDesc',     sum: '_descNum' },
-  { label: 'Líquido (€)',             key: 'liquido',       sum: '_liquidoNum' },
-  { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',    sum: '_ssPatNum' },
-  { label: 'Custo Empresa (€)',       key: 'custoEmpresa',  sum: '_custoNum' },
-  { label: 'Ajuste (€)',              key: 'ajusteLabel',   sum: '_ajusteNum' },
-  { label: 'Ordenado Bruto (€)',      key: 'brutoAlvo',     sum: '_brutoNum', highlight: true },
-  { label: 'Observação',              key: 'observacao' },
-  { label: 'Completo',                key: 'completo',      tipo: 'toggle' },
+  { label: 'Trabalhador',              key: 'nome',        w: 150 },
+  { label: 'NIF',                      key: 'nif',         w: 85  },
+  { label: 'NIS',                      key: 'nis',         w: 85  },
+  { label: 'Profissão',                key: 'profissao',   w: 100 },
+  { label: 'Empresa',                  key: 'empresa',     w: 130 },
+  { label: 'Início Vínculo',           key: 'inicioVinculo',  w: 88 },
+  { label: 'Cessação Vínculo',         key: 'cessacaoVinculo',w: 88 },
+  { label: 'Tabela IRS',               key: 'tabelaNome',  w: 82  },
+  { label: 'Nº Dep.',                  key: 'nDep',        w: 54  },
+  { label: 'Venc. Base (€)',           key: 'vencBase',    w: 84,  sum: '_vencNum'    },
+  { label: 'Sub. Alim. Dias',          key: 'subsAlimDias',w: 64  },
+  { label: 'Sub. Alim. €/dia',         key: 'subsAlimDia', w: 76  },
+  { label: 'Sub. Alim. Total (€)',     key: 'subsAlimTotal',w: 84, sum: '_subsAlimNum'},
+  { label: 'Sub. Férias / Duod. (€)', key: 'subsFerias',  w: 84,  sum: '_feriasNum'  },
+  { label: 'Sub. Natal / Duod. (€)',  key: 'subsNatal',   w: 84,  sum: '_natalNum'   },
+  { label: 'Ajudas Custo Inter. (€)', key: 'ajudas',      w: 84,  sum: '_ajudasNum'  },
+  { label: 'Base IRS (€)',             key: 'baseIRS',     w: 76  },
+  { label: 'Taxa IRS',                 key: 'taxaIRS',     w: 64  },
+  { label: 'IRS (€)',                  key: 'irsTotal',    w: 70,  sum: '_irsNum'     },
+  { label: 'SS Trab. 11% (€)',         key: 'ssTrab',      w: 80,  sum: '_ssTrabNum'  },
+  { label: 'Total Abonos (€)',         key: 'totalAbonos', w: 84,  sum: '_abonosNum'  },
+  { label: 'Total Descontos (€)',      key: 'totalDesc',   w: 84,  sum: '_descNum'    },
+  { label: 'Líquido (€)',              key: 'liquido',     w: 76,  sum: '_liquidoNum' },
+  { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',  w: 84,  sum: '_ssPatNum'   },
+  { label: 'Custo Empresa (€)',        key: 'custoEmpresa',w: 84,  sum: '_custoNum'   },
+  { label: 'Ajuste (€)',               key: 'ajusteLabel', w: 74,  sum: '_ajusteNum'  },
+  { label: 'Ordenado Bruto (€)',       key: 'brutoAlvo',   w: 96,  sum: '_brutoNum',  highlight: true },
+  { label: 'Observação',               key: 'observacao',  w: 150 },
+  { label: 'Completo',                 key: 'completo',    w: 64,  tipo: 'toggle' },
 ];
 
 function parseMes(str) {
@@ -353,11 +353,28 @@ export default function ResumoMensalPublico() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white">
-            <table className="border-collapse text-xs" style={{ minWidth: `${Math.max(600, activeCols.length * 120)}px`, width: '100%' }}>
+            <table
+              className="border-collapse"
+              style={{
+                width: '100%',
+                tableLayout: 'fixed',
+                minWidth: `${activeCols.reduce((s, { col }) => s + (col.w || 84), 0)}px`,
+                fontSize: '11px',
+              }}
+            >
+              <colgroup>
+                {activeCols.map(({ col, ci }) => (
+                  <col key={ci} style={{ width: `${col.w || 84}px` }} />
+                ))}
+              </colgroup>
               <thead>
                 <tr className="bg-slate-800 text-white">
-                  {activeCols.map(({ col, ci }) => (
-                    <th key={ci} className={`px-3 py-3 text-[10px] font-black uppercase tracking-wide text-center whitespace-nowrap ${col.highlight ? 'bg-emerald-700' : ''}`}>
+                  {activeCols.map(({ col, ci }, ai) => (
+                    <th
+                      key={ci}
+                      className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? 'bg-emerald-700' : ''}`}
+                      style={ai === 0 ? { position: 'sticky', left: 0, zIndex: 10, background: '#1e293b' } : {}}
+                    >
                       {col.label}
                     </th>
                   ))}
@@ -366,8 +383,15 @@ export default function ResumoMensalPublico() {
               <tbody>
                 {rows.map((row, ri) => (
                   <tr key={ri} className={row.completo ? 'bg-emerald-50' : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                    {activeCols.map(({ col, ci }) => (
-                      <td key={ci} className={`px-3 py-2 text-center whitespace-nowrap font-bold ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}>
+                    {activeCols.map(({ col, ci }, ai) => (
+                      <td
+                        key={ci}
+                        className={`px-1.5 py-1.5 font-bold overflow-hidden ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
+                        style={{
+                          ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc', boxShadow: '2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
+                          ...(col.tipo ? {} : { textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden', textAlign: 'center' }),
+                        }}
+                      >
                         {col.key === 'ajusteLabel' ? (
                           <span style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#94a3b8' }}>
                             {row.ajusteLabel}
@@ -377,13 +401,13 @@ export default function ResumoMensalPublico() {
                             <button
                               onClick={() => updateCompleto(row.workerId, !row.completo)}
                               title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
-                              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                              className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
                                 row.completo
                                   ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
                                   : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
                               }`}
                             >
-                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="20 6 9 17 4 12"/>
                               </svg>
                             </button>
@@ -401,7 +425,11 @@ export default function ResumoMensalPublico() {
                   {activeCols.map(({ col, ci }, idx) => {
                     const val = col.sum ? rows.reduce((s, r) => s + (r[col.sum] || 0), 0) : null;
                     return (
-                      <td key={ci} className={`px-3 py-2.5 text-center text-xs font-black whitespace-nowrap ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}>
+                      <td
+                        key={ci}
+                        className={`px-1.5 py-2 text-[10px] font-black whitespace-nowrap text-right ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
+                        style={idx === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', textAlign: 'left' } : {}}
+                      >
                         {idx === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${rows.filter(r => r.completo).length}/${rows.length} ✓` : val !== null ? val.toFixed(2) : ''}
                       </td>
                     );

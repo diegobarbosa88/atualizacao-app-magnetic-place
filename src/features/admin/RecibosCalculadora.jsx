@@ -1658,35 +1658,35 @@ function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
 }
 
 const RESUMO_COLS = [
-  { label: 'Trabalhador',           key: 'nome',           align: 'center' },
-  { label: 'NIF',                   key: 'nif',            align: 'center' },
-  { label: 'NIS',                   key: 'nis',            align: 'center' },
-  { label: 'Profissão',             key: 'profissao',      align: 'center' },
-  { label: 'Empresa',               key: 'empresa',        align: 'center' },
-  { label: 'Início Vínculo',        key: 'inicioVinculo',  align: 'center' },
-  { label: 'Cessação Vínculo',      key: 'cessacaoVinculo',align: 'center' },
-  { label: 'Tabela IRS',            key: 'tabelaNome',     align: 'center' },
-  { label: 'Nº Dep.',               key: 'nDep',         align: 'center' },
-  { label: 'Venc. Base (€)',        key: 'vencBase',     align: 'right', sumKey: '_vencNum' },
-  { label: 'Sub. Alim. Dias',       key: 'subsAlimDias', align: 'center' },
-  { label: 'Sub. Alim. €/dia',      key: 'subsAlimDia',  align: 'right' },
-  { label: 'Sub. Alim. Total (€)',  key: 'subsAlimTotal',align: 'right', sumKey: '_subsAlimNum' },
-  { label: 'Sub. Férias / Duod. (€)',key: 'subsFerias',  align: 'right', sumKey: '_feriasNum' },
-  { label: 'Sub. Natal / Duod. (€)',key: 'subsNatal',    align: 'right', sumKey: '_natalNum' },
-  { label: 'Ajudas Custo Inter. (€)',key: 'ajudas',      align: 'right', sumKey: '_ajudasNum' },
-  { label: 'Base IRS (€)',          key: 'baseIRS',      align: 'right' },
-  { label: 'Taxa IRS',              key: 'taxaIRS',      align: 'right' },
-  { label: 'IRS (€)',               key: 'irsTotal',     align: 'right', sumKey: '_irsNum' },
-  { label: 'SS Trab. 11% (€)',      key: 'ssTrab',       align: 'right', sumKey: '_ssTrabNum' },
-  { label: 'Total Abonos (€)',      key: 'totalAbonos',  align: 'right', sumKey: '_abonosNum' },
-  { label: 'Total Descontos (€)',   key: 'totalDesc',    align: 'right', sumKey: '_descNum' },
-  { label: 'Líquido (€)',           key: 'liquido',      align: 'right', sumKey: '_liquidoNum' },
-  { label: 'TSU Patronal 23,75% (€)',key: 'ssPatronal',  align: 'right', sumKey: '_ssPatNum' },
-  { label: 'Custo Empresa (€)',     key: 'custoEmpresa', align: 'right', sumKey: '_custoNum' },
-  { label: 'Ajuste (€)',            key: 'ajuste',       align: 'right', tipo: 'ajuste',      sumKey: '_ajusteNum' },
-  { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
-  { label: 'Observação',            key: 'observacao',   align: 'center', editable: true },
-  { label: 'Completo',              key: 'completo',     align: 'center', tipo: 'toggle' },
+  { label: 'Trabalhador',              key: 'nome',           align: 'center', w: 150 },
+  { label: 'NIF',                      key: 'nif',            align: 'center', w: 85  },
+  { label: 'NIS',                      key: 'nis',            align: 'center', w: 85  },
+  { label: 'Profissão',                key: 'profissao',      align: 'center', w: 100 },
+  { label: 'Empresa',                  key: 'empresa',        align: 'center', w: 130 },
+  { label: 'Início Vínculo',           key: 'inicioVinculo',  align: 'center', w: 88  },
+  { label: 'Cessação Vínculo',         key: 'cessacaoVinculo',align: 'center', w: 88  },
+  { label: 'Tabela IRS',               key: 'tabelaNome',     align: 'center', w: 82  },
+  { label: 'Nº Dep.',                  key: 'nDep',           align: 'center', w: 54  },
+  { label: 'Venc. Base (€)',           key: 'vencBase',       align: 'right',  w: 84,  sumKey: '_vencNum'    },
+  { label: 'Sub. Alim. Dias',          key: 'subsAlimDias',   align: 'center', w: 64  },
+  { label: 'Sub. Alim. €/dia',         key: 'subsAlimDia',    align: 'right',  w: 76  },
+  { label: 'Sub. Alim. Total (€)',     key: 'subsAlimTotal',  align: 'right',  w: 84,  sumKey: '_subsAlimNum'},
+  { label: 'Sub. Férias / Duod. (€)', key: 'subsFerias',     align: 'right',  w: 84,  sumKey: '_feriasNum'  },
+  { label: 'Sub. Natal / Duod. (€)',  key: 'subsNatal',      align: 'right',  w: 84,  sumKey: '_natalNum'   },
+  { label: 'Ajudas Custo Inter. (€)', key: 'ajudas',         align: 'right',  w: 84,  sumKey: '_ajudasNum'  },
+  { label: 'Base IRS (€)',             key: 'baseIRS',        align: 'right',  w: 76  },
+  { label: 'Taxa IRS',                 key: 'taxaIRS',        align: 'right',  w: 64  },
+  { label: 'IRS (€)',                  key: 'irsTotal',       align: 'right',  w: 70,  sumKey: '_irsNum'     },
+  { label: 'SS Trab. 11% (€)',         key: 'ssTrab',         align: 'right',  w: 80,  sumKey: '_ssTrabNum'  },
+  { label: 'Total Abonos (€)',         key: 'totalAbonos',    align: 'right',  w: 84,  sumKey: '_abonosNum'  },
+  { label: 'Total Descontos (€)',      key: 'totalDesc',      align: 'right',  w: 84,  sumKey: '_descNum'    },
+  { label: 'Líquido (€)',              key: 'liquido',        align: 'right',  w: 76,  sumKey: '_liquidoNum' },
+  { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',     align: 'right',  w: 84,  sumKey: '_ssPatNum'   },
+  { label: 'Custo Empresa (€)',        key: 'custoEmpresa',   align: 'right',  w: 84,  sumKey: '_custoNum'   },
+  { label: 'Ajuste (€)',               key: 'ajuste',         align: 'right',  w: 74,  sumKey: '_ajusteNum', tipo: 'ajuste' },
+  { label: 'Ordenado Bruto (€)',       key: 'brutoAlvo',      align: 'right',  w: 96,  sumKey: '_brutoNum',  highlight: true },
+  { label: 'Observação',               key: 'observacao',     align: 'center', w: 150, editable: true },
+  { label: 'Completo',                 key: 'completo',       align: 'center', w: 64,  tipo: 'toggle' },
 ];
 
 function CopiarLinkBtn({ mesStr }) {
@@ -2155,13 +2155,27 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
-          <table className="w-full border-collapse text-sm">
+          <table
+            className="border-collapse"
+            style={{
+              width: '100%',
+              tableLayout: 'fixed',
+              minWidth: `${activeCols.reduce((s, { col }) => s + (col.w || 84), 0)}px`,
+              fontSize: '11px',
+            }}
+          >
+            <colgroup>
+              {activeCols.map(({ col, ci }) => (
+                <col key={ci} style={{ width: `${col.w || 84}px` }} />
+              ))}
+            </colgroup>
             <thead>
               <tr className="bg-slate-800 text-white">
-                {activeCols.map(({ col, ci }) => (
+                {activeCols.map(({ col, ci }, ai) => (
                   <th
                     key={ci}
-                    className={`${thBase} ${col.highlight ? 'bg-emerald-700 text-white' : 'text-slate-200'}`}
+                    className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? 'bg-emerald-700 text-white' : 'text-slate-200'}`}
+                    style={ai === 0 ? { position: 'sticky', left: 0, zIndex: 10, background: col.highlight ? '#065f46' : '#1e293b' } : {}}
                   >
                     {col.label}
                   </th>
@@ -2174,10 +2188,14 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
                   key={ri}
                   className={row.completo ? 'bg-emerald-50' : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
                 >
-                  {activeCols.map(({ col, ci }) => (
+                  {activeCols.map(({ col, ci }, ai) => (
                     <td
                       key={ci}
-                      className={`px-1 py-1 text-xs font-bold whitespace-nowrap ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
+                      className={`px-1.5 py-1.5 font-bold overflow-hidden ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
+                      style={{
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc', boxShadow: '2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
+                        ...(col.tipo || col.editable ? {} : { textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }),
+                      }}
                     >
                       {col.tipo === 'ajuste' ? (
                         <input
@@ -2226,7 +2244,8 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
                 {activeCols.map(({ col, ci }, ai) => (
                   <td
                     key={ci}
-                    className={`px-3 py-2.5 text-xs font-black whitespace-nowrap ${tdAlign(col.align)} ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
+                    className={`px-1.5 py-2 text-[10px] font-black whitespace-nowrap text-right ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
+                    style={ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', textAlign: 'left' } : {}}
                   >
                     {ai === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${displayRows.filter(r => r.completo).length}/${displayRows.length} ✓` : totals[ai] !== null ? totals[ai].toFixed(2) : ''}
                   </td>
