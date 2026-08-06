@@ -148,6 +148,8 @@ export default function RecibosCalculadora() {
   const [mapa, setMapa] = useState(MAPA_DEFAULT);
   const [mapaRows, setMapaRows] = useState([]);
   const [workerRateHistory, setWorkerRateHistory] = useState([]);
+  const [subTab, setSubTab] = useState('calculadora');
+  const [contabData, setContabData] = useState([]);
   let rowCounter = mapaRows.length;
 
   useEffect(() => {
@@ -155,6 +157,14 @@ export default function RecibosCalculadora() {
     supabase.from('worker_valorhora_history').select('*')
       .then(({ data }) => setWorkerRateHistory(data || []));
   }, [supabase]);
+
+  // Carrega contabilidade_mensal reactivamente ao mudar o mês
+  useEffect(() => {
+    if (!supabase) return;
+    const mesStr = `${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`;
+    supabase.from('contabilidade_mensal').select('*').eq('mes', mesStr)
+      .then(({ data }) => setContabData(data || []));
+  }, [supabase, inputs.mes, inputs.ano]);
 
   // Calcula o custo do trabalhador no mês selecionado (igual à coluna Custo em Custos/Equipa)
   const calcularCustoMes = useCallback((workerId, mes, ano) => {
@@ -248,6 +258,86 @@ export default function RecibosCalculadora() {
   }, [mapaRows, inputs.vdl]);
 
   const mapaDiff = r ? mapaTotal - r.ajudaCustoNecessaria : 0;
+
+  // Linhas do Resumo Mensal (mesma lógica do Excel)
+  const resumoRows = useMemo(() => {
+    const mesNum  = parseInt(inputs.mes, 10);
+    const mesStr  = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+    const anoNum  = n(inputs.ano);
+    const eur2    = v => (isNaN(v) ? 0 : v).toFixed(2);
+    const pct2    = v => (v * 100).toFixed(2) + '%';
+
+    const trabalhadores = (workers || [])
+      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
+
+    return trabalhadores.map(w => {
+      const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
+      const hist         = workerRateHistory.filter(h => h.worker_id === w.id);
+      const brutoAlvo    = workerLogs.reduce((s, l) => {
+        const rate = getRateAtDate(l.date, hist, parseFloat(w.valorHora) || 0);
+        return s + (parseFloat(l.hours) || 0) * rate;
+      }, 0);
+      const contabRow    = contabData.find(r => r.worker_id === w.id);
+      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+
+      const rc = calcularRecibo({
+        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
+        horasSemana: 40, premios: 0, he1: 0, he2: 0,
+        incluirFerias: true, incluirNatal: true,
+        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
+        subsAlimDias,
+        subsAlimTipo: 'cartao',
+        tabelaKey:    w.tabela_irs || 'tabelaI',
+        nDependentes: w.n_dependentes ?? 0,
+        brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
+        territorio: 'internacional', funcao: 'geral', ano: anoNum,
+      });
+
+      const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
+
+      return {
+        nome:          w.name || '',
+        nif:           w.nif || '',
+        nis:           w.nis || '',
+        profissao:     w.profissao || '',
+        tabelaNome,
+        nDep:          String(w.n_dependentes ?? 0),
+        vencBase:      eur2(parseFloat(w.vencimento_base)),
+        subsAlimDias:  String(subsAlimDias),
+        subsAlimDia:   eur2(parseFloat(w.subsidio_alimentacao_dia) || 0),
+        subsAlimTotal: eur2(rc.subsAlimTotal),
+        subsFerias:    eur2(rc.subsFerias),
+        subsNatal:     eur2(rc.subsNatal),
+        ajudas:        eur2(rc.ajudaCustoNecessaria),
+        baseIRS:       eur2(rc.incidenciaIRS),
+        taxaIRS:       pct2(rc.taxaEfIRS),
+        irsTotal:      eur2(rc.irsTotal),
+        ssTrab:        eur2(rc.ssTrabalhador),
+        totalAbonos:   eur2(rc.totalAbonos),
+        totalDesc:     eur2(rc.totalDescontos),
+        liquido:       eur2(rc.liquido),
+        ssPatronal:    eur2(rc.ssPatronal),
+        custoEmpresa:  eur2(rc.custoEmpresa),
+        brutoAlvo:     eur2(brutoAlvo),
+        _brutoNum:     brutoAlvo,
+        _abonosNum:    rc.totalAbonos,
+        _descNum:      rc.totalDescontos,
+        _liquidoNum:   rc.liquido,
+        _ssPatNum:     rc.ssPatronal,
+        _custoNum:     rc.custoEmpresa,
+        _subsAlimNum:  rc.subsAlimTotal,
+        _feriasNum:    rc.subsFerias,
+        _natalNum:     rc.subsNatal,
+        _ajudasNum:    rc.ajudaCustoNecessaria,
+        _irsNum:       rc.irsTotal,
+        _ssTrabNum:    rc.ssTrabalhador,
+        _vencNum:      parseFloat(w.vencimento_base) || 0,
+      };
+    });
+  }, [workers, logs, workerRateHistory, contabData, inputs.mes, inputs.ano]);
 
   function addRow(data) {
     rowCounter++;
@@ -1084,7 +1174,29 @@ ${hdrRow}${bodyRows}${totRow}
         </div>
       </Card>
 
-      {/* Grid 2 colunas: inputs + preview */}
+      {/* Sub-abas */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+        <button
+          onClick={() => setSubTab('calculadora')}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'calculadora' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Calculadora
+        </button>
+        <button
+          onClick={() => setSubTab('resumo')}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'resumo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Resumo Mensal
+        </button>
+      </div>
+
+      {/* ── Resumo Mensal ── */}
+      {subTab === 'resumo' && (
+        <ResumoMensalTable rows={resumoRows} mesLabel={`${MESES_PT[parseInt(inputs.mes, 10)] || ''} ${inputs.ano}`} />
+      )}
+
+      {/* Grid 2 colunas: inputs + preview + mapa */}
+      {subTab === 'calculadora' && <>
       <div className="grid lg:grid-cols-2 gap-5 items-start">
 
         {/* ── COLUNA INPUTS ── */}
@@ -1513,6 +1625,7 @@ ${hdrRow}${bodyRows}${totRow}
           </div>
         )}
       </Card>
+      </>}
     </div>
   );
 }
@@ -1526,5 +1639,101 @@ function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
       <td className="py-1.5 px-1 text-right font-bold text-slate-800">{abono != null ? eur(abono) : ''}</td>
       <td className="py-1.5 px-1 text-right font-bold text-rose-600">{desconto != null ? eur(desconto) : ''}</td>
     </tr>
+  );
+}
+
+const RESUMO_COLS = [
+  { label: 'Trabalhador',           key: 'nome',         align: 'left' },
+  { label: 'NIF',                   key: 'nif',          align: 'left' },
+  { label: 'NIS',                   key: 'nis',          align: 'left' },
+  { label: 'Profissão',             key: 'profissao',    align: 'left' },
+  { label: 'Tabela IRS',            key: 'tabelaNome',   align: 'left' },
+  { label: 'Nº Dep.',               key: 'nDep',         align: 'center' },
+  { label: 'Venc. Base (€)',        key: 'vencBase',     align: 'right', sumKey: '_vencNum' },
+  { label: 'Sub. Alim. Dias',       key: 'subsAlimDias', align: 'center' },
+  { label: 'Sub. Alim. €/dia',      key: 'subsAlimDia',  align: 'right' },
+  { label: 'Sub. Alim. Total (€)',  key: 'subsAlimTotal',align: 'right', sumKey: '_subsAlimNum' },
+  { label: 'Sub. Férias / Duod. (€)',key: 'subsFerias',  align: 'right', sumKey: '_feriasNum' },
+  { label: 'Sub. Natal / Duod. (€)',key: 'subsNatal',    align: 'right', sumKey: '_natalNum' },
+  { label: 'Ajudas Custo Inter. (€)',key: 'ajudas',      align: 'right', sumKey: '_ajudasNum' },
+  { label: 'Base IRS (€)',          key: 'baseIRS',      align: 'right' },
+  { label: 'Taxa IRS',              key: 'taxaIRS',      align: 'right' },
+  { label: 'IRS (€)',               key: 'irsTotal',     align: 'right', sumKey: '_irsNum' },
+  { label: 'SS Trab. 11% (€)',      key: 'ssTrab',       align: 'right', sumKey: '_ssTrabNum' },
+  { label: 'Total Abonos (€)',      key: 'totalAbonos',  align: 'right', sumKey: '_abonosNum' },
+  { label: 'Total Descontos (€)',   key: 'totalDesc',    align: 'right', sumKey: '_descNum' },
+  { label: 'Líquido (€)',           key: 'liquido',      align: 'right', sumKey: '_liquidoNum' },
+  { label: 'TSU Patronal 23,75% (€)',key: 'ssPatronal',  align: 'right', sumKey: '_ssPatNum' },
+  { label: 'Custo Empresa (€)',     key: 'custoEmpresa', align: 'right', sumKey: '_custoNum' },
+  { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
+];
+
+function ResumoMensalTable({ rows, mesLabel }) {
+  const totals = RESUMO_COLS.map(col =>
+    col.sumKey ? rows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
+  );
+
+  const thBase = 'px-3 py-2.5 text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-left';
+  const tdBase = (align, highlight) =>
+    `px-3 py-2 text-xs font-bold whitespace-nowrap ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'} ${highlight ? 'text-emerald-700' : 'text-slate-700'}`;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo Mensal — {mesLabel}</h3>
+        {rows.length > 0 && (
+          <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">{rows.length} trabalhadores</span>
+        )}
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-100">
+          <p className="text-sm font-black uppercase tracking-wide">Sem trabalhadores activos com vencimento base</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+          <table className="w-full border-collapse text-sm" style={{ minWidth: '1600px' }}>
+            <thead>
+              <tr className="bg-slate-800 text-white">
+                {RESUMO_COLS.map((col, ci) => (
+                  <th
+                    key={ci}
+                    className={`${thBase} ${col.highlight ? 'bg-emerald-700 text-white' : 'text-slate-200'}`}
+                  >
+                    {col.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, ri) => (
+                <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                  {RESUMO_COLS.map((col, ci) => (
+                    <td
+                      key={ci}
+                      className={`${tdBase(col.align, col.highlight)} ${col.highlight ? 'bg-emerald-50 border-x border-emerald-100' : ''}`}
+                    >
+                      {row[col.key]}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="bg-indigo-50 border-t-2 border-indigo-200">
+                {RESUMO_COLS.map((col, ci) => (
+                  <td
+                    key={ci}
+                    className={`px-3 py-2.5 text-xs font-black whitespace-nowrap ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
+                  >
+                    {ci === 0 ? 'TOTAIS' : totals[ci] !== null ? totals[ci].toFixed(2) : ''}
+                  </td>
+                ))}
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
