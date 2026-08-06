@@ -2261,13 +2261,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           <button
                             onClick={() => updateCompleto(row.workerId, !row.completo)}
                             title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                            className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
                               row.completo
                                 ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
                                 : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
                             }`}
                           >
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="20 6 9 17 4 12"/>
                             </svg>
                           </button>
