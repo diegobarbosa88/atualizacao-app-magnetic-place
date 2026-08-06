@@ -984,8 +984,8 @@ ${hdrRow}${bodyRows}${totRow}
   function _renderMapaPagina(doc, { mesLabel, ano, nome, nif, nis, profissao, mapaLinhas, subsAlimTotal, logo }) {
     const W  = doc.internal.pageSize.getWidth();   // 210mm portrait
     const H  = doc.internal.pageSize.getHeight();  // 297mm portrait
-    const MX = 10;
-    const TW = W - 2 * MX;  // 190mm
+    const MX = 5;
+    const TW = W - 2 * MX;  // 200mm
     const NAVY  = [15, 31, 61];
     const GOLD  = [212, 175, 55];
     const LGRAY = [242, 244, 247];
@@ -1050,13 +1050,13 @@ ${hdrRow}${bodyRows}${totRow}
     const Y_FOOTER = H - 42;
     const availH   = Y_FOOTER - Y_TABLE;
     const nRows    = mapaLinhas.length;
-    const HEADER_ROW_H = 5.5;
-    const rowH = Math.max(3.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
-    const fs   = Math.min(7, Math.max(5, rowH * 1.6));
-    const pad  = Math.max(0.5, (rowH - fs * 0.3528) / 2);
+    const HEADER_ROW_H = 4.0;
+    const rowH = Math.max(2.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
+    const fs   = Math.min(6.5, Math.max(4.5, rowH * 1.6));
+    const pad  = Math.max(0.2, (rowH - fs * 0.3528) / 2);
 
-    // Colunas — soma = 190mm (TW portrait)
-    const colW = [18, 28, 32, 26, 20, 20, 14, 12, 20];
+    // Colunas — soma = 200mm (TW portrait com MX=5)
+    const colW = [18, 30, 34, 28, 21, 21, 14, 12, 22];
 
     autoTable(doc, {
       startY: Y_TABLE,
@@ -1078,12 +1078,12 @@ ${hdrRow}${bodyRows}${totRow}
       headStyles: {
         fillColor: NAVY, textColor: 255,
         fontSize: Math.min(7, fs + 0.5), fontStyle: 'bold',
-        cellPadding: { top: 1.5, bottom: 1.5, left: 1.5, right: 1.5 },
+        cellPadding: { top: 0.8, bottom: 0.8, left: 1.0, right: 1.0 },
         minCellHeight: HEADER_ROW_H, halign: 'center',
       },
       bodyStyles: {
         fontSize: fs,
-        cellPadding: { top: pad, bottom: pad, left: 1.5, right: 1.5 },
+        cellPadding: { top: pad, bottom: pad, left: 1.0, right: 1.0 },
         overflow: 'ellipsis',
         minCellHeight: rowH,
         halign: 'center',
