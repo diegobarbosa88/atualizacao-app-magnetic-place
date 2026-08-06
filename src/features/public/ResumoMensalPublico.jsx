@@ -94,16 +94,25 @@ export default function ResumoMensalPublico() {
   useEffect(() => {
     if (!sb) return;
 
-    sb.from('resumo_config').select('valor').eq('chave', 'visible_cols').single()
+    const parseValor = (v) => {
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
+      return null;
+    };
+
+    sb.from('resumo_config').select('valor').eq('chave', 'visible_cols').maybeSingle()
       .then(({ data }) => {
-        if (data?.valor && Array.isArray(data.valor)) setVisibleCols(new Set(data.valor));
+        const arr = parseValor(data?.valor);
+        if (arr) setVisibleCols(new Set(arr));
       });
 
     const ch = sb.channel('pub_config_cols')
       .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'resumo_config', filter: 'chave=eq.visible_cols',
+        event: '*', schema: 'public', table: 'resumo_config',
       }, ({ new: row }) => {
-        if (row?.valor && Array.isArray(row.valor)) setVisibleCols(new Set(row.valor));
+        if (row?.chave !== 'visible_cols') return;
+        const arr = parseValor(row?.valor);
+        if (arr) setVisibleCols(new Set(arr));
       })
       .subscribe();
 

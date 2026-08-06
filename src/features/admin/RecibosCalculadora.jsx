@@ -1737,21 +1737,36 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   useEffect(() => {
     if (!supabase) return;
 
-    supabase.from('resumo_config').select('valor').eq('chave', 'visible_cols').single()
+    const parseValor = (v) => {
+      if (Array.isArray(v)) return v;
+      if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
+      return null;
+    };
+
+    supabase.from('resumo_config').select('valor').eq('chave', 'visible_cols').maybeSingle()
       .then(({ data }) => {
-        if (data?.valor && Array.isArray(data.valor)) {
-          const cols = new Set(data.valor);
+        const arr = parseValor(data?.valor);
+        if (arr) {
+          const cols = new Set(arr);
           setVisibleColsRaw(cols);
           localStorage.setItem(LS_COLS, JSON.stringify([...cols]));
+        } else {
+          // Nenhuma configuração guardada ainda — escrever estado actual
+          supabase.from('resumo_config').upsert(
+            { chave: 'visible_cols', valor: [...visibleCols], updated_at: new Date().toISOString() },
+            { onConflict: 'chave' }
+          );
         }
       });
 
     const ch = supabase.channel('resumo_config_cols')
       .on('postgres_changes', {
-        event: '*', schema: 'public', table: 'resumo_config', filter: 'chave=eq.visible_cols',
+        event: '*', schema: 'public', table: 'resumo_config',
       }, ({ new: row }) => {
-        if (row?.valor && Array.isArray(row.valor)) {
-          const cols = new Set(row.valor);
+        if (row?.chave !== 'visible_cols') return;
+        const arr = parseValor(row?.valor);
+        if (arr) {
+          const cols = new Set(arr);
           setVisibleColsRaw(cols);
           localStorage.setItem(LS_COLS, JSON.stringify([...cols]));
         }
