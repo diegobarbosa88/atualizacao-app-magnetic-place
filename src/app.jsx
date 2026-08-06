@@ -23,6 +23,7 @@ import EntryForm from './components/common/EntryForm';
 import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
 import VerificationPortal from './components/common/VerificationPortal';
+import ResumoMensalPublico from './features/public/ResumoMensalPublico';
 import {
   toISODateLocal, isSameMonth
 } from './utils/dateUtils';
@@ -399,6 +400,11 @@ export default function App() {
   // Portal público de verificação de assinaturas (não requer login)
   if (urlView === 'verify' && urlVerifyId) {
     return <VerificationPortal signatureId={urlVerifyId} />;
+  }
+
+  // Resumo Mensal partilhado com contabilista (não requer login)
+  if (location.pathname === '/partilha/resumo') {
+    return <ResumoMensalPublico />;
   }
 
   return (

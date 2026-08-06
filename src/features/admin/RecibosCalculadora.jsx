@@ -1687,6 +1687,30 @@ const RESUMO_COLS = [
   { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
 ];
 
+function CopiarLinkBtn({ mesStr }) {
+  const [copiado, setCopiado] = useState(false);
+  const copiar = () => {
+    const url = `${window.location.origin}/partilha/resumo?mes=${mesStr}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2500);
+    });
+  };
+  return (
+    <button
+      onClick={copiar}
+      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${copiado ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'}`}
+      title="Copiar link partilhável para o contabilista"
+    >
+      {copiado ? (
+        <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!</>
+      ) : (
+        <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Partilhar</>
+      )}
+    </button>
+  );
+}
+
 const LS_COLS    = 'resumo_visible_cols';
 const LS_WORKERS = 'resumo_selected_workers';
 const LS_OBS     = 'resumo_observacoes';
@@ -1986,6 +2010,9 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
               </div>
             )}
           </div>
+
+          {/* Copiar link partilhável */}
+          <CopiarLinkBtn mesStr={mesStr} />
 
           {/* Exportar XLS */}
           <button
