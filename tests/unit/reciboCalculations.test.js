@@ -107,8 +107,8 @@ describe('calcularRecibo', () => {
     const r = calcularRecibo({ ...inputsBase, subsAlimValorDia: 7, subsAlimTipo: 'dinheiro' });
     // limite dinheiro: 6,15 → excedente: (7 - 6.15) * 20 = 17€
     expect(r.subsAlimExcedente).toBeCloseTo(17, 2);
-    // base IRS combinada inclui duodécimos
-    expect(r.incidenciaIRS).toBeCloseTo(1000 + 17 + 1000 / 12 + 1000 / 12, 1);
+    // base regular NÃO inclui duodécimos — só vencimento + excedente
+    expect(r.incidenciaRegular).toBeCloseTo(1000 + 17, 1);
   });
 
   it('duodécimos de férias e natal = vencimentoBase / 12 cada', () => {
@@ -128,13 +128,29 @@ describe('calcularRecibo', () => {
 
   it('SS trabalhador = 11% da base de incidência', () => {
     const r = calcularRecibo(inputsBase);
-    // base SS = vencBase + extras (sem ajuda de custo e sem parte isenta subsídio alimentação)
     expect(r.ssTrabalhador).toBeCloseTo(r.incidenciaSS * LIMITES.ssTrabalhador, 2);
   });
 
   it('IRS total > 0 para rendimento acima do mínimo', () => {
     const r = calcularRecibo(inputsBase);
     expect(r.irsTotal).toBeGreaterThan(0);
+  });
+
+  it('bug fix: duodécimos avaliados separadamente — vencimento 1000€ → IRS ≈ 42€ (não 89€)', () => {
+    // Caso confirmado com recibos TOConline:
+    // vencimento 1000€ + duodécimos 83,33€ férias + 83,33€ natal
+    // Bug antigo: base combinada 1166,67€ → IRS 89,15€ (escalão mais alto)
+    // Correto: incidenciaRegular 1000€ + cada duodécimo pela taxa do vencimento → IRS ≈ 42€
+    const r = calcularRecibo({
+      ...inputsBase,
+      subsAlimValorDia: 0,
+      subsAlimDias: 0,
+      brutoAlvo: 1166.67,
+    });
+    expect(r.incidenciaRegular).toBeCloseTo(1000, 1);
+    expect(r.irsFerias).toBeCloseTo(r.subsFerias * r.taxaSubsidios, 2);
+    expect(r.irsNatal).toBeCloseTo(r.subsNatal  * r.taxaSubsidios, 2);
+    expect(r.irsTotal).toBeCloseTo(42, 0);
   });
 
   it('líquido = totalAbonos − (IRS + SS trabalhador)', () => {

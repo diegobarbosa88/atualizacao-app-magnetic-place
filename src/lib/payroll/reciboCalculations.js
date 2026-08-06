@@ -233,19 +233,24 @@ export function calcularRecibo(inputs) {
 
   const vdl = valorDiarioLegal(territorio, funcao);
 
-  // IRS: base combinada mensal – mesmo método do TOConline
-  // Inclui vencimento + prémios + excedente subsAlim + duodécimos numa única taxa de tabela
-  const incidenciaIRS = vencimentoBase + premios + subsAlimExcedente + subsFerias + subsNatal;
-  const irsBase    = calcularIRS(incidenciaIRS, tabelaKey, nDependentes, ano);
-  const taxaEfIRS  = taxaEfetiva(incidenciaIRS, tabelaKey, nDependentes, ano);
+  // IRS regular: vencimento + prémios + excedente de subsídio alimentação
+  const incidenciaRegular = vencimentoBase + premios + subsAlimExcedente;
+  const irsRegular  = calcularIRS(incidenciaRegular, tabelaKey, nDependentes, ano);
+  const taxaRegular = taxaEfetiva(incidenciaRegular, tabelaKey, nDependentes, ano);
 
-  // Trabalho suplementar: 50% da taxa efetiva sobre a base combinada
-  const taxaOvertime = taxaEfIRS * 0.5;
+  // IRS subsídios: cada duodécimo tributado pela taxa do vencimento base isolado (sem somar entre si)
+  const taxaSubsidios = taxaEfetiva(vencimentoBase, tabelaKey, nDependentes, ano);
+  const irsFerias     = subsFerias * taxaSubsidios;
+  const irsNatal      = subsNatal  * taxaSubsidios;
+
+  // Trabalho suplementar: 50% da taxa regular
+  const taxaOvertime = taxaRegular * 0.5;
   const irsOvertime  = totalOvertime * taxaOvertime;
-  const irsTotal     = irsBase + irsOvertime;
 
-  // Base SS idêntica à base IRS + horas extra (sem ajudas de custo isentas e parte isenta subsAlim)
-  const incidenciaSS  = incidenciaIRS + totalOvertime;
+  const irsTotal = irsRegular + irsFerias + irsNatal + irsOvertime;
+
+  // Base SS: inclui tudo exceto ajudas de custo e parte isenta de subsAlim
+  const incidenciaSS  = incidenciaRegular + subsFerias + subsNatal + totalOvertime;
   const ssTrabalhador = incidenciaSS * LIMITES.ssTrabalhador;
   const ssPatronal    = incidenciaSS * LIMITES.ssPatronal;
 
@@ -264,7 +269,8 @@ export function calcularRecibo(inputs) {
     subsFerias, subsNatal,
     subsAlimTotal, subsAlimExcedente, limiteAlim,
     valorDiarioLegal: vdl,
-    incidenciaIRS, irsBase, taxaEfIRS,
+    incidenciaRegular, irsRegular, taxaRegular,
+    taxaSubsidios, irsFerias, irsNatal,
     taxaOvertime, irsOvertime,
     irsTotal,
     incidenciaSS, ssTrabalhador, ssPatronal,

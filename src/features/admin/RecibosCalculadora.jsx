@@ -324,8 +324,8 @@ export default function RecibosCalculadora() {
         subsFerias:    eur2(rc.subsFerias),
         subsNatal:     eur2(rc.subsNatal),
         ajudas:        eur2(rc.ajudaCustoNecessaria),
-        baseIRS:       eur2(rc.incidenciaIRS),
-        taxaIRS:       pct2(rc.taxaEfIRS),
+        baseIRS:       eur2(rc.incidenciaRegular),
+        taxaIRS:       pct2(rc.taxaRegular),
         irsTotal:      eur2(rc.irsTotal),
         ssTrab:        eur2(rc.ssTrabalhador),
         totalAbonos:   eur2(rc.totalAbonos),
@@ -477,7 +477,7 @@ export default function RecibosCalculadora() {
     if (n(inputs.he2) > 0) linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
     if (r.subsNatal > 0) linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
     if (r.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(r.ajudaCustoNecessaria), '']);
-    linhas.push(['T001', `IRS (incid. ${eur(r.incidenciaIRS)} · ${(r.taxaEfIRS * 100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
+    linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
 
     autoTable(doc, {
@@ -538,7 +538,7 @@ export default function RecibosCalculadora() {
     if (n(inputs.he2) > 0)      linhas.push(['A053', 'Trabalho Suplementar seguintes', `${inputs.he2}h`, r.valorHe2un.toFixed(4), r.valorHe2.toFixed(2), '']);
     if (r.subsNatal > 0)        linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', r.subsNatal.toFixed(2), '']);
     if (r.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', r.ajudaCustoNecessaria.toFixed(2), '']);
-    linhas.push(['T001', `IRS (incid. ${r.incidenciaIRS.toFixed(2)} · ${(r.taxaEfIRS * 100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
+    linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
     linhas.push(['', 'TOTAL', '', '', r.totalAbonos.toFixed(2), r.totalDescontos.toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', r.liquido.toFixed(2), '']);
@@ -685,7 +685,7 @@ export default function RecibosCalculadora() {
       if (rc.subsFerias > 0)  linhas.push(['A004', 'Sub. Férias (duodécimo 1/12)', '', '', eur2(rc.subsFerias), '']);
       if (rc.subsNatal > 0)   linhas.push(['A021', 'Sub. Natal (duodécimo 1/12)', '', '', eur2(rc.subsNatal), '']);
       if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (isento)', '', '', eur2(rc.ajudaCustoNecessaria), '']);
-      linhas.push(['T001', `IRS — ${tabelaNome.split('—')[0].trim()} / ${w.n_dependentes ?? 0} dep. (base ${eur2(rc.incidenciaIRS)} · ${pct(rc.taxaEfIRS)})`, '', '', '', eur2(rc.irsTotal)]);
+      linhas.push(['T001', `IRS — ${tabelaNome.split('—')[0].trim()} / ${w.n_dependentes ?? 0} dep. (venc. ${eur2(rc.incidenciaRegular)}·${pct(rc.taxaRegular)} + subs.·${pct(rc.taxaSubsidios)})`, '', '', '', eur2(rc.irsTotal)]);
       linhas.push(['T003', 'Seg. Social — Trabalhador (11%)', '', '', '', eur2(rc.ssTrabalhador)]);
 
       autoTable(doc, {
@@ -840,7 +840,7 @@ export default function RecibosCalculadora() {
         eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal),
         eur2(rc.subsFerias), eur2(rc.subsNatal),
         eur2(rc.ajudaCustoNecessaria),
-        eur2(rc.incidenciaIRS), pct2(rc.taxaEfIRS), eur2(rc.irsTotal),
+        eur2(rc.incidenciaRegular), pct2(rc.taxaRegular), eur2(rc.irsTotal),
         eur2(rc.ssTrabalhador), eur2(rc.totalAbonos), eur2(rc.totalDescontos),
         eur2(rc.liquido), eur2(rc.ssPatronal), eur2(rc.custoEmpresa),
         eur2(brutoAlvo),
@@ -1430,7 +1430,7 @@ ${hdrRow}${bodyRows}${totRow}
                         <td className="py-1.5 px-1 text-right" />
                       </tr>
                     )}
-                    <ReciboLinha desc={`T001 - IRS (incid. ${eur(r.incidenciaIRS)} · ${(r.taxaEfIRS * 100).toFixed(1)}%)`} desconto={r.irsTotal} />
+                    <ReciboLinha desc={`T001 - IRS (venc.·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
                     {/* Total */}
                     <tr className="border-t-2 border-slate-800 font-black">
@@ -1446,9 +1446,11 @@ ${hdrRow}${bodyRows}${totRow}
 
               {/* Notas de taxas */}
               <div className="mt-3 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 font-bold space-y-0.5">
-                <p>Base IRS mensal (vencimento + prémios + excedente + duodécimos): {eur(r.incidenciaIRS)} · taxa efetiva {(r.taxaEfIRS * 100).toFixed(2)}%</p>
+                <p>IRS — Taxa efetiva (Vencimento e restantes abonos): {eur(r.incidenciaRegular)} · {(r.taxaRegular * 100).toFixed(2)}%</p>
+                {r.subsFerias > 0 && <p>IRS — Taxa efetiva (Subsídio de Férias): {(r.taxaSubsidios * 100).toFixed(2)}%</p>}
+                {r.subsNatal  > 0 && <p>IRS — Taxa efetiva (Subsídio de Natal): {(r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {(n(inputs.he1) > 0 || n(inputs.he2) > 0) && (
-                  <p>Trabalho suplementar: taxa {(r.taxaOvertime * 100).toFixed(2)}% (50% da taxa mensal)</p>
+                  <p>Trabalho suplementar: taxa {(r.taxaOvertime * 100).toFixed(2)}% (50% da taxa regular)</p>
                 )}
                 {r.subsAlimExcedente > 0 && (
                   <p className="text-amber-600">Atenção: subsídio de alimentação excede o limite de isenção ({eur(r.limiteAlim)}/dia) — excedente {eur(r.subsAlimExcedente)} sujeito a IRS/SS.</p>
