@@ -1,0 +1,1530 @@
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { AlertTriangle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { useApp } from '../../context/AppContext';
+import { getRateAtDate } from './cost-reports/useCostReportsData.js';
+import {
+  IRS_TABELAS,
+  IRS_TABELAS_BY_YEAR,
+  getIRSTabelasPorAno,
+  LIMITES,
+  MESES_PT,
+  calcularRecibo,
+  valorDiarioLegal,
+  gerarLinhasMapa,
+  eur,
+} from '../../lib/payroll/reciboCalculations.js';
+
+const EMPRESA = {
+  nome: 'Magnetic Place Unipessoal, Lda',
+  morada: 'Rua D. Pedro V n 715 Loja 80, Trofa, Bougado (São Martinho e Santiago)',
+  nif: '517379740',
+};
+
+const INPUT_DEFAULT = {
+  nome: '',
+  nif: '',
+  categoria: '',
+  nis: '',
+  mes: String(new Date().getMonth() + 1),
+  ano: String(new Date().getFullYear()),
+  diasMes: '20',
+  vencimentoBase: '',
+  horasSemana: '40',
+  premios: '0',
+  he1: '0',
+  he2: '0',
+  incluirFerias: true,
+  incluirNatal: true,
+  subsAlimValorDia: '8.00',
+  subsAlimDias: '20',
+  subsAlimTipo: 'cartao',
+  tabelaKey: 'tabelaI',
+  nDependentes: '0',
+  brutoAlvo: '',
+  territorio: 'internacional',
+  funcao: 'geral',
+  vdl: String(LIMITES.ajudaInternacionalGeral),
+  cliente: '',
+  localidade: '',
+  pais: '',
+};
+
+const MAPA_DEFAULT = {
+  dataInicio: '',
+  horaPartida: '07:30',
+  horaChegada: '20:30',
+};
+
+function n(v) { return parseFloat(v) || 0; }
+
+function LabelInput({ label, children, hint }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">{label}</label>
+      {children}
+      {hint && <span className="text-[10px] text-slate-400 ml-1">{hint}</span>}
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, className = '' }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      readOnly={readOnly}
+      step={step}
+      min={min}
+      max={max}
+      className={`w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm transition-all
+        ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50'}
+        ${className}`}
+    />
+  );
+}
+
+function SelectInput({ value, onChange, children }) {
+  return (
+    <select
+      value={value}
+      onChange={onChange}
+      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all lowercase"
+    >
+      {children}
+    </select>
+  );
+}
+
+function Card({ children, className = '' }) {
+  return (
+    <div className={`bg-white rounded-2xl border border-slate-100 shadow-sm ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function SectionHeader({ n: num, label }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-4">
+      <span className="w-6 h-6 rounded-full bg-slate-700 text-white text-[11px] font-black flex items-center justify-center shrink-0">{num}</span>
+      <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">{label}</h3>
+    </div>
+  );
+}
+
+const TZ_MAP = {
+  'Europe/Lisbon':     { pais: 'Portugal',       territorio: 'nacional' },
+  'Europe/Madrid':     { pais: 'Espanha',         territorio: 'internacional' },
+  'Europe/Paris':      { pais: 'França',          territorio: 'internacional' },
+  'Europe/Berlin':     { pais: 'Alemanha',        territorio: 'internacional' },
+  'Europe/London':     { pais: 'Reino Unido',     territorio: 'internacional' },
+  'Europe/Amsterdam':  { pais: 'Países Baixos',   territorio: 'internacional' },
+  'Europe/Brussels':   { pais: 'Bélgica',         territorio: 'internacional' },
+  'Europe/Luxembourg': { pais: 'Luxemburgo',      territorio: 'internacional' },
+  'Europe/Rome':       { pais: 'Itália',          territorio: 'internacional' },
+  'Europe/Zurich':     { pais: 'Suíça',           territorio: 'internacional' },
+};
+
+function dadosDeCliente(client) {
+  const tz = client?.timezone || 'Europe/Madrid';
+  const { pais = '', territorio = 'internacional' } = TZ_MAP[tz] || {};
+  let localidade = '';
+  if (client?.morada) {
+    const partes = client.morada.split(',').map(p => p.trim()).filter(Boolean);
+    // Penúltima parte costuma ser a localidade (antes do país)
+    localidade = partes.length >= 2 ? partes[partes.length - 2] : partes[0] || '';
+  }
+  return { cliente: client?.name || '', localidade, pais, territorio };
+}
+
+export default function RecibosCalculadora() {
+  const { workers, logs, supabase, clients } = useApp();
+
+  const [selectedWorkerId, setSelectedWorkerId] = useState('');
+  const [inputs, setInputs] = useState(INPUT_DEFAULT);
+  const [mapa, setMapa] = useState(MAPA_DEFAULT);
+  const [mapaRows, setMapaRows] = useState([]);
+  const [workerRateHistory, setWorkerRateHistory] = useState([]);
+  let rowCounter = mapaRows.length;
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('worker_valorhora_history').select('*')
+      .then(({ data }) => setWorkerRateHistory(data || []));
+  }, [supabase]);
+
+  // Calcula o custo do trabalhador no mês selecionado (igual à coluna Custo em Custos/Equipa)
+  const calcularCustoMes = useCallback((workerId, mes, ano) => {
+    if (!workerId || !logs) return 0;
+    const monthStr = `${ano}-${String(mes).padStart(2, '0')}`;
+    const worker = workers.find(w => w.id === workerId);
+    const history = workerRateHistory.filter(h => h.worker_id === workerId);
+    return (logs || [])
+      .filter(l => l.workerId === workerId && l.date?.startsWith(monthStr))
+      .reduce((sum, log) => {
+        const rate = getRateAtDate(log.date, history, worker?.valorHora);
+        return sum + (Number(log.hours) || 0) * rate;
+      }, 0);
+  }, [logs, workers, workerRateHistory]);
+
+  // Sincroniza bruto alvo com o custo do mês sempre que muda: trabalhador, mês, ano ou histórico de taxas
+  useEffect(() => {
+    if (!selectedWorkerId) return;
+    const custo = calcularCustoMes(selectedWorkerId, inputs.mes, inputs.ano);
+    if (custo > 0) setInputs(prev => ({ ...prev, brutoAlvo: custo.toFixed(2) }));
+  }, [selectedWorkerId, inputs.mes, inputs.ano, calcularCustoMes]);
+
+  const set = useCallback((field, value) => {
+    setInputs(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handleSelectWorker = (e) => {
+    const id = e.target.value;
+    setSelectedWorkerId(id);
+    if (!id) return;
+    const w = workers.find(x => x.id === id);
+    if (!w) return;
+
+    // Cliente padrão atribuído ao trabalhador
+    const clientId = w.defaultClientId || (w.assignedClients || [])[0];
+    const client = (clients || []).find(c => c.id === clientId);
+    const dc = dadosDeCliente(client);
+
+    setInputs(prev => ({
+      ...prev,
+      nome: w.name || prev.nome,
+      nif: w.nif || prev.nif,
+      categoria: w.profissao || prev.categoria,
+      nis: w.nis || prev.nis,
+      vencimentoBase: w.vencimento_base != null ? String(w.vencimento_base) : prev.vencimentoBase,
+      subsAlimValorDia: w.subsidio_alimentacao_dia != null ? String(w.subsidio_alimentacao_dia) : prev.subsAlimValorDia,
+      tabelaKey: w.tabela_irs || prev.tabelaKey,
+      nDependentes: w.n_dependentes != null ? String(w.n_dependentes) : prev.nDependentes,
+      cliente: dc.cliente || prev.cliente,
+      localidade: dc.localidade || prev.localidade,
+      pais: dc.pais || prev.pais,
+      territorio: dc.territorio || prev.territorio,
+    }));
+  };
+
+  const r = useMemo(() => {
+    if (!inputs.vencimentoBase) return null;
+    return calcularRecibo({
+      vencimentoBase: n(inputs.vencimentoBase),
+      horasSemana: n(inputs.horasSemana),
+      premios: n(inputs.premios),
+      he1: n(inputs.he1),
+      he2: n(inputs.he2),
+      incluirFerias: inputs.incluirFerias,
+      incluirNatal: inputs.incluirNatal,
+      subsAlimValorDia: n(inputs.subsAlimValorDia),
+      subsAlimDias: n(inputs.subsAlimDias),
+      subsAlimTipo: inputs.subsAlimTipo,
+      tabelaKey: inputs.tabelaKey,
+      nDependentes: n(inputs.nDependentes),
+      brutoAlvo: n(inputs.brutoAlvo),
+      territorio: inputs.territorio,
+      funcao: inputs.funcao,
+      ano: n(inputs.ano),
+    });
+  }, [inputs]);
+
+  // Sincroniza o valor diário legal quando muda o território ou função
+  useEffect(() => {
+    setInputs(prev => ({
+      ...prev,
+      vdl: String(valorDiarioLegal(prev.territorio, prev.funcao)),
+    }));
+  }, [inputs.territorio, inputs.funcao]);
+
+  const mapaTotal = useMemo(() => {
+    return mapaRows.reduce((sum, row) => {
+      const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(inputs.vdl);
+      return sum + limite * (row.pct / 100);
+    }, 0);
+  }, [mapaRows, inputs.vdl]);
+
+  const mapaDiff = r ? mapaTotal - r.ajudaCustoNecessaria : 0;
+
+  function addRow(data) {
+    rowCounter++;
+    setMapaRows(prev => [...prev, {
+      id: Date.now() + prev.length,
+      dia: '',
+      servico: 'Serviços de mecânica geral',
+      cliente: inputs.cliente,
+      localidade: inputs.localidade || inputs.pais,
+      territorio: inputs.territorio === 'nacional' ? 'Nacional' : 'Internacional',
+      tipo: 'Consecutivo',
+      hora: '',
+      pct: 100,
+      ...data,
+    }]);
+  }
+
+  function removeRow(id) {
+    setMapaRows(prev => prev.filter(r => r.id !== id));
+  }
+
+  function updateRow(id, field, value) {
+    setMapaRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+  }
+
+  function autoFill() {
+    if (!r) return;
+
+    // Mapa data → nome do cliente a partir dos logs do trabalhador no mês selecionado
+    const mesStr = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
+    const clientePorDia = {};
+    (logs || [])
+      .filter(l => l.workerId === selectedWorkerId && l.date?.startsWith(mesStr))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach(l => {
+        const nome = (clients || []).find(c => c.id === l.clientId)?.name || '';
+        if (nome) clientePorDia[l.date] = nome;
+      });
+
+    // Para um dado dia sem registo, devolve o cliente do último registo anterior
+    const datasOrdenadas = Object.keys(clientePorDia).sort();
+    function clienteParaDia(data) {
+      let ultimo = null;
+      for (const d of datasOrdenadas) {
+        if (d <= data) ultimo = clientePorDia[d];
+        else break;
+      }
+      // Dias antes do primeiro registo: usa o cliente do primeiro registo do mês
+      return ultimo || (datasOrdenadas.length > 0 ? clientePorDia[datasOrdenadas[0]] : null);
+    }
+
+    // Data de início: primeiro dia do mês se não definida pelo utilizador
+    const dataInicio = mapa.dataInicio || `${mesStr}-01`;
+
+    const rows = gerarLinhasMapa({
+      necessaria: r.ajudaCustoNecessaria,
+      limiteDia: n(inputs.vdl),
+      dataInicio,
+      horaPartida: mapa.horaPartida,
+      horaChegada: mapa.horaChegada,
+      territorio: inputs.territorio,
+      cliente: inputs.cliente,
+      localidade: inputs.localidade || inputs.pais,
+    });
+
+    setMapaRows(rows.map((row, i) => ({
+      ...row,
+      id: Date.now() + i,
+      // Cliente do log desse dia; se sem registo, propaga o último registo anterior
+      cliente: clienteParaDia(row.dia) || row.cliente,
+    })));
+  }
+
+  function navMes(delta) {
+    setInputs(prev => {
+      let mes = parseInt(prev.mes) + delta;
+      let ano = parseInt(prev.ano);
+      if (mes < 1)  { mes = 12; ano -= 1; }
+      if (mes > 12) { mes = 1;  ano += 1; }
+      return { ...prev, mes: String(mes), ano: String(ano) };
+    });
+  }
+
+  function gerarReciboPDF() {
+    if (!r) return;
+    const doc = new jsPDF();
+    const mesNum = parseInt(inputs.mes, 10);
+    const mesLabel = MESES_PT[mesNum] || inputs.mes;
+
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECIBO DE VENCIMENTO', 105, 16, { align: 'center' });
+
+    autoTable(doc, {
+      startY: 22,
+      body: [
+        ['Empresa:', EMPRESA.nome],
+        ['Morada:', EMPRESA.morada],
+        ['NIF:', EMPRESA.nif],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
+    });
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 2,
+      body: [
+        ['Trabalhador:', inputs.nome || '—', 'Mês / Ano:', `${mesLabel} ${inputs.ano}`],
+        ['NIF:', inputs.nif || '—', 'Profissão:', inputs.categoria || '—'],
+        ['NIS:', inputs.nis || '—', 'Venc. Base:', eur(n(inputs.vencimentoBase))],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 1.5 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
+    });
+
+    const linhas = [
+      ['A001', 'Vencimento Base', '', '', eur(n(inputs.vencimentoBase)), ''],
+      ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, eur(n(inputs.subsAlimValorDia)), eur(r.subsAlimTotal), ''],
+    ];
+    if (r.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(r.subsFerias), '']);
+    if (n(inputs.premios) > 0) linhas.push(['A008', 'Prémios / Bónus', '', '', eur(n(inputs.premios)), '']);
+    if (n(inputs.he1) > 0) linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
+    if (n(inputs.he2) > 0) linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
+    if (r.subsNatal > 0) linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
+    if (r.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(r.ajudaCustoNecessaria), '']);
+    linhas.push(['T001', `IRS (incid. ${eur(r.incidenciaIRS)} · ${(r.taxaEfIRS * 100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
+    linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 4,
+      head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
+      body: linhas,
+      theme: 'striped',
+      headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
+      styles: { fontSize: 7, cellPadding: 2 },
+      columnStyles: { 0: { cellWidth: 12 }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+    });
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 3,
+      body: [
+        [
+          { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
+          { content: eur(r.totalAbonos), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
+          { content: eur(r.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
+        ],
+        [
+          { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
+          { content: eur(r.liquido), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+          { content: 'Custo Empresa (c/ TSU 23,75%)' },
+          { content: eur(r.custoEmpresa), styles: { halign: 'right' } },
+        ],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 28 }, 2: { cellWidth: 60 } },
+    });
+
+    const ySign = doc.lastAutoTable.finalY + 14;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`O(a) trabalhador(a),`, 14, ySign);
+    doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
+    doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
+
+    const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
+    doc.save(`recibo-vencimento-${nomeFile}-${inputs.mes.padStart(2, '0')}-${inputs.ano}.pdf`);
+  }
+
+  function exportReciboXLS() {
+    if (!r) return;
+    const mesNum = parseInt(inputs.mes, 10);
+    const mesLabel = MESES_PT[mesNum] || inputs.mes;
+
+    const linhas = [
+      ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
+      ['A001', 'Vencimento Base', '', '', n(inputs.vencimentoBase).toFixed(2), ''],
+      ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, n(inputs.subsAlimValorDia).toFixed(2), r.subsAlimTotal.toFixed(2), ''],
+    ];
+    if (r.subsFerias > 0)       linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', r.subsFerias.toFixed(2), '']);
+    if (n(inputs.premios) > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', n(inputs.premios).toFixed(2), '']);
+    if (n(inputs.he1) > 0)      linhas.push(['A052', 'Trabalho Suplementar 1ª hora', `${inputs.he1}h`, r.valorHe1un.toFixed(4), r.valorHe1.toFixed(2), '']);
+    if (n(inputs.he2) > 0)      linhas.push(['A053', 'Trabalho Suplementar seguintes', `${inputs.he2}h`, r.valorHe2un.toFixed(4), r.valorHe2.toFixed(2), '']);
+    if (r.subsNatal > 0)        linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', r.subsNatal.toFixed(2), '']);
+    if (r.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', r.ajudaCustoNecessaria.toFixed(2), '']);
+    linhas.push(['T001', `IRS (incid. ${r.incidenciaIRS.toFixed(2)} · ${(r.taxaEfIRS * 100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
+    linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
+    linhas.push(['', 'TOTAL', '', '', r.totalAbonos.toFixed(2), r.totalDescontos.toFixed(2)]);
+    linhas.push(['', 'Líquido a Receber', '', '', r.liquido.toFixed(2), '']);
+    linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', r.custoEmpresa.toFixed(2), '']);
+
+    const rows = linhas.map((row, i) => {
+      const isHdr = i === 0;
+      const isTot = row[1] === 'TOTAL';
+      const isLiq = row[1] === 'Líquido a Receber';
+      const bg  = isHdr ? '#0F1F3D' : isTot ? '#EEF2FF' : isLiq ? '#ECFDF5' : i % 2 === 0 ? '#ffffff' : '#F8FAFC';
+      const col = isHdr ? 'white' : isTot ? '#4F46E5' : isLiq ? '#059669' : '#1E293B';
+      const fw  = isHdr || isTot || isLiq ? 'bold' : 'normal';
+      return `<tr>${row.map(c => `<td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;background:${bg};color:${col};font-weight:${fw}">${c}</td>`).join('')}</tr>`;
+    }).join('');
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="utf-8"/></head><body>
+<h2 style="font-family:Arial;color:#0F1F3D">RECIBO DE VENCIMENTO — ${mesLabel} ${inputs.ano}</h2>
+<p style="font-family:Arial;font-size:12px"><b>${inputs.nome || '—'}</b> &nbsp;·&nbsp; NIF: ${inputs.nif || '—'} &nbsp;·&nbsp; Profissão: ${inputs.categoria || '—'}</p>
+<table border="1" style="border-collapse:collapse;font-family:Arial;font-size:11px;min-width:600px">${rows}</table>
+<p style="font-family:Arial;font-size:10px;color:#64748B;margin-top:16px">Estimativa — confirmar sempre no TOConline antes de processar.</p>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
+    a.download = `recibo-vencimento-${nomeFile}-${inputs.mes.padStart(2, '0')}-${inputs.ano}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function gerarMapaSalarialPDF() {
+    const mesNum   = parseInt(inputs.mes, 10);
+    const mesStr   = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+    const mesLabel = MESES_PT[mesNum] || inputs.mes;
+    const anoNum   = n(inputs.ano);
+
+    const trabalhadores = (workers || [])
+      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (trabalhadores.length === 0) {
+      alert('Nenhum trabalhador activo com vencimento base configurado.');
+      return;
+    }
+
+    // Buscar histórico de taxas + dias editáveis — mesma lógica da aba Contabilidade
+    const [rateRes, contabRes] = await Promise.all([
+      supabase.from('worker_valorhora_history').select('*'),
+      supabase.from('contabilidade_mensal').select('*').eq('mes', mesStr),
+    ]);
+    const rateHistory = rateRes.data || [];
+    const contabRows  = contabRes.data || [];
+
+    // Logs do mês (todos os trabalhadores)
+    const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
+
+    const doc  = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const eur2 = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
+    const pct  = v => (v * 100).toFixed(1) + '%';
+
+    let isFirstPage = true;
+
+    trabalhadores.forEach(w => {
+      // Bruto = mesmo cálculo da coluna "Ordenado Bruto" na aba Contabilidade:
+      // horas × taxa-correta-na-data (usando worker_valorhora_history)
+      const workerHistory = rateHistory.filter(h => h.worker_id === w.id);
+      const workerLogs    = logsDoMes.filter(l => l.workerId === w.id);
+      const totalHoras    = workerLogs.reduce((s, l) => s + (parseFloat(l.hours) || 0), 0);
+      const brutoAlvo     = workerLogs.reduce((s, l) => {
+        const rate = getRateAtDate(l.date, workerHistory, parseFloat(w.valorHora) || 0);
+        return s + (parseFloat(l.hours) || 0) * rate;
+      }, 0);
+
+      // Dias de subsídio alimentação = valor da aba Contabilidade (editável, default 22)
+      const contabRow  = contabRows.find(r => r.worker_id === w.id);
+      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+
+      const rc = calcularRecibo({
+        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
+        horasSemana:      40,
+        premios:          0,
+        he1: 0, he2: 0,
+        incluirFerias:    true,
+        incluirNatal:     true,
+        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
+        subsAlimDias,
+        subsAlimTipo:     'cartao',
+        tabelaKey:        w.tabela_irs || 'tabelaI',
+        nDependentes:     w.n_dependentes ?? 0,
+        brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
+        territorio:       'internacional',
+        funcao:           'geral',
+        ano:              anoNum,
+      });
+
+      const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
+
+      if (!isFirstPage) doc.addPage();
+      isFirstPage = false;
+
+      // Cabeçalho empresa
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('FICHA DE PROCESSAMENTO SALARIAL', 105, 14, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${EMPRESA.nome}  ·  NIF ${EMPRESA.nif}  ·  ${mesLabel} ${inputs.ano}`, 105, 20, { align: 'center' });
+
+      // Identificação do trabalhador
+      autoTable(doc, {
+        startY: 25,
+        body: [
+          ['Trabalhador:', (w.name || '—').toUpperCase(), 'NIF:', w.nif || '—'],
+          ['Profissão:', w.profissao || '—', 'NIS:', w.nis || '—'],
+          ['Tabela IRS:', tabelaNome, 'Nº Dependentes:', String(w.n_dependentes ?? 0)],
+          ['Vencimento Base:', eur2(parseFloat(w.vencimento_base)), 'Salário/hora:', eur2(rc.salarioHora)],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 32 }, 2: { fontStyle: 'bold', cellWidth: 30 } },
+      });
+
+      // Separador — mês
+      const yMes = doc.lastAutoTable.finalY + 2;
+      doc.setFillColor(15, 31, 61);
+      doc.rect(14, yMes, 182, 6, 'F');
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(`MÊS: ${mesLabel.toUpperCase()} ${inputs.ano}  ·  Sub. Alim.: ${subsAlimDias} dias  ·  Horas totais: ${totalHoras.toFixed(1)}h`, 17, yMes + 4);
+      doc.setTextColor(0, 0, 0);
+
+      // Linhas de abonos/descontos
+      const linhas = [
+        ['A001', 'Vencimento Base', '', '', eur2(parseFloat(w.vencimento_base)), ''],
+      ];
+      if (subsAlimDias > 0) {
+        linhas.push(['A002', 'Sub. Alimentação — Cartão (isento ≤ €10,46)', `${subsAlimDias}d`, eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal), '']);
+      }
+      if (rc.subsAlimExcedente > 0) linhas.push(['', '  → Excedente sujeito a IRS/SS', '', '', eur2(rc.subsAlimExcedente), '']);
+      if (rc.subsFerias > 0)  linhas.push(['A004', 'Sub. Férias (duodécimo 1/12)', '', '', eur2(rc.subsFerias), '']);
+      if (rc.subsNatal > 0)   linhas.push(['A021', 'Sub. Natal (duodécimo 1/12)', '', '', eur2(rc.subsNatal), '']);
+      if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (isento)', '', '', eur2(rc.ajudaCustoNecessaria), '']);
+      linhas.push(['T001', `IRS — ${tabelaNome.split('—')[0].trim()} / ${w.n_dependentes ?? 0} dep. (base ${eur2(rc.incidenciaIRS)} · ${pct(rc.taxaEfIRS)})`, '', '', '', eur2(rc.irsTotal)]);
+      linhas.push(['T003', 'Seg. Social — Trabalhador (11%)', '', '', '', eur2(rc.ssTrabalhador)]);
+
+      autoTable(doc, {
+        startY: yMes + 8,
+        head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
+        body: linhas,
+        theme: 'striped',
+        headStyles: { fillColor: [51, 65, 85], fontSize: 7, fontStyle: 'bold' },
+        styles: { fontSize: 7.5, cellPadding: 2.2 },
+        columnStyles: {
+          0: { cellWidth: 13 },
+          2: { cellWidth: 12, halign: 'center' },
+          3: { cellWidth: 20, halign: 'right' },
+          4: { cellWidth: 28, halign: 'right' },
+          5: { cellWidth: 28, halign: 'right' },
+        },
+      });
+
+      // Totais
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 2,
+        body: [
+          [
+            { content: 'TOTAL ABONOS', styles: { fontStyle: 'bold' } },
+            { content: eur2(rc.totalAbonos), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: 'TOTAL DESCONTOS', styles: { fontStyle: 'bold' } },
+            { content: eur2(rc.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
+          ],
+          [
+            { content: 'LÍQUIDO A RECEBER', styles: { fontStyle: 'bold', fontSize: 9, fillColor: [236, 253, 245], textColor: [5, 150, 105] } },
+            { content: eur2(rc.liquido), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right', fillColor: [236, 253, 245], textColor: [5, 150, 105] } },
+            { content: 'Custo empresa (+ TSU 23,75%)' },
+            { content: eur2(rc.custoEmpresa), styles: { halign: 'right' } },
+          ],
+          [
+            { content: 'TSU Patronal (23,75%)', styles: { textColor: [100, 116, 139] } },
+            { content: eur2(rc.ssPatronal), styles: { halign: 'right', textColor: [100, 116, 139] } },
+            { content: brutoAlvo > 0 ? `Ordenado bruto (${totalHoras.toFixed(1)}h × taxa hist.)` : 'Sem registos no mês', styles: { textColor: [100, 116, 139], fontSize: 6.5 } },
+            { content: brutoAlvo > 0 ? eur2(brutoAlvo) : '—', styles: { halign: 'right', textColor: [100, 116, 139] } },
+          ],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: 30 }, 2: { cellWidth: 62 } },
+      });
+
+      // Nota de rodapé
+      const yAviso = doc.lastAutoTable.finalY + 3;
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(120, 120, 120);
+      doc.text('Prémios, horas suplementares e ajustamentos manuais não incluídos — adicionar no TOConline conforme necessário.', 14, yAviso);
+      doc.setTextColor(0, 0, 0);
+    });
+
+    doc.save(`processamento-salarial-${String(mesNum).padStart(2, '0')}-${inputs.ano}.pdf`);
+  }
+
+  // Helpers partilhados pelas duas funções batch abaixo
+  async function _fetchBatchData(mesStr) {
+    const [rateRes, contabRes] = await Promise.all([
+      supabase.from('worker_valorhora_history').select('*'),
+      supabase.from('contabilidade_mensal').select('*').eq('mes', mesStr),
+    ]);
+    return { rateHistory: rateRes.data || [], contabRows: contabRes.data || [] };
+  }
+
+  function _calcBruto(workerId, workerLogs, rateHistory, valorHoraDefault) {
+    const hist = rateHistory.filter(h => h.worker_id === workerId);
+    return workerLogs.reduce((s, l) => {
+      const rate = getRateAtDate(l.date, hist, parseFloat(valorHoraDefault) || 0);
+      return s + (parseFloat(l.hours) || 0) * rate;
+    }, 0);
+  }
+
+  function _clientePorDiaFn(workerId, mesStr) {
+    const mapa = {};
+    (logs || [])
+      .filter(l => l.workerId === workerId && l.date?.startsWith(mesStr))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .forEach(l => {
+        const nome = (clients || []).find(c => c.id === l.clientId)?.name || '';
+        if (nome) mapa[l.date] = nome;
+      });
+    const datas = Object.keys(mapa).sort();
+    return (data) => {
+      let ultimo = null;
+      for (const d of datas) {
+        if (d <= data) ultimo = mapa[d];
+        else break;
+      }
+      return ultimo || (datas.length > 0 ? mapa[datas[0]] : '');
+    };
+  }
+
+  async function exportMapaSalarialXLS() {
+    const mesNum   = parseInt(inputs.mes, 10);
+    const mesStr   = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+    const mesLabel = MESES_PT[mesNum] || inputs.mes;
+    const anoNum   = n(inputs.ano);
+
+    const trabalhadores = (workers || [])
+      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (trabalhadores.length === 0) { alert('Nenhum trabalhador activo com vencimento base configurado.'); return; }
+
+    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
+
+    const eur2 = v => (isNaN(v) ? 0 : v).toFixed(2);
+    const pct2 = v => (v * 100).toFixed(2) + '%';
+
+    // Cabeçalho
+    const cols = [
+      'Trabalhador', 'NIF', 'NIS', 'Profissão',
+      'Tabela IRS', 'Nº Dep.',
+      'Venc. Base (€)', 'Sub. Alim. Dias', 'Sub. Alim. €/dia', 'Sub. Alim. Total (€)',
+      'Sub. Férias / Duod. (€)', 'Sub. Natal / Duod. (€)',
+      'Ajudas Custo Inter. (€)',
+      'Base IRS (€)', 'Taxa IRS', 'IRS (€)',
+      'SS Trab. 11% (€)', 'Total Abonos (€)', 'Total Descontos (€)',
+      'Líquido (€)', 'TSU Patronal 23,75% (€)', 'Custo Empresa (€)',
+      'Ordenado Bruto (€)',
+    ];
+
+    const dataRows = trabalhadores.map(w => {
+      const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo    = _calcBruto(w.id, workerLogs, rateHistory, w.valorHora);
+      const contabRow    = contabRows.find(r => r.worker_id === w.id);
+      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+
+      const rc = calcularRecibo({
+        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
+        horasSemana: 40, premios: 0, he1: 0, he2: 0,
+        incluirFerias: true, incluirNatal: true,
+        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
+        subsAlimDias,
+        subsAlimTipo: 'cartao',
+        tabelaKey:    w.tabela_irs || 'tabelaI',
+        nDependentes: w.n_dependentes ?? 0,
+        brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
+        territorio: 'internacional', funcao: 'geral', ano: anoNum,
+      });
+
+      const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
+
+      return [
+        w.name || '', w.nif || '', w.nis || '', w.profissao || '',
+        tabelaNome, String(w.n_dependentes ?? 0),
+        eur2(parseFloat(w.vencimento_base)), String(subsAlimDias),
+        eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal),
+        eur2(rc.subsFerias), eur2(rc.subsNatal),
+        eur2(rc.ajudaCustoNecessaria),
+        eur2(rc.incidenciaIRS), pct2(rc.taxaEfIRS), eur2(rc.irsTotal),
+        eur2(rc.ssTrabalhador), eur2(rc.totalAbonos), eur2(rc.totalDescontos),
+        eur2(rc.liquido), eur2(rc.ssPatronal), eur2(rc.custoEmpresa),
+        eur2(brutoAlvo),
+      ];
+    });
+
+    // Totais
+    const sumIdx = [6, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22];
+    const totais = cols.map((_, ci) => {
+      if (ci === 0) return 'TOTAIS';
+      if (!sumIdx.includes(ci)) return '';
+      return eur2(dataRows.reduce((s, r) => s + (parseFloat(r[ci]) || 0), 0));
+    });
+
+    const lastCol = cols.length - 1; // índice da coluna "Ordenado Bruto"
+    const style = (bg, color, bold, isOB = false) =>
+      `background:${isOB ? '#ECFDF5' : bg};color:${isOB ? '#065F46' : color};font-weight:${bold || isOB ? 'bold' : 'normal'};padding:7px 10px;border:1px solid ${isOB ? '#6EE7B7' : '#E2E8F0'};white-space:nowrap${isOB ? ';font-size:12px' : ''}`;
+
+    const hdrRow = `<tr>${cols.map((c, ci) => `<td style="${style('#0F1F3D', 'white', true, ci === lastCol)}">${c}</td>`).join('')}</tr>`;
+    const bodyRows = dataRows.map((row, ri) =>
+      `<tr>${row.map((c, ci) => `<td style="${style(ri % 2 === 0 ? '#ffffff' : '#F8FAFC', '#1E293B', false, ci === lastCol)}">${c}</td>`).join('')}</tr>`
+    ).join('');
+    const totRow = `<tr>${totais.map((c, ci) => `<td style="${style('#EEF2FF', '#4F46E5', true, ci === lastCol)}">${c}</td>`).join('')}</tr>`;
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="utf-8"/></head><body>
+<h2 style="font-family:Arial;color:#0F1F3D">PROCESSAMENTO SALARIAL — ${mesLabel.toUpperCase()} ${inputs.ano}</h2>
+<p style="font-family:Arial;font-size:11px">${EMPRESA.nome} &nbsp;·&nbsp; NIF ${EMPRESA.nif}</p>
+<table border="0" cellspacing="0" style="border-collapse:collapse;font-family:Arial;font-size:10px">
+${hdrRow}${bodyRows}${totRow}
+</table>
+<p style="font-family:Arial;font-size:9px;color:#64748B;margin-top:12px">Estimativa — confirmar sempre no TOConline antes de processar. Prémios e horas suplementares não incluídos.</p>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `processamento-salarial-${String(mesNum).padStart(2, '0')}-${inputs.ano}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function gerarMapasAjudasPDF() {
+    const mesNum   = parseInt(inputs.mes, 10);
+    const mesStr   = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+    const mesLabel = MESES_PT[mesNum] || inputs.mes;
+    const anoNum   = n(inputs.ano);
+
+    const trabalhadores = (workers || [])
+      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (trabalhadores.length === 0) { alert('Nenhum trabalhador activo com vencimento base configurado.'); return; }
+
+    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
+
+    const doc  = new jsPDF();
+    const eur2 = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
+    let isFirstPage = true;
+
+    trabalhadores.forEach(w => {
+      const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo    = _calcBruto(w.id, workerLogs, rateHistory, w.valorHora);
+      const contabRow    = contabRows.find(r => r.worker_id === w.id);
+      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+
+      const rc = calcularRecibo({
+        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
+        horasSemana: 40, premios: 0, he1: 0, he2: 0,
+        incluirFerias: true, incluirNatal: true,
+        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
+        subsAlimDias,
+        subsAlimTipo: 'cartao',
+        tabelaKey:    w.tabela_irs || 'tabelaI',
+        nDependentes: w.n_dependentes ?? 0,
+        brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
+        territorio: 'internacional', funcao: 'geral', ano: anoNum,
+      });
+
+      if (rc.ajudaCustoNecessaria <= 0) return; // sem ajudas de custo, pula
+
+      // Cliente carry-forward por dia
+      const clienteParaDia = _clientePorDiaFn(w.id, mesStr);
+
+      // Data de início: primeiro log do trabalhador no mês ou dia 1
+      const primeiroLog = workerLogs.map(l => l.date).sort()[0];
+      const dataInicio  = primeiroLog || `${mesStr}-01`;
+
+      const limiteDia = valorDiarioLegal('internacional', 'geral');
+
+      const mapaLinhas = gerarLinhasMapa({
+        necessaria:   rc.ajudaCustoNecessaria,
+        limiteDia,
+        dataInicio,
+        horaPartida:  '07:30',
+        horaChegada:  '20:30',
+        territorio:   'internacional',
+        cliente:      '',
+        localidade:   '',
+      }).map(row => ({
+        ...row,
+        cliente: clienteParaDia(row.dia) || '',
+      }));
+
+      if (mapaLinhas.length === 0) return;
+
+      if (!isFirstPage) doc.addPage();
+      isFirstPage = false;
+
+      // Cabeçalho
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MAPA DE AJUDAS DE CUSTO', 105, 18, { align: 'center' });
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+
+      autoTable(doc, {
+        startY: 24,
+        body: [
+          ['Empresa:', EMPRESA.nome],
+          ['Morada:', EMPRESA.morada],
+          ['NIF:', EMPRESA.nif],
+          ['Mês / Ano:', `${mesLabel} ${inputs.ano}`],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
+      });
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 4,
+        body: [
+          ['Nome:', (w.name || '—').toUpperCase()],
+          ['NIF:', w.nif || '—'],
+          ['Profissão:', w.profissao || '—'],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
+      });
+
+      // Tabela de dias
+      const rowsData = mapaLinhas.map(row => {
+        const valor = limiteDia * (row.pct / 100);
+        return [row.dia, row.servico, row.cliente, row.localidade || '—', row.territorio, row.tipo, row.hora, `${row.pct}%`, eur2(valor)];
+      });
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 6,
+        head: [['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor']],
+        body: rowsData,
+        theme: 'striped',
+        headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
+        styles: { fontSize: 7, cellPadding: 2 },
+        columnStyles: { 8: { halign: 'right' } },
+      });
+
+      // Totais
+      const mapaTotal = mapaLinhas.reduce((s, row) => s + limiteDia * (row.pct / 100), 0);
+      const importancia = mapaTotal - rc.subsAlimTotal;
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 4,
+        body: [
+          [{ content: 'Total ajudas de custo', styles: { fontStyle: 'bold' } }, eur2(mapaTotal)],
+          ['Subsídio de alimentação (dedução)', eur2(rc.subsAlimTotal)],
+          [{ content: 'Importância a receber', styles: { fontStyle: 'bold' } }, { content: eur2(importancia), styles: { fontStyle: 'bold' } }],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 2.5 },
+        columnStyles: { 1: { halign: 'right' } },
+      });
+
+      // Assinatura
+      const ySign = doc.lastAutoTable.finalY + 12;
+      doc.setFontSize(8);
+      doc.text(`Recebi a importância de ${eur2(importancia)}, referente a ajudas de custo.`, 14, ySign);
+      doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
+      doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
+    });
+
+    if (isFirstPage) { alert('Nenhum trabalhador com ajudas de custo no mês seleccionado.'); return; }
+    doc.save(`mapas-ajudas-custo-${String(mesNum).padStart(2, '0')}-${inputs.ano}.pdf`);
+  }
+
+  function gerarPDF() {
+    const doc = new jsPDF();
+    const mesNum = parseInt(inputs.mes, 10);
+    const mesLabel = MESES_PT[mesNum] || inputs.mes;
+
+    // Cabeçalho empresa
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('MAPA DE AJUDAS DE CUSTO', 105, 18, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const headerData = [
+      ['Empresa:', EMPRESA.nome],
+      ['Morada:', EMPRESA.morada],
+      ['NIF:', EMPRESA.nif],
+      ['Mês / Ano:', `${mesLabel} ${inputs.ano}`],
+    ];
+    autoTable(doc, {
+      startY: 24,
+      body: headerData,
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
+    });
+
+    // Dados do trabalhador
+    const trabData = [
+      ['Nome:', inputs.nome || '—'],
+      ['NIF:', inputs.nif || '—'],
+      ['Profissão:', inputs.categoria || '—'],
+    ];
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 4,
+      body: trabData,
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 2 },
+      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
+    });
+
+    // Tabela de dias
+    const rowsData = mapaRows.map(row => {
+      const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(inputs.vdl);
+      const valor = limite * (row.pct / 100);
+      return [row.dia, row.servico, row.cliente, row.localidade, row.territorio, row.tipo, row.hora, `${row.pct}%`, eur(valor)];
+    });
+
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 6,
+      head: [['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor']],
+      body: rowsData,
+      theme: 'striped',
+      headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
+      styles: { fontSize: 7, cellPadding: 2 },
+      columnStyles: { 8: { halign: 'right' } },
+    });
+
+    // Totais
+    const subsAlimTotal = r ? r.subsAlimTotal : 0;
+    const importanciaReceber = mapaTotal - subsAlimTotal;
+    autoTable(doc, {
+      startY: doc.lastAutoTable.finalY + 4,
+      body: [
+        [{ content: 'Total ajudas de custo', styles: { fontStyle: 'bold' } }, eur(mapaTotal)],
+        ['Subsídio de alimentação (dedução)', eur(subsAlimTotal)],
+        [{ content: 'Importância a receber', styles: { fontStyle: 'bold' } }, { content: eur(importanciaReceber), styles: { fontStyle: 'bold' } }],
+      ],
+      theme: 'plain',
+      styles: { fontSize: 8, cellPadding: 2.5 },
+      columnStyles: { 1: { halign: 'right' } },
+    });
+
+    // Assinatura
+    const ySign = doc.lastAutoTable.finalY + 12;
+    doc.setFontSize(8);
+    doc.text(`Recebi a importância de ${eur(importanciaReceber)}, referente a ajudas de custo.`, 14, ySign);
+    doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
+    doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
+
+    const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
+    doc.save(`mapa-ajudas-custo-${nomeFile}-${inputs.mes.padStart(2, '0')}-${inputs.ano}.pdf`);
+  }
+
+  return (
+    <div className="space-y-5 pb-12">
+
+      {/* Aviso de compliance — sempre visível */}
+      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-2xl p-4">
+        <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+        <p className="text-xs font-bold text-amber-800 leading-relaxed">
+          <span className="font-black uppercase tracking-wide">Estimativa — não oficial.</span>{' '}
+          Valores calculados com base nas tabelas IRS 2026 (Despacho n.º 233-A/2026) e TSU em vigor.
+          Confirme sempre os valores finais no <span className="font-black">TOConline</span> antes de processar o salário.
+          Ajudas de custo só são isentas se corresponderem a deslocações reais devidamente documentadas.
+        </p>
+      </div>
+
+      {/* Selector de trabalhador */}
+      <Card className="p-5">
+        <LabelInput label="Trabalhador (preenchimento automático)">
+          <SelectInput value={selectedWorkerId} onChange={handleSelectWorker}>
+            <option value="">— Introduzir manualmente —</option>
+            {(workers || [])
+              .filter(w => w.is_active !== false && w.status !== 'inativo')
+              .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+              .map(w => (
+                <option key={w.id} value={w.id}>{w.name}</option>
+              ))}
+          </SelectInput>
+        </LabelInput>
+      </Card>
+
+      {/* Seletor de mês — global, controla todo o recibo */}
+      <Card className="px-5 py-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navMes(-1)}
+              className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="font-black text-slate-800 text-base min-w-40 text-center">
+              {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
+            </span>
+            <button
+              onClick={() => navMes(1)}
+              className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={gerarMapaSalarialPDF}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all shadow-sm"
+              title="PDF de processamento — todos os trabalhadores"
+            >
+              <FileText size={12} /> PDF
+            </button>
+            <button
+              onClick={exportMapaSalarialXLS}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-sm"
+              title="Excel de processamento — todos os trabalhadores"
+            >
+              <FileSpreadsheet size={12} /> Excel
+            </button>
+            <button
+              onClick={gerarMapasAjudasPDF}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm"
+              title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
+            >
+              <Download size={12} /> Mapas AC
+            </button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Grid 2 colunas: inputs + preview */}
+      <div className="grid lg:grid-cols-2 gap-5 items-start">
+
+        {/* ── COLUNA INPUTS ── */}
+        <div className="space-y-4">
+
+          {/* 1 - Dados do Trabalhador */}
+          <Card className="p-5">
+            <SectionHeader n="1" label="Dados do Trabalhador" />
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <LabelInput label="Nome">
+                <TextInput value={inputs.nome} onChange={e => set('nome', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Categoria / Profissão">
+                <TextInput value={inputs.categoria} onChange={e => set('categoria', e.target.value)} />
+              </LabelInput>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <LabelInput label="NIF">
+                <TextInput value={inputs.nif} onChange={e => set('nif', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="NIS (SS)">
+                <TextInput value={inputs.nis} onChange={e => set('nis', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Dias processados">
+                <TextInput type="number" value={inputs.diasMes} onChange={e => set('diasMes', e.target.value)} min="1" max="31" />
+              </LabelInput>
+            </div>
+          </Card>
+
+          {/* 2 - Retribuição Base */}
+          <Card className="p-5">
+            <SectionHeader n="2" label="Retribuição Base" />
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <LabelInput label="Vencimento Base (€/mês)">
+                <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => set('vencimentoBase', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Horas / semana">
+                <TextInput type="number" value={inputs.horasSemana} onChange={e => set('horasSemana', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Salário/hora (auto)">
+                <TextInput
+                  type="number"
+                  readOnly
+                  value={r ? r.salarioHora.toFixed(4) : ''}
+                />
+              </LabelInput>
+            </div>
+
+            <div className="flex flex-col gap-2 mb-3">
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+                Incluir Subsídio de Férias (100% com duodécimos)
+              </label>
+              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+                Incluir Subsídio de Natal (100% com duodécimos)
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <LabelInput label="Prémios / Bónus (€, tributável)">
+                <TextInput type="number" step="0.01" value={inputs.premios} onChange={e => set('premios', e.target.value)} />
+              </LabelInput>
+              <div />
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 mb-3">
+              <LabelInput label="H. Suplementares 1ª hora (qtd)">
+                <TextInput type="number" step="0.5" value={inputs.he1} onChange={e => set('he1', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="H. Suplementares seguintes (qtd)">
+                <TextInput type="number" step="0.5" value={inputs.he2} onChange={e => set('he2', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="" hint="1ª h: +25% · seguintes: +37,5%">
+                <div />
+              </LabelInput>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <LabelInput label="Subsídio Alimentação (€/dia)">
+                <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => set('subsAlimValorDia', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Pago em">
+                <SelectInput value={inputs.subsAlimTipo} onChange={e => set('subsAlimTipo', e.target.value)}>
+                  <option value="cartao">Cartão / vale (isento ≤ €10,46)</option>
+                  <option value="dinheiro">Dinheiro (isento ≤ €6,15)</option>
+                </SelectInput>
+              </LabelInput>
+              <LabelInput label="Dias com subsídio">
+                <TextInput type="number" value={inputs.subsAlimDias} onChange={e => set('subsAlimDias', e.target.value)} />
+              </LabelInput>
+            </div>
+          </Card>
+
+          {/* 3 - IRS */}
+          <Card className="p-5">
+            <SectionHeader n="3" label="IRS — Situação Fiscal" />
+            <div className="grid grid-cols-2 gap-3">
+              <LabelInput label="Tabela de retenção">
+                <SelectInput value={inputs.tabelaKey} onChange={e => set('tabelaKey', e.target.value)}>
+                  {Object.entries(getIRSTabelasPorAno(n(inputs.ano))).map(([k, t]) => (
+                    <option key={k} value={k}>{t.nome}</option>
+                  ))}
+                </SelectInput>
+              </LabelInput>
+              <LabelInput
+                label="Nº de dependentes"
+                hint={`Continente — tabelas ${Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a).find(a=>a<=n(inputs.ano)) || Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a)[0]}`}
+              >
+                <TextInput type="number" min="0" value={inputs.nDependentes} onChange={e => set('nDependentes', e.target.value)} />
+              </LabelInput>
+            </div>
+          </Card>
+
+          {/* 4 - Bruto Alvo & Deslocação */}
+          <Card className="p-5">
+            <SectionHeader n="4" label="Bruto Alvo & Deslocação Internacional" />
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <LabelInput
+                label="Valor Bruto Total Alvo (€)"
+                hint={selectedWorkerId ? 'Auto: custo do mês em Custos/Equipa. Editável.' : 'Selecione um trabalhador para preencher automaticamente.'}
+              >
+                <TextInput type="number" step="0.01" value={inputs.brutoAlvo} onChange={e => set('brutoAlvo', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Valor diário legal (€)" hint="Auto-preenchido por território/função. Editável.">
+                <TextInput type="number" step="0.01" value={inputs.vdl} onChange={e => set('vdl', e.target.value)} />
+              </LabelInput>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <LabelInput label="Território">
+                <SelectInput value={inputs.territorio} onChange={e => set('territorio', e.target.value)}>
+                  <option value="internacional">Internacional</option>
+                  <option value="nacional">Nacional</option>
+                </SelectInput>
+              </LabelInput>
+              <LabelInput label="Função">
+                <SelectInput value={inputs.funcao} onChange={e => set('funcao', e.target.value)}>
+                  <option value="geral">Trabalhador em geral</option>
+                  <option value="gerencia">Gerência / Administração</option>
+                </SelectInput>
+              </LabelInput>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <LabelInput label="Cliente">
+                <TextInput value={inputs.cliente} onChange={e => set('cliente', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="Localidade">
+                <TextInput value={inputs.localidade} onChange={e => set('localidade', e.target.value)} />
+              </LabelInput>
+              <LabelInput label="País">
+                <TextInput value={inputs.pais} onChange={e => set('pais', e.target.value)} />
+              </LabelInput>
+            </div>
+          </Card>
+        </div>
+
+        {/* ── COLUNA PREVIEW ── */}
+        <div>
+          {r ? (
+            <Card className="p-5">
+              {/* Cabeçalho do recibo */}
+              <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-4 gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-slate-800">{inputs.nome || '—'}</p>
+                  <p className="text-[10px] text-slate-500 font-bold">NIF: {inputs.nif || '—'} · Profissão: {inputs.categoria || '—'}</p>
+                  <p className="text-[10px] text-slate-500 font-bold">Vencimento: {eur(n(inputs.vencimentoBase))} · Hora: {eur(r.salarioHora)}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  <p className="font-black text-lg text-slate-800">{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={gerarReciboPDF}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all"
+                      title="Exportar recibo em PDF"
+                    >
+                      <FileText size={11} /> PDF
+                    </button>
+                    <button
+                      onClick={exportReciboXLS}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
+                      title="Exportar recibo em Excel"
+                    >
+                      <FileSpreadsheet size={11} /> Excel
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabela de linhas */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-200">
+                      <th className="text-left py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Descrição</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Qtd</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">V.Unit.</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Abonos</th>
+                      <th className="text-right py-1.5 px-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">Descontos</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    <ReciboLinha desc="A001 - Vencimento Base" abono={r.salarioHora > 0 ? n(inputs.vencimentoBase) : null} />
+                    <ReciboLinha desc="A002 - Subs. Alimentação" qtd={`${inputs.subsAlimDias}d`} vUnit={n(inputs.subsAlimValorDia)} abono={r.subsAlimTotal} />
+                    {r.subsFerias > 0 && <ReciboLinha desc="A004 - Subs. Férias (duodécimos)" abono={r.subsFerias} />}
+                    {n(inputs.premios) > 0 && <ReciboLinha desc="A008 - Prémios / Bónus" abono={n(inputs.premios)} />}
+                    {n(inputs.he1) > 0 && <ReciboLinha desc="A052 - Trabalho Suplementar 1ª hora" qtd={`${inputs.he1}h`} vUnit={r.valorHe1un} abono={r.valorHe1} />}
+                    {n(inputs.he2) > 0 && <ReciboLinha desc="A053 - Trabalho Suplementar seguintes" qtd={`${inputs.he2}h`} vUnit={r.valorHe2un} abono={r.valorHe2} />}
+                    {r.subsNatal > 0 && <ReciboLinha desc="A021 - Subs. Natal (duodécimos)" abono={r.subsNatal} />}
+                    {r.ajudaCustoNecessaria > 0 && (
+                      <tr className="bg-orange-50">
+                        <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-slate-700">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
+                        <td className="py-1.5 px-1 text-right" />
+                        <td className="py-1.5 px-1 text-right" />
+                        <td className="py-1.5 px-1 text-right font-bold">{eur(r.ajudaCustoNecessaria)}</td>
+                        <td className="py-1.5 px-1 text-right" />
+                      </tr>
+                    )}
+                    <ReciboLinha desc={`T001 - IRS (incid. ${eur(r.incidenciaIRS)} · ${(r.taxaEfIRS * 100).toFixed(1)}%)`} desconto={r.irsTotal} />
+                    <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
+                    {/* Total */}
+                    <tr className="border-t-2 border-slate-800 font-black">
+                      <td className="py-2 px-1">Total</td>
+                      <td className="py-2 px-1" />
+                      <td className="py-2 px-1" />
+                      <td className="py-2 px-1 text-right">{eur(r.totalAbonos)}</td>
+                      <td className="py-2 px-1 text-right">{eur(r.totalDescontos)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Notas de taxas */}
+              <div className="mt-3 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 font-bold space-y-0.5">
+                <p>Base IRS mensal (vencimento + prémios + excedente + duodécimos): {eur(r.incidenciaIRS)} · taxa efetiva {(r.taxaEfIRS * 100).toFixed(2)}%</p>
+                {(n(inputs.he1) > 0 || n(inputs.he2) > 0) && (
+                  <p>Trabalho suplementar: taxa {(r.taxaOvertime * 100).toFixed(2)}% (50% da taxa mensal)</p>
+                )}
+                {r.subsAlimExcedente > 0 && (
+                  <p className="text-amber-600">Atenção: subsídio de alimentação excede o limite de isenção ({eur(r.limiteAlim)}/dia) — excedente {eur(r.subsAlimExcedente)} sujeito a IRS/SS.</p>
+                )}
+              </div>
+
+              {/* Resumo líquido / custo */}
+              <div className="mt-3 pt-3 border-t border-dashed border-slate-200 grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Líquido a receber</p>
+                  <p className="text-xl font-black text-slate-800">{eur(r.liquido)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Custo empresa (c/ TSU 23,75%)</p>
+                  <p className="text-xl font-black text-slate-800">{eur(r.custoEmpresa)}</p>
+                </div>
+              </div>
+            </Card>
+          ) : (
+            <Card className="p-10 flex flex-col items-center justify-center text-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                <RefreshCw size={22} className="text-slate-400" />
+              </div>
+              <p className="text-sm font-black text-slate-400 uppercase tracking-wide">Preencha o vencimento base</p>
+              <p className="text-xs font-bold text-slate-300">O preview do recibo aparece aqui</p>
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* ── MAPA DE AJUDAS DE CUSTO ── */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <SectionHeader n="5" label="Mapa de Ajudas de Custo" />
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setMapaRows([])}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all"
+            >
+              <Trash2 size={12} /> Limpar
+            </button>
+            <button
+              onClick={() => addRow()}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+            >
+              <Plus size={12} /> Linha manual
+            </button>
+            {mapaRows.length > 0 && (
+              <button
+                onClick={gerarPDF}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
+              >
+                <Download size={12} /> Exportar PDF
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Toolbar de preenchimento automático */}
+        <div className="flex gap-3 flex-wrap items-end mb-4 p-3.5 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+          <LabelInput label="Data de início">
+            <input
+              type="date"
+              value={mapa.dataInicio}
+              onChange={e => setMapa(p => ({ ...p, dataInicio: e.target.value }))}
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
+            />
+          </LabelInput>
+          <LabelInput label="Hora partida">
+            <input
+              type="time"
+              value={mapa.horaPartida}
+              onChange={e => setMapa(p => ({ ...p, horaPartida: e.target.value }))}
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
+            />
+          </LabelInput>
+          <LabelInput label="Hora chegada">
+            <input
+              type="time"
+              value={mapa.horaChegada}
+              onChange={e => setMapa(p => ({ ...p, horaChegada: e.target.value }))}
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
+            />
+          </LabelInput>
+          <button
+            onClick={autoFill}
+            disabled={!r || r.ajudaCustoNecessaria <= 0}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <RefreshCw size={12} /> Preencher automaticamente
+          </button>
+        </div>
+
+        {/* Tabela do mapa */}
+        {mapaRows.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-xs">
+              <thead>
+                <tr className="bg-slate-800 text-white">
+                  {['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor', ''].map(h => (
+                    <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {mapaRows.map(row => {
+                  const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(inputs.vdl);
+                  const valor = limite * (row.pct / 100);
+                  return (
+                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-1 py-1">
+                        <input type="date" value={row.dia} onChange={e => updateRow(row.id, 'dia', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input type="text" value={row.servico} onChange={e => updateRow(row.id, 'servico', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input type="text" value={row.cliente} onChange={e => updateRow(row.id, 'cliente', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input type="text" value={row.localidade} onChange={e => updateRow(row.id, 'localidade', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                      </td>
+                      <td className="px-1 py-1">
+                        <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300">
+                          <option value="Internacional">Internacional</option>
+                          <option value="Nacional">Nacional</option>
+                        </select>
+                      </td>
+                      <td className="px-1 py-1">
+                        <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300">
+                          <option value="Partida">Partida</option>
+                          <option value="Consecutivo">Consecutivo</option>
+                          <option value="Chegada">Chegada</option>
+                        </select>
+                      </td>
+                      <td className="px-1 py-1">
+                        <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                      </td>
+                      <td className="px-1 py-1">
+                        <input type="number" value={row.pct} min="0" max="100" step="5"
+                          onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
+                          className="w-16 border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                      </td>
+                      <td className="px-2 py-1 text-right font-bold text-slate-700">{eur(valor)}</td>
+                      <td className="px-1 py-1 text-center">
+                        <button onClick={() => removeRow(row.id)} className="p-1 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                          <X size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="py-10 text-center text-slate-400">
+            <p className="text-xs font-bold">Sem linhas — use "Preencher automaticamente" ou adicione manualmente.</p>
+          </div>
+        )}
+
+        {/* Totais do mapa */}
+        {mapaRows.length > 0 && (
+          <div className="mt-4 flex gap-5 flex-wrap p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total do Mapa</p>
+              <p className="text-lg font-black text-slate-800">{eur(mapaTotal)}</p>
+            </div>
+            {r && (
+              <>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Necessário (do recibo)</p>
+                  <p className="text-lg font-black text-slate-800">{eur(r.ajudaCustoNecessaria)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Diferença</p>
+                  <p className={`text-lg font-black ${Math.abs(mapaDiff) < 0.5 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {mapaDiff >= 0 ? '+' : ''}{eur(mapaDiff)}
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
+  return (
+    <tr className="hover:bg-slate-50 transition-colors">
+      <td className="py-1.5 px-1 text-slate-700 font-bold">{desc}</td>
+      <td className="py-1.5 px-1 text-right text-slate-500">{qtd || ''}</td>
+      <td className="py-1.5 px-1 text-right text-slate-500">{vUnit != null ? eur(vUnit) : ''}</td>
+      <td className="py-1.5 px-1 text-right font-bold text-slate-800">{abono != null ? eur(abono) : ''}</td>
+      <td className="py-1.5 px-1 text-right font-bold text-rose-600">{desconto != null ? eur(desconto) : ''}</td>
+    </tr>
+  );
+}

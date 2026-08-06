@@ -3,7 +3,7 @@ import { useApp } from '../../../context/AppContext';
 import { useTeam } from '../contexts/TeamContext';
 import {
   UserCircle, User, Phone, CreditCard, Landmark, Wallet, CalendarRange, Save, X, Building2, Euro,
-  MapPin, Fingerprint, Mail, Briefcase, Timer, CheckCircle, ShieldOff, CheckCircle2
+  MapPin, Fingerprint, Mail, Briefcase, Timer, CheckCircle, ShieldOff, CheckCircle2, Receipt, Users
 } from 'lucide-react';
 
 const WorkerForm = () => {
@@ -153,6 +153,28 @@ const WorkerForm = () => {
             </div>
           </div>
 
+          {/* IRS — SITUAÇÃO FISCAL */}
+          <div className="bg-violet-50/30 p-4 sm:p-5 rounded-2xl border border-violet-100 space-y-4">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="p-1.5 bg-violet-100 text-violet-600 rounded-lg"><Receipt size={14} /></div>
+              <h4 className="font-black text-violet-800 text-sm sm:text-base uppercase tracking-tight">IRS — Situação Fiscal</h4>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-violet-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Receipt size={10} /> Tabela de Retenção</label>
+                <select value={workerForm.tabela_irs || 'tabelaI'} onChange={e => setWorkerForm({ ...workerForm, tabela_irs: e.target.value })} className="w-full bg-white border border-violet-100 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all">
+                  <option value="tabelaI">Tabela I — Não casado / Casado, dois titulares</option>
+                  <option value="tabelaII">Tabela II — Não casado, com dependentes</option>
+                  <option value="tabelaIII">Tabela III — Casado, único titular</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-violet-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Users size={10} /> Nº de Dependentes</label>
+                <input type="number" min="0" value={workerForm.n_dependentes ?? 0} onChange={e => setWorkerForm({ ...workerForm, n_dependentes: parseInt(e.target.value, 10) || 0 })} className="w-full bg-white border border-violet-100 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-2 focus:ring-violet-50 transition-all" placeholder="0" />
+              </div>
+            </div>
+          </div>
+
           {/* DADOS FINANCEIROS */}
           <div className="bg-emerald-50/30 p-4 sm:p-5 rounded-2xl border border-emerald-100 space-y-4">
             <div className="flex items-center gap-2 mb-1">
@@ -181,6 +203,16 @@ const WorkerForm = () => {
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><CalendarRange size={10} /> Desde</label>
                 <input type="date" value={workerForm.dataAlteracao || ''} onChange={e => setWorkerForm({ ...workerForm, dataAlteracao: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm font-bold outline-none shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 transition-all" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-2 border-t border-emerald-100/50">
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Euro size={10} /> Vencimento Base (€)</label>
+                <input type="number" step="0.01" value={workerForm.vencimento_base ?? ''} onChange={e => setWorkerForm({ ...workerForm, vencimento_base: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base text-emerald-700 font-black outline-none shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 transition-all" placeholder="0.00" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Euro size={10} /> Subsídio Alimentação/Dia (€)</label>
+                <input type="number" step="0.01" value={workerForm.subsidio_alimentacao_dia ?? ''} onChange={e => setWorkerForm({ ...workerForm, subsidio_alimentacao_dia: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-lg sm:rounded-xl p-2.5 sm:p-3 text-sm sm:text-base text-emerald-700 font-black outline-none shadow-sm focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 transition-all" placeholder="9.60" />
               </div>
             </div>
           </div>

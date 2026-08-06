@@ -168,6 +168,8 @@ export const AppProvider = ({ children }) => {
               nis: d.nis !== undefined ? d.nis : '',
               nif: d.nif !== undefined ? d.nif : '',
               status: d.is_active === false ? 'inativo' : 'ativo',
+              tabela_irs: d.tabela_irs || 'tabelaI',
+              n_dependentes: d.n_dependentes ?? 0,
             }));
             setter(mapped);
           } else {
