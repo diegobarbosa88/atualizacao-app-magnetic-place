@@ -1050,10 +1050,10 @@ ${hdrRow}${bodyRows}${totRow}
     const Y_FOOTER = H - 42;
     const availH   = Y_FOOTER - Y_TABLE;
     const nRows    = mapaLinhas.length;
-    const HEADER_ROW_H = 4.0;
-    const rowH = Math.max(2.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
+    const HEADER_ROW_H = 3.5;
+    const rowH = Math.max(1.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
     const fs   = Math.min(6.5, Math.max(4.5, rowH * 1.6));
-    const pad  = Math.max(0.2, (rowH - fs * 0.3528) / 2);
+    const pad  = Math.max(0.1, (rowH - fs * 0.3528) / 2);
 
     // Colunas — soma = 200mm (TW portrait com MX=5)
     const colW = [18, 30, 34, 28, 21, 21, 14, 12, 22];
@@ -1078,7 +1078,7 @@ ${hdrRow}${bodyRows}${totRow}
       headStyles: {
         fillColor: NAVY, textColor: 255,
         fontSize: Math.min(7, fs + 0.5), fontStyle: 'bold',
-        cellPadding: { top: 0.8, bottom: 0.8, left: 1.0, right: 1.0 },
+        cellPadding: { top: 0.3, bottom: 0.3, left: 1.0, right: 1.0 },
         minCellHeight: HEADER_ROW_H, halign: 'center',
       },
       bodyStyles: {
