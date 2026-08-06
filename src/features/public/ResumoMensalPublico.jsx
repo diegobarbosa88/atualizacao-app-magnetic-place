@@ -64,6 +64,9 @@ export default function ResumoMensalPublico() {
   const [rateHistory, setRateHistory] = useState([]);
   const [staticReady, setStaticReady] = useState(false);
 
+  // Colunas visíveis — sincronizadas com as escolhas do admin
+  const [visibleCols, setVisibleCols] = useState(() => new Set(COLS.map((_, i) => i)));
+
   // Dados reactivos ao mês
   const [logs,    setLogs]    = useState([]);
   const [contab,  setContab]  = useState([]);
@@ -85,6 +88,26 @@ export default function ResumoMensalPublico() {
       setRateHistory(r.data || []);
       setStaticReady(true);
     });
+  }, []);
+
+  // Carregar e subscrever colunas visíveis definidas pelo admin
+  useEffect(() => {
+    if (!sb) return;
+
+    sb.from('resumo_config').select('valor').eq('chave', 'visible_cols').single()
+      .then(({ data }) => {
+        if (data?.valor && Array.isArray(data.valor)) setVisibleCols(new Set(data.valor));
+      });
+
+    const ch = sb.channel('pub_config_cols')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'resumo_config', filter: 'chave=eq.visible_cols',
+      }, ({ new: row }) => {
+        if (row?.valor && Array.isArray(row.valor)) setVisibleCols(new Set(row.valor));
+      })
+      .subscribe();
+
+    return () => { sb.removeChannel(ch); };
   }, []);
 
   // Carregar logs (filtrados pelo mês), contabilidade e observações quando o mês muda
@@ -217,8 +240,9 @@ export default function ResumoMensalPublico() {
     });
   }, [staticReady, workers, clients, rateHistory, logs, contab, obs, ano]);
 
-  const mesLabel = `${MESES_PT[mes] || ''} ${ano}`;
-  const isReady  = staticReady && !loading;
+  const mesLabel   = `${MESES_PT[mes] || ''} ${ano}`;
+  const isReady    = staticReady && !loading;
+  const activeCols = COLS.map((col, ci) => ({ col, ci })).filter(({ ci }) => visibleCols.has(ci));
 
   if (!sb) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -262,10 +286,10 @@ export default function ResumoMensalPublico() {
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm bg-white">
-            <table className="border-collapse text-xs" style={{ minWidth: '1800px', width: '100%' }}>
+            <table className="border-collapse text-xs" style={{ minWidth: `${Math.max(600, activeCols.length * 120)}px`, width: '100%' }}>
               <thead>
                 <tr className="bg-slate-800 text-white">
-                  {COLS.map((col, ci) => (
+                  {activeCols.map(({ col, ci }) => (
                     <th key={ci} className={`px-3 py-3 text-[10px] font-black uppercase tracking-wide text-center whitespace-nowrap ${col.highlight ? 'bg-emerald-700' : ''}`}>
                       {col.label}
                     </th>
@@ -275,7 +299,7 @@ export default function ResumoMensalPublico() {
               <tbody>
                 {rows.map((row, ri) => (
                   <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                    {COLS.map((col, ci) => (
+                    {activeCols.map(({ col, ci }) => (
                       <td key={ci} className={`px-3 py-2 text-center whitespace-nowrap font-bold ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}>
                         {row[col.key]}
                       </td>
@@ -285,11 +309,11 @@ export default function ResumoMensalPublico() {
               </tbody>
               <tfoot>
                 <tr className="bg-indigo-50 border-t-2 border-indigo-200">
-                  {COLS.map((col, ci) => {
+                  {activeCols.map(({ col, ci }, idx) => {
                     const val = col.sum ? rows.reduce((s, r) => s + (r[col.sum] || 0), 0) : null;
                     return (
                       <td key={ci} className={`px-3 py-2.5 text-center text-xs font-black whitespace-nowrap ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}>
-                        {ci === 0 ? 'TOTAIS' : val !== null ? val.toFixed(2) : ''}
+                        {idx === 0 ? 'TOTAIS' : val !== null ? val.toFixed(2) : ''}
                       </td>
                     );
                   })}
