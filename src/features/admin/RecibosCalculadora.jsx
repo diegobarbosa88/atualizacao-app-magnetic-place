@@ -405,7 +405,7 @@ export default function RecibosCalculadora() {
     const dataInicio = mapa.dataInicio || `${mesStr}-01`;
 
     const rows = gerarLinhasMapa({
-      necessaria: r.ajudaCustoNecessaria,
+      necessaria: r.ajudaCustoNecessaria + r.subsAlimTotal,
       limiteDia: n(inputs.vdl),
       dataInicio,
       horaPartida: mapa.horaPartida,
@@ -1099,7 +1099,7 @@ ${hdrRow}${bodyRows}${totRow}
       const limiteDia = valorDiarioLegal('internacional', 'geral');
 
       const mapaLinhas = gerarLinhasMapa({
-        necessaria:   rc.ajudaCustoNecessaria,
+        necessaria:   rc.ajudaCustoNecessaria + rc.subsAlimTotal,
         limiteDia,
         dataInicio,
         horaPartida:  '07:30',
