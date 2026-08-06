@@ -1051,8 +1051,8 @@ ${hdrRow}${bodyRows}${totRow}
     const availH   = Y_FOOTER - Y_TABLE;
     const nRows    = mapaLinhas.length;
     const HEADER_ROW_H = 3.5;
-    const rowH = Math.max(1.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
-    const fs   = Math.min(6.5, Math.max(4.5, rowH * 1.6));
+    const rowH = Math.min(4.5, Math.max(1.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1)));
+    const fs   = Math.min(6, Math.max(4.5, rowH * 1.4));
     const pad  = Math.max(0.1, (rowH - fs * 0.3528) / 2);
 
     // Colunas — soma = 200mm (TW portrait com MX=5)
