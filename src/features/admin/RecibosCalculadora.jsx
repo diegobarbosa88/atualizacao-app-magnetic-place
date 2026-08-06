@@ -1678,11 +1678,13 @@ const RESUMO_COLS = [
   { label: 'Líquido (€)',           key: 'liquido',      align: 'right', sumKey: '_liquidoNum' },
   { label: 'TSU Patronal 23,75% (€)',key: 'ssPatronal',  align: 'right', sumKey: '_ssPatNum' },
   { label: 'Custo Empresa (€)',     key: 'custoEmpresa', align: 'right', sumKey: '_custoNum' },
+  { label: 'Observação',            key: 'observacao',   align: 'center', editable: true },
   { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
 ];
 
 const LS_COLS    = 'resumo_visible_cols';
 const LS_WORKERS = 'resumo_selected_workers';
+const LS_OBS     = 'resumo_observacoes';
 
 function loadFromLS(key, fallback) {
   try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
@@ -1696,8 +1698,17 @@ function ResumoMensalTable({ rows, mesLabel }) {
   const [selectedWorkers, setSelectedWorkersRaw] = useState(() =>
     new Set(loadFromLS(LS_WORKERS, []))
   );
+  const [observacoes, setObservacoesRaw] = useState(() => loadFromLS(LS_OBS, {}));
   const [showColPicker, setShowColPicker] = useState(false);
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
+
+  const updateObs = (nome, valor) => {
+    setObservacoesRaw(prev => {
+      const next = { ...prev, [nome]: valor };
+      localStorage.setItem(LS_OBS, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const setVisibleCols = (val) => {
     const next = typeof val === 'function' ? val(visibleCols) : val;
@@ -1736,14 +1747,14 @@ function ResumoMensalTable({ rows, mesLabel }) {
       `<td style="${style('#0F1F3D', 'white', true, col.highlight)}">${col.label}</td>`
     ).join('')}</tr>`;
 
-    const bodyRows = filteredRows.map((row, ri) =>
+    const bodyRows = displayRows.map((row, ri) =>
       `<tr>${activeCols.map(({ col }) =>
         `<td style="${style(ri % 2 === 0 ? '#ffffff' : '#F8FAFC', '#1E293B', false, col.highlight)}">${row[col.key] ?? ''}</td>`
       ).join('')}</tr>`
     ).join('');
 
     const totRow = `<tr>${activeCols.map(({ col }, ai) => {
-      const val = col.sumKey ? filteredRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null;
+      const val = col.sumKey ? displayRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null;
       return `<td style="${style('#EEF2FF', '#4F46E5', true, col.highlight)}">${ai === 0 ? 'TOTAIS' : val !== null ? val.toFixed(2) : ''}</td>`;
     }).join('')}</tr>`;
 
@@ -1767,8 +1778,11 @@ function ResumoMensalTable({ rows, mesLabel }) {
   // Set vazio = todos; Set com nomes = apenas os selecionados
   const filteredRows = selectedWorkers.size > 0 ? rows.filter(r => selectedWorkers.has(r.nome)) : rows;
 
+  // Injeta observação em cada linha (para render e para XLS)
+  const displayRows = filteredRows.map(r => ({ ...r, observacao: observacoes[r.nome] || '' }));
+
   const totals = activeCols.map(({ col }) =>
-    col.sumKey ? filteredRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
+    col.sumKey ? displayRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
   );
 
   const thBase = 'px-3 py-2.5 text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-center';
@@ -1953,14 +1967,24 @@ function ResumoMensalTable({ rows, mesLabel }) {
               </tr>
             </thead>
             <tbody>
-              {filteredRows.map((row, ri) => (
+              {displayRows.map((row, ri) => (
                 <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                   {activeCols.map(({ col, ci }) => (
                     <td
                       key={ci}
-                      className={`px-3 py-2 text-xs font-bold whitespace-nowrap ${tdAlign(col.align)} ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
+                      className={`px-1 py-1 text-xs font-bold whitespace-nowrap ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
                     >
-                      {row[col.key]}
+                      {col.editable ? (
+                        <input
+                          type="text"
+                          value={observacoes[row.nome] || ''}
+                          onChange={e => updateObs(row.nome, e.target.value)}
+                          placeholder="—"
+                          className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
+                        />
+                      ) : (
+                        <span className={`block px-2 ${tdAlign()}`}>{row[col.key]}</span>
+                      )}
                     </td>
                   ))}
                 </tr>
