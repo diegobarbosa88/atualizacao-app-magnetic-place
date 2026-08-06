@@ -268,7 +268,7 @@ export default function RecibosCalculadora() {
     const pct2    = v => (v * 100).toFixed(2) + '%';
 
     const trabalhadores = (workers || [])
-      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .filter(w => w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));

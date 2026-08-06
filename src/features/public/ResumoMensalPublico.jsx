@@ -230,7 +230,7 @@ export default function ResumoMensalPublico() {
     const fmtData = d => d ? String(d).split('T')[0] : '';
 
     const ativos = workers
-      .filter(w => w.is_active !== false && w.vencimento_base != null)
+      .filter(w => w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     return ativos.map(w => {
