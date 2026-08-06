@@ -1683,8 +1683,9 @@ const RESUMO_COLS = [
   { label: 'Líquido (€)',           key: 'liquido',      align: 'right', sumKey: '_liquidoNum' },
   { label: 'TSU Patronal 23,75% (€)',key: 'ssPatronal',  align: 'right', sumKey: '_ssPatNum' },
   { label: 'Custo Empresa (€)',     key: 'custoEmpresa', align: 'right', sumKey: '_custoNum' },
-  { label: 'Observação',            key: 'observacao',   align: 'center', editable: true },
   { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
+  { label: 'Completo',              key: 'completo',     align: 'center', tipo: 'toggle' },
+  { label: 'Observação',            key: 'observacao',   align: 'center', editable: true },
 ];
 
 function CopiarLinkBtn({ mesStr }) {
@@ -1730,6 +1731,7 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
     new Set(loadFromLS(LS_WORKERS, []))
   );
   const [observacoes, setObservacoes] = useState(() => loadFromLS(LS_OBS, {}));
+  const [completos, setCompletos] = useState({});
   const [showColPicker, setShowColPicker] = useState(false);
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
 
@@ -1780,16 +1782,17 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   useEffect(() => {
     if (!supabase || !mesStr) return;
 
-    supabase.from('resumo_observacoes').select('worker_id, observacao').eq('mes', mesStr)
+    supabase.from('resumo_observacoes').select('worker_id, observacao, completo').eq('mes', mesStr)
       .then(({ data }) => {
         if (!data) return;
-        const map = {};
-        data.forEach(r => { map[r.worker_id] = r.observacao; });
+        const obsMap = {}, compMap = {};
+        data.forEach(r => { obsMap[r.worker_id] = r.observacao; compMap[r.worker_id] = !!r.completo; });
         setObservacoes(prev => {
-          const merged = { ...prev, ...map };
+          const merged = { ...prev, ...obsMap };
           localStorage.setItem(LS_OBS, JSON.stringify(merged));
           return merged;
         });
+        setCompletos(prev => ({ ...prev, ...compMap }));
       });
 
     const channel = supabase
@@ -1808,6 +1811,11 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
           localStorage.setItem(LS_OBS, JSON.stringify(next));
           return next;
         });
+        if (eventType !== 'DELETE') {
+          setCompletos(prev => ({ ...prev, [row.worker_id]: !!row.completo }));
+        } else {
+          setCompletos(prev => { const n = { ...prev }; delete n[row.worker_id]; return n; });
+        }
       })
       .subscribe();
 
@@ -1842,7 +1850,17 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
     });
     if (supabase && workerId && mesStr) {
       supabase.from('resumo_observacoes').upsert(
-        { worker_id: workerId, mes: mesStr, observacao: valor, updated_at: new Date().toISOString() },
+        { worker_id: workerId, mes: mesStr, observacao: valor, completo: completos[workerId] || false, updated_at: new Date().toISOString() },
+        { onConflict: 'worker_id,mes' }
+      );
+    }
+  };
+
+  const updateCompleto = (workerId, valor) => {
+    setCompletos(prev => ({ ...prev, [workerId]: valor }));
+    if (supabase && workerId && mesStr) {
+      supabase.from('resumo_observacoes').upsert(
+        { worker_id: workerId, mes: mesStr, completo: valor, observacao: observacoes[workerId] || '', updated_at: new Date().toISOString() },
         { onConflict: 'worker_id,mes' }
       );
     }
@@ -1904,8 +1922,12 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   // Set vazio = todos; Set com nomes = apenas os selecionados
   const filteredRows = selectedWorkers.size > 0 ? rows.filter(r => selectedWorkers.has(r.nome)) : rows;
 
-  // Injeta observação em cada linha (para render e para XLS); chave = workerId
-  const displayRows = filteredRows.map(r => ({ ...r, observacao: observacoes[r.workerId] || '' }));
+  // Injeta observação e estado completo em cada linha
+  const displayRows = filteredRows.map(r => ({
+    ...r,
+    observacao: observacoes[r.workerId] || '',
+    completo: completos[r.workerId] || false,
+  }));
 
   const totals = activeCols.map(({ col }) =>
     col.sumKey ? displayRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
@@ -2097,13 +2119,32 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
             </thead>
             <tbody>
               {displayRows.map((row, ri) => (
-                <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                <tr
+                  key={ri}
+                  className={row.completo ? 'bg-emerald-50' : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
+                >
                   {activeCols.map(({ col, ci }) => (
                     <td
                       key={ci}
                       className={`px-1 py-1 text-xs font-bold whitespace-nowrap ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
                     >
-                      {col.editable ? (
+                      {col.tipo === 'toggle' ? (
+                        <div className="flex justify-center px-2">
+                          <button
+                            onClick={() => updateCompleto(row.workerId, !row.completo)}
+                            title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                              row.completo
+                                ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
+                                : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
+                            }`}
+                          >
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          </button>
+                        </div>
+                      ) : col.editable ? (
                         <input
                           type="text"
                           value={observacoes[row.workerId] || ''}
@@ -2126,7 +2167,7 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
                     key={ci}
                     className={`px-3 py-2.5 text-xs font-black whitespace-nowrap ${tdAlign(col.align)} ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
                   >
-                    {ai === 0 ? 'TOTAIS' : totals[ai] !== null ? totals[ai].toFixed(2) : ''}
+                    {ai === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${displayRows.filter(r => r.completo).length}/${displayRows.length} ✓` : totals[ai] !== null ? totals[ai].toFixed(2) : ''}
                   </td>
                 ))}
               </tr>

@@ -38,8 +38,9 @@ const COLS = [
   { label: 'Líquido (€)',             key: 'liquido',       sum: '_liquidoNum' },
   { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',    sum: '_ssPatNum' },
   { label: 'Custo Empresa (€)',       key: 'custoEmpresa',  sum: '_custoNum' },
-  { label: 'Observação',              key: 'observacao' },
   { label: 'Ordenado Bruto (€)',      key: 'brutoAlvo',     sum: '_brutoNum', highlight: true },
+  { label: 'Completo',                key: 'completo',      tipo: 'toggle' },
+  { label: 'Observação',              key: 'observacao' },
 ];
 
 function parseMes(str) {
@@ -68,10 +69,11 @@ export default function ResumoMensalPublico() {
   const [visibleCols, setVisibleCols] = useState(() => new Set(COLS.map((_, i) => i)));
 
   // Dados reactivos ao mês
-  const [logs,    setLogs]    = useState([]);
-  const [contab,  setContab]  = useState([]);
-  const [obs,     setObs]     = useState({});
-  const [loading, setLoading] = useState(true);
+  const [logs,      setLogs]      = useState([]);
+  const [contab,    setContab]    = useState([]);
+  const [obs,       setObs]       = useState({});
+  const [completos, setCompletos] = useState({});
+  const [loading,   setLoading]   = useState(true);
 
   const ms = toMesStr(ano, mes);
 
@@ -141,17 +143,18 @@ export default function ResumoMensalPublico() {
     Promise.all([
       sb.from('logs').select('*').gte('date', dataInicio).lt('date', nextMes).limit(5000),
       sb.from('contabilidade_mensal').select('*').eq('mes', ms),
-      sb.from('resumo_observacoes').select('worker_id, observacao').eq('mes', ms),
+      sb.from('resumo_observacoes').select('worker_id, observacao, completo').eq('mes', ms),
     ]).then(([l, c, o]) => {
       setLogs(l.data || []);
       setContab(c.data || []);
-      const map = {};
-      (o.data || []).forEach(r => { map[r.worker_id] = r.observacao; });
-      setObs(map);
+      const obsMap = {}, compMap = {};
+      (o.data || []).forEach(r => { obsMap[r.worker_id] = r.observacao; compMap[r.worker_id] = !!r.completo; });
+      setObs(obsMap);
+      setCompletos(compMap);
       setLoading(false);
     });
 
-    // Subscrição real-time das observações
+    // Subscrição real-time das observações e estado completo
     const channel = sb.channel(`pub_obs_${ms}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'resumo_observacoes', filter: `mes=eq.${ms}`,
@@ -161,6 +164,11 @@ export default function ResumoMensalPublico() {
           ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== row.worker_id))
           : { ...prev, [row.worker_id]: row.observacao || '' }
         );
+        if (eventType !== 'DELETE') {
+          setCompletos(prev => ({ ...prev, [row.worker_id]: !!row.completo }));
+        } else {
+          setCompletos(prev => { const n = { ...prev }; delete n[row.worker_id]; return n; });
+        }
       })
       .subscribe();
 
@@ -242,6 +250,7 @@ export default function ResumoMensalPublico() {
         custoEmpresa:  eur2(rc.custoEmpresa),
         brutoAlvo:     eur2(brutoAlvo),
         observacao:    obs[w.id] || '',
+        completo:      completos[w.id] || false,
         _vencNum:      parseFloat(w.vencimento_base) || 0,
         _subsAlimNum:  rc.subsAlimTotal,
         _feriasNum:    rc.subsFerias,
@@ -257,7 +266,17 @@ export default function ResumoMensalPublico() {
         _brutoNum:     brutoAlvo,
       };
     });
-  }, [staticReady, workers, clients, rateHistory, logs, contab, obs, ano]);
+  }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ano]);
+
+  const updateCompleto = (workerId, valor) => {
+    setCompletos(prev => ({ ...prev, [workerId]: valor }));
+    if (sb && workerId && ms) {
+      sb.from('resumo_observacoes').upsert(
+        { worker_id: workerId, mes: ms, completo: valor, observacao: obs[workerId] || '', updated_at: new Date().toISOString() },
+        { onConflict: 'worker_id,mes' }
+      );
+    }
+  };
 
   const mesLabel   = `${MESES_PT[mes] || ''} ${ano}`;
   const isReady    = staticReady && !loading;
@@ -317,10 +336,28 @@ export default function ResumoMensalPublico() {
               </thead>
               <tbody>
                 {rows.map((row, ri) => (
-                  <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
+                  <tr key={ri} className={row.completo ? 'bg-emerald-50' : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
                     {activeCols.map(({ col, ci }) => (
                       <td key={ci} className={`px-3 py-2 text-center whitespace-nowrap font-bold ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}>
-                        {row[col.key]}
+                        {col.tipo === 'toggle' ? (
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => updateCompleto(row.workerId, !row.completo)}
+                              title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
+                              className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
+                                row.completo
+                                  ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
+                                  : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
+                              }`}
+                            >
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            </button>
+                          </div>
+                        ) : (
+                          row[col.key]
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -332,7 +369,7 @@ export default function ResumoMensalPublico() {
                     const val = col.sum ? rows.reduce((s, r) => s + (r[col.sum] || 0), 0) : null;
                     return (
                       <td key={ci} className={`px-3 py-2.5 text-center text-xs font-black whitespace-nowrap ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}>
-                        {idx === 0 ? 'TOTAIS' : val !== null ? val.toFixed(2) : ''}
+                        {idx === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${rows.filter(r => r.completo).length}/${rows.length} ✓` : val !== null ? val.toFixed(2) : ''}
                       </td>
                     );
                   })}
