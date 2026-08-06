@@ -1669,21 +1669,120 @@ const RESUMO_COLS = [
 ];
 
 function ResumoMensalTable({ rows, mesLabel }) {
-  const totals = RESUMO_COLS.map(col =>
-    col.sumKey ? rows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
+  const [visibleCols, setVisibleCols] = useState(() => new Set(RESUMO_COLS.map((_, i) => i)));
+  const [workerFilter, setWorkerFilter] = useState('');
+  const [showColPicker, setShowColPicker] = useState(false);
+
+  const toggleCol = (ci) => {
+    // Coluna "Trabalhador" (ci=0) não pode ser ocultada
+    if (ci === 0) return;
+    setVisibleCols(prev => {
+      const next = new Set(prev);
+      next.has(ci) ? next.delete(ci) : next.add(ci);
+      return next;
+    });
+  };
+
+  const activeCols = RESUMO_COLS.map((col, ci) => ({ col, ci })).filter(({ ci }) => visibleCols.has(ci));
+
+  const filteredRows = workerFilter ? rows.filter(r => r.nome === workerFilter) : rows;
+
+  const totals = activeCols.map(({ col }) =>
+    col.sumKey ? filteredRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
   );
 
   const thBase = 'px-3 py-2.5 text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-left';
-  const tdBase = (align, highlight) =>
-    `px-3 py-2 text-xs font-bold whitespace-nowrap ${align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left'} ${highlight ? 'text-emerald-700' : 'text-slate-700'}`;
+  const tdAlign = (align) => align === 'right' ? 'text-right' : align === 'center' ? 'text-center' : 'text-left';
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 flex-wrap">
         <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo Mensal — {mesLabel}</h3>
         {rows.length > 0 && (
-          <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">{rows.length} trabalhadores</span>
+          <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
+            {filteredRows.length}/{rows.length} trabalhadores
+          </span>
         )}
+
+        <div className="ml-auto flex items-center gap-2">
+          {/* Filtro de trabalhador */}
+          <select
+            value={workerFilter}
+            onChange={e => setWorkerFilter(e.target.value)}
+            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 shadow-sm"
+          >
+            <option value="">Todos os trabalhadores</option>
+            {rows.map(r => (
+              <option key={r.nome} value={r.nome}>{r.nome}</option>
+            ))}
+          </select>
+
+          {/* Seletor de colunas */}
+          <div className="relative">
+            <button
+              onClick={() => setShowColPicker(p => !p)}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              Colunas
+              <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-md text-[9px] font-black">
+                {visibleCols.size}/{RESUMO_COLS.length}
+              </span>
+            </button>
+
+            {showColPicker && (
+              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-[520px]">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Colunas visíveis</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setVisibleCols(new Set(RESUMO_COLS.map((_, i) => i)))}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wide"
+                    >
+                      Todas
+                    </button>
+                    <span className="text-slate-300">·</span>
+                    <button
+                      onClick={() => setVisibleCols(new Set([0]))}
+                      className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-wide"
+                    >
+                      Mínimo
+                    </button>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-1">
+                  {RESUMO_COLS.map((col, ci) => (
+                    <label
+                      key={ci}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors ${ci === 0 ? 'opacity-50 cursor-default' : 'hover:bg-slate-50'}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={visibleCols.has(ci)}
+                        onChange={() => toggleCol(ci)}
+                        disabled={ci === 0}
+                        className="w-3.5 h-3.5 accent-indigo-600 shrink-0"
+                      />
+                      <span className={`text-[11px] font-bold truncate ${col.highlight ? 'text-emerald-700' : 'text-slate-600'}`}>
+                        {col.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowColPicker(false)}
+                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-wide"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {rows.length === 0 ? (
@@ -1692,10 +1791,10 @@ function ResumoMensalTable({ rows, mesLabel }) {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
-          <table className="w-full border-collapse text-sm" style={{ minWidth: '1600px' }}>
+          <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="bg-slate-800 text-white">
-                {RESUMO_COLS.map((col, ci) => (
+                {activeCols.map(({ col, ci }) => (
                   <th
                     key={ci}
                     className={`${thBase} ${col.highlight ? 'bg-emerald-700 text-white' : 'text-slate-200'}`}
@@ -1706,12 +1805,12 @@ function ResumoMensalTable({ rows, mesLabel }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, ri) => (
+              {filteredRows.map((row, ri) => (
                 <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}>
-                  {RESUMO_COLS.map((col, ci) => (
+                  {activeCols.map(({ col, ci }) => (
                     <td
                       key={ci}
-                      className={`${tdBase(col.align, col.highlight)} ${col.highlight ? 'bg-emerald-50 border-x border-emerald-100' : ''}`}
+                      className={`px-3 py-2 text-xs font-bold whitespace-nowrap ${tdAlign(col.align)} ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
                     >
                       {row[col.key]}
                     </td>
@@ -1721,12 +1820,12 @@ function ResumoMensalTable({ rows, mesLabel }) {
             </tbody>
             <tfoot>
               <tr className="bg-indigo-50 border-t-2 border-indigo-200">
-                {RESUMO_COLS.map((col, ci) => (
+                {activeCols.map(({ col, ci }, ai) => (
                   <td
                     key={ci}
-                    className={`px-3 py-2.5 text-xs font-black whitespace-nowrap ${col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : 'text-left'} ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
+                    className={`px-3 py-2.5 text-xs font-black whitespace-nowrap ${tdAlign(col.align)} ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
                   >
-                    {ci === 0 ? 'TOTAIS' : totals[ci] !== null ? totals[ci].toFixed(2) : ''}
+                    {ai === 0 ? 'TOTAIS' : totals[ai] !== null ? totals[ai].toFixed(2) : ''}
                   </td>
                 ))}
               </tr>
