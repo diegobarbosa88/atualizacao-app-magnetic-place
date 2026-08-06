@@ -1736,6 +1736,18 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   const [ajustes,   setAjustes]   = useState({});
   const [showColPicker, setShowColPicker] = useState(false);
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'ok' | 'error'
+  const [dbError,    setDbError]    = useState(null);
+
+  // Verificar se a BD está configurada corretamente
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('resumo_observacoes').select('completo, ajuste_bruto').limit(1)
+      .then(({ error }) => {
+        if (error) setDbError(error.message);
+        else setDbError(null);
+      });
+  }, [supabase]);
 
   // Sincronizar colunas visíveis com Supabase (fonte de verdade partilhada)
   useEffect(() => {
@@ -1875,17 +1887,29 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
 
   const upsertObs = (workerId, patch) => {
     if (!supabase || !workerId || !mesStr) return;
+    setSaveStatus('saving');
     supabase.from('resumo_observacoes').upsert(
       {
-        worker_id: workerId, mes: mesStr,
+        worker_id:    workerId,
+        mes:          mesStr,
         observacao:   observacoes[workerId] || '',
         completo:     completos[workerId]   || false,
         ajuste_bruto: ajustes[workerId]     || 0,
-        updated_at: new Date().toISOString(),
+        updated_at:   new Date().toISOString(),
         ...patch,
       },
       { onConflict: 'worker_id,mes' }
-    ).then(({ error }) => { if (error) console.error('[resumo_obs] upsert erro:', error); });
+    ).then(({ error }) => {
+      if (error) {
+        console.error('[resumo_obs] upsert erro:', error);
+        setDbError(error.message);
+        setSaveStatus('error');
+      } else {
+        setDbError(null);
+        setSaveStatus('ok');
+      }
+      setTimeout(() => setSaveStatus(null), 2500);
+    });
   };
 
   const updateObs = (workerId, valor) => {
@@ -1989,6 +2013,20 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
 
   return (
     <div className="space-y-3">
+      {/* Banner de erro de BD */}
+      {dbError && (
+        <div className="p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800">
+          <strong>⚠️ Erro na base de dados:</strong> {dbError}
+          <br />Execute este SQL no Supabase → SQL Editor:
+          <pre className="mt-1 bg-red-100 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap select-all">
+{`ALTER TABLE resumo_observacoes
+  ADD COLUMN IF NOT EXISTS completo     BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS ajuste_bruto NUMERIC DEFAULT 0;
+ALTER TABLE resumo_observacoes DISABLE ROW LEVEL SECURITY;`}
+          </pre>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
         <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo Mensal — {mesLabel}</h3>
@@ -1997,6 +2035,9 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
             {filteredRows.length} {filteredRows.length !== rows.length ? `de ${rows.length} ` : ''}trabalhadores
           </span>
         )}
+        {saveStatus === 'saving' && <span className="text-[10px] text-slate-400 animate-pulse">A guardar…</span>}
+        {saveStatus === 'ok'     && <span className="text-[10px] text-emerald-600 font-black">✓ Guardado</span>}
+        {saveStatus === 'error'  && <span className="text-[10px] text-red-600 font-black">✗ Erro ao guardar</span>}
 
         <div className="ml-auto flex items-center gap-2">
           {/* Seletor de trabalhadores */}

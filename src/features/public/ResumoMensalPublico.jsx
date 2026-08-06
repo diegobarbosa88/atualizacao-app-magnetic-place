@@ -76,8 +76,20 @@ export default function ResumoMensalPublico() {
   const [completos, setCompletos] = useState({});
   const [ajustes,   setAjustes]   = useState({});
   const [loading,   setLoading]   = useState(true);
+  const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'ok' | 'error'
+  const [dbError,    setDbError]    = useState(null);
 
   const ms = toMesStr(ano, mes);
+
+  // Verificar se a BD está configurada corretamente
+  useEffect(() => {
+    if (!sb) return;
+    sb.from('resumo_observacoes').select('completo, ajuste_bruto').limit(1)
+      .then(({ error }) => {
+        if (error) setDbError(error.message);
+        else setDbError(null);
+      });
+  }, []);
 
   // Carregar workers, clients, historico de taxas uma vez
   useEffect(() => {
@@ -297,14 +309,36 @@ export default function ResumoMensalPublico() {
     });
   }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ajustes, ano]);
 
+  const upsertObs = (workerId, patch) => {
+    if (!sb || !workerId || !ms) return;
+    setSaveStatus('saving');
+    sb.from('resumo_observacoes').upsert(
+      {
+        worker_id:    workerId,
+        mes:          ms,
+        observacao:   obs[workerId]      || '',
+        completo:     completos[workerId] || false,
+        ajuste_bruto: ajustes[workerId]   || 0,
+        updated_at:   new Date().toISOString(),
+        ...patch,
+      },
+      { onConflict: 'worker_id,mes' }
+    ).then(({ error }) => {
+      if (error) {
+        console.error('[resumo_obs] upsert erro:', error);
+        setDbError(error.message);
+        setSaveStatus('error');
+      } else {
+        setDbError(null);
+        setSaveStatus('ok');
+      }
+      setTimeout(() => setSaveStatus(null), 2500);
+    });
+  };
+
   const updateCompleto = (workerId, valor) => {
     setCompletos(prev => ({ ...prev, [workerId]: valor }));
-    if (sb && workerId && ms) {
-      sb.from('resumo_observacoes').upsert(
-        { worker_id: workerId, mes: ms, completo: valor, observacao: obs[workerId] || '', ajuste_bruto: ajustes[workerId] || 0, updated_at: new Date().toISOString() },
-        { onConflict: 'worker_id,mes' }
-      ).then(({ error }) => { if (error) console.error('[resumo_obs] upsert completo erro:', error); });
-    }
+    upsertObs(workerId, { completo: valor });
   };
 
   const mesLabel   = `${MESES_PT[mes] || ''} ${ano}`;
@@ -335,10 +369,27 @@ export default function ResumoMensalPublico() {
           </button>
         </div>
         <div className="text-right">
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Vista partilhada · só leitura</p>
-          {isReady && <p className="text-[10px] text-slate-400">{rows.length} trabalhadores · {logs.length} registos</p>}
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wide">Vista partilhada</p>
+          {saveStatus === 'saving' && <p className="text-[10px] text-slate-300 animate-pulse">A guardar…</p>}
+          {saveStatus === 'ok'     && <p className="text-[10px] text-emerald-400 font-black">✓ Guardado</p>}
+          {saveStatus === 'error'  && <p className="text-[10px] text-red-400 font-black">✗ Erro ao guardar</p>}
+          {!saveStatus && isReady  && <p className="text-[10px] text-slate-400">{rows.length} trabalhadores · {logs.length} registos</p>}
         </div>
       </div>
+
+      {/* Banner de erro de BD */}
+      {dbError && (
+        <div className="mx-4 mt-4 p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800">
+          <strong>⚠️ Erro na base de dados:</strong> {dbError}
+          <br />Execute este SQL no Supabase → SQL Editor:
+          <pre className="mt-1 bg-red-100 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap">
+{`ALTER TABLE resumo_observacoes
+  ADD COLUMN IF NOT EXISTS completo     BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS ajuste_bruto NUMERIC DEFAULT 0;
+ALTER TABLE resumo_observacoes DISABLE ROW LEVEL SECURITY;`}
+          </pre>
+        </div>
+      )}
 
       {/* Tabela */}
       <div className="p-4">
