@@ -343,7 +343,7 @@ export default function ResumoMensalPublico() {
 
   const mesLabel   = `${MESES_PT[mes] || ''} ${ano}`;
   const isReady    = staticReady && !loading;
-  const activeCols = COLS.map((col, ci) => ({ col, ci })).filter(({ ci }) => visibleCols.has(ci));
+  const activeCols = COLS.map((col, ci) => ({ col, ci })).filter(({ col, ci }) => visibleCols.has(ci) && col.key !== 'ajusteLabel');
 
   if (!sb) return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">

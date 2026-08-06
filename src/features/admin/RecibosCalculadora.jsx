@@ -2253,7 +2253,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           value={ajustes[row.workerId] ?? ''}
                           onChange={e => updateAjuste(row.workerId, e.target.value)}
                           placeholder="0"
-                          className="w-full min-w-24 bg-transparent outline-none text-right text-xs font-bold placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
+                          className="w-full min-w-24 bg-transparent outline-none text-center text-xs font-bold placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
                           style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#64748b' }}
                         />
                       ) : col.tipo === 'toggle' ? (
