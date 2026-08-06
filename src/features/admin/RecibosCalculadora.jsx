@@ -884,6 +884,172 @@ ${hdrRow}${bodyRows}${totRow}
     URL.revokeObjectURL(url);
   }
 
+  // ── Renderiza UMA página do mapa (A4 paisagem) ───────────────────────────
+  function _renderMapaPagina(doc, { mesLabel, ano, nome, nif, nis, profissao, mapaLinhas, subsAlimTotal }) {
+    const W  = doc.internal.pageSize.getWidth();
+    const H  = doc.internal.pageSize.getHeight();
+    const MX = 12;
+    const TW = W - 2 * MX;
+    const NAVY  = [15, 31, 61];
+    const GOLD  = [212, 175, 55];
+    const LGRAY = [245, 246, 248];
+    const MGRAY = [90, 105, 125];
+    const fmt = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+    const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const fmtDia  = iso => { const d = new Date(iso + 'T00:00:00'); return `${DIAS_PT[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}`; };
+
+    // ZONA 1: Cabeçalho navy
+    const HEADER_H = 38;
+    doc.setFillColor(...NAVY);
+    doc.rect(0, 0, W, HEADER_H, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text(EMPRESA.nome.toUpperCase(), MX, 11);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(170, 185, 210);
+    doc.text(EMPRESA.morada, MX, 17);
+    doc.text(`NIF ${EMPRESA.nif}`, MX, 22);
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(15);
+    doc.text('MAPA DE AJUDAS DE CUSTO', W / 2, 14.5, { align: 'center' });
+
+    doc.setDrawColor(...GOLD);
+    doc.setLineWidth(0.5);
+    doc.line(W / 2 - 58, 17.5, W / 2 + 58, 17.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(220, 230, 245);
+    doc.text(`${mesLabel.toUpperCase()}  ${ano}`, W / 2, 24, { align: 'center' });
+
+    // ZONA 2: Faixa do trabalhador
+    const Y_TRAB = HEADER_H + 2;
+    doc.setFillColor(...LGRAY);
+    doc.rect(MX, Y_TRAB, TW, 13, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...NAVY);
+    doc.text((nome || '—').toUpperCase(), MX + 3, Y_TRAB + 6.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    doc.setTextColor(...MGRAY);
+    doc.text(profissao || '—', MX + 3, Y_TRAB + 11);
+
+    const XR = W - MX - 3;
+    doc.text(`NIF: ${nif || '—'}`, XR - 44, Y_TRAB + 5.5);
+    doc.text(`NIS: ${nis || '—'}`, XR - 44, Y_TRAB + 10.5);
+
+    // ZONA 3: Tabela — altura adaptativa para caber na página
+    const Y_TABLE  = Y_TRAB + 16;
+    const Y_FOOTER = H - 50;
+    const availH   = Y_FOOTER - Y_TABLE;
+    const nRows    = mapaLinhas.length;
+    const HEADER_ROW_H = 7;
+    const rowH = Math.max(3.8, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
+    const fs   = Math.min(7, Math.max(5.5, rowH * 1.65));
+    const pad  = Math.max(1.0, (rowH - fs * 0.3528) / 2);
+
+    // Colunas — soma = TW = 273mm
+    const colW = [28, 46, 48, 38, 26, 24, 18, 16, 29];
+
+    autoTable(doc, {
+      startY: Y_TABLE,
+      tableWidth: TW,
+      margin: { left: MX, right: MX },
+      head: [['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor (€)']],
+      body: mapaLinhas.map(row => [
+        fmtDia(row.dia),
+        row.servico,
+        row.cliente || '—',
+        row.localidade || '—',
+        row.territorio,
+        row.tipo,
+        row.hora || '—',
+        `${row.pct}%`,
+        fmt(row.valor),
+      ]),
+      theme: 'striped',
+      headStyles: {
+        fillColor: NAVY, textColor: 255,
+        fontSize: Math.min(7, fs + 0.5), fontStyle: 'bold',
+        cellPadding: { top: 2.5, bottom: 2.5, left: 2, right: 2 },
+        minCellHeight: HEADER_ROW_H,
+      },
+      bodyStyles: {
+        fontSize: fs,
+        cellPadding: { top: pad, bottom: pad, left: 2, right: 2 },
+        overflow: 'ellipsis',
+        minCellHeight: rowH,
+      },
+      alternateRowStyles: { fillColor: [248, 249, 251] },
+      columnStyles: {
+        0: { cellWidth: colW[0], fontStyle: 'bold', halign: 'center' },
+        1: { cellWidth: colW[1] },
+        2: { cellWidth: colW[2] },
+        3: { cellWidth: colW[3] },
+        4: { cellWidth: colW[4], halign: 'center' },
+        5: { cellWidth: colW[5], halign: 'center' },
+        6: { cellWidth: colW[6], halign: 'center' },
+        7: { cellWidth: colW[7], halign: 'center' },
+        8: { cellWidth: colW[8], halign: 'right', fontStyle: 'bold' },
+      },
+      pageBreak: 'avoid',
+    });
+
+    // ZONA 4: Totais (posição fixa no rodapé)
+    const mapaTotal   = mapaLinhas.reduce((s, row) => s + row.valor, 0);
+    const importancia = mapaTotal - subsAlimTotal;
+
+    const YT = Y_FOOTER + 4;
+    const XT = MX + 142;
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 75, 95);
+    doc.text('Total ajudas de custo:', XT, YT);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text(fmt(mapaTotal), W - MX, YT, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 75, 95);
+    doc.text('(−) Subsídio de alimentação:', XT, YT + 7);
+    doc.setTextColor(0, 0, 0);
+    doc.text(fmt(subsAlimTotal), W - MX, YT + 7, { align: 'right' });
+
+    doc.setDrawColor(...NAVY);
+    doc.setLineWidth(0.25);
+    doc.line(XT, YT + 10.5, W - MX, YT + 10.5);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...NAVY);
+    doc.text('Importância a receber:', XT, YT + 18);
+    doc.text(fmt(importancia), W - MX, YT + 18, { align: 'right' });
+
+    // ZONA 5: Assinatura
+    const YS = H - 26;
+    doc.setDrawColor(190, 200, 215);
+    doc.setLineWidth(0.2);
+    doc.line(MX, YS - 2, W - MX, YS - 2);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(55, 65, 80);
+    doc.text(`Recebi a importância de ${fmt(importancia)}, referente a ajudas de custo (${mesLabel} de ${ano}).`, MX, YS + 5);
+    doc.text(`Trofa, _____ de _________________________________ de ${ano}`, MX, YS + 13);
+    doc.text('Assinatura:', MX, YS + 21);
+    doc.setDrawColor(120, 130, 145);
+    doc.line(MX + 28, YS + 21, MX + 165, YS + 21);
+  }
+
   async function gerarMapasAjudasPDF() {
     const mesNum   = parseInt(inputs.mes, 10);
     const mesStr   = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
@@ -899,8 +1065,7 @@ ${hdrRow}${bodyRows}${totRow}
     const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
 
-    const doc  = new jsPDF();
-    const eur2 = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     let isFirstPage = true;
 
     trabalhadores.forEach(w => {
@@ -945,6 +1110,7 @@ ${hdrRow}${bodyRows}${totRow}
       }).map(row => ({
         ...row,
         cliente: clienteParaDia(row.dia) || '',
+        valor:   limiteDia * (row.pct / 100),
       }));
 
       if (mapaLinhas.length === 0) return;
@@ -952,76 +1118,12 @@ ${hdrRow}${bodyRows}${totRow}
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
 
-      // Cabeçalho
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('MAPA DE AJUDAS DE CUSTO', 105, 18, { align: 'center' });
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-
-      autoTable(doc, {
-        startY: 24,
-        body: [
-          ['Empresa:', EMPRESA.nome],
-          ['Morada:', EMPRESA.morada],
-          ['NIF:', EMPRESA.nif],
-          ['Mês / Ano:', `${mesLabel} ${inputs.ano}`],
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 2 },
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
+      _renderMapaPagina(doc, {
+        mesLabel, ano: inputs.ano,
+        nome: w.name, nif: w.nif, nis: w.nis, profissao: w.profissao,
+        mapaLinhas,
+        subsAlimTotal: rc.subsAlimTotal,
       });
-
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 4,
-        body: [
-          ['Nome:', (w.name || '—').toUpperCase()],
-          ['NIF:', w.nif || '—'],
-          ['Profissão:', w.profissao || '—'],
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 2 },
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
-      });
-
-      // Tabela de dias
-      const rowsData = mapaLinhas.map(row => {
-        const valor = limiteDia * (row.pct / 100);
-        return [row.dia, row.servico, row.cliente, row.localidade || '—', row.territorio, row.tipo, row.hora, `${row.pct}%`, eur2(valor)];
-      });
-
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 6,
-        head: [['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor']],
-        body: rowsData,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
-        styles: { fontSize: 7, cellPadding: 2 },
-        columnStyles: { 8: { halign: 'right' } },
-      });
-
-      // Totais
-      const mapaTotal = mapaLinhas.reduce((s, row) => s + limiteDia * (row.pct / 100), 0);
-      const importancia = mapaTotal - rc.subsAlimTotal;
-
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 4,
-        body: [
-          [{ content: 'Total ajudas de custo', styles: { fontStyle: 'bold' } }, eur2(mapaTotal)],
-          ['Subsídio de alimentação (dedução)', eur2(rc.subsAlimTotal)],
-          [{ content: 'Importância a receber', styles: { fontStyle: 'bold' } }, { content: eur2(importancia), styles: { fontStyle: 'bold' } }],
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 2.5 },
-        columnStyles: { 1: { halign: 'right' } },
-      });
-
-      // Assinatura
-      const ySign = doc.lastAutoTable.finalY + 12;
-      doc.setFontSize(8);
-      doc.text(`Recebi a importância de ${eur2(importancia)}, referente a ajudas de custo.`, 14, ySign);
-      doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
-      doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
     });
 
     if (isFirstPage) { alert('Nenhum trabalhador com ajudas de custo no mês seleccionado.'); return; }
@@ -1029,83 +1131,24 @@ ${hdrRow}${bodyRows}${totRow}
   }
 
   function gerarPDF() {
-    const doc = new jsPDF();
-    const mesNum = parseInt(inputs.mes, 10);
+    const mesNum   = parseInt(inputs.mes, 10);
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
 
-    // Cabeçalho empresa
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('MAPA DE AJUDAS DE CUSTO', 105, 18, { align: 'center' });
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    const headerData = [
-      ['Empresa:', EMPRESA.nome],
-      ['Morada:', EMPRESA.morada],
-      ['NIF:', EMPRESA.nif],
-      ['Mês / Ano:', `${mesLabel} ${inputs.ano}`],
-    ];
-    autoTable(doc, {
-      startY: 24,
-      body: headerData,
-      theme: 'plain',
-      styles: { fontSize: 8, cellPadding: 2 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
-    });
-
-    // Dados do trabalhador
-    const trabData = [
-      ['Nome:', inputs.nome || '—'],
-      ['NIF:', inputs.nif || '—'],
-      ['Profissão:', inputs.categoria || '—'],
-    ];
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 4,
-      body: trabData,
-      theme: 'plain',
-      styles: { fontSize: 8, cellPadding: 2 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 28 } },
-    });
-
-    // Tabela de dias
-    const rowsData = mapaRows.map(row => {
+    const rowsWithVal = mapaRows.map(row => {
       const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(inputs.vdl);
-      const valor = limite * (row.pct / 100);
-      return [row.dia, row.servico, row.cliente, row.localidade, row.territorio, row.tipo, row.hora, `${row.pct}%`, eur(valor)];
+      return { ...row, valor: limite * (row.pct / 100) };
     });
 
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 6,
-      head: [['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor']],
-      body: rowsData,
-      theme: 'striped',
-      headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
-      styles: { fontSize: 7, cellPadding: 2 },
-      columnStyles: { 8: { halign: 'right' } },
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    _renderMapaPagina(doc, {
+      mesLabel, ano: inputs.ano,
+      nome:      inputs.nome,
+      nif:       inputs.nif,
+      nis:       inputs.nis,
+      profissao: inputs.categoria,
+      mapaLinhas:    rowsWithVal,
+      subsAlimTotal: r ? r.subsAlimTotal : 0,
     });
-
-    // Totais
-    const subsAlimTotal = r ? r.subsAlimTotal : 0;
-    const importanciaReceber = mapaTotal - subsAlimTotal;
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 4,
-      body: [
-        [{ content: 'Total ajudas de custo', styles: { fontStyle: 'bold' } }, eur(mapaTotal)],
-        ['Subsídio de alimentação (dedução)', eur(subsAlimTotal)],
-        [{ content: 'Importância a receber', styles: { fontStyle: 'bold' } }, { content: eur(importanciaReceber), styles: { fontStyle: 'bold' } }],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 8, cellPadding: 2.5 },
-      columnStyles: { 1: { halign: 'right' } },
-    });
-
-    // Assinatura
-    const ySign = doc.lastAutoTable.finalY + 12;
-    doc.setFontSize(8);
-    doc.text(`Recebi a importância de ${eur(importanciaReceber)}, referente a ajudas de custo.`, 14, ySign);
-    doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
-    doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
 
     const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
     doc.save(`mapa-ajudas-custo-${nomeFile}-${inputs.mes.padStart(2, '0')}-${inputs.ano}.pdf`);
