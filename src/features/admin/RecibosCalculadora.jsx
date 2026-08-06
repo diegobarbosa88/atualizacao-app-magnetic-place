@@ -1683,11 +1683,11 @@ const RESUMO_COLS = [
 
 function ResumoMensalTable({ rows, mesLabel }) {
   const [visibleCols, setVisibleCols] = useState(() => new Set(RESUMO_COLS.map((_, i) => i)));
-  const [workerFilter, setWorkerFilter] = useState('');
+  const [selectedWorkers, setSelectedWorkers] = useState(() => new Set());
   const [showColPicker, setShowColPicker] = useState(false);
+  const [showWorkerPicker, setShowWorkerPicker] = useState(false);
 
   const toggleCol = (ci) => {
-    // Coluna "Trabalhador" (ci=0) não pode ser ocultada
     if (ci === 0) return;
     setVisibleCols(prev => {
       const next = new Set(prev);
@@ -1696,9 +1696,18 @@ function ResumoMensalTable({ rows, mesLabel }) {
     });
   };
 
+  const toggleWorker = (nome) => {
+    setSelectedWorkers(prev => {
+      const next = new Set(prev);
+      next.has(nome) ? next.delete(nome) : next.add(nome);
+      return next;
+    });
+  };
+
   const activeCols = RESUMO_COLS.map((col, ci) => ({ col, ci })).filter(({ ci }) => visibleCols.has(ci));
 
-  const filteredRows = workerFilter ? rows.filter(r => r.nome === workerFilter) : rows;
+  // Set vazio = todos; Set com nomes = apenas os selecionados
+  const filteredRows = selectedWorkers.size > 0 ? rows.filter(r => selectedWorkers.has(r.nome)) : rows;
 
   const totals = activeCols.map(({ col }) =>
     col.sumKey ? filteredRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
@@ -1714,27 +1723,86 @@ function ResumoMensalTable({ rows, mesLabel }) {
         <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo Mensal — {mesLabel}</h3>
         {rows.length > 0 && (
           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
-            {filteredRows.length}/{rows.length} trabalhadores
+            {filteredRows.length} {filteredRows.length !== rows.length ? `de ${rows.length} ` : ''}trabalhadores
           </span>
         )}
 
         <div className="ml-auto flex items-center gap-2">
-          {/* Filtro de trabalhador */}
-          <select
-            value={workerFilter}
-            onChange={e => setWorkerFilter(e.target.value)}
-            className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 shadow-sm"
-          >
-            <option value="">Todos os trabalhadores</option>
-            {rows.map(r => (
-              <option key={r.nome} value={r.nome}>{r.nome}</option>
-            ))}
-          </select>
+          {/* Seletor de trabalhadores */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowWorkerPicker(p => !p); setShowColPicker(false); }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showWorkerPicker ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'}`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Trabalhadores
+              {selectedWorkers.size > 0 && (
+                <span className="bg-slate-200 text-slate-700 px-1.5 py-0.5 rounded-md text-[9px] font-black">
+                  {selectedWorkers.size}/{rows.length}
+                </span>
+              )}
+            </button>
+
+            {showWorkerPicker && (
+              <div className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl p-4 w-72">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Trabalhadores visíveis</span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedWorkers(new Set())}
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wide"
+                    >
+                      Todos
+                    </button>
+                    <span className="text-slate-300">·</span>
+                    <button
+                      onClick={() => setSelectedWorkers(new Set(rows.map(r => r.nome)))}
+                      className="text-[10px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-wide"
+                    >
+                      Nenhum
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-0.5 max-h-64 overflow-y-auto">
+                  {rows.map(r => (
+                    <label
+                      key={r.nome}
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedWorkers.size === 0 || selectedWorkers.has(r.nome)}
+                        onChange={() => {
+                          if (selectedWorkers.size === 0) {
+                            // primeiro clique a desseleccionar: mantém todos menos este
+                            setSelectedWorkers(new Set(rows.map(x => x.nome).filter(n => n !== r.nome)));
+                          } else {
+                            toggleWorker(r.nome);
+                          }
+                        }}
+                        className="w-3.5 h-3.5 accent-slate-700 shrink-0"
+                      />
+                      <span className="text-[11px] font-bold text-slate-700 truncate">{r.nome}</span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowWorkerPicker(false)}
+                  className="mt-3 w-full py-1.5 text-[10px] font-black uppercase text-slate-400 hover:text-slate-600 tracking-wide"
+                >
+                  Fechar
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Seletor de colunas */}
           <div className="relative">
             <button
-              onClick={() => setShowColPicker(p => !p)}
+              onClick={() => { setShowColPicker(p => !p); setShowWorkerPicker(false); }}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
