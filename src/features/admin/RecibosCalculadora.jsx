@@ -1123,36 +1123,41 @@ ${hdrRow}${bodyRows}${totRow}
       pageBreak: 'avoid',
     });
 
-    // ── ZONA 4: Totais (posição fixa — nunca sobrepõe tabela) ───────────────
+    // ── ZONA 4: Totais — logo após a tabela ─────────────────────────────────
     const mapaTotal   = mapaLinhas.reduce((s, row) => s + row.valor, 0);
     const importancia = mapaTotal - subsAlimTotal;
-    const XT = MX + 60;
-    const YT = Y_FOOTER + 3;
+    const tableEnd    = (doc.lastAutoTable && doc.lastAutoTable.finalY) || Y_FOOTER;
+    const XT          = MX + 55;
+    const YT          = Math.min(tableEnd + 5, H - 38);
+
+    // Fundo suave na zona de totais
+    doc.setFillColor(245, 247, 250);
+    doc.rect(XT - 2, YT - 3, W - MX - XT + 2, 24, 'F');
 
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 75, 95);
-    doc.text('Total ajudas de custo:', XT, YT + 4);
+    doc.text('Total Ajudas de Custo', XT, YT + 2);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...NAVY);
-    doc.text(fmt(mapaTotal), W - MX, YT + 4, { align: 'right' });
+    doc.text(fmt(mapaTotal), W - MX - 1, YT + 2, { align: 'right' });
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(60, 75, 95);
-    doc.text('(−) Subsídio de alimentação:', XT, YT + 11);
+    doc.text('Dedução Sub. Alimentação', XT, YT + 8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...NAVY);
-    doc.text(fmt(subsAlimTotal), W - MX, YT + 11, { align: 'right' });
+    doc.text(`- ${fmt(subsAlimTotal)}`, W - MX - 1, YT + 8, { align: 'right' });
 
     doc.setDrawColor(...NAVY);
     doc.setLineWidth(0.3);
-    doc.line(XT, YT + 14.5, W - MX, YT + 14.5);
+    doc.line(XT, YT + 11, W - MX - 1, YT + 11);
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...NAVY);
-    doc.text('Importância a receber:', XT, YT + 22);
-    doc.text(fmt(importancia), W - MX, YT + 22, { align: 'right' });
+    doc.text('Importância a Receber', XT, YT + 18);
+    doc.text(fmt(importancia), W - MX - 1, YT + 18, { align: 'right' });
 
     // ── ZONA 5: Assinatura ──────────────────────────────────────────────────
     const YS = H - 12;
