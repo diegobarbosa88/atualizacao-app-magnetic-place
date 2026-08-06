@@ -49,6 +49,8 @@ const INPUT_DEFAULT = {
   cliente: '',
   localidade: '',
   pais: '',
+  clienteAbrev:    '',
+  localidadeAbrev: '',
 };
 
 const MAPA_DEFAULT = {
@@ -382,8 +384,8 @@ export default function RecibosCalculadora() {
       id: Date.now() + prev.length,
       dia: '',
       servico: 'Serviços de mecânica geral',
-      cliente: inputs.cliente,
-      localidade: inputs.localidade || inputs.pais,
+      cliente:    inputs.clienteAbrev    || inputs.cliente,
+      localidade: inputs.localidadeAbrev || inputs.localidade || inputs.pais,
       territorio: inputs.territorio === 'nacional' ? 'Nacional' : 'Internacional',
       tipo: 'Consecutivo',
       hora: '',
@@ -494,8 +496,8 @@ export default function RecibosCalculadora() {
         id: Date.now() + i,
         dia,
         servico: 'Serviços de mecânica geral',
-        cliente: clienteParaDia(dia) || inputs.cliente || '',
-        localidade: inputs.localidade || inputs.pais || '',
+        cliente:    clienteParaDia(dia)    || inputs.clienteAbrev    || inputs.cliente    || '',
+        localidade: inputs.localidadeAbrev || inputs.localidade      || inputs.pais       || '',
         territorio: territorioLabel,
         tipo,
         hora,
@@ -1045,13 +1047,13 @@ ${hdrRow}${bodyRows}${totRow}
     // ── ZONA 3: Tabela adaptativa (190mm de largura) ─────────────────────────
     // Rodapé reserva 48mm: 26mm totais + 22mm assinatura
     const Y_TABLE  = Y_TRAB + 13;
-    const Y_FOOTER = H - 48;
+    const Y_FOOTER = H - 42;
     const availH   = Y_FOOTER - Y_TABLE;
     const nRows    = mapaLinhas.length;
-    const HEADER_ROW_H = 6.5;
-    const rowH = Math.max(3.5, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
+    const HEADER_ROW_H = 5.5;
+    const rowH = Math.max(3.0, (availH - HEADER_ROW_H) / Math.max(nRows, 1));
     const fs   = Math.min(7, Math.max(5, rowH * 1.6));
-    const pad  = Math.max(0.8, (rowH - fs * 0.3528) / 2);
+    const pad  = Math.max(0.5, (rowH - fs * 0.3528) / 2);
 
     // Colunas — soma = 190mm (TW portrait)
     const colW = [18, 28, 32, 26, 20, 20, 14, 12, 20];
@@ -1076,7 +1078,7 @@ ${hdrRow}${bodyRows}${totRow}
       headStyles: {
         fillColor: NAVY, textColor: 255,
         fontSize: Math.min(7, fs + 0.5), fontStyle: 'bold',
-        cellPadding: { top: 2, bottom: 2, left: 1.5, right: 1.5 },
+        cellPadding: { top: 1.5, bottom: 1.5, left: 1.5, right: 1.5 },
         minCellHeight: HEADER_ROW_H, halign: 'center',
       },
       bodyStyles: {
@@ -1133,7 +1135,7 @@ ${hdrRow}${bodyRows}${totRow}
     doc.text(fmt(importancia), W - MX, YT + 22, { align: 'right' });
 
     // ── ZONA 5: Assinatura ──────────────────────────────────────────────────
-    const YS = H - 22;
+    const YS = H - 12;
     doc.setDrawColor(190, 200, 215);
     doc.setLineWidth(0.2);
     doc.line(MX, YS - 1, W - MX, YS - 1);
@@ -1141,11 +1143,7 @@ ${hdrRow}${bodyRows}${totRow}
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
     doc.setTextColor(55, 65, 80);
-    doc.text(`Recebi a importância de ${fmt(importancia)}, referente a ajudas de custo (${mesLabel} de ${ano}).`, MX, YS + 4);
-    doc.text(`Trofa, _____ de _________________________________ de ${ano}`, MX, YS + 10);
-    doc.text('Assinatura:', MX, YS + 17);
-    doc.setDrawColor(120, 130, 145);
-    doc.line(MX + 26, YS + 17, MX + 155, YS + 17);
+    doc.text(`Recebi a importância de ${fmt(importancia)}, referente a ajudas de custo (${mesLabel} de ${ano}).`, MX, YS + 5);
   }
 
   async function gerarMapasAjudasPDF() {
@@ -1536,6 +1534,18 @@ ${hdrRow}${bodyRows}${totRow}
               </LabelInput>
               <LabelInput label="País">
                 <TextInput value={inputs.pais} onChange={e => set('pais', e.target.value)} />
+              </LabelInput>
+            </div>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <LabelInput label="Abreviação Cliente (mapa)">
+                <TextInput value={inputs.clienteAbrev}
+                  onChange={e => set('clienteAbrev', e.target.value)}
+                  placeholder={inputs.cliente || 'Ex: Calcosa'} />
+              </LabelInput>
+              <LabelInput label="Abreviação Localidade (mapa)">
+                <TextInput value={inputs.localidadeAbrev}
+                  onChange={e => set('localidadeAbrev', e.target.value)}
+                  placeholder={inputs.localidade || inputs.pais || 'Ex: Espanha'} />
               </LabelInput>
             </div>
           </Card>
