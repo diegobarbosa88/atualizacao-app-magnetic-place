@@ -1681,11 +1681,35 @@ const RESUMO_COLS = [
   { label: 'Ordenado Bruto (€)',    key: 'brutoAlvo',    align: 'right', sumKey: '_brutoNum', highlight: true },
 ];
 
+const LS_COLS    = 'resumo_visible_cols';
+const LS_WORKERS = 'resumo_selected_workers';
+
+function loadFromLS(key, fallback) {
+  try { const v = localStorage.getItem(key); return v !== null ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+}
+
 function ResumoMensalTable({ rows, mesLabel }) {
-  const [visibleCols, setVisibleCols] = useState(() => new Set(RESUMO_COLS.map((_, i) => i)));
-  const [selectedWorkers, setSelectedWorkers] = useState(() => new Set());
+  const [visibleCols, setVisibleColsRaw] = useState(() =>
+    new Set(loadFromLS(LS_COLS, RESUMO_COLS.map((_, i) => i)))
+  );
+  const [selectedWorkers, setSelectedWorkersRaw] = useState(() =>
+    new Set(loadFromLS(LS_WORKERS, []))
+  );
   const [showColPicker, setShowColPicker] = useState(false);
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
+
+  const setVisibleCols = (val) => {
+    const next = typeof val === 'function' ? val(visibleCols) : val;
+    setVisibleColsRaw(next);
+    localStorage.setItem(LS_COLS, JSON.stringify([...next]));
+  };
+
+  const setSelectedWorkers = (val) => {
+    const next = typeof val === 'function' ? val(selectedWorkers) : val;
+    setSelectedWorkersRaw(next);
+    localStorage.setItem(LS_WORKERS, JSON.stringify([...next]));
+  };
 
   const toggleCol = (ci) => {
     if (ci === 0) return;
@@ -1703,6 +1727,40 @@ function ResumoMensalTable({ rows, mesLabel }) {
       return next;
     });
   };
+
+  function exportXLS() {
+    const style = (bg, color, bold, highlight = false) =>
+      `background:${highlight ? '#ECFDF5' : bg};color:${highlight ? '#065F46' : color};font-weight:${bold || highlight ? 'bold' : 'normal'};padding:7px 10px;border:1px solid ${highlight ? '#6EE7B7' : '#E2E8F0'};white-space:nowrap;text-align:center${highlight ? ';font-size:12px' : ''}`;
+
+    const hdrRow = `<tr>${activeCols.map(({ col }) =>
+      `<td style="${style('#0F1F3D', 'white', true, col.highlight)}">${col.label}</td>`
+    ).join('')}</tr>`;
+
+    const bodyRows = filteredRows.map((row, ri) =>
+      `<tr>${activeCols.map(({ col }) =>
+        `<td style="${style(ri % 2 === 0 ? '#ffffff' : '#F8FAFC', '#1E293B', false, col.highlight)}">${row[col.key] ?? ''}</td>`
+      ).join('')}</tr>`
+    ).join('');
+
+    const totRow = `<tr>${activeCols.map(({ col }, ai) => {
+      const val = col.sumKey ? filteredRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null;
+      return `<td style="${style('#EEF2FF', '#4F46E5', true, col.highlight)}">${ai === 0 ? 'TOTAIS' : val !== null ? val.toFixed(2) : ''}</td>`;
+    }).join('')}</tr>`;
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="utf-8"/></head><body>
+<h2 style="font-family:Arial;color:#0F1F3D">RESUMO MENSAL — ${mesLabel.toUpperCase()}</h2>
+<table border="1">${hdrRow}${bodyRows}${totRow}</table>
+</body></html>`;
+
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `resumo-mensal-${mesLabel.toLowerCase().replace(/\s+/g, '-')}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   const activeCols = RESUMO_COLS.map((col, ci) => ({ col, ci })).filter(({ ci }) => visibleCols.has(ci));
 
@@ -1863,6 +1921,15 @@ function ResumoMensalTable({ rows, mesLabel }) {
               </div>
             )}
           </div>
+
+          {/* Exportar XLS */}
+          <button
+            onClick={exportXLS}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all border border-emerald-600 shadow-sm"
+            title="Exportar tabela actual como folha de cálculo"
+          >
+            <FileSpreadsheet size={13} /> XLS
+          </button>
         </div>
       </div>
 
