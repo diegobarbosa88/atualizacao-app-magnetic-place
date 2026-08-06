@@ -1885,7 +1885,7 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
         ...patch,
       },
       { onConflict: 'worker_id,mes' }
-    );
+    ).then(({ error }) => { if (error) console.error('[resumo_obs] upsert erro:', error); });
   };
 
   const updateObs = (workerId, valor) => {

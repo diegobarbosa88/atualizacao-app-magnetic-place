@@ -301,9 +301,9 @@ export default function ResumoMensalPublico() {
     setCompletos(prev => ({ ...prev, [workerId]: valor }));
     if (sb && workerId && ms) {
       sb.from('resumo_observacoes').upsert(
-        { worker_id: workerId, mes: ms, completo: valor, observacao: obs[workerId] || '', updated_at: new Date().toISOString() },
+        { worker_id: workerId, mes: ms, completo: valor, observacao: obs[workerId] || '', ajuste_bruto: ajustes[workerId] || 0, updated_at: new Date().toISOString() },
         { onConflict: 'worker_id,mes' }
-      );
+      ).then(({ error }) => { if (error) console.error('[resumo_obs] upsert completo erro:', error); });
     }
   };
 
