@@ -135,7 +135,14 @@ function AdminDashboard(props) {
     if (dismissedAdminNotifs.includes(n.id)) return false;
     return true;
   }).length;
-  const unreadCount = workerSubmissionUnread + pendingChangeRequestsCount + pendingAbsencesCount;
+  const generalAdminNotifs = (appNotifications || []).filter(n => {
+    if (n.target_type !== 'admin') return false;
+    if (n.payload?.kind) return false;
+    if (isRead(n)) return false;
+    if (dismissedAdminNotifs.includes(n.id)) return false;
+    return true;
+  });
+  const unreadCount = workerSubmissionUnread + generalAdminNotifs.length + pendingChangeRequestsCount + pendingAbsencesCount;
 
   const handleDismissAdminNotif = useCallback((id) => {
     setDismissedAdminNotifs(prev => {
@@ -667,6 +674,17 @@ function AdminDashboard(props) {
                 );
               });
             })()}
+            {generalAdminNotifs.map(n => (
+              <div key={n.id} className="px-4 py-3 hover:bg-indigo-50 transition-colors flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600 shrink-0 mt-0.5"><Bell size={14} /></div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-black text-slate-800">{n.title}</p>
+                  {n.message && <p className="text-[10px] text-slate-500 mt-0.5">{n.message}</p>}
+                  {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
+                </div>
+                <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="p-1 text-slate-300 hover:text-slate-500 shrink-0"><X size={12} /></button>
+              </div>
+            ))}
             {unreadCount === 0 && notificacoesDeCorrecao.filter(n => !isViewed(n)).length === 0 && (
               <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>
             )}

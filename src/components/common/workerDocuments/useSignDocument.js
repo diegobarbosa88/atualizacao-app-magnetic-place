@@ -276,7 +276,7 @@ export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerI
       const workerName = currentUser?.name || currentUser?.nome || 'Trabalhador';
       const docTitle = selectedDoc?.title || selectedDoc?.nome_ficheiro || 'documento';
       const nId = `notif_signed_${selectedDoc.id}_${Date.now()}`;
-      supabase.from('app_notifications').insert({
+      const { error: notifErr } = await supabase.from('app_notifications').insert({
         id: nId,
         title: `✍️ Documento assinado: ${workerName}`,
         message: `${workerName} assinou o documento "${docTitle}" e aguarda a tua assinatura.`,
@@ -286,6 +286,7 @@ export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerI
         is_active: true,
         created_at: new Date().toISOString(),
       });
+      if (notifErr) console.error('[useSignDocument] Erro ao inserir notificação:', notifErr);
       const adminEmail = companySignature?.responsibleEmail;
       if (adminEmail) {
         sendValidationEmail({
