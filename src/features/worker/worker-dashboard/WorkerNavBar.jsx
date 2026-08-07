@@ -32,8 +32,10 @@ const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, isCurrentMonth, absencePendingCount, documentsPendingCount }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, isCurrentMonth, absencePendingCount, documentsPendingCount, notifCount, onOpenNotifs }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
+  const totalBellCount = (alertCount || 0) + (notifCount || 0);
+  const handleBellClick = () => { if (alertCount > 0) onOpenAlerts(); else if (notifCount > 0) onOpenNotifs?.(); };
 
   return (
     <>
@@ -63,16 +65,16 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
         </button>
 
         <div className="flex items-center gap-2">
-          {/* Sino — sempre visível se há alertas */}
-          {alertCount > 0 && (
+          {/* Sino — visível se há alertas ou notificações */}
+          {totalBellCount > 0 && (
             <button
-              onClick={onOpenAlerts}
+              onClick={handleBellClick}
               className="relative p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"
-              title="Avisos pendentes"
+              title={alertCount > 0 ? 'Avisos pendentes' : 'Notificações'}
             >
               <Bell size={18} />
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 rounded-full text-[9px] font-black text-white flex items-center justify-center px-1">
-                {alertCount}
+                {totalBellCount}
               </span>
             </button>
           )}

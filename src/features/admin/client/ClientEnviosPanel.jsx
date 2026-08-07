@@ -23,7 +23,38 @@ export default function ClientEnviosPanel({
   setModalEmailAberto,
   setPrintingReport,
 }) {
-  const { clients, logs, clientApprovals, handleDelete, notificationPreferences, workers } = useApp();
+  const { clients, logs, clientApprovals, handleDelete, saveToDb, notificationPreferences, workers } = useApp();
+
+  const handleAnularValidacao = async (c) => {
+    if (!window.confirm('Anular validação?')) return;
+    const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr);
+    if (!appr) return;
+    try {
+      await handleDelete('client_approvals', appr.id);
+      if (c.email && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) {
+        sendValidationEmail({
+          to: c.email, name: c.name,
+          title: `Validação Anulada · ${portalMonthStr}`,
+          message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador.`,
+          link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}`
+        }).catch(() => {});
+      }
+      if (shouldSendNotification('validacao_anulada', 'db', notificationPreferences)) {
+        const nId = `notif_clappr_undo_${c.id}_${portalMonthStr}_${Date.now()}`;
+        await saveToDb('app_notifications', nId, {
+          id: nId,
+          title: `❌ Validação anulada`,
+          message: `A validação do relatório de ${portalMonthStr} foi anulada. Por favor reveja o relatório.`,
+          type: 'warning',
+          target_type: 'client',
+          target_client_id: String(c.id),
+          is_dismissible: true,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); }
+  };
   const [view, setView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
   const [sortConfig] = useState({ key: 'name', direction: 'asc' });
 
@@ -96,7 +127,7 @@ export default function ClientEnviosPanel({
                     <div className="flex items-center justify-end gap-1">
                       {c.status === 'validado' ? (
                         <>
-                          <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador.`, link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => {}); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Anular"><RotateCcw size={13} /></button>
+                          <button onClick={() => handleAnularValidacao(c)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Anular"><RotateCcw size={13} /></button>
                           <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Relatório"><Download size={13} /></button>
                         </>
                       ) : (
@@ -134,7 +165,7 @@ export default function ClientEnviosPanel({
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
-                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador.`, link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => {}); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
+                      <button onClick={() => handleAnularValidacao(c)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
                       <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100"><Download size={12} /> Relatório</button>
                     </>
                   ) : (

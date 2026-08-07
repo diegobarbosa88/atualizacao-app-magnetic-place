@@ -536,7 +536,7 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const handleApproveMonth = async (workerId) => {
+  const handleApproveMonth = async (workerId, { notifyAdmin = false } = {}) => {
     const monthStr = toISODateLocal(currentMonth).substring(0, 7);
     const id = "appr_" + workerId + "_" + monthStr;
     await saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() });
@@ -552,6 +552,20 @@ export const AppProvider = ({ children }) => {
       is_active: true,
       created_at: new Date().toISOString(),
     });
+    if (notifyAdmin) {
+      const worker = workers?.find(w => String(w.id) === String(workerId));
+      const adminNId = `notif_submit_${workerId}_${monthStr}`;
+      await saveToDb('app_notifications', adminNId, {
+        id: adminNId,
+        title: `📋 Mês submetido: ${worker?.name || 'Trabalhador'}`,
+        message: `${worker?.name || 'Trabalhador'} submeteu o registo de ${monthStr} para aprovação.`,
+        type: 'info',
+        target_type: 'admin',
+        is_dismissible: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      });
+    }
   };
 
   // Update notification preferences in Supabase

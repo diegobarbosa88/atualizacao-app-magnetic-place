@@ -56,6 +56,20 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
       setAbsenceRequests(prev => prev.map(r =>
         r.id === req.id ? { ...r, status: 'archived' } : r
       ));
+      if (req.worker_id) {
+        const dateStr = (req.dates || []).slice(0, 3).join(', ') + ((req.dates || []).length > 3 ? '…' : '');
+        supabase.from('app_notifications').insert({
+          id: `notif_absence_arch_${req.id}_${Date.now()}`,
+          title: `🗄️ Pedido de ausência arquivado`,
+          message: `O teu pedido de ausência${dateStr ? ` de ${dateStr}` : ''} foi arquivado.`,
+          type: 'info',
+          target_type: 'specific',
+          target_worker_ids: [req.worker_id],
+          is_dismissible: true,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        });
+      }
     }
   };
 

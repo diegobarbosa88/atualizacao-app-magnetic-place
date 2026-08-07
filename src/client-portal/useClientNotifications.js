@@ -71,14 +71,18 @@ export function useClientNotifications({
       if (prev.includes(id)) return prev;
       const updated = [...prev, id];
       localStorage.setItem(`dismissed_client_notifs_${effectiveClientId}`, JSON.stringify(updated));
-      if (supabase) {
-        supabase.from('app_notifications')
-          .update({ dismissed_by_ids: updated })
-          .eq('id', id);
+      if (supabase && effectiveClientId) {
+        const notif = appNotifications?.find(n => n.id === id);
+        const existing = notif?.dismissed_by_ids || [];
+        if (!existing.includes(String(effectiveClientId))) {
+          supabase.from('app_notifications')
+            .update({ dismissed_by_ids: [...existing, String(effectiveClientId)] })
+            .eq('id', id);
+        }
       }
       return updated;
     });
-  }, [effectiveClientId, supabase]);
+  }, [effectiveClientId, supabase, appNotifications]);
 
   const handleAcceptContestation = useCallback(async (notif) => {
     const changes = notif.payload?.changes;
@@ -187,7 +191,7 @@ export function useClientNotifications({
             title: '✅ Pedido de Registo Aprovado',
             message: `O seu pedido de ${item.date} foi aprovado pelo cliente.`,
             type: 'success',
-            target_type: 'worker',
+            target_type: 'specific',
             target_worker_ids: [String(item.worker_id)],
             created_at: new Date().toISOString(),
             is_active: true,
@@ -250,7 +254,7 @@ export function useClientNotifications({
             title: '❌ Pedido de Registo Rejeitado',
             message: `O seu pedido de ${item.date} foi rejeitado pelo cliente.${rejectionMsg}`,
             type: 'error',
-            target_type: 'worker',
+            target_type: 'specific',
             target_worker_ids: [String(item.worker_id)],
             created_at: new Date().toISOString(),
             is_active: true,

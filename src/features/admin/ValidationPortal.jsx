@@ -304,7 +304,23 @@ const ValidationPortal = ({
                   </button>
                 ) : (
                   <button
-                    onClick={async () => { try { await handleDelete('approvals', w.approval.id); } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }}
+                    onClick={async () => {
+                      try {
+                        await handleDelete('approvals', w.approval.id);
+                        const nId = `notif_appr_undo_${w.id}_${portalMonthStr}_${Date.now()}`;
+                        await saveToDb('app_notifications', nId, {
+                          id: nId,
+                          title: `⚠️ Aprovação do mês anulada`,
+                          message: `A aprovação do teu registo de ${portalMonthStr} foi anulada pelo administrador.`,
+                          type: 'warning',
+                          target_type: 'specific',
+                          target_worker_ids: [String(w.id)],
+                          is_dismissible: true,
+                          is_active: true,
+                          created_at: new Date().toISOString(),
+                        });
+                      } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); }
+                    }}
                     className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"
                   >
                     <RotateCcw size={12} /> Anular

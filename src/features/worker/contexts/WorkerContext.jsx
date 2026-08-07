@@ -106,7 +106,8 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
 
   const myNotifications = useMemo(() => {
     if (!appNotifications || !currentUser) return [];
-    return appNotifications.filter(n => 
+    return appNotifications.filter(n =>
+      n.is_active !== false &&
       (!n.viewed_by_ids || !n.viewed_by_ids.includes(currentUser.id)) &&
       (!n.dismissed_by_ids || !n.dismissed_by_ids.includes(currentUser.id)) &&
       (n.target_type === 'all' ||
