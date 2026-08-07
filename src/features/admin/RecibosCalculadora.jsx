@@ -314,6 +314,7 @@ export default function RecibosCalculadora() {
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
+    setInputs(prev => ({ ...prev, premios: '0' }));
     if (!id) return;
     const w = workers.find(x => x.id === id);
     if (!w) return;
@@ -512,7 +513,9 @@ export default function RecibosCalculadora() {
 
     const valorDiario    = n(inputs.vdl);
     const valorAlim      = n(inputs.subsAlimValorDia);
-    const ajudaNecessaria = r.ajudaCustoNecessaria; // fixo — calculado com os inputs actuais
+    // Soma premios de volta: r.ajudaCustoNecessaria já descontou premios do brutoAlvo,
+    // mas autoFill vai sobrescrever premios com o residuo — o alvo real é o valor sem premios.
+    const ajudaNecessaria = r.ajudaCustoNecessaria + n(inputs.premios);
 
     if (ajudaNecessaria <= 0 || valorDiario <= 0) return;
 
@@ -637,6 +640,7 @@ export default function RecibosCalculadora() {
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
+    setInputs(prev => ({ ...prev, premios: '0' }));
   }
 
   function gerarReciboPDF() {
