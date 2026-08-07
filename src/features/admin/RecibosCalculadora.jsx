@@ -190,6 +190,7 @@ export default function RecibosCalculadora() {
   const [saveStatus, setSaveStatus]             = useState(null); // null | 'saving' | 'saved' | 'error'
   const [brutoAlvoEditado, setBrutoAlvoEditado] = useState(() => _s.brutoAlvoEditado || false);
   const [camposAuto, setCamposAuto] = useState(() => ({ ...CAMPOS_AUTO_DEFAULT, ...(_s.camposAuto || {}) }));
+  const [complementMethod, setComplementMethod] = useState(() => _s.complementMethod || 'A008');
   let rowCounter = mapaRows.length;
 
   useEffect(() => {
@@ -244,7 +245,7 @@ export default function RecibosCalculadora() {
   // Carrega o feriado municipal da empresa (campo 'feriado_municipal' em system_settings)
   useEffect(() => {
     if (!supabase) return;
-    supabase.from('system_settings').select('feriado_municipal').eq('id', 1).maybeSingle()
+    supabase.from('system_settings').select('*').eq('id', 1).maybeSingle()
       .then(({ data }) => setFeriadoMunicipal(data?.feriado_municipal || null));
   }, [supabase]);
 
@@ -463,12 +464,12 @@ export default function RecibosCalculadora() {
       sessionStorage.setItem(_SESSION_KEY, JSON.stringify({
         _v: _SESSION_VER,
         selectedWorkerId, inputs, mapa, mapaRows, subTab, autoFillInfo,
-        diasCalculados, camposAuto, brutoAlvoEditado,
+        diasCalculados, camposAuto, brutoAlvoEditado, complementMethod,
         diasAutoFillKey: diasAutoFillKeyRef.current,
         mapaAutoFillKey: mapaAutoFillKeyRef.current,
       }));
     } catch {}
-  }, [selectedWorkerId, inputs, mapa, mapaRows, subTab, autoFillInfo, diasCalculados, camposAuto, brutoAlvoEditado]);
+  }, [selectedWorkerId, inputs, mapa, mapaRows, subTab, autoFillInfo, diasCalculados, camposAuto, brutoAlvoEditado, complementMethod]);
 
   const mapaTotal = useMemo(() => {
     return mapaRows.reduce((sum, row) => {
@@ -479,10 +480,32 @@ export default function RecibosCalculadora() {
 
   const mapaDiff = r ? mapaTotal - r.ajudaCustoNecessaria : 0;
 
-  // Valor real das ajudas = "Importância a receber" do mapa (quando existe), senão o plug do recibo
-  const importanciaAReceber = autoFillInfo
-    ? Math.round((autoFillInfo.totalAjudas - autoFillInfo.subsAlimMapa + (autoFillInfo.usarA008 ? autoFillInfo.residuo : 0)) * 100) / 100
+  // Subsídio alimentação calculado ao vivo a partir das linhas actuais do mapa (apenas dias úteis Seg-Sex)
+  const subsAlimMapaLive = useMemo(() => {
+    const vdia = n(inputs.subsAlimValorDia);
+    if (vdia <= 0) return 0;
+    return mapaRows.reduce((sum, row) => {
+      if (!row.dia) return sum;
+      const dow = new Date(row.dia + 'T00:00:00').getDay();
+      return sum + (dow >= 1 && dow <= 5 ? vdia : 0);
+    }, 0);
+  }, [mapaRows, inputs.subsAlimValorDia]);
+
+  // Valor total do complemento nos inputs actuais (A008 + HE1 + HE2)
+  const complementTotalLive = r
+    ? Math.round((n(inputs.premios) + n(inputs.he1) * r.valorHe1un + n(inputs.he2) * r.valorHe2un) * 100) / 100
+    : 0;
+
+  // Importância a receber = mapa - subsAlim + complemento (calculado ao vivo, sem depender de snapshot)
+  const importanciaAReceber = mapaRows.length > 0
+    ? Math.round((mapaTotal - subsAlimMapaLive + complementTotalLive) * 100) / 100
     : null;
+
+  // Aviso de stale: o valor necessário mudou desde o último autoFill
+  const valorNecLive = r ? Math.round((r.ajudaCustoNecessaria + complementTotalLive) * 100) / 100 : 0;
+  const mapaValorEsperado = Math.round((valorNecLive + subsAlimMapaLive) * 100) / 100;
+  const mapaDesviado = mapaRows.length > 0 && Math.abs(mapaTotal - mapaValorEsperado) > 0.5;
+
   const ajudasDisplay       = importanciaAReceber ?? r?.ajudaCustoNecessaria ?? 0;
   const _diffAjudas         = r ? ajudasDisplay - r.ajudaCustoNecessaria : 0;
   const totalAbonosDisplay  = r ? r.totalAbonos  + _diffAjudas : 0;
@@ -624,50 +647,67 @@ export default function RecibosCalculadora() {
   function autoFill() {
     if (!r) return;
 
-    const valorDiario    = n(inputs.vdl);
-    const valorAlim      = n(inputs.subsAlimValorDia);
-    // Soma premios de volta: r.ajudaCustoNecessaria já descontou premios do brutoAlvo,
-    // mas autoFill vai sobrescrever premios com o residuo — o alvo real é o valor sem premios.
-    const ajudaNecessaria = r.ajudaCustoNecessaria + n(inputs.premios);
+    const valorDiario = n(inputs.vdl);
+    const valorAlim   = n(inputs.subsAlimValorDia);
+    if (valorDiario <= 0) return;
 
-    if (ajudaNecessaria <= 0 || valorDiario <= 0) return;
+    // Soma de volta TODOS os complementos actuais para obter o alvo puro (sem considerar o complemento anterior)
+    const heComplement = n(inputs.he1) * r.valorHe1un + n(inputs.he2) * r.valorHe2un;
+    const ajudaNecessaria = r.ajudaCustoNecessaria + n(inputs.premios) + heComplement;
+    if (ajudaNecessaria <= 0) return;
 
-    const mesStr     = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
-    const dataInicio = mapa.dataInicio || `${mesStr}-01`;
+    const mesStr       = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
+    const totalDiasMes = new Date(parseInt(inputs.ano), parseInt(inputs.mes), 0).getDate();
 
-    // Conta dias úteis (Seg–Sex) nas primeiras nDias da viagem
-    function contarDiasUteis(nDias) {
+    // Conta dias úteis (Seg–Sex) nas primeiras nDias a partir de dataInicio
+    function contarDiasUteis(di, nDias) {
       let count = 0;
-      const d = new Date(dataInicio + 'T00:00:00');
+      const d = new Date(di + 'T00:00:00');
       for (let i = 0; i < nDias; i++) {
-        const dow = d.getDay(); // 0=Dom, 6=Sáb
+        const dow = d.getDay();
         if (dow >= 1 && dow <= 5) count++;
         d.setDate(d.getDate() + 1);
       }
       return count;
     }
 
-    // Busca combinatória iterativa: N, fP, fC ↔ subsAlimMapa interdependentes
-    const totalDiasMes = new Date(parseInt(inputs.ano), parseInt(inputs.mes), 0).getDate();
-    let subsAlimMapa = valorAlim > 0 ? r.subsAlimTotal : 0;
-    let bestCombo = null, nLinhas = 1, diasUteisCount = 0;
-
-    for (let iter = 0; iter < 6; iter++) {
-      const valorNec = ajudaNecessaria + subsAlimMapa;
-      if (valorNec <= 0) break;
-
-      bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
-      if (!bestCombo) break;
-
-      nLinhas = bestCombo.N;
-      diasUteisCount = valorAlim > 0 ? contarDiasUteis(nLinhas) : 0;
-      const novoSubsAlim = diasUteisCount * valorAlim;
-
-      if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
-      subsAlimMapa = novoSubsAlim;
+    // Busca combinatória iterativa para uma dada data de início
+    function runForStartDay(di) {
+      let subsAlimMapa = valorAlim > 0 ? r.subsAlimTotal : 0;
+      let bestCombo = null, diasUteisCount = 0;
+      for (let iter = 0; iter < 6; iter++) {
+        const valorNec = ajudaNecessaria + subsAlimMapa;
+        if (valorNec <= 0) break;
+        bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
+        if (!bestCombo) break;
+        diasUteisCount = valorAlim > 0 ? contarDiasUteis(di, bestCombo.N) : 0;
+        const novoSubsAlim = diasUteisCount * valorAlim;
+        if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+        subsAlimMapa = novoSubsAlim;
+      }
+      if (!bestCombo) return null;
+      const totalAjudas = Math.round(bestCombo.total * 100) / 100;
+      const valorNecFinal = ajudaNecessaria + subsAlimMapa;
+      const residuo = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
+      return { bestCombo, subsAlimMapa, diasUteisCount, totalAjudas, residuo, valorNecFinal, di };
     }
 
-    if (!bestCombo) return;
+    // Se o utilizador definiu uma data de início específica, usa-a; caso contrário testa dias 1–20
+    let bestResult = null;
+    if (mapa.dataInicio) {
+      bestResult = runForStartDay(mapa.dataInicio);
+    } else {
+      for (let day = 1; day <= 20; day++) {
+        const di = `${mesStr}-${String(day).padStart(2, '0')}`;
+        const result = runForStartDay(di);
+        if (!result) continue;
+        if (!bestResult || Math.abs(result.residuo) < Math.abs(bestResult.residuo)) bestResult = result;
+      }
+    }
+    if (!bestResult) return;
+
+    const { bestCombo, subsAlimMapa, diasUteisCount, totalAjudas, residuo, valorNecFinal, di: dataInicio } = bestResult;
+    const nLinhas = bestCombo.N;
 
     // Mapa data→cliente a partir dos logs do trabalhador no mês selecionado
     const clientePorDia = {};
@@ -681,63 +721,57 @@ export default function RecibosCalculadora() {
     const datasOrdenadas = Object.keys(clientePorDia).sort();
     function clienteParaDia(data) {
       let ultimo = null;
-      for (const d of datasOrdenadas) {
-        if (d <= data) ultimo = clientePorDia[d];
-        else break;
-      }
+      for (const d of datasOrdenadas) { if (d <= data) ultimo = clientePorDia[d]; else break; }
       return ultimo || (datasOrdenadas.length > 0 ? clientePorDia[datasOrdenadas[0]] : null);
     }
 
     let cursor = new Date(dataInicio + 'T00:00:00');
     const territorioLabel = inputs.territorio === 'nacional' ? 'Nacional' : 'Internacional';
     const rows = [];
-
     for (let i = 0; i < nLinhas; i++) {
-      const isFirstRow = i === 0;
-      const isLastRow  = i === nLinhas - 1;
-      const tipo = isFirstRow && !isLastRow ? 'Partida'
-                 : isLastRow && !isFirstRow ? 'Chegada'
-                 : isFirstRow               ? 'Partida'
-                 :                            'Consecutivo';
+      const isFirst = i === 0, isLast = i === nLinhas - 1;
+      const tipo = isFirst ? 'Partida' : isLast ? 'Chegada' : 'Consecutivo';
       let hora, pct;
-      if (isFirstRow) {
+      if (isFirst) {
         pct  = Math.round(bestCombo.fP * 100);
         hora = horaDefaultPartida(bestCombo.fP, mapa.horaPartida || null);
-      } else if (isLastRow) {
+      } else if (isLast) {
         pct  = Math.round(bestCombo.fC * 100);
         hora = horaDefaultChegada(bestCombo.fC, mapa.horaChegada || null);
-      } else {
-        pct  = 100;
-        hora = '';
-      }
+      } else { pct = 100; hora = ''; }
       const dia = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
-
       rows.push({
-        id: Date.now() + i,
-        dia,
+        id: Date.now() + i, dia,
         servico: 'Serviços de mecânica geral',
         cliente:    clienteParaDia(dia)    || inputs.clienteAbrev    || inputs.cliente    || '',
         localidade: inputs.localidadeAbrev || inputs.localidade      || inputs.pais       || '',
-        territorio: territorioLabel,
-        tipo,
-        hora,
-        pct,
+        territorio: territorioLabel, tipo, hora, pct,
       });
-
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    // Resíduo → A008 só se |diff| > 5€ (dentro de ±5€ a diferença é absorvida)
-    const totalAjudas         = Math.round(bestCombo.total * 100) / 100;
-    const valorNecessarioFinal = ajudaNecessaria + subsAlimMapa;
-    const residuo             = Math.round((valorNecessarioFinal - totalAjudas) * 100) / 100;
-    const usarA008            = Math.abs(residuo) > 5 && residuo > 0.01;
-    set('premios', usarA008 ? residuo.toFixed(2) : '0');
+    // Complemento residual: sempre complementar (sem tolerância de ±5€)
+    const usarComplemento = residuo > 0.01;
+    if (usarComplemento) {
+      if (complementMethod === 'he1' && r.valorHe1un > 0) {
+        const h = Math.ceil((residuo / r.valorHe1un) * 100) / 100;
+        setInputs(prev => ({ ...prev, he1: String(h), premios: '0' }));
+      } else if (complementMethod === 'he2' && r.valorHe2un > 0) {
+        const h = Math.ceil((residuo / r.valorHe2un) * 100) / 100;
+        setInputs(prev => ({ ...prev, he2: String(h), premios: '0' }));
+      } else {
+        set('premios', residuo.toFixed(2));
+      }
+    } else {
+      set('premios', '0');
+    }
 
     setMapaRows(rows);
     setAutoFillInfo({
-      totalAjudas, subsAlimMapa, diasUteisCount, residuo, usarA008,
-      valorNecessario: valorNecessarioFinal,
+      totalAjudas, subsAlimMapa, diasUteisCount, residuo, usarComplemento,
+      complementMethod: usarComplemento ? complementMethod : null,
+      valorNecessario: valorNecFinal,
+      dataInicio,
       combo: { N: bestCombo.N, fP: bestCombo.fP, fC: bestCombo.fC },
     });
   }
@@ -2306,15 +2340,27 @@ ${hdrRow}${bodyRows}${totRow}
                 )}
               </div>
 
-              {/* Resumo líquido / custo */}
-              <div className="mt-3 pt-3 border-t border-dashed border-slate-200 grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Líquido a receber</p>
-                  <p className="text-xl font-black text-slate-800">{eur(liquidoDisplay)}</p>
+              {/* Resumo — bloco de 3 colunas (Total Abonos | Total Descontos | Líquido) */}
+              <div className="mt-3 pt-3 border-t-2 border-slate-800 grid grid-cols-3 gap-2">
+                <div className="bg-slate-50 rounded-xl px-3 py-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Abonos</p>
+                  <p className="text-base font-black text-slate-800">{eur(totalAbonosDisplay)}</p>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Custo empresa (c/ TSU 23,75%)</p>
-                  <p className="text-xl font-black text-slate-800">{eur(custoEmpDisplay)}</p>
+                <div className="bg-slate-50 rounded-xl px-3 py-2">
+                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Descontos</p>
+                  <p className="text-base font-black text-rose-600">{eur(r.totalDescontos)}</p>
+                </div>
+                <div className="bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-200">
+                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">Líquido a receber</p>
+                  <p className="text-base font-black text-emerald-700">{eur(liquidoDisplay)}</p>
+                </div>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <div className="px-3 py-1.5 text-[10px] text-slate-400">
+                  <span className="font-black">IRS:</span> {eur(r.irsTotal)} · <span className="font-black">SS:</span> {eur(r.ssTrabalhador)}
+                </div>
+                <div className="px-3 py-1.5 text-[10px] text-slate-400 text-right">
+                  <span className="font-black">Custo empresa (c/ TSU 23,75%):</span> {eur(custoEmpDisplay)}
                 </div>
               </div>
             </Card>
@@ -2367,7 +2413,7 @@ ${hdrRow}${bodyRows}${totRow}
 
         {/* Toolbar de preenchimento automático */}
         <div className="flex gap-3 flex-wrap items-end mb-4 p-3.5 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-          <LabelInput label="Data de início">
+          <LabelInput label="Data de início" hint={!mapa.dataInicio ? 'Auto (dias 1–20)' : null}>
             <input
               type="date"
               value={mapa.dataInicio}
@@ -2390,6 +2436,17 @@ ${hdrRow}${bodyRows}${totRow}
               onChange={e => setMapa(p => ({ ...p, horaChegada: e.target.value }))}
               className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
             />
+          </LabelInput>
+          <LabelInput label="Complementar via">
+            <SelectInput
+              value={complementMethod}
+              onChange={e => setComplementMethod(e.target.value)}
+            >
+              <option value="A008">A008 — Prémios/Bónus</option>
+              <option value="he1">HE 1ª hora</option>
+              <option value="he2">HE seguintes</option>
+              <option value="aleatorio">Aleatório (A008)</option>
+            </SelectInput>
           </LabelInput>
           <button
             onClick={autoFill}
@@ -2498,36 +2555,50 @@ ${hdrRow}${bodyRows}${totRow}
             )}
           </div>
         )}
-        {autoFillInfo && (
+        {mapaDesviado && (
+          <div className="mt-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold flex items-center gap-2">
+            <AlertTriangle size={14} className="shrink-0" />
+            O valor necessário mudou desde o último auto-preenchimento — os totais apresentados são os valores actuais.
+          </div>
+        )}
+        {(autoFillInfo || mapaRows.length > 0) && importanciaAReceber !== null && (
           <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-slate-600 flex flex-wrap gap-4">
-            {autoFillInfo.combo && (
+            {autoFillInfo?.combo && (
               <span className="w-full text-[10px] text-indigo-500 font-semibold">
                 {autoFillInfo.combo.N} dias · Partida {Math.round(autoFillInfo.combo.fP * 100)}%
                 ({horaDefaultPartida(autoFillInfo.combo.fP, mapa.horaPartida || null)}) · Chegada {Math.round(autoFillInfo.combo.fC * 100)}%
                 ({horaDefaultChegada(autoFillInfo.combo.fC, mapa.horaChegada || null)})
+                {autoFillInfo.dataInicio && ` · início ${autoFillInfo.dataInicio}`}
                 {' '}→ {eur(autoFillInfo.totalAjudas)}
                 {' '}(necessário: {eur(autoFillInfo.valorNecessario)}, diff: {autoFillInfo.residuo >= 0 ? '+' : ''}{eur(autoFillInfo.residuo)})
               </span>
             )}
             <span>
-              <span className="font-semibold text-slate-700">Ajudas de custo:</span>{' '}
-              {eur(autoFillInfo.totalAjudas)}
+              <span className="font-semibold text-slate-700">Ajudas de custo (live):</span>{' '}
+              {eur(mapaTotal)}
             </span>
-            {autoFillInfo.subsAlimMapa > 0 && (
+            {subsAlimMapaLive > 0 && (
               <span>
-                <span className="font-semibold text-slate-700">Sub. alim. ({autoFillInfo.diasUteisCount} dias úteis):</span>{' '}
-                −{eur(autoFillInfo.subsAlimMapa)}
+                <span className="font-semibold text-slate-700">Sub. alim. (dias úteis mapa):</span>{' '}
+                −{eur(subsAlimMapaLive)}
               </span>
             )}
-            {autoFillInfo.usarA008 && (
+            {complementTotalLive > 0 && (
               <span>
-                <span className="font-semibold text-slate-700">Complemento A008:</span>{' '}
-                {eur(autoFillInfo.residuo)}
+                <span className="font-semibold text-slate-700">
+                  Complemento {autoFillInfo?.complementMethod === 'he1' ? 'HE 1ª' : autoFillInfo?.complementMethod === 'he2' ? 'HE seg.' : 'A008'}:
+                </span>{' '}
+                +{eur(complementTotalLive)}
+                {autoFillInfo?.complementMethod === 'he1' && r && ` (${n(inputs.he1).toFixed(2)}h × ${eur(r.valorHe1un)})`}
+                {autoFillInfo?.complementMethod === 'he2' && r && ` (${n(inputs.he2).toFixed(2)}h × ${eur(r.valorHe2un)})`}
               </span>
             )}
             <span>
               <span className="font-semibold text-slate-700">Importância a receber:</span>{' '}
-              {eur(autoFillInfo.totalAjudas - autoFillInfo.subsAlimMapa + (autoFillInfo.usarA008 ? autoFillInfo.residuo : 0))} ✓
+              <span className="font-black text-emerald-700">{eur(importanciaAReceber)}</span>{' '}
+              {r && <span className={`text-[10px] ${Math.abs(importanciaAReceber - r.ajudaCustoNecessaria - complementTotalLive) < 0.02 ? 'text-emerald-500' : 'text-amber-500'}`}>
+                ({importanciaAReceber >= (r.ajudaCustoNecessaria + complementTotalLive) - 0.01 ? '✓' : '⚠'} necessário: {eur(r.ajudaCustoNecessaria + complementTotalLive)})
+              </span>}
             </span>
           </div>
         )}
