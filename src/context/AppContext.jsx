@@ -302,7 +302,7 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
-    const channelApprovals = supabaseInstance
+    const channelClientApprovals = supabaseInstance
       .channel('realtime-client-approvals')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'client_approvals' }, (payload) => {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
@@ -348,29 +348,83 @@ export const AppProvider = ({ children }) => {
 
     const channelWorkers = supabaseInstance
       .channel('realtime-workers')
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'workers' }, (payload) => {
-        const updated = payload.new;
-        setWorkers(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
-        setCurrentUser(prev => {
-          if (!prev || prev.id !== updated.id) return prev;
-          const hasChange = Object.keys(updated).some(k => prev[k] !== updated[k]);
-          if (!hasChange) return prev;
-          const merged = { ...prev, ...updated };
-          localStorage.setItem('magnetic_user', JSON.stringify(merged));
-          return merged;
-        });
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          upsertById(setWorkers)(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new;
+          setWorkers(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
+          setCurrentUser(prev => {
+            if (!prev || prev.id !== updated.id) return prev;
+            const hasChange = Object.keys(updated).some(k => prev[k] !== updated[k]);
+            if (!hasChange) return prev;
+            const merged = { ...prev, ...updated };
+            localStorage.setItem('magnetic_user', JSON.stringify(merged));
+            return merged;
+          });
+        } else if (payload.eventType === 'DELETE') {
+          removeById(setWorkers)(payload.old);
+        }
       })
       .subscribe();
+
+    const channelClients = supabaseInstance
+      .channel('realtime-clients')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setClients)(payload.old);
+        else upsertById(setClients)(payload.new);
+      }).subscribe();
+
+    const channelDocuments = supabaseInstance
+      .channel('realtime-documents')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setDocuments)(payload.old);
+        else upsertById(setDocuments)(payload.new);
+      }).subscribe();
+
+    const channelSchedules = supabaseInstance
+      .channel('realtime-schedules')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedules' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setSchedules)(payload.old);
+        else upsertById(setSchedules)(payload.new);
+      }).subscribe();
+
+    const channelPersonalSchedules = supabaseInstance
+      .channel('realtime-personalschedules')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'personalschedules' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setPersonalSchedules)(payload.old);
+        else upsertById(setPersonalSchedules)(payload.new);
+      }).subscribe();
+
+    const channelApprovals = supabaseInstance
+      .channel('realtime-approvals')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'approvals' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setApprovals)(payload.old);
+        else upsertById(setApprovals)(payload.new);
+      }).subscribe();
+
+    const channelExpenses = supabaseInstance
+      .channel('realtime-expenses')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setExpenses)(payload.old);
+        else upsertById(setExpenses)(payload.new);
+      }).subscribe();
 
     return () => {
       supabaseInstance.removeChannel(channelNotif);
       supabaseInstance.removeChannel(channelCorrections);
       supabaseInstance.removeChannel(channelCorrectionItems);
-      supabaseInstance.removeChannel(channelApprovals);
+      supabaseInstance.removeChannel(channelClientApprovals);
       supabaseInstance.removeChannel(channelLogs);
       supabaseInstance.removeChannel(channelChangeReqs);
       supabaseInstance.removeChannel(channelAbsences);
       supabaseInstance.removeChannel(channelWorkers);
+      supabaseInstance.removeChannel(channelClients);
+      supabaseInstance.removeChannel(channelDocuments);
+      supabaseInstance.removeChannel(channelSchedules);
+      supabaseInstance.removeChannel(channelPersonalSchedules);
+      supabaseInstance.removeChannel(channelApprovals);
+      supabaseInstance.removeChannel(channelExpenses);
     };
   }, [isDbReady]);
 
