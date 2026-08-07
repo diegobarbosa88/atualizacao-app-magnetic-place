@@ -15,6 +15,7 @@ import {
   gerarLinhasMapa,
   eur,
 } from '../../lib/payroll/reciboCalculations.js';
+import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -154,6 +155,12 @@ export default function RecibosCalculadora() {
   const logoRef = useRef(null);
   const [subTab, setSubTab] = useState('calculadora');
   const [contabData, setContabData] = useState([]);
+  // Indica se o valor de cada campo foi calculado automaticamente (true) ou editado manualmente (false)
+  const [diasCalculados, setDiasCalculados] = useState({ diasMes: false, subsAlimDias: false });
+  // Chave da última combinação trabalhador+mês já auto-preenchida; evita re-preenchimento em edições manuais
+  const diasAutoFillKeyRef = useRef('');
+  // Feriado municipal configurado ao nível da empresa (campo 'feriado_municipal' em system_settings)
+  const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
   let rowCounter = mapaRows.length;
 
   useEffect(() => {
@@ -205,6 +212,13 @@ export default function RecibosCalculadora() {
       .then(({ data }) => setWorkerRateHistory(data || []));
   }, [supabase]);
 
+  // Carrega o feriado municipal da empresa (campo 'feriado_municipal' em system_settings)
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('system_settings').select('feriado_municipal').eq('id', 1).maybeSingle()
+      .then(({ data }) => setFeriadoMunicipal(data?.feriado_municipal || null));
+  }, [supabase]);
+
   // Limpa contabData ao mudar mês para evitar mostrar valores do mês anterior enquanto o fetch não termina
   useEffect(() => {
     setContabData([]);
@@ -243,14 +257,48 @@ export default function RecibosCalculadora() {
     setInputs(prev => ({ ...prev, brutoAlvo: custo > 0 ? custo.toFixed(2) : '' }));
   }, [selectedWorkerId, inputs.mes, inputs.ano]);
 
-  // Sincroniza subsAlimDias com contabilidade_mensal ao mudar trabalhador ou mês
+  // Auto-preenchimento de "Dias processados" e "Dias com subsídio" ao mudar trabalhador ou mês.
+  // Só corre uma vez por combinação trabalhador+mês; não sobrescreve edições manuais feitas depois.
   useEffect(() => {
-    if (!selectedWorkerId) return;
-    const contabRow = contabData.find(r => r.worker_id === selectedWorkerId);
-    if (contabRow?.dias_trabalhados != null) {
-      setInputs(prev => ({ ...prev, subsAlimDias: String(contabRow.dias_trabalhados) }));
-    }
-  }, [selectedWorkerId, inputs.mes, inputs.ano, contabData]);
+    if (!selectedWorkerId || !supabase) return;
+    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}`;
+    if (diasAutoFillKeyRef.current === key) return;
+    diasAutoFillKeyRef.current = key;
+
+    const w = workers.find(x => x.id === selectedWorkerId);
+    if (!w) return;
+
+    const mes = parseInt(inputs.mes, 10);
+    const ano = parseInt(inputs.ano, 10);
+    const mesStr = `${ano}-${String(mes).padStart(2, '0')}`;
+
+    let cancelled = false;
+    supabase
+      .from('absence_requests')
+      .select('dates')
+      .eq('worker_id', selectedWorkerId)
+      .eq('status', 'approved')
+      .then(({ data }) => {
+        if (cancelled) return;
+        const ausencias = (data || [])
+          .flatMap(a => a.dates || [])
+          .filter(d => d.startsWith(mesStr));
+
+        const dias = calcularDiasUteisNoMes(ano, mes, {
+          feriadoMunicipal,
+          dataAdmissao: w.dataInicio || null,
+          dataCessacao: w.dataFim || null,
+          ausencias,
+          horasSemana: parseFloat(inputs.horasSemana) || 40,
+        });
+
+        setInputs(prev => ({ ...prev, diasMes: String(dias), subsAlimDias: String(dias) }));
+        setDiasCalculados({ diasMes: true, subsAlimDias: true });
+      });
+
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkerId, inputs.mes, inputs.ano, workers, supabase, feriadoMunicipal]);
 
   const set = useCallback((field, value) => {
     setInputs(prev => ({ ...prev, [field]: value }));
@@ -259,6 +307,10 @@ export default function RecibosCalculadora() {
   const handleSelectWorker = (e) => {
     const id = e.target.value;
     setSelectedWorkerId(id);
+    setMapaRows([]);
+    setAutoFillInfo(null);
+    diasAutoFillKeyRef.current = '';
+    setDiasCalculados({ diasMes: false, subsAlimDias: false });
     if (!id) return;
     const w = workers.find(x => x.id === id);
     if (!w) return;
@@ -567,6 +619,8 @@ export default function RecibosCalculadora() {
     });
     setMapaRows([]);
     setAutoFillInfo(null);
+    diasAutoFillKeyRef.current = '';
+    setDiasCalculados({ diasMes: false, subsAlimDias: false });
   }
 
   function gerarReciboPDF() {
@@ -1452,7 +1506,18 @@ ${hdrRow}${bodyRows}${totRow}
                 <TextInput value={inputs.nis} onChange={e => set('nis', e.target.value)} />
               </LabelInput>
               <LabelInput label="Dias processados">
-                <TextInput type="number" value={inputs.diasMes} onChange={e => set('diasMes', e.target.value)} min="1" max="31" />
+                <div className="relative">
+                  <TextInput
+                    type="number"
+                    value={inputs.diasMes}
+                    onChange={e => { set('diasMes', e.target.value); setDiasCalculados(p => ({ ...p, diasMes: false })); }}
+                    min="1" max="31"
+                    className={diasCalculados.diasMes ? 'pr-10' : ''}
+                  />
+                  {diasCalculados.diasMes && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none" title="Calculado automaticamente">auto</span>
+                  )}
+                </div>
               </LabelInput>
             </div>
           </Card>
@@ -1517,7 +1582,17 @@ ${hdrRow}${bodyRows}${totRow}
                 </SelectInput>
               </LabelInput>
               <LabelInput label="Dias com subsídio">
-                <TextInput type="number" value={inputs.subsAlimDias} onChange={e => set('subsAlimDias', e.target.value)} />
+                <div className="relative">
+                  <TextInput
+                    type="number"
+                    value={inputs.subsAlimDias}
+                    onChange={e => { set('subsAlimDias', e.target.value); setDiasCalculados(p => ({ ...p, subsAlimDias: false })); }}
+                    className={diasCalculados.subsAlimDias ? 'pr-10' : ''}
+                  />
+                  {diasCalculados.subsAlimDias && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none" title="Calculado automaticamente">auto</span>
+                  )}
+                </div>
               </LabelInput>
             </div>
           </Card>
