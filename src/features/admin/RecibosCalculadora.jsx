@@ -1560,18 +1560,7 @@ ${hdrRow}${bodyRows}${totRow}
         ausencias:    workerAusencias,
       });
 
-      const rc = calcularRecibo({
-        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
-        horasSemana: 40, premios: 0, he1: 0, he2: 0,
-        incluirFerias: true, incluirNatal: true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
-        tabelaKey:    w.tabela_irs || 'tabelaI',
-        nDependentes: w.n_dependentes ?? 0,
-        brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
-        territorio: 'internacional', funcao: 'geral', ano: anoNum,
-      });
+      const { rc } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
 
       if (rc.ajudaCustoNecessaria <= 0) return; // sem ajudas de custo, pula
 
