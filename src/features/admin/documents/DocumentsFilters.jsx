@@ -15,7 +15,7 @@ export default function DocumentsFilters({
 }) {
   return (
     <>
-      <div className="grid grid-cols-4 gap-1 mb-4 bg-slate-100 p-1 rounded-2xl w-full">
+      <div className="flex overflow-x-auto gap-1 mb-4 pb-0.5 bg-slate-100 p-1 rounded-2xl w-full">
         {[
           { key: 'all', label: 'Todos', icon: LayoutList, activeColor: 'text-slate-700' },
           { key: 'pending', label: 'Pendentes', icon: Clock, activeColor: 'text-amber-500' },
@@ -27,7 +27,7 @@ export default function DocumentsFilters({
             <button
               key={key}
               onClick={() => setStateFilter(key)}
-              className={`flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${active ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}
+              className={`flex-shrink-0 flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${active ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}
             >
               <Icon size={13} className={active ? activeColor : 'text-slate-400'} />
               <span className={`text-[9px] font-black uppercase whitespace-nowrap ${active ? activeColor : 'text-slate-400'}`}>{label}</span>

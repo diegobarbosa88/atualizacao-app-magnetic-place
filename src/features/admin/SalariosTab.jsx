@@ -431,13 +431,13 @@ export default function SalariosTab({ month }) {
         <>
           {/* Header: sumário + exportar */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'Trabalhadores', value: employeesFiltered.length, color: 'text-slate-700', bg: 'bg-slate-50' },
                 { label: 'Match Exato', value: (salarioResultado?.summary?.total_exact_matches || 0) + justificacoes.length, color: 'text-emerald-700', bg: 'bg-emerald-50' },
                 { label: 'Pendentes', value: pendentesEfectivos, color: 'text-amber-700', bg: 'bg-amber-50' },
               ].map(c => (
-                <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center`}>
+                <div key={c.label} className={`${c.bg} rounded-2xl px-4 py-3 text-center min-w-0`}>
                   <p className={`text-2xl font-black ${c.color}`}>{c.value}</p>
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{c.label}</p>
                 </div>

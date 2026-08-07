@@ -705,7 +705,7 @@ const CostReports = () => {
       </div>
 
       <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-200">
-        <div className="grid grid-cols-6 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
+        <div className="flex overflow-x-auto gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
           {[
             { id: 'workers', icon: Users, label: 'Equipa' },
             { id: 'clients', icon: Building2, label: 'Clientes' },
@@ -717,7 +717,7 @@ const CostReports = () => {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-shrink-0 flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
             >
               <Icon size={13} />
               <span className="text-[9px] font-black uppercase whitespace-nowrap">{label}</span>

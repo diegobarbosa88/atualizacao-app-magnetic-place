@@ -120,7 +120,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
                         </div>
 
                         {isSubExpanded && subBadgeItems.length > 0 && (
-                          <div className="mt-1 ml-4 bg-slate-50 rounded-xl overflow-hidden">
+                          <div className="mt-1 ml-4 bg-slate-50 rounded-xl overflow-x-auto">
                             <table className="w-full text-[10px]">
                               <thead>
                                 <tr className="border-b border-slate-200">

@@ -135,44 +135,44 @@ export default function TxRow({ tx, pagamentos, justificacoes, internos, notasCr
             <div className="flex items-center gap-1 flex-wrap justify-end">
               {tipo === 'debito' && (
                 <button onClick={() => onAcaoRecibo(tx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors">
+                  className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-teal-100 text-teal-700 hover:bg-teal-200 transition-colors">
                   <UserCheck size={9} /> Recibo
                 </button>
               )}
               {tipo === 'debito' && (
                 <button onClick={() => onAcaoFatura(tx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
+                  className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-orange-100 text-orange-700 hover:bg-orange-200 transition-colors">
                   <FileMinus size={9} /> Fatura Doc
                 </button>
               )}
               {tipo === 'debito' ? (
                 <button onClick={() => onAcaoCliente(tx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                  className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
                   <Receipt size={9} /> Fatura
                 </button>
               ) : (
                 <button onClick={() => onAcaoCliente(tx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                  className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
                   <Link size={9} /> CLIENTE
                 </button>
               )}
               {tipo === 'credito' && (
                 <button onClick={() => onOpenNcManual(tx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors">
+                  className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors">
                   <FileText size={9} /> NC
                 </button>
               )}
               <button onClick={() => onMarcarInterno(tx)}
-                className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
+                className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
                 <ArrowLeftRight size={9} /> Interno
               </button>
               <button onClick={() => onJustificar(tx)}
-                className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors">
+                className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors">
                 <MessageSquare size={9} /> Justificar
               </button>
               {tipo === 'debito' && (
                 <button onClick={() => onMarcarImposto(tx)}
-                  className="flex items-center gap-1 px-2 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                  className="flex items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
                   <Percent size={9} /> PAGAMENTO IMPOSTO
                 </button>
               )}

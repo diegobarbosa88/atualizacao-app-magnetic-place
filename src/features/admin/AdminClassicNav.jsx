@@ -47,7 +47,7 @@ export default function AdminClassicNav({
             <button
               data-notif-bell
               onClick={onToggleNotifDropdown}
-              className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative"
+              className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100 relative"
             >
               <Bell size={17} />
               {unreadCount > 0 && (
@@ -59,18 +59,18 @@ export default function AdminClassicNav({
             {currentUser?.isAdmin && (
               <button
                 onClick={() => onLogin && onLogin('worker', currentUser)}
-                className="flex items-center justify-center p-1 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"
+                className="flex items-center justify-center p-2 bg-indigo-50 text-indigo-700 rounded-xl border border-indigo-100"
               >
                 <Users size={18} />
               </button>
             )}
             <button
               onClick={onOpenFinReport}
-              className="flex items-center justify-center p-1 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"
+              className="flex items-center justify-center p-2 bg-emerald-50 text-emerald-700 rounded-xl border border-emerald-100"
             >
               <BarChart3 size={18} />
             </button>
-            <button onClick={onLogout} className="p-1 text-slate-400">
+            <button onClick={onLogout} className="p-2 text-slate-400">
               <LogOut size={18} />
             </button>
           </div>

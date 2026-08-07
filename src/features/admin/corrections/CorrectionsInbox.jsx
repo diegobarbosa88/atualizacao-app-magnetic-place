@@ -482,14 +482,14 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
       )}
 
       {/* Status filter tabs */}
-      <div className="grid grid-cols-4 gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
+      <div className="flex overflow-x-auto gap-1 mb-6 bg-slate-100 p-1 rounded-2xl w-full">
         {[
           ['open',     AlertCircle, 'text-amber-500',  totalOpenCount],
           ['applied',  CheckCircle, 'text-emerald-500', counts.applied],
           ['rejected', XCircle,     'text-rose-500',    counts.rejected],
           ['all',      LayoutList,  'text-slate-500',   null],
         ].map(([k, Icon, iconColor, count]) => (
-          <button key={k} onClick={() => setFilter(k)} className={`relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}>
+          <button key={k} onClick={() => setFilter(k)} className={`flex-shrink-0 relative flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${filter === k ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}>
             <Icon size={13} className={filter === k ? iconColor : 'text-slate-400'} />
             <span className={`text-[9px] font-black uppercase whitespace-nowrap ${filter === k ? iconColor : 'text-slate-400'}`}>
               {k === 'open' ? 'Abertas' : k === 'applied' ? 'Aplicadas' : k === 'rejected' ? 'Rejeitadas' : 'Todas'}

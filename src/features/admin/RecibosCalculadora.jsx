@@ -2032,7 +2032,7 @@ ${hdrRow}${bodyRows}${totRow}
                 </div>
               </LabelInput>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <LabelInput label="NIF">
                 <div className="relative">
                   <TextInput value={inputs.nif} onChange={e => { set('nif', e.target.value); setCamposAuto(p => ({ ...p, nif: false })); }} className={camposAuto.nif ? 'pr-10' : ''} />
@@ -2065,7 +2065,7 @@ ${hdrRow}${bodyRows}${totRow}
           {/* 2 - Retribuição Base */}
           <Card className="p-5">
             <SectionHeader n="2" label="Retribuição Base" />
-            <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <LabelInput label="Vencimento Base (€/mês)">
                 <div className="relative">
                   <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => { set('vencimentoBase', e.target.value); setCamposAuto(p => ({ ...p, vencimentoBase: false })); }} className={camposAuto.vencimentoBase ? 'pr-10' : ''} />
@@ -2102,7 +2102,7 @@ ${hdrRow}${bodyRows}${totRow}
               <div />
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
               <LabelInput label="H. Suplementares 1ª hora (qtd)">
                 <TextInput type="number" step="0.5" value={inputs.he1} onChange={e => set('he1', e.target.value)} />
               </LabelInput>
@@ -2114,7 +2114,7 @@ ${hdrRow}${bodyRows}${totRow}
               </LabelInput>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <LabelInput label="Subsídio Alimentação (€/dia)">
                 <div className="relative">
                   <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => { set('subsAlimValorDia', e.target.value); setCamposAuto(p => ({ ...p, subsAlimValorDia: false })); }} className={camposAuto.subsAlimValorDia ? 'pr-10' : ''} />
@@ -2217,7 +2217,7 @@ ${hdrRow}${bodyRows}${totRow}
                 </SelectInput>
               </LabelInput>
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <LabelInput label="Cliente">
                 <div className="relative">
                   <TextInput value={inputs.cliente} onChange={e => { set('cliente', e.target.value); setCamposAuto(p => ({ ...p, cliente: false })); }} className={camposAuto.cliente ? 'pr-10' : ''} />
