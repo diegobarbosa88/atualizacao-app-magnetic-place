@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, RefreshCw, Upload, FileDown, Trash2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Loader2, Upload, FileDown, Trash2 } from 'lucide-react';
 import { STATUS_DOC } from '../../utils/validacaoHelpers';
+import { useApp } from '../../context/AppContext';
 
 // ─── Modo Documentos ──────────────────────────────────────────────────────────
 const ModoDocumentos = ({ workers }) => {
-  const [docs, setDocs]               = useState([]);
-  const [carregando, setCarregando]   = useState(false);
+  const { documents, saveToDb, handleDelete } = useApp();
+  const docs = [...documents].sort((a, b) => new Date(b.dataEmissao || 0) - new Date(a.dataEmissao || 0));
+
   const [filtroWorker, setFiltroWorker] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('');
   const [enviandoId, setEnviandoId]   = useState(null);
@@ -13,36 +15,17 @@ const ModoDocumentos = ({ workers }) => {
   const [selecionados, setSelecionados] = useState(new Set());
   const [enviandoLote, setEnviandoLote] = useState(false);
 
-  const carregar = useCallback(async () => {
-    const db = window.supabaseInstance;
-    if (!db) return;
-    setCarregando(true);
-    const { data } = await db.from('documents').select('*').order('dataEmissao', { ascending: false }).limit(500);
-    setDocs(data ?? []);
-    setCarregando(false);
-  }, []);
-
-  useEffect(() => { carregar(); }, [carregar]);
-
   const enviar = async (doc) => {
-    const db = window.supabaseInstance;
-    if (!db) return;
     setEnviandoId(doc.id);
-    const { error } = await db.from('documents').update({ status: 'Pendente' }).eq('id', doc.id);
-    if (!error) setDocs(prev => prev.map(d => d.id === doc.id ? { ...d, status: 'Pendente' } : d));
+    await saveToDb('documents', doc.id, { status: 'Pendente' });
     setEnviandoId(null);
   };
 
   const apagar = async (doc) => {
-    const db = window.supabaseInstance;
-    if (!db || !window.confirm(`Apagar documento "${doc.nomeFicheiro}"?`)) return;
+    if (!window.confirm(`Apagar documento "${doc.nomeFicheiro}"?`)) return;
     setApagandoId(doc.id);
     try {
-      // Extrai o path do storage a partir do URL público
-      const match = doc.url?.match(/\/documentos\/(.+)$/);
-      if (match) await db.storage.from('documentos').remove([decodeURIComponent(match[1])]);
-      await db.from('documents').delete().eq('id', doc.id);
-      setDocs(prev => prev.filter(d => d.id !== doc.id));
+      await handleDelete('documents', doc.id);
     } finally {
       setApagandoId(null);
     }
@@ -78,11 +61,8 @@ const ModoDocumentos = ({ workers }) => {
     if (!db || selecionados.size === 0) return;
     setEnviandoLote(true);
     const ids = [...selecionados];
-    const { error } = await db.from('documents').update({ status: 'Pendente' }).in('id', ids);
-    if (!error) {
-      setDocs(prev => prev.map(d => ids.includes(d.id) ? { ...d, status: 'Pendente' } : d));
-      setSelecionados(new Set());
-    }
+    await db.from('documents').update({ status: 'Pendente' }).in('id', ids);
+    setSelecionados(new Set());
     setEnviandoLote(false);
   };
 
@@ -109,10 +89,6 @@ const ModoDocumentos = ({ workers }) => {
               Enviar ({selecionados.size})
             </button>
           )}
-          <button onClick={carregar} disabled={carregando}
-            className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors disabled:opacity-40">
-            <RefreshCw size={13} className={carregando ? 'animate-spin' : ''} /> Atualizar
-          </button>
         </div>
       </div>
 

@@ -410,6 +410,12 @@ export const AppProvider = ({ children }) => {
         else upsertById(setExpenses)(payload.new);
       }).subscribe();
 
+    const channelSettings = supabaseInstance
+      .channel('realtime-system-settings')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'system_settings' }, (payload) => {
+        if (payload.new) setSystemSettings(prev => ({ ...prev, ...payload.new }));
+      }).subscribe();
+
     return () => {
       supabaseInstance.removeChannel(channelNotif);
       supabaseInstance.removeChannel(channelCorrections);
@@ -425,6 +431,7 @@ export const AppProvider = ({ children }) => {
       supabaseInstance.removeChannel(channelPersonalSchedules);
       supabaseInstance.removeChannel(channelApprovals);
       supabaseInstance.removeChannel(channelExpenses);
+      supabaseInstance.removeChannel(channelSettings);
     };
   }, [isDbReady]);
 

@@ -87,6 +87,34 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
     return () => { cancelled = true; };
   }, [supabase]);
 
+  useEffect(() => {
+    if (!supabase) return;
+    const upsert = (setter) => (row) => setter(prev => {
+      const exists = prev.some(x => x.id === row.id);
+      return exists ? prev.map(x => x.id === row.id ? row : x) : [row, ...prev];
+    });
+    const remove = (setter) => (row) => setter(prev => prev.filter(x => x.id !== row.id));
+
+    const chDocs = supabase
+      .channel('realtime-worker-documents-hook')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'worker_documents' }, (payload) => {
+        if (payload.eventType === 'DELETE') remove(setGeneratedDocs)(payload.old);
+        else upsert(setGeneratedDocs)(payload.new);
+      }).subscribe();
+
+    const chTemplates = supabase
+      .channel('realtime-document-templates-hook')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'document_templates' }, (payload) => {
+        if (payload.eventType === 'DELETE') remove(setTemplates)(payload.old);
+        else upsert(setTemplates)(payload.new);
+      }).subscribe();
+
+    return () => {
+      supabase.removeChannel(chDocs);
+      supabase.removeChannel(chTemplates);
+    };
+  }, [supabase]);
+
   const handleUploadTemplate = useCallback(async ({
     name, description, file,
     stamp_x, stamp_y, stamp_page,
