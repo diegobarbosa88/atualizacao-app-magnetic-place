@@ -157,8 +157,9 @@ export default function RecibosCalculadora() {
   const [contabData, setContabData] = useState([]);
   // Indica se o valor de cada campo foi calculado automaticamente (true) ou editado manualmente (false)
   const [diasCalculados, setDiasCalculados] = useState({ diasMes: false, subsAlimDias: false });
-  // Chave da última combinação trabalhador+mês já auto-preenchida; evita re-preenchimento em edições manuais
+  // Chave da última combinação trabalhador+mês já auto-preenchida (dias e mapa)
   const diasAutoFillKeyRef = useRef('');
+  const mapaAutoFillKeyRef = useRef('');
   // Feriado municipal configurado ao nível da empresa (campo 'feriado_municipal' em system_settings)
   const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
   let rowCounter = mapaRows.length;
@@ -294,6 +295,7 @@ export default function RecibosCalculadora() {
 
         setInputs(prev => ({ ...prev, diasMes: String(dias), subsAlimDias: String(dias) }));
         setDiasCalculados({ diasMes: true, subsAlimDias: true });
+        mapaAutoFillKeyRef.current = ''; // permite que o mapa re-preencha com subsAlimDias correcto
       });
 
     return () => { cancelled = true; };
@@ -310,6 +312,7 @@ export default function RecibosCalculadora() {
     setMapaRows([]);
     setAutoFillInfo(null);
     diasAutoFillKeyRef.current = '';
+    mapaAutoFillKeyRef.current = '';
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     if (!id) return;
     const w = workers.find(x => x.id === id);
@@ -366,6 +369,18 @@ export default function RecibosCalculadora() {
       vdl: String(valorDiarioLegal(prev.territorio, prev.funcao)),
     }));
   }, [inputs.territorio, inputs.funcao]);
+
+  // Preenche o mapa de ajudas automaticamente ao mudar trabalhador ou mês.
+  // Corre duas vezes por design: primeiro com brutoAlvo (rápido), depois com subsAlimDias correcto
+  // (quando a query de ausências retorna e reset a chave). Edições manuais ao mapa não são sobrescritas.
+  useEffect(() => {
+    if (!selectedWorkerId || !r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0) return;
+    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}`;
+    if (mapaAutoFillKeyRef.current === key) return;
+    mapaAutoFillKeyRef.current = key;
+    autoFill();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkerId, inputs.mes, inputs.ano, r]);
 
   const mapaTotal = useMemo(() => {
     return mapaRows.reduce((sum, row) => {
@@ -620,6 +635,7 @@ export default function RecibosCalculadora() {
     setMapaRows([]);
     setAutoFillInfo(null);
     diasAutoFillKeyRef.current = '';
+    mapaAutoFillKeyRef.current = '';
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
   }
 
