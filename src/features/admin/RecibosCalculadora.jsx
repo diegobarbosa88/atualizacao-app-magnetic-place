@@ -782,6 +782,224 @@ export default function RecibosCalculadora() {
     URL.revokeObjectURL(url);
   }
 
+  async function gerarRecibosBatchPDF() {
+    const mesNum    = parseInt(inputs.mes, 10);
+    const mesStr    = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+    const mesLabel  = MESES_PT[mesNum] || inputs.mes;
+    const anoNum    = n(inputs.ano);
+
+    const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
+    const trabalhadores = (workers || [])
+      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null && logsDoMes.some(l => l.workerId === w.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (trabalhadores.length === 0) {
+      alert('Nenhum trabalhador com registos neste mês.');
+      return;
+    }
+
+    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const doc = new jsPDF();
+    let isFirstPage = true;
+
+    trabalhadores.forEach(w => {
+      const workerHistory = rateHistory.filter(h => h.worker_id === w.id);
+      const workerLogs    = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo     = workerLogs.reduce((s, l) => {
+        const rate = getRateAtDate(l.date, workerHistory, parseFloat(w.valorHora) || 0);
+        return s + (parseFloat(l.hours) || 0) * rate;
+      }, 0);
+      const contabRow    = contabRows.find(cr => cr.worker_id === w.id);
+      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+      const rc = calcularRecibo({
+        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
+        horasSemana:      40,
+        premios:          0,
+        he1: 0, he2: 0,
+        incluirFerias:    true,
+        incluirNatal:     true,
+        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
+        subsAlimDias,
+        subsAlimTipo:     'cartao',
+        tabelaKey:        w.tabela_irs || 'tabelaI',
+        nDependentes:     w.n_dependentes ?? 0,
+        brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
+        territorio:       'internacional',
+        funcao:           'geral',
+        ano:              anoNum,
+      });
+
+      if (!isFirstPage) doc.addPage();
+      isFirstPage = false;
+
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      doc.text('RECIBO DE VENCIMENTO', 105, 16, { align: 'center' });
+
+      autoTable(doc, {
+        startY: 22,
+        body: [
+          ['Empresa:', EMPRESA.nome],
+          ['Morada:', EMPRESA.morada],
+          ['NIF:', EMPRESA.nif],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
+      });
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 2,
+        body: [
+          ['Trabalhador:', (w.name || '—').toUpperCase(), 'Mês / Ano:', `${mesLabel} ${inputs.ano}`],
+          ['NIF:', w.nif || '—', 'Profissão:', w.profissao || '—'],
+          ['NIS:', w.nis || '—', 'Venc. Base:', eur(parseFloat(w.vencimento_base) || 0)],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
+      });
+
+      const linhas = [
+        ['A001', 'Vencimento Base', '', '', eur(parseFloat(w.vencimento_base) || 0), ''],
+        ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
+      ];
+      if (rc.subsFerias > 0)           linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
+      if (rc.subsNatal > 0)            linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
+      if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(rc.ajudaCustoNecessaria), '']);
+      linhas.push(['T001', `IRS (venc. ${eur(rc.incidenciaRegular)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(rc.irsTotal)]);
+      linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 4,
+        head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
+        body: linhas,
+        theme: 'striped',
+        headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
+        styles: { fontSize: 7, cellPadding: 2 },
+        columnStyles: { 0: { cellWidth: 12 }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      });
+
+      autoTable(doc, {
+        startY: doc.lastAutoTable.finalY + 3,
+        body: [
+          [
+            { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
+            { content: eur(rc.totalAbonos), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
+            { content: eur(rc.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
+          ],
+          [
+            { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
+            { content: eur(rc.liquido), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+            { content: 'Custo Empresa (c/ TSU 23,75%)' },
+            { content: eur(rc.custoEmpresa), styles: { halign: 'right' } },
+          ],
+        ],
+        theme: 'plain',
+        styles: { fontSize: 8, cellPadding: 3 },
+        columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 28 }, 2: { cellWidth: 60 } },
+      });
+
+      const ySign = doc.lastAutoTable.finalY + 14;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text('O(a) trabalhador(a),', 14, ySign);
+      doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
+      doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
+    });
+
+    doc.save(`recibos-vencimento-${mesStr}.pdf`);
+  }
+
+  async function exportRecibosBatchXLS() {
+    const mesNum    = parseInt(inputs.mes, 10);
+    const mesStr    = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+    const mesLabel  = MESES_PT[mesNum] || inputs.mes;
+    const anoNum    = n(inputs.ano);
+
+    const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
+    const trabalhadores = (workers || [])
+      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null && logsDoMes.some(l => l.workerId === w.id))
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+    if (trabalhadores.length === 0) {
+      alert('Nenhum trabalhador com registos neste mês.');
+      return;
+    }
+
+    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+
+    const blocos = trabalhadores.map(w => {
+      const workerHistory = rateHistory.filter(h => h.worker_id === w.id);
+      const workerLogs    = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo     = workerLogs.reduce((s, l) => {
+        const rate = getRateAtDate(l.date, workerHistory, parseFloat(w.valorHora) || 0);
+        return s + (parseFloat(l.hours) || 0) * rate;
+      }, 0);
+      const contabRow    = contabRows.find(cr => cr.worker_id === w.id);
+      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+      const rc = calcularRecibo({
+        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
+        horasSemana:      40,
+        premios:          0,
+        he1: 0, he2: 0,
+        incluirFerias:    true,
+        incluirNatal:     true,
+        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
+        subsAlimDias,
+        subsAlimTipo:     'cartao',
+        tabelaKey:        w.tabela_irs || 'tabelaI',
+        nDependentes:     w.n_dependentes ?? 0,
+        brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
+        territorio:       'internacional',
+        funcao:           'geral',
+        ano:              anoNum,
+      });
+
+      const linhas = [
+        ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
+        ['A001', 'Vencimento Base', '', '', (parseFloat(w.vencimento_base) || 0).toFixed(2), ''],
+        ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, (parseFloat(w.subsidio_alimentacao_dia) || 0).toFixed(2), rc.subsAlimTotal.toFixed(2), ''],
+      ];
+      if (rc.subsFerias > 0)           linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
+      if (rc.subsNatal > 0)            linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
+      if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', rc.ajudaCustoNecessaria.toFixed(2), '']);
+      linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
+      linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
+      linhas.push(['', 'TOTAL', '', '', rc.totalAbonos.toFixed(2), rc.totalDescontos.toFixed(2)]);
+      linhas.push(['', 'Líquido a Receber', '', '', rc.liquido.toFixed(2), '']);
+      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', rc.custoEmpresa.toFixed(2), '']);
+
+      const rows = linhas.map((row, i) => {
+        const isHdr = i === 0;
+        const isTot = row[1] === 'TOTAL';
+        const isLiq = row[1] === 'Líquido a Receber';
+        const bg  = isHdr ? '#0F1F3D' : isTot ? '#EEF2FF' : isLiq ? '#ECFDF5' : i % 2 === 0 ? '#ffffff' : '#F8FAFC';
+        const col = isHdr ? 'white' : isTot ? '#4F46E5' : isLiq ? '#059669' : '#1E293B';
+        const fw  = isHdr || isTot || isLiq ? 'bold' : 'normal';
+        return `<tr>${row.map(c => `<td style="padding:8px 12px;border-bottom:1px solid #E2E8F0;background:${bg};color:${col};font-weight:${fw}">${c}</td>`).join('')}</tr>`;
+      }).join('');
+
+      return `<div style="page-break-after:always;margin-bottom:40px">
+<h2 style="font-family:Arial;color:#0F1F3D">RECIBO DE VENCIMENTO — ${mesLabel} ${inputs.ano}</h2>
+<p style="font-family:Arial;font-size:12px"><b>${(w.name || '—').toUpperCase()}</b> &nbsp;·&nbsp; NIF: ${w.nif || '—'} &nbsp;·&nbsp; Profissão: ${w.profissao || '—'} &nbsp;·&nbsp; NIS: ${w.nis || '—'}</p>
+<table border="1" style="border-collapse:collapse;font-family:Arial;font-size:11px;min-width:600px">${rows}</table>
+<p style="font-family:Arial;font-size:10px;color:#64748B;margin-top:16px">Estimativa — confirmar sempre no TOConline antes de processar.</p>
+</div>`;
+    });
+
+    const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
+<head><meta charset="utf-8"/></head><body>${blocos.join('')}</body></html>`;
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `recibos-vencimento-${mesStr}.xls`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function gerarMapaSalarialPDF() {
     const mesNum   = parseInt(inputs.mes, 10);
     const mesStr   = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
@@ -1449,7 +1667,21 @@ ${hdrRow}${bodyRows}${totRow}
               <ChevronRight size={18} />
             </button>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <button
+              onClick={gerarRecibosBatchPDF}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-sm"
+              title="PDF dos recibos de vencimento — todos os trabalhadores"
+            >
+              <FileText size={12} /> Recibos PDF
+            </button>
+            <button
+              onClick={exportRecibosBatchXLS}
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-teal-600 text-white hover:bg-teal-700 transition-all shadow-sm"
+              title="Excel dos recibos de vencimento — todos os trabalhadores"
+            >
+              <FileSpreadsheet size={12} /> Recibos XLS
+            </button>
             <button
               onClick={gerarMapaSalarialPDF}
               className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all shadow-sm"
