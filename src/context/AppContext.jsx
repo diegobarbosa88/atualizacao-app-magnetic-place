@@ -540,6 +540,18 @@ export const AppProvider = ({ children }) => {
     const monthStr = toISODateLocal(currentMonth).substring(0, 7);
     const id = "appr_" + workerId + "_" + monthStr;
     await saveToDb('approvals', id, { id, workerId, month: monthStr, timestamp: new Date().toISOString() });
+    const nId = `notif_appr_${workerId}_${monthStr}`;
+    await saveToDb('app_notifications', nId, {
+      id: nId,
+      title: `✅ Registo do mês aprovado`,
+      message: `O teu registo de ${monthStr} foi aprovado.`,
+      type: 'success',
+      target_type: 'specific',
+      target_worker_ids: [workerId],
+      is_dismissible: true,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    });
   };
 
   // Update notification preferences in Supabase

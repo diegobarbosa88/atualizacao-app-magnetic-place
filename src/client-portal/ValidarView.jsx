@@ -186,8 +186,7 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
                                                 title: `✅ Validação Recebida: ${clientData.name}`,
                                                 message: `O cliente aprovou e assinou o relatório de ${originalTotal}h referente a ${clientData.period}.`,
                                                 type: 'success',
-                                                target_type: 'specific',
-                                                target_worker_ids: [],
+                                                target_type: 'admin',
                                                 is_dismissible: true,
                                                 is_active: true,
                                                 created_at: new Date().toISOString()

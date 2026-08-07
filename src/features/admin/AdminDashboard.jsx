@@ -164,7 +164,7 @@ function AdminDashboard(props) {
 
   const markNotifRead = async (id) => {
     const previousState = optimisticReadIds;
-    setOptimisticReadIds(prev => new Set([prev, id]));
+    setOptimisticReadIds(prev => new Set([...prev, id]));
     try {
       if (!currentUser?.id || !supabase) return;
       const notif = appNotifications.find(n => n.id === id);

@@ -109,7 +109,8 @@ export const WorkerProvider = ({ children, handleSaveEntry }) => {
     return appNotifications.filter(n => 
       (!n.viewed_by_ids || !n.viewed_by_ids.includes(currentUser.id)) &&
       (!n.dismissed_by_ids || !n.dismissed_by_ids.includes(currentUser.id)) &&
-      (n.workerId === currentUser.id || !n.workerId)
+      (n.target_type === 'all' ||
+       (n.target_type === 'specific' && n.target_worker_ids?.includes(currentUser.id)))
     );
   }, [appNotifications, currentUser]);
 

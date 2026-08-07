@@ -293,6 +293,20 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
           if (error) throw error;
           succeeded++;
 
+          // N1: notificar o trabalhador que tem um documento para assinar
+          const nId = `notif_${Date.now()}_${workerId}`;
+          await supabase.from('app_notifications').insert({
+            id: nId,
+            title: `📄 Novo documento para assinar`,
+            message: `Tens um novo documento "${selectedTemplate.name}" para rever e assinar.`,
+            type: 'info',
+            target_type: 'specific',
+            target_worker_ids: [workerId],
+            is_dismissible: true,
+            is_active: true,
+            created_at: new Date().toISOString(),
+          });
+
           if (sendEmail && worker?.email) {
             const ok = await sendWorkerDocumentEmail({
               workerEmail: worker.email,
@@ -437,6 +451,20 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
         })
         .eq('id', doc.id);
       if (dbErr) throw dbErr;
+
+      // N3: notificar o trabalhador que o documento foi aprovado
+      const nIdN3 = `notif_approved_${doc.id}_${Date.now()}`;
+      await supabase.from('app_notifications').insert({
+        id: nIdN3,
+        title: `✅ Documento aprovado`,
+        message: `O teu documento "${doc.title || doc.nome_ficheiro || 'documento'}" foi aprovado e assinado pela empresa.`,
+        type: 'success',
+        target_type: 'specific',
+        target_worker_ids: [doc.worker_id],
+        is_dismissible: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      });
 
       await loadGeneratedDocs();
       return { signedPdfUrl: publicUrl, adminSignedAt };

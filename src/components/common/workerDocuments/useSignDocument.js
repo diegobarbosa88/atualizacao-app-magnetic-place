@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { sendValidationEmail } from '../../../utils/emailUtils';
 import { getStampHTML } from '../../../hooks/useSignatureStamp';
 import { cropSignatureCanvas } from '../../../utils/signatureCanvas';
 import workerDocumentsCSS from '../WorkerDocuments.css?inline';
@@ -251,7 +252,7 @@ async function signPdfDoc({ selectedDoc, currentUser, signerOpenedAt, workerIp, 
 }
 
 export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerIp, canvasRef }) {
-  const { supabase } = useApp();
+  const { supabase, systemSettings } = useApp();
   const [signing, setSigning] = useState(false);
 
   const handleSign = async (signatureFromModal, selectedDoc) => {
@@ -262,13 +263,40 @@ export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerI
     setSigning(true);
     try {
       const isTemplateDoc = !!(selectedDoc.templateId || selectedDoc.template_id);
+      let result;
       if (isTemplateDoc && selectedDoc.generated_html) {
         const { docData } = await signTemplateDoc({ selectedDoc, currentUser, signerOpenedAt, workerIp, signatureDataURL, supabase });
-        return { docData, type: 'template' };
+        result = { docData, type: 'template' };
       } else {
         const { docData } = await signPdfDoc({ selectedDoc, currentUser, signerOpenedAt, workerIp, signatureDataURL, saveToDb, supabase });
-        return { docData, type: 'pdf' };
+        result = { docData, type: 'pdf' };
       }
+
+      // N2: notificar admin que o trabalhador assinou
+      const workerName = currentUser?.name || currentUser?.nome || 'Trabalhador';
+      const docTitle = selectedDoc?.title || selectedDoc?.nome_ficheiro || 'documento';
+      const nId = `notif_signed_${selectedDoc.id}_${Date.now()}`;
+      supabase.from('app_notifications').insert({
+        id: nId,
+        title: `✍️ Documento assinado: ${workerName}`,
+        message: `${workerName} assinou o documento "${docTitle}" e aguarda a tua assinatura.`,
+        type: 'info',
+        target_type: 'admin',
+        is_dismissible: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      });
+      const adminEmail = systemSettings?.companySignature?.responsibleEmail;
+      if (adminEmail) {
+        sendValidationEmail({
+          to: adminEmail,
+          name: systemSettings?.companySignature?.responsibleName || 'Admin',
+          title: `✍️ Documento assinado: ${workerName}`,
+          message: `${workerName} assinou o documento "${docTitle}" e aguarda a tua assinatura.`,
+        }).catch(() => {});
+      }
+
+      return result;
     } catch (err) {
       console.error('Erro completo:', err);
       alert(`Erro: ${err.message || 'Erro desconhecido'}`);

@@ -23,6 +23,19 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
       setAbsenceRequests(prev => prev.map(r =>
         r.id === req.id ? { ...r, status: 'approved' } : r
       ));
+      const nId = `notif_absence_${req.id}`;
+      const dateStr = (req.dates || []).slice(0, 3).join(', ') + ((req.dates || []).length > 3 ? '…' : '');
+      supabase.from('app_notifications').insert({
+        id: nId,
+        title: `✅ Ausência aprovada`,
+        message: `A tua ausência${dateStr ? ` de ${dateStr}` : ''} foi aprovada.`,
+        type: 'success',
+        target_type: 'specific',
+        target_worker_ids: [req.worker_id],
+        is_dismissible: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      });
     }
   };
 

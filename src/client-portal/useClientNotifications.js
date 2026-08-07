@@ -71,9 +71,14 @@ export function useClientNotifications({
       if (prev.includes(id)) return prev;
       const updated = [...prev, id];
       localStorage.setItem(`dismissed_client_notifs_${effectiveClientId}`, JSON.stringify(updated));
+      if (supabase) {
+        supabase.from('app_notifications')
+          .update({ dismissed_by_ids: updated })
+          .eq('id', id);
+      }
       return updated;
     });
-  }, [effectiveClientId]);
+  }, [effectiveClientId, supabase]);
 
   const handleAcceptContestation = useCallback(async (notif) => {
     const changes = notif.payload?.changes;
