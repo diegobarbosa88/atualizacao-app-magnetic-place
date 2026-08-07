@@ -616,12 +616,11 @@ export default function RecibosCalculadora() {
     }
 
     // Resíduo → definir A008 Prémios (substituir, não acumular)
+    // Sempre actualizar, incluindo quando residuo=0, para limpar premios de fills anteriores.
     const totalAjudas        = Math.round(bestTotal * valorDiario * 100) / 100;
     const valorNecessarioFinal = ajudaNecessaria + subsAlimMapa;
     const residuo             = Math.round((valorNecessarioFinal - totalAjudas) * 100) / 100;
-    if (residuo > 0.01) {
-      set('premios', residuo.toFixed(2));
-    }
+    set('premios', residuo > 0.01 ? residuo.toFixed(2) : '0');
 
     setMapaRows(rows);
     setAutoFillInfo({ totalAjudas, subsAlimMapa, diasUteisCount, residuo, valorNecessario: valorNecessarioFinal });
