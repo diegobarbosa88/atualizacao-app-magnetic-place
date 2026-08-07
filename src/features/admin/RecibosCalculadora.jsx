@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertTriangle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
@@ -162,6 +162,8 @@ export default function RecibosCalculadora() {
   const mapaAutoFillKeyRef = useRef('');
   // Feriado municipal configurado ao nível da empresa (campo 'feriado_municipal' em system_settings)
   const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
+  const [isValidado, setIsValidado]             = useState(false);
+  const [saveStatus, setSaveStatus]             = useState(null); // null | 'saving' | 'saved' | 'error'
   let rowCounter = mapaRows.length;
 
   useEffect(() => {
@@ -332,6 +334,7 @@ export default function RecibosCalculadora() {
       nis: w.nis || prev.nis,
       vencimentoBase: w.vencimento_base != null ? String(w.vencimento_base) : prev.vencimentoBase,
       subsAlimValorDia: w.subsidio_alimentacao_dia != null ? String(w.subsidio_alimentacao_dia) : prev.subsAlimValorDia,
+      subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
       tabelaKey: w.tabela_irs || prev.tabelaKey,
       nDependentes: w.n_dependentes != null ? String(w.n_dependentes) : prev.nDependentes,
       cliente: dc.cliente || prev.cliente,
@@ -376,12 +379,25 @@ export default function RecibosCalculadora() {
   // (quando a query de ausências retorna e reset a chave). Edições manuais ao mapa não são sobrescritas.
   useEffect(() => {
     if (!selectedWorkerId || !r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0) return;
-    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}`;
+    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}-${n(inputs.vencimentoBase)}-${inputs.subsAlimTipo}-${n(inputs.nDependentes)}-${inputs.tabelaKey}-${n(inputs.subsAlimValorDia)}`;
     if (mapaAutoFillKeyRef.current === key) return;
     mapaAutoFillKeyRef.current = key;
     autoFill();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkerId, inputs.mes, inputs.ano, r]);
+
+  // Carrega estado de validação sempre que muda o trabalhador ou mês
+  useEffect(() => {
+    if (!selectedWorkerId || !inputs.mes || !inputs.ano) { setIsValidado(false); return; }
+    const mesStr = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
+    supabase
+      .from('resumo_observacoes')
+      .select('completo')
+      .eq('worker_id', selectedWorkerId)
+      .eq('mes', mesStr)
+      .maybeSingle()
+      .then(({ data }) => setIsValidado(data?.completo ?? false));
+  }, [selectedWorkerId, inputs.mes, inputs.ano, supabase]);
 
   const mapaTotal = useMemo(() => {
     return mapaRows.reduce((sum, row) => {
@@ -1624,6 +1640,32 @@ ${hdrRow}${bodyRows}${totRow}
     doc.save(`mapas-ajudas-custo-${String(mesNum).padStart(2, '0')}-${inputs.ano}.pdf`);
   }
 
+  async function saveWorkerProfile() {
+    if (!selectedWorkerId) return;
+    setSaveStatus('saving');
+    const { error } = await supabase.from('workers').update({
+      vencimento_base:           n(inputs.vencimentoBase),
+      subsidio_alimentacao_dia:  n(inputs.subsAlimValorDia),
+      subsidio_alimentacao_tipo: inputs.subsAlimTipo,
+      tabela_irs:                inputs.tabelaKey,
+      n_dependentes:             n(inputs.nDependentes),
+    }).eq('id', selectedWorkerId);
+    if (error) { setSaveStatus('error'); return; }
+    setSaveStatus('saved');
+    setTimeout(() => setSaveStatus(null), 2500);
+  }
+
+  async function toggleValidado() {
+    if (!selectedWorkerId) return;
+    const mesStr   = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
+    const novoValor = !isValidado;
+    await supabase.from('resumo_observacoes').upsert(
+      { worker_id: selectedWorkerId, mes: mesStr, completo: novoValor },
+      { onConflict: 'worker_id,mes' }
+    );
+    setIsValidado(novoValor);
+  }
+
   function gerarPDF() {
     const mesNum   = parseInt(inputs.mes, 10);
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
@@ -1676,17 +1718,46 @@ ${hdrRow}${bodyRows}${totRow}
 
       {/* Selector de trabalhador */}
       <Card className="p-5">
-        <LabelInput label="Trabalhador (preenchimento automático)">
-          <SelectInput value={selectedWorkerId} onChange={handleSelectWorker}>
-            <option value="">— Introduzir manualmente —</option>
-            {(workers || [])
-              .filter(w => w.is_active !== false && w.status !== 'inativo')
-              .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-              .map(w => (
-                <option key={w.id} value={w.id}>{w.name}</option>
-              ))}
-          </SelectInput>
-        </LabelInput>
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="flex-1 min-w-48">
+            <LabelInput label="Trabalhador (preenchimento automático)">
+              <SelectInput value={selectedWorkerId} onChange={handleSelectWorker}>
+                <option value="">— Introduzir manualmente —</option>
+                {(workers || [])
+                  .filter(w => w.is_active !== false && w.status !== 'inativo')
+                  .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                  .map(w => (
+                    <option key={w.id} value={w.id}>{w.name}</option>
+                  ))}
+              </SelectInput>
+            </LabelInput>
+          </div>
+          {selectedWorkerId && (
+            <div className="flex gap-2 pb-0.5">
+              <button
+                onClick={saveWorkerProfile}
+                disabled={saveStatus === 'saving'}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase transition-all shadow-sm
+                  ${saveStatus === 'saved'  ? 'bg-emerald-600 text-white' :
+                    saveStatus === 'error'  ? 'bg-rose-600 text-white' :
+                                             'bg-slate-700 text-white hover:bg-slate-900'}`}
+                title="Guarda vencimento base, subsídio alimentação, tipo, tabela IRS e nº dependentes no perfil do trabalhador"
+              >
+                <Save size={12} />
+                {saveStatus === 'saving' ? 'A guardar…' : saveStatus === 'saved' ? 'Guardado ✓' : saveStatus === 'error' ? 'Erro!' : 'Guardar'}
+              </button>
+              <button
+                onClick={toggleValidado}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase transition-all shadow-sm
+                  ${isValidado ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                title={isValidado ? 'Recibo validado — clique para remover validação' : 'Marcar recibo deste mês como validado'}
+              >
+                <CheckCircle size={12} />
+                {isValidado ? 'Validado' : 'Validar'}
+              </button>
+            </div>
+          )}
+        </div>
       </Card>
 
       {/* Seletor de mês — global, controla todo o recibo */}

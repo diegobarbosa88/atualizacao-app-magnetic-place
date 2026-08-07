@@ -57,7 +57,7 @@ const INITIAL_WORKER_FORM = {
   address: '', dni: '', isAdmin: false,
   dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0],
   limited_entry_mode: false,
-  vencimento_base: '', subsidio_alimentacao_dia: '',
+  vencimento_base: '', subsidio_alimentacao_dia: '', subsidio_alimentacao_tipo: 'dinheiro',
 };
 
 export const TeamProvider = ({ children }) => {
