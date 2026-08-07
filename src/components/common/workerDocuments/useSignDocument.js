@@ -252,7 +252,7 @@ async function signPdfDoc({ selectedDoc, currentUser, signerOpenedAt, workerIp, 
 }
 
 export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerIp, canvasRef }) {
-  const { supabase, systemSettings } = useApp();
+  const { supabase, companySignature } = useApp();
   const [signing, setSigning] = useState(false);
 
   const handleSign = async (signatureFromModal, selectedDoc) => {
@@ -286,11 +286,11 @@ export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerI
         is_active: true,
         created_at: new Date().toISOString(),
       });
-      const adminEmail = systemSettings?.companySignature?.responsibleEmail;
+      const adminEmail = companySignature?.responsibleEmail;
       if (adminEmail) {
         sendValidationEmail({
           to: adminEmail,
-          name: systemSettings?.companySignature?.responsibleName || 'Admin',
+          name: companySignature?.responsibleName || 'Admin',
           title: `✍️ Documento assinado: ${workerName}`,
           message: `${workerName} assinou o documento "${docTitle}" e aguarda a tua assinatura.`,
         }).catch(() => {});

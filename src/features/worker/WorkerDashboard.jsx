@@ -1,6 +1,7 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { WorkerProvider, useWorker } from './contexts/WorkerContext';
 import { useApp } from '../../context/AppContext';
+import { isPending } from '../../constants/documentStatus';
 import {
   CheckCircle, Edit2,
   ChevronUp, ChevronDown, Trash2, Plus, Zap, X,
@@ -52,6 +53,19 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   } = useWorker();
 
   const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase, absenceRequests } = useApp();
+
+  const [pendingTemplateDocsCount, setPendingTemplateDocsCount] = useState(0);
+  const loadPendingTemplateDocs = useCallback(async () => {
+    if (!currentUser?.id || !supabase) return;
+    const { data } = await supabase
+      .from('worker_documents')
+      .select('id, status')
+      .eq('worker_id', currentUser.id)
+      .eq('status', 'pending');
+    setPendingTemplateDocsCount((data || []).length);
+  }, [currentUser?.id, supabase]);
+  useEffect(() => { loadPendingTemplateDocs(); }, [loadPendingTemplateDocs]);
+
   const [workerTab, setWorkerTab] = useState('home');
   const [timeEntryModalOpen, setTimeEntryModalOpen] = useState(false);
   const [timeEntryInitialLogId, setTimeEntryInitialLogId] = useState(null);
@@ -62,6 +76,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [documentsModalOpen, setDocumentsModalOpen] = useState(false);
+  useEffect(() => {
+    if (!documentsModalOpen) loadPendingTemplateDocs();
+  }, [documentsModalOpen, loadPendingTemplateDocs]);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -188,7 +205,9 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     return pendingMonthStart >= workerStartDate;
   });
 
-  const pendingSignaturesCount = (documents || []).filter(d => !d.signed_at && d.workerId === currentUser?.id && d.status !== 'Rascunho').length;
+  const pendingSignaturesCount =
+    (documents || []).filter(d => isPending(d.status) && d.workerId === currentUser?.id && d.visivel_worker === true).length +
+    pendingTemplateDocsCount;
   const alertCount = filteredPendingApprovals.length + (pendingSignaturesCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
 
   useEffect(() => {
