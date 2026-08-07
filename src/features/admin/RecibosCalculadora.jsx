@@ -1540,17 +1540,25 @@ ${hdrRow}${bodyRows}${totRow}
 
     if (trabalhadores.length === 0) { alert('Nenhum trabalhador activo com vencimento base configurado.'); return; }
 
-    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const { rateHistory, absenceData } = await _fetchBatchData(mesStr);
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     let isFirstPage = true;
 
     trabalhadores.forEach(w => {
-      const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
-      const brutoAlvo    = _calcBruto(w.id, workerLogs, rateHistory, w.valorHora);
-      const contabRow    = contabRows.find(r => r.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+      const workerLogs      = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo       = _calcBruto(w.id, workerLogs, rateHistory, w.valorHora);
+      const workerAusencias = absenceData
+        .filter(a => a.worker_id === w.id)
+        .flatMap(a => a.dates || [])
+        .filter(d => d.startsWith(mesStr));
+      const subsAlimDias    = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
+        ausencias:    workerAusencias,
+      });
 
       const rc = calcularRecibo({
         vencimentoBase:   parseFloat(w.vencimento_base) || 0,
@@ -2097,10 +2105,17 @@ ${hdrRow}${bodyRows}${totRow}
             >
               <Plus size={12} /> Linha manual
             </button>
+            <button
+              onClick={gerarMapasAjudasPDF}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase bg-indigo-500 text-white hover:bg-indigo-600 transition-all shadow-sm"
+              title="PDF com os mapas de todos os trabalhadores"
+            >
+              <Download size={12} /> Exportar Todos
+            </button>
             {mapaRows.length > 0 && (
               <button
                 onClick={gerarPDF}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase bg-indigo-700 text-white hover:bg-indigo-800 shadow-lg shadow-indigo-200 transition-all"
               >
                 <Download size={12} /> Exportar PDF
               </button>
