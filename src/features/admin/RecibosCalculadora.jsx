@@ -852,19 +852,27 @@ export default function RecibosCalculadora() {
       return;
     }
 
-    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const { rateHistory, absenceData } = await _fetchBatchData(mesStr);
     const doc = new jsPDF();
     let isFirstPage = true;
 
     trabalhadores.forEach(w => {
-      const workerHistory = rateHistory.filter(h => h.worker_id === w.id);
-      const workerLogs    = logsDoMes.filter(l => l.workerId === w.id);
-      const brutoAlvo     = workerLogs.reduce((s, l) => {
+      const workerHistory   = rateHistory.filter(h => h.worker_id === w.id);
+      const workerLogs      = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo       = workerLogs.reduce((s, l) => {
         const rate = getRateAtDate(l.date, workerHistory, parseFloat(w.valorHora) || 0);
         return s + (parseFloat(l.hours) || 0) * rate;
       }, 0);
-      const contabRow    = contabRows.find(cr => cr.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+      const workerAusencias = absenceData
+        .filter(a => a.worker_id === w.id)
+        .flatMap(a => a.dates || [])
+        .filter(d => d.startsWith(mesStr));
+      const subsAlimDias    = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
+        ausencias:    workerAusencias,
+      });
       const { rc, premios: premiosBatch } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
 
       if (!isFirstPage) doc.addPage();
@@ -967,17 +975,25 @@ export default function RecibosCalculadora() {
       return;
     }
 
-    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const { rateHistory, absenceData } = await _fetchBatchData(mesStr);
 
     const blocos = trabalhadores.map(w => {
-      const workerHistory = rateHistory.filter(h => h.worker_id === w.id);
-      const workerLogs    = logsDoMes.filter(l => l.workerId === w.id);
-      const brutoAlvo     = workerLogs.reduce((s, l) => {
+      const workerHistory   = rateHistory.filter(h => h.worker_id === w.id);
+      const workerLogs      = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo       = workerLogs.reduce((s, l) => {
         const rate = getRateAtDate(l.date, workerHistory, parseFloat(w.valorHora) || 0);
         return s + (parseFloat(l.hours) || 0) * rate;
       }, 0);
-      const contabRow    = contabRows.find(cr => cr.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+      const workerAusencias = absenceData
+        .filter(a => a.worker_id === w.id)
+        .flatMap(a => a.dates || [])
+        .filter(d => d.startsWith(mesStr));
+      const subsAlimDias    = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
+        ausencias:    workerAusencias,
+      });
       const { rc, premios: premiosBatch } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
 
       const linhas = [
@@ -1198,11 +1214,16 @@ export default function RecibosCalculadora() {
 
   // Helpers partilhados pelas duas funções batch abaixo
   async function _fetchBatchData(mesStr) {
-    const [rateRes, contabRes] = await Promise.all([
+    const [rateRes, contabRes, absenceRes] = await Promise.all([
       supabase.from('worker_valorhora_history').select('*'),
       supabase.from('contabilidade_mensal').select('*').eq('mes', mesStr),
+      supabase.from('absence_requests').select('worker_id, dates').eq('status', 'approved'),
     ]);
-    return { rateHistory: rateRes.data || [], contabRows: contabRes.data || [] };
+    return {
+      rateHistory:  rateRes.data    || [],
+      contabRows:   contabRes.data  || [],
+      absenceData:  absenceRes.data || [],
+    };
   }
 
   function _calcBruto(workerId, workerLogs, rateHistory, valorHoraDefault) {
