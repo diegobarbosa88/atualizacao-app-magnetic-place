@@ -423,7 +423,7 @@ export default function RecibosCalculadora() {
         incluirFerias: true, incluirNatal: true,
         subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
         subsAlimDias,
-        subsAlimTipo: 'cartao',
+        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
         tabelaKey:    w.tabela_irs || 'tabelaI',
         nDependentes: w.n_dependentes ?? 0,
         brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
@@ -432,7 +432,7 @@ export default function RecibosCalculadora() {
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
 
-      const empresa = [...new Set(workerLogs.map(l => l.clientId).filter(Boolean))]
+      const empresa =[...new Set(workerLogs.map(l => l.clientId).filter(Boolean))]
         .map(id => (clients || []).find(c => c.id === id)?.name || '')
         .filter(Boolean)
         .join(' / ');
@@ -787,7 +787,7 @@ export default function RecibosCalculadora() {
     const baseParams = {
       vencimentoBase: vencBase, horasSemana: 40, premios: 0,
       he1: 0, he2: 0, incluirFerias: true, incluirNatal: true,
-      subsAlimValorDia, subsAlimDias, subsAlimTipo: 'cartao',
+      subsAlimValorDia, subsAlimDias, subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
       tabelaKey: w.tabela_irs || 'tabelaI',
       nDependentes: w.n_dependentes ?? 0,
       brutoAlvo: brutoAlvo || vencBase,
@@ -1096,7 +1096,7 @@ export default function RecibosCalculadora() {
         incluirNatal:     true,
         subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
         subsAlimDias,
-        subsAlimTipo:     'cartao',
+        subsAlimTipo:     w.subsidio_alimentacao_tipo || 'dinheiro',
         tabelaKey:        w.tabela_irs || 'tabelaI',
         nDependentes:     w.n_dependentes ?? 0,
         brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
@@ -1297,7 +1297,7 @@ export default function RecibosCalculadora() {
         incluirFerias: true, incluirNatal: true,
         subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
         subsAlimDias,
-        subsAlimTipo: 'cartao',
+        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
         tabelaKey:    w.tabela_irs || 'tabelaI',
         nDependentes: w.n_dependentes ?? 0,
         brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
@@ -1558,7 +1558,7 @@ ${hdrRow}${bodyRows}${totRow}
         incluirFerias: true, incluirNatal: true,
         subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
         subsAlimDias,
-        subsAlimTipo: 'cartao',
+        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
         tabelaKey:    w.tabela_irs || 'tabelaI',
         nDependentes: w.n_dependentes ?? 0,
         brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
