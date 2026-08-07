@@ -60,12 +60,22 @@ const MAPA_DEFAULT = {
   horaChegada: '20:30',
 };
 
+const CAMPOS_AUTO_DEFAULT = {
+  nome: false, nif: false, categoria: false, nis: false,
+  vencimentoBase: false, subsAlimValorDia: false, subsAlimTipo: false,
+  tabelaKey: false, nDependentes: false,
+  cliente: false, localidade: false, pais: false, territorio: false,
+};
+
 function n(v) { return parseFloat(v) || 0; }
 
-function LabelInput({ label, children, hint }) {
+function LabelInput({ label, children, hint, badge }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">{label}</label>
+      <div className="flex items-center gap-1 ml-1">
+        <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</label>
+        {badge && <span className="text-[9px] font-bold text-indigo-400">{badge}</span>}
+      </div>
       {children}
       {hint && <span className="text-[10px] text-slate-400 ml-1">{hint}</span>}
     </div>
@@ -164,6 +174,8 @@ export default function RecibosCalculadora() {
   const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
   const [isValidado, setIsValidado]             = useState(false);
   const [saveStatus, setSaveStatus]             = useState(null); // null | 'saving' | 'saved' | 'error'
+  const [brutoAlvoEditado, setBrutoAlvoEditado] = useState(false); // false = auto dos logs, true = editado/salvo manualmente
+  const [camposAuto, setCamposAuto] = useState(CAMPOS_AUTO_DEFAULT);
   let rowCounter = mapaRows.length;
 
   useEffect(() => {
@@ -253,10 +265,12 @@ export default function RecibosCalculadora() {
   const calcularCustoMesRef = useRef(calcularCustoMes);
   useEffect(() => { calcularCustoMesRef.current = calcularCustoMes; }, [calcularCustoMes]);
 
-  // Sincroniza brutoAlvo ao mudar trabalhador ou mês; não sobrescreve edições manuais quando logs sincronizam
+  // Sincroniza brutoAlvo ao mudar trabalhador ou mês (valor auto dos logs).
+  // O useEffect de isValidado corre depois (async) e sobrescreve com o ajuste_bruto salvo, se existir.
   useEffect(() => {
     if (!selectedWorkerId) return;
     const custo = calcularCustoMesRef.current(selectedWorkerId, inputs.mes, inputs.ano);
+    setBrutoAlvoEditado(false);
     setInputs(prev => ({ ...prev, brutoAlvo: custo > 0 ? custo.toFixed(2) : '' }));
   }, [selectedWorkerId, inputs.mes, inputs.ano]);
 
@@ -316,8 +330,14 @@ export default function RecibosCalculadora() {
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
+    setBrutoAlvoEditado(false);
+    if (!id) {
+      // Sem trabalhador: limpar todos os campos mas preservar mês/ano
+      setInputs(prev => ({ ...INPUT_DEFAULT, mes: prev.mes, ano: prev.ano }));
+      setCamposAuto(CAMPOS_AUTO_DEFAULT);
+      return;
+    }
     setInputs(prev => ({ ...prev, premios: '0' }));
-    if (!id) return;
     const w = workers.find(x => x.id === id);
     if (!w) return;
 
@@ -325,6 +345,22 @@ export default function RecibosCalculadora() {
     const clientId = w.defaultClientId || (w.assignedClients || [])[0];
     const client = (clients || []).find(c => c.id === clientId);
     const dc = dadosDeCliente(client);
+
+    setCamposAuto({
+      nome:            !!w.name,
+      nif:             !!w.nif,
+      categoria:       !!w.profissao,
+      nis:             !!w.nis,
+      vencimentoBase:  w.vencimento_base != null,
+      subsAlimValorDia: w.subsidio_alimentacao_dia != null,
+      subsAlimTipo:    true, // sempre auto ao selecionar trabalhador
+      tabelaKey:       !!w.tabela_irs,
+      nDependentes:    w.n_dependentes != null,
+      cliente:         !!dc.cliente,
+      localidade:      !!dc.localidade,
+      pais:            !!dc.pais,
+      territorio:      !!dc.territorio,
+    });
 
     setInputs(prev => ({
       ...prev,
@@ -379,24 +415,30 @@ export default function RecibosCalculadora() {
   // (quando a query de ausências retorna e reset a chave). Edições manuais ao mapa não são sobrescritas.
   useEffect(() => {
     if (!selectedWorkerId || !r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0) return;
-    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}-${n(inputs.vencimentoBase)}-${inputs.subsAlimTipo}-${n(inputs.nDependentes)}-${inputs.tabelaKey}-${n(inputs.subsAlimValorDia)}`;
+    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}-${n(inputs.vencimentoBase)}-${inputs.subsAlimTipo}-${n(inputs.nDependentes)}-${inputs.tabelaKey}-${n(inputs.subsAlimValorDia)}-${n(inputs.subsAlimDias)}-${n(inputs.brutoAlvo)}-${String(inputs.incluirFerias)}-${String(inputs.incluirNatal)}-${n(inputs.he1)}-${n(inputs.he2)}`;
     if (mapaAutoFillKeyRef.current === key) return;
     mapaAutoFillKeyRef.current = key;
     autoFill();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkerId, inputs.mes, inputs.ano, r]);
 
-  // Carrega estado de validação sempre que muda o trabalhador ou mês
+  // Carrega estado de validação e brutoAlvo salvo manualmente para este worker+mês
   useEffect(() => {
     if (!selectedWorkerId || !inputs.mes || !inputs.ano) { setIsValidado(false); return; }
     const mesStr = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
     supabase
       .from('resumo_observacoes')
-      .select('completo')
+      .select('completo, ajuste_bruto')
       .eq('worker_id', selectedWorkerId)
       .eq('mes', mesStr)
       .maybeSingle()
-      .then(({ data }) => setIsValidado(data?.completo ?? false));
+      .then(({ data }) => {
+        setIsValidado(data?.completo ?? false);
+        if (data?.ajuste_bruto != null) {
+          setInputs(prev => ({ ...prev, brutoAlvo: String(data.ajuste_bruto) }));
+          setBrutoAlvoEditado(true);
+        }
+      });
   }, [selectedWorkerId, inputs.mes, inputs.ano, supabase]);
 
   const mapaTotal = useMemo(() => {
@@ -1643,14 +1685,26 @@ ${hdrRow}${bodyRows}${totRow}
   async function saveWorkerProfile() {
     if (!selectedWorkerId) return;
     setSaveStatus('saving');
-    const { error } = await supabase.from('workers').update({
-      vencimento_base:           n(inputs.vencimentoBase),
-      subsidio_alimentacao_dia:  n(inputs.subsAlimValorDia),
-      subsidio_alimentacao_tipo: inputs.subsAlimTipo,
-      tabela_irs:                inputs.tabelaKey,
-      n_dependentes:             n(inputs.nDependentes),
-    }).eq('id', selectedWorkerId);
-    if (error) { setSaveStatus('error'); return; }
+    const mesStr = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
+      supabase.from('workers').update({
+        vencimento_base:           n(inputs.vencimentoBase),
+        subsidio_alimentacao_dia:  n(inputs.subsAlimValorDia),
+        subsidio_alimentacao_tipo: inputs.subsAlimTipo,
+        tabela_irs:                inputs.tabelaKey,
+        n_dependentes:             n(inputs.nDependentes),
+      }).eq('id', selectedWorkerId),
+      supabase.from('resumo_observacoes').upsert(
+        {
+          worker_id:    selectedWorkerId,
+          mes:          mesStr,
+          completo:     isValidado,
+          ajuste_bruto: brutoAlvoEditado ? n(inputs.brutoAlvo) : null,
+        },
+        { onConflict: 'worker_id,mes' }
+      ),
+    ]);
+    if (e1 || e2) { setSaveStatus('error'); return; }
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus(null), 2500);
   }
@@ -1660,10 +1714,27 @@ ${hdrRow}${bodyRows}${totRow}
     const mesStr   = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
     const novoValor = !isValidado;
     await supabase.from('resumo_observacoes').upsert(
-      { worker_id: selectedWorkerId, mes: mesStr, completo: novoValor },
+      {
+        worker_id:    selectedWorkerId,
+        mes:          mesStr,
+        completo:     novoValor,
+        ajuste_bruto: brutoAlvoEditado ? n(inputs.brutoAlvo) : null,
+      },
       { onConflict: 'worker_id,mes' }
     );
     setIsValidado(novoValor);
+  }
+
+  async function resetBrutoAlvoAuto() {
+    if (!selectedWorkerId) return;
+    const custo = calcularCustoMesRef.current(selectedWorkerId, inputs.mes, inputs.ano);
+    setBrutoAlvoEditado(false);
+    setInputs(prev => ({ ...prev, brutoAlvo: custo > 0 ? custo.toFixed(2) : '' }));
+    const mesStr = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
+    await supabase.from('resumo_observacoes').upsert(
+      { worker_id: selectedWorkerId, mes: mesStr, completo: isValidado, ajuste_bruto: null },
+      { onConflict: 'worker_id,mes' }
+    );
   }
 
   function gerarPDF() {
@@ -1857,18 +1928,30 @@ ${hdrRow}${bodyRows}${totRow}
             <SectionHeader n="1" label="Dados do Trabalhador" />
             <div className="grid grid-cols-2 gap-3 mb-3">
               <LabelInput label="Nome">
-                <TextInput value={inputs.nome} onChange={e => set('nome', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.nome} onChange={e => { set('nome', e.target.value); setCamposAuto(p => ({ ...p, nome: false })); }} className={camposAuto.nome ? 'pr-10' : ''} />
+                  {camposAuto.nome && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
               <LabelInput label="Categoria / Profissão">
-                <TextInput value={inputs.categoria} onChange={e => set('categoria', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.categoria} onChange={e => { set('categoria', e.target.value); setCamposAuto(p => ({ ...p, categoria: false })); }} className={camposAuto.categoria ? 'pr-10' : ''} />
+                  {camposAuto.categoria && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <LabelInput label="NIF">
-                <TextInput value={inputs.nif} onChange={e => set('nif', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.nif} onChange={e => { set('nif', e.target.value); setCamposAuto(p => ({ ...p, nif: false })); }} className={camposAuto.nif ? 'pr-10' : ''} />
+                  {camposAuto.nif && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
               <LabelInput label="NIS (SS)">
-                <TextInput value={inputs.nis} onChange={e => set('nis', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.nis} onChange={e => { set('nis', e.target.value); setCamposAuto(p => ({ ...p, nis: false })); }} className={camposAuto.nis ? 'pr-10' : ''} />
+                  {camposAuto.nis && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
               <LabelInput label="Dias processados">
                 <div className="relative">
@@ -1892,7 +1975,10 @@ ${hdrRow}${bodyRows}${totRow}
             <SectionHeader n="2" label="Retribuição Base" />
             <div className="grid grid-cols-3 gap-3 mb-3">
               <LabelInput label="Vencimento Base (€/mês)">
-                <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => set('vencimentoBase', e.target.value)} />
+                <div className="relative">
+                  <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => { set('vencimentoBase', e.target.value); setCamposAuto(p => ({ ...p, vencimentoBase: false })); }} className={camposAuto.vencimentoBase ? 'pr-10' : ''} />
+                  {camposAuto.vencimentoBase && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
               <LabelInput label="Horas / semana">
                 <TextInput type="number" value={inputs.horasSemana} onChange={e => set('horasSemana', e.target.value)} />
@@ -1938,10 +2024,13 @@ ${hdrRow}${bodyRows}${totRow}
 
             <div className="grid grid-cols-3 gap-3">
               <LabelInput label="Subsídio Alimentação (€/dia)">
-                <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => set('subsAlimValorDia', e.target.value)} />
+                <div className="relative">
+                  <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => { set('subsAlimValorDia', e.target.value); setCamposAuto(p => ({ ...p, subsAlimValorDia: false })); }} className={camposAuto.subsAlimValorDia ? 'pr-10' : ''} />
+                  {camposAuto.subsAlimValorDia && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
-              <LabelInput label="Pago em">
-                <SelectInput value={inputs.subsAlimTipo} onChange={e => set('subsAlimTipo', e.target.value)}>
+              <LabelInput label="Pago em" badge={camposAuto.subsAlimTipo ? 'auto' : null}>
+                <SelectInput value={inputs.subsAlimTipo} onChange={e => { set('subsAlimTipo', e.target.value); setCamposAuto(p => ({ ...p, subsAlimTipo: false })); }}>
                   <option value="cartao">Cartão / vale (isento ≤ €10,46)</option>
                   <option value="dinheiro">Dinheiro (isento ≤ €6,15)</option>
                 </SelectInput>
@@ -1966,8 +2055,8 @@ ${hdrRow}${bodyRows}${totRow}
           <Card className="p-5">
             <SectionHeader n="3" label="IRS — Situação Fiscal" />
             <div className="grid grid-cols-2 gap-3">
-              <LabelInput label="Tabela de retenção">
-                <SelectInput value={inputs.tabelaKey} onChange={e => set('tabelaKey', e.target.value)}>
+              <LabelInput label="Tabela de retenção" badge={camposAuto.tabelaKey ? 'auto' : null}>
+                <SelectInput value={inputs.tabelaKey} onChange={e => { set('tabelaKey', e.target.value); setCamposAuto(p => ({ ...p, tabelaKey: false })); }}>
                   {Object.entries(getIRSTabelasPorAno(n(inputs.ano))).map(([k, t]) => (
                     <option key={k} value={k}>{t.nome}</option>
                   ))}
@@ -1977,7 +2066,10 @@ ${hdrRow}${bodyRows}${totRow}
                 label="Nº de dependentes"
                 hint={`Continente — tabelas ${Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a).find(a=>a<=n(inputs.ano)) || Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a)[0]}`}
               >
-                <TextInput type="number" min="0" value={inputs.nDependentes} onChange={e => set('nDependentes', e.target.value)} />
+                <div className="relative">
+                  <TextInput type="number" min="0" value={inputs.nDependentes} onChange={e => { set('nDependentes', e.target.value); setCamposAuto(p => ({ ...p, nDependentes: false })); }} className={camposAuto.nDependentes ? 'pr-10' : ''} />
+                  {camposAuto.nDependentes && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
             </div>
           </Card>
@@ -1988,17 +2080,40 @@ ${hdrRow}${bodyRows}${totRow}
             <div className="grid grid-cols-2 gap-3 mb-3">
               <LabelInput
                 label="Valor Bruto Total Alvo (€)"
-                hint={selectedWorkerId ? 'Auto: custo do mês em Custos/Equipa. Editável.' : 'Selecione um trabalhador para preencher automaticamente.'}
+                hint={selectedWorkerId
+                  ? (brutoAlvoEditado ? 'Valor editado manualmente — clique "edit ×" para repor o valor automático.' : 'Auto: custo do mês em Custos/Equipa. Editável.')
+                  : 'Selecione um trabalhador para preencher automaticamente.'}
               >
-                <TextInput type="number" step="0.01" value={inputs.brutoAlvo} onChange={e => set('brutoAlvo', e.target.value)} />
+                <div className="relative">
+                  <TextInput
+                    type="number"
+                    step="0.01"
+                    value={inputs.brutoAlvo}
+                    onChange={e => { set('brutoAlvo', e.target.value); setBrutoAlvoEditado(true); }}
+                    className={selectedWorkerId ? 'pr-12' : ''}
+                  />
+                  {selectedWorkerId && !brutoAlvoEditado && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none" title="Calculado automaticamente dos registos de horas">auto</span>
+                  )}
+                  {brutoAlvoEditado && (
+                    <button
+                      type="button"
+                      onClick={resetBrutoAlvoAuto}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-amber-500 hover:text-slate-500 leading-none cursor-pointer"
+                      title="Clique para repor o valor calculado automaticamente dos registos de horas"
+                    >
+                      edit ×
+                    </button>
+                  )}
+                </div>
               </LabelInput>
               <LabelInput label="Valor diário legal (€)" hint="Auto-preenchido por território/função. Editável.">
                 <TextInput type="number" step="0.01" value={inputs.vdl} onChange={e => set('vdl', e.target.value)} />
               </LabelInput>
             </div>
             <div className="grid grid-cols-2 gap-3 mb-3">
-              <LabelInput label="Território">
-                <SelectInput value={inputs.territorio} onChange={e => set('territorio', e.target.value)}>
+              <LabelInput label="Território" badge={camposAuto.territorio ? 'auto' : null}>
+                <SelectInput value={inputs.territorio} onChange={e => { set('territorio', e.target.value); setCamposAuto(p => ({ ...p, territorio: false })); }}>
                   <option value="internacional">Internacional</option>
                   <option value="nacional">Nacional</option>
                 </SelectInput>
@@ -2012,13 +2127,22 @@ ${hdrRow}${bodyRows}${totRow}
             </div>
             <div className="grid grid-cols-3 gap-3">
               <LabelInput label="Cliente">
-                <TextInput value={inputs.cliente} onChange={e => set('cliente', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.cliente} onChange={e => { set('cliente', e.target.value); setCamposAuto(p => ({ ...p, cliente: false })); }} className={camposAuto.cliente ? 'pr-10' : ''} />
+                  {camposAuto.cliente && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
               <LabelInput label="Localidade">
-                <TextInput value={inputs.localidade} onChange={e => set('localidade', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.localidade} onChange={e => { set('localidade', e.target.value); setCamposAuto(p => ({ ...p, localidade: false })); }} className={camposAuto.localidade ? 'pr-10' : ''} />
+                  {camposAuto.localidade && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
               <LabelInput label="País">
-                <TextInput value={inputs.pais} onChange={e => set('pais', e.target.value)} />
+                <div className="relative">
+                  <TextInput value={inputs.pais} onChange={e => { set('pais', e.target.value); setCamposAuto(p => ({ ...p, pais: false })); }} className={camposAuto.pais ? 'pr-10' : ''} />
+                  {camposAuto.pais && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                </div>
               </LabelInput>
             </div>
             <div className="grid grid-cols-2 gap-3 mt-2">
