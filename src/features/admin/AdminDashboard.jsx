@@ -43,7 +43,6 @@ import FornecedorManager from './FornecedorManager';
 import ScheduleManager from './ScheduleManager';
 import CostReports from './CostReports';
 import DocumentsAdmin from './DocumentsAdmin';
-import DocumentTemplatesAdmin from '../../components/admin/DocumentTemplatesAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
 import AdminOverview from './AdminOverview';
 import AdminReports from './AdminReports';

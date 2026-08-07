@@ -112,9 +112,15 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   };
 
   const {
+    templates,
     generatedDocs,
+    loading: loadingTemplates,
     loadingDocs,
     saving,
+    handleUploadTemplate,
+    handleUpdateTemplate,
+    handleDeleteTemplate,
+    handleGenerateDocuments,
     handleApproveDocument,
     handleDeleteDoc: handleDeleteGenerated,
   } = useDocumentTemplates(clientSupabase);
@@ -458,7 +464,17 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
 
       {/* Conteúdo */}
       {activeGroup === 'arquivo' && activeSection === 'templates' && (
-        <DocumentTemplatesAdmin workers={workers} systemSettings={systemSettings} />
+        <DocumentTemplatesAdmin
+          workers={workers}
+          systemSettings={systemSettings}
+          templates={templates}
+          loading={loadingTemplates}
+          saving={saving}
+          onUploadTemplate={handleUploadTemplate}
+          onUpdateTemplate={handleUpdateTemplate}
+          onDeleteTemplate={handleDeleteTemplate}
+          onGenerateDocuments={handleGenerateDocuments}
+        />
       )}
       {activeGroup === 'faturas' && activeSection === 'importar' && (
         <FaturasAdmin />

@@ -1,23 +1,22 @@
 import React, { useState, useMemo } from 'react';
 import { FileText, Plus, Trash2, Eye, Edit3, Send, Loader2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { downloadTemplateBytes } from '../../utils/docxTemplateService';
 import DocxPreviewModal from '../common/DocxPreviewModal';
 import TemplateEditorModal from './templates/TemplateEditorModal';
 import TemplateGenerateModal from './templates/TemplateGenerateModal';
 
-export default function DocumentTemplatesAdmin({ workers = [] }) {
+export default function DocumentTemplatesAdmin({
+  workers = [],
+  templates = [],
+  loading = false,
+  saving = false,
+  onUploadTemplate,
+  onUpdateTemplate,
+  onDeleteTemplate,
+  onGenerateDocuments,
+}) {
   const { supabase, clients } = useApp();
-  const {
-    templates,
-    loading,
-    saving,
-    handleUploadTemplate,
-    handleUpdateTemplate,
-    handleDeleteTemplate,
-    handleGenerateDocuments,
-  } = useDocumentTemplates(supabase);
 
   const [showEditorModal, setShowEditorModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -63,7 +62,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
     setGenerating(true);
     setGenProgress({ current: 0, total: selectedWorkers.length, workerName: '', status: 'pending' });
     try {
-      const res = await handleGenerateDocuments(selectedTemplate, selectedWorkers, {
+      const res = await onGenerateDocuments(selectedTemplate, selectedWorkers, {
         workersById: workerById,
         clientId: selectedClientId || null,
         onProgress: (p) => setGenProgress(p),
@@ -135,7 +134,7 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
                       <button onClick={() => openTemplatePreview(t)} className="p-2 bg-white text-slate-500 rounded-xl border border-slate-100 hover:bg-slate-600 hover:text-white transition-all shadow-sm" title="Pré-visualizar"><Eye className="w-3 h-3" /></button>
                       <button onClick={() => openEditModal(t)} className="p-1.5 bg-white text-purple-600 rounded-lg border border-purple-100 hover:bg-purple-600 hover:text-white transition-all shadow-sm" title="Editar"><Edit3 className="w-3 h-3" /></button>
                       <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Gerar"><Send className="w-3 h-3" /></button>
-                      <button onClick={() => handleDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Apagar"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => onDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Apagar"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   </td>
                 </tr>
@@ -154,9 +153,9 @@ export default function DocumentTemplatesAdmin({ workers = [] }) {
           onSave={async (data) => {
             try {
               if (editingTemplate) {
-                await handleUpdateTemplate({ id: editingTemplate.id, oldDocxPath: editingTemplate.template_docx_path, ...data });
+                await onUpdateTemplate({ id: editingTemplate.id, oldDocxPath: editingTemplate.template_docx_path, ...data });
               } else {
-                await handleUploadTemplate(data);
+                await onUploadTemplate(data);
               }
               closeEditorModal();
             } catch (err) {
