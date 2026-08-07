@@ -38,7 +38,7 @@ const INPUT_DEFAULT = {
   incluirFerias: true,
   incluirNatal: true,
   subsAlimValorDia: '8.00',
-  subsAlimDias: '20',
+  subsAlimDias: '22',
   subsAlimTipo: 'dinheiro',
   tabelaKey: 'tabelaI',
   nDependentes: '0',
@@ -205,6 +205,11 @@ export default function RecibosCalculadora() {
       .then(({ data }) => setWorkerRateHistory(data || []));
   }, [supabase]);
 
+  // Limpa contabData ao mudar mês para evitar mostrar valores do mês anterior enquanto o fetch não termina
+  useEffect(() => {
+    setContabData([]);
+  }, [inputs.mes, inputs.ano]);
+
   // Carrega contabilidade_mensal reactivamente ao mudar o mês
   useEffect(() => {
     if (!supabase) return;
@@ -227,12 +232,25 @@ export default function RecibosCalculadora() {
       }, 0);
   }, [logs, workers, workerRateHistory]);
 
-  // Sincroniza bruto alvo com o custo do mês sempre que muda: trabalhador, mês, ano ou histórico de taxas
+  // Ref para aceder à versão mais recente de calcularCustoMes sem re-disparar o efeito quando logs actualizam em background
+  const calcularCustoMesRef = useRef(calcularCustoMes);
+  useEffect(() => { calcularCustoMesRef.current = calcularCustoMes; }, [calcularCustoMes]);
+
+  // Sincroniza brutoAlvo ao mudar trabalhador ou mês; não sobrescreve edições manuais quando logs sincronizam
   useEffect(() => {
     if (!selectedWorkerId) return;
-    const custo = calcularCustoMes(selectedWorkerId, inputs.mes, inputs.ano);
-    if (custo > 0) setInputs(prev => ({ ...prev, brutoAlvo: custo.toFixed(2) }));
-  }, [selectedWorkerId, inputs.mes, inputs.ano, calcularCustoMes]);
+    const custo = calcularCustoMesRef.current(selectedWorkerId, inputs.mes, inputs.ano);
+    setInputs(prev => ({ ...prev, brutoAlvo: custo > 0 ? custo.toFixed(2) : '' }));
+  }, [selectedWorkerId, inputs.mes, inputs.ano]);
+
+  // Sincroniza subsAlimDias com contabilidade_mensal ao mudar trabalhador ou mês
+  useEffect(() => {
+    if (!selectedWorkerId) return;
+    const contabRow = contabData.find(r => r.worker_id === selectedWorkerId);
+    if (contabRow?.dias_trabalhados != null) {
+      setInputs(prev => ({ ...prev, subsAlimDias: String(contabRow.dias_trabalhados) }));
+    }
+  }, [selectedWorkerId, inputs.mes, inputs.ano, contabData]);
 
   const set = useCallback((field, value) => {
     setInputs(prev => ({ ...prev, [field]: value }));
@@ -527,12 +545,12 @@ export default function RecibosCalculadora() {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    // Resíduo → somar a A008 Prémios
+    // Resíduo → definir A008 Prémios (substituir, não acumular)
     const totalAjudas        = Math.round(bestTotal * valorDiario * 100) / 100;
     const valorNecessarioFinal = ajudaNecessaria + subsAlimMapa;
     const residuo             = Math.round((valorNecessarioFinal - totalAjudas) * 100) / 100;
     if (residuo > 0.01) {
-      set('premios', String((n(inputs.premios) + residuo).toFixed(2)));
+      set('premios', residuo.toFixed(2));
     }
 
     setMapaRows(rows);
@@ -547,6 +565,8 @@ export default function RecibosCalculadora() {
       if (mes > 12) { mes = 1;  ano += 1; }
       return { ...prev, mes: String(mes), ano: String(ano) };
     });
+    setMapaRows([]);
+    setAutoFillInfo(null);
   }
 
   function gerarReciboPDF() {
