@@ -782,6 +782,61 @@ export default function RecibosCalculadora() {
     URL.revokeObjectURL(url);
   }
 
+  function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr) {
+    const vencBase         = parseFloat(w.vencimento_base)         || 0;
+    const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
+    const baseParams = {
+      vencimentoBase: vencBase, horasSemana: 40, premios: 0,
+      he1: 0, he2: 0, incluirFerias: true, incluirNatal: true,
+      subsAlimValorDia, subsAlimDias, subsAlimTipo: 'cartao',
+      tabelaKey: w.tabela_irs || 'tabelaI',
+      nDependentes: w.n_dependentes ?? 0,
+      brutoAlvo: brutoAlvo || vencBase,
+      territorio: 'internacional', funcao: 'geral', ano: anoNum,
+    };
+    const rc0             = calcularRecibo(baseParams);
+    const valorDiario     = valorDiarioLegal('internacional', 'geral');
+    const ajudaNecessaria = rc0.ajudaCustoNecessaria;
+    if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, premios: 0 };
+
+    const dataInicio = `${mesStr}-01`;
+    function contarDiasUteis(nDias) {
+      let count = 0;
+      const d = new Date(dataInicio + 'T00:00:00');
+      for (let i = 0; i < nDias; i++) {
+        const dow = d.getDay();
+        if (dow >= 1 && dow <= 5) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    }
+
+    let subsAlimMapa = subsAlimValorDia > 0 ? rc0.subsAlimTotal : 0;
+    let bestF = 0, bestDias = 0, bestTotal = 0, nLinhas = 1;
+    for (let iter = 0; iter < 6; iter++) {
+      const valorNec = ajudaNecessaria + subsAlimMapa;
+      if (valorNec <= 0) break;
+      const unidades = valorNec / valorDiario;
+      bestF = 0; bestDias = 0; bestTotal = 0;
+      for (const f of [0.50, 0.25, 0.00]) {
+        const dias = Math.floor(unidades - f);
+        if (dias < 0) continue;
+        const total = dias + f;
+        if (total <= unidades + 1e-9 && total > bestTotal) { bestF = f; bestDias = dias; bestTotal = total; }
+      }
+      nLinhas = bestDias + 1;
+      const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(nLinhas) * subsAlimValorDia : 0;
+      if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+      subsAlimMapa = novoSubsAlim;
+    }
+
+    const totalAjudas   = Math.round(bestTotal * valorDiario * 100) / 100;
+    const valorNecFinal = ajudaNecessaria + subsAlimMapa;
+    const premios       = Math.max(0, Math.round((valorNecFinal - totalAjudas) * 100) / 100);
+    const rc = premios > 0.01 ? calcularRecibo({ ...baseParams, premios }) : rc0;
+    return { rc, premios };
+  }
+
   async function gerarRecibosBatchPDF() {
     const mesNum    = parseInt(inputs.mes, 10);
     const mesStr    = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
@@ -811,23 +866,7 @@ export default function RecibosCalculadora() {
       }, 0);
       const contabRow    = contabRows.find(cr => cr.worker_id === w.id);
       const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
-      const rc = calcularRecibo({
-        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
-        horasSemana:      40,
-        premios:          0,
-        he1: 0, he2: 0,
-        incluirFerias:    true,
-        incluirNatal:     true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo:     'cartao',
-        tabelaKey:        w.tabela_irs || 'tabelaI',
-        nDependentes:     w.n_dependentes ?? 0,
-        brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
-        territorio:       'internacional',
-        funcao:           'geral',
-        ano:              anoNum,
-      });
+      const { rc, premios: premiosBatch } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
 
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
@@ -865,6 +904,7 @@ export default function RecibosCalculadora() {
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
       ];
       if (rc.subsFerias > 0)           linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
+      if (premiosBatch > 0.01)         linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
       if (rc.subsNatal > 0)            linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
       if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(rc.ajudaCustoNecessaria), '']);
       linhas.push(['T001', `IRS (venc. ${eur(rc.incidenciaRegular)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(rc.irsTotal)]);
@@ -939,23 +979,7 @@ export default function RecibosCalculadora() {
       }, 0);
       const contabRow    = contabRows.find(cr => cr.worker_id === w.id);
       const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
-      const rc = calcularRecibo({
-        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
-        horasSemana:      40,
-        premios:          0,
-        he1: 0, he2: 0,
-        incluirFerias:    true,
-        incluirNatal:     true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo:     'cartao',
-        tabelaKey:        w.tabela_irs || 'tabelaI',
-        nDependentes:     w.n_dependentes ?? 0,
-        brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
-        territorio:       'internacional',
-        funcao:           'geral',
-        ano:              anoNum,
-      });
+      const { rc, premios: premiosBatch } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
 
       const linhas = [
         ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
@@ -963,6 +987,7 @@ export default function RecibosCalculadora() {
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, (parseFloat(w.subsidio_alimentacao_dia) || 0).toFixed(2), rc.subsAlimTotal.toFixed(2), ''],
       ];
       if (rc.subsFerias > 0)           linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
+      if (premiosBatch > 0.01)         linhas.push(['A008', 'Prémios / Bónus', '', '', premiosBatch.toFixed(2), '']);
       if (rc.subsNatal > 0)            linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
       if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', rc.ajudaCustoNecessaria.toFixed(2), '']);
       linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
