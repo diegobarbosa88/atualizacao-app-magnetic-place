@@ -465,8 +465,11 @@ export default function RecibosCalculadora() {
     if (isCessacao && mesParcialDados) {
       const diasNG = parseInt(diasFeriasNaoGozadas, 10) || 0;
       const feriasNGEur = parseFloat((diasNG * mesParcialDados.vencBaseOriginal / 30).toFixed(2));
-      // A010 (férias não gozadas) + A011 (subsídio sobre férias não gozadas) = 2×
-      abonosCessacao += feriasNGEur * 2;
+      // A010 — compensação pelos dias de descanso não usufruídos (sempre incluída)
+      abonosCessacao += feriasNGEur;
+      // A011 — subsídio sobre férias não gozadas: só quando duodécimos NÃO estão ativos,
+      // caso contrário o subsídio já foi liquidado mensalmente via A004
+      if (!inputs.incluirFerias) abonosCessacao += feriasNGEur;
       // A004P / A021P — subsídios proporcionais apenas quando duodécimos NÃO estão ativos
       if (!inputs.incluirFerias || !inputs.incluirNatal) {
         const w = workers?.find(x => x.id === selectedWorkerId);
@@ -708,6 +711,8 @@ export default function RecibosCalculadora() {
     );
     return {
       ...base,
+      // Quando duodécimos ativos: subsídio já liquidado mensalmente, não duplicar
+      subsidioSobreFeriasNaoGozadas: inputs.incluirFerias ? 0 : base.subsidioSobreFeriasNaoGozadas,
       subsFeriasProp: inputs.incluirFerias ? 0 : base.subsFeriasProp,
       subsNatalProp:  inputs.incluirNatal  ? 0 : base.subsNatalProp,
       duodecimosFeriasAtivos: inputs.incluirFerias,
@@ -2378,8 +2383,8 @@ ${hdrRow}${bodyRows}${totRow}
             <Card className="p-5 border-rose-200">
               <SectionHeader n="★" label="Acerto de Cessação" />
               <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-                {(inputs.incluirFerias || inputs.incluirNatal)
-                  ? 'Com duodécimos ativos, o subsídio de férias/Natal já foi liquidado mensalmente — o acerto cobre apenas os dias de férias não gozados (se aplicável).'
+                {inputs.incluirFerias
+                  ? 'Com duodécimos de subsídio de férias ativos, apenas os dias de férias não gozados são compensados aqui (A010) — o subsídio de férias correspondente já foi liquidado mensalmente via A004.'
                   : 'Rubricas calculadas automaticamente para inclusão no recibo do mês de cessação. IRS e SS incidem sobre estes valores pelo método normal.'}
               </p>
 
@@ -2431,7 +2436,12 @@ ${hdrRow}${bodyRows}${totRow}
                   {acertoCessacao.feriasNaoGozadasEur > 0 && (
                     <>
                       <div className="flex justify-between"><span className="font-bold">Férias não gozadas ({diasFeriasNaoGozadas}d)</span><span>{acertoCessacao.feriasNaoGozadasEur.toFixed(2)}€</span></div>
-                      <div className="flex justify-between"><span className="font-bold">Subsídio s/ férias não gozadas</span><span>{acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2)}€</span></div>
+                      {acertoCessacao.subsidioSobreFeriasNaoGozadas > 0
+                        ? <div className="flex justify-between"><span className="font-bold">Subsídio s/ férias não gozadas</span><span>{acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2)}€</span></div>
+                        : acertoCessacao.duodecimosFeriasAtivos && (
+                            <div className="flex justify-between text-slate-400 italic text-[10px]"><span>Subsídio s/ férias não gozadas</span><span>0,00€ — já liquidado via A004</span></div>
+                          )
+                      }
                     </>
                   )}
                   {acertoCessacao.subsFeriasProp > 0

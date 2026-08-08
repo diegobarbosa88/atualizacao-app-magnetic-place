@@ -113,3 +113,57 @@ describe('calcularRecibo — abonosCessacao', () => {
     expect(r.liquido).toBeCloseTo(r.totalAbonos - r.irsTotal - r.ssTrabalhador, 2);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Regressão: A011 ausente quando duodécimos de sub. férias ativos
+// ─────────────────────────────────────────────────────────────
+
+describe('calcularRecibo — A011 com duodécimos activos (Antonio Augusto Lima)', () => {
+  // Cenário: cessação 26 Junho, vencBase 1000€, diasFeriasNaoGozadas = 32
+  // Com duodécimos ativos: abonosCessacao = A010 APENAS (sem A011)
+  const feriasNG = parseFloat((32 * 1000 / 30).toFixed(2)); // 1066.67
+
+  it('duodécimos ATIVOS — abonosCessacao inclui só A010 (não A011)', () => {
+    const rComA011 = calcularRecibo({
+      vencimentoBase: 866.67, vencBaseContratual: 1000,
+      abonosCessacao: feriasNG * 2, // incorreto: A010 + A011
+      incluirFerias: true, incluirNatal: true,
+      brutoAlvo: 5000, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+    });
+    const rSemA011 = calcularRecibo({
+      vencimentoBase: 866.67, vencBaseContratual: 1000,
+      abonosCessacao: feriasNG, // correto: só A010
+      incluirFerias: true, incluirNatal: true,
+      brutoAlvo: 5000, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+    });
+    // Sem A011 → A082 é maior (pela diferença de feriasNG)
+    expect(rSemA011.ajudaCustoNecessaria).toBeCloseTo(rComA011.ajudaCustoNecessaria + feriasNG, 1);
+    // Total Abonos = brutoAlvo em ambos os casos
+    expect(rSemA011.totalAbonos).toBeCloseTo(5000, 2);
+    expect(rComA011.totalAbonos).toBeCloseTo(5000, 2);
+  });
+
+  it('duodécimos ATIVOS — totalAbonos = brutoAlvo sem A011, liquido = brutoAlvo − IRS − SS', () => {
+    const r = calcularRecibo({
+      vencimentoBase: 866.67, vencBaseContratual: 1000,
+      abonosCessacao: feriasNG, // só A010
+      incluirFerias: true, incluirNatal: true,
+      brutoAlvo: 5000, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+    });
+    expect(r.totalAbonos).toBeCloseTo(5000, 2);
+    expect(r.liquido).toBeCloseTo(r.totalAbonos - r.irsTotal - r.ssTrabalhador, 2);
+  });
+
+  it('duodécimos NÃO ATIVOS — abonosCessacao inclui A010 + A011 (2×feriasNG)', () => {
+    const r = calcularRecibo({
+      vencimentoBase: 866.67, vencBaseContratual: 1000,
+      abonosCessacao: feriasNG * 2, // A010 + A011
+      incluirFerias: false, incluirNatal: false,
+      brutoAlvo: 5000, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+    });
+    expect(r.totalAbonos).toBeCloseTo(5000, 2);
+    expect(r.liquido).toBeCloseTo(r.totalAbonos - r.irsTotal - r.ssTrabalhador, 2);
+    // Sem duodécimos (subsFerias=0, subsNatal=0): A082 = 5000 − 866.67 − 2×feriasNG
+    expect(r.ajudaCustoNecessaria).toBeCloseTo(5000 - 866.67 - feriasNG * 2, 1);
+  });
+});
