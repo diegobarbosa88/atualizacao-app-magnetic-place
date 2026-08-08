@@ -762,8 +762,12 @@ export default function RecibosCalculadora() {
     return { diasNaoTrab, horasNaoTrab, valor, label };
   }, [mesParcialDados, inputs.horasSemana]);
 
-  // D001 é exibido como linha informativa em Descontos — A082 é reduzido em conformidade para que
-  // Total Abonos (display) = BrutoAlvo e Líquido = BrutoAlvo − IRS − SS
+  // D001 ("Desconto dias por cessação/início de contrato") — LINHA PURAMENTE INFORMATIVA.
+  // Mostra ao trabalhador porque é que A001 aparece com o valor contratual completo num mês parcial.
+  // NÃO representa uma dedução real: A082 é reduzido exatamente em igual montante, mantendo:
+  //   Total Abonos (display) = Bruto Alvo SEMPRE
+  //   Total Descontos        = T001 (IRS) + T003 (SS) APENAS — D001 NUNCA entra
+  //   Líquido a Receber      = Bruto Alvo − IRS − SS
   const descontoD001        = descontoDiasParcial?.valor ?? 0;
   const ajudasDisplayRecibo = Math.max(0, ajudasDisplay - descontoD001);
 
