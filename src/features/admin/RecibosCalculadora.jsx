@@ -16,7 +16,7 @@ import {
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
-import { calcMesParcial, calcAcertoCessacao, calcDiasFeriasAnoAdmissao } from '../../lib/payroll/mesParcial.js';
+import { calcMesParcial, calcAcertoCessacao, calcDiasFeriasAnoAdmissao, calcFeriasVencidas } from '../../lib/payroll/mesParcial.js';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -195,6 +195,7 @@ export default function RecibosCalculadora() {
   const [mesParcialDados, setMesParcialDados] = useState(null);
   // null | { tipo, diaInicio, diaFim, diasTrabalhados, vencBaseOriginal, vencProporcional, fator }
   const [diasFeriasNaoGozadas, setDiasFeriasNaoGozadas] = useState('0');
+  const [diasFeriasGozados,    setDiasFeriasGozados]    = useState('0');
   const mesParcialKeyRef  = useRef('');
   const mesParcialDadosRef = useRef(null); // espelho síncrono de mesParcialDados
   let rowCounter = mapaRows.length;
@@ -400,6 +401,7 @@ export default function RecibosCalculadora() {
     mesParcialDadosRef.current = null;
     setMesParcialDados(null);
     setDiasFeriasNaoGozadas('0');
+    setDiasFeriasGozados('0');
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     setBrutoAlvoEditado(false);
     if (!id) {
@@ -663,27 +665,53 @@ export default function RecibosCalculadora() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workers, logs, clients, workerRateHistory, feriadoMunicipal, inputs.mes, inputs.ano]);
 
-  // Rubricas do acerto de cessação (calculadas quando cessação cai no mês em processamento)
+  // Rubricas do acerto de cessação — quando duodécimos estão ativos, sub. férias/Natal já foram
+  // pagos mensalmente e não devem ser duplicados no acerto.
   const acertoCessacao = useMemo(() => {
     if (!mesParcialDados || (mesParcialDados.tipo !== 'fim' && mesParcialDados.tipo !== 'ambos')) return null;
     const w = workers?.find(x => x.id === selectedWorkerId);
     if (!w) return null;
-    return calcAcertoCessacao(
+    const base = calcAcertoCessacao(
       mesParcialDados.vencBaseOriginal,
       w.dataInicio || null,
       w.dataFim    || null,
       parseInt(inputs.ano, 10),
       parseInt(diasFeriasNaoGozadas, 10) || 0,
     );
-  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano, diasFeriasNaoGozadas]);
+    return {
+      ...base,
+      subsFeriasProp: inputs.incluirFerias ? 0 : base.subsFeriasProp,
+      subsNatalProp:  inputs.incluirNatal  ? 0 : base.subsNatalProp,
+      duodecimosFeriasAtivos: inputs.incluirFerias,
+      duodecimosNatalAtivos:  inputs.incluirNatal,
+    };
+  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano, diasFeriasNaoGozadas,
+      inputs.incluirFerias, inputs.incluirNatal]);
 
-  // Informação sobre dias de férias no ano de admissão (apenas informativa)
+  // Informação sobre dias de férias no ano de admissão (usada no banner do mês parcial)
   const feriasAnoAdmissao = useMemo(() => {
     if (!mesParcialDados || (mesParcialDados.tipo !== 'inicio' && mesParcialDados.tipo !== 'ambos')) return null;
     const w = workers?.find(x => x.id === selectedWorkerId);
     if (!w) return null;
     return calcDiasFeriasAnoAdmissao(w.dataInicio || null, w.dataFim || null, parseInt(inputs.ano, 10));
   }, [mesParcialDados, selectedWorkerId, workers, inputs.ano]);
+
+  // Férias vencidas no ano para o trabalhador em cessação (Art. 238º/239º/245º)
+  const feriasVencidas = useMemo(() => {
+    if (!mesParcialDados || (mesParcialDados.tipo !== 'fim' && mesParcialDados.tipo !== 'ambos')) return null;
+    const w = workers?.find(x => x.id === selectedWorkerId);
+    if (!w?.dataInicio) return null;
+    return calcFeriasVencidas(w.dataInicio, w.dataFim || null, parseInt(inputs.ano, 10));
+  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano]);
+
+  // Auto-preenche "Dias não gozadas" com o saldo calculado; editável pelo utilizador
+  useEffect(() => {
+    if (!feriasVencidas) return;
+    const gozados = parseFloat(diasFeriasGozados) || 0;
+    const saldo = Math.max(0, parseFloat((feriasVencidas.diasVencidos - gozados).toFixed(1)));
+    setDiasFeriasNaoGozadas(String(saldo));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feriasVencidas, diasFeriasGozados]);
 
   // Desconto por dias não trabalhados — TOConline: A001 fica cheio, esta é a linha de desconto separada
   const descontoDiasParcial = useMemo(() => {
@@ -887,6 +915,7 @@ export default function RecibosCalculadora() {
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     mesParcialKeyRef.current   = '';
+    setDiasFeriasGozados('0');
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     setInputs(prev => ({ ...prev, premios: '0' }));
   }
@@ -2323,19 +2352,54 @@ ${hdrRow}${bodyRows}${totRow}
             <Card className="p-5 border-rose-200">
               <SectionHeader n="★" label="Acerto de Cessação" />
               <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-                Rubricas calculadas automaticamente para inclusão no recibo do mês de cessação. IRS e SS incidem sobre estes valores pelo método normal.
+                {(inputs.incluirFerias || inputs.incluirNatal)
+                  ? 'Com duodécimos ativos, o subsídio de férias/Natal já foi liquidado mensalmente — o acerto cobre apenas os dias de férias não gozados (se aplicável).'
+                  : 'Rubricas calculadas automaticamente para inclusão no recibo do mês de cessação. IRS e SS incidem sobre estes valores pelo método normal.'}
               </p>
+
+              {/* Férias vencidas — cálculo automático */}
+              {feriasVencidas && (
+                <div className="space-y-1 text-xs bg-amber-50 rounded-xl p-3 border border-amber-200 mb-3">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-amber-800">Férias vencidas neste ano</span>
+                    <span className="font-bold text-amber-800">{feriasVencidas.diasVencidos} dias</span>
+                  </div>
+                  <p className="text-[10px] text-amber-700">{feriasVencidas.formula}</p>
+                  <p className="text-[9px] text-amber-600 leading-relaxed">
+                    ⚠️ Não considera reduções por faltas injustificadas (Art. 238º n.º 2) nem parentalidade/doença — confirmar com a contabilista.
+                  </p>
+                </div>
+              )}
+
+              {/* Inputs: dias gozados + dias não gozadas */}
               <div className="grid grid-cols-2 gap-3 mb-3">
-                <LabelInput label="Dias de férias não gozadas" hint="Do ano corrente e/ou anterior">
+                {feriasVencidas && (
+                  <LabelInput label="Dias já gozados este ano" hint="Do módulo Horários ou registo manual">
+                    <TextInput
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={diasFeriasGozados}
+                      onChange={e => setDiasFeriasGozados(e.target.value)}
+                    />
+                  </LabelInput>
+                )}
+                <LabelInput
+                  label="Dias de férias não gozadas"
+                  hint={feriasVencidas ? 'Auto-calculado (vencidos − gozados); editável' : 'Do ano corrente e/ou anterior'}
+                >
                   <TextInput
                     type="number"
                     min="0"
+                    step="0.5"
                     value={diasFeriasNaoGozadas}
                     onChange={e => setDiasFeriasNaoGozadas(e.target.value)}
                   />
                 </LabelInput>
-                <div />
+                {!feriasVencidas && <div />}
               </div>
+
+              {/* Resumo do acerto */}
               {acertoCessacao && (
                 <div className="space-y-1 text-xs bg-rose-50 rounded-xl p-3 border border-rose-100">
                   {acertoCessacao.feriasNaoGozadasEur > 0 && (
@@ -2344,8 +2408,18 @@ ${hdrRow}${bodyRows}${totRow}
                       <div className="flex justify-between"><span className="font-bold">Subsídio s/ férias não gozadas</span><span>{acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2)}€</span></div>
                     </>
                   )}
-                  <div className="flex justify-between"><span className="font-bold">Sub. Férias proporcional</span><span>{acertoCessacao.subsFeriasProp.toFixed(2)}€</span></div>
-                  <div className="flex justify-between"><span className="font-bold">Sub. Natal proporcional</span><span>{acertoCessacao.subsNatalProp.toFixed(2)}€</span></div>
+                  {acertoCessacao.subsFeriasProp > 0
+                    ? <div className="flex justify-between"><span className="font-bold">Sub. Férias proporcional</span><span>{acertoCessacao.subsFeriasProp.toFixed(2)}€</span></div>
+                    : acertoCessacao.duodecimosFeriasAtivos && (
+                        <div className="flex justify-between text-slate-400 italic text-[10px]"><span>Sub. Férias proporcional</span><span>0,00€ — já liquidado via duodécimos</span></div>
+                      )
+                  }
+                  {acertoCessacao.subsNatalProp > 0
+                    ? <div className="flex justify-between"><span className="font-bold">Sub. Natal proporcional</span><span>{acertoCessacao.subsNatalProp.toFixed(2)}€</span></div>
+                    : acertoCessacao.duodecimosNatalAtivos && (
+                        <div className="flex justify-between text-slate-400 italic text-[10px]"><span>Sub. Natal proporcional</span><span>0,00€ — já liquidado via duodécimos</span></div>
+                      )
+                  }
                   <p className="text-[10px] text-rose-600 pt-1 border-t border-rose-200 leading-relaxed">
                     Proporcional: {acertoCessacao.descricao}
                   </p>

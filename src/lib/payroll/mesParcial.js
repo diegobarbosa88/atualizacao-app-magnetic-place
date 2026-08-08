@@ -116,6 +116,75 @@ export function calcAcertoCessacao(vencimentoBase, dataInicio, dataFim, ano, dia
 }
 
 /**
+ * Cálculo completo dos dias de férias vencidos num dado ano civil, cobrindo os três cenários
+ * do Código do Trabalho (Lei n.º 7/2009):
+ *   - Art. 239º  — ano de admissão
+ *   - Art. 238º  — anos civis completos seguintes (22 dias a 1 de Janeiro)
+ *   - Art. 245º  — ano de cessação (não coincide com o de admissão): 22 dias Jan 1 + proporcional
+ *
+ * @param {string}      dataInicio  'YYYY-MM-DD'
+ * @param {string|null} dataFim     'YYYY-MM-DD' ou null
+ * @param {number}      ano
+ * @returns {{ regra, diasVencidos, formula, ...detalhes } | null}
+ */
+export function calcFeriasVencidas(dataInicio, dataFim, ano) {
+  if (!dataInicio) return null;
+  const anoAdmissao = parseInt(dataInicio.slice(0, 4), 10);
+  const anoCessacao = dataFim ? parseInt(dataFim.slice(0, 4), 10) : null;
+
+  if (anoAdmissao === ano) {
+    // Art. 239º — único ano de admissão: 2 dias por mês completo trabalhado
+    const info = calcDiasFeriasAnoAdmissao(dataInicio, dataFim, ano);
+    if (!info) return null;
+    return {
+      regra: 'admissao',
+      diasVencidos: info.diasFerias,
+      mesesCompletos: info.mesesCompletos,
+      limitado: info.limitado,
+      diasJan1: 0,
+      diasProporcionaisCessacao: 0,
+      formula: info.limitado
+        ? `Art. 239º: 2 × ${info.mesesCompletos}m = ${info.mesesCompletos * 2}d → limitado a 20d`
+        : `Art. 239º: 2 × ${info.mesesCompletos}m = ${info.diasFerias}d`,
+    };
+  }
+
+  const diasJan1 = 22;
+
+  if (anoCessacao !== ano) {
+    // Art. 238º — ano civil completo (nem admissão nem cessação): 22 dias vencidos a 1 Jan
+    return {
+      regra: 'completo',
+      diasVencidos: diasJan1,
+      diasJan1,
+      diasProporcionaisCessacao: 0,
+      formula: 'Art. 238º: 22 dias vencidos a 1 de Janeiro',
+    };
+  }
+
+  // Art. 245º — ano de cessação (não é o ano de admissão)
+  // 22 dias vencidos a 1 Jan (serviço do ano anterior) + proporcional pelo tempo trabalhado este ano
+  const mesF = parseInt(dataFim.slice(5, 7), 10);
+  const diaFRaw = parseInt(dataFim.slice(8, 10), 10);
+  const diaF = Math.min(diaFRaw, 30);
+  const mesesCompletos = mesF - 1; // meses completos de Jan até (mesF-1)
+  const fator = parseFloat((mesesCompletos + diaF / 30).toFixed(4));
+  const diasProporcionaisCessacao = parseFloat(((22 / 12) * fator).toFixed(2));
+  const diasVencidos = parseFloat((diasJan1 + diasProporcionaisCessacao).toFixed(2));
+
+  return {
+    regra: 'cessacao',
+    diasVencidos,
+    diasJan1,
+    mesesCompletos,
+    diasFimMes: diaF,
+    diasProporcionaisCessacao,
+    fator,
+    formula: `Art. 245º: 22d (Jan 1) + 22/12 × (${mesesCompletos}m + ${diaF}d) = 22 + ${diasProporcionaisCessacao}d = ${diasVencidos}d`,
+  };
+}
+
+/**
  * Dias de férias a que o trabalhador tem direito no ano de admissão.
  * Regra: 2 dias úteis por mês completo trabalhado, máximo 20 dias se ≥ 10 meses.
  *
