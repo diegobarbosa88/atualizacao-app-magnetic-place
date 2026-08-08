@@ -79,7 +79,7 @@ function InputField({ label, error, icon: Icon, children }) {
 function Inp({ error, ...props }) {
   return (
     <input
-      className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-300
+      className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-300 normal-case
         ${error
           ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-2 focus:ring-rose-100'
           : 'border-slate-200 bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50'
@@ -92,7 +92,7 @@ function Inp({ error, ...props }) {
 function Sel({ children, ...props }) {
   return (
     <select
-      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none"
+      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none normal-case"
       {...props}
     >
       {children}
@@ -107,7 +107,7 @@ function InfoBox({ color, children }) {
     slate:  'bg-slate-50 border-slate-200 text-slate-600',
   }[color] || 'bg-slate-50 border-slate-200 text-slate-600';
   return (
-    <div className={`rounded-xl border px-4 py-3 text-xs font-medium leading-relaxed ${s}`}>
+    <div className={`rounded-xl border px-4 py-3 text-xs font-medium leading-relaxed normal-case ${s}`}>
       {children}
     </div>
   );
@@ -138,10 +138,10 @@ function BrandPanel({ step }) {
           </div>
         </div>
 
-        <h1 className="text-white font-black text-lg leading-snug mb-3">
+        <p className="text-white font-black text-lg leading-snug mb-3 normal-case">
           Ficha de Colaborador
-        </h1>
-        <p className="text-slate-400 text-sm font-medium leading-relaxed">
+        </p>
+        <p className="text-slate-400 text-sm font-medium leading-relaxed normal-case">
           Preencha os seus dados para concluir o processo de registo.
           A informação é tratada de forma confidencial.
         </p>
@@ -170,7 +170,7 @@ function BrandPanel({ step }) {
       <div className="mt-10 pt-6 border-t border-white/10">
         <div className="flex items-center gap-2 text-slate-500">
           <Lock size={12} />
-          <span className="text-[10px] font-medium">Dados protegidos — RGPD</span>
+          <span className="text-[10px] font-medium normal-case">Dados protegidos — RGPD</span>
         </div>
       </div>
     </div>
@@ -277,7 +277,7 @@ export default function OnboardingForm({ token }) {
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#0F1F3D' }}>
       <div className="text-center space-y-4">
         <Loader2 className="text-indigo-400 animate-spin mx-auto" size={36} />
-        <p className="text-slate-400 text-sm font-medium">A verificar o convite…</p>
+        <p className="text-slate-400 text-sm font-medium normal-case">A verificar o convite…</p>
       </div>
     </div>
   );
@@ -288,16 +288,16 @@ export default function OnboardingForm({ token }) {
         <div className="text-center mb-8">
           <img src="/MAGNETIC (3).png" alt="Logo" className="h-12 w-12 mx-auto mb-4 object-contain"
             onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }} />
-          <p className="text-slate-400 text-sm font-medium">Magnetic Place Unipessoal, Lda</p>
+          <p className="text-slate-400 text-sm font-medium normal-case">Magnetic Place Unipessoal, Lda</p>
         </div>
         <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
           <div className="w-14 h-14 bg-rose-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <AlertCircle className="text-rose-500" size={28} />
           </div>
-          <h2 className="font-black text-slate-800 text-xl mb-3" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+          <p className="font-black text-slate-800 text-xl mb-3 normal-case">
             Link inválido ou expirado
-          </h2>
-          <p className="text-slate-500 text-sm leading-relaxed">
+          </p>
+          <p className="text-slate-500 text-sm leading-relaxed normal-case">
             Este link já foi utilizado ou expirou. Contacte a empresa para receber um novo convite.
           </p>
         </div>
@@ -316,15 +316,15 @@ export default function OnboardingForm({ token }) {
           <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
             <CheckCircle className="text-emerald-500" size={32} />
           </div>
-          <h2 className="font-black text-slate-800 text-2xl mb-3" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+          <p className="font-black text-slate-800 text-2xl mb-3 normal-case">
             Enviado com sucesso!
-          </h2>
-          <p className="text-slate-500 text-sm leading-relaxed mb-6">
+          </p>
+          <p className="text-slate-500 text-sm leading-relaxed mb-6 normal-case">
             Os seus dados foram recebidos e serão revistos pela equipa da Magnetic Place.
             Após aprovação, receberá as informações de acesso.
           </p>
           <div className="bg-slate-50 rounded-xl px-4 py-3">
-            <p className="text-slate-400 text-xs font-medium">Pode fechar esta janela.</p>
+            <p className="text-slate-400 text-xs font-medium normal-case">Pode fechar esta janela.</p>
           </div>
         </div>
       </div>
@@ -475,7 +475,7 @@ export default function OnboardingForm({ token }) {
                       className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </div>
-                  <span className="text-xs text-slate-600 leading-relaxed">
+                  <span className="text-xs text-slate-600 leading-relaxed normal-case">
                     Autorizo a <strong className="text-slate-800">Magnetic Place Unipessoal, Lda</strong> a tratar os meus dados pessoais
                     para fins de processamento salarial e cumprimento de obrigações legais, nos termos do Regulamento Geral de Proteção de Dados (RGPD).
                   </span>
@@ -553,7 +553,7 @@ function RRow({ label, value, mono }) {
   return (
     <div className="flex items-start gap-3 py-2.5">
       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide w-20 shrink-0 pt-0.5">{label}</span>
-      <span className={`text-sm text-slate-700 break-all ${mono ? 'font-mono font-medium' : 'font-semibold'}`}>{value}</span>
+      <span className={`text-sm text-slate-700 break-all normal-case ${mono ? 'font-mono font-medium' : 'font-semibold'}`}>{value}</span>
     </div>
   );
 }
