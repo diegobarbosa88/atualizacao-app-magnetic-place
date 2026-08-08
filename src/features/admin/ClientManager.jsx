@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X, Building2
 } from 'lucide-react';
 import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';

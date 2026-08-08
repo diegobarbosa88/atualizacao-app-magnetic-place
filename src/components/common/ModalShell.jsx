@@ -27,7 +27,7 @@ export default function ModalShell({ isOpen, onClose, title, subtitle, icon, acc
         className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full ${sizeClass} flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300`}
         style={{ maxHeight: 'min(92dvh, 92vh)' }}
       >
-        <div className={`flex items-center gap-3 ${a.header} border-b px-5 py-4 shrink-0`}>
+        <div className={`flex items-center gap-3 ${a.header} border-b px-4 py-3 shrink-0`}>
           <div className={`w-8 h-8 rounded-xl ${a.iconBg} flex items-center justify-center shrink-0`}>
             <span className={a.iconColor}>{icon}</span>
           </div>
