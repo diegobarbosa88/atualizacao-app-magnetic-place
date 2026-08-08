@@ -167,3 +167,51 @@ describe('calcularRecibo — A011 com duodécimos activos (Antonio Augusto Lima)
     expect(r.ajudaCustoNecessaria).toBeCloseTo(5000 - 866.67 - feriasNG * 2, 1);
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// A010 — tratamento fiscal: taxa IRS regular (não taxaSubsidios), SS sempre incluído
+// Regressão: Antonio Augusto Lima — Férias Não Gozadas = 500€
+// ─────────────────────────────────────────────────────────────
+
+describe('calcularRecibo — A010 fiscal: base IRS regular e SS (Antonio Augusto Lima)', () => {
+  // cessação 26 Jun, vencBase 1000€, proporcional 866.67€, duodécimos ativos
+  // abonosCessacao = 500€ (A010 apenas)
+  const feriasNG = 500;
+  const base = {
+    vencimentoBase: 866.67, vencBaseContratual: 1000,
+    abonosCessacao: feriasNG,
+    incluirFerias: true, incluirNatal: true,
+    brutoAlvo: 5000, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+  };
+
+  it('A010 entra em incidenciaRegular — base IRS à taxa regular', () => {
+    const r = calcularRecibo(base);
+    // incidenciaRegular = vencProporcional + abonosCessacao (A010)
+    expect(r.incidenciaRegular).toBeCloseTo(866.67 + feriasNG, 1);
+  });
+
+  it('A010 entra em incidenciaSS — base Segurança Social', () => {
+    const r = calcularRecibo(base);
+    // incidenciaSS = incidenciaRegular + subsFerias + subsNatal (+ overtime=0)
+    // = (866.67 + 500) + 83.33 + 83.33 = 1533.33
+    expect(r.incidenciaSS).toBeCloseTo(r.incidenciaRegular + r.subsFerias + r.subsNatal, 2);
+    expect(r.incidenciaSS).toBeCloseTo(866.67 + feriasNG + 83.33 + 83.33, 1);
+  });
+
+  it('irsFerias e irsNatal NÃO incluem A010 — usam taxaSubsidios sobre vencBaseContratual', () => {
+    const rSem = calcularRecibo({ ...base, abonosCessacao: 0 });
+    const rCom = calcularRecibo(base);
+    // taxaSubsidios depende apenas de vencBaseContratual (1000€), não de abonosCessacao
+    expect(rCom.taxaSubsidios).toBeCloseTo(rSem.taxaSubsidios, 5);
+    expect(rCom.irsFerias).toBeCloseTo(rSem.irsFerias, 4);
+    expect(rCom.irsNatal).toBeCloseTo(rSem.irsNatal, 4);
+    // Mas irsRegular é maior porque A010 está em incidenciaRegular
+    expect(rCom.irsRegular).toBeGreaterThan(rSem.irsRegular);
+  });
+
+  it('totalAbonos = brutoAlvo e liquido = brutoAlvo − IRS − SS', () => {
+    const r = calcularRecibo(base);
+    expect(r.totalAbonos).toBeCloseTo(5000, 2);
+    expect(r.liquido).toBeCloseTo(r.totalAbonos - r.irsTotal - r.ssTrabalhador, 2);
+  });
+});

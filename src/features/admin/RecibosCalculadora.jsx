@@ -1022,7 +1022,7 @@ export default function RecibosCalculadora() {
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplayRecibo), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
-    linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
+    linhas.push(['T001', `IRS (${acertoCessacao?.feriasNaoGozadasEur > 0 ? 'venc.+A010' : 'venc.'} ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
 
     autoTable(doc, {
@@ -1107,7 +1107,7 @@ export default function RecibosCalculadora() {
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplayRecibo.toFixed(2), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
-    linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
+    linhas.push(['T001', `IRS (${acertoCessacao?.feriasNaoGozadasEur > 0 ? 'venc.+A010' : 'venc.'} ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
     linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), r.totalDescontos.toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
@@ -2736,7 +2736,7 @@ ${hdrRow}${bodyRows}${totRow}
 
               {/* Notas de taxas */}
               <div className="mt-3 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 font-bold space-y-0.5">
-                <p>IRS — Taxa efetiva (Vencimento e restantes abonos): {eur(r.incidenciaRegular)} · {(r.taxaRegular * 100).toFixed(2)}%</p>
+                <p>IRS — Taxa efetiva ({acertoCessacao?.feriasNaoGozadasEur > 0 ? 'Vencimento, restantes abonos e Férias Não Gozadas' : 'Vencimento e restantes abonos'}): {eur(r.incidenciaRegular)} · {(r.taxaRegular * 100).toFixed(2)}%</p>
                 {r.subsFerias > 0 && <p>IRS — Taxa efetiva (Subsídio de Férias): {(r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {r.subsNatal  > 0 && <p>IRS — Taxa efetiva (Subsídio de Natal): {(r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {(n(inputs.he1) > 0 || n(inputs.he2) > 0) && (
