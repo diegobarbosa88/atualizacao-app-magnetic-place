@@ -153,13 +153,8 @@ function MobileHeader({ step }) {
           </div>
         </div>
       </div>
-      {/* Barra de progresso */}
-      <div className="h-[2px] bg-white/5">
-        <div
-          className="h-full bg-indigo-500 transition-all duration-500"
-          style={{ width: `${Math.max(8, ((step + 1) / STEPS.length) * 100)}%` }}
-        />
-      </div>
+      {/* Linha âmbar de separação */}
+      <div className="h-[3px] bg-amber-400/80" />
     </div>
   );
 }
