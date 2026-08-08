@@ -8,6 +8,7 @@ import {
   FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck, Shield, Calculator,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
+import { resolveBadge } from './adminNavConfig';
 
 const MENU_STRUCTURE = [
   { id: 'overview', label: 'Geral', icon: LayoutGrid },
@@ -17,7 +18,8 @@ const MENU_STRUCTURE = [
       { id: 'workers', label: 'Colaboradores', icon: Users, path: '/admin/team?subtab=workers' },
       { id: 'absences', label: 'Faltas', icon: CalendarX, path: '/admin/team?subtab=absences', badgeType: 'absences', color: 'orange' },
       { id: 'validacao', label: 'Validação', icon: ShieldCheck, path: '/admin/team?subtab=validacao', color: 'emerald' },
-      { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/team?subtab=correcoes', badgeType: 'workerCorrections', color: 'amber' },
+      { id: 'correcoes',  label: 'Correções',  icon: AlertTriangle, path: '/admin/team?subtab=correcoes',  badgeType: 'workerCorrections', color: 'amber' },
+      { id: 'onboarding', label: 'Pendentes',  icon: Clock,         path: '/admin/team?subtab=onboarding',  color: 'teal' },
     ],
   },
   {
@@ -74,17 +76,11 @@ const ACCENT = {
   blue: 'text-blue-600',
   violet: 'text-violet-600',
   sky: 'text-sky-600',
+  teal: 'text-teal-600',
 };
 
-function resolveBadge(badgeType, counts) {
-  if (!badgeType || !counts) return 0;
-  if (badgeType === 'team') return (counts.absences || 0) + (counts.workerCorrections || 0);
-  if (badgeType === 'clients') return counts.clientCorrections || 0;
-  return counts[badgeType] || 0;
-}
-
-function SubSubFlyout({ subtabs, anchorTop, onNavigate, onMouseEnter, onMouseLeave }) {
-  const style = { top: Math.max(8, anchorTop), left: 416, zIndex: 410 };
+function SubSubFlyout({ subtabs, anchorTop, anchorLeft, onNavigate, onMouseEnter, onMouseLeave }) {
+  const style = { top: Math.max(8, anchorTop), left: anchorLeft, zIndex: 410 };
   const el = (
     <div
       className="fixed bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-200/60 py-1.5 min-w-[160px]"
@@ -107,9 +103,10 @@ function SubSubFlyout({ subtabs, anchorTop, onNavigate, onMouseEnter, onMouseLea
   return portal ? ReactDOM.createPortal(el, portal) : el;
 }
 
-function SubFlyout({ subtabs, top, counts, onNavigate, onMouseEnter, onMouseLeave }) {
+function SubFlyout({ subtabs, top, flyoutLeft, counts, onNavigate, onMouseEnter, onMouseLeave }) {
   const [hoveredId, setHoveredId] = useState(null);
   const [subTop, setSubTop] = useState(0);
+  const [subLeft, setSubLeft] = useState(0);
   const hideSubTimer = useRef(null);
 
   const clearHideSub = () => clearTimeout(hideSubTimer.current);
@@ -122,12 +119,13 @@ function SubFlyout({ subtabs, top, counts, onNavigate, onMouseEnter, onMouseLeav
     clearHideSub();
     const rect = e.currentTarget.getBoundingClientRect();
     setSubTop(rect.top);
+    setSubLeft(rect.right);
     setHoveredId(st.id);
   };
 
   const activeSub = subtabs.find(s => s.id === hoveredId);
 
-  const style = { top: Math.max(8, top), left: 240, zIndex: 400 };
+  const style = { top: Math.max(8, top), left: flyoutLeft, zIndex: 400 };
   const el = (
     <>
       <div
@@ -163,6 +161,7 @@ function SubFlyout({ subtabs, top, counts, onNavigate, onMouseEnter, onMouseLeav
         <SubSubFlyout
           subtabs={activeSub.subtabs}
           anchorTop={subTop}
+          anchorLeft={subLeft}
           onNavigate={onNavigate}
           onMouseEnter={() => { clearHideSub(); onMouseEnter(); }}
           onMouseLeave={() => { scheduleHideSub(); onMouseLeave(); }}
@@ -179,6 +178,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
   const hideTimer = useRef(null);
   const [hoveredTab, setHoveredTab] = useState(null);
   const [flyoutTop, setFlyoutTop] = useState(0);
+  const [flyoutLeft, setFlyoutLeft] = useState(0);
 
   const clearHide = () => clearTimeout(hideTimer.current);
   const scheduleHide = () => {
@@ -190,6 +190,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
     clearHide();
     const rect = e.currentTarget.getBoundingClientRect();
     setFlyoutTop(rect.top);
+    setFlyoutLeft(rect.right);
     setHoveredTab(tab.id);
   };
 
@@ -248,6 +249,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
         <SubFlyout
           subtabs={activeFlyoutTab.subtabs}
           top={flyoutTop}
+          flyoutLeft={flyoutLeft}
           counts={counts}
           onNavigate={handleNavigate}
           onMouseEnter={clearHide}

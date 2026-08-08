@@ -1,17 +1,6 @@
 import React from 'react';
 import { Bell, BarChart3, LogOut, Users, Menu, ChevronLeft } from 'lucide-react';
-
-const TAB_LABELS = {
-  overview: 'Geral',
-  team: 'Equipa',
-  clients: 'Clientes',
-  schedules: 'Horários',
-  documentos: 'Documentos',
-  reports: 'Folhas',
-  costs: 'Custos',
-  settings: 'Configurações',
-  notificacoes: 'Notificações',
-};
+import { SECTION_LABELS } from './adminNavConfig';
 
 export default function AdminTopbar({
   activeTab,
@@ -44,7 +33,7 @@ export default function AdminTopbar({
         ) : (
           <div className="min-w-0">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Administração</p>
-            <p className="text-sm font-black text-slate-800 truncate">{TAB_LABELS[activeTab] || 'Geral'}</p>
+            <p className="text-sm font-black text-slate-800 truncate">{SECTION_LABELS[activeTab] || 'Geral'}</p>
           </div>
         )}
       </div>
