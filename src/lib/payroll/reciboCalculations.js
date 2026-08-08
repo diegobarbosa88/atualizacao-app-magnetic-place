@@ -179,7 +179,9 @@ export function valorDiarioLegal(territorio, funcao) {
 /**
  * Calcula o recibo completo a partir dos inputs do formulário.
  * @param {object} inputs
- * @param {number}  inputs.vencimentoBase
+ * @param {number}  inputs.vencimentoBase      vencimento efetivo (proporcional em mês parcial)
+ * @param {number|null} inputs.vencBaseContratual  vencimento contratual completo (para A004/A021/taxaSubsidios); omitir em mês completo
+ * @param {number}  inputs.abonosCessacao      abonos tributáveis de acerto de cessação (A010+A011+A004P+A021P); reduzem A082
  * @param {number}  inputs.horasSemana       default 40
  * @param {number}  inputs.premios            default 0
  * @param {number}  inputs.he1               horas suplementares 1ª hora
@@ -199,6 +201,8 @@ export function valorDiarioLegal(territorio, funcao) {
 export function calcularRecibo(inputs) {
   const {
     vencimentoBase = 0,
+    vencBaseContratual = null,
+    abonosCessacao = 0,
     horasSemana = 40,
     premios = 0,
     he1 = 0,
@@ -216,7 +220,10 @@ export function calcularRecibo(inputs) {
     ano = new Date().getFullYear(),
   } = inputs;
 
-  const salarioHora = (vencimentoBase * 12) / (52 * (horasSemana || 40));
+  // Vencimento contratual completo — usado para duodécimos, taxa de subsídios e hora suplementar
+  const vencBaseParaDuodecimos = vencBaseContratual ?? vencimentoBase;
+
+  const salarioHora = (vencBaseParaDuodecimos * 12) / (52 * (horasSemana || 40));
 
   const valorHe1un = salarioHora * 1.25;
   const valorHe2un = salarioHora * 1.375;
@@ -224,8 +231,9 @@ export function calcularRecibo(inputs) {
   const valorHe2 = valorHe2un * he2;
   const totalOvertime = valorHe1 + valorHe2;
 
-  const subsFerias = incluirFerias ? vencimentoBase / 12 : 0;
-  const subsNatal  = incluirNatal  ? vencimentoBase / 12 : 0;
+  // Duodécimos sempre sobre vencimento contratual (não sobre o proporcional)
+  const subsFerias = incluirFerias ? vencBaseParaDuodecimos / 12 : 0;
+  const subsNatal  = incluirNatal  ? vencBaseParaDuodecimos / 12 : 0;
 
   const subsAlimTotal = subsAlimValorDia * subsAlimDias;
   const limiteAlim = subsAlimTipo === 'cartao' ? LIMITES.subsAlimCartao : LIMITES.subsAlimDinheiro;
@@ -233,13 +241,13 @@ export function calcularRecibo(inputs) {
 
   const vdl = valorDiarioLegal(territorio, funcao);
 
-  // IRS regular: vencimento + prémios + excedente de subsídio alimentação
-  const incidenciaRegular = vencimentoBase + premios + subsAlimExcedente;
+  // IRS regular: vencimento efetivo + prémios + excedente de subsídio alimentação + abonos cessação
+  const incidenciaRegular = vencimentoBase + premios + subsAlimExcedente + abonosCessacao;
   const irsRegular  = calcularIRS(incidenciaRegular, tabelaKey, nDependentes, ano);
   const taxaRegular = taxaEfetiva(incidenciaRegular, tabelaKey, nDependentes, ano);
 
-  // IRS subsídios: cada duodécimo tributado pela taxa do vencimento base isolado (sem somar entre si)
-  const taxaSubsidios = taxaEfetiva(vencimentoBase, tabelaKey, nDependentes, ano);
+  // IRS subsídios: taxa calculada sobre vencimento contratual (não sobre o proporcional)
+  const taxaSubsidios = taxaEfetiva(vencBaseParaDuodecimos, tabelaKey, nDependentes, ano);
   const irsFerias     = subsFerias * taxaSubsidios;
   const irsNatal      = subsNatal  * taxaSubsidios;
 
@@ -254,8 +262,9 @@ export function calcularRecibo(inputs) {
   const ssTrabalhador = incidenciaSS * LIMITES.ssTrabalhador;
   const ssPatronal    = incidenciaSS * LIMITES.ssPatronal;
 
-  // Ajuda de custo internacional como valor residual (plug)
-  const somaOutrosAbonos = vencimentoBase + subsAlimTotal + subsFerias + premios + totalOvertime + subsNatal;
+  // Ajuda de custo como valor residual (plug): A082 absorve a diferença para atingir o brutoAlvo
+  // abonosCessacao é incluído em somaOutrosAbonos para que A082 diminua em conformidade
+  const somaOutrosAbonos = vencimentoBase + subsAlimTotal + subsFerias + premios + totalOvertime + subsNatal + abonosCessacao;
   const ajudaCustoNecessaria = Math.max(0, brutoAlvo - somaOutrosAbonos);
 
   const totalAbonos    = somaOutrosAbonos + ajudaCustoNecessaria;
@@ -276,6 +285,7 @@ export function calcularRecibo(inputs) {
     incidenciaSS, ssTrabalhador, ssPatronal,
     somaOutrosAbonos, ajudaCustoNecessaria,
     totalAbonos, totalDescontos, liquido, custoEmpresa,
+    vencBaseParaDuodecimos,
   };
 }
 

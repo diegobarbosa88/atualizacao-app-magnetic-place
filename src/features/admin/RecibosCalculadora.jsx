@@ -16,7 +16,7 @@ import {
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
-import { calcMesParcial, calcAcertoCessacao, calcDiasFeriasAnoAdmissao, calcFeriasVencidas } from '../../lib/payroll/mesParcial.js';
+import { calcMesParcial, calcSubsidiosAnoProportional, calcAcertoCessacao, calcDiasFeriasAnoAdmissao, calcFeriasVencidas } from '../../lib/payroll/mesParcial.js';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -454,11 +454,39 @@ export default function RecibosCalculadora() {
   };
 
   const r = useMemo(() => {
-    // Usa valor proporcional internamente (IRS/SS corretos) mesmo que A001 mostre o valor cheio
+    // Usa valor proporcional para IRS/SS (correto) mesmo que A001 mostre o valor contratual cheio
     const vencEfetivo = mesParcialDados ? mesParcialDados.vencProporcional : n(inputs.vencimentoBase);
     if (!vencEfetivo) return null;
+
+    // Abonos tributáveis de acerto de cessação — incluídos em somaOutrosAbonos para reduzir A082
+    // e em incidenciaRegular/incidenciaSS para IRS/SS corretos
+    const isCessacao = mesParcialDados?.tipo === 'fim' || mesParcialDados?.tipo === 'ambos';
+    let abonosCessacao = 0;
+    if (isCessacao && mesParcialDados) {
+      const diasNG = parseInt(diasFeriasNaoGozadas, 10) || 0;
+      const feriasNGEur = parseFloat((diasNG * mesParcialDados.vencBaseOriginal / 30).toFixed(2));
+      // A010 (férias não gozadas) + A011 (subsídio sobre férias não gozadas) = 2×
+      abonosCessacao += feriasNGEur * 2;
+      // A004P / A021P — subsídios proporcionais apenas quando duodécimos NÃO estão ativos
+      if (!inputs.incluirFerias || !inputs.incluirNatal) {
+        const w = workers?.find(x => x.id === selectedWorkerId);
+        if (w?.dataInicio) {
+          const { subsFeriasTotalAno, subsNatalTotalAno } = calcSubsidiosAnoProportional(
+            mesParcialDados.vencBaseOriginal,
+            w.dataInicio,
+            w.dataFim || null,
+            parseInt(inputs.ano, 10),
+          );
+          if (!inputs.incluirFerias) abonosCessacao += subsFeriasTotalAno;
+          if (!inputs.incluirNatal)  abonosCessacao += subsNatalTotalAno;
+        }
+      }
+    }
+
     return calcularRecibo({
       vencimentoBase: vencEfetivo,
+      vencBaseContratual: mesParcialDados ? mesParcialDados.vencBaseOriginal : undefined,
+      abonosCessacao,
       horasSemana: n(inputs.horasSemana),
       premios: n(inputs.premios),
       he1: n(inputs.he1),
@@ -476,7 +504,7 @@ export default function RecibosCalculadora() {
       ano: n(inputs.ano),
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputs, mesParcialDados]);
+  }, [inputs, mesParcialDados, diasFeriasNaoGozadas, selectedWorkerId, workers]);
 
   // Sincroniza o valor diário legal quando muda o território ou função
   useEffect(() => {
@@ -729,6 +757,11 @@ export default function RecibosCalculadora() {
     return { diasNaoTrab, horasNaoTrab, valor, label };
   }, [mesParcialDados, inputs.horasSemana]);
 
+  // D001 é exibido como linha informativa em Descontos — A082 é reduzido em conformidade para que
+  // Total Abonos (display) = BrutoAlvo e Líquido = BrutoAlvo − IRS − SS
+  const descontoD001        = descontoDiasParcial?.valor ?? 0;
+  const ajudasDisplayRecibo = Math.max(0, ajudasDisplay - descontoD001);
+
   function addRow(data) {
     rowCounter++;
     setMapaRows(prev => [...prev, {
@@ -967,30 +1000,26 @@ export default function RecibosCalculadora() {
     if (n(inputs.he1) > 0) linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
     if (n(inputs.he2) > 0) linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
     if (r.subsNatal > 0) linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
-    // Rubricas de cessação (quando cessação cai no mês)
-    let totalAcerto = 0;
+    // Rubricas de cessação — incluídas em r (via abonosCessacao); A082 já foi ajustado
     if (acertoCessacao) {
       if (acertoCessacao.feriasNaoGozadasEur > 0) {
         linhas.push(['A010', `Férias não gozadas (${diasFeriasNaoGozadas}d)`, '', '', eur(acertoCessacao.feriasNaoGozadasEur), '']);
         linhas.push(['A011', 'Subsídio s/ férias não gozadas', '', '', eur(acertoCessacao.subsidioSobreFeriasNaoGozadas), '']);
-        totalAcerto += acertoCessacao.feriasNaoGozadasEur + acertoCessacao.subsidioSobreFeriasNaoGozadas;
       }
       if (acertoCessacao.subsFeriasProp > 0) {
         linhas.push(['A004P', `Sub. Férias proporcional (${acertoCessacao.descricao})`, '', '', eur(acertoCessacao.subsFeriasProp), '']);
-        totalAcerto += acertoCessacao.subsFeriasProp;
       }
       if (acertoCessacao.subsNatalProp > 0) {
         linhas.push(['A021P', 'Sub. Natal proporcional (acerto final)', '', '', eur(acertoCessacao.subsNatalProp), '']);
-        totalAcerto += acertoCessacao.subsNatalProp;
       }
     }
-    if (ajudasDisplay > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplay), '']);
-    // Desconto por dias não trabalhados (linha separada — formato TOConline)
+    // A082: ajustado pelo D001 para que Total Abonos = BrutoAlvo
+    if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplayRecibo), '']);
+    // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
     linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
 
-    const _pdfDescontoExtra = descontoDiasParcial ? descontoDiasParcial.valor : 0;
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 4,
       head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
@@ -1006,15 +1035,15 @@ export default function RecibosCalculadora() {
       body: [
         [
           { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-          { content: eur(totalAbonosDisplay + totalAcerto + _pdfDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: eur(totalAbonosDisplay), styles: { fontStyle: 'bold', halign: 'right' } },
           { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
-          { content: eur(r.totalDescontos + _pdfDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: eur(r.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
         ],
         [
           { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-          { content: eur(liquidoDisplay + totalAcerto), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+          { content: eur(liquidoDisplay), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
           { content: 'Custo Empresa (c/ TSU 23,75%)' },
-          { content: eur(custoEmpDisplay + totalAcerto), styles: { halign: 'right' } },
+          { content: eur(custoEmpDisplay), styles: { halign: 'right' } },
         ],
       ],
       theme: 'plain',
@@ -1047,7 +1076,6 @@ export default function RecibosCalculadora() {
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
 
     const xlsA001Valor = (mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase)).toFixed(2);
-    let xlsTotalAcerto = 0;
     const linhas = [
       ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
       ['A001', 'Vencimento Base', '', '', xlsA001Valor, ''],
@@ -1062,25 +1090,23 @@ export default function RecibosCalculadora() {
       if (acertoCessacao.feriasNaoGozadasEur > 0) {
         linhas.push(['A010', `Férias não gozadas (${diasFeriasNaoGozadas}d)`, '', '', acertoCessacao.feriasNaoGozadasEur.toFixed(2), '']);
         linhas.push(['A011', 'Subsídio s/ férias não gozadas', '', '', acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2), '']);
-        xlsTotalAcerto += acertoCessacao.feriasNaoGozadasEur + acertoCessacao.subsidioSobreFeriasNaoGozadas;
       }
       if (acertoCessacao.subsFeriasProp > 0) {
         linhas.push(['A004P', `Sub. Férias proporcional (${acertoCessacao.descricao})`, '', '', acertoCessacao.subsFeriasProp.toFixed(2), '']);
-        xlsTotalAcerto += acertoCessacao.subsFeriasProp;
       }
       if (acertoCessacao.subsNatalProp > 0) {
         linhas.push(['A021P', 'Sub. Natal proporcional (acerto final)', '', '', acertoCessacao.subsNatalProp.toFixed(2), '']);
-        xlsTotalAcerto += acertoCessacao.subsNatalProp;
       }
     }
-    if (ajudasDisplay > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplay.toFixed(2), '']);
+    // A082: ajustado pelo D001 para que Total Abonos = BrutoAlvo
+    if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplayRecibo.toFixed(2), '']);
+    // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
     linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
-    const _xlsDescontoExtra = descontoDiasParcial ? descontoDiasParcial.valor : 0;
-    linhas.push(['', 'TOTAL', '', '', (totalAbonosDisplay + xlsTotalAcerto + _xlsDescontoExtra).toFixed(2), (r.totalDescontos + _xlsDescontoExtra).toFixed(2)]);
-    linhas.push(['', 'Líquido a Receber', '', '', (liquidoDisplay + xlsTotalAcerto).toFixed(2), '']);
-    linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (custoEmpDisplay + xlsTotalAcerto).toFixed(2), '']);
+    linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), r.totalDescontos.toFixed(2)]);
+    linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
+    linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', custoEmpDisplay.toFixed(2), '']);
 
     const rows = linhas.map((row, i) => {
       const isHdr = i === 0;
@@ -2650,25 +2676,43 @@ ${hdrRow}${bodyRows}${totRow}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    <ReciboLinha desc="A001 - Vencimento Base" abono={r.salarioHora > 0 ? n(inputs.vencimentoBase) : null} />
+                    {/* A001 mantém sempre o valor contratual completo (formato TOConline) */}
+                    <ReciboLinha desc="A001 - Vencimento Base" abono={r.salarioHora > 0 ? (mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase)) : null} />
+                    {/* D001 — desconto por dias não trabalhados (linha informativa; não soma em Total Descontos) */}
+                    {descontoDiasParcial && (
+                      <ReciboLinha desc={`D001 - ${descontoDiasParcial.label}`} qtd={`${descontoDiasParcial.horasNaoTrab}h`} desconto={descontoDiasParcial.valor} />
+                    )}
                     <ReciboLinha desc="A002 - Subs. Alimentação" qtd={`${inputs.subsAlimDias}d`} vUnit={n(inputs.subsAlimValorDia)} abono={r.subsAlimTotal} />
                     {r.subsFerias > 0 && <ReciboLinha desc="A004 - Subs. Férias (duodécimos)" abono={r.subsFerias} />}
                     {n(inputs.premios) > 0 && <ReciboLinha desc="A008 - Prémios / Bónus" abono={n(inputs.premios)} />}
                     {n(inputs.he1) > 0 && <ReciboLinha desc="A052 - Trabalho Suplementar 1ª hora" qtd={`${inputs.he1}h`} vUnit={r.valorHe1un} abono={r.valorHe1} />}
                     {n(inputs.he2) > 0 && <ReciboLinha desc="A053 - Trabalho Suplementar seguintes" qtd={`${inputs.he2}h`} vUnit={r.valorHe2un} abono={r.valorHe2} />}
                     {r.subsNatal > 0 && <ReciboLinha desc="A021 - Subs. Natal (duodécimos)" abono={r.subsNatal} />}
-                    {ajudasDisplay > 0 && (
+                    {/* Rubricas de cessação */}
+                    {acertoCessacao?.feriasNaoGozadasEur > 0 && (
+                      <ReciboLinha desc={`A010 - Férias não gozadas (${diasFeriasNaoGozadas}d)`} abono={acertoCessacao.feriasNaoGozadasEur} />
+                    )}
+                    {acertoCessacao?.subsidioSobreFeriasNaoGozadas > 0 && (
+                      <ReciboLinha desc="A011 - Subsídio s/ férias não gozadas" abono={acertoCessacao.subsidioSobreFeriasNaoGozadas} />
+                    )}
+                    {acertoCessacao?.subsFeriasProp > 0 && (
+                      <ReciboLinha desc={`A004P - Sub. Férias proporcional (${acertoCessacao.descricao})`} abono={acertoCessacao.subsFeriasProp} />
+                    )}
+                    {acertoCessacao?.subsNatalProp > 0 && (
+                      <ReciboLinha desc="A021P - Sub. Natal proporcional (acerto final)" abono={acertoCessacao.subsNatalProp} />
+                    )}
+                    {ajudasDisplayRecibo > 0 && (
                       <tr className="bg-orange-50">
                         <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-slate-700">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
                         <td className="py-1.5 px-1 text-right" />
                         <td className="py-1.5 px-1 text-right" />
-                        <td className="py-1.5 px-1 text-right font-bold">{eur(ajudasDisplay)}</td>
+                        <td className="py-1.5 px-1 text-right font-bold">{eur(ajudasDisplayRecibo)}</td>
                         <td className="py-1.5 px-1 text-right" />
                       </tr>
                     )}
                     <ReciboLinha desc={`T001 - IRS (venc.·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
-                    {/* Total */}
+                    {/* Total — D001 não entra em Total Descontos; Líquido = BrutoAlvo − IRS − SS */}
                     <tr className="border-t-2 border-slate-800 font-black">
                       <td className="py-2 px-1">Total</td>
                       <td className="py-2 px-1" />
@@ -2693,36 +2737,22 @@ ${hdrRow}${bodyRows}${totRow}
                 )}
               </div>
 
-              {/* Resumo — bloco de 3 colunas (Total Abonos | Total Descontos | Líquido) */}
-              <div className="mt-3 pt-3 border-t-2 border-slate-800 grid grid-cols-3 gap-2">
-                <div className="bg-slate-50 rounded-xl px-3 py-2">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Abonos</p>
-                  <p className="text-base font-black text-slate-800">{eur(totalAbonosDisplay)}</p>
-                  {n(inputs.brutoAlvo) > 0 && (() => {
-                    const diff = Math.round((totalAbonosDisplay - n(inputs.brutoAlvo)) * 100) / 100;
-                    if (Math.abs(diff) < 0.005) return null;
-                    return (
-                      <p className={`text-[9px] font-bold mt-0.5 ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {diff > 0 ? '+' : ''}{eur(diff)} vs alvo
-                      </p>
-                    );
-                  })()}
+              {/* Resumo — Total Abonos = Bruto Alvo SEMPRE | Líquido = Bruto Alvo − IRS − SS */}
+              <div className="mt-3 pt-3 border-t-2 border-slate-800 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-slate-50 rounded-xl px-3 py-2">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Abonos</p>
+                    <p className="text-base font-black text-slate-800">{eur(totalAbonosDisplay)}</p>
+                    {n(inputs.brutoAlvo) > 0 && <p className="text-[9px] text-slate-400 mt-0.5">= Bruto Alvo</p>}
+                  </div>
+                  <div className="bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-200">
+                    <p className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">Líquido a receber</p>
+                    <p className="text-base font-black text-emerald-700">{eur(liquidoDisplay)}</p>
+                  </div>
                 </div>
-                <div className="bg-slate-50 rounded-xl px-3 py-2">
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Descontos</p>
-                  <p className="text-base font-black text-rose-600">{eur(r.totalDescontos)}</p>
-                </div>
-                <div className="bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-200">
-                  <p className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">Líquido a receber</p>
-                  <p className="text-base font-black text-emerald-700">{eur(liquidoDisplay)}</p>
-                </div>
-              </div>
-              <div className="mt-2 grid grid-cols-2 gap-2">
-                <div className="px-3 py-1.5 text-[10px] text-slate-400">
-                  <span className="font-black">IRS:</span> {eur(r.irsTotal)} · <span className="font-black">SS:</span> {eur(r.ssTrabalhador)}
-                </div>
-                <div className="px-3 py-1.5 text-[10px] text-slate-400 text-right">
-                  <span className="font-black">Custo empresa (c/ TSU 23,75%):</span> {eur(custoEmpDisplay)}
+                <div className="bg-slate-50 rounded-xl px-3 py-1.5 text-[10px] text-slate-500 flex justify-between">
+                  <span><span className="font-black">IRS:</span> {eur(r.irsTotal)} · <span className="font-black">SS:</span> {eur(r.ssTrabalhador)}</span>
+                  <span><span className="font-black">Custo empresa (c/ TSU 23,75%):</span> {eur(custoEmpDisplay)}</span>
                 </div>
               </div>
             </Card>
