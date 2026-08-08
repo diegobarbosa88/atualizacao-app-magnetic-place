@@ -16,6 +16,7 @@ import {
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
+import { calcMesParcial, calcAcertoCessacao, calcDiasFeriasAnoAdmissao } from '../../lib/payroll/mesParcial.js';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -190,6 +191,12 @@ export default function RecibosCalculadora() {
   const [brutoAlvoEditado, setBrutoAlvoEditado] = useState(() => _s.brutoAlvoEditado || false);
   const [camposAuto, setCamposAuto] = useState(() => ({ ...CAMPOS_AUTO_DEFAULT, ...(_s.camposAuto || {}) }));
   const [complementMethod, setComplementMethod] = useState(() => _s.complementMethod || 'A008');
+  // ── Mês parcial (admissão / cessação no mês em processamento) ──
+  const [mesParcialDados, setMesParcialDados] = useState(null);
+  // null | { tipo, diaInicio, diaFim, diasTrabalhados, vencBaseOriginal, vencProporcional, fator }
+  const [diasFeriasNaoGozadas, setDiasFeriasNaoGozadas] = useState('0');
+  const mesParcialKeyRef  = useRef('');
+  const mesParcialDadosRef = useRef(null); // espelho síncrono de mesParcialDados
   let rowCounter = mapaRows.length;
 
   useEffect(() => {
@@ -334,6 +341,49 @@ export default function RecibosCalculadora() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkerId, inputs.mes, inputs.ano, workers, supabase, feriadoMunicipal]);
 
+  // Deteção de mês parcial: auto-fill vencBase proporcional quando admissão ou cessação
+  // caem no mês em processamento (convenção de 30 dias — Código do Trabalho).
+  useEffect(() => {
+    if (!selectedWorkerId) { setMesParcialDados(null); mesParcialDadosRef.current = null; return; }
+    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}`;
+    if (mesParcialKeyRef.current === key) return;
+    mesParcialKeyRef.current = key;
+
+    const w = workers?.find(x => x.id === selectedWorkerId);
+    if (!w?.vencimento_base) { setMesParcialDados(null); mesParcialDadosRef.current = null; return; }
+
+    const info = calcMesParcial(
+      w.dataInicio || null,
+      w.dataFim    || null,
+      parseInt(inputs.ano, 10),
+      parseInt(inputs.mes, 10),
+    );
+
+    if (info.tipo === 'completo') {
+      if (mesParcialDadosRef.current !== null) {
+        // Voltou de um mês parcial → restaura vencBase do perfil do trabalhador
+        setInputs(prev => ({ ...prev, vencimentoBase: String(w.vencimento_base) }));
+        setCamposAuto(prev => ({ ...prev, vencimentoBase: true }));
+      }
+      mesParcialDadosRef.current = null;
+      setMesParcialDados(null);
+      return;
+    }
+
+    const vencBaseOriginal  = parseFloat(w.vencimento_base);
+    const vencProporcional  = parseFloat((vencBaseOriginal * info.fator).toFixed(2));
+    const dados = { tipo: info.tipo, diaInicio: info.diaInicio, diaFim: info.diaFim,
+                    diasTrabalhados: info.diasTrabalhados, vencBaseOriginal, vencProporcional,
+                    fator: info.fator };
+
+    mesParcialDadosRef.current = dados;
+    setMesParcialDados(dados);
+    setDiasFeriasNaoGozadas('0');
+    setInputs(prev => ({ ...prev, vencimentoBase: String(vencProporcional) }));
+    setCamposAuto(prev => ({ ...prev, vencimentoBase: true }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedWorkerId, inputs.mes, inputs.ano, workers?.length]);
+
   const set = useCallback((field, value) => {
     setInputs(prev => ({ ...prev, [field]: value }));
   }, []);
@@ -345,6 +395,10 @@ export default function RecibosCalculadora() {
     setAutoFillInfo(null);
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
+    mesParcialKeyRef.current   = '';
+    mesParcialDadosRef.current = null;
+    setMesParcialDados(null);
+    setDiasFeriasNaoGozadas('0');
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     setBrutoAlvoEditado(false);
     if (!id) {
@@ -605,6 +659,28 @@ export default function RecibosCalculadora() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workers, logs, clients, workerRateHistory, feriadoMunicipal, inputs.mes, inputs.ano]);
 
+  // Rubricas do acerto de cessação (calculadas quando cessação cai no mês em processamento)
+  const acertoCessacao = useMemo(() => {
+    if (!mesParcialDados || (mesParcialDados.tipo !== 'fim' && mesParcialDados.tipo !== 'ambos')) return null;
+    const w = workers?.find(x => x.id === selectedWorkerId);
+    if (!w) return null;
+    return calcAcertoCessacao(
+      mesParcialDados.vencBaseOriginal,
+      w.dataInicio || null,
+      w.dataFim    || null,
+      parseInt(inputs.ano, 10),
+      parseInt(diasFeriasNaoGozadas, 10) || 0,
+    );
+  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano, diasFeriasNaoGozadas]);
+
+  // Informação sobre dias de férias no ano de admissão (apenas informativa)
+  const feriasAnoAdmissao = useMemo(() => {
+    if (!mesParcialDados || (mesParcialDados.tipo !== 'inicio' && mesParcialDados.tipo !== 'ambos')) return null;
+    const w = workers?.find(x => x.id === selectedWorkerId);
+    if (!w) return null;
+    return calcDiasFeriasAnoAdmissao(w.dataInicio || null, w.dataFim || null, parseInt(inputs.ano, 10));
+  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano]);
+
   function addRow(data) {
     rowCounter++;
     setMapaRows(prev => [...prev, {
@@ -790,6 +866,7 @@ export default function RecibosCalculadora() {
     setAutoFillInfo(null);
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
+    mesParcialKeyRef.current   = '';
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     setInputs(prev => ({ ...prev, premios: '0' }));
   }
@@ -816,20 +893,25 @@ export default function RecibosCalculadora() {
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
     });
 
+    const vencBaseLabel = mesParcialDados ? mesParcialDados.vencBaseOriginal.toFixed(2) : n(inputs.vencimentoBase).toFixed(2);
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 2,
       body: [
         ['Trabalhador:', inputs.nome || '—', 'Mês / Ano:', `${mesLabel} ${inputs.ano}`],
         ['NIF:', inputs.nif || '—', 'Profissão:', inputs.categoria || '—'],
-        ['NIS:', inputs.nis || '—', 'Venc. Base:', eur(n(inputs.vencimentoBase))],
+        ['NIS:', inputs.nis || '—', 'Venc. Base:', `${vencBaseLabel}€`],
       ],
       theme: 'plain',
       styles: { fontSize: 8, cellPadding: 1.5 },
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
     });
 
+    // A001 — proporcional quando admissão/cessação cai no mês
+    const a001Qtd  = mesParcialDados ? `${mesParcialDados.diasTrabalhados}d` : '';
+    const a001Unit = mesParcialDados ? eur(mesParcialDados.vencBaseOriginal / 30) : '';
+
     const linhas = [
-      ['A001', 'Vencimento Base', '', '', eur(n(inputs.vencimentoBase)), ''],
+      ['A001', 'Vencimento Base', a001Qtd, a001Unit, eur(n(inputs.vencimentoBase)), ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, eur(n(inputs.subsAlimValorDia)), eur(r.subsAlimTotal), ''],
     ];
     if (r.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(r.subsFerias), '']);
@@ -837,6 +919,23 @@ export default function RecibosCalculadora() {
     if (n(inputs.he1) > 0) linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
     if (n(inputs.he2) > 0) linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
     if (r.subsNatal > 0) linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
+    // Rubricas de cessação (quando cessação cai no mês)
+    let totalAcerto = 0;
+    if (acertoCessacao) {
+      if (acertoCessacao.feriasNaoGozadasEur > 0) {
+        linhas.push(['A010', `Férias não gozadas (${diasFeriasNaoGozadas}d)`, '', '', eur(acertoCessacao.feriasNaoGozadasEur), '']);
+        linhas.push(['A011', 'Subsídio s/ férias não gozadas', '', '', eur(acertoCessacao.subsidioSobreFeriasNaoGozadas), '']);
+        totalAcerto += acertoCessacao.feriasNaoGozadasEur + acertoCessacao.subsidioSobreFeriasNaoGozadas;
+      }
+      if (acertoCessacao.subsFeriasProp > 0) {
+        linhas.push(['A004P', `Sub. Férias proporcional (${acertoCessacao.descricao})`, '', '', eur(acertoCessacao.subsFeriasProp), '']);
+        totalAcerto += acertoCessacao.subsFeriasProp;
+      }
+      if (acertoCessacao.subsNatalProp > 0) {
+        linhas.push(['A021P', 'Sub. Natal proporcional (acerto final)', '', '', eur(acertoCessacao.subsNatalProp), '']);
+        totalAcerto += acertoCessacao.subsNatalProp;
+      }
+    }
     if (ajudasDisplay > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplay), '']);
     linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
@@ -856,21 +955,29 @@ export default function RecibosCalculadora() {
       body: [
         [
           { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-          { content: eur(totalAbonosDisplay), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: eur(totalAbonosDisplay + totalAcerto), styles: { fontStyle: 'bold', halign: 'right' } },
           { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
           { content: eur(r.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
         ],
         [
           { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-          { content: eur(liquidoDisplay), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+          { content: eur(liquidoDisplay + totalAcerto), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
           { content: 'Custo Empresa (c/ TSU 23,75%)' },
-          { content: eur(custoEmpDisplay), styles: { halign: 'right' } },
+          { content: eur(custoEmpDisplay + totalAcerto), styles: { halign: 'right' } },
         ],
       ],
       theme: 'plain',
       styles: { fontSize: 8, cellPadding: 3 },
       columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 28 }, 2: { cellWidth: 60 } },
     });
+
+    if (acertoCessacao) {
+      doc.setFontSize(6.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(160, 80, 80);
+      doc.text('Acerto inclui apenas vencimento e subsídios proporcionais. Compensações por cessação devem ser calculadas manualmente.', 14, doc.lastAutoTable.finalY + 5, { maxWidth: 182 });
+      doc.setTextColor(0, 0, 0);
+    }
 
     const ySign = doc.lastAutoTable.finalY + 14;
     doc.setFontSize(8);
@@ -888,9 +995,12 @@ export default function RecibosCalculadora() {
     const mesNum = parseInt(inputs.mes, 10);
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
 
+    const xlsA001Qtd  = mesParcialDados ? `${mesParcialDados.diasTrabalhados}d` : '';
+    const xlsA001Unit = mesParcialDados ? (mesParcialDados.vencBaseOriginal / 30).toFixed(2) : '';
+    let xlsTotalAcerto = 0;
     const linhas = [
       ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
-      ['A001', 'Vencimento Base', '', '', n(inputs.vencimentoBase).toFixed(2), ''],
+      ['A001', 'Vencimento Base', xlsA001Qtd, xlsA001Unit, n(inputs.vencimentoBase).toFixed(2), ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, n(inputs.subsAlimValorDia).toFixed(2), r.subsAlimTotal.toFixed(2), ''],
     ];
     if (r.subsFerias > 0)       linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', r.subsFerias.toFixed(2), '']);
@@ -898,12 +1008,27 @@ export default function RecibosCalculadora() {
     if (n(inputs.he1) > 0)      linhas.push(['A052', 'Trabalho Suplementar 1ª hora', `${inputs.he1}h`, r.valorHe1un.toFixed(4), r.valorHe1.toFixed(2), '']);
     if (n(inputs.he2) > 0)      linhas.push(['A053', 'Trabalho Suplementar seguintes', `${inputs.he2}h`, r.valorHe2un.toFixed(4), r.valorHe2.toFixed(2), '']);
     if (r.subsNatal > 0)        linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', r.subsNatal.toFixed(2), '']);
+    if (acertoCessacao) {
+      if (acertoCessacao.feriasNaoGozadasEur > 0) {
+        linhas.push(['A010', `Férias não gozadas (${diasFeriasNaoGozadas}d)`, '', '', acertoCessacao.feriasNaoGozadasEur.toFixed(2), '']);
+        linhas.push(['A011', 'Subsídio s/ férias não gozadas', '', '', acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2), '']);
+        xlsTotalAcerto += acertoCessacao.feriasNaoGozadasEur + acertoCessacao.subsidioSobreFeriasNaoGozadas;
+      }
+      if (acertoCessacao.subsFeriasProp > 0) {
+        linhas.push(['A004P', `Sub. Férias proporcional (${acertoCessacao.descricao})`, '', '', acertoCessacao.subsFeriasProp.toFixed(2), '']);
+        xlsTotalAcerto += acertoCessacao.subsFeriasProp;
+      }
+      if (acertoCessacao.subsNatalProp > 0) {
+        linhas.push(['A021P', 'Sub. Natal proporcional (acerto final)', '', '', acertoCessacao.subsNatalProp.toFixed(2), '']);
+        xlsTotalAcerto += acertoCessacao.subsNatalProp;
+      }
+    }
     if (ajudasDisplay > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplay.toFixed(2), '']);
     linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
-    linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), r.totalDescontos.toFixed(2)]);
-    linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
-    linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', custoEmpDisplay.toFixed(2), '']);
+    linhas.push(['', 'TOTAL', '', '', (totalAbonosDisplay + xlsTotalAcerto).toFixed(2), r.totalDescontos.toFixed(2)]);
+    linhas.push(['', 'Líquido a Receber', '', '', (liquidoDisplay + xlsTotalAcerto).toFixed(2), '']);
+    linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (custoEmpDisplay + xlsTotalAcerto).toFixed(2), '']);
 
     const rows = linhas.map((row, i) => {
       const isHdr = i === 0;
@@ -933,8 +1058,8 @@ export default function RecibosCalculadora() {
     URL.revokeObjectURL(url);
   }
 
-  function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr) {
-    const vencBase         = parseFloat(w.vencimento_base)          || 0;
+  function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride) {
+    const vencBase         = vencBaseOverride ?? (parseFloat(w.vencimento_base) || 0);
     const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
     const baseParams = {
       vencimentoBase: vencBase, horasSemana: 40, premios: 0,
@@ -1039,7 +1164,12 @@ export default function RecibosCalculadora() {
         dataCessacao: w.dataFim    || null,
         ausencias:    workerAusencias,
       });
-      const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      // Proporcionalidade para este trabalhador
+      const wMesParcial    = calcMesParcial(w.dataInicio || null, w.dataFim || null, anoNum, mesNum);
+      const wVencOrig      = parseFloat(w.vencimento_base) || 0;
+      const wVencCalculo   = wMesParcial.tipo !== 'completo' ? parseFloat((wVencOrig * wMesParcial.fator).toFixed(2)) : wVencOrig;
+      const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr,
+        wMesParcial.tipo !== 'completo' ? wVencCalculo : undefined);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       if (!isFirstPage) doc.addPage();
@@ -1066,20 +1196,29 @@ export default function RecibosCalculadora() {
         body: [
           ['Trabalhador:', (w.name || '—').toUpperCase(), 'Mês / Ano:', `${mesLabel} ${inputs.ano}`],
           ['NIF:', w.nif || '—', 'Profissão:', w.profissao || '—'],
-          ['NIS:', w.nis || '—', 'Venc. Base:', eur(parseFloat(w.vencimento_base) || 0)],
+          ['NIS:', w.nis || '—', 'Venc. Base:', `${wVencOrig.toFixed(2)}€`],
         ],
         theme: 'plain',
         styles: { fontSize: 8, cellPadding: 1.5 },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
       });
 
+      const bA001Qtd  = wMesParcial.tipo !== 'completo' ? `${wMesParcial.diasTrabalhados}d` : '';
+      const bA001Unit = wMesParcial.tipo !== 'completo' ? eur(wVencOrig / 30) : '';
       const linhas = [
-        ['A001', 'Vencimento Base', '', '', eur(parseFloat(w.vencimento_base) || 0), ''],
+        ['A001', 'Vencimento Base', bA001Qtd, bA001Unit, eur(wVencCalculo), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
       ];
       if (rc.subsFerias > 0)   linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
       if (premiosBatch > 0)    linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
       if (rc.subsNatal > 0)    linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
+      // Acerto de cessação no batch
+      let bTotalAcerto = 0;
+      if (wMesParcial.tipo === 'fim' || wMesParcial.tipo === 'ambos') {
+        const wAcerto = calcAcertoCessacao(wVencOrig, w.dataInicio || null, w.dataFim || null, anoNum, 0);
+        if (wAcerto.subsFeriasProp > 0) { linhas.push(['A004P', `Sub. Férias prop. (${wAcerto.descricao})`, '', '', eur(wAcerto.subsFeriasProp), '']); bTotalAcerto += wAcerto.subsFeriasProp; }
+        if (wAcerto.subsNatalProp  > 0) { linhas.push(['A021P', 'Sub. Natal prop. (acerto final)', '', '', eur(wAcerto.subsNatalProp), '']); bTotalAcerto += wAcerto.subsNatalProp; }
+      }
       if (mapaLiqLive > 0)     linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
       linhas.push(['T001', `IRS (venc. ${eur(rc.incidenciaRegular)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(rc.irsTotal)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
@@ -1099,15 +1238,15 @@ export default function RecibosCalculadora() {
         body: [
           [
             { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalAbonos + mapaAjudasDiff), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: eur(rc.totalAbonos + mapaAjudasDiff + bTotalAcerto), styles: { fontStyle: 'bold', halign: 'right' } },
             { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
             { content: eur(rc.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
           ],
           [
             { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-            { content: eur(rc.liquido + mapaAjudasDiff), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+            { content: eur(rc.liquido + mapaAjudasDiff + bTotalAcerto), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
             { content: 'Custo Empresa (c/ TSU 23,75%)' },
-            { content: eur(rc.custoEmpresa + mapaAjudasDiff), styles: { halign: 'right' } },
+            { content: eur(rc.custoEmpresa + mapaAjudasDiff + bTotalAcerto), styles: { halign: 'right' } },
           ],
         ],
         theme: 'plain',
@@ -1161,23 +1300,35 @@ export default function RecibosCalculadora() {
         dataCessacao: w.dataFim    || null,
         ausencias:    workerAusencias,
       });
-      const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const xlsWMesParcial  = calcMesParcial(w.dataInicio || null, w.dataFim || null, anoNum, mesNum);
+      const xlsWVencOrig    = parseFloat(w.vencimento_base) || 0;
+      const xlsWVencCalculo = xlsWMesParcial.tipo !== 'completo' ? parseFloat((xlsWVencOrig * xlsWMesParcial.fator).toFixed(2)) : xlsWVencOrig;
+      const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr,
+        xlsWMesParcial.tipo !== 'completo' ? xlsWVencCalculo : undefined);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
+      const xlsA001Qtd  = xlsWMesParcial.tipo !== 'completo' ? `${xlsWMesParcial.diasTrabalhados}d` : '';
+      const xlsA001Unit = xlsWMesParcial.tipo !== 'completo' ? (xlsWVencOrig / 30).toFixed(2) : '';
+      let xlsBTotalAcerto = 0;
       const linhas = [
         ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
-        ['A001', 'Vencimento Base', '', '', (parseFloat(w.vencimento_base) || 0).toFixed(2), ''],
+        ['A001', 'Vencimento Base', xlsA001Qtd, xlsA001Unit, xlsWVencCalculo.toFixed(2), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, (parseFloat(w.subsidio_alimentacao_dia) || 0).toFixed(2), rc.subsAlimTotal.toFixed(2), ''],
       ];
       if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
       if (premiosBatch > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', premiosBatch.toFixed(2), '']);
       if (rc.subsNatal > 0)  linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
+      if (xlsWMesParcial.tipo === 'fim' || xlsWMesParcial.tipo === 'ambos') {
+        const xlsWAcerto = calcAcertoCessacao(xlsWVencOrig, w.dataInicio || null, w.dataFim || null, anoNum, 0);
+        if (xlsWAcerto.subsFeriasProp > 0) { linhas.push(['A004P', `Sub. Férias prop. (${xlsWAcerto.descricao})`, '', '', xlsWAcerto.subsFeriasProp.toFixed(2), '']); xlsBTotalAcerto += xlsWAcerto.subsFeriasProp; }
+        if (xlsWAcerto.subsNatalProp  > 0) { linhas.push(['A021P', 'Sub. Natal prop. (acerto final)', '', '', xlsWAcerto.subsNatalProp.toFixed(2), '']); xlsBTotalAcerto += xlsWAcerto.subsNatalProp; }
+      }
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', mapaLiqLive.toFixed(2), '']);
       linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
-      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff).toFixed(2), rc.totalDescontos.toFixed(2)]);
-      linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff).toFixed(2), '']);
-      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (rc.custoEmpresa + mapaAjudasDiff).toFixed(2), '']);
+      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), rc.totalDescontos.toFixed(2)]);
+      linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), '']);
+      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (rc.custoEmpresa + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), '']);
 
       const rows = linhas.map((row, i) => {
         const isHdr = i === 0;
@@ -2093,6 +2244,72 @@ ${hdrRow}${bodyRows}${totRow}
               </LabelInput>
             </div>
           </Card>
+
+          {/* ── Banner: mês parcial ── */}
+          {mesParcialDados && (
+            <div className={`rounded-2xl border px-4 py-3 text-xs space-y-1 ${
+              mesParcialDados.tipo === 'fim' || mesParcialDados.tipo === 'ambos'
+                ? 'bg-rose-50 border-rose-300 text-rose-800'
+                : 'bg-amber-50 border-amber-300 text-amber-800'
+            }`}>
+              <p className="font-black uppercase tracking-wide text-[11px]">
+                {mesParcialDados.tipo === 'inicio' && 'Mês parcial — início de contrato'}
+                {mesParcialDados.tipo === 'fim'    && 'Mês parcial — cessação de contrato'}
+                {mesParcialDados.tipo === 'ambos'  && 'Mês parcial — admissão e cessação'}
+              </p>
+              <p>
+                Dias trabalhados (convenção 30 dias): <strong>dia {mesParcialDados.diaInicio} a dia {mesParcialDados.diaFim} = {mesParcialDados.diasTrabalhados} dias</strong>
+              </p>
+              <p>
+                Venc. base proporcional: <strong>{mesParcialDados.vencProporcional.toFixed(2)}€</strong>
+                {' '}({mesParcialDados.diasTrabalhados}/30 × {mesParcialDados.vencBaseOriginal.toFixed(2)}€)
+              </p>
+              {feriasAnoAdmissao && (
+                <p className="text-[11px] opacity-80">
+                  Direito a férias no ano de admissão: <strong>{feriasAnoAdmissao.diasFerias} dias</strong> ({feriasAnoAdmissao.mesesCompletos} meses completos × 2){feriasAnoAdmissao.limitado ? ' — limitado a 20' : ''}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* ── Acerto de Cessação ── */}
+          {mesParcialDados && (mesParcialDados.tipo === 'fim' || mesParcialDados.tipo === 'ambos') && (
+            <Card className="p-5 border-rose-200">
+              <SectionHeader n="★" label="Acerto de Cessação" />
+              <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
+                Rubricas calculadas automaticamente para inclusão no recibo do mês de cessação. IRS e SS incidem sobre estes valores pelo método normal.
+              </p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <LabelInput label="Dias de férias não gozadas" hint="Do ano corrente e/ou anterior">
+                  <TextInput
+                    type="number"
+                    min="0"
+                    value={diasFeriasNaoGozadas}
+                    onChange={e => setDiasFeriasNaoGozadas(e.target.value)}
+                  />
+                </LabelInput>
+                <div />
+              </div>
+              {acertoCessacao && (
+                <div className="space-y-1 text-xs bg-rose-50 rounded-xl p-3 border border-rose-100">
+                  {acertoCessacao.feriasNaoGozadasEur > 0 && (
+                    <>
+                      <div className="flex justify-between"><span className="font-bold">Férias não gozadas ({diasFeriasNaoGozadas}d)</span><span>{acertoCessacao.feriasNaoGozadasEur.toFixed(2)}€</span></div>
+                      <div className="flex justify-between"><span className="font-bold">Subsídio s/ férias não gozadas</span><span>{acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2)}€</span></div>
+                    </>
+                  )}
+                  <div className="flex justify-between"><span className="font-bold">Sub. Férias proporcional</span><span>{acertoCessacao.subsFeriasProp.toFixed(2)}€</span></div>
+                  <div className="flex justify-between"><span className="font-bold">Sub. Natal proporcional</span><span>{acertoCessacao.subsNatalProp.toFixed(2)}€</span></div>
+                  <p className="text-[10px] text-rose-600 pt-1 border-t border-rose-200 leading-relaxed">
+                    Proporcional: {acertoCessacao.descricao}
+                  </p>
+                </div>
+              )}
+              <p className="text-[10px] text-slate-400 mt-3 leading-relaxed border-t border-slate-100 pt-3">
+                ⚠️ Este acerto inclui apenas vencimento e subsídios proporcionais. Compensações por cessação, formação em dívida, ou outras verbas específicas do motivo de cessação devem ser calculadas e adicionadas manualmente com apoio jurídico/contabilístico.
+              </p>
+            </Card>
+          )}
 
           {/* 2 - Retribuição Base */}
           <Card className="p-5">
