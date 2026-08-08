@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
@@ -14,12 +14,30 @@ import WorkerValidationPanel from './team/WorkerValidationPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 import DocumentScannerModal from './team/DocumentScannerModal';
 import WorkerFolderModal from './documents/WorkerFolderModal';
+import OnboardingPendentes from './team/OnboardingPendentes';
+import { sendOnboardingInviteEmail } from '../../utils/emailUtils';
 
 const TeamManagerContent = ({ onLogin }) => {
   const { workers, schedules, clients, supabase, workerChangeRequests, absenceRequests, systemSettings } = useApp();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [teamSubTab, setTeamSubTab] = useState(() => searchParams.get('subtab') || 'workers');
+  const [pendingOnboardingCount, setPendingOnboardingCount] = useState(0);
+  const [inviteModal, setInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [generatedLink, setGeneratedLink] = useState('');
+  const [linkCopied, setLinkCopied] = useState(false);
+  const [inviteEmailSent, setInviteEmailSent] = useState(false);
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase
+      .from('worker_onboarding_submissions')
+      .select('id', { count: 'exact' })
+      .eq('status', 'pending')
+      .then(({ count }) => setPendingOnboardingCount(count || 0));
+  }, [supabase, teamSubTab]);
 
   useEffect(() => {
     const tab = searchParams.get('subtab');
@@ -39,6 +57,44 @@ const TeamManagerContent = ({ onLogin }) => {
   const [empModal, setEmpModal] = useState({ show: false, workerId: null, workerName: '' });
   const [scannerOpen, setScannerOpen] = useState(false);
   const [pastaModal, setPastaModal] = useState({ show: false, workerId: null, workerName: '' });
+
+  const gerarConvite = async () => {
+    if (!supabase || inviteLoading) return;
+    setInviteLoading(true);
+    try {
+      const token = crypto.randomUUID();
+      const id = 'onb_inv_' + Date.now();
+      await supabase.from('worker_onboarding_invites').insert({
+        id, token,
+        email: inviteEmail || null,
+        created_by: null,
+        created_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending',
+      });
+      const link = `${window.location.origin}/onboarding/${token}`;
+      setGeneratedLink(link);
+      setLinkCopied(false);
+      setInviteEmailSent(false);
+    } catch (e) {
+      console.error('[onboarding] Erro ao gerar convite:', e);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(generatedLink).then(() => {
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2000);
+    });
+  };
+
+  const sendInviteEmail = async () => {
+    if (!inviteEmail || !generatedLink) return;
+    const ok = await sendOnboardingInviteEmail({ toEmail: inviteEmail, link: generatedLink });
+    if (ok) setInviteEmailSent(true);
+  };
 
   const pendingChangeRequests = (workerChangeRequests || []).filter(r => r.status === 'pending');
   const pendingAbsences = (absenceRequests || []).filter(r => r.status === 'pending').length;
@@ -123,6 +179,15 @@ const TeamManagerContent = ({ onLogin }) => {
             <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${teamSubTab === 'correcoes' ? 'bg-white text-amber-500' : 'bg-red-500 text-white'}`}>{pendingWorkerCorrections}</span>
           )}
         </button>
+        <button
+          onClick={() => setTeamSubTab('onboarding')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'onboarding' ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-teal-600'}`}
+        >
+          <Clock size={14} /> Pendentes
+          {pendingOnboardingCount > 0 && (
+            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${teamSubTab === 'onboarding' ? 'bg-white text-teal-600' : 'bg-teal-500 text-white'}`}>{pendingOnboardingCount}</span>
+          )}
+        </button>
       </div>
 
       {teamSubTab === 'absences' && (
@@ -139,6 +204,10 @@ const TeamManagerContent = ({ onLogin }) => {
 
       {teamSubTab === 'correcoes' && (
         <CorrectionsInbox forcedSource="workers" />
+      )}
+
+      {teamSubTab === 'onboarding' && (
+        <OnboardingPendentes />
       )}
 
       {teamSubTab === 'workers' && (<>
@@ -168,6 +237,13 @@ const TeamManagerContent = ({ onLogin }) => {
             <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
+          <button
+            onClick={() => { setInviteEmail(''); setGeneratedLink(''); setInviteModal(true); }}
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-teal-600 hover:bg-teal-700 text-white"
+            title="Convidar novo colaborador via link de onboarding"
+          >
+            <UserPlus size={14} /> Convidar
+          </button>
           <button
             onClick={() => setScannerOpen(true)}
             className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-violet-600 hover:bg-violet-700 text-white"
@@ -199,6 +275,80 @@ const TeamManagerContent = ({ onLogin }) => {
       </ModalShell>
 
       <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
+
+      {/* Modal de convite de onboarding */}
+      <ModalShell
+        isOpen={inviteModal}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); }}
+        title="Convidar novo colaborador"
+        subtitle="Gera um link único que o colaborador usa para preencher os seus dados."
+        icon={<UserPlus size={16} />}
+        accent="indigo"
+        size="md"
+      >
+        <div className="space-y-4">
+          {!generatedLink ? (<>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                Email do colaborador (opcional)
+              </label>
+              <input
+                className="w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                type="email"
+                placeholder="colaborador@email.com"
+                value={inviteEmail}
+                onChange={e => setInviteEmail(e.target.value)}
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Se preenchido, pode enviar o link por email diretamente.</p>
+            </div>
+            <button
+              onClick={gerarConvite}
+              disabled={inviteLoading}
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black uppercase bg-teal-600 text-white hover:bg-teal-700 transition-all disabled:opacity-50"
+            >
+              {inviteLoading ? <span className="animate-spin text-lg">⟳</span> : <UserPlus size={16} />}
+              Gerar link de convite
+            </button>
+          </>) : (<>
+            <div className="bg-teal-50 rounded-xl p-4 border border-teal-100">
+              <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest mb-2">Link gerado</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold text-teal-800 break-all flex-1 bg-white rounded-lg px-3 py-2 border border-teal-200 font-mono select-all">
+                  {generatedLink}
+                </p>
+                <button
+                  onClick={copyLink}
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${linkCopied ? 'bg-emerald-600 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+                >
+                  {linkCopied ? <Check size={12} /> : <Copy size={12} />}
+                  {linkCopied ? 'Copiado' : 'Copiar'}
+                </button>
+              </div>
+              <p className="text-[10px] text-teal-600 mt-2 font-bold">
+                Este link expira em 7 dias e só pode ser usado uma vez.
+              </p>
+            </div>
+            {inviteEmail && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={sendInviteEmail}
+                  disabled={inviteEmailSent}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${inviteEmailSent ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
+                >
+                  {inviteEmailSent ? <Check size={14} /> : <Mail size={14} />}
+                  {inviteEmailSent ? 'Email enviado' : `Enviar por email para ${inviteEmail}`}
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => { setGeneratedLink(''); setInviteEmail(''); }}
+              className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+            >
+              Gerar novo link
+            </button>
+          </>)}
+        </div>
+      </ModalShell>
 
       {pastaModal.show && (
         <WorkerFolderModal

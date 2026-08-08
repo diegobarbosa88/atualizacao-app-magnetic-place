@@ -24,6 +24,7 @@ import ClientTimesheetReport from './components/common/ClientTimesheetReport';
 import WorkerDocuments from './components/common/WorkerDocuments';
 import VerificationPortal from './components/common/VerificationPortal';
 import ResumoMensalPublico from './features/public/ResumoMensalPublico';
+import OnboardingForm from './features/public/OnboardingForm';
 import {
   toISODateLocal, isSameMonth
 } from './utils/dateUtils';
@@ -405,6 +406,12 @@ export default function App() {
   // Resumo Mensal partilhado com contabilista (não requer login)
   if (location.pathname === '/partilha/resumo') {
     return <ResumoMensalPublico />;
+  }
+
+  // Formulário público de onboarding de novos colaboradores (não requer login)
+  if (location.pathname.startsWith('/onboarding/')) {
+    const onbToken = location.pathname.split('/')[2];
+    return <OnboardingForm token={onbToken} />;
   }
 
   return (

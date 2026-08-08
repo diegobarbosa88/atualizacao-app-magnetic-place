@@ -132,6 +132,47 @@ export const sendValidationEmail = async ({ to, name, title, message, link }) =>
  * Link aponta para o portal do trabalhador (?view=worker[&doc=<id>]).
  * @returns {Promise<boolean>}
  */
+export const sendOnboardingInviteEmail = async ({ toEmail, link }) => {
+  if (!toEmail) return false;
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID_NOTIF || !EMAILJS_PUBLIC_KEY) {
+    console.warn('[emailUtils] EmailJS não configurado — email de convite não enviado.');
+    return false;
+  }
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, {
+      to_email: toEmail,
+      to_name: 'Novo Colaborador',
+      notification_title: 'Convite para preenchimento de dados',
+      notification_message: 'Foi convidado(a) para preencher os seus dados na Magnetic Place. O link expira em 7 dias e só pode ser usado uma vez.',
+      link_unico: link,
+    }, EMAILJS_PUBLIC_KEY);
+    return true;
+  } catch (error) {
+    console.warn('[emailUtils] Falha no envio de email de convite:', error);
+    return false;
+  }
+};
+
+export const sendOnboardingNotifAdmin = async ({ nome, profissao }) => {
+  if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID_NOTIF || !EMAILJS_PUBLIC_KEY) {
+    console.warn('[emailUtils] EmailJS não configurado — notificação admin não enviada.');
+    return false;
+  }
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_NOTIF, {
+      to_email: 'diegobarbosa@magneticplace.pt',
+      to_name: 'Admin',
+      notification_title: `Novo pedido de registo — ${nome}`,
+      notification_message: `${nome} (${profissao || 'profissão não indicada'}) submeteu os seus dados. Aceda ao painel admin → Equipa → Pendentes para rever e aprovar.`,
+      link_unico: typeof window !== 'undefined' ? window.location.origin : '',
+    }, EMAILJS_PUBLIC_KEY);
+    return true;
+  } catch (error) {
+    console.warn('[emailUtils] Falha no envio de email de notificação ao admin:', error);
+    return false;
+  }
+};
+
 export const sendWorkerDocumentEmail = async ({
   workerEmail,
   workerName,
