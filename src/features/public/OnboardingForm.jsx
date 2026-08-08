@@ -138,8 +138,8 @@ function BrandPanel({ step }) {
           </div>
         </div>
 
-        <h1 className="text-white font-black text-2xl leading-tight mb-3" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
-          Ficha de<br />Colaborador
+        <h1 className="text-white font-black text-lg leading-snug mb-3">
+          Ficha de Colaborador
         </h1>
         <p className="text-slate-400 text-sm font-medium leading-relaxed">
           Preencha os seus dados para concluir o processo de registo.
