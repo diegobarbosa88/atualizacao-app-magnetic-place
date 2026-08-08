@@ -62,8 +62,8 @@ const EMPTY_FORM = {
 function InputField({ label, error, icon: Icon, children }) {
   return (
     <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-600">
-        {Icon && <Icon size={11} className="text-indigo-400" />}
+      <label className="flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-widest text-slate-700">
+        {Icon && <Icon size={12} className="text-indigo-500" />}
         {label}
       </label>
       {children}
@@ -79,7 +79,7 @@ function InputField({ label, error, icon: Icon, children }) {
 function Inp({ error, ...props }) {
   return (
     <input
-      className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all placeholder:text-slate-300 normal-case
+      className={`w-full rounded-xl border px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all placeholder:text-slate-300 placeholder:font-normal normal-case
         ${error
           ? 'border-rose-300 bg-rose-50 focus:border-rose-400 focus:ring-2 focus:ring-rose-100'
           : 'border-slate-200 bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50'
@@ -92,7 +92,7 @@ function Inp({ error, ...props }) {
 function Sel({ children, ...props }) {
   return (
     <select
-      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none normal-case"
+      className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none normal-case"
       {...props}
     >
       {children}
@@ -115,10 +115,38 @@ function InfoBox({ color, children }) {
 
 // ─── Painel de marca (esquerda / topo) ───────────────────────────
 
+function MobileHeader({ step }) {
+  const Icon = STEPS[step].icon;
+  return (
+    <div
+      className="flex items-center justify-between px-5 py-3"
+      style={{ background: 'linear-gradient(135deg, #0F1F3D 0%, #1a3460 100%)' }}
+    >
+      <div className="flex items-center gap-2.5">
+        <img
+          src="/MAGNETIC (3).png"
+          alt="Logo"
+          className="h-8 w-8 object-contain"
+          onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }}
+        />
+        <div>
+          <p className="text-white font-black text-sm tracking-tight leading-none">MAGNETIC PLACE</p>
+          <p className="text-slate-400 text-[10px] font-medium normal-case mt-0.5">Ficha de Colaborador</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+        <Icon size={12} className="text-indigo-300" />
+        <span className="text-indigo-200 text-[11px] font-bold normal-case">{STEPS[step].label}</span>
+        <span className="text-slate-500 text-[10px]">{step + 1}/{STEPS.length}</span>
+      </div>
+    </div>
+  );
+}
+
 function BrandPanel({ step }) {
   return (
     <div
-      className="flex flex-col justify-between p-8 lg:p-10"
+      className="flex flex-col justify-between h-full p-10"
       style={{ background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' }}
     >
       {/* Logo + nome */}
@@ -138,17 +166,17 @@ function BrandPanel({ step }) {
           </div>
         </div>
 
-        <p className="text-white font-black text-lg leading-snug mb-3 normal-case">
+        <p className="text-white font-black text-xl leading-snug mb-3 normal-case">
           Ficha de Colaborador
         </p>
-        <p className="text-slate-400 text-sm font-medium leading-relaxed normal-case">
+        <p className="text-slate-400 text-sm leading-relaxed normal-case">
           Preencha os seus dados para concluir o processo de registo.
           A informação é tratada de forma confidencial.
         </p>
       </div>
 
       {/* Passos */}
-      <div className="mt-10 space-y-3">
+      <div className="space-y-3">
         {STEPS.map((s, i) => {
           const done = i < step;
           const active = i === step;
@@ -159,7 +187,7 @@ function BrandPanel({ step }) {
                 ${done ? 'bg-emerald-500' : active ? 'bg-indigo-500' : 'bg-white/10'}`}>
                 {done ? <Check size={14} className="text-white" /> : <Icon size={14} className={active ? 'text-white' : 'text-slate-400'} />}
               </div>
-              <span className={`text-sm font-bold ${active ? 'text-white' : 'text-slate-400'}`}>{s.label}</span>
+              <span className={`text-sm font-bold normal-case ${active ? 'text-white' : 'text-slate-400'}`}>{s.label}</span>
               {active && <div className="flex-1 h-px bg-indigo-500/40" />}
             </div>
           );
@@ -167,7 +195,7 @@ function BrandPanel({ step }) {
       </div>
 
       {/* Rodapé */}
-      <div className="mt-10 pt-6 border-t border-white/10">
+      <div className="pt-6 border-t border-white/10">
         <div className="flex items-center gap-2 text-slate-500">
           <Lock size={12} />
           <span className="text-[10px] font-medium normal-case">Dados protegidos — RGPD</span>
@@ -340,8 +368,13 @@ export default function OnboardingForm({ token }) {
   return (
     <div className="min-h-screen lg:flex" style={{ background: '#0F1F3D' }}>
 
-      {/* Painel de marca — esquerda em desktop, topo em mobile */}
-      <div className="lg:w-80 lg:min-h-screen lg:sticky lg:top-0 lg:self-start">
+      {/* Mobile: barra compacta no topo */}
+      <div className="lg:hidden">
+        <MobileHeader step={step} />
+      </div>
+
+      {/* Desktop: painel lateral fixo */}
+      <div className="hidden lg:block lg:w-80 lg:min-h-screen lg:sticky lg:top-0 lg:self-start">
         <BrandPanel step={step} />
       </div>
 
@@ -352,10 +385,10 @@ export default function OnboardingForm({ token }) {
         <div className="bg-white border-b border-slate-100 px-6 lg:px-10 py-4">
           <div className="max-w-xl mx-auto lg:mx-0">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black text-slate-500 uppercase tracking-widest">
+              <span className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
                 {STEPS[step].label}
               </span>
-              <span className="text-xs font-bold text-slate-400">{step + 1} / {STEPS.length}</span>
+              <span className="text-xs font-bold text-slate-500">{step + 1} / {STEPS.length}</span>
             </div>
             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div
