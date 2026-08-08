@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
-  AlertTriangle, Send, ChevronRight, ChevronDown,
+  AlertTriangle, Send, ChevronRight, ChevronDown, PanelLeftClose, PanelLeftOpen,
   FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck, Shield, Calculator,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
@@ -173,7 +173,7 @@ function SubFlyout({ subtabs, top, flyoutLeft, counts, onNavigate, onMouseEnter,
   return portal ? ReactDOM.createPortal(el, portal) : el;
 }
 
-function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClick }) {
+function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClick, collapsed }) {
   const navigate = useNavigate();
   const hideTimer = useRef(null);
   const [hoveredTab, setHoveredTab] = useState(null);
@@ -186,7 +186,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
   };
 
   const handleTabEnter = (tab, e) => {
-    if (!tab.subtabs) { scheduleHide(); return; }
+    if (!tab.subtabs && !collapsed) { scheduleHide(); return; }
     clearHide();
     const rect = e.currentTarget.getBoundingClientRect();
     setFlyoutTop(rect.top);
@@ -207,7 +207,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
   const activeFlyoutTab = MENU_STRUCTURE.find(t => t.id === hoveredTab);
 
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+    <nav className={`flex-1 overflow-y-auto py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
       {MENU_STRUCTURE.map(tab => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;
@@ -223,23 +223,29 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
             onMouseEnter={(e) => handleTabEnter(tab, e)}
             onMouseLeave={scheduleHide}
             aria-current={isActive ? 'page' : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            title={collapsed ? tab.label : undefined}
+            className={`w-full flex items-center rounded-xl text-sm font-bold transition-all relative ${
+              collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+            } ${
               isActive
                 ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
                 : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
             }`}
           >
             <Icon size={18} className="shrink-0" />
-            <span className="flex-1 text-left truncate">{tab.label}</span>
-            {badge > 0 && (
+            {!collapsed && <span className="flex-1 text-left truncate">{tab.label}</span>}
+            {!collapsed && badge > 0 && (
               <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
                 isActive ? 'bg-white text-indigo-600' : 'bg-red-500 text-white'
               }`}>
                 {badge}
               </span>
             )}
-            {tab.subtabs && (
+            {!collapsed && tab.subtabs && (
               <ChevronRight size={12} className={`shrink-0 ${isActive ? 'text-white/60' : 'text-slate-300'}`} />
+            )}
+            {collapsed && badge > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
             )}
           </button>
         );
@@ -367,7 +373,36 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
   );
 }
 
-function UserFooter({ currentUser, onLogout, onSwitchToWorker, onItemClick }) {
+function UserFooter({ currentUser, onLogout, onSwitchToWorker, onItemClick, collapsed }) {
+  if (collapsed) {
+    return (
+      <div className="border-t border-slate-100 p-2 space-y-2 flex flex-col items-center">
+        <div
+          title={currentUser?.name || 'Admin'}
+          className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-xs font-black shrink-0"
+        >
+          {(currentUser?.name || 'A').slice(0, 1).toUpperCase()}
+        </div>
+        {onSwitchToWorker && (
+          <button
+            onClick={() => { onSwitchToWorker(); onItemClick && onItemClick(); }}
+            title="Meu painel de trabalhador"
+            className="w-full flex items-center justify-center p-2 rounded-xl text-indigo-600 hover:bg-indigo-50 transition-all"
+          >
+            <Users size={14} />
+          </button>
+        )}
+        <button
+          onClick={() => { onLogout(); onItemClick && onItemClick(); }}
+          title="Terminar sessão"
+          className="w-full flex items-center justify-center p-2 rounded-xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all"
+        >
+          <LogOut size={14} />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="border-t border-slate-100 p-3 space-y-2">
       <div className="flex items-center gap-3 px-2 py-2">
@@ -412,6 +447,17 @@ export default function AdminSidebar({
 }) {
   const drawerRef = useRef(null);
   const firstItemRef = useRef(null);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('admin-sidebar-collapsed') === '1'; } catch { return false; }
+  });
+
+  const toggleCollapsed = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('admin-sidebar-collapsed', next ? '1' : '0'); } catch {}
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!isMobileOpen) return;
@@ -436,21 +482,36 @@ export default function AdminSidebar({
   };
 
   const desktop = (
-    <aside className="hidden md:flex w-60 shrink-0 sticky top-0 h-screen flex-col bg-white border-r border-slate-200 shadow-sm">
-      <div className="px-5 py-5 border-b border-slate-100 flex items-center gap-3">
-        <CompanyLogo className="h-10 w-auto" />
-        <div className="min-w-0">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admin</p>
-          <p className="text-xs font-black text-slate-700 truncate">Menu Principal</p>
+    <aside className={`hidden md:flex shrink-0 sticky top-0 h-screen flex-col bg-white border-r border-slate-200 shadow-sm transition-all duration-200 ${
+      collapsed ? 'w-[68px]' : 'w-60'
+    }`}>
+      <div className={`py-5 border-b border-slate-100 flex items-center ${collapsed ? 'px-3 flex-col gap-2' : 'px-5 gap-3'}`}>
+        <div className={`flex items-center min-w-0 ${collapsed ? '' : 'flex-1 gap-3'}`}>
+          <CompanyLogo className="h-10 w-auto" />
+          {!collapsed && (
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admin</p>
+              <p className="text-xs font-black text-slate-700 truncate">Menu Principal</p>
+            </div>
+          )}
         </div>
+        <button
+          onClick={toggleCollapsed}
+          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-all shrink-0"
+        >
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
       </div>
       <NavList
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         setAuditWorkerId={setAuditWorkerId}
         counts={counts}
+        collapsed={collapsed}
       />
-      <UserFooter currentUser={currentUser} onLogout={onLogout} onSwitchToWorker={onSwitchToWorker} />
+      <UserFooter currentUser={currentUser} onLogout={onLogout} onSwitchToWorker={onSwitchToWorker} collapsed={collapsed} />
     </aside>
   );
 
