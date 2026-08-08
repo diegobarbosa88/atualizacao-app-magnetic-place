@@ -6,7 +6,7 @@ import {
   Building2, Timer, CheckCircle, CheckCircle2, ChevronDown
 } from 'lucide-react';
 
-const inp = 'w-full bg-white border border-slate-200 rounded-lg py-1 px-2.5 text-sm font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
+const inp = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
 const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0].slice(2)}`; };
 const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
 
