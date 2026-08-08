@@ -118,7 +118,7 @@ function InfoBox({ color, children }) {
 function MobileHeader({ step }) {
   return (
     <div style={{ background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' }}>
-      <div className="px-5 pt-5 pb-5 space-y-6">
+      <div className="px-5 pt-5 pb-5 space-y-4">
         {/* Linha 1: logo + marca */}
         <div className="flex items-center gap-3">
           <img
@@ -132,6 +132,8 @@ function MobileHeader({ step }) {
             <p className="text-slate-400 text-xs font-medium normal-case mt-0.5">Unipessoal, Lda</p>
           </div>
         </div>
+        {/* Separador */}
+        <div className="h-px bg-white/10" />
         {/* Linha 2: passo atual + dots */}
         <div className="flex items-end justify-between">
           <div>
