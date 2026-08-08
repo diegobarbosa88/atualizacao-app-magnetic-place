@@ -13,9 +13,9 @@ const supabase = createClient(
 );
 
 const TABELA_IRS_OPTIONS = [
-  { value: 'tabelaI',   label: 'Tabela I — Trabalho dependente (geral)' },
-  { value: 'tabelaII',  label: 'Tabela II — Pensões' },
-  { value: 'tabelaIII', label: 'Tabela III — Não casado, dois titulares' },
+  { value: 'tabelaI',   label: 'Tabela I — Não casado / Casado, dois titulares' },
+  { value: 'tabelaII',  label: 'Tabela II — Não casado, com dependentes' },
+  { value: 'tabelaIII', label: 'Tabela III — Casado, único titular' },
 ];
 
 const STEPS = [
