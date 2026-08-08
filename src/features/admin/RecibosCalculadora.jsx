@@ -1010,7 +1010,7 @@ export default function RecibosCalculadora() {
 
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
     const trabalhadores = (workers || [])
-      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null && logsDoMes.some(l => l.workerId === w.id))
+      .filter(w => (w.is_active !== false && w.status !== 'inativo' || w.dataFim?.startsWith(mesStr) || w.dataInicio?.startsWith(mesStr)) && w.vencimento_base != null && logsDoMes.some(l => l.workerId === w.id))
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (trabalhadores.length === 0) {
@@ -1134,7 +1134,7 @@ export default function RecibosCalculadora() {
 
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
     const trabalhadores = (workers || [])
-      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null && logsDoMes.some(l => l.workerId === w.id))
+      .filter(w => (w.is_active !== false && w.status !== 'inativo' || w.dataFim?.startsWith(mesStr) || w.dataInicio?.startsWith(mesStr)) && w.vencimento_base != null && logsDoMes.some(l => l.workerId === w.id))
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (trabalhadores.length === 0) {
@@ -1215,7 +1215,7 @@ export default function RecibosCalculadora() {
     const anoNum   = n(inputs.ano);
 
     const trabalhadores = (workers || [])
-      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .filter(w => (w.is_active !== false && w.status !== 'inativo' || w.dataFim?.startsWith(mesStr) || w.dataInicio?.startsWith(mesStr)) && w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (trabalhadores.length === 0) {
@@ -1429,7 +1429,7 @@ export default function RecibosCalculadora() {
     const anoNum   = n(inputs.ano);
 
     const trabalhadores = (workers || [])
-      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .filter(w => (w.is_active !== false && w.status !== 'inativo' || w.dataFim?.startsWith(mesStr) || w.dataInicio?.startsWith(mesStr)) && w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (trabalhadores.length === 0) { alert('Nenhum trabalhador activo com vencimento base configurado.'); return; }
@@ -1703,7 +1703,7 @@ ${hdrRow}${bodyRows}${totRow}
     const anoNum   = n(inputs.ano);
 
     const trabalhadores = (workers || [])
-      .filter(w => w.is_active !== false && w.status !== 'inativo' && w.vencimento_base != null)
+      .filter(w => (w.is_active !== false && w.status !== 'inativo' || w.dataFim?.startsWith(mesStr) || w.dataInicio?.startsWith(mesStr)) && w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     if (trabalhadores.length === 0) { alert('Nenhum trabalhador activo com vencimento base configurado.'); return; }
@@ -1933,7 +1933,7 @@ ${hdrRow}${bodyRows}${totRow}
               <SelectInput value={selectedWorkerId} onChange={handleSelectWorker}>
                 <option value="">— Introduzir manualmente —</option>
                 {(workers || [])
-                  .filter(w => w.is_active !== false && w.status !== 'inativo')
+                  .filter(w => { const m = `${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`; return (w.is_active !== false && w.status !== 'inativo') || w.dataFim?.startsWith(m) || w.dataInicio?.startsWith(m); })
                   .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
                   .map(w => (
                     <option key={w.id} value={w.id}>{w.name}</option>
