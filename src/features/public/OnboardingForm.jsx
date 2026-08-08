@@ -120,14 +120,17 @@ function MobileHeader({ step }) {
     <div style={{ background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' }}>
       <div className="px-5 pt-4 pb-3.5 space-y-3">
         {/* Linha 1: logo + marca */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <img
             src="/MAGNETIC (3).png"
             alt="Logo"
-            className="h-7 w-7 object-contain"
+            className="h-9 w-9 object-contain"
             onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }}
           />
-          <p className="text-white font-black text-sm tracking-tight">MAGNETIC PLACE</p>
+          <div>
+            <p className="text-white font-black text-base tracking-tight leading-none">MAGNETIC PLACE</p>
+            <p className="text-slate-400 text-[10px] font-medium normal-case mt-0.5">Unipessoal, Lda</p>
+          </div>
         </div>
         {/* Linha 2: passo atual + dots */}
         <div className="flex items-end justify-between">
