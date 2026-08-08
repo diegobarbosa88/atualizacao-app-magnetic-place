@@ -510,7 +510,7 @@ export default function RecibosCalculadora() {
   // Desviado = A082 live ≠ r.ajudaCustoNecessaria (o valor que o recibo calcula para A082)
   // Indica que o mapa e o recibo estão dessincronizados — exportação bloqueada.
   const mapaDesviado = mapaLiqLive != null && r != null
-    && Math.abs(mapaLiqLive - r.ajudaCustoNecessaria) > 0.5;
+    && Math.abs(mapaLiqLive - r.ajudaCustoNecessaria) > 7;
 
   // A082 para o recibo: sempre o líquido do mapa ao vivo (nunca snapshot, nunca com complemento)
   const ajudasDisplay       = mapaLiqLive ?? r?.ajudaCustoNecessaria ?? 0;

@@ -27,7 +27,7 @@ function computeAjudasDisplay(mapaRows, mapaTotal, subsAlimMapaLive, ajudaNecess
 
 function isMapaDesviado(mapaLiqLive, ajudaNecessaria, mapaRowsLen) {
   if (mapaRowsLen === 0 || ajudaNecessaria == null) return false;
-  return Math.abs(mapaLiqLive - ajudaNecessaria) > 0.5;
+  return Math.abs(mapaLiqLive - ajudaNecessaria) > 7;
 }
 
 // ---------------------------------------------------------------------------
@@ -99,8 +99,9 @@ describe('mapaDesviado — deteta dessincronização entre mapa e recibo', () =>
     expect(isMapaDesviado(mapaLiqLive, mapaLiqLive, mapaRows.length)).toBe(false);
   });
 
-  it('NÃO está desviado com diferença < 0,50 €', () => {
-    expect(isMapaDesviado(mapaLiqLive, mapaLiqLive + 0.3, mapaRows.length)).toBe(false);
+  it('NÃO está desviado com diferença < 7 € (ex.: +2,29 € de arredondamento de subsAlim)', () => {
+    expect(isMapaDesviado(mapaLiqLive, mapaLiqLive + 2.29, mapaRows.length)).toBe(false);
+    expect(isMapaDesviado(mapaLiqLive, mapaLiqLive + 6.99, mapaRows.length)).toBe(false);
   });
 
   it('ESTÁ desviado quando complemento antigo invalida a relação mapa←→recibo', () => {
