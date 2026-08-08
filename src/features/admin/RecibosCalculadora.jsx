@@ -16,7 +16,7 @@ import {
   eur,
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
-import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada } from '../../lib/payroll/mapaAutoFill.js';
+import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -510,7 +510,7 @@ export default function RecibosCalculadora() {
   // Desviado = A082 live ≠ r.ajudaCustoNecessaria (o valor que o recibo calcula para A082)
   // Indica que o mapa e o recibo estão dessincronizados — exportação bloqueada.
   const mapaDesviado = mapaLiqLive != null && r != null
-    && Math.abs(mapaLiqLive - r.ajudaCustoNecessaria) > 7;
+    && Math.abs(mapaLiqLive - r.ajudaCustoNecessaria) > SYNC_TOLERANCE;
 
   // A082 para o recibo: sempre o líquido do mapa ao vivo (nunca snapshot, nunca com complemento)
   const ajudasDisplay       = mapaLiqLive ?? r?.ajudaCustoNecessaria ?? 0;
@@ -757,8 +757,9 @@ export default function RecibosCalculadora() {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    // Complemento residual: sempre complementar (sem tolerância de ±5€)
-    const usarComplemento = residuo > 0.01;
+    // Só complementar se o resíduo exceder a tolerância de sincronização;
+    // resíduos pequenos ficam dentro do limiar de mapaDesviado sem necessidade de prémios.
+    const usarComplemento = residuo > SYNC_TOLERANCE;
     if (usarComplemento) {
       if (complementMethod === 'he1' && r.valorHe1un > 0) {
         const h = Math.ceil((residuo / r.valorHe1un) * 100) / 100;
@@ -2277,7 +2278,7 @@ ${hdrRow}${bodyRows}${totRow}
                       onClick={gerarReciboPDF}
                       disabled={mapaDesviado}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      title={mapaDesviado ? 'Mapa dessincronizado — corra o auto-preenchimento antes de exportar' : 'Exportar recibo em PDF'}
+                      title={mapaDesviado ? 'Mapa dessincronizado — clique em "Preencher automaticamente" antes de exportar' : 'Exportar recibo em PDF'}
                     >
                       <FileText size={11} /> PDF
                     </button>
@@ -2285,7 +2286,7 @@ ${hdrRow}${bodyRows}${totRow}
                       onClick={exportReciboXLS}
                       disabled={mapaDesviado}
                       className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      title={mapaDesviado ? 'Mapa dessincronizado — corra o auto-preenchimento antes de exportar' : 'Exportar recibo em Excel'}
+                      title={mapaDesviado ? 'Mapa dessincronizado — clique em "Preencher automaticamente" antes de exportar' : 'Exportar recibo em Excel'}
                     >
                       <FileSpreadsheet size={11} /> Excel
                     </button>
@@ -2459,7 +2460,7 @@ ${hdrRow}${bodyRows}${totRow}
           </LabelInput>
           <button
             onClick={autoFill}
-            disabled={!r || r.ajudaCustoNecessaria <= 0}
+            disabled={!r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <RefreshCw size={12} /> Preencher automaticamente
@@ -2571,7 +2572,7 @@ ${hdrRow}${bodyRows}${totRow}
               <p className="font-black uppercase tracking-wide mb-0.5">Mapa dessincronizado — exportação bloqueada</p>
               <p className="font-semibold">
                 O A082 do mapa ({eur(mapaLiqLive)}) difere do necessário no recibo ({r ? eur(r.ajudaCustoNecessaria) : '—'}).
-                Corra o <strong>auto-preenchimento</strong> para ressincronizar antes de exportar o recibo.
+                Clique em <strong>Preencher automaticamente</strong> para ressincronizar antes de exportar o recibo.
               </p>
             </div>
           </div>

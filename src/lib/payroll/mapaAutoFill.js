@@ -9,6 +9,9 @@
  * Fórmula: total = valorDiario × ((N − 2) + fP + fC)   (N ≥ 2)
  */
 
+/** Tolerância de sincronização do mapa (mesma que mapaDesviado em RecibosCalculadora). */
+export const SYNC_TOLERANCE = 7;
+
 export const FRAC_PARTIDA = [1.00, 0.75, 0.50];
 export const FRAC_CHEGADA = [0.50, 0.25, 0.00];
 
@@ -71,16 +74,20 @@ export function findBestCombo(valorNec, valorDiario, maxN) {
         const betterAbsDiff = absDiff < best.absDiff - eps;
         const tieAbsDiff    = absDiff <= best.absDiff + eps;
 
-        if (betterAbsDiff) {
-          best = { N, fP, fC, total, diff, absDiff };
-        } else if (tieAbsDiff) {
-          const thisPos = diff >= 0;
-          const bestPos = best.diff >= 0;
+        // "bom": mapa dentro da tolerância de sincronização (diff ≥ -7) — inclui mapa ligeiramente
+        // acima do alvo (complemento com tolerância) ou abaixo (pode complementar com prémios).
+        // "mau": mapa acima do alvo por mais de 7€ — nenhum complemento positivo pode resolver.
+        const thisGood = diff >= -SYNC_TOLERANCE;
+        const bestGood = best.diff >= -SYNC_TOLERANCE;
 
-          if (thisPos && !bestPos) {
-            // Regra 2: diff≥0 bate diff<0
+        if (thisGood && !bestGood) {
+          // Regra 0: qualquer combo "bom" bate qualquer "mau" independentemente do absDiff
+          best = { N, fP, fC, total, diff, absDiff };
+        } else if (thisGood === bestGood) {
+          // Mesma classe: menor absDiff ganha
+          if (betterAbsDiff) {
             best = { N, fP, fC, total, diff, absDiff };
-          } else if (thisPos === bestPos) {
+          } else if (tieAbsDiff) {
             if (fP > best.fP) {
               // Regra 3: partida mais alta (100% > 75% > 50%)
               best = { N, fP, fC, total, diff, absDiff };
