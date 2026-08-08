@@ -62,8 +62,8 @@ const EMPTY_FORM = {
 function InputField({ label, error, icon: Icon, children }) {
   return (
     <div className="space-y-1.5">
-      <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-        {Icon && <Icon size={11} className="text-slate-300" />}
+      <label className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-widest text-slate-600">
+        {Icon && <Icon size={11} className="text-indigo-400" />}
         {label}
       </label>
       {children}
@@ -138,7 +138,7 @@ function BrandPanel({ step }) {
           </div>
         </div>
 
-        <h1 className="text-white font-black text-3xl lg:text-4xl leading-tight mb-3" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
+        <h1 className="text-white font-black text-2xl leading-tight mb-3" style={{ fontFamily: "'Big Shoulders Display', sans-serif" }}>
           Ficha de<br />Colaborador
         </h1>
         <p className="text-slate-400 text-sm font-medium leading-relaxed">
