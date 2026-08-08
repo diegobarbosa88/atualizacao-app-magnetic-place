@@ -285,7 +285,7 @@ export default function RecibosCalculadora() {
     if (!selectedWorkerId || !workers?.length) return;
     const custo = calcularCustoMesRef.current(selectedWorkerId, inputs.mes, inputs.ano);
     setBrutoAlvoEditado(false);
-    setInputs(prev => ({ ...prev, brutoAlvo: custo > 0 ? custo.toFixed(2) : '' }));
+    setInputs(prev => ({ ...prev, brutoAlvo: custo > 0 ? custo.toFixed(2) : prev.brutoAlvo }));
   // workers?.length garante que o effect re-corre quando os workers carregam (necessário com sessão restaurada)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkerId, inputs.mes, inputs.ano, workers?.length]);
@@ -540,21 +540,15 @@ export default function RecibosCalculadora() {
         const rate = getRateAtDate(l.date, hist, parseFloat(w.valorHora) || 0);
         return s + (parseFloat(l.hours) || 0) * rate;
       }, 0);
-      const contabRow    = contabData.find(r => r.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
-
-      const rc = calcularRecibo({
-        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
-        horasSemana: 40, premios: 0, he1: 0, he2: 0,
-        incluirFerias: true, incluirNatal: true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
-        tabelaKey:    w.tabela_irs || 'tabelaI',
-        nDependentes: w.n_dependentes ?? 0,
-        brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
-        territorio: 'internacional', funcao: 'geral', ano: anoNum,
+      const subsAlimDias = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
       });
+
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
 
@@ -582,33 +576,34 @@ export default function RecibosCalculadora() {
         subsAlimTotal: eur2(rc.subsAlimTotal),
         subsFerias:    eur2(rc.subsFerias),
         subsNatal:     eur2(rc.subsNatal),
-        ajudas:        eur2(rc.ajudaCustoNecessaria),
+        ajudas:        eur2(mapaLiqLive),
         baseIRS:       eur2(rc.incidenciaRegular),
         taxaIRS:       pct2(rc.taxaRegular),
         irsTotal:      eur2(rc.irsTotal),
         ssTrab:        eur2(rc.ssTrabalhador),
-        totalAbonos:   eur2(rc.totalAbonos),
+        totalAbonos:   eur2(rc.totalAbonos + mapaAjudasDiff),
         totalDesc:     eur2(rc.totalDescontos),
-        liquido:       eur2(rc.liquido),
+        liquido:       eur2(rc.liquido + mapaAjudasDiff),
         ssPatronal:    eur2(rc.ssPatronal),
-        custoEmpresa:  eur2(rc.custoEmpresa),
+        custoEmpresa:  eur2(rc.custoEmpresa + mapaAjudasDiff),
         brutoAlvo:     eur2(brutoAlvo),
         _brutoNum:     brutoAlvo,
-        _abonosNum:    rc.totalAbonos,
+        _abonosNum:    rc.totalAbonos + mapaAjudasDiff,
         _descNum:      rc.totalDescontos,
-        _liquidoNum:   rc.liquido,
+        _liquidoNum:   rc.liquido + mapaAjudasDiff,
         _ssPatNum:     rc.ssPatronal,
-        _custoNum:     rc.custoEmpresa,
+        _custoNum:     rc.custoEmpresa + mapaAjudasDiff,
         _subsAlimNum:  rc.subsAlimTotal,
         _feriasNum:    rc.subsFerias,
         _natalNum:     rc.subsNatal,
-        _ajudasNum:    rc.ajudaCustoNecessaria,
+        _ajudasNum:    mapaLiqLive,
         _irsNum:       rc.irsTotal,
         _ssTrabNum:    rc.ssTrabalhador,
         _vencNum:      parseFloat(w.vencimento_base) || 0,
       };
     }).filter(Boolean);
-  }, [workers, logs, clients, workerRateHistory, contabData, inputs.mes, inputs.ano]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workers, logs, clients, workerRateHistory, feriadoMunicipal, inputs.mes, inputs.ano]);
 
   function addRow(data) {
     rowCounter++;
@@ -956,10 +951,10 @@ export default function RecibosCalculadora() {
     if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
 
     const totalDiasMes = new Date(anoNum, parseInt(mesStr.split('-')[1], 10), 0).getDate();
-    const dataInicio   = `${mesStr}-01`;
-    function contarDiasUteis(nDias) {
+
+    function contarDiasUteis(di, nDias) {
       let count = 0;
-      const d = new Date(dataInicio + 'T00:00:00');
+      const d = new Date(di + 'T00:00:00');
       for (let i = 0; i < nDias; i++) {
         const dow = d.getDay();
         if (dow >= 1 && dow <= 5) count++;
@@ -968,19 +963,35 @@ export default function RecibosCalculadora() {
       return count;
     }
 
-    let subsAlimMapa = subsAlimValorDia > 0 ? rc0.subsAlimTotal : 0;
-    let bestCombo    = null;
-    for (let iter = 0; iter < 6; iter++) {
-      const valorNec = ajudaNecessaria + subsAlimMapa;
-      if (valorNec <= 0) break;
-      bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
-      if (!bestCombo) break;
-      const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(bestCombo.N) * subsAlimValorDia : 0;
-      if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
-      subsAlimMapa = novoSubsAlim;
+    function runForStartDay(di) {
+      let subsAlimMapa = subsAlimValorDia > 0 ? rc0.subsAlimTotal : 0;
+      let bestCombo = null;
+      for (let iter = 0; iter < 6; iter++) {
+        const valorNec = ajudaNecessaria + subsAlimMapa;
+        if (valorNec <= 0) break;
+        bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
+        if (!bestCombo) break;
+        const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(di, bestCombo.N) * subsAlimValorDia : 0;
+        if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+        subsAlimMapa = novoSubsAlim;
+      }
+      if (!bestCombo) return null;
+      const totalAjudas = Math.round(bestCombo.total * 100) / 100;
+      const valorNecFinal = ajudaNecessaria + subsAlimMapa;
+      const residuo = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
+      return { bestCombo, subsAlimMapa, totalAjudas, residuo };
     }
 
-    if (!bestCombo) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
+    let bestResult = null;
+    for (let day = 1; day <= 20; day++) {
+      const di = `${mesStr}-${String(day).padStart(2, '0')}`;
+      const result = runForStartDay(di);
+      if (!result) continue;
+      if (!bestResult || Math.abs(result.residuo) < Math.abs(bestResult.residuo)) bestResult = result;
+    }
+
+    if (!bestResult) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
+    const { bestCombo, subsAlimMapa } = bestResult;
 
     const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
     const valorNecFinal = ajudaNecessaria + subsAlimMapa;
@@ -1724,36 +1735,52 @@ ${hdrRow}${bodyRows}${totRow}
       // Cliente carry-forward por dia
       const clienteParaDia = _clientePorDiaFn(w.id, mesStr);
 
-      // Mapa arranca sempre no dia 1 do mês
-      const dataInicio   = `${mesStr}-01`;
       const limiteDia    = valorDiarioLegal('internacional', 'geral');
       const valorAlimDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
       const totalDiasMes = new Date(anoNum, mesNum, 0).getDate();
 
-      // Conta dias úteis (Seg–Sex) nas primeiras nDias a partir de dataInicio
-      function contarUteis(nDias) {
+      // Conta dias úteis (Seg–Sex) nas primeiras nDias a partir de di
+      function contarUteis(di, nDias) {
         let c = 0;
-        const d = new Date(dataInicio + 'T00:00:00');
+        const d = new Date(di + 'T00:00:00');
         for (let i = 0; i < nDias; i++) { if (d.getDay() >= 1 && d.getDay() <= 5) c++; d.setDate(d.getDate() + 1); }
         return c;
       }
 
-      // Iteração com findBestCombo — mesma lógica que autoFill na UI
-      let subsAlimMapa = valorAlimDia > 0 ? rc.subsAlimTotal : 0;
-      let bestCombo    = null;
-      for (let iter = 0; iter < 6; iter++) {
-        const valorNec = rc.ajudaCustoNecessaria + subsAlimMapa;
-        if (valorNec <= 0) break;
-        bestCombo = findBestCombo(valorNec, limiteDia, totalDiasMes);
-        if (!bestCombo) break;
-        const novoSubsAlim = valorAlimDia > 0 ? contarUteis(bestCombo.N) * valorAlimDia : 0;
-        if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
-        subsAlimMapa = novoSubsAlim;
+      // Mesma lógica que autoFill na UI: testa dias de início 1–20 e escolhe o de menor |resíduo|
+      function runForStartDayMapa(di) {
+        let subsAlimMapa = valorAlimDia > 0 ? rc.subsAlimTotal : 0;
+        let bestCombo = null;
+        for (let iter = 0; iter < 6; iter++) {
+          const valorNec = rc.ajudaCustoNecessaria + subsAlimMapa;
+          if (valorNec <= 0) break;
+          bestCombo = findBestCombo(valorNec, limiteDia, totalDiasMes);
+          if (!bestCombo) break;
+          const novoSubsAlim = valorAlimDia > 0 ? contarUteis(di, bestCombo.N) * valorAlimDia : 0;
+          if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+          subsAlimMapa = novoSubsAlim;
+        }
+        if (!bestCombo) return null;
+        const totalAjudas = Math.round(bestCombo.total * 100) / 100;
+        const valorNecFinal = rc.ajudaCustoNecessaria + subsAlimMapa;
+        const residuo = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
+        return { bestCombo, subsAlimMapa, residuo, di };
+      }
+
+      let bestMapaResult = null;
+      for (let day = 1; day <= 20; day++) {
+        const di = `${mesStr}-${String(day).padStart(2, '0')}`;
+        const result = runForStartDayMapa(di);
+        if (!result) continue;
+        if (!bestMapaResult || Math.abs(result.residuo) < Math.abs(bestMapaResult.residuo)) bestMapaResult = result;
       }
 
       // Constrói linhas do mapa a partir do combo (N, fP, fC) com frações legais
       let mapaLinhas = [];
-      if (bestCombo) {
+      let subsAlimMapaFinal = 0;
+      if (bestMapaResult) {
+        const { bestCombo, subsAlimMapa, di: dataInicio } = bestMapaResult;
+        subsAlimMapaFinal = subsAlimMapa;
         let cursor = new Date(dataInicio + 'T00:00:00');
         for (let i = 0; i < bestCombo.N; i++) {
           const isFirst = i === 0, isLast = i === bestCombo.N - 1;
@@ -1784,7 +1811,7 @@ ${hdrRow}${bodyRows}${totRow}
         mesLabel, ano: inputs.ano,
         nome: w.name, nif: w.nif, nis: w.nis, profissao: w.profissao,
         mapaLinhas,
-        subsAlimTotal: subsAlimMapa,
+        subsAlimTotal: subsAlimMapaFinal,
         logo: logoRef.current,
       });
     });
@@ -2334,6 +2361,15 @@ ${hdrRow}${bodyRows}${totRow}
                 <div className="bg-slate-50 rounded-xl px-3 py-2">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Abonos</p>
                   <p className="text-base font-black text-slate-800">{eur(totalAbonosDisplay)}</p>
+                  {n(inputs.brutoAlvo) > 0 && (() => {
+                    const diff = Math.round((totalAbonosDisplay - n(inputs.brutoAlvo)) * 100) / 100;
+                    if (Math.abs(diff) < 0.005) return null;
+                    return (
+                      <p className={`text-[9px] font-bold mt-0.5 ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {diff > 0 ? '+' : ''}{eur(diff)} vs alvo
+                      </p>
+                    );
+                  })()}
                 </div>
                 <div className="bg-slate-50 rounded-xl px-3 py-2">
                   <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Descontos</p>
@@ -3244,7 +3280,19 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           placeholder="—"
                           className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
                         />
-                      ) : (
+                      ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
+                        const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
+                        return (
+                          <span className={`block px-2 ${tdAlign()}`}>
+                            {row[col.key]}
+                            {Math.abs(diff) >= 0.005 && (
+                              <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                              </span>
+                            )}
+                          </span>
+                        );
+                      })() : (
                         <span className={`block px-2 ${tdAlign()}`}>{row[col.key]}</span>
                       )}
                     </td>
