@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useTeam } from '../contexts/TeamContext';
 import {
@@ -6,7 +6,8 @@ import {
   Building2, Timer, CheckCircle, CheckCircle2, ChevronDown
 } from 'lucide-react';
 
-const inp = 'w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
+const inp = 'w-full bg-white border border-slate-200 rounded-lg py-2 px-2.5 text-sm font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
+const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0].slice(2)}`; };
 const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
 
 const WorkerForm = () => {
@@ -16,7 +17,15 @@ const WorkerForm = () => {
   const [saveSuccessScheduleId, setSaveSuccessScheduleId] = useState(null);
   const [expandedClientPeriods, setExpandedClientPeriods] = useState({});
   const [expandedSchedulePeriods, setExpandedSchedulePeriods] = useState({});
+  const [valorHoraHistory, setValorHoraHistory] = useState([]);
+  const [employmentHistory, setEmploymentHistory] = useState([]);
   const supabase = window.supabaseInstance;
+
+  useEffect(() => {
+    if (!workerForm.id || !supabase) { setValorHoraHistory([]); setEmploymentHistory([]); return; }
+    supabase.from('worker_valorhora_history').select('*').eq('worker_id', workerForm.id).order('data_alteracao', { ascending: false }).limit(4).then(({ data }) => setValorHoraHistory(data || []));
+    supabase.from('worker_employment_history').select('*').eq('worker_id', workerForm.id).order('created_at', { ascending: false }).limit(4).then(({ data }) => setEmploymentHistory(data || []));
+  }, [workerForm.id]);
 
   const handleSaveClientDates = async (clientId, dataInicio, dataFim) => {
     if (!workerForm.id || !supabase) return;
@@ -109,6 +118,15 @@ const WorkerForm = () => {
                 <label className={lbl}>Data Fim</label>
                 <input type="date" value={workerForm.dataFim || ''} onChange={f('dataFim')} className={inp} />
               </div>
+              {employmentHistory.length > 0 && (
+                <div className="col-span-2 border-l-2 border-slate-100 pl-2 space-y-0.5">
+                  {employmentHistory.map(p => (
+                    <p key={p.id} className="text-[9px] text-slate-400 font-mono leading-tight">
+                      {fmtDate(p.data_inicio)} → {p.data_fim ? fmtDate(p.data_fim) : <span className="text-indigo-400 font-bold">atual</span>}
+                    </p>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -154,6 +172,15 @@ const WorkerForm = () => {
               <div>
                 <label className={lbl}>Valor Hora (€)</label>
                 <input type="number" step="0.01" value={workerForm.valorHora} onChange={f('valorHora')} className={inp + ' text-emerald-700 font-black'} placeholder="0.00" />
+                {valorHoraHistory.length > 0 && (
+                  <div className="mt-1 border-l-2 border-emerald-100 pl-2 space-y-0.5">
+                    {valorHoraHistory.map(h => (
+                      <p key={h.id} className="text-[9px] text-slate-400 font-mono leading-tight">
+                        {h.valor_anterior ?? '—'} → <span className="text-emerald-600">{h.valor_novo}€</span> · {fmtDate(h.data_alteracao)}
+                      </p>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className={lbl}>Desde</label>
