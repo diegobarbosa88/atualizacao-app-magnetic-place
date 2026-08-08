@@ -496,17 +496,24 @@ export default function RecibosCalculadora() {
     ? Math.round((n(inputs.premios) + n(inputs.he1) * r.valorHe1un + n(inputs.he2) * r.valorHe2un) * 100) / 100
     : 0;
 
-  // Importância a receber = mapa - subsAlim + complemento (calculado ao vivo, sem depender de snapshot)
-  const importanciaAReceber = mapaRows.length > 0
-    ? Math.round((mapaTotal - subsAlimMapaLive + complementTotalLive) * 100) / 100
+  // A082 = valor líquido do mapa ao vivo: Total do Mapa − Subsídio Alimentação do Mapa
+  // O complemento (A008/HE) é uma rubrica SEPARADA no recibo — NUNCA soma aqui.
+  const mapaLiqLive = mapaRows.length > 0
+    ? Math.round((mapaTotal - subsAlimMapaLive) * 100) / 100
     : null;
 
-  // Aviso de stale: o valor necessário mudou desde o último autoFill
-  const valorNecLive = r ? Math.round((r.ajudaCustoNecessaria + complementTotalLive) * 100) / 100 : 0;
-  const mapaValorEsperado = Math.round((valorNecLive + subsAlimMapaLive) * 100) / 100;
-  const mapaDesviado = mapaRows.length > 0 && Math.abs(mapaTotal - mapaValorEsperado) > 0.5;
+  // Importância total a receber pelo trabalhador = A082 + complemento (só para informação no info-box)
+  const importanciaAReceber = mapaLiqLive != null
+    ? Math.round((mapaLiqLive + complementTotalLive) * 100) / 100
+    : null;
 
-  const ajudasDisplay       = importanciaAReceber ?? r?.ajudaCustoNecessaria ?? 0;
+  // Desviado = A082 live ≠ r.ajudaCustoNecessaria (o valor que o recibo calcula para A082)
+  // Indica que o mapa e o recibo estão dessincronizados — exportação bloqueada.
+  const mapaDesviado = mapaLiqLive != null && r != null
+    && Math.abs(mapaLiqLive - r.ajudaCustoNecessaria) > 0.5;
+
+  // A082 para o recibo: sempre o líquido do mapa ao vivo (nunca snapshot, nunca com complemento)
+  const ajudasDisplay       = mapaLiqLive ?? r?.ajudaCustoNecessaria ?? 0;
   const _diffAjudas         = r ? ajudasDisplay - r.ajudaCustoNecessaria : 0;
   const totalAbonosDisplay  = r ? r.totalAbonos  + _diffAjudas : 0;
   const liquidoDisplay      = r ? r.liquido       + _diffAjudas : 0;
@@ -2268,15 +2275,17 @@ ${hdrRow}${bodyRows}${totRow}
                   <div className="flex gap-1.5">
                     <button
                       onClick={gerarReciboPDF}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all"
-                      title="Exportar recibo em PDF"
+                      disabled={mapaDesviado}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={mapaDesviado ? 'Mapa dessincronizado — corra o auto-preenchimento antes de exportar' : 'Exportar recibo em PDF'}
                     >
                       <FileText size={11} /> PDF
                     </button>
                     <button
                       onClick={exportReciboXLS}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all"
-                      title="Exportar recibo em Excel"
+                      disabled={mapaDesviado}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={mapaDesviado ? 'Mapa dessincronizado — corra o auto-preenchimento antes de exportar' : 'Exportar recibo em Excel'}
                     >
                       <FileSpreadsheet size={11} /> Excel
                     </button>
@@ -2556,9 +2565,15 @@ ${hdrRow}${bodyRows}${totRow}
           </div>
         )}
         {mapaDesviado && (
-          <div className="mt-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 font-semibold flex items-center gap-2">
-            <AlertTriangle size={14} className="shrink-0" />
-            O valor necessário mudou desde o último auto-preenchimento — os totais apresentados são os valores actuais.
+          <div className="mt-2 px-4 py-3 bg-rose-50 border-2 border-rose-300 rounded-xl text-xs text-rose-800 flex items-start gap-2">
+            <AlertTriangle size={15} className="shrink-0 mt-0.5 text-rose-500" />
+            <div>
+              <p className="font-black uppercase tracking-wide mb-0.5">Mapa dessincronizado — exportação bloqueada</p>
+              <p className="font-semibold">
+                O A082 do mapa ({eur(mapaLiqLive)}) difere do necessário no recibo ({r ? eur(r.ajudaCustoNecessaria) : '—'}).
+                Corra o <strong>auto-preenchimento</strong> para ressincronizar antes de exportar o recibo.
+              </p>
+            </div>
           </div>
         )}
         {(autoFillInfo || mapaRows.length > 0) && importanciaAReceber !== null && (
@@ -2594,12 +2609,18 @@ ${hdrRow}${bodyRows}${totRow}
               </span>
             )}
             <span>
-              <span className="font-semibold text-slate-700">Importância a receber:</span>{' '}
-              <span className="font-black text-emerald-700">{eur(importanciaAReceber)}</span>{' '}
-              {r && <span className={`text-[10px] ${Math.abs(importanciaAReceber - r.ajudaCustoNecessaria - complementTotalLive) < 0.02 ? 'text-emerald-500' : 'text-amber-500'}`}>
-                ({importanciaAReceber >= (r.ajudaCustoNecessaria + complementTotalLive) - 0.01 ? '✓' : '⚠'} necessário: {eur(r.ajudaCustoNecessaria + complementTotalLive)})
+              <span className="font-semibold text-slate-700">A082 (recibo):</span>{' '}
+              <span className={`font-black ${mapaDesviado ? 'text-rose-600' : 'text-emerald-700'}`}>{eur(mapaLiqLive ?? 0)}</span>
+              {r && <span className={`text-[10px] ml-1 ${mapaDesviado ? 'text-rose-500' : 'text-emerald-500'}`}>
+                ({mapaDesviado ? '⚠ dessincronizado' : '✓'} necessário: {eur(r.ajudaCustoNecessaria)})
               </span>}
             </span>
+            {complementTotalLive > 0 && (
+              <span>
+                <span className="font-semibold text-slate-700">Total trabalhador (A082 + complemento):</span>{' '}
+                <span className="font-black text-indigo-700">{eur(importanciaAReceber ?? 0)}</span>
+              </span>
+            )}
           </div>
         )}
       </Card>
