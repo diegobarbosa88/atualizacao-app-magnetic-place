@@ -116,28 +116,46 @@ function InfoBox({ color, children }) {
 // ─── Painel de marca (esquerda / topo) ───────────────────────────
 
 function MobileHeader({ step }) {
-  const Icon = STEPS[step].icon;
   return (
-    <div
-      className="flex items-center justify-between px-5 py-3"
-      style={{ background: 'linear-gradient(135deg, #0F1F3D 0%, #1a3460 100%)' }}
-    >
-      <div className="flex items-center gap-2.5">
-        <img
-          src="/MAGNETIC (3).png"
-          alt="Logo"
-          className="h-8 w-8 object-contain"
-          onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }}
-        />
-        <div>
-          <p className="text-white font-black text-sm tracking-tight leading-none">MAGNETIC PLACE</p>
-          <p className="text-slate-400 text-[10px] font-medium normal-case mt-0.5">Ficha de Colaborador</p>
+    <div style={{ background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' }}>
+      <div className="px-5 pt-4 pb-3.5 space-y-3">
+        {/* Linha 1: logo + marca */}
+        <div className="flex items-center gap-2.5">
+          <img
+            src="/MAGNETIC (3).png"
+            alt="Logo"
+            className="h-7 w-7 object-contain"
+            onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=4f46e5&color=fff'; }}
+          />
+          <p className="text-white font-black text-sm tracking-tight">MAGNETIC PLACE</p>
+        </div>
+        {/* Linha 2: passo atual + dots */}
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest mb-1">
+              Passo {step + 1} de {STEPS.length}
+            </p>
+            <p className="text-white text-base font-extrabold normal-case leading-none">
+              {STEPS[step].label}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 pb-0.5">
+            {STEPS.map((_, i) => (
+              <div key={i} className={`rounded-full transition-all duration-300 ${
+                i < step  ? 'w-2 h-2 bg-emerald-400' :
+                i === step ? 'w-5 h-2 bg-indigo-400' :
+                              'w-2 h-2 bg-white/15'
+              }`} />
+            ))}
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-        <Icon size={12} className="text-indigo-300" />
-        <span className="text-indigo-200 text-[11px] font-bold normal-case">{STEPS[step].label}</span>
-        <span className="text-slate-500 text-[10px]">{step + 1}/{STEPS.length}</span>
+      {/* Barra de progresso */}
+      <div className="h-[2px] bg-white/5">
+        <div
+          className="h-full bg-indigo-500 transition-all duration-500"
+          style={{ width: `${Math.max(8, ((step + 1) / STEPS.length) * 100)}%` }}
+        />
       </div>
     </div>
   );
