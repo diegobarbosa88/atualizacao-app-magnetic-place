@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useTeam, TeamProvider } from './contexts/TeamContext';
-import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock } from 'lucide-react';
+import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch, UserPlus, Copy, Mail, Check, Clock, Loader2 } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
 import ModalShell from '../../components/common/ModalShell';
@@ -281,68 +281,70 @@ const TeamManagerContent = ({ onLogin }) => {
         isOpen={inviteModal}
         onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); }}
         title="Convidar novo colaborador"
-        subtitle="Gera um link único que o colaborador usa para preencher os seus dados."
+        subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
         accent="indigo"
         size="md"
       >
-        <div className="space-y-4">
+        <div className="p-5 space-y-4">
           {!generatedLink ? (<>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              Gera um link único e seguro que o colaborador usa para preencher os seus próprios dados.
+              O link expira em 7 dias e só pode ser usado uma vez.
+            </p>
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
                 Email do colaborador (opcional)
               </label>
               <input
-                className="w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-slate-400"
                 type="email"
                 placeholder="colaborador@email.com"
                 value={inviteEmail}
                 onChange={e => setInviteEmail(e.target.value)}
               />
-              <p className="text-[10px] text-slate-400 mt-1">Se preenchido, pode enviar o link por email diretamente.</p>
+              <p className="text-[10px] text-slate-400 mt-1.5">Se preenchido, pode enviar o link por email.</p>
             </div>
             <button
               onClick={gerarConvite}
               disabled={inviteLoading}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black uppercase bg-teal-600 text-white hover:bg-teal-700 transition-all disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black uppercase bg-teal-600 text-white hover:bg-teal-700 active:scale-[0.98] transition-all disabled:opacity-50 shadow-md"
             >
-              {inviteLoading ? <span className="animate-spin text-lg">⟳</span> : <UserPlus size={16} />}
+              {inviteLoading ? <Loader2 size={16} className="animate-spin" /> : <UserPlus size={16} />}
               Gerar link de convite
             </button>
           </>) : (<>
-            <div className="bg-teal-50 rounded-xl p-4 border border-teal-100">
-              <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest mb-2">Link gerado</p>
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-bold text-teal-800 break-all flex-1 bg-white rounded-lg px-3 py-2 border border-teal-200 font-mono select-all">
-                  {generatedLink}
-                </p>
+            <div className="bg-teal-50 rounded-xl p-4 border border-teal-100 space-y-3">
+              <p className="text-[10px] font-black text-teal-700 uppercase tracking-widest">Link gerado com sucesso</p>
+              <div className="bg-white rounded-lg border border-teal-200 px-3 py-2.5">
+                <p className="text-xs font-mono text-teal-800 break-all select-all leading-relaxed">{generatedLink}</p>
+              </div>
+              <div className="flex gap-2">
                 <button
                   onClick={copyLink}
-                  className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-black uppercase transition-all ${linkCopied ? 'bg-emerald-600 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase transition-all ${linkCopied ? 'bg-emerald-600 text-white' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
                 >
-                  {linkCopied ? <Check size={12} /> : <Copy size={12} />}
-                  {linkCopied ? 'Copiado' : 'Copiar'}
+                  {linkCopied ? <Check size={13} /> : <Copy size={13} />}
+                  {linkCopied ? 'Copiado!' : 'Copiar link'}
                 </button>
+                {inviteEmail && (
+                  <button
+                    onClick={sendInviteEmail}
+                    disabled={inviteEmailSent}
+                    className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-black uppercase transition-all ${inviteEmailSent ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'} disabled:opacity-60`}
+                  >
+                    {inviteEmailSent ? <Check size={13} /> : <Mail size={13} />}
+                    {inviteEmailSent ? 'Enviado' : 'Enviar email'}
+                  </button>
+                )}
               </div>
-              <p className="text-[10px] text-teal-600 mt-2 font-bold">
-                Este link expira em 7 dias e só pode ser usado uma vez.
+              <p className="text-[10px] text-teal-600 font-bold">
+                Expira em 7 dias · uso único
               </p>
             </div>
-            {inviteEmail && (
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={sendInviteEmail}
-                  disabled={inviteEmailSent}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${inviteEmailSent ? 'bg-emerald-100 text-emerald-700' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}
-                >
-                  {inviteEmailSent ? <Check size={14} /> : <Mail size={14} />}
-                  {inviteEmailSent ? 'Email enviado' : `Enviar por email para ${inviteEmail}`}
-                </button>
-              </div>
-            )}
             <button
               onClick={() => { setGeneratedLink(''); setInviteEmail(''); }}
-              className="text-xs text-slate-400 hover:text-slate-600 font-bold"
+              className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1 transition-colors"
             >
               Gerar novo link
             </button>
