@@ -44,11 +44,7 @@ function validarIBAN(raw) {
 }
 
 function validarNIS(nis) {
-  if (!/^\d{11}$/.test(nis)) return false;
-  const d = nis.split('').map(Number);
-  const w = [29, 23, 19, 17, 13, 11, 7, 5, 3, 2];
-  const sum = d.slice(0, 10).reduce((a, v, i) => a + v * w[i], 0);
-  return d[10] === (9 - ((sum - 1) % 10)) % 10;
+  return /^\d{11}$/.test(nis);
 }
 
 const EMPTY_FORM = {
@@ -264,7 +260,7 @@ export default function OnboardingForm({ token }) {
     }
     if (s === 2) {
       if (form.nif && !validarNIF(form.nif)) errs.nif = 'NIF inválido — verifique os 9 dígitos e o dígito de controlo.';
-      if (form.nis && !validarNIS(form.nis)) errs.nis = 'NIS inválido — deve ter 11 dígitos com dígito de controlo correto.';
+      if (form.nis && !validarNIS(form.nis)) errs.nis = 'NIS inválido — deve ter exatamente 11 dígitos.';
       if (form.iban && !validarIBAN(form.iban)) errs.iban = 'IBAN inválido — verifique o formato e o checksum.';
     }
     return errs;
