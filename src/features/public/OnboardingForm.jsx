@@ -397,8 +397,8 @@ export default function OnboardingForm({ token }) {
       {/* Painel do formulário */}
       <div className="flex-1 bg-slate-50 lg:min-h-screen flex flex-col">
 
-        {/* Barra de progresso */}
-        <div className="bg-white border-b border-slate-100 px-6 lg:px-10 py-4">
+        {/* Barra de progresso — só desktop (mobile já tem no cabeçalho) */}
+        <div className="hidden lg:block bg-white border-b border-slate-100 px-6 lg:px-10 py-4">
           <div className="max-w-xl mx-auto lg:mx-0">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-extrabold text-slate-700 uppercase tracking-widest">
