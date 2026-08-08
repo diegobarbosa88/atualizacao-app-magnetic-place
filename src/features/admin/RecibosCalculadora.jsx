@@ -12,7 +12,6 @@ import {
   MESES_PT,
   calcularRecibo,
   valorDiarioLegal,
-  gerarLinhasMapa,
   eur,
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
@@ -940,7 +939,7 @@ export default function RecibosCalculadora() {
   }
 
   function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr) {
-    const vencBase         = parseFloat(w.vencimento_base)         || 0;
+    const vencBase         = parseFloat(w.vencimento_base)          || 0;
     const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
     const baseParams = {
       vencimentoBase: vencBase, horasSemana: 40, premios: 0,
@@ -954,9 +953,10 @@ export default function RecibosCalculadora() {
     const rc0             = calcularRecibo(baseParams);
     const valorDiario     = valorDiarioLegal('internacional', 'geral');
     const ajudaNecessaria = rc0.ajudaCustoNecessaria;
-    if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, premios: 0 };
+    if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
 
-    const dataInicio = `${mesStr}-01`;
+    const totalDiasMes = new Date(anoNum, parseInt(mesStr.split('-')[1], 10), 0).getDate();
+    const dataInicio   = `${mesStr}-01`;
     function contarDiasUteis(nDias) {
       let count = 0;
       const d = new Date(dataInicio + 'T00:00:00');
@@ -969,29 +969,26 @@ export default function RecibosCalculadora() {
     }
 
     let subsAlimMapa = subsAlimValorDia > 0 ? rc0.subsAlimTotal : 0;
-    let bestF = 0, bestDias = 0, bestTotal = 0, nLinhas = 1;
+    let bestCombo    = null;
     for (let iter = 0; iter < 6; iter++) {
       const valorNec = ajudaNecessaria + subsAlimMapa;
       if (valorNec <= 0) break;
-      const unidades = valorNec / valorDiario;
-      bestF = 0; bestDias = 0; bestTotal = 0;
-      for (const f of [0.50, 0.25, 0.00]) {
-        const dias = Math.floor(unidades - f);
-        if (dias < 0) continue;
-        const total = dias + f;
-        if (total <= unidades + 1e-9 && total > bestTotal) { bestF = f; bestDias = dias; bestTotal = total; }
-      }
-      nLinhas = bestDias + 1;
-      const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(nLinhas) * subsAlimValorDia : 0;
+      bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
+      if (!bestCombo) break;
+      const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(bestCombo.N) * subsAlimValorDia : 0;
       if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
       subsAlimMapa = novoSubsAlim;
     }
 
-    const totalAjudas   = Math.round(bestTotal * valorDiario * 100) / 100;
+    if (!bestCombo) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
+
+    const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
     const valorNecFinal = ajudaNecessaria + subsAlimMapa;
-    const premios       = Math.max(0, Math.round((valorNecFinal - totalAjudas) * 100) / 100);
-    const rc = premios > 0.01 ? calcularRecibo({ ...baseParams, premios }) : rc0;
-    return { rc, premios };
+    const residuo       = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
+    const premios       = residuo > SYNC_TOLERANCE ? Math.round(residuo * 100) / 100 : 0;
+    const mapaLiqLive   = Math.round((totalAjudas - subsAlimMapa) * 100) / 100;
+    const rc = premios > 0 ? calcularRecibo({ ...baseParams, premios }) : rc0;
+    return { rc, premios, mapaLiqLive };
   }
 
   async function gerarRecibosBatchPDF() {
@@ -1031,7 +1028,8 @@ export default function RecibosCalculadora() {
         dataCessacao: w.dataFim    || null,
         ausencias:    workerAusencias,
       });
-      const { rc, premios: premiosBatch } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
@@ -1068,10 +1066,10 @@ export default function RecibosCalculadora() {
         ['A001', 'Vencimento Base', '', '', eur(parseFloat(w.vencimento_base) || 0), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
       ];
-      if (rc.subsFerias > 0)           linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
-      if (premiosBatch > 0.01)         linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
-      if (rc.subsNatal > 0)            linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
-      if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(rc.ajudaCustoNecessaria), '']);
+      if (rc.subsFerias > 0)   linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
+      if (premiosBatch > 0)    linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
+      if (rc.subsNatal > 0)    linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
+      if (mapaLiqLive > 0)     linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
       linhas.push(['T001', `IRS (venc. ${eur(rc.incidenciaRegular)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(rc.irsTotal)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
 
@@ -1090,15 +1088,15 @@ export default function RecibosCalculadora() {
         body: [
           [
             { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalAbonos), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: eur(rc.totalAbonos + mapaAjudasDiff), styles: { fontStyle: 'bold', halign: 'right' } },
             { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
             { content: eur(rc.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
           ],
           [
             { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-            { content: eur(rc.liquido), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+            { content: eur(rc.liquido + mapaAjudasDiff), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
             { content: 'Custo Empresa (c/ TSU 23,75%)' },
-            { content: eur(rc.custoEmpresa), styles: { halign: 'right' } },
+            { content: eur(rc.custoEmpresa + mapaAjudasDiff), styles: { halign: 'right' } },
           ],
         ],
         theme: 'plain',
@@ -1152,22 +1150,23 @@ export default function RecibosCalculadora() {
         dataCessacao: w.dataFim    || null,
         ausencias:    workerAusencias,
       });
-      const { rc, premios: premiosBatch } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const linhas = [
         ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
         ['A001', 'Vencimento Base', '', '', (parseFloat(w.vencimento_base) || 0).toFixed(2), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, (parseFloat(w.subsidio_alimentacao_dia) || 0).toFixed(2), rc.subsAlimTotal.toFixed(2), ''],
       ];
-      if (rc.subsFerias > 0)           linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
-      if (premiosBatch > 0.01)         linhas.push(['A008', 'Prémios / Bónus', '', '', premiosBatch.toFixed(2), '']);
-      if (rc.subsNatal > 0)            linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
-      if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', rc.ajudaCustoNecessaria.toFixed(2), '']);
+      if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
+      if (premiosBatch > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', premiosBatch.toFixed(2), '']);
+      if (rc.subsNatal > 0)  linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
+      if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', mapaLiqLive.toFixed(2), '']);
       linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
-      linhas.push(['', 'TOTAL', '', '', rc.totalAbonos.toFixed(2), rc.totalDescontos.toFixed(2)]);
-      linhas.push(['', 'Líquido a Receber', '', '', rc.liquido.toFixed(2), '']);
-      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', rc.custoEmpresa.toFixed(2), '']);
+      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff).toFixed(2), rc.totalDescontos.toFixed(2)]);
+      linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff).toFixed(2), '']);
+      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (rc.custoEmpresa + mapaAjudasDiff).toFixed(2), '']);
 
       const rows = linhas.map((row, i) => {
         const isHdr = i === 0;
@@ -1729,6 +1728,7 @@ ${hdrRow}${bodyRows}${totRow}
       const dataInicio   = `${mesStr}-01`;
       const limiteDia    = valorDiarioLegal('internacional', 'geral');
       const valorAlimDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
+      const totalDiasMes = new Date(anoNum, mesNum, 0).getDate();
 
       // Conta dias úteis (Seg–Sex) nas primeiras nDias a partir de dataInicio
       function contarUteis(nDias) {
@@ -1738,30 +1738,41 @@ ${hdrRow}${bodyRows}${totRow}
         return c;
       }
 
-      // Iteração: subsAlimMapa = diasÚteis(mapa) × valorAlimDia
+      // Iteração com findBestCombo — mesma lógica que autoFill na UI
       let subsAlimMapa = valorAlimDia > 0 ? rc.subsAlimTotal : 0;
-      let mapaLinhas   = [];
-
+      let bestCombo    = null;
       for (let iter = 0; iter < 6; iter++) {
-        mapaLinhas = gerarLinhasMapa({
-          necessaria:  rc.ajudaCustoNecessaria + subsAlimMapa,
-          limiteDia,
-          dataInicio,
-          horaPartida: '07:30',
-          horaChegada: '20:30',
-          territorio:  'internacional',
-          cliente:     '',
-          localidade:  '',
-        }).map(row => ({
-          ...row,
-          cliente: clienteParaDia(row.dia) || '',
-          valor:   limiteDia * (row.pct / 100),
-        }));
+        const valorNec = rc.ajudaCustoNecessaria + subsAlimMapa;
+        if (valorNec <= 0) break;
+        bestCombo = findBestCombo(valorNec, limiteDia, totalDiasMes);
+        if (!bestCombo) break;
+        const novoSubsAlim = valorAlimDia > 0 ? contarUteis(bestCombo.N) * valorAlimDia : 0;
+        if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+        subsAlimMapa = novoSubsAlim;
+      }
 
-        if (mapaLinhas.length === 0) break;
-        const novo = contarUteis(mapaLinhas.length) * valorAlimDia;
-        if (Math.abs(novo - subsAlimMapa) < 0.005) break;
-        subsAlimMapa = novo;
+      // Constrói linhas do mapa a partir do combo (N, fP, fC) com frações legais
+      let mapaLinhas = [];
+      if (bestCombo) {
+        let cursor = new Date(dataInicio + 'T00:00:00');
+        for (let i = 0; i < bestCombo.N; i++) {
+          const isFirst = i === 0, isLast = i === bestCombo.N - 1;
+          const tipo = isFirst ? 'Partida' : isLast ? 'Chegada' : 'Consecutivo';
+          let pct, hora;
+          if (isFirst)     { pct = Math.round(bestCombo.fP * 100); hora = horaDefaultPartida(bestCombo.fP, '07:30'); }
+          else if (isLast) { pct = Math.round(bestCombo.fC * 100); hora = horaDefaultChegada(bestCombo.fC, '20:30'); }
+          else             { pct = 100; hora = ''; }
+          const dia = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,'0')}-${String(cursor.getDate()).padStart(2,'0')}`;
+          mapaLinhas.push({
+            id: i + 1, dia,
+            servico: 'Serviços de mecânica geral',
+            cliente: clienteParaDia(dia) || '',
+            localidade: '', territorio: 'Internacional',
+            tipo, hora, pct,
+            valor: limiteDia * (pct / 100),
+          });
+          cursor.setDate(cursor.getDate() + 1);
+        }
       }
 
       if (mapaLinhas.length === 0) return;
@@ -1965,20 +1976,6 @@ ${hdrRow}${bodyRows}${totRow}
               title="Excel dos recibos de vencimento — todos os trabalhadores"
             >
               <FileSpreadsheet size={12} /> Recibos XLS
-            </button>
-            <button
-              onClick={gerarMapaSalarialPDF}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all shadow-sm"
-              title="PDF de processamento — todos os trabalhadores"
-            >
-              <FileText size={12} /> PDF
-            </button>
-            <button
-              onClick={exportMapaSalarialXLS}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-sm"
-              title="Excel de processamento — todos os trabalhadores"
-            >
-              <FileSpreadsheet size={12} /> Excel
             </button>
             <button
               onClick={gerarMapasAjudasPDF}
@@ -2273,24 +2270,6 @@ ${hdrRow}${bodyRows}${totRow}
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <p className="font-black text-lg text-slate-800">{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={gerarReciboPDF}
-                      disabled={mapaDesviado}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-slate-700 text-white hover:bg-slate-900 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      title={mapaDesviado ? 'Mapa dessincronizado — clique em "Preencher automaticamente" antes de exportar' : 'Exportar recibo em PDF'}
-                    >
-                      <FileText size={11} /> PDF
-                    </button>
-                    <button
-                      onClick={exportReciboXLS}
-                      disabled={mapaDesviado}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                      title={mapaDesviado ? 'Mapa dessincronizado — clique em "Preencher automaticamente" antes de exportar' : 'Exportar recibo em Excel'}
-                    >
-                      <FileSpreadsheet size={11} /> Excel
-                    </button>
-                  </div>
                 </div>
               </div>
 
