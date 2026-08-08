@@ -3,9 +3,10 @@ import { Truck, Plus, RefreshCw } from 'lucide-react';
 import { FornecedorProvider, useFornecedor } from './contexts/FornecedorContext';
 import FornecedorForm from './fornecedores/FornecedorForm';
 import FornecedorList from './fornecedores/FornecedorList';
+import ModalShell from '../../components/common/ModalShell';
 
 function FornecedorManagerContent() {
-  const { fornecedores, loading, isAdding, novoFornecedor, carregar } = useFornecedor();
+  const { fornecedores, loading, isAdding, editingId, novoFornecedor, cancelar, carregar } = useFornecedor();
 
   const ativos = fornecedores.filter(f => f.status === 'ativo').length;
 
@@ -33,20 +34,26 @@ function FornecedorManagerContent() {
           >
             <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
           </button>
-          {!isAdding && (
-            <button
-              onClick={novoFornecedor}
-              className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
-            >
-              <Plus size={14} />
-              Novo Fornecedor
-            </button>
-          )}
+          <button
+            onClick={novoFornecedor}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
+          >
+            <Plus size={14} />
+            Novo Fornecedor
+          </button>
         </div>
       </div>
 
-      {/* Form (collapsa quando não está em edição) */}
-      {isAdding && <FornecedorForm />}
+      <ModalShell
+        isOpen={isAdding}
+        onClose={cancelar}
+        title={editingId ? 'Editar Fornecedor' : 'Novo Fornecedor'}
+        icon={<Truck size={16} />}
+        accent="indigo"
+        size="xl"
+      >
+        <FornecedorForm />
+      </ModalShell>
 
       {/* Lista */}
       <FornecedorList />

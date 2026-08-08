@@ -3,15 +3,16 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { useClient, ClientProvider } from './contexts/ClientContext';
 import {
-  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, X, Save, Building2, CreditCard, Mail, CalendarRange, Check, Navigation, Loader2, ShieldOff, Clock, Send, AlertTriangle, Shield, Search, MoreVertical
+  Briefcase, LayoutGrid, List, Edit2, Trash2, MapPin, Euro, ShieldOff, Send, AlertTriangle, Shield, Search, MoreVertical, Check, X
 } from 'lucide-react';
-import { getCurrentPosition } from '../../utils/geoUtils';
+import ClientForm from './client/ClientForm';
 import ClientEnviosPanel from './client/ClientEnviosPanel';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 import ClientPortalAuditPanel from './client/ClientPortalAuditPanel';
+import ModalShell from '../../components/common/ModalShell';
 
 const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setPrintingReport, portalMonth, setPortalMonth }) => {
-  const { clients, schedules, supabase, corrections } = useApp();
+  const { clients, supabase, corrections } = useApp();
 
   const pendingClientCorrections = (corrections || []).filter(c =>
     c.type !== 'creation_request' && c.type !== 'deletion_request' &&
@@ -32,7 +33,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     clientsSearch, setClientsSearch,
     clientsSort, setClientsSort,
     clientForm, setClientForm,
-    handleSaveClient,
     handleDeleteClient
   } = useClient();
 
@@ -44,8 +44,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
   const [confirmDeleteHistoryId, setConfirmDeleteHistoryId] = useState(null);
   const [confirmDeleteClientId, setConfirmDeleteClientId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
-  const [geoLoading, setGeoLoading] = useState(false);
-  const [geocodeLoading, setGeocodeLoading] = useState(false);
 
   // D-07: Função para carregar histórico
   const loadClientValorHoraHistory = async (clientId, clientName) => {
@@ -79,38 +77,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     await loadClientValorHoraHistory(showClientHistory.clientId, showClientHistory.clientName);
   };
 
-  const handleGeocodeMorada = async () => {
-    if (!clientForm.morada) return;
-    setGeocodeLoading(true);
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(clientForm.morada)}&format=json&limit=1`, {
-        headers: { 'Accept-Language': 'pt' }
-      });
-      const data = await res.json();
-      if (data && data[0]) {
-        setClientForm(prev => ({ ...prev, lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }));
-      } else {
-        alert('Morada não encontrada. Tente uma morada mais detalhada.');
-      }
-    } catch {
-      alert('Erro ao geocodificar a morada.');
-    } finally {
-      setGeocodeLoading(false);
-    }
-  };
-
-  const handleUseCurrentLocation = async () => {
-    setGeoLoading(true);
-    try {
-      const { lat, lng } = await getCurrentPosition();
-      setClientForm(prev => ({ ...prev, lat, lng }));
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setGeoLoading(false);
-    }
-  };
-
   const openEditClient = async (c) => {
     let dataAlteracao = new Date().toISOString().split('T')[0];
     if (supabase) {
@@ -125,7 +91,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     }
     setClientForm({ ...c, dataAlteracao });
     setIsAddingInTab(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const sortedClients = [...clients].filter(c =>
@@ -211,190 +176,20 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
             <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(!isAddingInTab); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className={`px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}>{isAddingInTab ? 'Voltar' : 'Novo'}</button>
+          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-indigo-600 text-white">Novo</button>
         </div>
       </div>
 
-      {isAddingInTab && (
-        <div className="mb-6 bg-white p-4 sm:p-6 lg:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-xl border border-slate-100">
-          <div className="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
-            <h3 className="text-lg sm:text-2xl font-black text-slate-800 flex items-center gap-2">
-              <Building2 className="text-indigo-600" size={22} />
-              {clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}
-            </h3>
-            <button onClick={() => setIsAddingInTab(false)} className="text-slate-400 hover:text-slate-800 transition-colors flex items-center gap-2 font-bold text-xs uppercase tracking-wider bg-slate-50 hover:bg-slate-100 px-4 py-2 rounded-xl">
-              <X size={16} /> Fechar Form
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* COLUNA ESQUERDA (8 colunas) */}
-            <div className="lg:col-span-8 space-y-8">
-              
-              {/* DADOS DO CLIENTE */}
-              <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 space-y-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl"><Briefcase size={18} /></div>
-                  <h4 className="font-black text-slate-700 text-lg uppercase tracking-tight">Dados do Cliente</h4>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Building2 size={10} /> Empresa</label>
-                    <input type="text" value={clientForm.name} onChange={e => setClientForm({ ...clientForm, name: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Nome da empresa" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><CreditCard size={10} /> NIF</label>
-                    <input type="text" value={clientForm.nif || ''} onChange={e => setClientForm({ ...clientForm, nif: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Nº de Contribuinte" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Mail size={10} /> E-mail de Contato</label>
-                    <input type="email" value={clientForm.email || ''} onChange={e => setClientForm({ ...clientForm, email: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="email@exemplo.pt" />
-                  </div>
-                  <div className="space-y-1 flex items-center justify-end">
-                    <label className="text-[10px] font-black text-amber-600 uppercase tracking-wider ml-1 flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={clientForm.triggers_limited_mode || false}
-                        onChange={e => setClientForm({ ...clientForm, triggers_limited_mode: e.target.checked })}
-                        className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
-                      />
-                      Ativa modo limitado para workers
-                    </label>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><Clock size={10} /> Fuso Horário</label>
-                    <select
-                      value={clientForm.timezone || 'Europe/Madrid'}
-                      onChange={e => setClientForm({ ...clientForm, timezone: e.target.value })}
-                      className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all"
-                    >
-                      {typeof Intl !== 'undefined' && Intl.supportedValuesOf ? 
-                        Intl.supportedValuesOf('timeZone').map(tz => (
-                          <option key={tz} value={tz}>{tz}</option>
-                        )) : (
-                        <option value="Europe/Madrid">Europe/Madrid</option>
-                      )}
-                    </select>
-                  </div>
-                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1 flex items-center gap-1"><MapPin size={10} /> Morada</label>
-                    <input type="text" value={clientForm.morada || ''} onChange={e => setClientForm({ ...clientForm, morada: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-4 focus:ring-indigo-50 transition-all" placeholder="Morada completa" />
-                  </div>
-                </div>
-              </div>
-
-              {/* DADOS FINANCEIROS */}
-              <div className="bg-emerald-50/30 p-6 rounded-[2rem] border border-emerald-100 space-y-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl"><Euro size={18} /></div>
-                  <h4 className="font-black text-emerald-800 text-lg uppercase tracking-tight">Dados Financeiros</h4>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-emerald-100/50">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><Euro size={10} /> Valor Hora (€)</label>
-                    <input type="number" step="0.01" value={clientForm.valorHora || ''} onChange={e => setClientForm({ ...clientForm, valorHora: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-lg text-emerald-700 font-black outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" placeholder="0.00" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-emerald-600/70 uppercase tracking-wider ml-1 flex items-center gap-1"><CalendarRange size={10} /> Valor válido desde</label>
-                    <input type="date" value={clientForm.dataAlteracao || ''} onChange={e => setClientForm({ ...clientForm, dataAlteracao: e.target.value })} className="w-full bg-white border border-emerald-100 rounded-xl p-4 text-sm font-bold outline-none shadow-sm focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* COLUNA DIREITA (4 colunas) */}
-            <div className="lg:col-span-4 space-y-6 flex flex-col">
-              <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100 flex-1">
-                <div className="flex items-center gap-2 mb-4">
-                  <Briefcase size={16} className="text-indigo-600" />
-                  <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest">Informação Adicional</h4>
-                </div>
-                <p className="text-xs text-slate-500 mb-4">
-                  Ao atualizar o valor/hora de um cliente, todos os registos futuros e os pendentes do mês atual serão atualizados com o novo valor.
-                </p>
-                <p className="text-xs text-slate-500">
-                  Regista a morada e os detalhes de faturação para constarem nos relatórios enviados.
-                </p>
-              </div>
-
-              {/* GEOLOCALIZAÇÃO */}
-              <div className="bg-violet-50 p-6 rounded-[2rem] border border-violet-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <MapPin size={16} className="text-violet-600" />
-                  <h4 className="font-black text-violet-700 text-sm uppercase tracking-widest">Geolocalização da Unidade</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-3 mb-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Latitude</label>
-                    <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border border-violet-100 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-50 transition-all" placeholder="38.7169" />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Longitude</label>
-                    <input type="number" step="any" value={clientForm.lng ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lng: e.target.value }))} className="w-full bg-white border border-violet-100 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-50 transition-all" placeholder="-9.1399" />
-                  </div>
-                </div>
-                <div className="space-y-1 mb-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider ml-1">Raio (metros)</label>
-                  <input type="number" value={clientForm.geo_radius_m ?? 200} onChange={e => setClientForm(prev => ({ ...prev, geo_radius_m: e.target.value }))} className="w-full bg-white border border-violet-100 rounded-xl p-3 text-sm font-bold outline-none shadow-sm focus:border-violet-400 focus:ring-4 focus:ring-violet-50 transition-all" placeholder="200" />
-                </div>
-                <button onClick={handleUseCurrentLocation} disabled={geoLoading} className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-4 py-3 rounded-xl font-black text-xs uppercase shadow-sm transition-all">
-                  {geoLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
-                  Usar localização atual
-                </button>
-                {clientForm.morada && (
-                  <button
-                    onClick={handleGeocodeMorada}
-                    disabled={geocodeLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-white border border-violet-200 text-violet-600 hover:bg-violet-50 disabled:opacity-50 px-4 py-3 rounded-xl font-black text-xs uppercase shadow-sm transition-all"
-                  >
-                    {geocodeLoading ? <Loader2 size={14} className="animate-spin" /> : <MapPin size={14} />}
-                    Aplicar morada à geolocalização
-                  </button>
-                )}
-              </div>
-
-              {/* HORÁRIOS */}
-              <div className="bg-slate-50 p-4 rounded-[2rem] border border-slate-100">
-                <div className="flex items-center gap-2 mb-3">
-                  <Clock size={14} className="text-indigo-600" />
-                  <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest">Horários</h4>
-                </div>
-                <div className="max-h-[200px] overflow-y-auto pr-1 custom-scrollbar space-y-1.5">
-                  {schedules.length === 0 && (
-                    <p className="text-[10px] text-slate-400 font-bold px-1">Sem horários criados.</p>
-                  )}
-                  {[...schedules].sort((a, b) => a.name.localeCompare(b.name)).map(s => {
-                    const isAssigned = !!(clientForm.assignedSchedules || []).includes(s.id);
-                    return (
-                      <label key={s.id} className={`flex items-center gap-2 p-2 rounded-xl border transition-all cursor-pointer shadow-sm ${isAssigned ? 'bg-indigo-50 border-indigo-200' : 'bg-white border-slate-100 hover:border-indigo-100'}`}>
-                        <div className={`w-4 h-4 rounded flex items-center justify-center border flex-shrink-0 ${isAssigned ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}>
-                          {isAssigned && <Check size={10} className="text-white" />}
-                        </div>
-                        <input type="checkbox" className="hidden" checked={isAssigned} onChange={() => {
-                          const current = clientForm.assignedSchedules || [];
-                          const updated = current.includes(s.id) ? current.filter(id => id !== s.id) : [...current, s.id];
-                          setClientForm({ ...clientForm, assignedSchedules: updated });
-                        }} />
-                        <span className={`text-[10px] font-black uppercase truncate ${isAssigned ? 'text-indigo-900' : 'text-slate-600'}`}>{s.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* AÇÕES */}
-              <div className="pt-2">
-                <button onClick={handleSaveClient} className="w-full bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-1 text-white p-5 rounded-[1.5rem] font-black text-sm uppercase shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-3 border border-indigo-500">
-                  <Save size={20} />
-                  Gravar Cliente
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalShell
+        isOpen={isAddingInTab}
+        onClose={() => setIsAddingInTab(false)}
+        title={clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}
+        icon={<Briefcase size={16} />}
+        accent="indigo"
+        size="2xl"
+      >
+        <ClientForm />
+      </ModalShell>
 
       {clientsView === 'list' ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">

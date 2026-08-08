@@ -8,13 +8,23 @@ const ACCENT = {
   slate:  { header: 'bg-slate-50 border-slate-100',   iconBg: 'bg-slate-100',  iconColor: 'text-slate-600'  },
 };
 
-export default function ModalShell({ isOpen, onClose, title, subtitle, icon, accent = 'indigo', footer, children }) {
+const SIZE_MAP = {
+  sm: 'sm:max-w-sm',
+  md: 'sm:max-w-md',
+  lg: 'sm:max-w-lg',
+  xl: 'sm:max-w-xl',
+  '2xl': 'sm:max-w-2xl',
+  '3xl': 'sm:max-w-3xl',
+};
+
+export default function ModalShell({ isOpen, onClose, title, subtitle, icon, accent = 'indigo', size = 'lg', footer, children }) {
   if (!isOpen) return null;
   const a = ACCENT[accent] || ACCENT.indigo;
+  const sizeClass = SIZE_MAP[size] || SIZE_MAP.lg;
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4">
       <div
-        className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full sm:max-w-lg flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full ${sizeClass} flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300`}
         style={{ maxHeight: 'min(92dvh, 92vh)' }}
       >
         <div className={`flex items-center gap-3 ${a.header} border-b px-5 py-4 shrink-0`}>

@@ -5,6 +5,7 @@ import { useTeam, TeamProvider } from './contexts/TeamContext';
 import { Users, LayoutGrid, List, CalendarX, ShieldCheck, AlertTriangle, Search, ScanSearch } from 'lucide-react';
 import WorkerForm from './team/WorkerForm';
 import WorkerList from './team/WorkerList';
+import ModalShell from '../../components/common/ModalShell';
 import ChangeRequestsPanel from './team/ChangeRequestsPanel';
 import AbsenceRequestsPanel from './team/AbsenceRequestsPanel';
 import WorkerValorHoraHistoryModal from './team/WorkerValorHoraHistoryModal';
@@ -75,7 +76,6 @@ const TeamManagerContent = ({ onLogin }) => {
     }
     setWorkerForm({ ...w, dataAlteracao });
     setIsAddingInTab(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleWorkerListAction = (w) => {
@@ -178,17 +178,25 @@ const TeamManagerContent = ({ onLogin }) => {
           <button
             onClick={() => {
               setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0], limited_entry_mode: false, vencimento_base: '', subsidio_alimentacao_dia: '' });
-              setIsAddingInTab(!isAddingInTab);
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setIsAddingInTab(true);
             }}
-            className={`px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap ${isAddingInTab ? 'bg-slate-200 text-slate-600' : 'bg-indigo-600 text-white'}`}
+            className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-indigo-600 text-white"
           >
-            {isAddingInTab ? 'Fechar' : 'Novo'}
+            Novo
           </button>
         </div>
       </div>
 
-      {isAddingInTab && <WorkerForm />}
+      <ModalShell
+        isOpen={isAddingInTab}
+        onClose={() => setIsAddingInTab(false)}
+        title={workerForm.id ? 'Editar Colaborador' : 'Novo Colaborador'}
+        icon={<Users size={16} />}
+        accent="indigo"
+        size="3xl"
+      >
+        <WorkerForm />
+      </ModalShell>
 
       <DocumentScannerModal open={scannerOpen} onClose={() => setScannerOpen(false)} />
 

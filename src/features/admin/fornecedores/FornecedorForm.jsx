@@ -1,5 +1,5 @@
 import React from 'react';
-import { Building2, CreditCard, FileText, Loader2, X, Save, Truck } from 'lucide-react';
+import { Building2, CreditCard, FileText, Loader2, Save } from 'lucide-react';
 import { useFornecedor } from '../contexts/FornecedorContext';
 
 function Field({ label, children }) {
@@ -14,31 +14,13 @@ function Field({ label, children }) {
 const inputCls = 'border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all w-full bg-white';
 
 export default function FornecedorForm() {
-  const { form, setForm, saving, guardar, cancelar, editingId } = useFornecedor();
+  const { form, setForm, saving, guardar, cancelar } = useFornecedor();
 
   const f = (field) => (e) => setForm(prev => ({ ...prev, [field]: e.target.value }));
   const tog = (field) => () => setForm(prev => ({ ...prev, [field]: !prev[field] }));
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600">
-            <Truck size={16} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {editingId ? 'Editar Fornecedor' : 'Novo Fornecedor'}
-            </p>
-            <p className="text-sm font-black text-slate-700">{form.nome || '—'}</p>
-          </div>
-        </div>
-        <button onClick={cancelar} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">
-          <X size={16} />
-        </button>
-      </div>
-
+    <div className="p-6 space-y-5">
       {/* Secção 1 — Dados da Empresa */}
       <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100 space-y-3">
         <div className="flex items-center gap-2 mb-1">
