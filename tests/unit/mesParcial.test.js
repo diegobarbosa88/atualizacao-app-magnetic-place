@@ -67,6 +67,40 @@ describe('calcMesParcial', () => {
     // 1200 × (14/30) = 560.00
     expect(vencProporcional).toBeCloseTo(560, 0);
   });
+
+  // Regressão — Antonio Augusto Lima: cessação a 26 de Junho, vencBase 1000€
+  it('regressão ANTONIO AUGUSTO LIMA — cessação 26-Jun, vencBase 1000€, 4 dias não trabalhados', () => {
+    const vencBase = 1000;
+    const horasSemana = 40;
+    const r = calcMesParcial('2025-01-01', '2026-06-26', 2026, 6);
+
+    // Verificações de estrutura
+    expect(r.tipo).toBe('fim');
+    expect(r.diaFim).toBe(26);
+    expect(r.diasTrabalhados).toBe(26);
+
+    const diasNaoTrab = 30 - r.diasTrabalhados;
+    expect(diasNaoTrab).toBe(4);
+
+    // A001 mantém valor contratual
+    const a001Valor = vencBase;
+    expect(a001Valor).toBe(1000);
+
+    // Linha de desconto separada (formato TOConline)
+    const horasNaoTrab = diasNaoTrab * (horasSemana / 5); // 4 × 8 = 32h
+    expect(horasNaoTrab).toBe(32);
+
+    // Valor do desconto usando convenção 30 dias: diasNaoTrab × vencBase / 30
+    const valorDesconto = parseFloat((diasNaoTrab * vencBase / 30).toFixed(2));
+    expect(valorDesconto).toBeCloseTo(133.33, 1);
+
+    // Vencimento proporcional = A001 - desconto = 866,67€
+    const vencProporcional = vencBase * r.fator;
+    expect(vencProporcional).toBeCloseTo(866.67, 1);
+
+    // Confirmar equivalência: A001 - desconto = vencimento proporcional
+    expect(a001Valor - valorDesconto).toBeCloseTo(vencProporcional, 1);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────

@@ -379,7 +379,8 @@ export default function RecibosCalculadora() {
     mesParcialDadosRef.current = dados;
     setMesParcialDados(dados);
     setDiasFeriasNaoGozadas('0');
-    setInputs(prev => ({ ...prev, vencimentoBase: String(vencProporcional) }));
+    // Mantém o campo no valor contratual cheio; o desconto aparece como linha separada
+    setInputs(prev => ({ ...prev, vencimentoBase: String(vencBaseOriginal) }));
     setCamposAuto(prev => ({ ...prev, vencimentoBase: true }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWorkerId, inputs.mes, inputs.ano, workers?.length]);
@@ -451,9 +452,11 @@ export default function RecibosCalculadora() {
   };
 
   const r = useMemo(() => {
-    if (!inputs.vencimentoBase) return null;
+    // Usa valor proporcional internamente (IRS/SS corretos) mesmo que A001 mostre o valor cheio
+    const vencEfetivo = mesParcialDados ? mesParcialDados.vencProporcional : n(inputs.vencimentoBase);
+    if (!vencEfetivo) return null;
     return calcularRecibo({
-      vencimentoBase: n(inputs.vencimentoBase),
+      vencimentoBase: vencEfetivo,
       horasSemana: n(inputs.horasSemana),
       premios: n(inputs.premios),
       he1: n(inputs.he1),
@@ -470,7 +473,8 @@ export default function RecibosCalculadora() {
       funcao: inputs.funcao,
       ano: n(inputs.ano),
     });
-  }, [inputs]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputs, mesParcialDados]);
 
   // Sincroniza o valor diário legal quando muda o território ou função
   useEffect(() => {
@@ -680,6 +684,22 @@ export default function RecibosCalculadora() {
     if (!w) return null;
     return calcDiasFeriasAnoAdmissao(w.dataInicio || null, w.dataFim || null, parseInt(inputs.ano, 10));
   }, [mesParcialDados, selectedWorkerId, workers, inputs.ano]);
+
+  // Desconto por dias não trabalhados — TOConline: A001 fica cheio, esta é a linha de desconto separada
+  const descontoDiasParcial = useMemo(() => {
+    if (!mesParcialDados) return null;
+    const diasNaoTrab = 30 - mesParcialDados.diasTrabalhados;
+    if (diasNaoTrab <= 0) return null;
+    const hs = n(inputs.horasSemana) || 40;
+    const horasNaoTrab = parseFloat((diasNaoTrab * hs / 5).toFixed(2));
+    const valor = parseFloat((diasNaoTrab * mesParcialDados.vencBaseOriginal / 30).toFixed(2));
+    const label = mesParcialDados.tipo === 'inicio'
+      ? 'Desconto dias por início de contrato'
+      : mesParcialDados.tipo === 'fim'
+      ? 'Desconto dias por cessação de contrato'
+      : 'Desconto dias por início e cessação de contrato';
+    return { diasNaoTrab, horasNaoTrab, valor, label };
+  }, [mesParcialDados, inputs.horasSemana]);
 
   function addRow(data) {
     rowCounter++;
@@ -906,12 +926,11 @@ export default function RecibosCalculadora() {
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
     });
 
-    // A001 — proporcional quando admissão/cessação cai no mês
-    const a001Qtd  = mesParcialDados ? `${mesParcialDados.diasTrabalhados}d` : '';
-    const a001Unit = mesParcialDados ? eur(mesParcialDados.vencBaseOriginal / 30) : '';
+    // A001 mantém-se sempre no valor contratual completo (formato TOConline)
+    const a001Valor = mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase);
 
     const linhas = [
-      ['A001', 'Vencimento Base', a001Qtd, a001Unit, eur(n(inputs.vencimentoBase)), ''],
+      ['A001', 'Vencimento Base', '', '', eur(a001Valor), ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, eur(n(inputs.subsAlimValorDia)), eur(r.subsAlimTotal), ''],
     ];
     if (r.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(r.subsFerias), '']);
@@ -937,9 +956,12 @@ export default function RecibosCalculadora() {
       }
     }
     if (ajudasDisplay > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplay), '']);
+    // Desconto por dias não trabalhados (linha separada — formato TOConline)
+    if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
     linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
 
+    const _pdfDescontoExtra = descontoDiasParcial ? descontoDiasParcial.valor : 0;
     autoTable(doc, {
       startY: doc.lastAutoTable.finalY + 4,
       head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
@@ -955,9 +977,9 @@ export default function RecibosCalculadora() {
       body: [
         [
           { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-          { content: eur(totalAbonosDisplay + totalAcerto), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: eur(totalAbonosDisplay + totalAcerto + _pdfDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
           { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
-          { content: eur(r.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: eur(r.totalDescontos + _pdfDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
         ],
         [
           { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
@@ -995,12 +1017,11 @@ export default function RecibosCalculadora() {
     const mesNum = parseInt(inputs.mes, 10);
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
 
-    const xlsA001Qtd  = mesParcialDados ? `${mesParcialDados.diasTrabalhados}d` : '';
-    const xlsA001Unit = mesParcialDados ? (mesParcialDados.vencBaseOriginal / 30).toFixed(2) : '';
+    const xlsA001Valor = (mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase)).toFixed(2);
     let xlsTotalAcerto = 0;
     const linhas = [
       ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
-      ['A001', 'Vencimento Base', xlsA001Qtd, xlsA001Unit, n(inputs.vencimentoBase).toFixed(2), ''],
+      ['A001', 'Vencimento Base', '', '', xlsA001Valor, ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, n(inputs.subsAlimValorDia).toFixed(2), r.subsAlimTotal.toFixed(2), ''],
     ];
     if (r.subsFerias > 0)       linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', r.subsFerias.toFixed(2), '']);
@@ -1024,9 +1045,11 @@ export default function RecibosCalculadora() {
       }
     }
     if (ajudasDisplay > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplay.toFixed(2), '']);
+    if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
     linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
-    linhas.push(['', 'TOTAL', '', '', (totalAbonosDisplay + xlsTotalAcerto).toFixed(2), r.totalDescontos.toFixed(2)]);
+    const _xlsDescontoExtra = descontoDiasParcial ? descontoDiasParcial.valor : 0;
+    linhas.push(['', 'TOTAL', '', '', (totalAbonosDisplay + xlsTotalAcerto + _xlsDescontoExtra).toFixed(2), (r.totalDescontos + _xlsDescontoExtra).toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', (liquidoDisplay + xlsTotalAcerto).toFixed(2), '']);
     linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (custoEmpDisplay + xlsTotalAcerto).toFixed(2), '']);
 
@@ -1203,10 +1226,8 @@ export default function RecibosCalculadora() {
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
       });
 
-      const bA001Qtd  = wMesParcial.tipo !== 'completo' ? `${wMesParcial.diasTrabalhados}d` : '';
-      const bA001Unit = wMesParcial.tipo !== 'completo' ? eur(wVencOrig / 30) : '';
       const linhas = [
-        ['A001', 'Vencimento Base', bA001Qtd, bA001Unit, eur(wVencCalculo), ''],
+        ['A001', 'Vencimento Base', '', '', eur(wVencOrig), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
       ];
       if (rc.subsFerias > 0)   linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
@@ -1220,6 +1241,16 @@ export default function RecibosCalculadora() {
         if (wAcerto.subsNatalProp  > 0) { linhas.push(['A021P', 'Sub. Natal prop. (acerto final)', '', '', eur(wAcerto.subsNatalProp), '']); bTotalAcerto += wAcerto.subsNatalProp; }
       }
       if (mapaLiqLive > 0)     linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
+      // Desconto proporcional (linha separada — formato TOConline)
+      const bDiasNaoTrab = wMesParcial.tipo !== 'completo' ? 30 - wMesParcial.diasTrabalhados : 0;
+      const bDescontoExtra = bDiasNaoTrab > 0 ? parseFloat((bDiasNaoTrab * wVencOrig / 30).toFixed(2)) : 0;
+      if (bDiasNaoTrab > 0) {
+        const bHorasNaoTrab = parseFloat((bDiasNaoTrab * 40 / 5).toFixed(2));
+        const bLabel = wMesParcial.tipo === 'inicio' ? 'Desconto dias por início de contrato'
+          : wMesParcial.tipo === 'fim' ? 'Desconto dias por cessação de contrato'
+          : 'Desconto dias por início e cessação de contrato';
+        linhas.push(['D001', bLabel, `${bHorasNaoTrab}h`, '', '', eur(bDescontoExtra)]);
+      }
       linhas.push(['T001', `IRS (venc. ${eur(rc.incidenciaRegular)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(rc.irsTotal)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
 
@@ -1238,9 +1269,9 @@ export default function RecibosCalculadora() {
         body: [
           [
             { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalAbonos + mapaAjudasDiff + bTotalAcerto), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: eur(rc.totalAbonos + mapaAjudasDiff + bTotalAcerto + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
             { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: eur(rc.totalDescontos + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
           ],
           [
             { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
@@ -1307,12 +1338,10 @@ export default function RecibosCalculadora() {
         xlsWMesParcial.tipo !== 'completo' ? xlsWVencCalculo : undefined);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
-      const xlsA001Qtd  = xlsWMesParcial.tipo !== 'completo' ? `${xlsWMesParcial.diasTrabalhados}d` : '';
-      const xlsA001Unit = xlsWMesParcial.tipo !== 'completo' ? (xlsWVencOrig / 30).toFixed(2) : '';
       let xlsBTotalAcerto = 0;
       const linhas = [
         ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
-        ['A001', 'Vencimento Base', xlsA001Qtd, xlsA001Unit, xlsWVencCalculo.toFixed(2), ''],
+        ['A001', 'Vencimento Base', '', '', xlsWVencOrig.toFixed(2), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, (parseFloat(w.subsidio_alimentacao_dia) || 0).toFixed(2), rc.subsAlimTotal.toFixed(2), ''],
       ];
       if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
@@ -1324,9 +1353,18 @@ export default function RecibosCalculadora() {
         if (xlsWAcerto.subsNatalProp  > 0) { linhas.push(['A021P', 'Sub. Natal prop. (acerto final)', '', '', xlsWAcerto.subsNatalProp.toFixed(2), '']); xlsBTotalAcerto += xlsWAcerto.subsNatalProp; }
       }
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', mapaLiqLive.toFixed(2), '']);
+      const xlsBDiasNaoTrab = xlsWMesParcial.tipo !== 'completo' ? 30 - xlsWMesParcial.diasTrabalhados : 0;
+      const xlsBDescontoExtra = xlsBDiasNaoTrab > 0 ? parseFloat((xlsBDiasNaoTrab * xlsWVencOrig / 30).toFixed(2)) : 0;
+      if (xlsBDiasNaoTrab > 0) {
+        const xlsBHorasNaoTrab = parseFloat((xlsBDiasNaoTrab * 40 / 5).toFixed(2));
+        const xlsBLabel = xlsWMesParcial.tipo === 'inicio' ? 'Desconto dias por início de contrato'
+          : xlsWMesParcial.tipo === 'fim' ? 'Desconto dias por cessação de contrato'
+          : 'Desconto dias por início e cessação de contrato';
+        linhas.push(['D001', xlsBLabel, `${xlsBHorasNaoTrab}h`, '', '', xlsBDescontoExtra.toFixed(2)]);
+      }
       linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
-      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), rc.totalDescontos.toFixed(2)]);
+      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBTotalAcerto + xlsBDescontoExtra).toFixed(2), (rc.totalDescontos + xlsBDescontoExtra).toFixed(2)]);
       linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), '']);
       linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (rc.custoEmpresa + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), '']);
 
@@ -2261,8 +2299,16 @@ ${hdrRow}${bodyRows}${totRow}
                 Dias trabalhados (convenção 30 dias): <strong>dia {mesParcialDados.diaInicio} a dia {mesParcialDados.diaFim} = {mesParcialDados.diasTrabalhados} dias</strong>
               </p>
               <p>
-                Venc. base proporcional: <strong>{mesParcialDados.vencProporcional.toFixed(2)}€</strong>
-                {' '}({mesParcialDados.diasTrabalhados}/30 × {mesParcialDados.vencBaseOriginal.toFixed(2)}€)
+                Venc. base contratual: <strong>{mesParcialDados.vencBaseOriginal.toFixed(2)}€</strong>
+              </p>
+              {descontoDiasParcial && (
+                <p>
+                  {descontoDiasParcial.label}: <strong>−{descontoDiasParcial.valor.toFixed(2)}€</strong>
+                  {' '}({descontoDiasParcial.diasNaoTrab}d × {descontoDiasParcial.horasNaoTrab}h não trabalhadas)
+                </p>
+              )}
+              <p>
+                Venc. base neste mês: <strong>{mesParcialDados.vencProporcional.toFixed(2)}€</strong>
               </p>
               {feriasAnoAdmissao && (
                 <p className="text-[11px] opacity-80">
