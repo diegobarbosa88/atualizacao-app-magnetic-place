@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { calcularRecibo } from '../../src/lib/payroll/reciboCalculations.js';
 
 // ─────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ describe('calcularRecibo — abonosCessacao', () => {
     // A004 / A021 usam vencimento contratual
     expect(r.subsFerias).toBeCloseTo(83.33, 1);
     expect(r.subsNatal).toBeCloseTo(83.33, 1);
-    // totalAbonos = brutoAlvo (A082 absrove a diferença)
+    // totalAbonos = brutoAlvo (A082 absorve a diferença)
     expect(r.totalAbonos).toBeCloseTo(5000, 2);
     // abonosCessacao incluídos na base IRS
     expect(r.incidenciaRegular).toBeCloseTo(866.67 + feriasNGEur * 2, 1);
@@ -102,7 +102,7 @@ describe('calcularRecibo — abonosCessacao', () => {
     expect(r1.liquido).toBeCloseTo(r2.liquido, 5);
   });
 
-  it('quando abonosCessacao > (brutoAlvo − venc − outros): A082 = 0, totalAbonos ≥ brutoAlvo', () => {
+  it('quando abonosCessacao > (brutoAlvo − venc − outros): A082 = 0, totalAbonos >= brutoAlvo', () => {
     const r = calcularRecibo({
       vencimentoBase: 866.67, vencBaseContratual: 1000,
       abonosCessacao: 4000,  // muito grande
@@ -136,7 +136,7 @@ describe('calcularRecibo — A011 com duodécimos activos (Antonio Augusto Lima)
       incluirFerias: true, incluirNatal: true,
       brutoAlvo: 5000, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
     });
-    // Sem A011 → A082 é maior (pela diferença de feriasNG)
+    // Sem A011 --> A082 é maior (pela diferença de feriasNG)
     expect(rSemA011.ajudaCustoNecessaria).toBeCloseTo(rComA011.ajudaCustoNecessaria + feriasNG, 1);
     // Total Abonos = brutoAlvo em ambos os casos
     expect(rSemA011.totalAbonos).toBeCloseTo(5000, 2);
@@ -154,7 +154,7 @@ describe('calcularRecibo — A011 com duodécimos activos (Antonio Augusto Lima)
     expect(r.liquido).toBeCloseTo(r.totalAbonos - r.irsTotal - r.ssTrabalhador, 2);
   });
 
-  it('duodécimos NÃO ATIVOS — abonosCessacao inclui A010 + A011 (2×feriasNG)', () => {
+  it('duodécimos NAO ATIVOS — abonosCessacao inclui A010 + A011 (2×feriasNG)', () => {
     const r = calcularRecibo({
       vencimentoBase: 866.67, vencBaseContratual: 1000,
       abonosCessacao: feriasNG * 2, // A010 + A011
@@ -163,7 +163,7 @@ describe('calcularRecibo — A011 com duodécimos activos (Antonio Augusto Lima)
     });
     expect(r.totalAbonos).toBeCloseTo(5000, 2);
     expect(r.liquido).toBeCloseTo(r.totalAbonos - r.irsTotal - r.ssTrabalhador, 2);
-    // Sem duodécimos (subsFerias=0, subsNatal=0): A082 = 5000 − 866.67 − 2×feriasNG
+    // Sem duodécimos (subsFerias=0, subsNatal=0): A082 = 5000 - 866.67 - 2×feriasNG
     expect(r.ajudaCustoNecessaria).toBeCloseTo(5000 - 866.67 - feriasNG * 2, 1);
   });
 });
@@ -198,7 +198,7 @@ describe('calcularRecibo — A010 fiscal: base IRS regular e SS (Antonio Augusto
     expect(r.incidenciaSS).toBeCloseTo(866.67 + feriasNG + 83.33 + 83.33, 1);
   });
 
-  it('irsFerias e irsNatal NÃO incluem A010 — usam taxaSubsidios sobre vencBaseContratual', () => {
+  it('irsFerias e irsNatal NAO incluem A010 — usam taxaSubsidios sobre vencBaseContratual', () => {
     const rSem = calcularRecibo({ ...base, abonosCessacao: 0 });
     const rCom = calcularRecibo(base);
     // taxaSubsidios depende apenas de vencBaseContratual (1000€), não de abonosCessacao
@@ -217,21 +217,23 @@ describe('calcularRecibo — A010 fiscal: base IRS regular e SS (Antonio Augusto
 });
 
 // ─────────────────────────────────────────────────────────────
-// D001 — linha informativa: NUNCA entra em Total Descontos
+// D001 — fórmula corrigida: A082 absorve D001, totais são somas directas
 //
-// Invariantes obrigatórios (com ou sem D001):
-//   Total Abonos (display) = Bruto Alvo
-//   Total Descontos        = IRS + SS apenas
-//   Líquido                = Bruto Alvo − IRS − SS
+// Nova fórmula: A082 = brutoAlvo − (outros abonos) + D001 = r.ajudaCustoNecessaria
+// Invariantes (display):
+//   Total Abonos    = brutoAlvo + D001  (soma de TODAS as linhas de abono)
+//   Total Descontos = D001 + IRS + SS   (soma de TODAS as linhas de desconto)
+//   Liquido         = brutoAlvo − IRS − SS  (D001 cancela-se entre as duas colunas)
 // ─────────────────────────────────────────────────────────────
 
-describe('D001 — linha puramente informativa (nunca em Total Descontos)', () => {
+describe('D001 — fórmula corrigida (A082 absorve D001; totais são somas directas)', () => {
 
-  // ── CESSAÇÃO: Antonio Augusto Lima ───────────────────────────
-  // vencBase 1000€, cessação 26 Jun → 4 dias não trab → D001 = 4×1000/30 = 133,33€
-  // vencProporcional = 866,67€ | abonosCessacao = A010 (32 dias × 1000/30 = 1066,67€)
-  describe('cessação — Antonio Augusto Lima (D001 = 133,33€)', () => {
-    const brutoAlvo        = 5000;
+  // CESSACAO: Antonio Augusto Lima
+  // vencBase 1000 EUR, cessação 26 Jun, brutoAlvo 3384 EUR
+  // diasNaoTrab = 4 → D001 = 4×1000/30 = 133.33 EUR
+  // vencProporcional = 866.67 EUR | A010 = 32×1000/30 = 1066.67 EUR
+  describe('cessação — Antonio Augusto Lima (D001 = 133,33 EUR, brutoAlvo = 3384 EUR)', () => {
+    const brutoAlvo        = 3384;
     const vencContratual   = 1000;
     const diasTrab         = 26;
     const diasNaoTrab      = 30 - diasTrab;                                               // 4
@@ -244,38 +246,50 @@ describe('D001 — linha puramente informativa (nunca em Total Descontos)', () =
       r = calcularRecibo({
         vencimentoBase:     vencProporcional,
         vencBaseContratual: vencContratual,
-        abonosCessacao:     feriasNG,       // A010 apenas (duodécimos ativos)
+        abonosCessacao:     feriasNG,
         incluirFerias: true, incluirNatal: true,
         brutoAlvo, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
       });
     });
 
-    it('Total Abonos = Bruto Alvo (D001 não altera)', () => {
-      expect(r.totalAbonos).toBeCloseTo(brutoAlvo, 2);
+    it('A082 = r.ajudaCustoNecessaria — inclui +133.33 EUR vs mês completo', () => {
+      const rFull = calcularRecibo({
+        vencimentoBase: vencContratual, abonosCessacao: feriasNG,
+        incluirFerias: true, incluirNatal: true,
+        brutoAlvo, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+      });
+      expect(r.ajudaCustoNecessaria - rFull.ajudaCustoNecessaria).toBeCloseTo(descontoD001, 1);
     });
 
-    it('Total Descontos = IRS + SS apenas — D001 (133,33€) NUNCA entra', () => {
-      expect(r.totalDescontos).toBeCloseTo(r.irsTotal + r.ssTrabalhador, 2);
-      expect(r.totalDescontos).not.toBeCloseTo(r.irsTotal + r.ssTrabalhador + descontoD001, 1);
+    it('Total Abonos display = brutoAlvo + D001 = 3517.33 EUR', () => {
+      const totalAbonosDisplay = r.totalAbonos + descontoD001;
+      expect(totalAbonosDisplay).toBeCloseTo(brutoAlvo + descontoD001, 2);
+      expect(totalAbonosDisplay).toBeCloseTo(3517.33, 1);
     });
 
-    it('Líquido = Bruto Alvo − IRS − SS (D001 não afeta o líquido)', () => {
-      expect(r.liquido).toBeCloseTo(brutoAlvo - r.irsTotal - r.ssTrabalhador, 2);
+    it('Total Descontos display = D001 + IRS + SS', () => {
+      const totalDescontosDisplay = r.totalDescontos + descontoD001;
+      expect(totalDescontosDisplay).toBeCloseTo(descontoD001 + r.irsTotal + r.ssTrabalhador, 2);
     });
 
-    it('soma visual das linhas de abono = Bruto Alvo', () => {
-      // A082 display = r.ajudaCustoNecessaria − D001 (A082 absorve a diferença)
-      const ajudasDisplayRecibo = Math.max(0, r.ajudaCustoNecessaria - descontoD001);
-      // Soma visual: A001 (contratual) + A010 + A004 + A021 + A082(display)
-      const somaVisualAbonos = vencContratual + feriasNG + r.subsFerias + r.subsNatal + ajudasDisplayRecibo;
-      expect(somaVisualAbonos).toBeCloseTo(brutoAlvo, 1);
+    it('Liquido = brutoAlvo − IRS − SS (D001 cancela-se)', () => {
+      const totalAbonosDisplay    = r.totalAbonos    + descontoD001;
+      const totalDescontosDisplay = r.totalDescontos + descontoD001;
+      const liquidoDisplay        = totalAbonosDisplay - totalDescontosDisplay;
+      expect(liquidoDisplay).toBeCloseTo(brutoAlvo - r.irsTotal - r.ssTrabalhador, 2);
+      expect(liquidoDisplay).toBeCloseTo(r.liquido, 2);
+    });
+
+    it('soma visual das linhas de abono = brutoAlvo + D001', () => {
+      const somaVisualAbonos = vencContratual + feriasNG + r.subsFerias + r.subsNatal + r.ajudaCustoNecessaria;
+      expect(somaVisualAbonos).toBeCloseTo(brutoAlvo + descontoD001, 1);
     });
   });
 
-  // ── ADMISSÃO: IDEMILTON Maia de Brito Junior ─────────────────
-  // vencBase 1200€, admissão 17 Mai → 16 dias não trab → D001 = 16×1200/30 = 640€
-  // vencProporcional = 560€ (14 dias trab)
-  describe('admissão — IDEMILTON (D001 = 640€)', () => {
+  // ADMISSAO: IDEMILTON Maia de Brito Junior
+  // vencBase 1200 EUR, admissão 17 Mai → 16 dias não trab → D001 = 16×1200/30 = 640 EUR
+  // vencProporcional = 560 EUR (14 dias trab)
+  describe('admissão — IDEMILTON (D001 = 640 EUR)', () => {
     const brutoAlvo        = 3000;
     const vencContratual   = 1200;
     const diasTrab         = 14;
@@ -293,24 +307,37 @@ describe('D001 — linha puramente informativa (nunca em Total Descontos)', () =
       });
     });
 
-    it('Total Abonos = Bruto Alvo (D001 não altera)', () => {
-      expect(r.totalAbonos).toBeCloseTo(brutoAlvo, 2);
+    it('A082 = r.ajudaCustoNecessaria — inclui +640 EUR vs mês completo', () => {
+      const rFull = calcularRecibo({
+        vencimentoBase: vencContratual,
+        incluirFerias: true, incluirNatal: true,
+        brutoAlvo, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+      });
+      expect(r.ajudaCustoNecessaria - rFull.ajudaCustoNecessaria).toBeCloseTo(descontoD001, 1);
     });
 
-    it('Total Descontos = IRS + SS apenas — D001 (640€) NUNCA entra', () => {
-      expect(r.totalDescontos).toBeCloseTo(r.irsTotal + r.ssTrabalhador, 2);
-      expect(r.totalDescontos).not.toBeCloseTo(r.irsTotal + r.ssTrabalhador + descontoD001, 1);
+    it('Total Abonos display = brutoAlvo + D001 = 3640 EUR', () => {
+      const totalAbonosDisplay = r.totalAbonos + descontoD001;
+      expect(totalAbonosDisplay).toBeCloseTo(brutoAlvo + descontoD001, 2);
+      expect(totalAbonosDisplay).toBeCloseTo(3640, 1);
     });
 
-    it('Líquido = Bruto Alvo − IRS − SS (D001 não afeta o líquido)', () => {
-      expect(r.liquido).toBeCloseTo(brutoAlvo - r.irsTotal - r.ssTrabalhador, 2);
+    it('Total Descontos display = D001 + IRS + SS', () => {
+      const totalDescontosDisplay = r.totalDescontos + descontoD001;
+      expect(totalDescontosDisplay).toBeCloseTo(descontoD001 + r.irsTotal + r.ssTrabalhador, 2);
     });
 
-    it('soma visual das linhas de abono = Bruto Alvo', () => {
-      const ajudasDisplayRecibo = Math.max(0, r.ajudaCustoNecessaria - descontoD001);
-      // Soma visual: A001 (contratual) + A004 + A021 + A082(display)
-      const somaVisualAbonos = vencContratual + r.subsFerias + r.subsNatal + ajudasDisplayRecibo;
-      expect(somaVisualAbonos).toBeCloseTo(brutoAlvo, 1);
+    it('Liquido = brutoAlvo − IRS − SS (D001 cancela-se)', () => {
+      const totalAbonosDisplay    = r.totalAbonos    + descontoD001;
+      const totalDescontosDisplay = r.totalDescontos + descontoD001;
+      const liquidoDisplay        = totalAbonosDisplay - totalDescontosDisplay;
+      expect(liquidoDisplay).toBeCloseTo(brutoAlvo - r.irsTotal - r.ssTrabalhador, 2);
+      expect(liquidoDisplay).toBeCloseTo(r.liquido, 2);
+    });
+
+    it('soma visual das linhas de abono = brutoAlvo + D001', () => {
+      const somaVisualAbonos = vencContratual + r.subsFerias + r.subsNatal + r.ajudaCustoNecessaria;
+      expect(somaVisualAbonos).toBeCloseTo(brutoAlvo + descontoD001, 1);
     });
   });
 });

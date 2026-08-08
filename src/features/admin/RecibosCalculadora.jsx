@@ -603,11 +603,11 @@ export default function RecibosCalculadora() {
     && Math.abs(mapaLiqLive - r.ajudaCustoNecessaria) > SYNC_TOLERANCE;
 
   // A082 para o recibo: sempre o líquido do mapa ao vivo (nunca snapshot, nunca com complemento)
-  const ajudasDisplay       = mapaLiqLive ?? r?.ajudaCustoNecessaria ?? 0;
-  const _diffAjudas         = r ? ajudasDisplay - r.ajudaCustoNecessaria : 0;
-  const totalAbonosDisplay  = r ? r.totalAbonos  + _diffAjudas : 0;
-  const liquidoDisplay      = r ? r.liquido       + _diffAjudas : 0;
-  const custoEmpDisplay     = r ? r.custoEmpresa  + _diffAjudas : 0;
+  const ajudasDisplay   = mapaLiqLive ?? r?.ajudaCustoNecessaria ?? 0;
+  const _diffAjudas     = r ? ajudasDisplay - r.ajudaCustoNecessaria : 0;
+  // totalAbonosDisplay e totalDescontosDisplay computados abaixo, após descontoD001 estar disponível
+  const liquidoDisplay  = r ? r.liquido      + _diffAjudas : 0;
+  const custoEmpDisplay = r ? r.custoEmpresa + _diffAjudas : 0;
 
   // Linhas do Resumo Mensal (mesma lógica do Excel)
   const resumoRows = useMemo(() => {
@@ -762,14 +762,17 @@ export default function RecibosCalculadora() {
     return { diasNaoTrab, horasNaoTrab, valor, label };
   }, [mesParcialDados, inputs.horasSemana]);
 
-  // D001 ("Desconto dias por cessação/início de contrato") — LINHA PURAMENTE INFORMATIVA.
-  // Mostra ao trabalhador porque é que A001 aparece com o valor contratual completo num mês parcial.
-  // NÃO representa uma dedução real: A082 é reduzido exatamente em igual montante, mantendo:
-  //   Total Abonos (display) = Bruto Alvo SEMPRE
-  //   Total Descontos        = T001 (IRS) + T003 (SS) APENAS — D001 NUNCA entra
-  //   Líquido a Receber      = Bruto Alvo − IRS − SS
-  const descontoD001        = descontoDiasParcial?.valor ?? 0;
-  const ajudasDisplayRecibo = Math.max(0, ajudasDisplay - descontoD001);
+  // D001 ("Desconto dias por cessação/início de contrato") — linha informativa de mês parcial.
+  // Fórmula corrigida do A082: A082 = brutoAlvo − (outros abonos) + D001 = r.ajudaCustoNecessaria
+  //   (o D001 já está absorvido em A082 porque vencProporcional < vencContratual)
+  // Totais são somas normais sem excepções:
+  //   Total Abonos    = brutoAlvo + D001   (soma de todas as linhas de abono, incluindo A082)
+  //   Total Descontos = D001 + IRS + SS    (soma de todas as linhas de desconto)
+  //   Líquido         = brutoAlvo − IRS − SS  (D001 cancela-se automaticamente entre as duas colunas)
+  const descontoD001          = descontoDiasParcial?.valor ?? 0;
+  const ajudasDisplayRecibo   = ajudasDisplay;   // sem ajuste de D001 — nova fórmula corrigida
+  const totalAbonosDisplay    = r ? r.totalAbonos    + _diffAjudas + descontoD001 : 0;
+  const totalDescontosDisplay = r ? r.totalDescontos + descontoD001               : 0;
 
   function addRow(data) {
     rowCounter++;
@@ -1046,7 +1049,7 @@ export default function RecibosCalculadora() {
           { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
           { content: eur(totalAbonosDisplay), styles: { fontStyle: 'bold', halign: 'right' } },
           { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
-          { content: eur(r.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
+          { content: eur(totalDescontosDisplay), styles: { fontStyle: 'bold', halign: 'right' } },
         ],
         [
           { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
@@ -1113,7 +1116,7 @@ export default function RecibosCalculadora() {
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
     linhas.push(['T001', `IRS (${acertoCessacao?.feriasNaoGozadasEur > 0 ? 'venc.+A010' : 'venc.'} ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
-    linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), r.totalDescontos.toFixed(2)]);
+    linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), totalDescontosDisplay.toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
     linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', custoEmpDisplay.toFixed(2), '']);
 
@@ -2726,13 +2729,13 @@ ${hdrRow}${bodyRows}${totRow}
                     )}
                     <ReciboLinha desc={`T001 - IRS (venc.·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
-                    {/* Total — D001 não entra em Total Descontos; Líquido = BrutoAlvo − IRS − SS */}
+                    {/* Total — soma directa de todas as linhas; D001 cancela-se → Líquido = BrutoAlvo − IRS − SS */}
                     <tr className="border-t-2 border-slate-800 font-black">
                       <td className="py-2 px-1">Total</td>
                       <td className="py-2 px-1" />
                       <td className="py-2 px-1" />
                       <td className="py-2 px-1 text-right">{eur(totalAbonosDisplay)}</td>
-                      <td className="py-2 px-1 text-right">{eur(r.totalDescontos)}</td>
+                      <td className="py-2 px-1 text-right">{eur(totalDescontosDisplay)}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -2751,13 +2754,17 @@ ${hdrRow}${bodyRows}${totRow}
                 )}
               </div>
 
-              {/* Resumo — Total Abonos = Bruto Alvo SEMPRE | Líquido = Bruto Alvo − IRS − SS */}
+              {/* Resumo — Líquido = Bruto Alvo − IRS − SS SEMPRE | Total Abonos = Bruto Alvo + D001 (mês parcial) */}
               <div className="mt-3 pt-3 border-t-2 border-slate-800 space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   <div className="bg-slate-50 rounded-xl px-3 py-2">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total Abonos</p>
                     <p className="text-base font-black text-slate-800">{eur(totalAbonosDisplay)}</p>
-                    {n(inputs.brutoAlvo) > 0 && <p className="text-[9px] text-slate-400 mt-0.5">= Bruto Alvo</p>}
+                    {n(inputs.brutoAlvo) > 0 && (
+                      <p className="text-[9px] text-slate-400 mt-0.5">
+                        {descontoD001 > 0 ? '= Bruto Alvo + D001' : '= Bruto Alvo'}
+                      </p>
+                    )}
                   </div>
                   <div className="bg-emerald-50 rounded-xl px-3 py-2 border border-emerald-200">
                     <p className="text-[9px] font-black text-emerald-600 uppercase tracking-wider">Líquido a receber</p>
