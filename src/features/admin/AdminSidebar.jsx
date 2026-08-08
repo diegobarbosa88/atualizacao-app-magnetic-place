@@ -447,17 +447,26 @@ export default function AdminSidebar({
 }) {
   const drawerRef = useRef(null);
   const firstItemRef = useRef(null);
-  const [collapsed, setCollapsed] = useState(() => {
-    try { return localStorage.getItem('admin-sidebar-collapsed') === '1'; } catch { return false; }
-  });
+  const [collapsed, setCollapsed] = useState(true);
+  const autoCollapseTimer = useRef(null);
+
+  const clearAutoCollapse = () => clearTimeout(autoCollapseTimer.current);
+  const scheduleAutoCollapse = () => {
+    clearAutoCollapse();
+    autoCollapseTimer.current = setTimeout(() => setCollapsed(true), 7000);
+  };
 
   const toggleCollapsed = () => {
-    setCollapsed(prev => {
-      const next = !prev;
-      try { localStorage.setItem('admin-sidebar-collapsed', next ? '1' : '0'); } catch {}
-      return next;
-    });
+    clearAutoCollapse();
+    setCollapsed(prev => !prev);
   };
+
+  const handleSidebarMouseEnter = () => clearAutoCollapse();
+  const handleSidebarMouseLeave = () => {
+    if (!collapsed) scheduleAutoCollapse();
+  };
+
+  useEffect(() => () => clearAutoCollapse(), []);
 
   useEffect(() => {
     if (!isMobileOpen) return;
@@ -482,7 +491,10 @@ export default function AdminSidebar({
   };
 
   const desktop = (
-    <aside className={`hidden md:flex shrink-0 sticky top-0 h-screen flex-col bg-white border-r border-slate-200 shadow-sm transition-all duration-200 ${
+    <aside
+      onMouseEnter={handleSidebarMouseEnter}
+      onMouseLeave={handleSidebarMouseLeave}
+      className={`hidden md:flex shrink-0 sticky top-0 h-screen flex-col bg-white border-r border-slate-200 shadow-sm transition-all duration-200 ${
       collapsed ? 'w-[68px]' : 'w-60'
     }`}>
       <div className={`py-5 border-b border-slate-100 flex items-center ${collapsed ? 'px-3 flex-col gap-2' : 'px-5 gap-3'}`}>
