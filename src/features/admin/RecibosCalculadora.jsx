@@ -2658,36 +2658,45 @@ function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
 }
 
 const RESUMO_COLS = [
-  { label: 'Trabalhador',              key: 'nome',           align: 'center', w: 150 },
-  { label: 'NIF',                      key: 'nif',            align: 'center', w: 85  },
-  { label: 'NIS',                      key: 'nis',            align: 'center', w: 85  },
-  { label: 'Profissão',                key: 'profissao',      align: 'center', w: 100 },
-  { label: 'Empresa',                  key: 'empresa',        align: 'center', w: 130 },
-  { label: 'Início Vínculo',           key: 'inicioVinculo',  align: 'center', w: 88  },
-  { label: 'Cessação Vínculo',         key: 'cessacaoVinculo',align: 'center', w: 88  },
-  { label: 'Tabela IRS',               key: 'tabelaNome',     align: 'center', w: 82  },
-  { label: 'Nº Dep.',                  key: 'nDep',           align: 'center', w: 54  },
-  { label: 'Venc. Base (€)',           key: 'vencBase',       align: 'right',  w: 84,  sumKey: '_vencNum'    },
-  { label: 'Sub. Alim. Dias',          key: 'subsAlimDias',   align: 'center', w: 64  },
-  { label: 'Sub. Alim. €/dia',         key: 'subsAlimDia',    align: 'right',  w: 76  },
-  { label: 'Sub. Alim. Total (€)',     key: 'subsAlimTotal',  align: 'right',  w: 84,  sumKey: '_subsAlimNum'},
-  { label: 'Sub. Férias / Duod. (€)', key: 'subsFerias',     align: 'right',  w: 84,  sumKey: '_feriasNum'  },
-  { label: 'Sub. Natal / Duod. (€)',  key: 'subsNatal',      align: 'right',  w: 84,  sumKey: '_natalNum'   },
-  { label: 'Ajudas Custo Inter. (€)', key: 'ajudas',         align: 'right',  w: 84,  sumKey: '_ajudasNum'  },
-  { label: 'Base IRS (€)',             key: 'baseIRS',        align: 'right',  w: 76  },
-  { label: 'Taxa IRS',                 key: 'taxaIRS',        align: 'right',  w: 64  },
-  { label: 'IRS (€)',                  key: 'irsTotal',       align: 'right',  w: 70,  sumKey: '_irsNum'     },
-  { label: 'SS Trab. 11% (€)',         key: 'ssTrab',         align: 'right',  w: 80,  sumKey: '_ssTrabNum'  },
-  { label: 'Total Abonos (€)',         key: 'totalAbonos',    align: 'right',  w: 84,  sumKey: '_abonosNum'  },
-  { label: 'Total Descontos (€)',      key: 'totalDesc',      align: 'right',  w: 84,  sumKey: '_descNum'    },
-  { label: 'Líquido (€)',              key: 'liquido',        align: 'right',  w: 76,  sumKey: '_liquidoNum' },
-  { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',     align: 'right',  w: 84,  sumKey: '_ssPatNum'   },
-  { label: 'Custo Empresa (€)',        key: 'custoEmpresa',   align: 'right',  w: 84,  sumKey: '_custoNum'   },
-  { label: 'Ajuste (€)',               key: 'ajuste',         align: 'right',  w: 74,  sumKey: '_ajusteNum', tipo: 'ajuste' },
-  { label: 'Ordenado Bruto (€)',       key: 'brutoAlvo',      align: 'right',  w: 96,  sumKey: '_brutoNum',  highlight: true },
-  { label: 'Observação',               key: 'observacao',     align: 'center', w: 150, editable: true },
-  { label: 'Completo',                 key: 'completo',       align: 'center', w: 64,  tipo: 'toggle' },
+  { label: 'Trabalhador',              key: 'nome',           align: 'left',   w: 150, group: 'id'                                                  },
+  { label: 'NIF',                      key: 'nif',            align: 'center', w: 85,  group: 'id'                                                  },
+  { label: 'NIS',                      key: 'nis',            align: 'center', w: 85,  group: 'id'                                                  },
+  { label: 'Profissão',                key: 'profissao',      align: 'left',   w: 100, group: 'id'                                                  },
+  { label: 'Empresa',                  key: 'empresa',        align: 'left',   w: 130, group: 'id'                                                  },
+  { label: 'Início Vínculo',           key: 'inicioVinculo',  align: 'center', w: 88,  group: 'id'                                                  },
+  { label: 'Cessação Vínculo',         key: 'cessacaoVinculo',align: 'center', w: 88,  group: 'id'                                                  },
+  { label: 'Tabela IRS',               key: 'tabelaNome',     align: 'center', w: 82,  group: 'tabela'                                              },
+  { label: 'Nº Dep.',                  key: 'nDep',           align: 'center', w: 54,  group: 'tabela'                                              },
+  { label: 'Venc. Base (€)',           key: 'vencBase',       align: 'right',  w: 84,  group: 'venc',   sumKey: '_vencNum'                         },
+  { label: 'Sub. Alim. Dias',          key: 'subsAlimDias',   align: 'center', w: 64,  group: 'venc'                                                },
+  { label: 'Sub. Alim. €/dia',         key: 'subsAlimDia',    align: 'right',  w: 76,  group: 'venc'                                                },
+  { label: 'Sub. Alim. Total (€)',     key: 'subsAlimTotal',  align: 'right',  w: 84,  group: 'venc',   sumKey: '_subsAlimNum'                     },
+  { label: 'Sub. Férias / Duod. (€)', key: 'subsFerias',     align: 'right',  w: 84,  group: 'venc',   sumKey: '_feriasNum'                       },
+  { label: 'Sub. Natal / Duod. (€)',  key: 'subsNatal',      align: 'right',  w: 84,  group: 'venc',   sumKey: '_natalNum'                        },
+  { label: 'Ajudas Custo Inter. (€)', key: 'ajudas',         align: 'right',  w: 84,  group: 'venc',   sumKey: '_ajudasNum'                       },
+  { label: 'Base IRS (€)',             key: 'baseIRS',        align: 'right',  w: 76,  group: 'fiscal'                                              },
+  { label: 'Taxa IRS',                 key: 'taxaIRS',        align: 'right',  w: 64,  group: 'fiscal'                                              },
+  { label: 'IRS (€)',                  key: 'irsTotal',       align: 'right',  w: 70,  group: 'fiscal', sumKey: '_irsNum'                          },
+  { label: 'SS Trab. 11% (€)',         key: 'ssTrab',         align: 'right',  w: 80,  group: 'fiscal', sumKey: '_ssTrabNum'                       },
+  { label: 'Total Abonos (€)',         key: 'totalAbonos',    align: 'right',  w: 84,  group: 'totais', sumKey: '_abonosNum',  highlight: 'blue'   },
+  { label: 'Total Descontos (€)',      key: 'totalDesc',      align: 'right',  w: 84,  group: 'totais', sumKey: '_descNum'                         },
+  { label: 'Líquido (€)',              key: 'liquido',        align: 'right',  w: 76,  group: 'totais', sumKey: '_liquidoNum', highlight: 'green'  },
+  { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',     align: 'right',  w: 84,  group: 'totais', sumKey: '_ssPatNum'                        },
+  { label: 'Custo Empresa (€)',        key: 'custoEmpresa',   align: 'right',  w: 84,  group: 'totais', sumKey: '_custoNum',   highlight: 'rose'   },
+  { label: 'Ajuste (€)',               key: 'ajuste',         align: 'right',  w: 74,  group: 'totais', sumKey: '_ajusteNum',  tipo: 'ajuste'      },
+  { label: 'Ordenado Bruto (€)',       key: 'brutoAlvo',      align: 'right',  w: 96,  group: 'totais', sumKey: '_brutoNum',   highlight: 'emerald'},
+  { label: 'Observação',               key: 'observacao',     align: 'center', w: 150, group: 'obs',    editable: true                             },
+  { label: 'Completo',                 key: 'completo',       align: 'center', w: 64,  group: 'obs',    tipo: 'toggle'                             },
 ];
+
+const GROUP_DEFS = {
+  id:     { label: 'Identificação', bg: '#334155', text: '#94a3b8', border: null      },
+  tabela: { label: 'Tabela Fiscal', bg: '#4c1d95', text: '#ddd6fe', border: '#7c3aed' },
+  venc:   { label: 'Vencimentos',   bg: '#1e3a8a', text: '#bfdbfe', border: '#3b82f6' },
+  fiscal: { label: 'Fiscal',        bg: '#78350f', text: '#fde68a', border: '#f59e0b' },
+  totais: { label: 'Totais',        bg: '#1e1b4b', text: '#c7d2fe', border: '#6366f1' },
+  obs:    { label: 'Gestão',        bg: '#334155', text: '#94a3b8', border: null      },
+};
 
 function CopiarLinkBtn({ mesStr }) {
   const [copiado, setCopiado] = useState(false);
@@ -2722,8 +2731,88 @@ function loadFromLS(key, fallback) {
   catch { return fallback; }
 }
 
+function ScrollArrows({ scrollRef }) {
+  const [canLeft, setCanLeft]   = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => {
+      setCanLeft(el.scrollLeft > 4);
+      setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => { el.removeEventListener('scroll', update); ro.disconnect(); };
+  }, [scrollRef]);
+
+  const step = 300;
+  const scroll = dir => scrollRef.current?.scrollBy({ left: dir * step, behavior: 'smooth' });
+
+  if (!canLeft && !canRight) return null;
+  return (
+    <div className="absolute inset-y-0 left-0 right-0 pointer-events-none z-20 flex items-center justify-between px-1">
+      <button
+        onMouseDown={e => { e.preventDefault(); scroll(-1); }}
+        className={`pointer-events-auto w-7 h-7 rounded-full bg-white border border-slate-300 shadow-md flex items-center justify-center text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all ${canLeft ? 'opacity-90' : 'opacity-0 pointer-events-none'}`}
+        tabIndex={-1}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button
+        onMouseDown={e => { e.preventDefault(); scroll(1); }}
+        className={`pointer-events-auto w-7 h-7 rounded-full bg-white border border-slate-300 shadow-md flex items-center justify-center text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all ${canRight ? 'opacity-90' : 'opacity-0 pointer-events-none'}`}
+        tabIndex={-1}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  );
+}
+
 function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   const { supabase } = useApp();
+  const tableScrollRef = useRef(null);
+
+  // Drag-to-scroll: click e arrastar para rolar em qualquer direcção
+  useEffect(() => {
+    const el = tableScrollRef.current;
+    if (!el) return;
+    let active = false, startX = 0, startY = 0, scrollL = 0, scrollT = 0;
+
+    const down = e => {
+      if (e.target.closest('input,button,a,select,textarea')) return;
+      active = true;
+      startX = e.clientX; startY = e.clientY;
+      scrollL = el.scrollLeft; scrollT = el.scrollTop;
+      el.style.cursor = 'grabbing';
+      el.style.userSelect = 'none';
+    };
+    const move = e => {
+      if (!active) return;
+      e.preventDefault();
+      el.scrollLeft = scrollL - (e.clientX - startX);
+      el.scrollTop  = scrollT - (e.clientY - startY);
+    };
+    const up = () => {
+      active = false;
+      el.style.cursor = 'grab';
+      el.style.userSelect = '';
+    };
+
+    el.style.cursor = 'grab';
+    el.addEventListener('mousedown', down);
+    window.addEventListener('mousemove', move, { passive: false });
+    window.addEventListener('mouseup', up);
+    return () => {
+      el.removeEventListener('mousedown', down);
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+  }, []);
 
   const [visibleCols, setVisibleColsRaw] = useState(() =>
     new Set(loadFromLS(LS_COLS, RESUMO_COLS.map((_, i) => i)))
@@ -3008,8 +3097,20 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
     col.sumKey ? displayRows.reduce((s, r) => s + (r[col.sumKey] || 0), 0) : null
   );
 
-  const thBase = 'px-3 py-2.5 text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-center';
-  const tdAlign = () => 'text-center';
+  // Agrupamentos de colunas para cabeçalho duplo
+  const groupSpans = activeCols.reduce((acc, { col }) => {
+    const g = col.group || 'obs';
+    const last = acc[acc.length - 1];
+    if (last && last.group === g) { last.span++; }
+    else { acc.push({ group: g, span: 1 }); }
+    return acc;
+  }, []);
+
+  // Helpers de destaque por tipo de coluna
+  const hlHead = h => ({ blue: 'bg-sky-700 text-white', green: 'bg-emerald-700 text-white', rose: 'bg-rose-700 text-white', emerald: 'bg-emerald-600 text-white' }[h] || '');
+  const hlCell = h => ({ blue: 'bg-sky-50 text-sky-900 border-x border-sky-100', green: 'bg-emerald-50 text-emerald-900 border-x border-emerald-100', rose: 'bg-rose-50 text-rose-900 border-x border-rose-100', emerald: 'bg-emerald-50 text-emerald-800 border-x border-emerald-100' }[h] || '');
+  const hlFoot = h => ({ blue: 'bg-sky-200 text-sky-900 border-x border-sky-300', green: 'bg-emerald-200 text-emerald-900 border-x border-emerald-300', rose: 'bg-rose-200 text-rose-900 border-x border-rose-300', emerald: 'bg-emerald-200 text-emerald-800 border-x border-emerald-300' }[h] || '');
+  const tdAlign = col => col?.align === 'right' ? 'text-right' : col?.align === 'left' ? 'text-left' : 'text-center';
 
   return (
     <div className="space-y-3">
@@ -3203,7 +3304,14 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           <p className="text-sm font-black uppercase tracking-wide">Sem trabalhadores activos com vencimento base</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+        <div className="relative">
+          {/* Botões de scroll lateral */}
+          <ScrollArrows scrollRef={tableScrollRef} />
+          <div
+            ref={tableScrollRef}
+            className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm scroll-smooth"
+            style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
+          >
           <table
             className="border-collapse"
             style={{
@@ -3219,31 +3327,69 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               ))}
             </colgroup>
             <thead>
+              {/* Linha de grupos — sem sticky para não conflituar com a coluna fixa */}
+              <tr>
+                {activeCols.map(({ col, ci }, ai) => {
+                  const g = col.group || 'obs';
+                  const def = GROUP_DEFS[g] || GROUP_DEFS.obs;
+                  const isFirstInGroup = ai === 0 || (activeCols[ai - 1]?.col.group || 'obs') !== g;
+                  const isLastInGroup  = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== g;
+                  return (
+                    <th
+                      key={ci}
+                      className="text-[8px] font-black uppercase tracking-widest py-1"
+                      style={{
+                        background: def.bg,
+                        color: def.text,
+                        textAlign: isFirstInGroup ? 'left' : 'center',
+                        paddingLeft: isFirstInGroup ? '8px' : '0',
+                        borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : 'none',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {isFirstInGroup ? def.label : ''}
+                    </th>
+                  );
+                })}
+              </tr>
+              {/* Linha de nomes de colunas */}
               <tr className="bg-slate-800 text-white">
-                {activeCols.map(({ col, ci }, ai) => (
-                  <th
-                    key={ci}
-                    className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? 'bg-emerald-700 text-white' : 'text-slate-200'}`}
-                    style={ai === 0 ? { position: 'sticky', left: 0, zIndex: 10, background: col.highlight ? '#065f46' : '#1e293b' } : {}}
-                  >
-                    {col.label}
-                  </th>
-                ))}
+                {activeCols.map(({ col, ci }, ai) => {
+                  const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
+                  const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
+                  return (
+                    <th
+                      key={ci}
+                      className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? hlHead(col.highlight) : 'text-slate-200'}`}
+                      style={{
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 10, background: col.highlight ? undefined : '#1e293b' } : {}),
+                        ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
+                      }}
+                    >
+                      {col.label}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
               {displayRows.map((row, ri) => (
                 <tr
                   key={ri}
-                  className={row.completo ? 'bg-emerald-50' : ri % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
+                  className={`group/row transition-colors ${row.completo ? 'bg-emerald-50 hover:bg-emerald-100' : ri % 2 === 0 ? 'bg-white hover:bg-indigo-50' : 'bg-slate-50 hover:bg-indigo-50'}`}
                 >
-                  {activeCols.map(({ col, ci }, ai) => (
+                  {activeCols.map(({ col, ci }, ai) => {
+                    const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
+                    const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
+                    return (
                     <td
                       key={ci}
-                      className={`px-1.5 py-1.5 font-bold overflow-hidden ${col.highlight ? 'text-emerald-700 bg-emerald-50 border-x border-emerald-100' : 'text-slate-700'}`}
+                      className={`px-2 py-2 font-bold overflow-hidden ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'}`}
                       style={{
-                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc', boxShadow: '2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc', boxShadow: '2px 0 6px -2px rgba(0,0,0,.10)' } : {}),
                         ...(col.tipo || col.editable ? {} : { textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }),
+                        ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}33` } : {}),
                       }}
                     >
                       {col.tipo === 'ajuste' ? (
@@ -3283,7 +3429,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
                         const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
                         return (
-                          <span className={`block px-2 ${tdAlign()}`}>
+                          <span className={`block px-2 ${tdAlign(col)}`}>
                             {row[col.key]}
                             {Math.abs(diff) >= 0.005 && (
                               <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
@@ -3293,27 +3439,36 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           </span>
                         );
                       })() : (
-                        <span className={`block px-2 ${tdAlign()}`}>{row[col.key]}</span>
+                        <span className={`block px-2 ${tdAlign(col)}`}>{row[col.key]}</span>
                       )}
                     </td>
-                  ))}
+                  );
+                  })}
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="bg-indigo-50 border-t-2 border-indigo-200">
-                {activeCols.map(({ col, ci }, ai) => (
-                  <td
-                    key={ci}
-                    className={`px-1.5 py-2 text-[10px] font-black whitespace-nowrap text-center ${col.highlight ? 'bg-emerald-100 text-emerald-800 border-x border-emerald-200' : 'text-indigo-700'}`}
-                    style={ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', textAlign: 'center' } : {}}
-                  >
-                    {ai === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${displayRows.filter(r => r.completo).length}/${displayRows.length} ✓` : totals[ai] !== null ? totals[ai].toFixed(2) : ''}
-                  </td>
-                ))}
+              <tr className="border-t-[3px] border-slate-700">
+                {activeCols.map(({ col, ci }, ai) => {
+                  const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
+                  const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
+                  return (
+                    <td
+                      key={ci}
+                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-800 text-slate-100'} ${tdAlign(col)}`}
+                      style={{
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#1e293b', color: '#f1f5f9' } : {}),
+                        ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
+                      }}
+                    >
+                      {ai === 0 ? 'TOTAIS' : col.tipo === 'toggle' ? `${displayRows.filter(r => r.completo).length}/${displayRows.length} ✓` : totals[ai] !== null ? totals[ai].toFixed(2) : ''}
+                    </td>
+                  );
+                })}
               </tr>
             </tfoot>
           </table>
+          </div>
         </div>
       )}
     </div>
