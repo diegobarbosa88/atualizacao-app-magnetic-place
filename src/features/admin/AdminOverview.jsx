@@ -168,12 +168,12 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 sm:mb-8">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><LayoutGrid size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><LayoutGrid size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Dashboard Geral</h3>
         </div>
         <div className="flex items-center gap-3 bg-white p-2 rounded-2xl shadow-sm border border-slate-200">
           <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronLeft size={16} /></button>
-          <span className="font-bold text-sm uppercase tracking-widest text-indigo-600 min-w-[120px] text-center">
+          <span className="font-bold text-sm min-w-[120px] text-center" style={{ color: '#1B3A57' }}>
             {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
           </span>
           <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-slate-100 rounded-xl text-slate-500"><ChevronRight size={16} /></button>
@@ -183,22 +183,26 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
         <KpiCard
-          icon={<Clock size={24} />} iconBg="bg-indigo-50" iconColor="text-indigo-600"
+          icon={<Clock size={24} />} iconBg="" iconColor=""
+          iconStyle={{ backgroundColor: 'rgba(27,58,87,0.1)', color: '#869AAF' }}
           value={formatHours(adminStats.totalHours)} subtitle={`${formatHours(aggregatedTrend.expected)} Esperadas`}
           label="Horas Totais" trend={vsLastMonth.hours}
         />
         <KpiCard
-          icon={<TrendingUp size={24} />} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+          icon={<TrendingUp size={24} />} iconBg="" iconColor=""
+          iconStyle={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}
           value={formatCurrency(adminStats.expectedRevenue)} subtitle="Estimada"
           label="Faturação" trend={vsLastMonth.revenue}
         />
         <KpiCard
-          icon={<TrendingDown size={24} />} iconBg="bg-rose-50" iconColor="text-rose-600"
+          icon={<TrendingDown size={24} />} iconBg="" iconColor=""
+          iconStyle={{ backgroundColor: 'rgba(27,58,87,0.08)', color: '#869AAF' }}
           value={formatCurrency(adminStats.expectedCosts + adminStats.monthlyExpenses)} subtitle="Operacionais + Fixos"
           label="Custos Globais" trend={vsLastMonth.costs} invertTrend
         />
         <KpiCard
-          icon={<Wallet size={24} />} iconBg="bg-white/20" iconColor=""
+          icon={<Wallet size={24} />} iconBg="" iconColor=""
+          iconStyle={{ backgroundColor: 'rgba(235,141,0,0.2)', color: '#EB8D00' }}
           value={formatCurrency(adminStats.netProfit)} subtitle="Líquido"
           label="Resultado" trend={vsLastMonth.profit} dark
         />
@@ -209,16 +213,16 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         {/* Area Chart */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
-            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><TrendingUp size={20} /></div>
-            <h3 className="font-black text-lg text-slate-800">Fluxo de Faturamento Diário</h3>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><TrendingUp size={20} /></div>
+            <h3 className="font-medium text-base text-slate-700">Fluxo de Faturamento Diário</h3>
           </div>
           {areaData.length > 0 ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={areaData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#EB8D00" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#EB8D00" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -228,7 +232,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                   contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value) => [`€${value}`, 'Faturamento']}
                 />
-                <Area type="monotone" dataKey="valor" stroke="#6366f1" strokeWidth={2} fill="url(#colorValor)" />
+                <Area type="monotone" dataKey="valor" stroke="#EB8D00" strokeWidth={2} fill="url(#colorValor)" />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
@@ -251,8 +255,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         {/* Worker Comparison */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
-            <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Activity size={20} /></div>
-            <h3 className="font-black text-lg text-slate-800">Comparativo por Trabalhador</h3>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><Activity size={20} /></div>
+            <h3 className="font-medium text-base text-slate-700">Comparativo por Trabalhador</h3>
           </div>
           <div className="space-y-3">
             {workerComparisonData.length > 0 ? workerComparisonData.map((w) => (
@@ -273,8 +277,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2">
                     <div
-                      className={`h-2 rounded-full transition-all duration-500 ${w.isOver ? 'bg-emerald-500' : 'bg-indigo-500'}`}
-                      style={{ width: `${Math.min(100, w.ratioPct || 0)}%` }}
+                      className="h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min(100, w.ratioPct || 0)}%`, backgroundColor: '#EB8D00' }}
                     />
                   </div>
                 </div>
@@ -289,8 +293,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         <div className="space-y-4 sm:space-y-6 lg:space-y-8">
           <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
             <div className="flex items-center gap-3 mb-6">
-              <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Trophy size={20} /></div>
-              <h3 className="font-black text-lg text-slate-800">Top Unidades (Horas)</h3>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: '#1B3A57' }}><Trophy size={20} /></div>
+              <h3 className="font-medium text-base text-slate-700">Top Unidades (Horas)</h3>
             </div>
             <div className="space-y-4">
               {topClientsWithPrev.length > 0 ? topClientsWithPrev.map((c) => (
@@ -304,11 +308,11 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                             {c.pct >= 0 ? '▲' : '▼'} {Math.abs(c.pct)}%
                           </span>
                         )}
-                        <span className="text-xs font-black text-indigo-600">{formatHours(c.hours)}</span>
+                        <span className="text-xs font-black" style={{ color: '#1B3A57' }}>{formatHours(c.hours)}</span>
                       </div>
                     </div>
                     <div className="w-full bg-slate-50 rounded-full h-2">
-                      <div className="bg-indigo-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%` }} />
+                      <div className="h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (c.hours / c.totalCurr) * 100)}%`, backgroundColor: '#1B3A57' }} />
                     </div>
                   </div>
                 </div>
@@ -318,8 +322,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
 
           <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
             <div className="flex items-center gap-3 mb-6">
-              <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><History size={20} /></div>
-              <h3 className="font-black text-lg text-slate-800">Atividade Recente</h3>
+              <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><History size={20} /></div>
+              <h3 className="font-medium text-base text-slate-700">Atividade Recente</h3>
             </div>
             <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
               {logs
@@ -333,7 +337,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
                       <p className="text-xs font-bold text-slate-700 truncate">{workers.find(w => w.id === log.workerId)?.name || 'Colaborador'}</p>
                       <p className="text-[10px] text-slate-400 uppercase tracking-widest">{clients.find(c => c.id === log.clientId)?.name} • {formatLogDate(log.date)}</p>
                     </div>
-                    <div className="text-xs font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg shrink-0">
+                    <div className="text-xs font-black px-2 py-1 rounded-lg shrink-0" style={{ color: '#1B3A57', backgroundColor: 'rgba(27,58,87,0.08)' }}>
                       {formatHours(Number(log.hours) || 0)}
                     </div>
                   </div>
@@ -343,7 +347,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
             {logs.length > 5 && (
               <button
                 onClick={() => setShowAllActivity(!showAllActivity)}
-                className="mt-4 w-full py-3 text-xs font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-colors"
+                className="mt-4 w-full py-3 text-xs font-black uppercase tracking-widest rounded-2xl transition-colors hover:bg-amber-50"
+                style={{ color: '#EB8D00' }}
               >
                 {showAllActivity ? 'Mostrar Menos' : 'Ver Tudo →'}
               </button>

@@ -1,15 +1,16 @@
 import React from 'react';
 
-export default function KpiCard({ icon, iconBg, iconColor, value, subtitle, label, trend, invertTrend = false, dark = false }) {
+export default function KpiCard({ icon, iconBg, iconColor, iconStyle = {}, value, subtitle, label, trend, invertTrend = false, dark = false }) {
   const trendGood = invertTrend ? trend <= 0 : trend >= 0;
   const base = dark
-    ? 'bg-gradient-to-br from-slate-900 to-slate-800 shadow-xl text-white'
+    ? 'shadow-xl text-white'
     : 'bg-white shadow-sm border border-slate-100';
+  const darkBg = dark ? { backgroundColor: '#1B3A57' } : {};
 
   return (
-    <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] flex flex-col gap-2 sm:gap-3 ${base}`}>
+    <div className={`p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] flex flex-col gap-2 sm:gap-3 ${base}`} style={darkBg}>
       <div className="flex justify-between items-start">
-        <div className={`${iconBg} ${iconColor} p-3 rounded-2xl`}>{icon}</div>
+        <div className={`${iconBg} ${iconColor} p-3 rounded-2xl`} style={iconStyle}>{icon}</div>
         {trend !== null && trend !== undefined && trend !== 0 && (
           <span className={`text-[10px] font-black px-2 py-1 rounded-full ${
             dark

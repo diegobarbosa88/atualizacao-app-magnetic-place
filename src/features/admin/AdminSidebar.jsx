@@ -762,7 +762,7 @@ export default function AdminSidebar({
     <aside
       onMouseEnter={handleSidebarMouseEnter}
       onMouseLeave={handleSidebarMouseLeave}
-      className={`relative hidden md:flex shrink-0 sticky top-0 h-screen flex-col transition-all duration-200 ${
+      className={`relative hidden md:flex shrink-0 h-full flex-col transition-all duration-200 ${
         collapsed ? 'w-[68px]' : 'w-60'
       }`}
       style={{
@@ -771,35 +771,6 @@ export default function AdminSidebar({
         zIndex: 1,
       }}
     >
-      {/* Cabeçalho com logótipo */}
-      <div
-        className={`py-4 flex items-center ${collapsed ? 'justify-center px-3' : 'px-5 gap-3'}`}
-        style={{ borderBottom: `1px solid ${B.navBorder}` }}
-      >
-        <div
-          style={{
-            width: collapsed ? '32px' : '44px',
-            height: collapsed ? '30px' : '44px',
-            borderRadius: '50%',
-            overflow: 'hidden',
-            flexShrink: 0,
-            transition: 'width 200ms ease, height 200ms ease',
-          }}
-        >
-          <CompanyLogo className="w-full h-full object-cover" />
-        </div>
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: B.sectionLabel }}>
-              Admin
-            </p>
-            <p className="text-xs font-black truncate" style={{ color: 'white' }}>
-              Menu Principal
-            </p>
-          </div>
-        )}
-      </div>
-
       <NavList
         activeTab={activeTab}
         setActiveTab={setActiveTab}

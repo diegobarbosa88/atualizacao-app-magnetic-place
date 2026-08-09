@@ -50,6 +50,7 @@ import AdminSettings from './AdminSettings';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
 import AdminClassicNav from './AdminClassicNav';
+import CompanyLogo from '../../components/common/CompanyLogo';
 import TOConlineAdmin from './TOConlineAdmin';
 import ContabilidadeTab from './ContabilidadeTab';
 import RecibosCalculadora from './RecibosCalculadora';
@@ -60,6 +61,31 @@ import {
   formatHours, calculateDuration
 } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';
+
+function BrandBar() {
+  return (
+    <div
+      className="flex items-center px-4 sm:px-6 gap-3 shrink-0"
+      style={{
+        height: '48px',
+        backgroundColor: '#1B3A57',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+        zIndex: 40,
+      }}
+    >
+      <div style={{
+        width: '28px', height: '28px', borderRadius: '50%',
+        overflow: 'hidden', flexShrink: 0, backgroundColor: '#EB8D00',
+      }}>
+        <CompanyLogo className="w-full h-full object-cover" />
+      </div>
+      <div>
+        <p style={{ fontSize: '13px', fontWeight: 600, color: 'white', lineHeight: 1.2 }}>Magnetic Place</p>
+        <p style={{ fontSize: '9.5px', fontWeight: 500, color: '#869AAF', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Gestão</p>
+      </div>
+    </div>
+  );
+}
 
 function AdminDashboard(props) {
   const {
@@ -451,66 +477,69 @@ function AdminDashboard(props) {
   const navMode = systemSettings?.navMode || 'sidebar';
 
   return (
-    <div className={`bg-slate-50 font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex'}`}>
+    <div className={`bg-slate-50 font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}>
       {navMode === 'topbar' ? (
-        <AdminClassicNav
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          setAuditWorkerId={setAuditWorkerId}
-          pendingAbsencesCount={pendingAbsencesCount}
-          pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
-          pendingClientCorrectionsCount={pendingClientCorrectionsCount}
-          currentUser={currentUser}
-          unreadCount={unreadCount}
-          systemSettings={systemSettings}
-          onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
-          onOpenFinReport={() => setShowFinReport(true)}
-          onLogout={onLogout}
-          onLogin={onLogin}
-        />
-      ) : (
-        <AdminSidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          setAuditWorkerId={setAuditWorkerId}
-          pendingAbsencesCount={pendingAbsencesCount}
-          pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
-          pendingClientCorrectionsCount={pendingClientCorrectionsCount}
-          currentUser={currentUser}
-          onLogout={onLogout}
-          onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
-          isMobileOpen={mobileNavOpen}
-          onClose={() => setMobileNavOpen(false)}
-        />
-      )}
-
-      {navMode === 'topbar' ? (
-        <main className="px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6 overflow-x-hidden">
-          {tabContent}
-        </main>
-      ) : (
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-          <AdminTopbar
+        <>
+          <AdminClassicNav
             activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            setAuditWorkerId={setAuditWorkerId}
+            pendingAbsencesCount={pendingAbsencesCount}
+            pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
+            pendingClientCorrectionsCount={pendingClientCorrectionsCount}
+            currentUser={currentUser}
             unreadCount={unreadCount}
+            systemSettings={systemSettings}
             onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
             onOpenFinReport={() => setShowFinReport(true)}
             onLogout={onLogout}
-            onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
-            onOpenMobileNav={() => setMobileNavOpen(true)}
-            showBackToTeam={!!auditWorkerId}
-            onBackToTeam={() => setAuditWorkerId(null)}
+            onLogin={onLogin}
           />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
-            <div className="flex-1 min-h-0 flex flex-col px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
-              {tabContent}
-            </div>
+          <main className="px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6 overflow-x-hidden">
+            {tabContent}
           </main>
-        </div>
+        </>
+      ) : (
+        <>
+          <BrandBar />
+          <div className="flex-1 flex overflow-hidden min-h-0">
+            <AdminSidebar
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              setAuditWorkerId={setAuditWorkerId}
+              pendingAbsencesCount={pendingAbsencesCount}
+              pendingWorkerCorrectionsCount={pendingWorkerCorrectionsCount}
+              pendingClientCorrectionsCount={pendingClientCorrectionsCount}
+              currentUser={currentUser}
+              onLogout={onLogout}
+              onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
+              isMobileOpen={mobileNavOpen}
+              onClose={() => setMobileNavOpen(false)}
+            />
+            <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+              <AdminTopbar
+                activeTab={activeTab}
+                unreadCount={unreadCount}
+                onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
+                onOpenFinReport={() => setShowFinReport(true)}
+                onLogout={onLogout}
+                onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
+                onOpenMobileNav={() => setMobileNavOpen(true)}
+                showBackToTeam={!!auditWorkerId}
+                onBackToTeam={() => setAuditWorkerId(null)}
+              />
+              <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
+                <div className="flex-1 min-h-0 flex flex-col px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
+                  {tabContent}
+                </div>
+              </main>
+            </div>
+          </div>
+        </>
       )}
 
       {showNotifDropdown && (
-        <div ref={notifDropdownRef} className="fixed top-[4.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+        <div ref={notifDropdownRef} className="fixed top-[6.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notificações</h3>
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
