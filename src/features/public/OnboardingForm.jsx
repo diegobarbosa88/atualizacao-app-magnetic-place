@@ -3,9 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, ChevronLeft, ChevronRight, Loader2, AlertCircle, Check,
   User, Briefcase, Phone, Mail, CreditCard, MapPin, FileText, Users,
-  Building2, Shield, Lock
+  Building2, Shield, Lock, Calendar
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
+import CnpCombobox from '../../components/CnpCombobox';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -48,7 +49,7 @@ function validarNIS(nis) {
 }
 
 const EMPTY_FORM = {
-  nome: '', profissao: '', tel: '', email: '', dni: '', address: '',
+  nome: '', profissao: '', data_nascimento: '', tel: '', email: '', dni: '', address: '',
   tabela_irs: 'tabelaI', n_dependentes: 0,
   nis: '', nif: '', iban: '',
 };
@@ -423,7 +424,20 @@ export default function OnboardingForm({ token }) {
                 <Inp error={errors.nome} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome e apelido completos" />
               </InputField>
               <InputField label="Profissão / Cargo" icon={Briefcase}>
-                <Inp value={form.profissao} onChange={e => set('profissao', e.target.value)} placeholder="Ex: Técnico de Manutenção" />
+                <CnpCombobox
+                  initialQuery={form.profissao}
+                  inputClassName="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all placeholder:text-slate-300 placeholder:font-normal normal-case focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50"
+                  placeholder="Pesquisar profissão por nome…"
+                  formatSelected={item => item.nome}
+                  onSelect={item => set('profissao', item.nome)}
+                />
+              </InputField>
+              <InputField label="Data de Nascimento" icon={Calendar}>
+                <Inp
+                  type="date"
+                  value={form.data_nascimento}
+                  onChange={e => set('data_nascimento', e.target.value)}
+                />
               </InputField>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <InputField label="Telemóvel" icon={Phone} error={errors.tel}>
