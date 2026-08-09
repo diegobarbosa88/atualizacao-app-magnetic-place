@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   X, ShieldCheck, AlertTriangle, CheckCircle2, Loader2, TestTube2, ShieldAlert
 } from 'lucide-react';
+import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 
 // Motivos de cessação — códigos oficiais PSI (cessarVinculoTrabalhador WSDL, Agosto 2026)
 const MOTIVOS_CESSACAO = [
@@ -180,10 +181,12 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
 
   const precisaFundamentacao = MOTIVOS_COM_FUNDAMENTACAO.includes(form.motivoCessacao) && form.comunicacaoDesemprego;
 
+  const profissaoDefinida = findProfissaoByCodigo(worker.profissao_cnp);
+
   const camposFaltando = isAdmissao ? [
-    !form.dataNascimento      && 'Data de nascimento',
-    !form.profissaoCnp        && 'Código CNP profissão (5 dígitos)',
-    !form.localTrabalho       && 'Código do local de trabalho',
+    !form.dataNascimento  && 'Data de nascimento',
+    !profissaoDefinida    && 'Profissão (definir no perfil do trabalhador)',
+    !form.localTrabalho   && 'Código do local de trabalho',
   ].filter(Boolean) : [];
 
   const podaEnviar = !bloqueado
@@ -390,16 +393,19 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
                     </div>
 
                     <div>
-                      <label className={lbl}>Código CNP Profissão <span className="text-red-500">*</span></label>
-                      <input
-                        type="text"
-                        maxLength={5}
-                        value={form.profissaoCnp}
-                        onChange={e => setForm(p => ({ ...p, profissaoCnp: e.target.value.replace(/\D/g, '').substring(0, 5) }))}
-                        placeholder="ex: 93130"
-                        className={inp + (!form.profissaoCnp ? ' border-amber-400' : '')}
-                      />
-                      <p className="text-[10px] text-slate-400 mt-0.5">5 dígitos · Classificação Portuguesa de Profissões</p>
+                      <label className={lbl}>Profissão CPP <span className="text-red-500">*</span></label>
+                      {profissaoDefinida ? (
+                        <p className="text-sm font-mono font-semibold text-slate-800 py-1.5 px-2.5 bg-slate-50 border border-slate-200 rounded-lg">
+                          {profissaoDefinida.codigoCPP} — {profissaoDefinida.designacaoModal}
+                        </p>
+                      ) : (
+                        <div className="flex items-start gap-2 bg-amber-50 border border-amber-300 rounded-lg px-2.5 py-2">
+                          <AlertTriangle size={13} className="text-amber-600 shrink-0 mt-0.5" />
+                          <p className="text-xs text-amber-800 font-medium leading-snug">
+                            Profissão não definida — aceda ao perfil do trabalhador, selecione a função em <strong>Dados do Colaborador</strong> e reabra este ecrã.
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className={lbl}>Enquadramento</label>

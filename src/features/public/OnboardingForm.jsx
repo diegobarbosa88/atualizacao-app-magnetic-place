@@ -6,7 +6,7 @@ import {
   Building2, Shield, Lock, Calendar
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
-import CnpCombobox from '../../components/CnpCombobox';
+import SelectProfissaoEmpresa from '../../components/SelectProfissaoEmpresa';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -49,7 +49,7 @@ function validarNIS(nis) {
 }
 
 const EMPTY_FORM = {
-  nome: '', profissao: '', data_nascimento: '', tel: '', email: '', dni: '', address: '',
+  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', address: '',
   tabela_irs: 'tabelaI', n_dependentes: 0,
   nis: '', nif: '', iban: '',
 };
@@ -424,12 +424,13 @@ export default function OnboardingForm({ token }) {
                 <Inp error={errors.nome} value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Nome e apelido completos" />
               </InputField>
               <InputField label="Profissão / Cargo" icon={Briefcase}>
-                <CnpCombobox
-                  initialQuery={form.profissao}
-                  inputClassName="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all placeholder:text-slate-300 placeholder:font-normal normal-case focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50"
-                  placeholder="Pesquisar profissão por nome…"
-                  formatSelected={item => item.nome}
-                  onSelect={item => set('profissao', item.nome)}
+                <SelectProfissaoEmpresa
+                  value={form.profissao_cnp}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 appearance-none normal-case"
+                  onChange={(codigo, rotulo) => {
+                    set('profissao_cnp', codigo);
+                    set('profissao', rotulo);
+                  }}
                 />
               </InputField>
               <InputField label="Data de Nascimento" icon={Calendar}>

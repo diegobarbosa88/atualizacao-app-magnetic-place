@@ -6,8 +6,8 @@ import {
   Building2, Timer, CheckCircle, CheckCircle2, ChevronDown,
   ShieldCheck, AlertTriangle
 } from 'lucide-react';
-import CnpCombobox from '../../../components/CnpCombobox';
-import { findCnpByCode } from '../../../data/cnpProfissoes';
+import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
+import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 
 const fmtTs = iso => {
   if (!iso) return null;
@@ -76,7 +76,15 @@ const WorkerForm = () => {
               </div>
               <div>
                 <label className={lbl}>Profissão</label>
-                <input type="text" value={workerForm.profissao || ''} onChange={f('profissao')} className={inp} placeholder="Operador de Caixa" />
+                <SelectProfissaoEmpresa
+                  value={workerForm.profissao_cnp || ''}
+                  className={inp}
+                  onChange={(codigo, rotulo) => setWorkerForm(prev => ({
+                    ...prev,
+                    profissao_cnp: codigo,
+                    profissao: rotulo,
+                  }))}
+                />
               </div>
               <div>
                 <label className={lbl}>Telemóvel</label>
@@ -219,25 +227,13 @@ const WorkerForm = () => {
                 </select>
               </div>
               <div>
-                <label className={lbl}>Cód. CNP Profissão</label>
-                <CnpCombobox
-                  key={`cnp-${workerForm.id}`}
-                  workerKey={workerForm.id}
-                  initialQuery={(() => {
-                    const found = findCnpByCode(workerForm.profissao_cnp);
-                    return found
-                      ? `${found.codigo} — ${found.nome}`
-                      : (workerForm.profissao_cnp || '');
-                  })()}
-                  inputClassName={inp}
-                  placeholder="Pesquisar profissão ou código…"
-                  formatSelected={item => `${item.codigo} — ${item.nome}`}
-                  onSelect={item => setWorkerForm(prev => ({
-                    ...prev,
-                    profissao_cnp: item.codigo,
-                    profissao: item.nome,
-                  }))}
-                />
+                <label className={lbl}>Cód. CPP Profissão</label>
+                {(() => {
+                  const p = findProfissaoByCodigo(workerForm.profissao_cnp);
+                  return p
+                    ? <p className="text-xs font-mono font-semibold text-slate-700 py-[5px] px-2.5 bg-slate-50 border border-slate-200 rounded-lg">{p.codigoCPP} — {p.designacaoModal}</p>
+                    : <p className="text-xs text-slate-400 py-[5px] px-2.5 bg-slate-50 border border-slate-200 rounded-lg italic">Sem profissão definida — selecionar em Dados do Colaborador</p>;
+                })()}
               </div>
               <div>
                 <label className={lbl}>Cód. Local Trabalho</label>
