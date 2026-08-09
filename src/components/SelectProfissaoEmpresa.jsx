@@ -1,8 +1,8 @@
 import React from 'react';
-import { PROFISSOES_EMPRESA } from '../data/profissoesEmpresa';
+import { PROFISSOES_EMPRESA, GRUPOS_PROFISSOES } from '../data/profissoesEmpresa';
 
 /**
- * Dropdown simples com as profissões da empresa.
+ * Dropdown agrupado com as profissões da empresa.
  *
  * Props:
  *   value      — codigoCPP actualmente seleccionado (string)
@@ -25,10 +25,16 @@ export default function SelectProfissaoEmpresa({
   return (
     <select value={value || ''} onChange={handleChange} className={className}>
       <option value="">{placeholder}</option>
-      {PROFISSOES_EMPRESA.map(p => (
-        <option key={p.codigoCPP} value={p.codigoCPP}>
-          {p.rotulo}
-        </option>
+      {GRUPOS_PROFISSOES.map(grupo => (
+        <optgroup key={grupo} label={grupo}>
+          {PROFISSOES_EMPRESA
+            .filter(p => p.grupo === grupo)
+            .map(p => (
+              <option key={p.codigoCPP} value={p.codigoCPP}>
+                {p.rotulo}
+              </option>
+            ))}
+        </optgroup>
       ))}
     </select>
   );
