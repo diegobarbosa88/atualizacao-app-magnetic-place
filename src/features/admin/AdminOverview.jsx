@@ -253,12 +253,12 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         {/* Worker Comparison */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
+        <div className="flex flex-col h-full bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3 mb-6 shrink-0">
             <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(235,141,0,0.12)', color: '#EB8D00' }}><Activity size={20} /></div>
             <h3 className="font-medium text-base text-slate-700">Comparativo por Trabalhador</h3>
           </div>
-          <div className="space-y-3">
+          <div className="scroll-marca overflow-y-auto flex-1 min-h-0 space-y-3">
             {workerComparisonData.length > 0 ? workerComparisonData.map((w) => (
               <div key={w.id} className="flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 transition-colors">
                 <div className="flex-1 min-w-0">

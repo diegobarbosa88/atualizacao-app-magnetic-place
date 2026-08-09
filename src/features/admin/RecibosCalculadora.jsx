@@ -3505,7 +3505,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         key={ci}
                         onClick={canCopy ? e => handleCellClick(e, ri, ci, row[col.key]) : undefined}
                         title={canCopy ? (isCopied ? 'Copiado!' : 'Clique para copiar') : undefined}
-                        className={`px-2 py-1 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'} ${canCopy ? 'cursor-pointer' : ''}`}
+                        className={`px-2 py-0.5 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'} ${canCopy ? 'cursor-pointer' : ''}`}
                         style={{
                           position: 'relative',
                           whiteSpace: 'nowrap',
