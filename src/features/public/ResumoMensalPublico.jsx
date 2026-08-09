@@ -546,8 +546,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
         ) : (
           <div
             ref={tableScrollRef}
-            className="flex-1 overflow-auto rounded-2xl border border-slate-200 shadow-sm min-h-0"
-            style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
+            className="scroll-marca flex-1 overflow-auto rounded-2xl border border-slate-200 shadow-sm min-h-0"
             {...dragProps}
           >
             <table

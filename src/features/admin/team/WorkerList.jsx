@@ -3,6 +3,14 @@ import { useApp } from '../../../context/AppContext';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return parts.length === 1
+    ? parts[0][0].toUpperCase()
+    : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function ssBadge(w) {
   if (w.ss_cessacao_comunicada_em) {
     return (
@@ -76,13 +84,13 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
             <tr className="border-b border-slate-100 bg-slate-50">
               <th
                 onClick={() => setWorkersSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
               >
                 Colaborador {workersSort.key === 'name' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
               <th
                 onClick={() => setWorkersSort(prev => ({ key: 'schedule', direction: prev.key === 'schedule' && prev.direction === 'asc' ? 'desc' : 'asc' }))}
-                className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors"
+                className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors"
               >
                 Horário · Unidade {workersSort.key === 'schedule' ? (workersSort.direction === 'asc' ? '↑' : '↓') : ''}
               </th>
@@ -102,10 +110,15 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <tr key={w.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   {/* Colaborador */}
                   <td className="px-4 py-3">
-                    <p className="font-black text-slate-800 text-sm uppercase truncate">{w.name}</p>
-                    <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
-                    <div className="mt-1">{ssBadge(w)}</div>
-                    {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
+                      <div className="min-w-0">
+                        <p className="font-black text-slate-800 text-sm truncate">{w.name}</p>
+                        <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
+                        <div className="mt-1">{ssBadge(w)}</div>
+                        {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
+                      </div>
+                    </div>
                   </td>
 
                   {/* Horário · Unidade (oculto em mobile) */}
@@ -157,10 +170,10 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                             </button>
                             <button
                               onClick={() => { onLogin('worker', { ...w, isAdminImpersonating: true }); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-indigo-50 group transition-colors"
+                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-indigo-100 text-indigo-500 group-hover:bg-indigo-200 transition-colors shrink-0"><Search size={13} /></span>
-                              <span className="text-xs font-semibold text-slate-700 group-hover:text-indigo-700">Ver Portal</span>
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: '#869AAF' }}><Search size={13} /></span>
+                              <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-800">Ver Portal</span>
                             </button>
                             <button
                               onClick={() => { onVerPasta?.(w.id); setOpenMenuId(null); }}
@@ -263,18 +276,18 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
       {sortedWorkers.map(w => {
         const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
         return (
-          <div key={w.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+          <div key={w.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
             <div className="flex justify-between items-start mb-3">
               <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 ${w.status === 'inativo' ? 'text-rose-600 border-rose-200 bg-rose-50' : 'text-emerald-600 border-emerald-200 bg-emerald-50'}`}>
                 {w.status !== 'inativo' && <CheckCircle size={10} />}
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-indigo-100" title="Ver Portal"><Search size={12} /></button>
+                <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={12} /></button>
                 <button onClick={() => onEdit(w)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={12} /></button>
-                <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
-                <button onClick={() => onOpenVHHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
+                <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
+                <button onClick={() => onOpenVHHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
                   <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all border border-blue-100" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
                 )}
@@ -291,8 +304,13 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 )}
               </div>
             </div>
-            <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{w.name}</h4>
-            <p className="text-[10px] text-slate-400 font-bold truncate mb-2">{w.profissao || 'Staff'}</p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.name)}</div>
+              <div className="min-w-0">
+                <h4 className="font-black text-slate-800 text-sm truncate">{w.name}</h4>
+                <p className="text-[10px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
+              </div>
+            </div>
             <div className="mb-3">{ssBadge(w)}</div>
             <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
               <div className="flex items-center gap-1.5">

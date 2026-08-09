@@ -2052,82 +2052,75 @@ ${hdrRow}${bodyRows}${totRow}
   }
 
   return (
-    <div className={subTab === 'resumo' ? 'flex flex-col flex-1 min-h-0 gap-5 pb-2' : 'space-y-5 pb-2'}>
+    <div className={subTab === 'resumo' ? 'flex flex-col flex-1 min-h-0 gap-0 pb-0' : 'space-y-5 pb-2'}>
 
-      {/* ── Cabeçalho — padrão Contabilidade ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ── Modo Calculadora: cabeçalho completo + sub-abas ── */}
+      {subTab !== 'resumo' && (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h2 className="text-lg font-black text-slate-800 leading-tight">Calculadora de Recibos</h2>
+                <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Estimativas salariais</p>
+              </div>
+            </div>
 
-        {/* Título */}
-        <div className="flex items-center gap-2">
-          <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
-            <FileText size={20} />
+            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+              <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
+                <ChevronLeft size={16} className="text-slate-500" />
+              </button>
+              <span className="px-3 py-1 text-sm font-black text-slate-700 min-w-[140px] text-center">
+                {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
+              </span>
+              <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
+                <ChevronRight size={16} className="text-slate-500" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={gerarRecibosBatchPDF}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors"
+                title="PDF dos recibos de vencimento — todos os trabalhadores"
+              >
+                <FileText size={14} /> Recibos PDF
+              </button>
+              <button
+                onClick={exportRecibosBatchXLS}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-colors"
+                title="Excel dos recibos de vencimento — todos os trabalhadores"
+              >
+                <FileSpreadsheet size={14} /> Recibos XLS
+              </button>
+              <button
+                onClick={gerarMapasAjudasPDF}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
+              >
+                <Download size={14} /> Mapas AC
+              </button>
+            </div>
           </div>
-          <div>
-            <h2 className="text-lg font-black text-slate-800 leading-tight">Calculadora de Recibos</h2>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Estimativas salariais</p>
+
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+            <button
+              onClick={() => setSubTab('calculadora')}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'calculadora' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Calculadora
+            </button>
+            <button
+              onClick={() => setSubTab('resumo')}
+              className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all text-slate-500 hover:text-slate-700"
+            >
+              Resumo Mensal
+            </button>
           </div>
-        </div>
-
-        {/* Navegação mês */}
-        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-          <button
-            onClick={() => navMes(-1)}
-            className="p-1.5 rounded-lg hover:bg-white transition-colors"
-          >
-            <ChevronLeft size={16} className="text-slate-500" />
-          </button>
-          <span className="px-3 py-1 text-sm font-black text-slate-700 min-w-[140px] text-center">
-            {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
-          </span>
-          <button
-            onClick={() => navMes(1)}
-            className="p-1.5 rounded-lg hover:bg-white transition-colors"
-          >
-            <ChevronRight size={16} className="text-slate-500" />
-          </button>
-        </div>
-
-        {/* Botões batch */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={gerarRecibosBatchPDF}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors"
-            title="PDF dos recibos de vencimento — todos os trabalhadores"
-          >
-            <FileText size={14} /> Recibos PDF
-          </button>
-          <button
-            onClick={exportRecibosBatchXLS}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-colors"
-            title="Excel dos recibos de vencimento — todos os trabalhadores"
-          >
-            <FileSpreadsheet size={14} /> Recibos XLS
-          </button>
-          <button
-            onClick={gerarMapasAjudasPDF}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
-            title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
-          >
-            <Download size={14} /> Mapas AC
-          </button>
-        </div>
-      </div>
-
-      {/* Sub-abas */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
-        <button
-          onClick={() => setSubTab('calculadora')}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'calculadora' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Calculadora
-        </button>
-        <button
-          onClick={() => setSubTab('resumo')}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'resumo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Resumo Mensal
-        </button>
-      </div>
+        </>
+      )}
 
       {/* Selector de trabalhador — oculto na subaba Resumo */}
       {subTab !== 'resumo' && (
@@ -2181,6 +2174,8 @@ ${hdrRow}${bodyRows}${totRow}
           rows={resumoRows}
           mesLabel={`${MESES_PT[parseInt(inputs.mes, 10)] || ''} ${inputs.ano}`}
           mesStr={`${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`}
+          onBack={() => setSubTab('calculadora')}
+          onNavMes={navMes}
         />
       )}
 
@@ -2817,7 +2812,7 @@ ${hdrRow}${bodyRows}${totRow}
       </>}
 
       {/* Rodapé de compliance */}
-      <p className="text-center text-[10px] text-slate-400 font-bold pt-2 pb-4">
+      <p className="text-center text-[10px] text-slate-400 font-bold leading-none py-0.5">
         <AlertTriangle size={10} className="inline mr-1 text-amber-400" />
         Estimativa não oficial · IRS 2026 (Desp. 233-A/2026) · TSU em vigor · Confirme sempre no TOConline · Ajudas de custo isentas só com deslocações documentadas
       </p>
@@ -2902,7 +2897,7 @@ function ExpandCell({ text, maxWidth }) {
   );
 }
 
-function ResumoMensalTable({ rows, mesLabel, mesStr }) {
+function ResumoMensalTable({ rows, mesLabel, mesStr, onBack, onNavMes }) {
   const { supabase } = useApp();
   const { ref: tableScrollRef, dragProps } = useDragScroll();
 
@@ -3243,8 +3238,28 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
       )}
 
       {/* Toolbar */}
-      <div className="flex-shrink-0 flex items-center gap-3 flex-wrap">
-        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo Mensal — {mesLabel}</h3>
+      <div className="flex-shrink-0 flex items-center gap-2 flex-wrap">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all shrink-0"
+          >
+            <ChevronLeft size={13} /> Calculadora
+          </button>
+        )}
+        {onBack && <div className="w-px h-4 bg-slate-200 shrink-0" />}
+        <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide whitespace-nowrap">Resumo Mensal</h3>
+        {onNavMes && (
+          <div className="flex items-center gap-0.5 bg-slate-100 rounded-xl p-0.5">
+            <button onClick={() => onNavMes(-1)} className="p-1 rounded-lg hover:bg-white transition-colors">
+              <ChevronLeft size={13} className="text-slate-500" />
+            </button>
+            <span className="px-2 text-xs font-black text-slate-700 min-w-[110px] text-center">{mesLabel}</span>
+            <button onClick={() => onNavMes(1)} className="p-1 rounded-lg hover:bg-white transition-colors">
+              <ChevronRight size={13} className="text-slate-500" />
+            </button>
+          </div>
+        )}
         {rows.length > 0 && (
           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
             {filteredRows.length} {filteredRows.length !== rows.length ? `de ${rows.length} ` : ''}trabalhadores
@@ -3412,8 +3427,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
       ) : (
         <div
           ref={tableScrollRef}
-          className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 shadow-sm"
-          style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
+          className="scroll-marca flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 shadow-sm"
           {...dragProps}
         >
           <table

@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
 import SSConsultasPanel from './team/SSConsultasPanel';
@@ -46,6 +47,10 @@ export default function AdminSettings() {
   const [recalcProgress, setRecalcProgress] = useState({ current: 0, total: 0, done: false });
 
   const [showImportarContratos, setShowImportarContratos] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'geral';
+  const setTab = (tab) => setSearchParams({ tab });
 
   // Estado do painel Segurança Social
   const [ssStatus, setSsStatus] = useState(null); // { configurado, ambiente, nissEmpresa }
@@ -206,8 +211,25 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2"><Settings size={22} style={{ color: '#869AAF' }} /> Configurações do Sistema</h2>
       </div>
 
+      {/* Navegação por tabs */}
+      <div className="flex flex-wrap items-end gap-1 border-b border-slate-100 mb-2">
+        {[
+          { id: 'geral', label: 'Geral' },
+          { id: 'utilizadores', label: 'Utilizadores e Acesso' },
+          { id: 'psi', label: 'Segurança Social PSI' },
+          { id: 'integracoes', label: 'Integrações' },
+        ].map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setTab(id)}
+            className={`px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px whitespace-nowrap ${activeTab === id ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
+          >{label}</button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
 
+        {activeTab === 'utilizadores' && (<>
         {/* Administradores */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
           <div className="flex items-center justify-between mb-6">
@@ -279,6 +301,23 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
           )}
         </div>
 
+        {/* Alterar Senha */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Lock size={20} /></div>
+            <h3 className="font-black text-lg text-slate-800">Segurança da Conta</h3>
+          </div>
+          <div className="space-y-4">
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Alterar Senha Administrador</p>
+            <div className="flex gap-2">
+              <input type="password" placeholder="Nova Senha" className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" id="new-admin-pass" />
+              <button onClick={() => { const passEl = document.getElementById('new-admin-pass'); if (!passEl) return; const newPass = passEl.value; if (!newPass) return; updateSetting('adminPassword', newPass); alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.'); passEl.value = ''; }} className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-slate-800 transition-all">Atualizar</button>
+            </div>
+          </div>
+        </div>
+        </>)}
+
+        {activeTab === 'psi' && (<>
         {/* Segurança Social — Comunicações PSI */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-4">
@@ -419,67 +458,32 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
           </div>
         </div>
 
-        {/* Conta e Segurança */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+        </>)}
+
+        {activeTab === 'integracoes' && (<>
+        {/* Gemini API */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 lg:col-span-2">
           <div className="flex items-center gap-3 mb-6">
-            <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Lock size={20} /></div>
-            <h3 className="font-black text-lg text-slate-800">Segurança da Conta</h3>
+            <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><Sparkles size={20} /></div>
+            <h3 className="font-black text-lg text-slate-800">Inteligência Artificial — Gemini</h3>
           </div>
-          <div className="space-y-4">
-            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Alterar Senha Administrador</p>
+          <div className="max-w-lg space-y-4">
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Chave API Gemini</p>
+            <p className="text-[10px] text-slate-400">Obtenha a sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-indigo-500 underline">aistudio.google.com</a></p>
             <div className="flex gap-2">
-              <input
-                type="password"
-                placeholder="Nova Senha"
-                className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-                id="new-admin-pass"
-              />
-              <button
-                onClick={() => {
-                  const passEl = document.getElementById('new-admin-pass');
-                  if (!passEl) return;
-                  const newPass = passEl.value;
-                  if (!newPass) return;
-                  updateSetting('adminPassword', newPass);
-                  alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.');
-                  passEl.value = '';
-                }}
-                className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-slate-800 transition-all"
-              >
-                Atualizar
-              </button>
+              <input type="password" placeholder="AIza..." value={geminiKeyInput} onChange={e => setGeminiKeyInput(e.target.value)} className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none font-mono" />
+              <button onClick={() => { const key = geminiKeyInput.trim(); updateSetting('geminiApiKey', key); alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.'); }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all whitespace-nowrap" style={{ backgroundColor: '#1B3A57' }}>Guardar</button>
             </div>
-            <div className="border-t border-slate-100 pt-4">
-              <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-2">Chave API Gemini (IA)</p>
-              <p className="text-[10px] text-slate-400 mb-3">Obtenha a sua chave em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="text-indigo-500 underline">aistudio.google.com</a></p>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  placeholder="AIza..."
-                  value={geminiKeyInput}
-                  onChange={e => setGeminiKeyInput(e.target.value)}
-                  className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
-                />
-                <button
-                  onClick={() => {
-                    const key = geminiKeyInput.trim();
-                    updateSetting('geminiApiKey', key);
-                    alert(key ? 'Chave API guardada! A IA está agora activa.' : 'Chave API removida.');
-                  }}
-                  className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all whitespace-nowrap" style={{ backgroundColor: '#1B3A57' }}
-                >
-                  Guardar
-                </button>
-              </div>
-              {systemSettings.geminiApiKey ? (
-                <p className="text-[10px] text-emerald-600 font-bold mt-2 flex items-center gap-1"><span>•</span> IA activa</p>
-              ) : (
-                <p className="text-[10px] text-slate-400 font-bold mt-2 flex items-center gap-1"><span>•</span> IA inactiva - configure a chave</p>
-              )}
-            </div>
+            {systemSettings.geminiApiKey ? (
+              <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-1"><span>•</span> IA activa</p>
+            ) : (
+              <p className="text-[10px] text-slate-400 font-bold flex items-center gap-1"><span>•</span> IA inactiva — configure a chave</p>
+            )}
           </div>
         </div>
+        </>)}
 
+        {activeTab === 'geral' && (<>
         {/* Identidade Visual */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
@@ -688,6 +692,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"><CheckCircle size={14} /> Automação com IA</div>
           </div>
         </div>
+        </>)}
       </div>
 
       {showRecalcModal && (

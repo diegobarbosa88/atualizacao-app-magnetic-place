@@ -272,7 +272,7 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
   const activeFlyoutTab = MENU_STRUCTURE.find(t => t.id === hoveredTab);
 
   return (
-    <nav className={`flex-1 overflow-y-auto py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
+    <nav className={`scroll-marca flex-1 overflow-y-auto py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
       {MENU_GROUPS.map((group, groupIdx) => {
         const items = group.itemIds
           .map(id => MENU_STRUCTURE.find(t => t.id === id))
@@ -484,7 +484,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
   };
 
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-4">
+    <nav className="scroll-marca flex-1 overflow-y-auto px-3 py-4">
       {MENU_GROUPS.map((group, groupIdx) => {
         const items = group.itemIds
           .map(id => MENU_STRUCTURE.find(t => t.id === id))

@@ -186,7 +186,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
           icon={<Clock size={24} />} iconBg="" iconColor=""
           iconStyle={{ backgroundColor: 'rgba(27,58,87,0.1)', color: '#869AAF' }}
           value={formatHours(adminStats.totalHours)} subtitle={`${formatHours(aggregatedTrend.expected)} Esperadas`}
-          label="Horas Totais" trend={vsLastMonth.hours}
+          label="Horas Totais" trend={vsLastMonth.hours} neutralBadge
         />
         <KpiCard
           icon={<TrendingUp size={24} />} iconBg="" iconColor=""

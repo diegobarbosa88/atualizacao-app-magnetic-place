@@ -15,23 +15,23 @@ export default function DocumentsFilters({
 }) {
   return (
     <>
-      <div className="flex overflow-x-auto gap-1 mb-4 pb-0.5 bg-slate-100 p-1 rounded-2xl w-full">
+      {/* Tabs de estado — sublinhado laranja */}
+      <div className="flex overflow-x-auto gap-0 mb-4 border-b border-slate-100">
         {[
-          { key: 'all', label: 'Todos', icon: LayoutList, activeColor: 'text-slate-700' },
-          { key: 'pending', label: 'Pendentes', icon: Clock, activeColor: 'text-amber-500' },
-          { key: 'awaiting_admin', label: 'Aprovação', icon: FileSignature, activeColor: 'text-indigo-600' },
-          { key: 'signed', label: 'Assinados', icon: CheckCircle, activeColor: 'text-emerald-600' },
-        ].map(({ key, label, icon: Icon, activeColor }) => {
+          { key: 'all', label: 'Todos', icon: LayoutList },
+          { key: 'pending', label: 'Pendentes', icon: Clock },
+          { key: 'awaiting_admin', label: 'Aprovação', icon: FileSignature },
+          { key: 'signed', label: 'Assinados', icon: CheckCircle },
+        ].map(({ key, label, icon: Icon }) => {
           const active = stateFilter === key;
           return (
             <button
               key={key}
               onClick={() => setStateFilter(key)}
-              className={`flex-shrink-0 flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${active ? 'bg-white shadow-sm' : 'hover:text-slate-600'}`}
+              className={`flex-shrink-0 flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px whitespace-nowrap ${active ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
             >
-              <Icon size={13} className={active ? activeColor : 'text-slate-400'} />
-              <span className={`text-[9px] font-black uppercase whitespace-nowrap ${active ? activeColor : 'text-slate-400'}`}>{label}</span>
-              {counts[key] > 0 && <span className={`text-[9px] font-black tabular-nums ${active ? activeColor : 'text-slate-400'}`}>({counts[key]})</span>}
+              <Icon size={12} /> {label}
+              {counts[key] > 0 && <span className="tabular-nums">({counts[key]})</span>}
             </button>
           );
         })}
@@ -51,25 +51,18 @@ export default function DocumentsFilters({
         </button>
       </div>
 
-      {/* Filtro por categoria ACT */}
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {['Todas', ...CATEGORIAS_RH_ACT].map(c => {
-          const val = c === 'Todas' ? '' : c;
-          const active = (categoriaFilter || '') === val;
-          return (
-            <button
-              key={c}
-              onClick={() => setCategoriaFilter && setCategoriaFilter(val)}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all ${
-                active
-                  ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
-                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-              }`}
-            >
-              {c}
-            </button>
-          );
-        })}
+      {/* Filtro por categoria — dropdown */}
+      <div className="mb-4">
+        <select
+          className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none"
+          value={categoriaFilter || ''}
+          onChange={(e) => setCategoriaFilter && setCategoriaFilter(e.target.value)}
+        >
+          <option value="">Todas as categorias</option>
+          {CATEGORIAS_RH_ACT.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
       </div>
 
       <div className="flex flex-col gap-2 mb-5">
@@ -79,14 +72,15 @@ export default function DocumentsFilters({
             <input
               type="text"
               placeholder="Pesquisar..."
-              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+              className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button
             onClick={onShowUpload}
-            className="p-2.5 bg-indigo-600 text-white rounded-xl flex items-center justify-center hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 shrink-0"
+            className="p-2.5 text-white rounded-xl flex items-center justify-center transition-all shadow-md shrink-0"
+            style={{ backgroundColor: '#1B3A57' }}
             title="Upload Manual"
           >
             <Plus size={16} />

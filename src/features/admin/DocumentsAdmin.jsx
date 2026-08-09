@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, BarChart2, ArrowRightLeft, Landmark, ListChecks, AlertTriangle, LayoutGrid, List } from 'lucide-react';
+import { FileText, FileSignature, FolderOpen, Mail, Building2, ReceiptText, Coins, Receipt, BarChart2, ArrowRightLeft, Landmark, ListChecks, AlertTriangle, LayoutGrid, List, Search, ScanSearch, Users } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useDocumentTemplates } from '../../hooks/useDocumentTemplates';
 import { isSigned, isAwaitingAdmin } from '../../constants/documentStatus';
@@ -22,6 +22,7 @@ import DocumentsFilters from './documents/DocumentsFilters';
 import DocumentsTable from './documents/DocumentsTable';
 import UploadManualModal from './documents/UploadManualModal';
 import WorkerDocsFolderView from './documents/WorkerDocsFolderView';
+import DocumentScannerModal from './team/DocumentScannerModal';
 
 
 const TIPOS_MANUAIS = ['Recibo de Vencimento', 'Mapa de Deslocamento', 'Contrato de Trabalho', 'Outro'];
@@ -73,11 +74,11 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos', pagamentos: 'fila', banco: 'movimentacoes' };
 
   const GROUP_COLOR = {
-    indigo:  { active: 'bg-indigo-600 text-white shadow-indigo-200',  text: 'text-indigo-600',  icon: 'bg-indigo-50 text-indigo-600' },
-    blue:    { active: 'bg-blue-600 text-white shadow-blue-200',      text: 'text-blue-600',    icon: 'bg-blue-50 text-blue-600' },
-    emerald: { active: 'bg-emerald-600 text-white shadow-emerald-200',text: 'text-emerald-600', icon: 'bg-emerald-50 text-emerald-600' },
-    violet:  { active: 'bg-violet-600 text-white shadow-violet-200',  text: 'text-violet-600',  icon: 'bg-violet-50 text-violet-600' },
-    sky:     { active: 'bg-sky-600 text-white shadow-sky-200',        text: 'text-sky-600',     icon: 'bg-sky-50 text-sky-600' },
+    indigo:  { active: 'bg-[#1B3A57] text-white',    text: 'text-[#1B3A57]',    icon: 'bg-slate-100 text-[#1B3A57]' },
+    blue:    { active: 'bg-[#869AAF] text-white',    text: 'text-[#869AAF]',    icon: 'bg-slate-100 text-[#869AAF]' },
+    emerald: { active: 'bg-emerald-600 text-white',  text: 'text-emerald-600',  icon: 'bg-emerald-50 text-emerald-600' },
+    violet:  { active: 'bg-[#EB8D00] text-white',    text: 'text-[#EB8D00]',    icon: 'bg-amber-50 text-[#EB8D00]' },
+    sky:     { active: 'bg-slate-500 text-white',    text: 'text-slate-500',    icon: 'bg-slate-50 text-slate-500' },
   };
 
   const activeGroup = useMemo(() => {
@@ -138,6 +139,9 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
   const [categoriaFilter, setCategoriaFilter] = useState('');
   const [validadeFilter, setValidadeFilter] = useState('');
   const [viewMode, setViewMode] = useState('folder'); // 'table' | 'folder'
+  const [docMode, setDocMode] = useState('category'); // 'category' | 'worker'
+  const [workerSearch, setWorkerSearch] = useState('');
+  const [docScannerOpen, setDocScannerOpen] = useState(false);
   const [categoriaOverrides, setCategoriaOverrides] = useState({}); // { [docId]: categoria }
   const [approvingId, setApprovingId] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -502,7 +506,23 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {(activeGroup === 'arquivo' && activeSection === 'documentos') && (
         <>
-          {/* Banner de alerta de validade */}
+          {/* Seletor de modo */}
+          <div className="flex items-center gap-1 mb-4 border-b border-slate-100">
+            {[
+              { id: 'category', label: 'Por categoria', icon: FileText },
+              { id: 'worker',   label: 'Por colaborador', icon: Users },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => setDocMode(id)}
+                className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${docMode === id ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
+              >
+                <Icon size={13} /> {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Banner de alerta de validade — visível em ambos os modos */}
           {(() => {
             const expiring = documents.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade)));
             return expiring.length > 0 ? (
@@ -512,7 +532,7 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
                   {expiring.length} documento{expiring.length !== 1 ? 's' : ''} expirado{expiring.length !== 1 ? 's' : ''} ou a expirar em 30 dias
                 </p>
                 <button
-                  onClick={() => { setValidadeFilter('expiring'); setViewMode('table'); }}
+                  onClick={() => { setValidadeFilter('expiring'); setViewMode('table'); setDocMode('category'); }}
                   className="text-xs font-black text-red-600 underline hover:text-red-800 transition-colors whitespace-nowrap"
                 >
                   Ver todos →
@@ -521,71 +541,130 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
             ) : null;
           })()}
 
-          <DocumentsFilters
-            stateFilter={stateFilter}
-            setStateFilter={setStateFilter}
-            counts={counts}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            sourceFilter={sourceFilter}
-            setSourceFilter={setSourceFilter}
-            tipoFilter={tipoFilter}
-            setTipoFilter={setTipoFilter}
-            tipoOptions={tipoOptions}
-            categoriaFilter={categoriaFilter}
-            setCategoriaFilter={setCategoriaFilter}
-            validadeFilter={validadeFilter}
-            setValidadeFilter={setValidadeFilter}
-            onShowUpload={() => setShowUploadModal(true)}
-          />
+          {/* Modo: Por categoria */}
+          {docMode === 'category' && (<>
+            <DocumentsFilters
+              stateFilter={stateFilter}
+              setStateFilter={setStateFilter}
+              counts={counts}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              sourceFilter={sourceFilter}
+              setSourceFilter={setSourceFilter}
+              tipoFilter={tipoFilter}
+              setTipoFilter={setTipoFilter}
+              tipoOptions={tipoOptions}
+              categoriaFilter={categoriaFilter}
+              setCategoriaFilter={setCategoriaFilter}
+              validadeFilter={validadeFilter}
+              setValidadeFilter={setValidadeFilter}
+              onShowUpload={() => setShowUploadModal(true)}
+            />
 
-          {/* Toggle de modo de vista */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              {filteredDocs.length} documento{filteredDocs.length !== 1 ? 's' : ''}
-            </p>
-            <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {filteredDocs.length} documento{filteredDocs.length !== 1 ? 's' : ''}
+              </p>
+              <div className="flex items-center bg-slate-100 p-1 rounded-xl gap-1">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'table' ? 'bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  style={viewMode === 'table' ? { color: '#1B3A57' } : {}}
+                >
+                  <List size={12} /> Lista
+                </button>
+                <button
+                  onClick={() => setViewMode('folder')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'folder' ? 'bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                  style={viewMode === 'folder' ? { color: '#1B3A57' } : {}}
+                >
+                  <LayoutGrid size={12} /> Pastas
+                </button>
+              </div>
+            </div>
+
+            {viewMode === 'table' ? (
+              <DocumentsTable
+                filteredDocs={filteredDocs}
+                loadingDocs={loadingDocs}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onDeleteManual={handleDeleteManual}
+                onDeleteGenerated={handleDeleteGenerated}
+                onApprove={onApprove}
+                onPreview={openGeneratedPreview}
+                onEditCategoria={handleEditCategoria}
+                approvingId={approvingId}
+                saving={saving}
+              />
+            ) : (
+              <WorkerDocsFolderView
+                docs={filteredDocs}
+                workerName={searchTerm ? `Resultados para "${searchTerm}"` : null}
+                onPreview={openGeneratedPreview}
+                onDeleteManual={handleDeleteManual}
+                onDeleteGenerated={handleDeleteGenerated}
+              />
+            )}
+          </>)}
+
+          {/* Modo: Por colaborador */}
+          {docMode === 'worker' && (<>
+            <div className="flex gap-2 mb-5">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                <input
+                  type="text"
+                  placeholder="Pesquisar colaborador..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none"
+                  value={workerSearch}
+                  onChange={e => setWorkerSearch(e.target.value)}
+                />
+              </div>
               <button
-                onClick={() => setViewMode('table')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'table' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                onClick={() => setDocScannerOpen(true)}
+                className="p-2.5 rounded-xl flex items-center justify-center transition-all border-2 shrink-0 hover:bg-slate-50"
+                style={{ borderColor: '#869AAF', color: '#869AAF' }}
+                title="Scanner de Documentos com IA"
               >
-                <List size={12} /> Lista
-              </button>
-              <button
-                onClick={() => setViewMode('folder')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${viewMode === 'folder' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-              >
-                <LayoutGrid size={12} /> Pastas
+                <ScanSearch size={16} />
               </button>
             </div>
-          </div>
-
-          {viewMode === 'table' ? (
-            <DocumentsTable
-              filteredDocs={filteredDocs}
-              loadingDocs={loadingDocs}
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={handleSort}
-              onDeleteManual={handleDeleteManual}
-              onDeleteGenerated={handleDeleteGenerated}
-              onApprove={onApprove}
-              onPreview={openGeneratedPreview}
-              onEditCategoria={handleEditCategoria}
-              approvingId={approvingId}
-              saving={saving}
-            />
-          ) : (
-            <WorkerDocsFolderView
-              docs={filteredDocs}
-              workerName={searchTerm ? `Resultados para "${searchTerm}"` : null}
-              onPreview={openGeneratedPreview}
-              onDeleteManual={handleDeleteManual}
-              onDeleteGenerated={handleDeleteGenerated}
-            />
-          )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+              {workers
+                .filter(w => !workerSearch || w.name.toLowerCase().includes(workerSearch.toLowerCase()))
+                .map(w => {
+                  const workerDocs = documents.filter(d => d.workerId === w.id);
+                  const hasExpired = workerDocs.some(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade)));
+                  const initials = w.name
+                    ? (() => { const p = w.name.trim().split(/\s+/); return p.length === 1 ? p[0][0].toUpperCase() : (p[0][0] + p[p.length - 1][0]).toUpperCase(); })()
+                    : '?';
+                  return (
+                    <button
+                      key={w.id}
+                      onClick={() => { setSearchTerm(w.name); setDocMode('category'); setViewMode('table'); }}
+                      className="bg-white border border-slate-100 hover:border-slate-200 hover:shadow-md rounded-2xl p-4 text-center transition-all"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{initials}</div>
+                        <div>
+                          <p className="font-black text-slate-800 text-xs truncate max-w-[100px]">{w.name}</p>
+                          <p className="text-[10px] text-slate-400">{workerDocs.length} doc{workerDocs.length !== 1 ? 's' : ''}</p>
+                        </div>
+                        {workerDocs.length > 0 && (
+                          <div className={`w-2 h-2 rounded-full ${hasExpired ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          </>)}
         </>
       )}
+
+      {docScannerOpen && <DocumentScannerModal open={docScannerOpen} onClose={() => setDocScannerOpen(false)} />}
 
       {showUploadModal && (
         <UploadManualModal

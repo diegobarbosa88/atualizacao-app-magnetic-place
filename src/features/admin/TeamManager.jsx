@@ -145,10 +145,10 @@ const TeamManagerContent = ({ onLogin }) => {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Sub-tab navigation */}
-      <div className="flex flex-wrap items-center gap-2 mb-5 border-b border-slate-100 pb-3">
+      <div className="flex flex-wrap items-end gap-1 mb-5 border-b border-slate-100">
         <button
           onClick={() => setTeamSubTab('workers')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'workers' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-indigo-600'}`}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'workers' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <Users size={14} /> Colaboradores
           {pendingChangeRequests.length > 0 && (
@@ -157,35 +157,35 @@ const TeamManagerContent = ({ onLogin }) => {
         </button>
         <button
           onClick={() => setTeamSubTab('absences')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'absences' ? 'bg-orange-500 text-white' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'absences' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <CalendarX size={14} /> Faltas
           {pendingAbsences > 0 && (
-            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${teamSubTab === 'absences' ? 'bg-white text-orange-500' : 'bg-orange-500 text-white'}`}>{pendingAbsences}</span>
+            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingAbsences}</span>
           )}
         </button>
         <button
           onClick={() => setTeamSubTab('validacao')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'validacao' ? 'bg-emerald-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-emerald-600'}`}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'validacao' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <ShieldCheck size={14} /> Validação
         </button>
         <button
           onClick={() => setTeamSubTab('correcoes')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'correcoes' ? 'bg-amber-500 text-white' : 'bg-slate-50 text-slate-500 hover:text-amber-600'}`}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'correcoes' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <AlertTriangle size={14} /> Correções
           {pendingWorkerCorrections > 0 && (
-            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${teamSubTab === 'correcoes' ? 'bg-white text-amber-500' : 'bg-red-500 text-white'}`}>{pendingWorkerCorrections}</span>
+            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingWorkerCorrections}</span>
           )}
         </button>
         <button
           onClick={() => setTeamSubTab('onboarding')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${teamSubTab === 'onboarding' ? 'bg-teal-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-teal-600'}`}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${teamSubTab === 'onboarding' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <Clock size={14} /> Pendentes
           {pendingOnboardingCount > 0 && (
-            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${teamSubTab === 'onboarding' ? 'bg-white text-teal-600' : 'bg-teal-500 text-white'}`}>{pendingOnboardingCount}</span>
+            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingOnboardingCount}</span>
           )}
         </button>
       </div>
@@ -213,7 +213,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {teamSubTab === 'workers' && (<>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Users size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Colaboradores</h3>
         </div>
         <div className="relative">
@@ -234,19 +234,21 @@ const TeamManagerContent = ({ onLogin }) => {
             </label>
           )}
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
+            <button onClick={() => setWorkersView('grid')} className={`p-2 rounded-lg transition-all ${workersView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'grid' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setWorkersView('list')} className={`p-2 rounded-lg transition-all ${workersView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={workersView === 'list' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
           <button
             onClick={() => { setInviteEmail(''); setGeneratedLink(''); setInviteModal(true); }}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-teal-600 hover:bg-teal-700 text-white"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#869AAF' }}
             title="Convidar novo colaborador via link de onboarding"
           >
             <UserPlus size={14} /> Convidar
           </button>
           <button
             onClick={() => setScannerOpen(true)}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-violet-600 hover:bg-violet-700 text-white"
+            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl font-black text-xs uppercase transition-all whitespace-nowrap border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#869AAF' }}
             title="Scanner de Documentos com IA"
           >
             <ScanSearch size={14} /> Scanner
@@ -256,7 +258,8 @@ const TeamManagerContent = ({ onLogin }) => {
               setWorkerForm({ id: null, name: '', assignedClients: [], assignedSchedules: [], defaultClientId: '', defaultScheduleId: '', tel: '', valorHora: '', profissao: '', nis: '', nif: '', iban: '', status: 'ativo', dataInicio: '', dataFim: '', dataAlteracao: new Date().toISOString().split('T')[0], limited_entry_mode: false, vencimento_base: '', subsidio_alimentacao_dia: '' });
               setIsAddingInTab(true);
             }}
-            className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-indigo-600 text-white"
+            className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white"
+            style={{ backgroundColor: '#EB8D00' }}
           >
             Novo
           </button>
@@ -268,7 +271,7 @@ const TeamManagerContent = ({ onLogin }) => {
         onClose={() => setIsAddingInTab(false)}
         title={workerForm.id ? 'Editar Colaborador' : 'Novo Colaborador'}
         icon={<Users size={16} />}
-        accent="indigo"
+        accent="slate"
         size="3xl"
       >
         <WorkerForm />
@@ -283,7 +286,7 @@ const TeamManagerContent = ({ onLogin }) => {
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
-        accent="indigo"
+        accent="slate"
         size="md"
       >
         <div className="p-5 space-y-4">

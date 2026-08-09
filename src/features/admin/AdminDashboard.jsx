@@ -6,7 +6,8 @@ import ClientTimesheetReport from '../../components/common/ClientTimesheetReport
 import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
-  Settings, FileText, Sparkles, Bell, Pencil, FileDown, CalendarX
+  Settings, FileText, Sparkles, Bell, Pencil, FileDown, CalendarX,
+  Menu, BarChart3, LogOut, ChevronLeft
 } from 'lucide-react';
 
 const SOURCE_CFG = {
@@ -48,7 +49,6 @@ import AdminOverview from './AdminOverview';
 import AdminReports from './AdminReports';
 import AdminSettings from './AdminSettings';
 import AdminSidebar from './AdminSidebar';
-import AdminTopbar from './AdminTopbar';
 import AdminClassicNav from './AdminClassicNav';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import TOConlineAdmin from './TOConlineAdmin';
@@ -61,10 +61,10 @@ import {
 } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';
 
-function BrandBar() {
+function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogout, onSwitchToWorker, onOpenMobileNav, showBackToTeam, onBackToTeam }) {
   return (
     <div
-      className="flex items-center px-6 sm:px-10 gap-5 shrink-0"
+      className="flex items-center px-4 sm:px-6 gap-3 sm:gap-4 shrink-0"
       style={{
         height: '88px',
         backgroundColor: '#1B3A57',
@@ -73,15 +73,85 @@ function BrandBar() {
         zIndex: 40,
       }}
     >
+      <button
+        onClick={onOpenMobileNav}
+        aria-label="Abrir menu"
+        className="md:hidden p-2 rounded-xl transition-all shrink-0"
+        style={{ color: 'rgba(255,255,255,0.7)', backgroundColor: 'rgba(255,255,255,0.08)' }}
+      >
+        <Menu size={20} />
+      </button>
+
+      {showBackToTeam && (
+        <button
+          onClick={onBackToTeam}
+          className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all shrink-0"
+          style={{ color: 'rgba(255,255,255,0.8)', backgroundColor: 'rgba(255,255,255,0.1)' }}
+        >
+          <ChevronLeft size={15} /> Equipa
+        </button>
+      )}
+
       <div style={{
-        width: '58px', height: '58px', borderRadius: '50%',
+        width: '52px', height: '52px', borderRadius: '50%',
         overflow: 'hidden', flexShrink: 0, backgroundColor: '#EB8D00',
       }}>
         <CompanyLogo className="w-full h-full object-cover" />
       </div>
-      <div>
-        <p style={{ fontSize: '22px', fontWeight: 700, color: 'white', lineHeight: 1.2, fontFamily: "'Poppins', sans-serif", letterSpacing: '-0.01em' }}>Magnetic Place</p>
+      <div className="hidden sm:block">
+        <p style={{ fontSize: '20px', fontWeight: 700, color: 'white', lineHeight: 1.2, fontFamily: "'Poppins', sans-serif", letterSpacing: '-0.01em' }}>Magnetic Place</p>
         <p style={{ fontSize: '11px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: 1.4 }}>Gestão</p>
+      </div>
+
+      <div className="flex-1" />
+
+      <div className="flex items-center gap-2">
+        <button
+          data-notif-bell
+          onClick={onToggleNotifDropdown}
+          className="flex items-center justify-center p-2.5 rounded-xl transition-all relative"
+          style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+          aria-label="Notificações"
+        >
+          <Bell size={18} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={onOpenFinReport}
+          className="hidden sm:flex items-center justify-center p-2.5 rounded-xl transition-all"
+          style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+          aria-label="Relatório financeiro"
+          title="Relatório financeiro"
+        >
+          <BarChart3 size={18} />
+        </button>
+
+        {onSwitchToWorker && (
+          <button
+            onClick={onSwitchToWorker}
+            className="flex items-center justify-center p-2.5 rounded-xl transition-all"
+            style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+            aria-label="Ver como trabalhador"
+            title="Ver como trabalhador"
+          >
+            <Users size={18} />
+          </button>
+        )}
+
+        <button
+          onClick={onLogout}
+          className="p-2.5 rounded-xl transition-all"
+          style={{ color: 'rgba(255,255,255,0.5)' }}
+          aria-label="Terminar sessão"
+          title="Terminar sessão"
+        >
+          <LogOut size={18} />
+        </button>
       </div>
     </div>
   );
@@ -497,7 +567,16 @@ function AdminDashboard(props) {
         </>
       ) : (
         <>
-          <BrandBar />
+          <BrandBar
+            unreadCount={unreadCount}
+            onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
+            onOpenFinReport={() => setShowFinReport(true)}
+            onLogout={onLogout}
+            onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
+            onOpenMobileNav={() => setMobileNavOpen(true)}
+            showBackToTeam={!!auditWorkerId}
+            onBackToTeam={() => setAuditWorkerId(null)}
+          />
           <div className="flex-1 flex overflow-hidden min-h-0">
             <AdminSidebar
               activeTab={activeTab}
@@ -513,17 +592,6 @@ function AdminDashboard(props) {
               onClose={() => setMobileNavOpen(false)}
             />
             <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
-              <AdminTopbar
-                activeTab={activeTab}
-                unreadCount={unreadCount}
-                onToggleNotifDropdown={() => setShowNotifDropdown(s => !s)}
-                onOpenFinReport={() => setShowFinReport(true)}
-                onLogout={onLogout}
-                onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
-                onOpenMobileNav={() => setMobileNavOpen(true)}
-                showBackToTeam={!!auditWorkerId}
-                onBackToTeam={() => setAuditWorkerId(null)}
-              />
               <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
                 <div className="flex-1 min-h-0 flex flex-col px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
                   {tabContent}
@@ -535,7 +603,7 @@ function AdminDashboard(props) {
       )}
 
       {showNotifDropdown && (
-        <div ref={notifDropdownRef} className="fixed top-[8rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+        <div ref={notifDropdownRef} className="fixed top-[5.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notificações</h3>
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>

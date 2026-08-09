@@ -127,3 +127,20 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+/* Scrollbar personalizada Magnetic — fina, laranja, sem faixa */
+.scroll-marca::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
+}
+.scroll-marca::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scroll-marca::-webkit-scrollbar-thumb {
+  background: rgba(235, 141, 0, 0.6);
+  border-radius: 2px;
+}
+.scroll-marca {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(235, 141, 0, 0.6) transparent;
+}
