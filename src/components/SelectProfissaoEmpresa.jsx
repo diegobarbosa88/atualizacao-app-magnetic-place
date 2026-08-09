@@ -22,15 +22,8 @@ export default function SelectProfissaoEmpresa({
     onChange(found ? found.codigoCPP : '', found ? found.rotulo : '');
   };
 
-  const isEmpty = !value;
-
   return (
-    <select
-      value={value || ''}
-      onChange={handleChange}
-      className={className}
-      style={isEmpty ? { color: 'rgb(203 213 225)', fontWeight: '400' } : undefined}
-    >
+    <select value={value || ''} onChange={handleChange} className={className}>
       <option value="">{placeholder}</option>
       {GRUPOS_PROFISSOES.map(grupo => (
         <optgroup key={grupo} label={grupo}>
