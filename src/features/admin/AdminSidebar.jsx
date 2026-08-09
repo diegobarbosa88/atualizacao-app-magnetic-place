@@ -1,14 +1,31 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
   Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
-  AlertTriangle, Send, ChevronRight, ChevronDown, PanelLeftClose, PanelLeftOpen,
-  FolderOpen, Mail, ReceiptText, Coins, TrendingUp, Receipt, FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks, Truck, Shield, Calculator,
+  AlertTriangle, Send, ChevronRight, ChevronDown, ChevronLeft,
+  FolderOpen, Mail, ReceiptText, Coins, Receipt, FileSignature,
+  BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
+  Truck, Shield, Calculator,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import { resolveBadge } from './adminNavConfig';
+
+// Paleta de marca
+const B = {
+  navy: '#1B3A57',
+  orange: '#EB8D00',
+  activeItemBg: 'rgba(235,141,0,0.18)',
+  sectionLabel: '#869AAF',
+  inactiveText: '#B9C6D4',
+  inactiveIcon: '#869AAF',
+  divider: 'rgba(255,255,255,0.15)',
+  navBorder: 'rgba(255,255,255,0.08)',
+  hoverBg: 'rgba(255,255,255,0.07)',
+  flyoutActiveBg: 'rgba(235,141,0,0.12)',
+  accordionGuide: 'rgba(235,141,0,0.35)',
+};
 
 const MENU_STRUCTURE = [
   { id: 'overview', label: 'Geral', icon: LayoutGrid },
@@ -16,19 +33,19 @@ const MENU_STRUCTURE = [
     id: 'team', label: 'Equipa', icon: Trophy, badgeType: 'team',
     subtabs: [
       { id: 'workers', label: 'Colaboradores', icon: Users, path: '/admin/team?subtab=workers' },
-      { id: 'absences', label: 'Faltas', icon: CalendarX, path: '/admin/team?subtab=absences', badgeType: 'absences', color: 'orange' },
-      { id: 'validacao', label: 'Validação', icon: ShieldCheck, path: '/admin/team?subtab=validacao', color: 'emerald' },
-      { id: 'correcoes',  label: 'Correções',  icon: AlertTriangle, path: '/admin/team?subtab=correcoes',  badgeType: 'workerCorrections', color: 'amber' },
-      { id: 'onboarding', label: 'Pendentes',  icon: Clock,         path: '/admin/team?subtab=onboarding',  color: 'teal' },
+      { id: 'absences', label: 'Faltas', icon: CalendarX, path: '/admin/team?subtab=absences', badgeType: 'absences' },
+      { id: 'validacao', label: 'Validação', icon: ShieldCheck, path: '/admin/team?subtab=validacao' },
+      { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/team?subtab=correcoes', badgeType: 'workerCorrections' },
+      { id: 'onboarding', label: 'Pendentes', icon: Clock, path: '/admin/team?subtab=onboarding' },
     ],
   },
   {
     id: 'clients', label: 'Clientes', icon: Building2, badgeType: 'clients',
     subtabs: [
       { id: 'list', label: 'Clientes', icon: Building2, path: '/admin/clients?subtab=list' },
-      { id: 'envios', label: 'Envios', icon: Send, path: '/admin/clients?subtab=envios', color: 'blue' },
-      { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/clients?subtab=correcoes', badgeType: 'clientCorrections', color: 'orange' },
-      { id: 'auditoria', label: 'Auditoria Portal', icon: Shield, path: '/admin/clients?subtab=auditoria', color: 'violet' },
+      { id: 'envios', label: 'Envios', icon: Send, path: '/admin/clients?subtab=envios' },
+      { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/clients?subtab=correcoes', badgeType: 'clientCorrections' },
+      { id: 'auditoria', label: 'Auditoria Portal', icon: Shield, path: '/admin/clients?subtab=auditoria' },
     ],
   },
   {
@@ -41,16 +58,16 @@ const MENU_STRUCTURE = [
   {
     id: 'documentos', label: 'Documentos', icon: FolderOpen,
     subtabs: [
-      { id: 'doc-docs',      label: 'Documentos',    icon: FileText,      path: '/admin/documentos/documentos',                    color: 'indigo' },
-      { id: 'doc-templates', label: 'Templates',     icon: FileSignature, path: '/admin/documentos/templates',                     color: 'indigo' },
-      { id: 'fat-importar',  label: 'Importar Fat.', icon: Mail,          path: '/admin/documentos/faturas/importar',              color: 'blue' },
-      { id: 'fat-fornec',    label: 'Fat. Fornec.',  icon: Receipt,       path: '/admin/documentos/faturas/fornecedores',          color: 'blue' },
-      { id: 'rec-recibos',   label: 'Recibos',       icon: ReceiptText,   path: '/admin/documentos/reconciliacao/recibos',         color: 'emerald' },
-      { id: 'rec-salarios',  label: 'Salários',      icon: Coins,         path: '/admin/documentos/reconciliacao/salarios',        color: 'emerald' },
-      { id: 'rec-bancaria',  label: 'Bancária',      icon: Landmark,      path: '/admin/documentos/reconciliacao/bancaria',        color: 'emerald' },
-      { id: 'pag-fornecedores', label: 'Pagamentos',    icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores', color: 'violet' },
-      { id: 'pag-fila',        label: 'Fila de Pag.',  icon: ListChecks,    path: '/admin/documentos/pagamentos/fila',                    color: 'violet' },
-      { id: 'banco-movs',      label: 'Conta Bancária', icon: Landmark,     path: '/admin/documentos/banco/movimentacoes',               color: 'blue' },
+      { id: 'doc-docs', label: 'Documentos', icon: FileText, path: '/admin/documentos/documentos' },
+      { id: 'doc-templates', label: 'Templates', icon: FileSignature, path: '/admin/documentos/templates' },
+      { id: 'fat-importar', label: 'Importar Fat.', icon: Mail, path: '/admin/documentos/faturas/importar' },
+      { id: 'fat-fornec', label: 'Fat. Fornec.', icon: Receipt, path: '/admin/documentos/faturas/fornecedores' },
+      { id: 'rec-recibos', label: 'Recibos', icon: ReceiptText, path: '/admin/documentos/reconciliacao/recibos' },
+      { id: 'rec-salarios', label: 'Salários', icon: Coins, path: '/admin/documentos/reconciliacao/salarios' },
+      { id: 'rec-bancaria', label: 'Bancária', icon: Landmark, path: '/admin/documentos/reconciliacao/bancaria' },
+      { id: 'pag-fornecedores', label: 'Pagamentos', icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores' },
+      { id: 'pag-fila', label: 'Fila de Pag.', icon: ListChecks, path: '/admin/documentos/pagamentos/fila' },
+      { id: 'banco-movs', label: 'Conta Bancária', icon: Landmark, path: '/admin/documentos/banco/movimentacoes' },
     ],
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },
@@ -60,137 +77,186 @@ const MENU_STRUCTURE = [
   {
     id: 'toconline', label: 'TOConline', icon: BookOpen,
     subtabs: [
-      { id: 'toc-documentos', label: 'Documentos',  icon: FileText,  path: '/admin/toconline?subtab=documentos', color: 'blue' },
-      { id: 'toc-clientes',   label: 'Clientes',    icon: Users,     path: '/admin/toconline?subtab=clientes',   color: 'blue' },
-      { id: 'toc-artigos',    label: 'Artigos',      icon: Receipt,   path: '/admin/toconline?subtab=artigos',    color: 'blue' },
-      { id: 'toc-relatorios', label: 'Relatórios',  icon: BarChart2, path: '/admin/toconline?subtab=relatorios', color: 'blue' },
+      { id: 'toc-documentos', label: 'Documentos', icon: FileText, path: '/admin/toconline?subtab=documentos' },
+      { id: 'toc-clientes', label: 'Clientes', icon: Users, path: '/admin/toconline?subtab=clientes' },
+      { id: 'toc-artigos', label: 'Artigos', icon: Receipt, path: '/admin/toconline?subtab=artigos' },
+      { id: 'toc-relatorios', label: 'Relatórios', icon: BarChart2, path: '/admin/toconline?subtab=relatorios' },
     ],
   },
   { id: 'settings', label: 'Configurações', icon: Settings },
 ];
 
-const ACCENT = {
-  orange: 'text-orange-500',
-  emerald: 'text-emerald-600',
-  amber: 'text-amber-500',
-  blue: 'text-blue-600',
-  violet: 'text-violet-600',
-  sky: 'text-sky-600',
-  teal: 'text-teal-600',
-};
+const MENU_GROUPS = [
+  { id: 'principal',   label: 'PRINCIPAL',   itemIds: ['overview', 'team'] },
+  { id: 'operacional', label: 'OPERACIONAL', itemIds: ['clients', 'fornecedores', 'schedules', 'documentos'] },
+  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['reports', 'costs', 'contabilidade', 'recibos', 'toconline'] },
+  { id: 'sistema',     label: 'SISTEMA',     itemIds: ['settings'] },
+];
 
-function SubSubFlyout({ subtabs, anchorTop, anchorLeft, onNavigate, onMouseEnter, onMouseLeave }) {
-  const style = { top: Math.max(8, anchorTop), left: anchorLeft, zIndex: 410 };
+// Verifica se um path de subtab corresponde à URL atual
+function useSubtabActive() {
+  const location = useLocation();
+  return (path) => {
+    const [p, q] = path.split('?');
+    if (!q) return location.pathname === p;
+    return location.pathname === p && location.search.includes(q);
+  };
+}
+
+// Flyout navy para modo recolhido (portal)
+function SubFlyout({ subtabs, top, flyoutLeft, counts, onNavigate, onMouseEnter, onMouseLeave }) {
+  const [hoveredId, setHoveredId] = useState(null);
+  const isSubtabActive = useSubtabActive();
+
+  const style = {
+    position: 'fixed',
+    top: Math.max(8, top),
+    left: flyoutLeft,
+    zIndex: 400,
+    backgroundColor: B.navy,
+    border: `1px solid ${B.orange}`,
+    borderRadius: '7px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+    minWidth: '182px',
+    paddingTop: '4px',
+    paddingBottom: '4px',
+  };
+
   const el = (
-    <div
-      className="fixed bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-200/60 py-1.5 min-w-[160px]"
-      style={style}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
-    >
-      {subtabs.map(st => (
-        <button
-          key={st.id}
-          onClick={() => onNavigate(st.path)}
-          className="w-full flex items-center px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
-        >
-          {st.label}
-        </button>
-      ))}
+    <div style={style} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}>
+      {subtabs.map(st => {
+        const Icon = st.icon;
+        const badge = resolveBadge(st.badgeType, counts);
+        const active = isSubtabActive(st.path);
+        const hovered = hoveredId === st.id;
+        const highlighted = active || hovered;
+        return (
+          <button
+            key={st.id}
+            onClick={() => onNavigate(st.path)}
+            onMouseEnter={() => setHoveredId(st.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs text-left"
+            style={{
+              color: highlighted ? 'white' : B.inactiveText,
+              fontWeight: highlighted ? 500 : 400,
+              backgroundColor: highlighted ? B.flyoutActiveBg : 'transparent',
+              boxShadow: active ? `inset 2px 0 0 0 ${B.orange}` : 'none',
+              transition: 'background-color 100ms ease, color 100ms ease',
+              border: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            {Icon && (
+              <Icon size={13} className="shrink-0" style={{ color: highlighted ? B.orange : B.inactiveIcon }} />
+            )}
+            <span className="flex-1 truncate">{st.label}</span>
+            {badge > 0 && (
+              <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
+                {badge}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
   const portal = document.getElementById('flyout-root');
   return portal ? ReactDOM.createPortal(el, portal) : el;
 }
 
-function SubFlyout({ subtabs, top, flyoutLeft, counts, onNavigate, onMouseEnter, onMouseLeave }) {
-  const [hoveredId, setHoveredId] = useState(null);
-  const [subTop, setSubTop] = useState(0);
-  const [subLeft, setSubLeft] = useState(0);
-  const hideSubTimer = useRef(null);
-
-  const clearHideSub = () => clearTimeout(hideSubTimer.current);
-  const scheduleHideSub = () => {
-    hideSubTimer.current = setTimeout(() => setHoveredId(null), 160);
-  };
-
-  const handleSubEnter = (st, e) => {
-    if (!st.subtabs) { setHoveredId(null); return; }
-    clearHideSub();
-    const rect = e.currentTarget.getBoundingClientRect();
-    setSubTop(rect.top);
-    setSubLeft(rect.right);
-    setHoveredId(st.id);
-  };
-
-  const activeSub = subtabs.find(s => s.id === hoveredId);
-
-  const style = { top: Math.max(8, top), left: flyoutLeft, zIndex: 400 };
-  const el = (
-    <>
-      <div
-        className="fixed bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-200/60 py-1.5 min-w-[176px]"
-        style={style}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={onMouseLeave}
-      >
-        {subtabs.map(st => {
-          const Icon = st.icon;
-          const badge = resolveBadge(st.badgeType, counts);
-          const accentCls = ACCENT[st.color] || 'text-slate-700';
-          return (
-            <button
-              key={st.id}
-              onClick={() => onNavigate(st.path)}
-              onMouseEnter={(e) => handleSubEnter(st, e)}
-              onMouseLeave={st.subtabs ? scheduleHideSub : undefined}
-              className="w-full flex items-center gap-2.5 px-3.5 py-2 text-xs font-bold text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors text-left"
-            >
-              {Icon && <Icon size={13} className={`shrink-0 ${accentCls}`} />}
-              <span className="flex-1 truncate">{st.label}</span>
-              {badge > 0 && (
-                <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">{badge}</span>
-              )}
-              {st.subtabs && <ChevronRight size={12} className="text-slate-400 shrink-0" />}
-            </button>
-          );
-        })}
-      </div>
-
-      {hoveredId && activeSub?.subtabs && (
-        <SubSubFlyout
-          subtabs={activeSub.subtabs}
-          anchorTop={subTop}
-          anchorLeft={subLeft}
-          onNavigate={onNavigate}
-          onMouseEnter={() => { clearHideSub(); onMouseEnter(); }}
-          onMouseLeave={() => { scheduleHideSub(); onMouseLeave(); }}
-        />
-      )}
-    </>
+// Botão circular flutuante na borda direita da sidebar
+function ToggleBtn({ collapsed, onToggle }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={onToggle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+      style={{
+        position: 'absolute',
+        right: '-11px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: '22px',
+        height: '22px',
+        borderRadius: '50%',
+        backgroundColor: 'white',
+        border: `1.5px solid ${hovered ? B.orange : B.sectionLabel}`,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
+        padding: 0,
+        transition: 'border-color 150ms ease',
+        zIndex: 20,
+        boxShadow: '0 1px 5px rgba(0,0,0,0.2)',
+      }}
+    >
+      {collapsed
+        ? <ChevronRight size={13} style={{ color: B.navy }} />
+        : <ChevronLeft size={13} style={{ color: B.navy }} />
+      }
+    </button>
   );
-  const portal = document.getElementById('flyout-root');
-  return portal ? ReactDOM.createPortal(el, portal) : el;
 }
 
 function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClick, collapsed }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const hideTimer = useRef(null);
   const [hoveredTab, setHoveredTab] = useState(null);
+  const [hoveredBtn, setHoveredBtn] = useState(null);
   const [flyoutTop, setFlyoutTop] = useState(0);
   const [flyoutLeft, setFlyoutLeft] = useState(0);
+
+  // Accordion: abre o pai da subpágina atual na inicialização
+  const [expandedAccordion, setExpandedAccordion] = useState(() =>
+    MENU_STRUCTURE.find(t =>
+      t.subtabs?.some(st => {
+        const [p, q] = st.path.split('?');
+        return q ? location.pathname === p && location.search.includes(q) : location.pathname === p;
+      })
+    )?.id || null
+  );
+
+  // Fecha flyout ao alternar modo expandido/recolhido
+  useEffect(() => {
+    setHoveredTab(null);
+    clearTimeout(hideTimer.current);
+  }, [collapsed]);
+
+  // Sincroniza accordion ao navegar com back/forward
+  useEffect(() => {
+    const match = MENU_STRUCTURE.find(t =>
+      t.subtabs?.some(st => {
+        const [p, q] = st.path.split('?');
+        return q ? location.pathname === p && location.search.includes(q) : location.pathname === p;
+      })
+    );
+    if (match) setExpandedAccordion(match.id);
+  }, [location.pathname, location.search]);
 
   const clearHide = () => clearTimeout(hideTimer.current);
   const scheduleHide = () => {
     hideTimer.current = setTimeout(() => setHoveredTab(null), 160);
   };
 
+  const isSubtabActive = (path) => {
+    const [p, q] = path.split('?');
+    if (!q) return location.pathname === p;
+    return location.pathname === p && location.search.includes(q);
+  };
+
+  // Flyout só no modo recolhido
   const handleTabEnter = (tab, e) => {
-    if (!tab.subtabs && !collapsed) { scheduleHide(); return; }
+    if (!collapsed || !tab.subtabs) { scheduleHide(); return; }
     clearHide();
     const rect = e.currentTarget.getBoundingClientRect();
     setFlyoutTop(rect.top);
-    setFlyoutLeft(rect.right);
+    setFlyoutLeft(rect.right + 4);
     setHoveredTab(tab.id);
   };
 
@@ -207,50 +273,160 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
   const activeFlyoutTab = MENU_STRUCTURE.find(t => t.id === hoveredTab);
 
   return (
-    <nav className={`flex-1 overflow-y-auto py-4 space-y-1 ${collapsed ? 'px-2' : 'px-3'}`}>
-      {MENU_STRUCTURE.map(tab => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        const badge = resolveBadge(tab.badgeType, counts);
+    <nav className={`flex-1 overflow-y-auto py-3 ${collapsed ? 'px-2' : 'px-3'}`}>
+      {MENU_GROUPS.map((group, groupIdx) => {
+        const items = group.itemIds
+          .map(id => MENU_STRUCTURE.find(t => t.id === id))
+          .filter(Boolean);
+
         return (
-          <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id);
-              setAuditWorkerId(null);
-              onItemClick && onItemClick();
-            }}
-            onMouseEnter={(e) => handleTabEnter(tab, e)}
-            onMouseLeave={scheduleHide}
-            aria-current={isActive ? 'page' : undefined}
-            title={collapsed ? tab.label : undefined}
-            className={`w-full flex items-center rounded-xl text-sm font-bold transition-all relative ${
-              collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
-            } ${
-              isActive
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-          >
-            <Icon size={18} className="shrink-0" />
-            {!collapsed && <span className="flex-1 text-left truncate">{tab.label}</span>}
-            {!collapsed && badge > 0 && (
-              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                isActive ? 'bg-white text-indigo-600' : 'bg-red-500 text-white'
-              }`}>
-                {badge}
-              </span>
+          <div key={group.id} className={groupIdx > 0 ? 'mt-3' : ''}>
+            {groupIdx > 0 && collapsed ? (
+              <div style={{ height: '0.5px', backgroundColor: B.divider, margin: '0 4px 8px' }} />
+            ) : (
+              <p
+                className={`px-3 mb-1 ${groupIdx > 0 ? 'mt-1' : ''}`}
+                style={{
+                  fontSize: '9.5px',
+                  fontWeight: 500,
+                  letterSpacing: '0.06em',
+                  color: collapsed ? 'transparent' : B.sectionLabel,
+                  textTransform: 'uppercase',
+                  userSelect: 'none',
+                  lineHeight: collapsed ? 0 : undefined,
+                  height: collapsed ? 0 : undefined,
+                  marginBottom: collapsed ? 0 : undefined,
+                  overflow: 'hidden',
+                }}
+              >
+                {group.label}
+              </p>
             )}
-            {!collapsed && tab.subtabs && (
-              <ChevronRight size={12} className={`shrink-0 ${isActive ? 'text-white/60' : 'text-slate-300'}`} />
-            )}
-            {collapsed && badge > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
-            )}
-          </button>
+
+            <div className="space-y-0.5">
+              {items.map(tab => {
+                const Icon = tab.icon;
+                const isActive = tab.subtabs
+                  ? tab.subtabs.some(st => isSubtabActive(st.path))
+                  : activeTab === tab.id;
+                const isHovered = hoveredBtn === tab.id;
+                const badge = resolveBadge(tab.badgeType, counts);
+                const accordionOpen = !collapsed && expandedAccordion === tab.id && !!tab.subtabs;
+
+                return (
+                  <div key={tab.id}>
+                    <button
+                      onClick={() => {
+                        if (tab.subtabs) {
+                          if (!collapsed) {
+                            setExpandedAccordion(prev => prev === tab.id ? null : tab.id);
+                          }
+                        } else {
+                          setActiveTab(tab.id);
+                          setAuditWorkerId(null);
+                          onItemClick && onItemClick();
+                        }
+                      }}
+                      onMouseEnter={(e) => { setHoveredBtn(tab.id); handleTabEnter(tab, e); }}
+                      onMouseLeave={() => { setHoveredBtn(null); scheduleHide(); }}
+                      aria-current={isActive ? 'page' : undefined}
+                      aria-expanded={tab.subtabs ? accordionOpen : undefined}
+                      aria-controls={tab.subtabs ? `accordion-${tab.id}` : undefined}
+                      title={collapsed ? tab.label : undefined}
+                      style={{
+                        backgroundColor: isActive ? B.activeItemBg : isHovered ? B.hoverBg : 'transparent',
+                        boxShadow: isActive ? `inset 3px 0 0 0 ${B.orange}` : 'none',
+                        transition: 'background-color 150ms ease, box-shadow 150ms ease',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                      className={`w-full flex items-center rounded-lg text-sm font-bold relative ${
+                        collapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'
+                      }`}
+                    >
+                      <Icon size={18} className="shrink-0" style={{ color: isActive ? B.orange : B.inactiveIcon }} />
+                      {!collapsed && (
+                        <span className="flex-1 text-left truncate" style={{ color: isActive ? 'white' : B.inactiveText }}>
+                          {tab.label}
+                        </span>
+                      )}
+                      {!collapsed && badge > 0 && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-red-500 text-white shrink-0">
+                          {badge}
+                        </span>
+                      )}
+                      {!collapsed && tab.subtabs && (
+                        <ChevronDown
+                          size={12}
+                          className={`shrink-0 transition-transform duration-200 ${accordionOpen ? '' : '-rotate-90'}`}
+                          style={{ color: accordionOpen ? B.orange : B.inactiveIcon }}
+                        />
+                      )}
+                      {collapsed && badge > 0 && (
+                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                      )}
+                    </button>
+
+                    {/* Accordion de subitens (só no modo expandido) */}
+                    {!collapsed && tab.subtabs && (
+                      <div
+                        id={`accordion-${tab.id}`}
+                        style={{
+                          maxHeight: accordionOpen ? '600px' : '0',
+                          overflow: 'hidden',
+                          opacity: accordionOpen ? 1 : 0,
+                          transition: accordionOpen
+                            ? 'max-height 200ms ease, opacity 150ms ease'
+                            : 'max-height 150ms ease, opacity 80ms ease',
+                        }}
+                      >
+                        <div
+                          className="ml-4 pl-3 pb-1.5 pt-0.5 space-y-0.5"
+                          style={{ borderLeft: `1px solid ${B.accordionGuide}` }}
+                        >
+                          {tab.subtabs.map(st => {
+                            const StIcon = st.icon;
+                            const stBadge = resolveBadge(st.badgeType, counts);
+                            const subActive = isSubtabActive(st.path);
+                            return (
+                              <button
+                                key={st.id}
+                                onClick={() => handleNavigate(st.path)}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-left"
+                                style={{
+                                  color: subActive ? 'white' : B.inactiveText,
+                                  fontWeight: subActive ? 500 : 400,
+                                  backgroundColor: subActive ? B.flyoutActiveBg : 'transparent',
+                                  boxShadow: subActive ? `inset 2px 0 0 0 ${B.orange}` : 'none',
+                                  transition: 'background-color 100ms ease',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {StIcon && (
+                                  <StIcon size={12} className="shrink-0" style={{ color: subActive ? B.orange : B.inactiveIcon }} />
+                                )}
+                                <span className="flex-1 truncate">{st.label}</span>
+                                {stBadge > 0 && (
+                                  <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
+                                    {stBadge}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         );
       })}
 
+      {/* Flyout navy (só no modo recolhido) */}
       {hoveredTab && activeFlyoutTab?.subtabs && (
         <SubFlyout
           subtabs={activeFlyoutTab.subtabs}
@@ -268,8 +444,25 @@ function NavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClic
 
 function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onItemClick }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [expandedTab, setExpandedTab] = useState(activeTab);
   const [expandedSubtab, setExpandedSubtab] = useState(null);
+
+  useEffect(() => {
+    const match = MENU_STRUCTURE.find(t =>
+      t.subtabs?.some(st => {
+        const [p, q] = st.path.split('?');
+        return q ? location.pathname === p && location.search.includes(q) : location.pathname === p;
+      })
+    );
+    if (match) setExpandedTab(match.id);
+  }, [location.pathname, location.search]);
+
+  const isSubtabActive = (path) => {
+    const [p, q] = path.split('?');
+    if (!q) return location.pathname === p;
+    return location.pathname === p && location.search.includes(q);
+  };
 
   const handleTabClick = (tab) => {
     if (!tab.subtabs) {
@@ -280,8 +473,6 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
     }
     setExpandedTab(prev => prev === tab.id ? null : tab.id);
     setExpandedSubtab(null);
-    setActiveTab(tab.id);
-    setAuditWorkerId(null);
   };
 
   const handleSubtabClick = (st) => {
@@ -294,78 +485,118 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
   };
 
   return (
-    <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-      {MENU_STRUCTURE.map(tab => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        const isExpanded = expandedTab === tab.id;
-        const badge = resolveBadge(tab.badgeType, counts);
+    <nav className="flex-1 overflow-y-auto px-3 py-4">
+      {MENU_GROUPS.map((group, groupIdx) => {
+        const items = group.itemIds
+          .map(id => MENU_STRUCTURE.find(t => t.id === id))
+          .filter(Boolean);
         return (
-          <div key={tab.id}>
-            <button
-              onClick={() => handleTabClick(tab)}
-              aria-current={isActive ? 'page' : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                isActive
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-                  : 'text-slate-600 active:bg-slate-100'
-              }`}
-            >
-              <Icon size={18} className="shrink-0" />
-              <span className="flex-1 text-left truncate">{tab.label}</span>
-              {badge > 0 && (
-                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
-                  isActive ? 'bg-white text-indigo-600' : 'bg-red-500 text-white'
-                }`}>{badge}</span>
-              )}
-              {tab.subtabs && (
-                <ChevronDown size={13} className={`shrink-0 transition-transform duration-200 ${
-                  isExpanded ? 'rotate-180' : ''
-                } ${isActive ? 'text-white/60' : 'text-slate-400'}`} />
-              )}
-            </button>
-
-            {isExpanded && tab.subtabs && (
-              <div className="mt-1 ml-3 pl-3 border-l-2 border-indigo-100 space-y-0.5 pb-1">
-                {tab.subtabs.map(st => {
-                  const StIcon = st.icon;
-                  const stBadge = resolveBadge(st.badgeType, counts);
-                  const accentCls = ACCENT[st.color] || 'text-slate-600';
-                  const isSubExpanded = expandedSubtab === st.id;
-                  return (
-                    <div key={st.id}>
-                      <button
-                        onClick={() => handleSubtabClick(st)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:bg-slate-50 ${accentCls}`}
-                      >
-                        {StIcon && <StIcon size={13} className="shrink-0" />}
-                        <span className="flex-1 text-left truncate">{st.label}</span>
-                        {stBadge > 0 && (
-                          <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">{stBadge}</span>
-                        )}
-                        {st.subtabs && (
-                          <ChevronDown size={12} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isSubExpanded ? 'rotate-180' : ''}`} />
-                        )}
-                      </button>
-
-                      {isSubExpanded && st.subtabs && (
-                        <div className="mt-0.5 ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5">
-                          {st.subtabs.map(sst => (
-                            <button
-                              key={sst.id}
-                              onClick={() => { navigate(sst.path); onItemClick && onItemClick(); }}
-                              className="w-full flex items-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 active:bg-slate-50 active:text-indigo-600 transition-colors text-left"
-                            >
-                              {sst.label}
-                            </button>
-                          ))}
-                        </div>
+          <div key={group.id} className={groupIdx > 0 ? 'mt-4' : ''}>
+            <p className="px-3 mb-1 text-[9.5px] font-medium tracking-wide uppercase text-slate-400">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {items.map(tab => {
+                const Icon = tab.icon;
+                const isActive = tab.subtabs
+                  ? tab.subtabs.some(st => isSubtabActive(st.path))
+                  : activeTab === tab.id;
+                const isExpanded = expandedTab === tab.id;
+                const badge = resolveBadge(tab.badgeType, counts);
+                return (
+                  <div key={tab.id}>
+                    <button
+                      onClick={() => handleTabClick(tab)}
+                      aria-current={isActive ? 'page' : undefined}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        isActive ? '' : 'text-slate-600 active:bg-slate-100'
+                      }`}
+                      style={isActive ? {
+                        backgroundColor: 'rgba(235,141,0,0.10)',
+                        boxShadow: `inset 3px 0 0 0 ${B.orange}`,
+                      } : {}}
+                    >
+                      <Icon size={18} className="shrink-0" style={{ color: isActive ? B.orange : undefined }} />
+                      <span className="flex-1 text-left truncate" style={{ color: isActive ? B.navy : undefined }}>
+                        {tab.label}
+                      </span>
+                      {badge > 0 && (
+                        <span
+                          className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'text-white' : 'bg-red-500 text-white'}`}
+                          style={isActive ? { backgroundColor: B.orange } : {}}
+                        >
+                          {badge}
+                        </span>
                       )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      {tab.subtabs && (
+                        <ChevronDown
+                          size={13}
+                          className={`shrink-0 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`}
+                          style={{ color: isActive ? B.orange : undefined }}
+                        />
+                      )}
+                    </button>
+
+                    {tab.subtabs && (
+                      <div style={{
+                        maxHeight: isExpanded ? '600px' : '0',
+                        overflow: 'hidden',
+                        opacity: isExpanded ? 1 : 0,
+                        transition: isExpanded
+                          ? 'max-height 200ms ease, opacity 150ms ease'
+                          : 'max-height 150ms ease, opacity 80ms ease',
+                      }}>
+                        <div
+                          className="mt-1 ml-4 pl-3 pb-1 space-y-0.5"
+                          style={{ borderLeft: `2px solid rgba(235,141,0,0.20)` }}
+                        >
+                          {tab.subtabs.map(st => {
+                            const StIcon = st.icon;
+                            const stBadge = resolveBadge(st.badgeType, counts);
+                            const subActive = isSubtabActive(st.path);
+                            const isSubExpanded = expandedSubtab === st.id;
+                            return (
+                              <div key={st.id}>
+                                <button
+                                  onClick={() => handleSubtabClick(st)}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:bg-slate-50"
+                                  style={{ color: subActive ? B.navy : '#475569' }}
+                                >
+                                  {StIcon && <StIcon size={13} className="shrink-0" style={{ color: subActive ? B.orange : undefined }} />}
+                                  <span className="flex-1 text-left truncate">{st.label}</span>
+                                  {stBadge > 0 && (
+                                    <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
+                                      {stBadge}
+                                    </span>
+                                  )}
+                                  {st.subtabs && (
+                                    <ChevronDown size={12} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isSubExpanded ? '' : '-rotate-90'}`} />
+                                  )}
+                                </button>
+
+                                {isSubExpanded && st.subtabs && (
+                                  <div className="mt-0.5 ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5">
+                                    {st.subtabs.map(sst => (
+                                      <button
+                                        key={sst.id}
+                                        onClick={() => { navigate(sst.path); onItemClick && onItemClick(); }}
+                                        className="w-full flex items-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 active:bg-slate-50 transition-colors text-left"
+                                      >
+                                        {sst.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         );
       })}
@@ -373,61 +604,98 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
   );
 }
 
+function UserFooterBtn({ onClick, title, children, danger = false, onItemClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={() => { onClick(); onItemClick?.(); }}
+      title={title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-full flex items-center justify-center p-2 rounded-xl"
+      style={{
+        color: hovered ? (danger ? '#f87171' : 'white') : B.inactiveText,
+        backgroundColor: hovered ? (danger ? 'rgba(239,68,68,0.15)' : B.hoverBg) : 'transparent',
+        transition: 'background-color 150ms ease, color 150ms ease',
+        border: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function UserFooterBtnExpanded({ onClick, children, danger = false, onItemClick }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      onClick={() => { onClick(); onItemClick?.(); }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold"
+      style={{
+        color: hovered ? (danger ? '#f87171' : 'white') : B.inactiveText,
+        backgroundColor: hovered ? (danger ? 'rgba(239,68,68,0.15)' : B.hoverBg) : 'transparent',
+        transition: 'background-color 150ms ease, color 150ms ease',
+        border: 'none',
+        cursor: 'pointer',
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
 function UserFooter({ currentUser, onLogout, onSwitchToWorker, onItemClick, collapsed }) {
   if (collapsed) {
     return (
-      <div className="border-t border-slate-100 p-2 space-y-2 flex flex-col items-center">
+      <div className="p-2 space-y-1 flex flex-col items-center" style={{ borderTop: `1px solid ${B.navBorder}` }}>
         <div
           title={currentUser?.name || 'Admin'}
-          className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-xs font-black shrink-0"
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0 mb-1"
+          style={{ backgroundColor: B.orange, color: B.navy }}
         >
           {(currentUser?.name || 'A').slice(0, 1).toUpperCase()}
         </div>
         {onSwitchToWorker && (
-          <button
-            onClick={() => { onSwitchToWorker(); onItemClick && onItemClick(); }}
-            title="Meu painel de trabalhador"
-            className="w-full flex items-center justify-center p-2 rounded-xl text-indigo-600 hover:bg-indigo-50 transition-all"
-          >
+          <UserFooterBtn onClick={onSwitchToWorker} title="Meu painel de trabalhador" onItemClick={onItemClick}>
             <Users size={14} />
-          </button>
+          </UserFooterBtn>
         )}
-        <button
-          onClick={() => { onLogout(); onItemClick && onItemClick(); }}
-          title="Terminar sessão"
-          className="w-full flex items-center justify-center p-2 rounded-xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all"
-        >
+        <UserFooterBtn onClick={onLogout} title="Terminar sessão" danger onItemClick={onItemClick}>
           <LogOut size={14} />
-        </button>
+        </UserFooterBtn>
       </div>
     );
   }
 
   return (
-    <div className="border-t border-slate-100 p-3 space-y-2">
+    <div className="p-3 space-y-1" style={{ borderTop: `1px solid ${B.navBorder}` }}>
       <div className="flex items-center gap-3 px-2 py-2">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center text-xs font-black shrink-0">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center text-xs font-black shrink-0"
+          style={{ backgroundColor: B.orange, color: B.navy }}
+        >
           {(currentUser?.name || 'A').slice(0, 1).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-black text-slate-800 truncate">{currentUser?.name || 'Admin'}</p>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Administrador</p>
+          <p className="text-xs font-black truncate" style={{ color: 'white' }}>
+            {currentUser?.name || 'Admin'}
+          </p>
+          <p style={{ fontSize: '10px', fontWeight: 700, color: B.sectionLabel, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            Administrador
+          </p>
         </div>
       </div>
       {onSwitchToWorker && (
-        <button
-          onClick={() => { onSwitchToWorker(); onItemClick && onItemClick(); }}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-indigo-600 hover:bg-indigo-50 transition-all"
-        >
+        <UserFooterBtnExpanded onClick={onSwitchToWorker} onItemClick={onItemClick}>
           <Users size={14} /> Meu painel de trabalhador
-        </button>
+        </UserFooterBtnExpanded>
       )}
-      <button
-        onClick={() => { onLogout(); onItemClick && onItemClick(); }}
-        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all"
-      >
+      <UserFooterBtnExpanded onClick={onLogout} danger onItemClick={onItemClick}>
         <LogOut size={14} /> Terminar sessão
-      </button>
+      </UserFooterBtnExpanded>
     </div>
   );
 }
@@ -494,28 +762,44 @@ export default function AdminSidebar({
     <aside
       onMouseEnter={handleSidebarMouseEnter}
       onMouseLeave={handleSidebarMouseLeave}
-      className={`hidden md:flex shrink-0 sticky top-0 h-screen flex-col bg-white border-r border-slate-200 shadow-sm transition-all duration-200 ${
-      collapsed ? 'w-[68px]' : 'w-60'
-    }`}>
-      <div className={`py-5 border-b border-slate-100 flex items-center ${collapsed ? 'px-3 flex-col gap-2' : 'px-5 gap-3'}`}>
-        <div className={`flex items-center min-w-0 ${collapsed ? '' : 'flex-1 gap-3'}`}>
-          <CompanyLogo className="h-10 w-auto" />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admin</p>
-              <p className="text-xs font-black text-slate-700 truncate">Menu Principal</p>
-            </div>
-          )}
-        </div>
-        <button
-          onClick={toggleCollapsed}
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 transition-all shrink-0"
+      className={`relative hidden md:flex shrink-0 sticky top-0 h-screen flex-col transition-all duration-200 ${
+        collapsed ? 'w-[68px]' : 'w-60'
+      }`}
+      style={{
+        backgroundColor: B.navy,
+        borderRight: `1px solid ${B.navBorder}`,
+        zIndex: 1,
+      }}
+    >
+      {/* Cabeçalho com logótipo */}
+      <div
+        className={`py-4 flex items-center ${collapsed ? 'justify-center px-3' : 'px-5 gap-3'}`}
+        style={{ borderBottom: `1px solid ${B.navBorder}` }}
+      >
+        <div
+          style={{
+            width: collapsed ? '32px' : '44px',
+            height: collapsed ? '30px' : '44px',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            flexShrink: 0,
+            transition: 'width 200ms ease, height 200ms ease',
+          }}
         >
-          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-        </button>
+          <CompanyLogo className="w-full h-full object-cover" />
+        </div>
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: B.sectionLabel }}>
+              Admin
+            </p>
+            <p className="text-xs font-black truncate" style={{ color: 'white' }}>
+              Menu Principal
+            </p>
+          </div>
+        )}
       </div>
+
       <NavList
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -523,7 +807,15 @@ export default function AdminSidebar({
         counts={counts}
         collapsed={collapsed}
       />
-      <UserFooter currentUser={currentUser} onLogout={onLogout} onSwitchToWorker={onSwitchToWorker} collapsed={collapsed} />
+
+      <UserFooter
+        currentUser={currentUser}
+        onLogout={onLogout}
+        onSwitchToWorker={onSwitchToWorker}
+        collapsed={collapsed}
+      />
+
+      <ToggleBtn collapsed={collapsed} onToggle={toggleCollapsed} />
     </aside>
   );
 
@@ -533,7 +825,9 @@ export default function AdminSidebar({
       <aside ref={drawerRef} className="relative w-64 max-w-[85vw] bg-white h-full flex flex-col shadow-2xl">
         <div className="px-5 py-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <CompanyLogo className="h-10 w-auto" />
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+              <CompanyLogo className="w-full h-full object-cover" />
+            </div>
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admin</p>
               <p className="text-xs font-black text-slate-700 truncate">Menu Principal</p>
