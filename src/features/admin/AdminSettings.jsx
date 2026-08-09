@@ -2,10 +2,12 @@ import React, { useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
 import SSConsultasPanel from './team/SSConsultasPanel';
+import ImportarContratosSSDModal from './team/ImportarContratosSSDModal';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
   ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2,
-  Globe, TestTube2, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp
+  Globe, TestTube2, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp,
+  FileSpreadsheet, Upload,
 } from 'lucide-react';
 import { calculateDuration } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
@@ -42,6 +44,8 @@ export default function AdminSettings() {
   const [adminForm, setAdminForm] = useState({ id: null, name: '', nif: '', selectedWorkerId: '' });
   const [showRecalcModal, setShowRecalcModal] = useState(false);
   const [recalcProgress, setRecalcProgress] = useState({ current: 0, total: 0, done: false });
+
+  const [showImportarContratos, setShowImportarContratos] = useState(false);
 
   // Estado do painel Segurança Social
   const [ssStatus, setSsStatus] = useState(null); // { configurado, ambiente, nissEmpresa }
@@ -390,6 +394,30 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
           </div>
         )}
 
+        {/* Importar Contratos da SS Direta */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-blue-50 p-2 rounded-xl text-blue-600 shrink-0"><FileSpreadsheet size={20} /></div>
+              <div>
+                <h3 className="font-black text-lg text-slate-800">Importar Contratos da SS Direta</h3>
+                <p className="text-xs text-slate-400 font-medium mt-0.5">Sincronizar vínculos exportados da Segurança Social Direta com os perfis dos trabalhadores</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowImportarContratos(true)}
+              className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+            >
+              <Upload size={13} /> Importar CSV
+            </button>
+          </div>
+          <div className="mt-4 text-xs text-slate-400 space-y-1 pl-11">
+            <p>1. Na SS Direta: <span className="font-semibold text-slate-500">Emprego → Vínculos de trabalhadores → Exportar</span></p>
+            <p>2. Fazer upload do CSV — pré-visualização mostra alterações campo a campo antes de aplicar</p>
+            <p>3. Matching por NISS · profissão, contrato, regime, horas e vencimento base sincronizados automaticamente</p>
+          </div>
+        </div>
+
         {/* Conta e Segurança */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
           <div className="flex items-center gap-3 mb-6">
@@ -719,6 +747,14 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             </div>
           </div>
         </div>
+      )}
+
+      {showImportarContratos && (
+        <ImportarContratosSSDModal
+          workers={workers}
+          onClose={() => setShowImportarContratos(false)}
+          onImportado={() => setShowImportarContratos(false)}
+        />
       )}
     </div>
   );
