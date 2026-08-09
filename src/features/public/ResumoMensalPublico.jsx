@@ -575,12 +575,12 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           ) : isNome ? (
                             <span>{val}</span>
                           ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
-                            const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
+                            const diff = Math.round((row._brutoNum - row._abonosNum) * 100) / 100;
                             return (
                               <span className={`block px-2 ${tdAlign(col)}`}>
                                 {val}
                                 {Math.abs(diff) >= 0.005 && (
-                                  <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                  <span className={`block text-[9px] font-bold leading-tight ${diff <= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                                     {diff > 0 ? '+' : ''}{diff.toFixed(2)}
                                   </span>
                                 )}
