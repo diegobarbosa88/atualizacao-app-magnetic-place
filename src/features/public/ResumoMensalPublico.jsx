@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
 import { ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
 import {
-  calcularRecibo, getIRSTabelasPorAno, MESES_PT,
+  calcularRecibo, valorDiarioLegal, getIRSTabelasPorAno, MESES_PT,
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcMesParcial } from '../../lib/payroll/mesParcial.js';
+import { findBestCombo, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
 import { getRateAtDate } from '../admin/cost-reports/useCostReportsData.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
 
@@ -14,6 +15,74 @@ const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const EMPRESA = { nome: 'Magnetic Place Unipessoal, Lda', nif: '517379740' };
+
+function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride) {
+  const vencBase         = vencBaseOverride ?? (parseFloat(w.vencimento_base) || 0);
+  const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
+  const baseParams = {
+    vencimentoBase: vencBase, horasSemana: 40, premios: 0,
+    he1: 0, he2: 0, incluirFerias: true, incluirNatal: true,
+    subsAlimValorDia, subsAlimDias, subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
+    tabelaKey: w.tabela_irs || 'tabelaI',
+    nDependentes: w.n_dependentes ?? 0,
+    brutoAlvo: brutoAlvo || vencBase,
+    territorio: 'internacional', funcao: 'geral', ano: anoNum,
+  };
+  const rc0             = calcularRecibo(baseParams);
+  const valorDiario     = valorDiarioLegal('internacional', 'geral');
+  const ajudaNecessaria = rc0.ajudaCustoNecessaria;
+  if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, mapaLiqLive: 0 };
+
+  const totalDiasMes = new Date(anoNum, parseInt(mesStr.split('-')[1], 10), 0).getDate();
+
+  function contarDiasUteis(di, nDias) {
+    let count = 0;
+    const d = new Date(di + 'T00:00:00');
+    for (let i = 0; i < nDias; i++) {
+      const dow = d.getDay();
+      if (dow >= 1 && dow <= 5) count++;
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  function runForStartDay(di) {
+    let subsAlimMapa = subsAlimValorDia > 0 ? rc0.subsAlimTotal : 0;
+    let bestCombo = null;
+    for (let iter = 0; iter < 6; iter++) {
+      const valorNec = ajudaNecessaria + subsAlimMapa;
+      if (valorNec <= 0) break;
+      bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
+      if (!bestCombo) break;
+      const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(di, bestCombo.N) * subsAlimValorDia : 0;
+      if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
+      subsAlimMapa = novoSubsAlim;
+    }
+    if (!bestCombo) return null;
+    const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
+    const valorNecFinal = ajudaNecessaria + subsAlimMapa;
+    const residuo       = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
+    return { bestCombo, subsAlimMapa, totalAjudas, residuo };
+  }
+
+  let bestResult = null;
+  for (let day = 1; day <= 20; day++) {
+    const di     = `${mesStr}-${String(day).padStart(2, '0')}`;
+    const result = runForStartDay(di);
+    if (!result) continue;
+    if (!bestResult || Math.abs(result.residuo) < Math.abs(bestResult.residuo)) bestResult = result;
+  }
+
+  if (!bestResult) return { rc: rc0, mapaLiqLive: 0 };
+  const { bestCombo, subsAlimMapa } = bestResult;
+  const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
+  const valorNecFinal = ajudaNecessaria + subsAlimMapa;
+  const residuo       = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
+  const premios       = residuo > SYNC_TOLERANCE ? Math.round(residuo * 100) / 100 : 0;
+  const mapaLiqLive   = Math.round((totalAjudas - subsAlimMapa) * 100) / 100;
+  const rc            = premios > 0 ? calcularRecibo({ ...baseParams, premios }) : rc0;
+  return { rc, mapaLiqLive };
+}
 
 function parseMes(str) {
   const [a, m] = (str || '').split('-');
@@ -211,9 +280,10 @@ export default function ResumoMensalPublico() {
 
   const rows = useMemo(() => {
     if (!staticReady) return [];
-    const eur2 = v => (isNaN(v) ? 0 : v).toFixed(2);
-    const pct2 = v => (v * 100).toFixed(2) + '%';
+    const eur2   = v => (isNaN(v) ? 0 : v).toFixed(2);
+    const pct2   = v => (v * 100).toFixed(2) + '%';
     const fmtData = d => d ? String(d).split('T')[0] : '';
+    const mesStr = `${anoNum}-${String(mesNum).padStart(2, '0')}`;
 
     const ativos = workers
       .filter(w => w.vencimento_base != null)
@@ -236,20 +306,10 @@ export default function ResumoMensalPublico() {
       const vencOrig    = parseFloat(w.vencimento_base) || 0;
       const vencCalculo = wMesParcial.tipo !== 'completo'
         ? parseFloat((vencOrig * wMesParcial.fator).toFixed(2))
-        : vencOrig;
+        : undefined;
 
-      const rc = calcularRecibo({
-        vencimentoBase:   vencCalculo,
-        horasSemana: 40, premios: 0, he1: 0, he2: 0,
-        incluirFerias: true, incluirNatal: true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
-        tabelaKey:    w.tabela_irs || 'tabelaI',
-        nDependentes: w.n_dependentes ?? 0,
-        brutoAlvo:    brutoAlvo || vencOrig,
-        territorio: 'internacional', funcao: 'geral', ano: anoNum,
-      });
+      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencCalculo);
+      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
       const empresa = [...new Set(workerLogs.map(l => l.clientId).filter(Boolean))]
@@ -269,16 +329,16 @@ export default function ResumoMensalPublico() {
         subsAlimTotal: eur2(rc.subsAlimTotal),
         subsFerias:    eur2(rc.subsFerias),
         subsNatal:     eur2(rc.subsNatal),
-        ajudas:        eur2(rc.ajudaCustoNecessaria),
+        ajudas:        eur2(mapaLiqLive),
         baseIRS:       eur2(rc.incidenciaRegular),
         taxaIRS:       pct2(rc.taxaRegular),
         irsTotal:      eur2(rc.irsTotal),
         ssTrab:        eur2(rc.ssTrabalhador),
-        totalAbonos:   eur2(rc.totalAbonos),
+        totalAbonos:   eur2(rc.totalAbonos + mapaAjudasDiff),
         totalDesc:     eur2(rc.totalDescontos),
-        liquido:       eur2(rc.liquido),
+        liquido:       eur2(rc.liquido + mapaAjudasDiff),
         ssPatronal:    eur2(rc.ssPatronal),
-        custoEmpresa:  eur2(rc.custoEmpresa),
+        custoEmpresa:  eur2(rc.custoEmpresa + mapaAjudasDiff),
         ajuste:        ajusteVal,
         brutoAlvo:     eur2(brutoEfetivo),
         observacao:    obs[w.id] || '',
@@ -288,15 +348,15 @@ export default function ResumoMensalPublico() {
         _subsAlimNum:  rc.subsAlimTotal,
         _feriasNum:    rc.subsFerias,
         _natalNum:     rc.subsNatal,
-        _ajudasNum:    rc.ajudaCustoNecessaria,
+        _ajudasNum:    mapaLiqLive,
         _irsNum:       rc.irsTotal,
         _ssTrabNum:    rc.ssTrabalhador,
-        _abonosNum:    rc.totalAbonos,
+        _abonosNum:    rc.totalAbonos + mapaAjudasDiff,
         _descNum:      rc.totalDescontos,
-        _liquidoNum:   rc.liquido,
+        _liquidoNum:   rc.liquido + mapaAjudasDiff,
         _ssPatNum:     rc.ssPatronal,
-        _custoNum:     rc.custoEmpresa,
-        _brutoNum:     brutoAlvo,
+        _custoNum:     rc.custoEmpresa + mapaAjudasDiff,
+        _brutoNum:     brutoEfetivo,
       };
     }).filter(Boolean);
   }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ajustes, anoNum, mesNum]);
