@@ -339,6 +339,7 @@ export default function ResumoMensalPublico() {
   const hlHead = h => ({ blue: 'bg-sky-700 text-white', green: 'bg-emerald-700 text-white', rose: 'bg-rose-700 text-white', emerald: 'bg-emerald-600 text-white' }[h] || '');
   const hlCell = h => ({ blue: 'bg-sky-50 text-sky-900 border-x border-sky-100', green: 'bg-emerald-50 text-emerald-900 border-x border-emerald-100', rose: 'bg-rose-50 text-rose-900 border-x border-rose-100', emerald: 'bg-emerald-50 text-emerald-800 border-x border-emerald-100' }[h] || '');
   const hlFoot = h => ({ blue: 'bg-sky-200 text-sky-900 border-x border-sky-300', green: 'bg-emerald-200 text-emerald-900 border-x border-emerald-300', rose: 'bg-rose-200 text-rose-900 border-x border-rose-300', emerald: 'bg-emerald-200 text-emerald-800 border-x border-emerald-300' }[h] || '');
+  const tdAlign = col => col?.align === 'right' ? 'text-right' : col?.align === 'left' ? 'text-left' : 'text-center';
 
   function exportXLS() {
     const style = (bg, color, bold) =>
@@ -576,7 +577,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
                             const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
                             return (
-                              <span className="block text-right px-1">
+                              <span className={`block px-2 ${tdAlign(col)}`}>
                                 {val}
                                 {Math.abs(diff) >= 0.005 && (
                                   <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
