@@ -296,7 +296,7 @@ export default function ResumoMensalPublico() {
         _liquidoNum:   rc.liquido,
         _ssPatNum:     rc.ssPatronal,
         _custoNum:     rc.custoEmpresa,
-        _brutoNum:     brutoEfetivo,
+        _brutoNum:     brutoAlvo,
       };
     }).filter(Boolean);
   }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ajustes, anoNum, mesNum]);
