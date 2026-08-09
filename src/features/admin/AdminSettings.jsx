@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useApp } from '../../context/AppContext';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
+import SSConsultasPanel from './team/SSConsultasPanel';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
   ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2,
@@ -374,6 +375,20 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             </div>
           </div>
         </div>
+
+        {/* Segurança Social — Consultas PSI (Fase 1) */}
+        {ssStatus?.configurado && (
+          <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><Globe size={20} /></div>
+              <div>
+                <h3 className="font-black text-lg text-slate-800">Segurança Social — Consultas</h3>
+                <p className="text-xs text-slate-400 font-medium">Comprovativos · Documentos · Remunerações Permanentes</p>
+              </div>
+            </div>
+            <SSConsultasPanel />
+          </div>
+        )}
 
         {/* Conta e Segurança */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">

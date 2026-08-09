@@ -13,6 +13,7 @@
 
 const isProd = () => process.env.SS_AMBIENTE === 'producao';
 
+// Serviços de comunicação (escrita) — admissão REST e cessação SOAP
 const REST_URL  = () => isProd()
   ? 'https://app.seg-social.pt/ptss/rest/qlf/tco/vinculos/pedido'
   : 'https://extwww.seg-social.pt/ptss/rest/qlf/tco/vinculos/pedido';
@@ -20,6 +21,78 @@ const REST_URL  = () => isProd()
 const SOAP_BASE = () => isProd()
   ? 'https://app.seg-social.pt/ws/contrato/v1'
   : 'https://extservices.seg-social.pt/ws/contrato/v1';
+
+// Serviços de consulta CI (informação contributiva — só leitura, testáveis em produção)
+const CI_BASE   = () => isProd()
+  ? 'https://app.seg-social.pt/ptss/rest/ci'
+  : 'https://extwww.seg-social.pt/ptss/rest/ci';
+
+// Remunerações permanentes (QLF, mesmo host admissão, mas path diferente)
+const REMUN_URL = () => isProd()
+  ? 'https://app.seg-social.pt/ptss/rest/qlf/tco/remuneracoes/permanentes/trabalhadores'
+  : 'https://extwww.seg-social.pt/ptss/rest/qlf/tco/remuneracoes/permanentes/trabalhadores';
+
+// ── Consulta CI — GET genérico ───────────────────────────────────────────────
+
+/**
+ * Faz GET para uma URL completa da PSI CI (comprovativos, documentos de pagamento).
+ * Devolve { httpStatus, ok, json?, semRegistos? } ou lança erro em falha de rede.
+ */
+export async function callSSRestGetUrl(url) {
+  const token = getBearerToken();
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+  });
+
+  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401).');
+  if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403).');
+  if (res.status === 404) return { httpStatus: 404, ok: true, semRegistos: true, json: null };
+
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch { /* deixar null */ }
+
+  if (res.ok) return { httpStatus: res.status, ok: true, json };
+
+  const erro = json?.message || json?.erro || json?.descricao || `HTTP ${res.status}`;
+  return { httpStatus: res.status, ok: false, erro, json };
+}
+
+/**
+ * Faz POST (body JSON) para uma URL completa da PSI QLF (remunerações permanentes).
+ */
+export async function callSSRestPostUrl(url, body) {
+  const token = getBearerToken();
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type':  'application/json',
+      'Accept':        'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401).');
+  if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403).');
+  if (res.status === 404) return { httpStatus: 404, ok: true, semRegistos: true, json: null };
+
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch { /* deixar null */ }
+
+  // codigoResultado=4 → sem resultados (não é erro)
+  const cod = json?.codigoResultado ?? json?.['codigo-resultado'];
+  if (cod === 4 || cod === '4') return { httpStatus: res.status, ok: true, semRegistos: true, json };
+
+  if (res.ok) return { httpStatus: res.status, ok: true, json };
+
+  const erro = json?.message || json?.erro || json?.descricao || `HTTP ${res.status}`;
+  return { httpStatus: res.status, ok: false, erro, json };
+}
+
+export { CI_BASE, REMUN_URL };
 
 // ── Mapeamentos ──────────────────────────────────────────────────────────────
 

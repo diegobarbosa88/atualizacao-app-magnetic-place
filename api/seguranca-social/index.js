@@ -5,6 +5,10 @@ import {
   buildCessacaoSoap,
   parseSoapResponse,
   callSS,
+  callSSRestGetUrl,
+  callSSRestPostUrl,
+  CI_BASE,
+  REMUN_URL,
 } from './_soapUtils.js';
 
 function supabaseAdmin() {
@@ -63,9 +67,73 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── POST: comunicar admissão ou cessação ──
+  // ── GET consultas PSI (só leitura) ──────────────────────────────────────────
+
+  if (req.method === 'GET' && action === 'comprovativos') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const ano = req.query?.ano || new Date().getFullYear();
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const url = `${CI_BASE()}/comprovativos-pagamento/${ano}?niss=${nissEmpresa}`;
+    try {
+      const r = await callSSRestGetUrl(url);
+      if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      const dados = Array.isArray(r.json) ? r.json : (r.json?.comprovativos || r.json?.resultado || []);
+      await supabaseAdmin().from('ss_comunicacoes').insert({
+        worker_id: null, tipo: 'consulta', status: 'sucesso',
+        payload_xml: url, resposta_ss: JSON.stringify(r.json),
+        ambiente: getAmbiente(),
+      });
+      return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  if (req.method === 'GET' && action === 'documentos-pagamento') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const url = `${CI_BASE()}/documento-pagamento/consulta?niss=${nissEmpresa}`;
+    try {
+      const r = await callSSRestGetUrl(url);
+      if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      const dados = Array.isArray(r.json) ? r.json : (r.json?.documentos || r.json?.resultado || []);
+      await supabaseAdmin().from('ss_comunicacoes').insert({
+        worker_id: null, tipo: 'consulta', status: 'sucesso',
+        payload_xml: url, resposta_ss: JSON.stringify(r.json),
+        ambiente: getAmbiente(),
+      });
+      return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  // ── POST: comunicar admissão/cessação ou consultar remunerações ──────────────
   if (req.method !== 'POST') {
     return res.status(405).json({ erro: 'Método não permitido. Use POST.' });
+  }
+
+  // Remunerações (POST de consulta, sem efeitos colaterais)
+  if (action === 'remuneracoes') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const { nissTrabalhadores = [], dataInicio, dataFim } = req.body || {};
+    const nissEmpresa = process.env.SS_NISS_EMPRESA;
+    const bodyPSI = {
+      'niss-entidade-empregadora': Number(nissEmpresa),
+      ...(nissTrabalhadores.length ? { 'niss-trabalhadores': nissTrabalhadores.map(Number) } : {}),
+      ...(dataInicio ? { 'data-inicio': dataInicio } : {}),
+      ...(dataFim    ? { 'data-fim':    dataFim    } : {}),
+    };
+    try {
+      const r = await callSSRestPostUrl(REMUN_URL(), bodyPSI);
+      if (r.semRegistos) return res.status(200).json({ semRegistos: true, dados: [] });
+      if (!r.ok) return res.status(422).json({ erro: r.erro });
+      const dados = Array.isArray(r.json) ? r.json : (r.json?.remuneracoes || r.json?.resultado || []);
+      await supabaseAdmin().from('ss_comunicacoes').insert({
+        worker_id: null, tipo: 'consulta', status: 'sucesso',
+        payload_xml: JSON.stringify(bodyPSI), resposta_ss: JSON.stringify(r.json),
+        ambiente: getAmbiente(),
+      });
+      return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
   const { workerId, dadosExtra = {}, confirmadoPor } = req.body || {};
