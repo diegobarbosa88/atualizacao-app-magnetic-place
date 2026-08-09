@@ -451,7 +451,7 @@ function AdminDashboard(props) {
   const navMode = systemSettings?.navMode || 'sidebar';
 
   return (
-    <div className={`min-h-screen bg-slate-50 font-sans text-slate-900 ${navMode === 'topbar' ? '' : 'flex'}`}>
+    <div className={`bg-slate-50 font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex'}`}>
       {navMode === 'topbar' ? (
         <AdminClassicNav
           activeTab={activeTab}
@@ -489,7 +489,7 @@ function AdminDashboard(props) {
           {tabContent}
         </main>
       ) : (
-        <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+        <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
           <AdminTopbar
             activeTab={activeTab}
             unreadCount={unreadCount}
@@ -501,7 +501,7 @@ function AdminDashboard(props) {
             showBackToTeam={!!auditWorkerId}
             onBackToTeam={() => setAuditWorkerId(null)}
           />
-          <main className="flex-1 overflow-x-hidden flex flex-col min-h-0">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto flex flex-col min-h-0">
             <div className="flex-1 min-h-0 flex flex-col px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
               {tabContent}
             </div>
