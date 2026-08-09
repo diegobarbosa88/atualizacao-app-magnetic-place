@@ -501,8 +501,8 @@ function AdminDashboard(props) {
             showBackToTeam={!!auditWorkerId}
             onBackToTeam={() => setAuditWorkerId(null)}
           />
-          <main className="flex-1 overflow-x-hidden">
-            <div className="px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
+          <main className="flex-1 overflow-x-hidden flex flex-col min-h-0">
+            <div className="flex-1 min-h-0 flex flex-col px-3 sm:px-6 md:px-10 lg:px-16 py-4 sm:py-6">
               {tabContent}
             </div>
           </main>

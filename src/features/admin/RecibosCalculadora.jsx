@@ -2051,7 +2051,7 @@ ${hdrRow}${bodyRows}${totRow}
   }
 
   return (
-    <div className="space-y-5 pb-2">
+    <div className={subTab === 'resumo' ? 'flex flex-col flex-1 min-h-0 gap-5 pb-2' : 'space-y-5 pb-2'}>
 
       {/* ── Cabeçalho — padrão Contabilidade ── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -2112,7 +2112,24 @@ ${hdrRow}${bodyRows}${totRow}
         </div>
       </div>
 
-      {/* Selector de trabalhador */}
+      {/* Sub-abas */}
+      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+        <button
+          onClick={() => setSubTab('calculadora')}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'calculadora' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Calculadora
+        </button>
+        <button
+          onClick={() => setSubTab('resumo')}
+          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'resumo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+        >
+          Resumo Mensal
+        </button>
+      </div>
+
+      {/* Selector de trabalhador — oculto na subaba Resumo */}
+      {subTab !== 'resumo' && (
       <Card className="p-5">
         <div className="flex items-end gap-3 flex-wrap">
           <div className="flex-1 min-w-48">
@@ -2155,22 +2172,7 @@ ${hdrRow}${bodyRows}${totRow}
           )}
         </div>
       </Card>
-
-      {/* Sub-abas */}
-      <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
-        <button
-          onClick={() => setSubTab('calculadora')}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'calculadora' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Calculadora
-        </button>
-        <button
-          onClick={() => setSubTab('resumo')}
-          className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'resumo' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-        >
-          Resumo Mensal
-        </button>
-      </div>
+      )}
 
       {/* ── Resumo Mensal ── */}
       {subTab === 'resumo' && (
@@ -3202,10 +3204,10 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   const tdAlign = col => col?.align === 'right' ? 'text-right' : col?.align === 'left' ? 'text-left' : 'text-center';
 
   return (
-    <div className="space-y-3">
+    <div className="flex flex-col flex-1 min-h-0 gap-3">
       {/* Banner de erro de BD */}
       {dbError && (
-        <div className="p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800">
+        <div className="flex-shrink-0 p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800">
           <strong>⚠️ Erro na base de dados:</strong> {dbError}
           <br />Execute este SQL no Supabase → SQL Editor:
           <pre className="mt-1 bg-red-100 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap select-all">
@@ -3226,7 +3228,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
       )}
 
       {/* Toolbar */}
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex-shrink-0 flex items-center gap-3 flex-wrap">
         <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">Resumo Mensal — {mesLabel}</h3>
         {rows.length > 0 && (
           <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-lg">
@@ -3389,13 +3391,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
       </div>
 
       {rows.length === 0 ? (
-        <div className="py-16 text-center text-slate-400 bg-white rounded-2xl border border-slate-100">
+        <div className="flex-1 flex items-center justify-center text-slate-400 bg-white rounded-2xl border border-slate-100">
           <p className="text-sm font-black uppercase tracking-wide">Sem trabalhadores activos com vencimento base</p>
         </div>
       ) : (
         <div
           ref={tableScrollRef}
-          className="overflow-auto rounded-2xl border border-slate-200 shadow-sm"
+          className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 shadow-sm"
           style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
         >
           <table
@@ -3421,7 +3423,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : 'none',
                         whiteSpace: 'nowrap',
                         minWidth: col.key === 'nome' ? undefined : `${col.w || 64}px`,
-                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : {}),
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 12 } : {}),
                       }}
                     >
                       {isFirstInGroup ? def.label : ''}
@@ -3444,7 +3446,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         whiteSpace: 'nowrap',
                         minWidth: col.key === 'nome' ? undefined : `${col.w || 64}px`,
                         borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
-                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : {}),
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 12 } : {}),
                       }}
                     >
                       {col.label}
@@ -3463,7 +3465,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                     const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
                     const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
                     const stickyBg = row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc';
-                    const isNome = col.key === 'nome';
+                    const isNome     = col.key === 'nome';
+                    const isCompleto = col.key === 'completo';
                     return (
                       <td
                         key={ci}
@@ -3472,6 +3475,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           whiteSpace: 'nowrap',
                           minWidth: isNome ? undefined : `${col.w || 64}px`,
                           ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: stickyBg, boxShadow: '2px 0 6px -2px rgba(0,0,0,.10)' } : {}),
+                          ...(isCompleto ? { position: 'sticky', right: 0, zIndex: 5, background: stickyBg, boxShadow: '-2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
                           ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}33` } : {}),
                         }}
                       >
@@ -3543,6 +3547,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-indigo-50 text-indigo-700'}`}
                       style={{
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
+                        ...(col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 5, background: '#eef2ff' } : {}),
                         ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
                       }}
                     >

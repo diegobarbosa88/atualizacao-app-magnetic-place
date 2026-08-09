@@ -482,7 +482,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : 'none',
                           whiteSpace: 'nowrap',
                           minWidth: col.key === 'nome' ? undefined : `${col.w || 64}px`,
-                          ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : {}),
+                          ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 12 } : {}),
                         }}
                       >
                         {isFirstInGroup ? def.label : ''}
@@ -507,7 +507,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           whiteSpace: 'nowrap',
                           borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
                           minWidth: col.key === 'nome' ? undefined : `${col.w || 64}px`,
-                          ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : {}),
+                          ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 12 } : {}),
                         }}
                       >
                         {col.label}
@@ -523,9 +523,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       const g   = col.group || 'obs';
                       const def = GROUP_DEFS[g] || GROUP_DEFS.obs;
                       const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== g;
-                      const stickyBg = row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc';
-                      const isNome   = col.key === 'nome';
-                      const val      = row[col.key] ?? '';
+                      const stickyBg   = row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc';
+                      const isNome     = col.key === 'nome';
+                      const isCompleto = col.key === 'completo';
+                      const val        = row[col.key] ?? '';
 
                       return (
                         <td
@@ -537,6 +538,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
                             minWidth: isNome ? undefined : `${col.w || 64}px`,
                             ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: stickyBg, boxShadow: '2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
+                            ...(isCompleto ? { position: 'sticky', right: 0, zIndex: 5, background: stickyBg, boxShadow: '-2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
                           }}
                         >
                           {col.tipo === 'toggle' ? (
@@ -570,10 +572,20 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                               {(row.ajuste || 0) !== 0 ? ((row.ajuste > 0 ? '+' : '') + (row.ajuste || 0).toFixed(2)) : '—'}
                             </span>
                           ) : isNome ? (
-                            // Nome: sem truncagem, mostra sempre completo
                             <span>{val}</span>
-                          ) : (
-                            // Outras células de texto: trunca mas expande no hover
+                          ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
+                            const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
+                            return (
+                              <span className="block text-right px-1">
+                                {val}
+                                {Math.abs(diff) >= 0.005 && (
+                                  <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                    {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })() : (
                             <ExpandCell text={String(val)} maxWidth={`${col.w || 84}px`} />
                           )}
                         </td>
@@ -596,6 +608,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         style={{
                           borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
                           ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff' } : {}),
+                          ...(col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 5, background: '#eef2ff' } : {}),
                         }}
                       >
                         {ai === 0 ? 'TOTAIS'
