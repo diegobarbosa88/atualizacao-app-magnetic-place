@@ -6,6 +6,7 @@ import {
   calcularRecibo, valorDiarioLegal, getIRSTabelasPorAno, MESES_PT,
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcMesParcial } from '../../lib/payroll/mesParcial.js';
+import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
 import { getRateAtDate } from '../admin/cost-reports/useCostReportsData.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
@@ -150,9 +151,10 @@ export default function ResumoMensalPublico() {
   const [obs,        setObs]        = useState({});
   const [completos,  setCompletos]  = useState({});
   const [ajustes,    setAjustes]    = useState({});
-  const [loading,    setLoading]    = useState(true);
-  const [saveStatus, setSaveStatus] = useState(null);
-  const [dbError,    setDbError]    = useState(null);
+  const [loading,          setLoading]          = useState(true);
+  const [saveStatus,       setSaveStatus]       = useState(null);
+  const [dbError,          setDbError]          = useState(null);
+  const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
 
   const ms = toMesStr(ano, mes);
 
@@ -160,6 +162,12 @@ export default function ResumoMensalPublico() {
     if (!sb) return;
     sb.from('resumo_observacoes').select('completo, ajuste_bruto').limit(1)
       .then(({ error }) => { setDbError(error ? error.message : null); });
+  }, []);
+
+  useEffect(() => {
+    if (!sb) return;
+    sb.from('system_settings').select('*').eq('id', 1).maybeSingle()
+      .then(({ data }) => setFeriadoMunicipal(data?.feriado_municipal || null));
   }, []);
 
   useEffect(() => {
@@ -289,8 +297,10 @@ export default function ResumoMensalPublico() {
       .filter(w => w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
+    const logsDoMes = logs.filter(l => l.date?.startsWith(mesStr));
+
     return ativos.map(w => {
-      const workerLogs = logs.filter(l => l.workerId === w.id);
+      const workerLogs = logsDoMes.filter(l => l.workerId === w.id);
       if (workerLogs.length === 0) return null;
       const hist = rateHistory.filter(h => h.worker_id === w.id);
 
@@ -299,8 +309,11 @@ export default function ResumoMensalPublico() {
         return s + (parseFloat(l.hours) || 0) * rate;
       }, 0);
 
-      const contabRow    = contab.find(r => r.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
+      const subsAlimDias = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
+      });
 
       const wMesParcial = calcMesParcial(w.dataInicio || null, w.dataFim || null, anoNum, mesNum);
       const vencOrig    = parseFloat(w.vencimento_base) || 0;
@@ -315,8 +328,7 @@ export default function ResumoMensalPublico() {
       const empresa = [...new Set(workerLogs.map(l => l.clientId).filter(Boolean))]
         .map(id => clients.find(c => c.id === id)?.name || '').filter(Boolean).join(' / ');
 
-      const ajusteVal    = ajustes[w.id] || 0;
-      const brutoEfetivo = brutoAlvo + ajusteVal;
+      const ajusteVal = ajustes[w.id] || 0;
 
       return {
         workerId: w.id, nome: w.name || '', nif: w.nif || '', nis: w.nis || '',
@@ -340,11 +352,11 @@ export default function ResumoMensalPublico() {
         ssPatronal:    eur2(rc.ssPatronal),
         custoEmpresa:  eur2(rc.custoEmpresa + mapaAjudasDiff),
         ajuste:        ajusteVal,
-        brutoAlvo:     eur2(brutoEfetivo),
+        brutoAlvo:     eur2(brutoAlvo),
         observacao:    obs[w.id] || '',
         completo:      completos[w.id] || false,
         _ajusteNum:    ajusteVal,
-        _vencNum:      vencOrig,
+        _vencNum:      parseFloat(w.vencimento_base) || 0,
         _subsAlimNum:  rc.subsAlimTotal,
         _feriasNum:    rc.subsFerias,
         _natalNum:     rc.subsNatal,
@@ -356,10 +368,10 @@ export default function ResumoMensalPublico() {
         _liquidoNum:   rc.liquido + mapaAjudasDiff,
         _ssPatNum:     rc.ssPatronal,
         _custoNum:     rc.custoEmpresa + mapaAjudasDiff,
-        _brutoNum:     brutoEfetivo,
+        _brutoNum:     brutoAlvo,
       };
     }).filter(Boolean);
-  }, [staticReady, workers, clients, rateHistory, logs, contab, obs, completos, ajustes, anoNum, mesNum]);
+  }, [staticReady, workers, clients, rateHistory, logs, obs, completos, ajustes, anoNum, mesNum, feriadoMunicipal]);
 
   const upsertObs = (workerId, patch) => {
     if (!sb || !workerId || !ms) return;
