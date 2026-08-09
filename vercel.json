@@ -24,9 +24,6 @@
     "api/pagamentos/index.js": {
       "maxDuration": 30
     },
-    "api/pagamentos/processar-lote.js": {
-      "maxDuration": 30
-    },
     "api/seguranca-social/index.js": {
       "maxDuration": 30
     }
