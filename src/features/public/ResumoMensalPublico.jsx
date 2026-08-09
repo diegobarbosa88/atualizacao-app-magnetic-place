@@ -156,7 +156,21 @@ export default function ResumoMensalPublico() {
   const [saveStatus,       setSaveStatus]       = useState(null);
   const [dbError,          setDbError]          = useState(null);
   const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
+  const [copiedCell,       setCopiedCell]       = useState(null);
   const { ref: tableScrollRef, dragProps }       = useDragScroll();
+
+  const copyCell = (ri, ci, text) => {
+    if (text === '' || text == null || !navigator.clipboard) return;
+    navigator.clipboard.writeText(String(text)).then(() => {
+      const key = `${ri}-${ci}`;
+      setCopiedCell(key);
+      setTimeout(() => setCopiedCell(prev => (prev === key ? null : prev)), 900);
+    }).catch(() => {});
+  };
+  const handleCellClick = (e, ri, ci, text) => {
+    if (e.target.closest('input, button')) return;
+    copyCell(ri, ci, text);
+  };
 
   const ms = toMesStr(ano, mes);
 
@@ -605,19 +619,34 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       const isCompleto = col.key === 'completo';
                       const val        = row[col.key] ?? '';
 
+                      const cellKey = `${ri}-${ci}`;
+                      const isCopied = copiedCell === cellKey;
+                      const canCopy  = col.tipo !== 'toggle';
                       return (
                         <td
                           key={ci}
-                          className={`px-1.5 py-1.5 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'}`}
+                          onClick={canCopy ? e => handleCellClick(e, ri, ci, val) : undefined}
+                          title={canCopy ? (isCopied ? 'Copiado!' : 'Clique para copiar') : undefined}
+                          className={`px-1.5 py-[3px] font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'} ${canCopy ? 'cursor-pointer' : ''}`}
                           style={{
+                            position: 'relative',
                             whiteSpace: 'nowrap',
                             textAlign: col.align || 'center',
                             borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
                             minWidth: isNome ? undefined : `${col.w || 64}px`,
                             ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: stickyBg, boxShadow: '2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
                             ...(isCompleto ? { position: 'sticky', right: 0, zIndex: 5, background: stickyBg, boxShadow: '-2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
+                            ...(isCopied ? { background: 'rgba(16,185,129,0.22)' } : {}),
                           }}
                         >
+                          {isCopied && (
+                            <span
+                              className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wide shadow-md pointer-events-none whitespace-nowrap"
+                              style={{ zIndex: 20 }}
+                            >
+                              Copiado!
+                            </span>
+                          )}
                           {col.tipo === 'toggle' ? (
                             <div className="flex justify-center">
                               <button

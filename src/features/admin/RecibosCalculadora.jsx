@@ -2919,6 +2919,20 @@ function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
   const [saveStatus, setSaveStatus] = useState(null); // null | 'saving' | 'ok' | 'error'
   const [dbError,    setDbError]    = useState(null);
+  const [copiedCell, setCopiedCell] = useState(null);
+
+  const copyCell = (ri, ci, text) => {
+    if (text === '' || text == null || !navigator.clipboard) return;
+    navigator.clipboard.writeText(String(text)).then(() => {
+      const key = `${ri}-${ci}`;
+      setCopiedCell(key);
+      setTimeout(() => setCopiedCell(prev => (prev === key ? null : prev)), 900);
+    }).catch(() => {});
+  };
+  const handleCellClick = (e, ri, ci, text) => {
+    if (e.target.closest('input, button')) return;
+    copyCell(ri, ci, text);
+  };
 
   // Verificar se a BD está configurada corretamente
   useEffect(() => {
@@ -3469,18 +3483,33 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                     const stickyBg = row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc';
                     const isNome     = col.key === 'nome';
                     const isCompleto = col.key === 'completo';
+                    const cellKey = `${ri}-${ci}`;
+                    const isCopied = copiedCell === cellKey;
+                    const canCopy  = col.tipo !== 'toggle';
                     return (
                       <td
                         key={ci}
-                        className={`px-2 py-2 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'}`}
+                        onClick={canCopy ? e => handleCellClick(e, ri, ci, row[col.key]) : undefined}
+                        title={canCopy ? (isCopied ? 'Copiado!' : 'Clique para copiar') : undefined}
+                        className={`px-2 py-1 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'} ${canCopy ? 'cursor-pointer' : ''}`}
                         style={{
+                          position: 'relative',
                           whiteSpace: 'nowrap',
                           minWidth: isNome ? undefined : `${col.w || 64}px`,
                           ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: stickyBg, boxShadow: '2px 0 6px -2px rgba(0,0,0,.10)' } : {}),
                           ...(isCompleto ? { position: 'sticky', right: 0, zIndex: 5, background: stickyBg, boxShadow: '-2px 0 4px -2px rgba(0,0,0,.08)' } : {}),
                           ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}33` } : {}),
+                          ...(isCopied ? { background: 'rgba(16,185,129,0.22)' } : {}),
                         }}
                       >
+                        {isCopied && (
+                          <span
+                            className="absolute -top-2 left-1/2 -translate-x-1/2 -translate-y-full px-1.5 py-0.5 rounded-md bg-emerald-600 text-white text-[9px] font-black uppercase tracking-wide shadow-md pointer-events-none whitespace-nowrap"
+                            style={{ zIndex: 20 }}
+                          >
+                            Copiado!
+                          </span>
+                        )}
                         {col.tipo === 'ajuste' ? (
                           <input
                             type="number"

@@ -3,8 +3,15 @@ import { useApp } from '../../../context/AppContext';
 import { useTeam } from '../contexts/TeamContext';
 import {
   User, ShieldOff, Receipt, Wallet, CalendarRange, Save,
-  Building2, Timer, CheckCircle, CheckCircle2, ChevronDown
+  Building2, Timer, CheckCircle, CheckCircle2, ChevronDown,
+  ShieldCheck, AlertTriangle
 } from 'lucide-react';
+
+const fmtTs = iso => {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+};
 
 const inp = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
 const fmtDate = iso => { if (!iso) return 'atual'; const p = iso.split('T')[0].split('-'); return `${p[2]}/${p[1]}/${p[0].slice(2)}`; };
@@ -149,6 +156,106 @@ const WorkerForm = () => {
                 <input type="number" min="0" value={workerForm.n_dependentes ?? 0} onChange={e => setWorkerForm(prev => ({ ...prev, n_dependentes: parseInt(e.target.value, 10) || 0 }))} className={inp} placeholder="0" />
               </div>
             </div>
+          </div>
+
+          {/* Segurança Social */}
+          <div className="border-t border-slate-100 pt-4">
+            <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 flex items-center gap-1.5 mb-3">
+              <ShieldCheck size={10} /> Segurança Social
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Tipo de Contrato</label>
+                <select value={workerForm.tipo_contrato || 'sem_termo'} onChange={f('tipo_contrato')} className={inp}>
+                  <option value="sem_termo">Sem Termo</option>
+                  <option value="termo_certo">A Termo Certo</option>
+                  <option value="termo_incerto">A Termo Incerto</option>
+                  <option value="muito_curta_duracao">Muito Curta Duração</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Regime</label>
+                <select value={workerForm.regime || 'tempo_inteiro'} onChange={f('regime')} className={inp}>
+                  <option value="tempo_inteiro">Tempo Inteiro</option>
+                  <option value="tempo_parcial">Tempo Parcial</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Horas / Semana</label>
+                <input type="number" min="1" max="48" step="0.5" value={workerForm.horas_semanais ?? 40} onChange={e => setWorkerForm(prev => ({ ...prev, horas_semanais: parseFloat(e.target.value) || 40 }))} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Modo de Trabalho</label>
+                <select value={workerForm.modo_trabalho || 'presencial'} onChange={f('modo_trabalho')} className={inp}>
+                  <option value="presencial">Presencial</option>
+                  <option value="remoto">Remoto (Teletrabalho)</option>
+                  <option value="hibrido">Híbrido (Teletrabalho parcial)</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Data de Nascimento</label>
+                <input type="date" value={workerForm.data_nascimento || ''} onChange={f('data_nascimento')} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Enquadramento PSI</label>
+                <select
+                  value={workerForm.enquadramento || 'REGE'}
+                  onChange={e => setWorkerForm(prev => ({ ...prev, enquadramento: e.target.value }))}
+                  className={inp}
+                >
+                  <option value="REGE">REGE — Regime Geral</option>
+                  <option value="TRCD">TRCD — Contrato muito curta duração</option>
+                  <option value="TCCD">TCCD — Cultura muito curta duração</option>
+                  <option value="TRAG">TRAG — Trabalhadores agrícolas</option>
+                  <option value="RGTC">RGTC — Carris — Regime Geral</option>
+                  <option value="RGTL">RGTL — Lanifícios — Regime Geral</option>
+                  <option value="RGTS">RGTS — Seguros — Regime Geral</option>
+                  <option value="PEIN">PEIN — Pensionistas por invalidez</option>
+                  <option value="PEVE">PEVE — Pensionistas de velhice</option>
+                  <option value="PFPI">PFPI — Funções públicas — invalidez</option>
+                  <option value="PFPV">PFPV — Funções públicas — velhice</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Cód. CNP Profissão</label>
+                <input
+                  type="text"
+                  maxLength={5}
+                  value={workerForm.profissao_cnp || ''}
+                  onChange={e => setWorkerForm(prev => ({ ...prev, profissao_cnp: e.target.value.replace(/\D/g, '').substring(0, 5) }))}
+                  placeholder="ex: 93130"
+                  className={inp}
+                />
+              </div>
+              <div>
+                <label className={lbl}>Cód. Local Trabalho</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={workerForm.local_trabalho || ''}
+                  onChange={e => setWorkerForm(prev => ({ ...prev, local_trabalho: parseInt(e.target.value, 10) || null }))}
+                  placeholder="ex: 1"
+                  className={inp}
+                />
+              </div>
+            </div>
+            {/* Estado de comunicação SS (só leitura) */}
+            {workerForm.id && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${workerForm.ss_admissao_comunicada_em ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                  {workerForm.ss_admissao_comunicada_em
+                    ? <><CheckCircle size={10} className="shrink-0" /> Admissão: {fmtTs(workerForm.ss_admissao_comunicada_em)}</>
+                    : <><AlertTriangle size={10} className="shrink-0" /> Admissão por comunicar</>}
+                </div>
+                <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-bold border ${workerForm.ss_cessacao_comunicada_em ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : workerForm.dataFim ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                  {workerForm.ss_cessacao_comunicada_em
+                    ? <><CheckCircle size={10} className="shrink-0" /> Cessação: {fmtTs(workerForm.ss_cessacao_comunicada_em)}</>
+                    : workerForm.dataFim
+                      ? <><AlertTriangle size={10} className="shrink-0" /> Cessação por comunicar</>
+                      : <span className="text-slate-400">Cessação — n/a</span>}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Financeiro */}

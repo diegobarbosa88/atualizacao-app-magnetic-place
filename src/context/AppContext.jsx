@@ -170,6 +170,18 @@ export const AppProvider = ({ children }) => {
               status: d.is_active === false ? 'inativo' : 'ativo',
               tabela_irs: d.tabela_irs || 'tabelaI',
               n_dependentes: d.n_dependentes ?? 0,
+              tipo_contrato: d.tipo_contrato || 'sem_termo',
+              regime: d.regime || 'tempo_inteiro',
+              horas_semanais: d.horas_semanais ?? 40,
+              modo_trabalho: d.modo_trabalho || 'presencial',
+              data_nascimento: d.data_nascimento || null,
+              enquadramento: d.enquadramento || 'REGE',
+              local_trabalho: d.local_trabalho || null,
+              profissao_cnp: d.profissao_cnp || null,
+              ss_admissao_comunicada_em: d.ss_admissao_comunicada_em || null,
+              ss_admissao_num_registo: d.ss_admissao_num_registo || null,
+              ss_cessacao_comunicada_em: d.ss_cessacao_comunicada_em || null,
+              ss_cessacao_num_registo: d.ss_cessacao_num_registo || null,
             }));
             setter(mapped);
           } else {

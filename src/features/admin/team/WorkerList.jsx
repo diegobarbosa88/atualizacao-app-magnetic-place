@@ -1,11 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal } from 'lucide-react';
+import SSComunicacaoModal from './SSComunicacaoModal';
 
 const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory, onVerPasta }) => {
-  const { approvals, currentMonthStr, schedules, clients, saveToDb } = useApp();
+  const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers } = useApp();
   const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
+  const [ssAmbiente, setSsAmbiente] = useState('teste');
+
+  useEffect(() => {
+    fetch('/api/seguranca-social?action=status')
+      .then(r => r.json())
+      .then(d => { if (d.ambiente) setSsAmbiente(d.ambiente); })
+      .catch(() => {});
+  }, []);
+
+  function handleSsSuccess(data, workerIdOverride, tipoOverride) {
+    const workerId = workerIdOverride || ssModal?.worker?.id;
+    const tipo = tipoOverride || ssModal?.tipo;
+    if (workerId && tipo) {
+      const campo = tipo === 'admissao'
+        ? { ss_admissao_comunicada_em: data.dataHora || new Date().toISOString(), ss_admissao_num_registo: data.numRegisto || null }
+        : { ss_cessacao_comunicada_em: data.dataHora || new Date().toISOString(), ss_cessacao_num_registo: data.numRegisto || null };
+      setWorkers(prev => prev.map(w => w.id === workerId ? { ...w, ...campo } : w));
+    }
+  }
 
   const handleDelete = (id) => {
     onEdit?.({ __deleteId: id });
@@ -13,6 +34,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
 
   if (workersView === 'list') {
     return (
+      <>
       <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
         <table className="min-w-[480px] w-full text-sm table-fixed">
           <colgroup>
@@ -132,6 +154,37 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0 text-base leading-none">📊</span>
                               <span className="text-xs font-semibold text-slate-700">Histórico de Valor</span>
                             </button>
+                            {/* Segurança Social */}
+                            {(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && (
+                              <>
+                                <div className="mx-3 my-1 border-t border-slate-100" />
+                                <button
+                                  onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-blue-50 group transition-colors"
+                                >
+                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-500 group-hover:bg-blue-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
+                                  <div className="text-left">
+                                    <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">Comunicar Admissão à SS</span>
+                                    {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
+                                  </div>
+                                </button>
+                              </>
+                            )}
+                            {(w.dataFim && !w.ss_cessacao_comunicada_em) && (
+                              <>
+                                {!(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && <div className="mx-3 my-1 border-t border-slate-100" />}
+                                <button
+                                  onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-blue-50 group transition-colors"
+                                >
+                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-500 group-hover:bg-blue-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
+                                  <div className="text-left">
+                                    <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">Comunicar Cessação à SS</span>
+                                    {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
+                                  </div>
+                                </button>
+                              </>
+                            )}
                             <div className="mx-3 my-1 border-t border-slate-100" />
                             {confirmDeleteWorkerId === w.id ? (
                               <div className="mx-2 mb-1.5 p-2.5 bg-rose-50 rounded-xl border border-rose-100">
@@ -161,10 +214,21 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
           </tbody>
         </table>
       </div>
+      {ssModal && (
+        <SSComunicacaoModal
+          worker={ssModal.worker}
+          tipo={ssModal.tipo}
+          ambiente={ssAmbiente}
+          onClose={() => setSsModal(null)}
+          onSuccess={(data) => { handleSsSuccess(data); setSsModal(null); }}
+        />
+      )}
+    </>
     );
   }
 
   return (
+    <>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {sortedWorkers.map(w => {
         const workerApproval = approvals.find(a => a.workerId === w.id && a.month === currentMonthStr);
@@ -181,6 +245,12 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={12} /></button>
                 <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
                 <button onClick={() => onOpenVHHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
+                {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all border border-blue-100" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
+                )}
+                {w.dataFim && !w.ss_cessacao_comunicada_em && (
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all border border-blue-100" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
+                )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
                     <button onClick={() => { handleDelete(w.id); setConfirmDeleteWorkerId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>
@@ -208,6 +278,16 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
         );
       })}
     </div>
+    {ssModal && (
+      <SSComunicacaoModal
+        worker={ssModal.worker}
+        tipo={ssModal.tipo}
+        ambiente={ssAmbiente}
+        onClose={() => setSsModal(null)}
+        onSuccess={(data) => { handleSsSuccess(data); setSsModal(null); }}
+      />
+    )}
+    </>
   );
 };
 

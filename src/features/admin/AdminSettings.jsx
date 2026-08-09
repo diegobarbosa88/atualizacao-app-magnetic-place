@@ -3,7 +3,8 @@ import { useApp } from '../../context/AppContext';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
 import {
   Settings, Lock, Building2, Palette, Sparkles, CheckCircle,
-  ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2
+  ShieldCheck, ShieldOff, UserPlus, Wrench, X, Loader2, CalendarX, Plus, Trash2,
+  Globe, TestTube2, CheckCircle2, AlertTriangle, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { calculateDuration } from '../../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown } from '../../utils/timeUtils';
@@ -40,6 +41,33 @@ export default function AdminSettings() {
   const [adminForm, setAdminForm] = useState({ id: null, name: '', nif: '', selectedWorkerId: '' });
   const [showRecalcModal, setShowRecalcModal] = useState(false);
   const [recalcProgress, setRecalcProgress] = useState({ current: 0, total: 0, done: false });
+
+  // Estado do painel Segurança Social
+  const [ssStatus, setSsStatus] = useState(null); // { configurado, ambiente, nissEmpresa }
+  const [ssPingResult, setSsPingResult] = useState(null); // { ok, erro? }
+  const [ssPingLoading, setSsPingLoading] = useState(false);
+  const [ssPsiGuideOpen, setSsPsiGuideOpen] = useState(false);
+
+  React.useEffect(() => {
+    fetch('/api/seguranca-social?action=status')
+      .then(r => r.json())
+      .then(d => setSsStatus(d))
+      .catch(() => setSsStatus({ configurado: false, ambiente: 'teste', nissEmpresa: null }));
+  }, []);
+
+  async function handleSsPing() {
+    setSsPingLoading(true);
+    setSsPingResult(null);
+    try {
+      const r = await fetch('/api/seguranca-social?action=ping');
+      const d = await r.json();
+      setSsPingResult(d);
+    } catch {
+      setSsPingResult({ ok: false, erro: 'Erro de ligação à API.' });
+    } finally {
+      setSsPingLoading(false);
+    }
+  }
 
   const handleOpenAddAdmin = () => {
     setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' });
@@ -243,6 +271,108 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Segurança Social — Comunicações PSI */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-blue-50 p-2 rounded-xl text-blue-600"><Globe size={20} /></div>
+            <div>
+              <h3 className="font-black text-lg text-slate-800">Segurança Social — Comunicações</h3>
+              <p className="text-xs text-slate-400 font-medium">Plataforma de Serviços de Interoperabilidade (PSI)</p>
+            </div>
+          </div>
+
+          {/* Status das credenciais */}
+          <div className="space-y-3">
+            {ssStatus === null ? (
+              <div className="flex items-center gap-2 text-slate-400 text-xs"><Loader2 size={13} className="animate-spin" /> A verificar configuração…</div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border ${ssStatus.configurado ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                  {ssStatus.configurado ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                  {ssStatus.configurado ? 'Credenciais configuradas' : 'Credenciais em falta'}
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border ${ssStatus.ambiente === 'producao' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-orange-50 border-orange-200 text-orange-700'}`}>
+                  {ssStatus.ambiente === 'producao' ? <Globe size={13} /> : <TestTube2 size={13} />}
+                  {ssStatus.ambiente === 'producao' ? 'Produção' : 'MODO TESTE'}
+                </div>
+                {ssStatus.nissEmpresa && (
+                  <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border bg-slate-50 border-slate-200 text-slate-500">
+                    NISS: <span className="font-mono">{ssStatus.nissEmpresa}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Botão testar ligação */}
+            {ssStatus?.configurado && (
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSsPing}
+                  disabled={ssPingLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black transition-colors disabled:opacity-60"
+                >
+                  {ssPingLoading ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
+                  Testar Ligação ao Webservice
+                </button>
+                {ssPingResult && (
+                  <span className={`flex items-center gap-1.5 text-xs font-bold ${ssPingResult.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                    {ssPingResult.ok ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                    {ssPingResult.ok ? `Ligação OK (${ssStatus?.ambiente || 'teste'})` : ssPingResult.erro}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Configuração (informação — valores vêm de env vars Vercel) */}
+            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-1.5">
+              <p className="text-xs font-black text-blue-700 uppercase tracking-wide mb-2">Como configurar</p>
+              <p className="text-xs text-blue-600 leading-relaxed">
+                As credenciais PSI são geridas como variáveis de ambiente no <strong>Vercel Dashboard</strong> (Settings → Environment Variables) — nunca ficam expostas no browser:
+              </p>
+              <div className="bg-white border border-blue-200 rounded-lg p-2.5 font-mono text-[10px] text-slate-600 space-y-0.5">
+                <div><span className="text-blue-500">SS_NISS_EMPRESA</span> = NISS da empresa (11 dígitos)</div>
+                <div><span className="text-blue-500">SS_PSI_PASSWORD</span> = password de login da Segurança Social Direta</div>
+                <div><span className="text-blue-500">SS_AMBIENTE</span> = <span className="text-orange-500">teste</span> <span className="text-slate-400">(mudar para "producao" após testes)</span></div>
+              </div>
+            </div>
+
+            {/* Guia de adesão à PSI */}
+            <div className="border border-slate-100 rounded-xl overflow-hidden">
+              <button
+                onClick={() => setSsPsiGuideOpen(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+              >
+                <span className="text-xs font-black text-slate-700 uppercase tracking-wide">Como aderir à PSI (pré-requisito)</span>
+                {ssPsiGuideOpen ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
+              </button>
+              {ssPsiGuideOpen && (
+                <div className="px-4 py-4 space-y-3 text-xs text-slate-600 bg-white border-t border-slate-100">
+                  <div className="flex gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 font-black text-[10px] flex items-center justify-center shrink-0">1</span>
+                    <div><strong>Aderir em produção:</strong> Aceder à Segurança Social Direta (seg-social.pt) → Perfil → <em>Aderir à Plataforma de Serviços de Interoperabilidade</em> → Aceitar termos. A password a usar é a mesma password de login do Portal da Segurança Social Direta — não existe uma password PSI separada.</div>
+                  </div>
+                  <div className="flex gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 font-black text-[10px] flex items-center justify-center shrink-0">2</span>
+                    <div><strong>Pedir acesso ao ambiente de teste:</strong> Enviar email a <strong>suporte-psi@seg-social.pt</strong> com: NISS da empresa, nome do solicitante e telefone. O acesso é concedido em 24–48h.</div>
+                  </div>
+                  <div className="flex gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] flex items-center justify-center shrink-0">3</span>
+                    <div><strong>Configurar variáveis de ambiente:</strong> No Vercel Dashboard → Settings → Environment Variables, adicionar <code className="bg-slate-100 px-1 rounded text-[10px]">SS_NISS_EMPRESA</code>, <code className="bg-slate-100 px-1 rounded text-[10px]">SS_PSI_PASSWORD</code> e <code className="bg-slate-100 px-1 rounded text-[10px]">SS_AMBIENTE=teste</code>.</div>
+                  </div>
+                  <div className="flex gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 font-black text-[10px] flex items-center justify-center shrink-0">4</span>
+                    <div><strong>Testar:</strong> Clicar "Testar Ligação" acima para confirmar que as credenciais estão corretas antes de fazer comunicações reais.</div>
+                  </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="font-bold text-amber-700 mb-1">Aviso legal (DL n.º 127/2025, em vigor desde 1/1/2026)</p>
+                    <p className="text-amber-600 leading-relaxed">Admissão deve ser comunicada <strong>até ao início da execução do contrato</strong>. Cessação até ao <strong>dia 10 do mês seguinte</strong>. Incumprimento = contraordenação muito grave (até €24.000).</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Conta e Segurança */}
