@@ -1,7 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
+
+function ssBadge(w) {
+  if (w.ss_cessacao_comunicada_em) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 border border-slate-200 text-slate-500">
+        <CheckCircle size={8} /> SS Cessação OK
+      </span>
+    );
+  }
+  if (w.dataFim && !w.ss_cessacao_comunicada_em) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-orange-50 border border-orange-200 text-orange-600">
+        <AlertTriangle size={8} /> SS Cessação pendente
+      </span>
+    );
+  }
+  if (w.ss_admissao_comunicada_em) {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 border border-emerald-200 text-emerald-600">
+        <CheckCircle size={8} /> SS Admissão OK
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-50 border border-amber-200 text-amber-600">
+      <AlertTriangle size={8} /> SS por comunicar
+    </span>
+  );
+}
 
 const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory, onVerPasta }) => {
   const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers } = useApp();
@@ -75,6 +104,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-800 text-sm uppercase truncate">{w.name}</p>
                     <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
+                    <div className="mt-1">{ssBadge(w)}</div>
                     {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
                   </td>
 
@@ -262,7 +292,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
               </div>
             </div>
             <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{w.name}</h4>
-            <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{w.profissao || 'Staff'}</p>
+            <p className="text-[10px] text-slate-400 font-bold truncate mb-2">{w.profissao || 'Staff'}</p>
+            <div className="mb-3">{ssBadge(w)}</div>
             <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
               <div className="flex items-center gap-1.5">
                 <span>⏱</span> {schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}
