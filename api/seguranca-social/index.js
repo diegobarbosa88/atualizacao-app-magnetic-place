@@ -170,7 +170,24 @@ export default async function handler(req, res) {
     return res.status(404).json({ erro: 'Trabalhador não encontrado.' });
   }
 
-  // ── Validações ──
+  // ── Validações de segurança (dupla — UI já validou, aqui é a camada definitiva) ──
+
+  // 1. NISS: exatamente 11 dígitos numéricos
+  const nissDigits = String(worker.nis || '').replace(/\D/g, '');
+  if (nissDigits.length !== 11) {
+    return res.status(422).json({
+      erro: `NISS inválido: deve ter exatamente 11 dígitos numéricos (o trabalhador "${worker.name}" tem NISS "${worker.nis || '(vazio)'}" com ${nissDigits.length} dígitos). Corrija na ficha antes de comunicar.`,
+    });
+  }
+
+  // 2. Registos fictícios: bloquear pelo nome
+  if (/\bteste\b|\btest\b|\bficticio\b|\bfictício\b|\bdummy\b|\bexemplo\b|\bamostra\b/i.test(worker.name || '')) {
+    return res.status(422).json({
+      erro: `Registo de teste bloqueado: o trabalhador "${worker.name}" parece ser fictício. Remova-o da lista de Equipa antes de usar em produção.`,
+    });
+  }
+
+  // ── Validações de dados obrigatórios ──
   if (action === 'admissao') {
     if (!worker.nis)            return res.status(422).json({ erro: 'O trabalhador não tem NISS preenchido.' });
     if (!worker.nif)            return res.status(422).json({ erro: 'O trabalhador não tem NIF preenchido.' });
