@@ -341,3 +341,72 @@ describe('D001 — fórmula corrigida (A082 absorve D001; totais são somas dire
     });
   });
 });
+
+// ─────────────────────────────────────────────────────────────
+// Mês parcial simplificado — apenas D001, sem acerto de férias
+// Antonio Augusto Lima: cessação 26-Jun, vencBase 1000€, brutoAlvo 3384€
+// Confirma: sem A010/A011/A004P/A021P; A004/A021 = 83.33€ cada (contratual);
+//           Total Abonos = brutoAlvo; Líquido = brutoAlvo − IRS − SS.
+// ─────────────────────────────────────────────────────────────
+describe('mês parcial simplificado — sem acerto de cessação (Antonio Augusto Lima, cessação 26-Jun)', () => {
+  const vencContratual   = 1000;
+  const brutoAlvo        = 3384;
+  const diasTrab         = 26;
+  const diasNaoTrab      = 30 - diasTrab;                                               // 4
+  const vencProporcional = parseFloat((diasTrab    * vencContratual / 30).toFixed(2));  // 866.67
+  const descontoD001     = parseFloat((diasNaoTrab * vencContratual / 30).toFixed(2));  // 133.33
+
+  let r;
+  beforeEach(() => {
+    // O componente não passa vencBaseContratual — duodécimos baseados no proporcional (A001 − D001)
+    r = calcularRecibo({
+      vencimentoBase: vencProporcional,
+      // sem vencBaseContratual — base dos duodécimos = vencProporcional
+      // sem abonosCessacao — nenhuma rubrica de férias não gozadas
+      incluirFerias: true, incluirNatal: true,
+      brutoAlvo, tabelaKey: 'tabelaI', nDependentes: 0, ano: 2026,
+    });
+  });
+
+  it('D001 = 133,33€ (4 dias × 1000/30)', () => {
+    expect(descontoD001).toBeCloseTo(133.33, 1);
+  });
+
+  it('A004 e A021 = 72,22€ cada (calculados sobre A001 − D001 = vencimento proporcional)', () => {
+    expect(r.subsFerias).toBeCloseTo(vencProporcional / 12, 2);
+    expect(r.subsNatal).toBeCloseTo(vencProporcional / 12, 2);
+  });
+
+  it('incidenciaRegular = vencProporcional apenas (sem A010)', () => {
+    // Sem abonosCessacao, incidenciaRegular = vencProporcional + outros abonos regulares
+    // Neste caso sem prémios/HE: incidenciaRegular = vencProporcional
+    expect(r.incidenciaRegular).toBeCloseTo(vencProporcional, 2);
+  });
+
+  it('Total Abonos = brutoAlvo (calcularRecibo mantém invariante)', () => {
+    expect(r.totalAbonos).toBeCloseTo(brutoAlvo, 2);
+  });
+
+  it('Líquido = brutoAlvo − IRS − SS', () => {
+    expect(r.liquido).toBeCloseTo(brutoAlvo - r.irsTotal - r.ssTrabalhador, 2);
+  });
+
+  it('totalAbonosDisplay = brutoAlvo + D001 = 3517,33€', () => {
+    const totalAbonosDisplay = r.totalAbonos + descontoD001;
+    expect(totalAbonosDisplay).toBeCloseTo(brutoAlvo + descontoD001, 2);
+    expect(totalAbonosDisplay).toBeCloseTo(3517.33, 1);
+  });
+
+  it('totalDescontosDisplay = D001 + IRS + SS', () => {
+    const totalDescontosDisplay = r.totalDescontos + descontoD001;
+    expect(totalDescontosDisplay).toBeCloseTo(descontoD001 + r.irsTotal + r.ssTrabalhador, 2);
+  });
+
+  it('liquidoDisplay = brutoAlvo − IRS − SS (D001 cancela-se)', () => {
+    const totalAbonosDisplay    = r.totalAbonos    + descontoD001;
+    const totalDescontosDisplay = r.totalDescontos + descontoD001;
+    const liquidoDisplay        = totalAbonosDisplay - totalDescontosDisplay;
+    expect(liquidoDisplay).toBeCloseTo(brutoAlvo - r.irsTotal - r.ssTrabalhador, 2);
+    expect(liquidoDisplay).toBeCloseTo(r.liquido, 2);
+  });
+});

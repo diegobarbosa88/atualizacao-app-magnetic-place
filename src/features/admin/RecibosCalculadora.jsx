@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
@@ -16,7 +17,8 @@ import {
 } from '../../lib/payroll/reciboCalculations.js';
 import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
-import { calcMesParcial, calcSubsidiosAnoProportional, calcAcertoCessacao, calcDiasFeriasAnoAdmissao, calcFeriasVencidas } from '../../lib/payroll/mesParcial.js';
+import { calcMesParcial, calcDiasFeriasAnoAdmissao } from '../../lib/payroll/mesParcial.js';
+import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -194,8 +196,6 @@ export default function RecibosCalculadora() {
   // ── Mês parcial (admissão / cessação no mês em processamento) ──
   const [mesParcialDados, setMesParcialDados] = useState(null);
   // null | { tipo, diaInicio, diaFim, diasTrabalhados, vencBaseOriginal, vencProporcional, fator }
-  const [diasFeriasNaoGozadas, setDiasFeriasNaoGozadas] = useState('0');
-  const [diasFeriasGozados,    setDiasFeriasGozados]    = useState('0');
   const mesParcialKeyRef  = useRef('');
   const mesParcialDadosRef = useRef(null); // espelho síncrono de mesParcialDados
   let rowCounter = mapaRows.length;
@@ -379,7 +379,6 @@ export default function RecibosCalculadora() {
 
     mesParcialDadosRef.current = dados;
     setMesParcialDados(dados);
-    setDiasFeriasNaoGozadas('0');
     // Mantém o campo no valor contratual cheio; o desconto aparece como linha separada
     setInputs(prev => ({ ...prev, vencimentoBase: String(vencBaseOriginal) }));
     setCamposAuto(prev => ({ ...prev, vencimentoBase: true }));
@@ -400,8 +399,6 @@ export default function RecibosCalculadora() {
     mesParcialKeyRef.current   = '';
     mesParcialDadosRef.current = null;
     setMesParcialDados(null);
-    setDiasFeriasNaoGozadas('0');
-    setDiasFeriasGozados('0');
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     setBrutoAlvoEditado(false);
     if (!id) {
@@ -458,38 +455,8 @@ export default function RecibosCalculadora() {
     const vencEfetivo = mesParcialDados ? mesParcialDados.vencProporcional : n(inputs.vencimentoBase);
     if (!vencEfetivo) return null;
 
-    // Abonos tributáveis de acerto de cessação — incluídos em somaOutrosAbonos para reduzir A082
-    // e em incidenciaRegular/incidenciaSS para IRS/SS corretos
-    const isCessacao = mesParcialDados?.tipo === 'fim' || mesParcialDados?.tipo === 'ambos';
-    let abonosCessacao = 0;
-    if (isCessacao && mesParcialDados) {
-      const diasNG = parseInt(diasFeriasNaoGozadas, 10) || 0;
-      const feriasNGEur = parseFloat((diasNG * mesParcialDados.vencBaseOriginal / 30).toFixed(2));
-      // A010 — compensação pelos dias de descanso não usufruídos (sempre incluída)
-      abonosCessacao += feriasNGEur;
-      // A011 — subsídio sobre férias não gozadas: só quando duodécimos NÃO estão ativos,
-      // caso contrário o subsídio já foi liquidado mensalmente via A004
-      if (!inputs.incluirFerias) abonosCessacao += feriasNGEur;
-      // A004P / A021P — subsídios proporcionais apenas quando duodécimos NÃO estão ativos
-      if (!inputs.incluirFerias || !inputs.incluirNatal) {
-        const w = workers?.find(x => x.id === selectedWorkerId);
-        if (w?.dataInicio) {
-          const { subsFeriasTotalAno, subsNatalTotalAno } = calcSubsidiosAnoProportional(
-            mesParcialDados.vencBaseOriginal,
-            w.dataInicio,
-            w.dataFim || null,
-            parseInt(inputs.ano, 10),
-          );
-          if (!inputs.incluirFerias) abonosCessacao += subsFeriasTotalAno;
-          if (!inputs.incluirNatal)  abonosCessacao += subsNatalTotalAno;
-        }
-      }
-    }
-
     return calcularRecibo({
       vencimentoBase: vencEfetivo,
-      vencBaseContratual: mesParcialDados ? mesParcialDados.vencBaseOriginal : undefined,
-      abonosCessacao,
       horasSemana: n(inputs.horasSemana),
       premios: n(inputs.premios),
       he1: n(inputs.he1),
@@ -507,7 +474,7 @@ export default function RecibosCalculadora() {
       ano: n(inputs.ano),
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputs, mesParcialDados, diasFeriasNaoGozadas, selectedWorkerId, workers]);
+  }, [inputs, mesParcialDados]);
 
   // Sincroniza o valor diário legal quando muda o território ou função
   useEffect(() => {
@@ -636,9 +603,14 @@ export default function RecibosCalculadora() {
         dataAdmissao: w.dataInicio || null,
         dataCessacao: w.dataFim    || null,
       });
+      const wMesParcialR  = calcMesParcial(w.dataInicio || null, w.dataFim || null, anoNum, mesNum);
+      const wVencOrigR    = parseFloat(w.vencimento_base) || 0;
+      const wVencCalculoR = wMesParcialR.tipo !== 'completo'
+        ? parseFloat((wVencOrigR * wMesParcialR.fator).toFixed(2))
+        : undefined;
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, wVencCalculoR);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
@@ -696,31 +668,6 @@ export default function RecibosCalculadora() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workers, logs, clients, workerRateHistory, feriadoMunicipal, inputs.mes, inputs.ano]);
 
-  // Rubricas do acerto de cessação — quando duodécimos estão ativos, sub. férias/Natal já foram
-  // pagos mensalmente e não devem ser duplicados no acerto.
-  const acertoCessacao = useMemo(() => {
-    if (!mesParcialDados || (mesParcialDados.tipo !== 'fim' && mesParcialDados.tipo !== 'ambos')) return null;
-    const w = workers?.find(x => x.id === selectedWorkerId);
-    if (!w) return null;
-    const base = calcAcertoCessacao(
-      mesParcialDados.vencBaseOriginal,
-      w.dataInicio || null,
-      w.dataFim    || null,
-      parseInt(inputs.ano, 10),
-      parseInt(diasFeriasNaoGozadas, 10) || 0,
-    );
-    return {
-      ...base,
-      // Quando duodécimos ativos: subsídio já liquidado mensalmente, não duplicar
-      subsidioSobreFeriasNaoGozadas: inputs.incluirFerias ? 0 : base.subsidioSobreFeriasNaoGozadas,
-      subsFeriasProp: inputs.incluirFerias ? 0 : base.subsFeriasProp,
-      subsNatalProp:  inputs.incluirNatal  ? 0 : base.subsNatalProp,
-      duodecimosFeriasAtivos: inputs.incluirFerias,
-      duodecimosNatalAtivos:  inputs.incluirNatal,
-    };
-  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano, diasFeriasNaoGozadas,
-      inputs.incluirFerias, inputs.incluirNatal]);
-
   // Informação sobre dias de férias no ano de admissão (usada no banner do mês parcial)
   const feriasAnoAdmissao = useMemo(() => {
     if (!mesParcialDados || (mesParcialDados.tipo !== 'inicio' && mesParcialDados.tipo !== 'ambos')) return null;
@@ -728,23 +675,6 @@ export default function RecibosCalculadora() {
     if (!w) return null;
     return calcDiasFeriasAnoAdmissao(w.dataInicio || null, w.dataFim || null, parseInt(inputs.ano, 10));
   }, [mesParcialDados, selectedWorkerId, workers, inputs.ano]);
-
-  // Férias vencidas no ano para o trabalhador em cessação (Art. 238º/239º/245º)
-  const feriasVencidas = useMemo(() => {
-    if (!mesParcialDados || (mesParcialDados.tipo !== 'fim' && mesParcialDados.tipo !== 'ambos')) return null;
-    const w = workers?.find(x => x.id === selectedWorkerId);
-    if (!w?.dataInicio) return null;
-    return calcFeriasVencidas(w.dataInicio, w.dataFim || null, parseInt(inputs.ano, 10));
-  }, [mesParcialDados, selectedWorkerId, workers, inputs.ano]);
-
-  // Auto-preenche "Dias não gozadas" com o saldo calculado; editável pelo utilizador
-  useEffect(() => {
-    if (!feriasVencidas) return;
-    const gozados = parseFloat(diasFeriasGozados) || 0;
-    const saldo = Math.max(0, parseFloat((feriasVencidas.diasVencidos - gozados).toFixed(1)));
-    setDiasFeriasNaoGozadas(String(saldo));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feriasVencidas, diasFeriasGozados]);
 
   // Desconto por dias não trabalhados — TOConline: A001 fica cheio, esta é a linha de desconto separada
   const descontoDiasParcial = useMemo(() => {
@@ -960,7 +890,6 @@ export default function RecibosCalculadora() {
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     mesParcialKeyRef.current   = '';
-    setDiasFeriasGozados('0');
     setDiasCalculados({ diasMes: false, subsAlimDias: false });
     setInputs(prev => ({ ...prev, premios: '0' }));
   }
@@ -1012,24 +941,11 @@ export default function RecibosCalculadora() {
     if (n(inputs.he1) > 0) linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
     if (n(inputs.he2) > 0) linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
     if (r.subsNatal > 0) linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
-    // Rubricas de cessação — incluídas em r (via abonosCessacao); A082 já foi ajustado
-    if (acertoCessacao) {
-      if (acertoCessacao.feriasNaoGozadasEur > 0) {
-        linhas.push(['A010', `Férias não gozadas (${diasFeriasNaoGozadas}d)`, '', '', eur(acertoCessacao.feriasNaoGozadasEur), '']);
-        linhas.push(['A011', 'Subsídio s/ férias não gozadas', '', '', eur(acertoCessacao.subsidioSobreFeriasNaoGozadas), '']);
-      }
-      if (acertoCessacao.subsFeriasProp > 0) {
-        linhas.push(['A004P', `Sub. Férias proporcional (${acertoCessacao.descricao})`, '', '', eur(acertoCessacao.subsFeriasProp), '']);
-      }
-      if (acertoCessacao.subsNatalProp > 0) {
-        linhas.push(['A021P', 'Sub. Natal proporcional (acerto final)', '', '', eur(acertoCessacao.subsNatalProp), '']);
-      }
-    }
     // A082: ajustado pelo D001 para que Total Abonos = BrutoAlvo
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplayRecibo), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
-    linhas.push(['T001', `IRS (${acertoCessacao?.feriasNaoGozadasEur > 0 ? 'venc.+A010' : 'venc.'} ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
+    linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
 
     autoTable(doc, {
@@ -1063,14 +979,6 @@ export default function RecibosCalculadora() {
       columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 28 }, 2: { cellWidth: 60 } },
     });
 
-    if (acertoCessacao) {
-      doc.setFontSize(6.5);
-      doc.setFont('helvetica', 'italic');
-      doc.setTextColor(160, 80, 80);
-      doc.text('Acerto inclui apenas vencimento e subsídios proporcionais. Compensações por cessação devem ser calculadas manualmente.', 14, doc.lastAutoTable.finalY + 5, { maxWidth: 182 });
-      doc.setTextColor(0, 0, 0);
-    }
-
     const ySign = doc.lastAutoTable.finalY + 14;
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -1098,23 +1006,11 @@ export default function RecibosCalculadora() {
     if (n(inputs.he1) > 0)      linhas.push(['A052', 'Trabalho Suplementar 1ª hora', `${inputs.he1}h`, r.valorHe1un.toFixed(4), r.valorHe1.toFixed(2), '']);
     if (n(inputs.he2) > 0)      linhas.push(['A053', 'Trabalho Suplementar seguintes', `${inputs.he2}h`, r.valorHe2un.toFixed(4), r.valorHe2.toFixed(2), '']);
     if (r.subsNatal > 0)        linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', r.subsNatal.toFixed(2), '']);
-    if (acertoCessacao) {
-      if (acertoCessacao.feriasNaoGozadasEur > 0) {
-        linhas.push(['A010', `Férias não gozadas (${diasFeriasNaoGozadas}d)`, '', '', acertoCessacao.feriasNaoGozadasEur.toFixed(2), '']);
-        linhas.push(['A011', 'Subsídio s/ férias não gozadas', '', '', acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2), '']);
-      }
-      if (acertoCessacao.subsFeriasProp > 0) {
-        linhas.push(['A004P', `Sub. Férias proporcional (${acertoCessacao.descricao})`, '', '', acertoCessacao.subsFeriasProp.toFixed(2), '']);
-      }
-      if (acertoCessacao.subsNatalProp > 0) {
-        linhas.push(['A021P', 'Sub. Natal proporcional (acerto final)', '', '', acertoCessacao.subsNatalProp.toFixed(2), '']);
-      }
-    }
     // A082: ajustado pelo D001 para que Total Abonos = BrutoAlvo
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplayRecibo.toFixed(2), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
-    linhas.push(['T001', `IRS (${acertoCessacao?.feriasNaoGozadasEur > 0 ? 'venc.+A010' : 'venc.'} ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
+    linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
     linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), totalDescontosDisplay.toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
@@ -1300,13 +1196,6 @@ export default function RecibosCalculadora() {
       if (rc.subsFerias > 0)   linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
       if (premiosBatch > 0)    linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
       if (rc.subsNatal > 0)    linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
-      // Acerto de cessação no batch
-      let bTotalAcerto = 0;
-      if (wMesParcial.tipo === 'fim' || wMesParcial.tipo === 'ambos') {
-        const wAcerto = calcAcertoCessacao(wVencOrig, w.dataInicio || null, w.dataFim || null, anoNum, 0);
-        if (wAcerto.subsFeriasProp > 0) { linhas.push(['A004P', `Sub. Férias prop. (${wAcerto.descricao})`, '', '', eur(wAcerto.subsFeriasProp), '']); bTotalAcerto += wAcerto.subsFeriasProp; }
-        if (wAcerto.subsNatalProp  > 0) { linhas.push(['A021P', 'Sub. Natal prop. (acerto final)', '', '', eur(wAcerto.subsNatalProp), '']); bTotalAcerto += wAcerto.subsNatalProp; }
-      }
       if (mapaLiqLive > 0)     linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
       // Desconto proporcional (linha separada — formato TOConline)
       const bDiasNaoTrab = wMesParcial.tipo !== 'completo' ? 30 - wMesParcial.diasTrabalhados : 0;
@@ -1336,15 +1225,15 @@ export default function RecibosCalculadora() {
         body: [
           [
             { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalAbonos + mapaAjudasDiff + bTotalAcerto + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: eur(rc.totalAbonos + mapaAjudasDiff + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
             { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
             { content: eur(rc.totalDescontos + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
           ],
           [
             { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-            { content: eur(rc.liquido + mapaAjudasDiff + bTotalAcerto), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
+            { content: eur(rc.liquido + mapaAjudasDiff), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
             { content: 'Custo Empresa (c/ TSU 23,75%)' },
-            { content: eur(rc.custoEmpresa + mapaAjudasDiff + bTotalAcerto), styles: { halign: 'right' } },
+            { content: eur(rc.custoEmpresa + mapaAjudasDiff), styles: { halign: 'right' } },
           ],
         ],
         theme: 'plain',
@@ -1405,7 +1294,6 @@ export default function RecibosCalculadora() {
         xlsWMesParcial.tipo !== 'completo' ? xlsWVencCalculo : undefined);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
-      let xlsBTotalAcerto = 0;
       const linhas = [
         ['Código', 'Descrição', 'Qtd', 'V.Unit. (€)', 'Abonos (€)', 'Descontos (€)'],
         ['A001', 'Vencimento Base', '', '', xlsWVencOrig.toFixed(2), ''],
@@ -1414,11 +1302,6 @@ export default function RecibosCalculadora() {
       if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
       if (premiosBatch > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', premiosBatch.toFixed(2), '']);
       if (rc.subsNatal > 0)  linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
-      if (xlsWMesParcial.tipo === 'fim' || xlsWMesParcial.tipo === 'ambos') {
-        const xlsWAcerto = calcAcertoCessacao(xlsWVencOrig, w.dataInicio || null, w.dataFim || null, anoNum, 0);
-        if (xlsWAcerto.subsFeriasProp > 0) { linhas.push(['A004P', `Sub. Férias prop. (${xlsWAcerto.descricao})`, '', '', xlsWAcerto.subsFeriasProp.toFixed(2), '']); xlsBTotalAcerto += xlsWAcerto.subsFeriasProp; }
-        if (xlsWAcerto.subsNatalProp  > 0) { linhas.push(['A021P', 'Sub. Natal prop. (acerto final)', '', '', xlsWAcerto.subsNatalProp.toFixed(2), '']); xlsBTotalAcerto += xlsWAcerto.subsNatalProp; }
-      }
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', mapaLiqLive.toFixed(2), '']);
       const xlsBDiasNaoTrab = xlsWMesParcial.tipo !== 'completo' ? 30 - xlsWMesParcial.diasTrabalhados : 0;
       const xlsBDescontoExtra = xlsBDiasNaoTrab > 0 ? parseFloat((xlsBDiasNaoTrab * xlsWVencOrig / 30).toFixed(2)) : 0;
@@ -1431,9 +1314,9 @@ export default function RecibosCalculadora() {
       }
       linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
-      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBTotalAcerto + xlsBDescontoExtra).toFixed(2), (rc.totalDescontos + xlsBDescontoExtra).toFixed(2)]);
-      linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), '']);
-      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (rc.custoEmpresa + mapaAjudasDiff + xlsBTotalAcerto).toFixed(2), '']);
+      linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBDescontoExtra).toFixed(2), (rc.totalDescontos + xlsBDescontoExtra).toFixed(2)]);
+      linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff).toFixed(2), '']);
+      linhas.push(['', 'Custo Empresa (c/ TSU 23,75%)', '', '', (rc.custoEmpresa + mapaAjudasDiff).toFixed(2), '']);
 
       const rows = linhas.map((row, i) => {
         const isHdr = i === 0;
@@ -2168,17 +2051,65 @@ ${hdrRow}${bodyRows}${totRow}
   }
 
   return (
-    <div className="space-y-5 pb-12">
+    <div className="space-y-5 pb-2">
 
-      {/* Aviso de compliance — sempre visível */}
-      <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 border-l-4 border-l-amber-400 rounded-2xl p-4">
-        <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
-        <p className="text-xs font-bold text-amber-800 leading-relaxed">
-          <span className="font-black uppercase tracking-wide">Estimativa — não oficial.</span>{' '}
-          Valores calculados com base nas tabelas IRS 2026 (Despacho n.º 233-A/2026) e TSU em vigor.
-          Confirme sempre os valores finais no <span className="font-black">TOConline</span> antes de processar o salário.
-          Ajudas de custo só são isentas se corresponderem a deslocações reais devidamente documentadas.
-        </p>
+      {/* ── Cabeçalho — padrão Contabilidade ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+
+        {/* Título */}
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
+            <FileText size={20} />
+          </div>
+          <div>
+            <h2 className="text-lg font-black text-slate-800 leading-tight">Calculadora de Recibos</h2>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Estimativas salariais</p>
+          </div>
+        </div>
+
+        {/* Navegação mês */}
+        <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+          <button
+            onClick={() => navMes(-1)}
+            className="p-1.5 rounded-lg hover:bg-white transition-colors"
+          >
+            <ChevronLeft size={16} className="text-slate-500" />
+          </button>
+          <span className="px-3 py-1 text-sm font-black text-slate-700 min-w-[140px] text-center">
+            {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
+          </span>
+          <button
+            onClick={() => navMes(1)}
+            className="p-1.5 rounded-lg hover:bg-white transition-colors"
+          >
+            <ChevronRight size={16} className="text-slate-500" />
+          </button>
+        </div>
+
+        {/* Botões batch */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={gerarRecibosBatchPDF}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors"
+            title="PDF dos recibos de vencimento — todos os trabalhadores"
+          >
+            <FileText size={14} /> Recibos PDF
+          </button>
+          <button
+            onClick={exportRecibosBatchXLS}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-colors"
+            title="Excel dos recibos de vencimento — todos os trabalhadores"
+          >
+            <FileSpreadsheet size={14} /> Recibos XLS
+          </button>
+          <button
+            onClick={gerarMapasAjudasPDF}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+            title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
+          >
+            <Download size={14} /> Mapas AC
+          </button>
+        </div>
       </div>
 
       {/* Selector de trabalhador */}
@@ -2222,52 +2153,6 @@ ${hdrRow}${bodyRows}${totRow}
               </button>
             </div>
           )}
-        </div>
-      </Card>
-
-      {/* Seletor de mês — global, controla todo o recibo */}
-      <Card className="px-5 py-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navMes(-1)}
-              className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all"
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <span className="font-black text-slate-800 text-base min-w-40 text-center">
-              {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
-            </span>
-            <button
-              onClick={() => navMes(1)}
-              className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 transition-all"
-            >
-              <ChevronRight size={18} />
-            </button>
-          </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={gerarRecibosBatchPDF}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-rose-600 text-white hover:bg-rose-700 transition-all shadow-sm"
-              title="PDF dos recibos de vencimento — todos os trabalhadores"
-            >
-              <FileText size={12} /> Recibos PDF
-            </button>
-            <button
-              onClick={exportRecibosBatchXLS}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-teal-600 text-white hover:bg-teal-700 transition-all shadow-sm"
-              title="Excel dos recibos de vencimento — todos os trabalhadores"
-            >
-              <FileSpreadsheet size={12} /> Recibos XLS
-            </button>
-            <button
-              onClick={gerarMapasAjudasPDF}
-              className="flex items-center gap-1 px-2.5 py-2 rounded-xl text-[10px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 transition-all shadow-sm"
-              title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
-            >
-              <Download size={12} /> Mapas AC
-            </button>
-          </div>
         </div>
       </Card>
 
@@ -2383,95 +2268,6 @@ ${hdrRow}${bodyRows}${totRow}
                 </p>
               )}
             </div>
-          )}
-
-          {/* ── Acerto de Cessação ── */}
-          {mesParcialDados && (mesParcialDados.tipo === 'fim' || mesParcialDados.tipo === 'ambos') && (
-            <Card className="p-5 border-rose-200">
-              <SectionHeader n="★" label="Acerto de Cessação" />
-              <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-                {inputs.incluirFerias
-                  ? 'Com duodécimos de subsídio de férias ativos, apenas os dias de férias não gozados são compensados aqui (A010) — o subsídio de férias correspondente já foi liquidado mensalmente via A004.'
-                  : 'Rubricas calculadas automaticamente para inclusão no recibo do mês de cessação. IRS e SS incidem sobre estes valores pelo método normal.'}
-              </p>
-
-              {/* Férias vencidas — cálculo automático */}
-              {feriasVencidas && (
-                <div className="space-y-1 text-xs bg-amber-50 rounded-xl p-3 border border-amber-200 mb-3">
-                  <div className="flex justify-between">
-                    <span className="font-bold text-amber-800">Férias vencidas neste ano</span>
-                    <span className="font-bold text-amber-800">{feriasVencidas.diasVencidos} dias</span>
-                  </div>
-                  <p className="text-[10px] text-amber-700">{feriasVencidas.formula}</p>
-                  <p className="text-[9px] text-amber-600 leading-relaxed">
-                    ⚠️ Não considera reduções por faltas injustificadas (Art. 238º n.º 2) nem parentalidade/doença — confirmar com a contabilista.
-                  </p>
-                </div>
-              )}
-
-              {/* Inputs: dias gozados + dias não gozadas */}
-              <div className="grid grid-cols-2 gap-3 mb-3">
-                {feriasVencidas && (
-                  <LabelInput label="Dias já gozados este ano" hint="Do módulo Horários ou registo manual">
-                    <TextInput
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      value={diasFeriasGozados}
-                      onChange={e => setDiasFeriasGozados(e.target.value)}
-                    />
-                  </LabelInput>
-                )}
-                <LabelInput
-                  label="Dias de férias não gozadas"
-                  hint={feriasVencidas ? 'Auto-calculado (vencidos − gozados); editável' : 'Do ano corrente e/ou anterior'}
-                >
-                  <TextInput
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    value={diasFeriasNaoGozadas}
-                    onChange={e => setDiasFeriasNaoGozadas(e.target.value)}
-                  />
-                </LabelInput>
-                {!feriasVencidas && <div />}
-              </div>
-
-              {/* Resumo do acerto */}
-              {acertoCessacao && (
-                <div className="space-y-1 text-xs bg-rose-50 rounded-xl p-3 border border-rose-100">
-                  {acertoCessacao.feriasNaoGozadasEur > 0 && (
-                    <>
-                      <div className="flex justify-between"><span className="font-bold">Férias não gozadas ({diasFeriasNaoGozadas}d)</span><span>{acertoCessacao.feriasNaoGozadasEur.toFixed(2)}€</span></div>
-                      {acertoCessacao.subsidioSobreFeriasNaoGozadas > 0
-                        ? <div className="flex justify-between"><span className="font-bold">Subsídio s/ férias não gozadas</span><span>{acertoCessacao.subsidioSobreFeriasNaoGozadas.toFixed(2)}€</span></div>
-                        : acertoCessacao.duodecimosFeriasAtivos && (
-                            <div className="flex justify-between text-slate-400 italic text-[10px]"><span>Subsídio s/ férias não gozadas</span><span>0,00€ — já liquidado via A004</span></div>
-                          )
-                      }
-                    </>
-                  )}
-                  {acertoCessacao.subsFeriasProp > 0
-                    ? <div className="flex justify-between"><span className="font-bold">Sub. Férias proporcional</span><span>{acertoCessacao.subsFeriasProp.toFixed(2)}€</span></div>
-                    : acertoCessacao.duodecimosFeriasAtivos && (
-                        <div className="flex justify-between text-slate-400 italic text-[10px]"><span>Sub. Férias proporcional</span><span>0,00€ — já liquidado via duodécimos</span></div>
-                      )
-                  }
-                  {acertoCessacao.subsNatalProp > 0
-                    ? <div className="flex justify-between"><span className="font-bold">Sub. Natal proporcional</span><span>{acertoCessacao.subsNatalProp.toFixed(2)}€</span></div>
-                    : acertoCessacao.duodecimosNatalAtivos && (
-                        <div className="flex justify-between text-slate-400 italic text-[10px]"><span>Sub. Natal proporcional</span><span>0,00€ — já liquidado via duodécimos</span></div>
-                      )
-                  }
-                  <p className="text-[10px] text-rose-600 pt-1 border-t border-rose-200 leading-relaxed">
-                    Proporcional: {acertoCessacao.descricao}
-                  </p>
-                </div>
-              )}
-              <p className="text-[10px] text-slate-400 mt-3 leading-relaxed border-t border-slate-100 pt-3">
-                ⚠️ Este acerto inclui apenas vencimento e subsídios proporcionais. Compensações por cessação, formação em dívida, ou outras verbas específicas do motivo de cessação devem ser calculadas e adicionadas manualmente com apoio jurídico/contabilístico.
-              </p>
-            </Card>
           )}
 
           {/* 2 - Retribuição Base */}
@@ -2705,19 +2501,6 @@ ${hdrRow}${bodyRows}${totRow}
                     {n(inputs.he1) > 0 && <ReciboLinha desc="A052 - Trabalho Suplementar 1ª hora" qtd={`${inputs.he1}h`} vUnit={r.valorHe1un} abono={r.valorHe1} />}
                     {n(inputs.he2) > 0 && <ReciboLinha desc="A053 - Trabalho Suplementar seguintes" qtd={`${inputs.he2}h`} vUnit={r.valorHe2un} abono={r.valorHe2} />}
                     {r.subsNatal > 0 && <ReciboLinha desc="A021 - Subs. Natal (duodécimos)" abono={r.subsNatal} />}
-                    {/* Rubricas de cessação */}
-                    {acertoCessacao?.feriasNaoGozadasEur > 0 && (
-                      <ReciboLinha desc={`A010 - Férias não gozadas (${diasFeriasNaoGozadas}d)`} abono={acertoCessacao.feriasNaoGozadasEur} />
-                    )}
-                    {acertoCessacao?.subsidioSobreFeriasNaoGozadas > 0 && (
-                      <ReciboLinha desc="A011 - Subsídio s/ férias não gozadas" abono={acertoCessacao.subsidioSobreFeriasNaoGozadas} />
-                    )}
-                    {acertoCessacao?.subsFeriasProp > 0 && (
-                      <ReciboLinha desc={`A004P - Sub. Férias proporcional (${acertoCessacao.descricao})`} abono={acertoCessacao.subsFeriasProp} />
-                    )}
-                    {acertoCessacao?.subsNatalProp > 0 && (
-                      <ReciboLinha desc="A021P - Sub. Natal proporcional (acerto final)" abono={acertoCessacao.subsNatalProp} />
-                    )}
                     {ajudasDisplayRecibo > 0 && (
                       <tr className="bg-orange-50">
                         <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-slate-700">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
@@ -2743,7 +2526,7 @@ ${hdrRow}${bodyRows}${totRow}
 
               {/* Notas de taxas */}
               <div className="mt-3 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 font-bold space-y-0.5">
-                <p>IRS — Taxa efetiva ({acertoCessacao?.feriasNaoGozadasEur > 0 ? 'Vencimento, restantes abonos e Férias Não Gozadas' : 'Vencimento e restantes abonos'}): {eur(r.incidenciaRegular)} · {(r.taxaRegular * 100).toFixed(2)}%</p>
+                <p>IRS — Taxa efetiva (Vencimento e restantes abonos): {eur(r.incidenciaRegular)} · {(r.taxaRegular * 100).toFixed(2)}%</p>
                 {r.subsFerias > 0 && <p>IRS — Taxa efetiva (Subsídio de Férias): {(r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {r.subsNatal  > 0 && <p>IRS — Taxa efetiva (Subsídio de Natal): {(r.taxaSubsidios * 100).toFixed(2)}%</p>}
                 {(n(inputs.he1) > 0 || n(inputs.he2) > 0) && (
@@ -3029,6 +2812,12 @@ ${hdrRow}${bodyRows}${totRow}
         )}
       </Card>
       </>}
+
+      {/* Rodapé de compliance */}
+      <p className="text-center text-[10px] text-slate-400 font-bold pt-2 pb-4">
+        <AlertTriangle size={10} className="inline mr-1 text-amber-400" />
+        Estimativa não oficial · IRS 2026 (Desp. 233-A/2026) · TSU em vigor · Confirme sempre no TOConline · Ajudas de custo isentas só com deslocações documentadas
+      </p>
     </div>
   );
 }
@@ -3045,46 +2834,6 @@ function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
   );
 }
 
-const RESUMO_COLS = [
-  { label: 'Trabalhador',              key: 'nome',           align: 'left',   w: 150, group: 'id'                                                  },
-  { label: 'NIF',                      key: 'nif',            align: 'center', w: 85,  group: 'id'                                                  },
-  { label: 'NIS',                      key: 'nis',            align: 'center', w: 85,  group: 'id'                                                  },
-  { label: 'Profissão',                key: 'profissao',      align: 'left',   w: 100, group: 'id'                                                  },
-  { label: 'Empresa',                  key: 'empresa',        align: 'left',   w: 130, group: 'id'                                                  },
-  { label: 'Início Vínculo',           key: 'inicioVinculo',  align: 'center', w: 88,  group: 'id'                                                  },
-  { label: 'Cessação Vínculo',         key: 'cessacaoVinculo',align: 'center', w: 88,  group: 'id'                                                  },
-  { label: 'Tabela IRS',               key: 'tabelaNome',     align: 'center', w: 82,  group: 'tabela'                                              },
-  { label: 'Nº Dep.',                  key: 'nDep',           align: 'center', w: 54,  group: 'tabela'                                              },
-  { label: 'Venc. Base (€)',           key: 'vencBase',       align: 'right',  w: 84,  group: 'venc',   sumKey: '_vencNum'                         },
-  { label: 'Sub. Alim. Dias',          key: 'subsAlimDias',   align: 'center', w: 64,  group: 'venc'                                                },
-  { label: 'Sub. Alim. €/dia',         key: 'subsAlimDia',    align: 'right',  w: 76,  group: 'venc'                                                },
-  { label: 'Sub. Alim. Total (€)',     key: 'subsAlimTotal',  align: 'right',  w: 84,  group: 'venc',   sumKey: '_subsAlimNum'                     },
-  { label: 'Sub. Férias / Duod. (€)', key: 'subsFerias',     align: 'right',  w: 84,  group: 'venc',   sumKey: '_feriasNum'                       },
-  { label: 'Sub. Natal / Duod. (€)',  key: 'subsNatal',      align: 'right',  w: 84,  group: 'venc',   sumKey: '_natalNum'                        },
-  { label: 'Ajudas Custo Inter. (€)', key: 'ajudas',         align: 'right',  w: 84,  group: 'venc',   sumKey: '_ajudasNum'                       },
-  { label: 'Base IRS (€)',             key: 'baseIRS',        align: 'right',  w: 76,  group: 'fiscal'                                              },
-  { label: 'Taxa IRS',                 key: 'taxaIRS',        align: 'right',  w: 64,  group: 'fiscal'                                              },
-  { label: 'IRS (€)',                  key: 'irsTotal',       align: 'right',  w: 70,  group: 'fiscal', sumKey: '_irsNum'                          },
-  { label: 'SS Trab. 11% (€)',         key: 'ssTrab',         align: 'right',  w: 80,  group: 'fiscal', sumKey: '_ssTrabNum'                       },
-  { label: 'Total Abonos (€)',         key: 'totalAbonos',    align: 'right',  w: 84,  group: 'totais', sumKey: '_abonosNum',  highlight: 'blue'   },
-  { label: 'Total Descontos (€)',      key: 'totalDesc',      align: 'right',  w: 84,  group: 'totais', sumKey: '_descNum'                         },
-  { label: 'Líquido (€)',              key: 'liquido',        align: 'right',  w: 76,  group: 'totais', sumKey: '_liquidoNum', highlight: 'green'  },
-  { label: 'TSU Patronal 23,75% (€)', key: 'ssPatronal',     align: 'right',  w: 84,  group: 'totais', sumKey: '_ssPatNum'                        },
-  { label: 'Custo Empresa (€)',        key: 'custoEmpresa',   align: 'right',  w: 84,  group: 'totais', sumKey: '_custoNum',   highlight: 'rose'   },
-  { label: 'Ajuste (€)',               key: 'ajuste',         align: 'right',  w: 74,  group: 'totais', sumKey: '_ajusteNum',  tipo: 'ajuste'      },
-  { label: 'Ordenado Bruto (€)',       key: 'brutoAlvo',      align: 'right',  w: 96,  group: 'totais', sumKey: '_brutoNum',   highlight: 'emerald'},
-  { label: 'Observação',               key: 'observacao',     align: 'center', w: 150, group: 'obs',    editable: true                             },
-  { label: 'Completo',                 key: 'completo',       align: 'center', w: 64,  group: 'obs',    tipo: 'toggle'                             },
-];
-
-const GROUP_DEFS = {
-  id:     { label: 'Identificação', bg: '#334155', text: '#94a3b8', border: null      },
-  tabela: { label: 'Tabela Fiscal', bg: '#4c1d95', text: '#ddd6fe', border: '#7c3aed' },
-  venc:   { label: 'Vencimentos',   bg: '#1e3a8a', text: '#bfdbfe', border: '#3b82f6' },
-  fiscal: { label: 'Fiscal',        bg: '#78350f', text: '#fde68a', border: '#f59e0b' },
-  totais: { label: 'Totais',        bg: '#1e1b4b', text: '#c7d2fe', border: '#6366f1' },
-  obs:    { label: 'Gestão',        bg: '#334155', text: '#94a3b8', border: null      },
-};
 
 function CopiarLinkBtn({ mesStr }) {
   const [copiado, setCopiado] = useState(false);
@@ -3119,44 +2868,33 @@ function loadFromLS(key, fallback) {
   catch { return fallback; }
 }
 
-function ScrollArrows({ scrollRef }) {
-  const [canLeft, setCanLeft]   = useState(false);
-  const [canRight, setCanRight] = useState(false);
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const update = () => {
-      setCanLeft(el.scrollLeft > 4);
-      setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
-    };
-    update();
-    el.addEventListener('scroll', update, { passive: true });
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => { el.removeEventListener('scroll', update); ro.disconnect(); };
-  }, [scrollRef]);
-
-  const step = 300;
-  const scroll = dir => scrollRef.current?.scrollBy({ left: dir * step, behavior: 'smooth' });
-
-  if (!canLeft && !canRight) return null;
+function ExpandCell({ text, maxWidth }) {
+  const ref  = useRef(null);
+  const [rect, setRect] = useState(null);
+  const handleEnter = () => {
+    if (ref.current && ref.current.scrollWidth > ref.current.clientWidth + 1)
+      setRect(ref.current.getBoundingClientRect());
+  };
   return (
-    <div className="absolute inset-y-0 left-0 right-0 pointer-events-none z-20 flex items-center justify-between px-1">
-      <button
-        onMouseDown={e => { e.preventDefault(); scroll(-1); }}
-        className={`pointer-events-auto w-7 h-7 rounded-full bg-white border border-slate-300 shadow-md flex items-center justify-center text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all ${canLeft ? 'opacity-90' : 'opacity-0 pointer-events-none'}`}
-        tabIndex={-1}
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button
-        onMouseDown={e => { e.preventDefault(); scroll(1); }}
-        className={`pointer-events-auto w-7 h-7 rounded-full bg-white border border-slate-300 shadow-md flex items-center justify-center text-slate-600 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all ${canRight ? 'opacity-90' : 'opacity-0 pointer-events-none'}`}
-        tabIndex={-1}
-      >
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
+    <div
+      ref={ref}
+      style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: maxWidth || 'none' }}
+      onMouseEnter={handleEnter}
+      onMouseLeave={() => setRect(null)}
+    >
+      {text}
+      {rect && createPortal(
+        <div style={{
+          position: 'fixed', top: rect.top, left: rect.left, height: rect.height,
+          zIndex: 9999, background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px',
+          padding: '0 10px', whiteSpace: 'nowrap', boxShadow: '0 4px 20px rgba(0,0,0,.18)',
+          fontSize: '11px', fontWeight: 700, display: 'flex', alignItems: 'center',
+          pointerEvents: 'none', color: '#1e293b', minWidth: rect.width,
+        }}>
+          {text}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
@@ -3164,43 +2902,6 @@ function ScrollArrows({ scrollRef }) {
 function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   const { supabase } = useApp();
   const tableScrollRef = useRef(null);
-
-  // Drag-to-scroll: click e arrastar para rolar em qualquer direcção
-  useEffect(() => {
-    const el = tableScrollRef.current;
-    if (!el) return;
-    let active = false, startX = 0, startY = 0, scrollL = 0, scrollT = 0;
-
-    const down = e => {
-      if (e.target.closest('input,button,a,select,textarea')) return;
-      active = true;
-      startX = e.clientX; startY = e.clientY;
-      scrollL = el.scrollLeft; scrollT = el.scrollTop;
-      el.style.cursor = 'grabbing';
-      el.style.userSelect = 'none';
-    };
-    const move = e => {
-      if (!active) return;
-      e.preventDefault();
-      el.scrollLeft = scrollL - (e.clientX - startX);
-      el.scrollTop  = scrollT - (e.clientY - startY);
-    };
-    const up = () => {
-      active = false;
-      el.style.cursor = 'grab';
-      el.style.userSelect = '';
-    };
-
-    el.style.cursor = 'grab';
-    el.addEventListener('mousedown', down);
-    window.addEventListener('mousemove', move, { passive: false });
-    window.addEventListener('mouseup', up);
-    return () => {
-      el.removeEventListener('mousedown', down);
-      window.removeEventListener('mousemove', move);
-      window.removeEventListener('mouseup', up);
-    };
-  }, []);
 
   const [visibleCols, setVisibleColsRaw] = useState(() =>
     new Set(loadFromLS(LS_COLS, RESUMO_COLS.map((_, i) => i)))
@@ -3692,30 +3393,17 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           <p className="text-sm font-black uppercase tracking-wide">Sem trabalhadores activos com vencimento base</p>
         </div>
       ) : (
-        <div className="relative">
-          {/* Botões de scroll lateral */}
-          <ScrollArrows scrollRef={tableScrollRef} />
-          <div
-            ref={tableScrollRef}
-            className="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm scroll-smooth"
-            style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
-          >
+        <div
+          ref={tableScrollRef}
+          className="overflow-auto rounded-2xl border border-slate-200 shadow-sm"
+          style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
+        >
           <table
             className="border-collapse"
-            style={{
-              width: '100%',
-              tableLayout: 'fixed',
-              minWidth: `${activeCols.reduce((s, { col }) => s + (col.w || 84), 0)}px`,
-              fontSize: '11px',
-            }}
+            style={{ tableLayout: 'auto', width: '100%', fontSize: '11px' }}
           >
-            <colgroup>
-              {activeCols.map(({ col, ci }) => (
-                <col key={ci} style={{ width: `${col.w || 84}px` }} />
-              ))}
-            </colgroup>
-            <thead>
-              {/* Linha de grupos — sem sticky para não conflituar com a coluna fixa */}
+            <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
+              {/* Linha de grupos */}
               <tr>
                 {activeCols.map(({ col, ci }, ai) => {
                   const g = col.group || 'obs';
@@ -3727,13 +3415,13 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                       key={ci}
                       className="text-[8px] font-black uppercase tracking-widest py-1"
                       style={{
-                        background: def.bg,
-                        color: def.text,
+                        background: def.bg, color: def.text,
                         textAlign: isFirstInGroup ? 'left' : 'center',
                         paddingLeft: isFirstInGroup ? '8px' : '0',
                         borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : 'none',
                         whiteSpace: 'nowrap',
-                        overflow: 'hidden',
+                        minWidth: col.key === 'nome' ? undefined : `${col.w || 64}px`,
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : {}),
                       }}
                     >
                       {isFirstInGroup ? def.label : ''}
@@ -3742,17 +3430,21 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                 })}
               </tr>
               {/* Linha de nomes de colunas */}
-              <tr className="bg-slate-800 text-white">
+              <tr>
                 {activeCols.map(({ col, ci }, ai) => {
                   const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
                   const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
                   return (
                     <th
                       key={ci}
-                      className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? hlHead(col.highlight) : 'text-slate-200'}`}
+                      className={`px-1.5 py-2 text-[9px] font-black uppercase tracking-wide text-center leading-tight ${col.highlight ? hlHead(col.highlight) : ''}`}
                       style={{
-                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 10, background: col.highlight ? undefined : '#1e293b' } : {}),
-                        ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
+                        background: col.highlight ? undefined : def.bg,
+                        color: col.highlight ? undefined : def.text,
+                        whiteSpace: 'nowrap',
+                        minWidth: col.key === 'nome' ? undefined : `${col.w || 64}px`,
+                        borderRight: isLastInGroup && def.border ? `2px solid ${def.border}` : isLastInGroup ? '1px solid #1e293b' : undefined,
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 12 } : {}),
                       }}
                     >
                       {col.label}
@@ -3770,82 +3462,87 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   {activeCols.map(({ col, ci }, ai) => {
                     const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
                     const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
+                    const stickyBg = row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc';
+                    const isNome = col.key === 'nome';
                     return (
-                    <td
-                      key={ci}
-                      className={`px-2 py-2 font-bold overflow-hidden ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'}`}
-                      style={{
-                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: row.completo ? '#ecfdf5' : ri % 2 === 0 ? '#ffffff' : '#f8fafc', boxShadow: '2px 0 6px -2px rgba(0,0,0,.10)' } : {}),
-                        ...(col.tipo || col.editable ? {} : { textOverflow: 'ellipsis', whiteSpace: 'nowrap', overflow: 'hidden' }),
-                        ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}33` } : {}),
-                      }}
-                    >
-                      {col.tipo === 'ajuste' ? (
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={ajustes[row.workerId] ?? ''}
-                          onChange={e => updateAjuste(row.workerId, e.target.value)}
-                          placeholder="0"
-                          className="w-full bg-transparent outline-none text-center text-xs font-bold placeholder:text-slate-300 px-1 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
-                          style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#64748b' }}
-                        />
-                      ) : col.tipo === 'toggle' ? (
-                        <div className="flex justify-center px-2">
-                          <button
-                            onClick={() => updateCompleto(row.workerId, !row.completo)}
-                            title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
-                            className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
-                              row.completo
-                                ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
-                                : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
-                            }`}
-                          >
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12"/>
-                            </svg>
-                          </button>
-                        </div>
-                      ) : col.editable ? (
-                        <input
-                          type="text"
-                          value={observacoes[row.workerId] || ''}
-                          onChange={e => updateObs(row.workerId, e.target.value)}
-                          placeholder="—"
-                          className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
-                        />
-                      ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
-                        const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
-                        return (
-                          <span className={`block px-2 ${tdAlign(col)}`}>
-                            {row[col.key]}
-                            {Math.abs(diff) >= 0.005 && (
-                              <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
-                                {diff > 0 ? '+' : ''}{diff.toFixed(2)}
-                              </span>
-                            )}
-                          </span>
-                        );
-                      })() : (
-                        <span className={`block px-2 ${tdAlign(col)}`}>{row[col.key]}</span>
-                      )}
-                    </td>
-                  );
+                      <td
+                        key={ci}
+                        className={`px-2 py-2 font-bold ${col.highlight ? hlCell(col.highlight) : 'text-slate-700'}`}
+                        style={{
+                          whiteSpace: 'nowrap',
+                          minWidth: isNome ? undefined : `${col.w || 64}px`,
+                          ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: stickyBg, boxShadow: '2px 0 6px -2px rgba(0,0,0,.10)' } : {}),
+                          ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}33` } : {}),
+                        }}
+                      >
+                        {col.tipo === 'ajuste' ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={ajustes[row.workerId] ?? ''}
+                            onChange={e => updateAjuste(row.workerId, e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-transparent outline-none text-center text-xs font-bold placeholder:text-slate-300 px-1 py-1 rounded-lg hover:bg-amber-50 focus:bg-white focus:ring-2 focus:ring-amber-200 transition-all"
+                            style={{ color: (ajustes[row.workerId] || 0) < 0 ? '#dc2626' : (ajustes[row.workerId] || 0) > 0 ? '#16a34a' : '#64748b' }}
+                          />
+                        ) : col.tipo === 'toggle' ? (
+                          <div className="flex justify-center px-2">
+                            <button
+                              onClick={() => updateCompleto(row.workerId, !row.completo)}
+                              title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
+                              className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
+                                row.completo
+                                  ? 'bg-emerald-500 text-white hover:bg-red-400 shadow-sm'
+                                  : 'bg-white border-2 border-slate-300 text-transparent hover:border-emerald-400 hover:text-emerald-400'
+                              }`}
+                            >
+                              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            </button>
+                          </div>
+                        ) : col.editable ? (
+                          <input
+                            type="text"
+                            value={observacoes[row.workerId] || ''}
+                            onChange={e => updateObs(row.workerId, e.target.value)}
+                            placeholder="—"
+                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
+                          />
+                        ) : isNome ? (
+                          <span>{row[col.key]}</span>
+                        ) : col.key === 'totalAbonos' && row._brutoNum > 0 ? (() => {
+                          const diff = Math.round((row._abonosNum - row._brutoNum) * 100) / 100;
+                          return (
+                            <span className={`block px-2 ${tdAlign(col)}`}>
+                              {row[col.key]}
+                              {Math.abs(diff) >= 0.005 && (
+                                <span className={`block text-[9px] font-bold leading-tight ${diff >= 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                  {diff > 0 ? '+' : ''}{diff.toFixed(2)}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })() : (
+                          <ExpandCell text={String(row[col.key] ?? '')} maxWidth={`${col.w || 84}px`} />
+                        )}
+                      </td>
+                    );
                   })}
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-[3px] border-slate-700">
+              <tr className="border-t-2 border-indigo-300" style={{ position: 'sticky', bottom: 0, zIndex: 9 }}>
                 {activeCols.map(({ col, ci }, ai) => {
                   const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
                   const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
                   return (
                     <td
                       key={ci}
-                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-800 text-slate-100'} ${tdAlign(col)}`}
+                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-indigo-50 text-indigo-700'}`}
                       style={{
-                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#1e293b', color: '#f1f5f9' } : {}),
+                        ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
                         ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
                       }}
                     >
@@ -3856,7 +3553,6 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               </tr>
             </tfoot>
           </table>
-          </div>
         </div>
       )}
     </div>
