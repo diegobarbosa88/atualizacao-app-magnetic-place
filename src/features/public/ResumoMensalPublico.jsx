@@ -10,6 +10,7 @@ import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
 import { getRateAtDate } from '../admin/cost-reports/useCostReportsData.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
+import { useDragScroll } from '../../lib/useDragScroll.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -155,6 +156,7 @@ export default function ResumoMensalPublico() {
   const [saveStatus,       setSaveStatus]       = useState(null);
   const [dbError,          setDbError]          = useState(null);
   const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
+  const { ref: tableScrollRef, dragProps }       = useDragScroll();
 
   const ms = toMesStr(ano, mes);
 
@@ -529,8 +531,10 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           </div>
         ) : (
           <div
+            ref={tableScrollRef}
             className="flex-1 overflow-auto rounded-2xl border border-slate-200 shadow-sm min-h-0"
             style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
+            {...dragProps}
           >
             <table
               className="border-collapse"

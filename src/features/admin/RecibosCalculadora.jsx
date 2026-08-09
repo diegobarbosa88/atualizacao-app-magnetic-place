@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useDragScroll } from '../../lib/useDragScroll.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
@@ -2903,7 +2904,7 @@ function ExpandCell({ text, maxWidth }) {
 
 function ResumoMensalTable({ rows, mesLabel, mesStr }) {
   const { supabase } = useApp();
-  const tableScrollRef = useRef(null);
+  const { ref: tableScrollRef, dragProps } = useDragScroll();
 
   const [visibleCols, setVisibleColsRaw] = useState(() =>
     new Set(loadFromLS(LS_COLS, RESUMO_COLS.map((_, i) => i)))
@@ -3399,6 +3400,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           ref={tableScrollRef}
           className="flex-1 min-h-0 overflow-auto rounded-2xl border border-slate-200 shadow-sm"
           style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #e2e8f0' }}
+          {...dragProps}
         >
           <table
             className="border-collapse"
