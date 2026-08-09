@@ -65,9 +65,9 @@ import { callGemini } from '../../utils/aiUtils';
 function BrandBar() {
   return (
     <div
-      className="flex items-center px-5 sm:px-8 gap-4 shrink-0"
+      className="flex items-center px-10 sm:px-16 gap-8 shrink-0"
       style={{
-        height: '68px',
+        height: '136px',
         backgroundColor: '#1B3A57',
         borderBottom: '2px solid rgba(235,141,0,0.35)',
         boxShadow: '0 4px 16px rgba(0,0,0,0.22)',
@@ -75,15 +75,15 @@ function BrandBar() {
       }}
     >
       <div style={{
-        width: '44px', height: '44px', borderRadius: '50%',
+        width: '88px', height: '88px', borderRadius: '50%',
         overflow: 'hidden', flexShrink: 0, backgroundColor: '#EB8D00',
-        boxShadow: '0 0 0 3px rgba(235,141,0,0.3)',
+        boxShadow: '0 0 0 6px rgba(235,141,0,0.3)',
       }}>
         <CompanyLogo className="w-full h-full object-cover" />
       </div>
       <div>
-        <p style={{ fontSize: '16px', fontWeight: 700, color: 'white', lineHeight: 1.2, letterSpacing: '-0.01em' }}>Magnetic Place</p>
-        <p style={{ fontSize: '10px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1.4 }}>Gestão</p>
+        <p style={{ fontSize: '32px', fontWeight: 700, color: 'white', lineHeight: 1.2, letterSpacing: '-0.01em' }}>Magnetic Place</p>
+        <p style={{ fontSize: '20px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1.4 }}>Gestão</p>
       </div>
     </div>
   );
@@ -541,7 +541,7 @@ function AdminDashboard(props) {
       )}
 
       {showNotifDropdown && (
-        <div ref={notifDropdownRef} className="fixed top-[7.5rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
+        <div ref={notifDropdownRef} className="fixed top-[11rem] right-3 sm:right-6 z-[200] w-80 sm:w-96 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden animate-in slide-in-from-top-2 duration-150">
           <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
             <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-600">Notificações</h3>
             <button onClick={() => setShowNotifDropdown(false)} className="p-1 text-slate-300 hover:text-slate-600 transition-colors"><X size={14} /></button>
