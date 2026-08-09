@@ -110,13 +110,15 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       <div className="flex flex-wrap items-center gap-2 mb-5 border-b border-slate-100 pb-3">
         <button
           onClick={() => setClientSubTab('list')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'list' ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-indigo-600'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'list' ? '' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+          style={clientSubTab === 'list' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
         >
           <Building2 size={14} /> Clientes
         </button>
         <button
           onClick={() => setClientSubTab('envios')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'envios' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-blue-600'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'envios' ? '' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+          style={clientSubTab === 'envios' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
         >
           <Send size={14} /> Envios
         </button>
@@ -131,7 +133,8 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         </button>
         <button
           onClick={() => setClientSubTab('auditoria')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'auditoria' ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-violet-600'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'auditoria' ? '' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+          style={clientSubTab === 'auditoria' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
         >
           <Shield size={14} /> Auditoria Portal
         </button>
@@ -158,7 +161,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       {clientSubTab === 'list' && (<>
       <div className="flex flex-wrap justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Briefcase size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Briefcase size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão Comercial</h3>
         </div>
         <div className="relative">
@@ -173,10 +176,10 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
+            <button onClick={() => setClientsView('grid')} className={`p-2 rounded-lg transition-all ${clientsView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'grid' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setClientsView('list')} className={`p-2 rounded-lg transition-all ${clientsView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={clientsView === 'list' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap bg-indigo-600 text-white">Novo</button>
+          <button onClick={() => { setClientForm({ id: null, name: '', morada: '', nif: '', valorHora: '', email: '', dataAlteracao: new Date().toISOString().split('T')[0] }); setIsAddingInTab(true); }} className="px-3 sm:px-5 py-2 rounded-xl font-black text-xs uppercase shadow-lg transition-all whitespace-nowrap text-white" style={{ backgroundColor: '#EB8D00' }}>Novo</button>
         </div>
       </div>
 
@@ -185,7 +188,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         onClose={() => setIsAddingInTab(false)}
         title={clientForm.id ? 'Editar Cliente' : 'Novo Cliente'}
         icon={<Briefcase size={16} />}
-        accent="indigo"
+        accent="slate"
         size="2xl"
       >
         <ClientForm />
@@ -202,11 +205,11 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             </colgroup>
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
-                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">
+                <th onClick={() => setClientsSort(prev => ({ key: 'name', direction: prev.key === 'name' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors">
                   Cliente {clientsSort.key === 'name' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="hidden sm:table-cell text-left px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Morada</th>
-                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-indigo-600 transition-colors">
+                <th onClick={() => setClientsSort(prev => ({ key: 'value', direction: prev.key === 'value' && prev.direction === 'asc' ? 'desc' : 'asc' }))} className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer hover:text-slate-700 transition-colors">
                   Valor {clientsSort.key === 'value' ? (clientsSort.direction === 'asc' ? '↑' : '↓') : ''}
                 </th>
                 <th className="text-right px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ações</th>
@@ -220,7 +223,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                     <p className="text-xs text-slate-400 truncate">NIF: {c.nif || 'N/A'}</p>
                   </td>
                   <td className="hidden sm:table-cell px-4 py-3 text-sm font-bold text-slate-500 truncate">{c.morada || 'N/A'}</td>
-                  <td className="px-4 py-3 text-right text-sm font-bold text-indigo-600 whitespace-nowrap">{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
+                  <td className="px-4 py-3 text-right text-sm font-bold whitespace-nowrap" style={{ color: '#1B3A57' }}>{c.valorHora ? `${c.valorHora}€` : 'N/A'}</td>
                   <td className="px-3 py-3 text-right">
                     <div className="relative inline-block">
                       <button
@@ -279,14 +282,14 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedClients.map(c => (
-            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+            <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
-                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 text-indigo-600 border-indigo-200 bg-indigo-50">
+                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
                   <Briefcase size={10} /> Cliente
                 </div>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico">📊</button>
+                  <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico">📊</button>
                   <button onClick={() => { openEditClient(c); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
                   {confirmDeleteClientId === c.id ? (
                     <div className="flex items-center gap-1">
@@ -321,7 +324,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => { setShowClientHistory({ show: false, clientId: null, clientName: '' }); setEditingHistoryId(null); }}>
           <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-black text-indigo-700">Histórico de Valor Hora</h3>
+              <h3 className="text-lg font-black" style={{ color: '#1B3A57' }}>Histórico de Valor Hora</h3>
               <button onClick={() => { setShowClientHistory({ show: false, clientId: null, clientName: '' }); setEditingHistoryId(null); }} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
             </div>
             <p className="text-sm font-bold text-slate-500 mb-4">{showClientHistory.clientName}</p>
@@ -332,7 +335,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 {clientValorHoraHistory.map(h => (
                   <div key={h.id}>
                     {editingHistoryId === h.id ? (
-                      <div className="flex flex-wrap items-center gap-2 p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+                      <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
                         <input type="number" step="0.01" value={editingHistoryDraft.valor_anterior || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_anterior: e.target.value }))} className="w-16 border border-slate-300 rounded-lg p-1 text-xs font-bold" placeholder="Ant." />
                         <span className="text-slate-400 text-xs">→</span>
                         <input type="number" step="0.01" value={editingHistoryDraft.valor_novo || ''} onChange={e => setEditingHistoryDraft(d => ({ ...d, valor_novo: e.target.value }))} className="w-16 border border-slate-300 rounded-lg p-1 text-xs font-bold" placeholder="Novo" />
@@ -353,7 +356,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-bold text-slate-600">{h.valor_anterior || 'N/A'}€</span>
                           <span className="text-slate-400">→</span>
-                          <span className="text-sm font-bold text-indigo-600">{h.valor_novo}€</span>
+                          <span className="text-sm font-bold" style={{ color: '#1B3A57' }}>{h.valor_novo}€</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-xs text-slate-400">{new Date(h.data_alteracao).toLocaleDateString('pt-PT')}</span>

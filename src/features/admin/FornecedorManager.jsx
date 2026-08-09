@@ -15,7 +15,7 @@ function FornecedorManagerContent() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600">
+          <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>
             <Truck size={20} />
           </div>
           <div>
@@ -36,7 +36,7 @@ function FornecedorManagerContent() {
           </button>
           <button
             onClick={novoFornecedor}
-            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
+            className="flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors" style={{ backgroundColor: '#EB8D00' }}
           >
             <Plus size={14} />
             Novo Fornecedor
@@ -49,7 +49,7 @@ function FornecedorManagerContent() {
         onClose={cancelar}
         title={editingId ? 'Editar Fornecedor' : 'Novo Fornecedor'}
         icon={<Truck size={16} />}
-        accent="indigo"
+        accent="slate"
         size="xl"
       >
         <FornecedorForm />

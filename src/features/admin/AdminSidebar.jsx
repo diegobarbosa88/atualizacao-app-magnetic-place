@@ -7,7 +7,7 @@ import {
   AlertTriangle, Send, ChevronRight, ChevronDown, ChevronLeft,
   FolderOpen, Mail, ReceiptText, Coins, Receipt, FileSignature,
   BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
-  Truck, Shield, Calculator,
+  Truck, Shield,
 } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import { resolveBadge } from './adminNavConfig';
@@ -72,7 +72,6 @@ const MENU_STRUCTURE = [
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },
   { id: 'costs', label: 'Custos', icon: Wallet },
-  { id: 'contabilidade', label: 'Contabilidade', icon: Calculator },
   { id: 'recibos', label: 'Calc. Recibos', icon: Receipt },
   {
     id: 'toconline', label: 'TOConline', icon: BookOpen,
@@ -89,7 +88,7 @@ const MENU_STRUCTURE = [
 const MENU_GROUPS = [
   { id: 'principal',   label: 'PRINCIPAL',   itemIds: ['overview', 'team'] },
   { id: 'operacional', label: 'OPERACIONAL', itemIds: ['clients', 'fornecedores', 'schedules', 'documentos'] },
-  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['reports', 'costs', 'contabilidade', 'recibos', 'toconline'] },
+  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['reports', 'costs', 'recibos', 'toconline'] },
   { id: 'sistema',     label: 'SISTEMA',     itemIds: ['settings'] },
 ];
 

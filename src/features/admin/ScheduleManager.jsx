@@ -24,15 +24,15 @@ const ScheduleManagerContent = () => {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex justify-between items-center gap-3 mb-5">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Timer size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Timer size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Turnos Magnetic</h3>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-1">
-            <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
-            <button onClick={() => setSchedulesView('list')} className={`p-2 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`} title="Vista em Lista"><List size={18} /></button>
+            <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={schedulesView === 'grid' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Grade"><LayoutGrid size={18} /></button>
+            <button onClick={() => setSchedulesView('list')} className={`p-2 rounded-lg transition-all ${schedulesView === 'list' ? 'text-white' : 'text-slate-400 hover:text-slate-600'}`} style={schedulesView === 'list' ? { backgroundColor: '#1B3A57' } : {}} title="Vista em Lista"><List size={18} /></button>
           </div>
-          <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all bg-indigo-600 text-white">Novo Horário</button>
+          <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-6 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all text-white" style={{ backgroundColor: '#EB8D00' }}>Novo Horário</button>
         </div>
       </div>
 
@@ -41,7 +41,7 @@ const ScheduleManagerContent = () => {
         onClose={() => setIsAddingInTab(false)}
         title={scheduleForm.id ? 'Editar Horário' : 'Novo Horário'}
         icon={<Timer size={16} />}
-        accent="indigo"
+        accent="slate"
         size="3xl"
       >
         <ScheduleForm />
@@ -69,7 +69,7 @@ const ScheduleManagerContent = () => {
                     <div className="flex flex-nowrap gap-1 overflow-x-auto">
                       {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                         const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                        return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap">{d.l}</span> : null;
+                        return isActive ? <span key={d.v} className="px-2 py-1 rounded text-[10px] font-black uppercase whitespace-nowrap" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>{d.l}</span> : null;
                       })}
                     </div>
                   </td>
@@ -92,10 +92,10 @@ const ScheduleManagerContent = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedSchedules.map(s => (
-            <div key={s.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
+            <div key={s.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
               {/* Header */}
               <div className="flex justify-between items-start mb-3">
-                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1 text-indigo-600 border-indigo-200 bg-indigo-50">
+                <div className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase border flex items-center gap-1" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.4)', backgroundColor: 'rgba(134,154,175,0.1)' }}>
                   <Timer size={10} /> Turno
                 </div>
                 <div className="flex items-center gap-1">
@@ -115,7 +115,7 @@ const ScheduleManagerContent = () => {
                 <div className="flex flex-wrap gap-1">
                   {[{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }].map(d => {
                     const isActive = s.isAdvanced ? (s.dailyConfigs?.[d.v]?.isActive) : (s.weekdays || [1, 2, 3, 4, 5]).includes(d.v);
-                    return isActive ? <span key={d.v} className="bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded text-[8px] font-black uppercase">{d.l}</span> : null;
+                    return isActive ? <span key={d.v} className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}>{d.l}</span> : null;
                   })}
                 </div>
                 <div className="flex items-center gap-1.5"><Coffee size={10} /> {s.isAdvanced ? 'Variável' : `${s.breakStart || '--:--'}-${s.breakEnd || '--:--'}`}</div>

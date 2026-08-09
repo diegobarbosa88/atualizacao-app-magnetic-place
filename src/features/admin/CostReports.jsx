@@ -317,14 +317,14 @@ const CostReports = () => {
                 <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
                   <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
                   <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600">{item.totalHours.toFixed(1)}h</td>
-                  <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-sm font-black text-indigo-700">{formatCurrency(item.cost)}</td>
+                  <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-sm font-black text-[#1B3A57]">{formatCurrency(item.cost)}</td>
                 </tr>
               ))}
               {workerCosts.length > 0 && (
                 <tr className="bg-slate-100/60">
                   <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
                   <td className="px-4 py-3 text-sm font-black text-slate-700">{workerCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
-                  <td className="px-4 py-3 rounded-r-2xl text-sm font-black text-indigo-700">{formatCurrency(workerCosts.reduce((a, i) => a + i.cost, 0))}</td>
+                  <td className="px-4 py-3 rounded-r-2xl text-sm font-black text-[#1B3A57]">{formatCurrency(workerCosts.reduce((a, i) => a + i.cost, 0))}</td>
                 </tr>
               )}
             </tbody>
@@ -356,7 +356,7 @@ const CostReports = () => {
                   <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
                     <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
                     <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600">{item.totalHours.toFixed(1)}h</td>
-                    <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-indigo-700">{formatCurrency(item.cost)}</td>
+                    <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-[#1B3A57]">{formatCurrency(item.cost)}</td>
                     <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-emerald-700">
                       {totalPago > 0 ? formatCurrency(totalPago) : <span className="text-slate-300">—</span>}
                     </td>
@@ -366,7 +366,7 @@ const CostReports = () => {
                           estado === 'PAGO' ? 'bg-emerald-100 text-emerald-700' :
                           estado === 'PARCIAL' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-600'
                         }`}>{estado}</span>
-                        <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg text-slate-300 hover:text-indigo-500 hover:bg-indigo-50 transition-all" title="Associar pagamento bancário">
+                        <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Associar pagamento bancário">
                           <Link2 size={13} />
                         </button>
                       </div>
@@ -378,7 +378,7 @@ const CostReports = () => {
                 <tr className="bg-slate-100/60">
                   <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
                   <td className="px-4 py-3 text-sm font-black text-slate-700">{clientCosts.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
-                  <td className="px-4 py-3 text-sm font-black text-indigo-700">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
+                  <td className="px-4 py-3 text-sm font-black text-[#1B3A57]">{formatCurrency(clientCosts.reduce((a, i) => a + i.cost, 0))}</td>
                   <td className="px-4 py-3 text-sm font-black text-emerald-700">{formatCurrency(pagamentos.reduce((s, p) => s + Number(p.valor_pago || 0), 0))}</td>
                   <td className="px-4 py-3 rounded-r-2xl"></td>
                 </tr>
@@ -397,7 +397,7 @@ const CostReports = () => {
               <h3 className="text-sm font-black text-slate-700 uppercase tracking-tight">Faturas de Clientes</h3>
               <p className="text-[10px] text-slate-400 mt-0.5">{clienteFaturas.filter(f => f.status === 'PENDENTE').length} pendentes · {clienteFaturas.filter(f => f.status === 'PAGO').length} pagas</p>
             </div>
-            <button onClick={() => setIsAddingFatura(true)} className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase shadow-sm hover:bg-indigo-700 transition-colors">
+            <button onClick={() => setIsAddingFatura(true)} className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-[10px] font-black uppercase shadow-sm transition-colors" style={{ backgroundColor: '#EB8D00' }}>
               <Plus size={12} /> Inserir Fatura
             </button>
           </div>
@@ -414,7 +414,7 @@ const CostReports = () => {
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Valor (€)</label>
-                  <input type="text" value={faturaForm.valor} onChange={e => setFaturaForm({ ...faturaForm, valor: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-indigo-700 outline-none shadow-sm" placeholder="0,00" />
+                  <input type="text" value={faturaForm.valor} onChange={e => setFaturaForm({ ...faturaForm, valor: e.target.value })} className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-[#1B3A57] outline-none shadow-sm" placeholder="0,00" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Data</label>
@@ -422,7 +422,7 @@ const CostReports = () => {
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-3">
-                <button onClick={handleSaveFatura} disabled={faturaSaving} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-lg hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                <button onClick={handleSaveFatura} disabled={faturaSaving} className="flex-1 text-white py-4 rounded-2xl font-black text-xs uppercase shadow-lg transition-colors disabled:opacity-50" style={{ backgroundColor: '#1B3A57' }}>
                   {faturaSaving ? <><Loader2 size={14} className="animate-spin inline" /> A guardar...</> : 'Guardar Fatura'}
                 </button>
                 <button onClick={() => { setIsAddingFatura(false); setFaturaForm({ cliente: '', numero: '', valor: '', data: toISODateLocal(new Date()) }); }} className="px-6 py-4 bg-slate-200 text-slate-600 rounded-2xl font-black text-xs uppercase shadow-sm hover:bg-slate-300 transition-colors">Cancelar</button>
@@ -451,7 +451,7 @@ const CostReports = () => {
                     <tr key={f.id} className="bg-white hover:shadow-md transition-all duration-300 border border-slate-100">
                       <td className="px-4 py-3 rounded-l-2xl text-sm font-black text-slate-800">{dados.fornecedor || '—'}</td>
                       <td className="px-4 py-3 text-sm font-bold text-slate-600">{dados.numero_fatura || '—'}</td>
-                      <td className="px-4 py-3 text-sm font-black text-indigo-700">{formatCurrency(valor)}</td>
+                      <td className="px-4 py-3 text-sm font-black text-[#1B3A57]">{formatCurrency(valor)}</td>
                       <td className="px-4 py-3 text-sm font-bold text-slate-500">{dados.data_fatura ? new Date(dados.data_fatura).toLocaleDateString('pt-PT') : '—'}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${f.status === 'PAGO' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{f.status}</span>
@@ -471,7 +471,7 @@ const CostReports = () => {
                           }
                           return (
                             <div className="flex items-center justify-end gap-2">
-                              <button onClick={() => abrirLinkFaturaModal(f)} className="flex items-center gap-1 px-2 py-1 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-lg text-[9px] font-black uppercase transition-colors">
+                              <button onClick={() => abrirLinkFaturaModal(f)} className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 rounded-lg text-[9px] font-black uppercase transition-colors" style={{ color: '#869AAF' }}>
                                 <Link2 size={10} /> Ligar
                               </button>
                               {f.status === 'PENDENTE' && (
@@ -514,7 +514,7 @@ const CostReports = () => {
                 <tr key={item.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
                   <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100 text-sm font-black text-slate-800">{item.name}</td>
                   <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-600 whitespace-nowrap">{item.totalHours.toFixed(1)}h</td>
-                  <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-indigo-700 whitespace-nowrap">{formatCurrency(item.faturation)}</td>
+                  <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-[#1B3A57] whitespace-nowrap">{formatCurrency(item.faturation)}</td>
                   <td className="px-4 py-3 border-y border-slate-100 text-sm font-black text-rose-600 whitespace-nowrap">{formatCurrency(item.cost)}</td>
                   <td className={`px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-sm font-black whitespace-nowrap ${item.margin >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{formatCurrency(item.margin)}</td>
                 </tr>
@@ -523,7 +523,7 @@ const CostReports = () => {
                 <tr className="bg-slate-100/60">
                   <td className="px-4 py-3 rounded-l-2xl text-[10px] font-black uppercase text-slate-500">Total</td>
                   <td className="px-4 py-3 text-sm font-black text-slate-700">{clientMargins.reduce((a, i) => a + i.totalHours, 0).toFixed(1)}h</td>
-                  <td className="px-4 py-3 text-sm font-black text-indigo-700">{formatCurrency(clientMargins.reduce((a, i) => a + i.faturation, 0))}</td>
+                  <td className="px-4 py-3 text-sm font-black text-[#1B3A57]">{formatCurrency(clientMargins.reduce((a, i) => a + i.faturation, 0))}</td>
                   <td className="px-4 py-3 text-sm font-black text-rose-600">{formatCurrency(clientMargins.reduce((a, i) => a + i.cost, 0))}</td>
                   <td className="px-4 py-3 rounded-r-2xl text-sm font-black text-emerald-600">{formatCurrency(clientMargins.reduce((a, i) => a + i.margin, 0))}</td>
                 </tr>
@@ -588,8 +588,8 @@ const CostReports = () => {
                     <td className="px-4 py-3 border-y border-slate-100 text-sm font-bold text-slate-800">{exp.name}</td>
                     <td className="px-4 py-3 border-y border-slate-100">
                       <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase ${
-                        exp.type === 'fatura' ? 'bg-violet-100 text-violet-700' :
-                        exp.type === 'fixo'   ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'
+                        exp.type === 'fatura' ? 'bg-slate-100 text-slate-600' :
+                        exp.type === 'fixo'   ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-700'
                       }`}>{exp.type}</span>
                     </td>
                     <td className="px-4 py-3 border-y border-slate-100 font-black text-rose-600 text-right whitespace-nowrap">-{formatCurrency(exp.amount)}</td>
@@ -666,7 +666,7 @@ const CostReports = () => {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileText size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileText size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">{getTitle()}</h3>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -675,19 +675,19 @@ const CostReports = () => {
               {isAddingExpense ? 'Fechar' : '+ Despesa'}
             </button>
           )}
-          <button onClick={() => exportToXLS({ activeTab, ...exportArgs })} className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase shadow-sm hover:bg-indigo-700 transition-all">
+          <button onClick={() => exportToXLS({ activeTab, ...exportArgs })} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: '#1B3A57' }}>
             <Download size={13} /> Exportar
           </button>
           <div className="relative" ref={relatorioMenuRef}>
-            <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-xl font-black text-xs uppercase shadow-sm hover:bg-violet-700 transition-all">
+            <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: '#1B3A57' }}>
               <BookOpen size={13} /> Geral <ChevronDown size={11} />
             </button>
             {showRelatorioMenu && (
               <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden min-w-[160px]">
-                <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition-all">
+                <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralPDF(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all">
                   <FileText size={13} /> PDF
                 </button>
-                <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-violet-50 hover:text-violet-700 transition-all border-t border-slate-100">
+                <button onClick={() => { setShowRelatorioMenu(false); exportRelatorioGeralXLS(exportArgs); }} className="w-full flex items-center gap-2 px-4 py-3 text-xs font-black uppercase text-slate-700 hover:bg-slate-50 hover:text-slate-700 transition-all border-t border-slate-100">
                   <Download size={13} /> Excel / XLS
                 </button>
               </div>
@@ -717,7 +717,8 @@ const CostReports = () => {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex-shrink-0 flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              className={`flex-shrink-0 flex items-center justify-center gap-1 py-2 rounded-xl transition-all ${activeTab === id ? 'bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+              style={activeTab === id ? { color: '#EB8D00' } : {}}
             >
               <Icon size={13} />
               <span className="text-[9px] font-black uppercase whitespace-nowrap">{label}</span>

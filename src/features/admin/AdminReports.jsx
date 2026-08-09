@@ -115,7 +115,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 mb-6">
         <div className="flex items-center gap-3">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><FileText size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileText size={20} /></div>
           <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Folhas de Horas para Clientes</h3>
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="bg-indigo-50 text-indigo-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Users size={18} className="sm:hidden" /><Users size={24} className="hidden sm:block" /></div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-800">{activeWorkersCount}</p>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Colaboradores com Registos</p>
@@ -154,19 +154,22 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
         <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setFilterMode('month')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'month' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'month' ? 'shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            style={filterMode === 'month' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
           >
             <Calendar size={13} /> Mês
           </button>
           <button
             onClick={() => setFilterMode('range')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'range' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'range' ? 'shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            style={filterMode === 'range' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
           >
             <CalendarRange size={13} /> Intervalo
           </button>
           <button
             onClick={() => setFilterMode('dates')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'dates' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'dates' ? 'shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            style={filterMode === 'dates' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
           >
             <CalendarDays size={13} /> Dias
           </button>
@@ -205,7 +208,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
                   <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
                 </div>
                 {activeDates.length > 0 && (
-                  <p className="text-[10px] font-bold text-indigo-500 ml-1">{activeDates.length} dias no intervalo</p>
+                  <p className="text-[10px] font-bold ml-1" style={{ color: '#EB8D00' }}>{activeDates.length} dias no intervalo</p>
                 )}
               </>
             )}
@@ -225,7 +228,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Botões de ação */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex flex-col md:flex-row gap-3 md:gap-4">
-          <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-indigo-700 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
+          <button onClick={handleGenerateClientReport} disabled={!hasValidPeriod || (!reportFilter.clientId && !reportFilter.workerId)} className="flex-1 py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all border-2" style={{ color: '#1B3A57', borderColor: '#1B3A57', backgroundColor: 'transparent' }}>
             <FileText size={18} /> Gerar Selecção
           </button>
           <button onClick={() => {
@@ -248,7 +251,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
               dates: filterMode !== 'month' ? activeDates : null,
               periodLabel,
             });
-          }} disabled={!hasValidPeriod} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all">
+          }} disabled={!hasValidPeriod} className="px-8 py-4 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95 transition-all" style={{ backgroundColor: '#EB8D00' }}>
             <Zap size={18} className="text-amber-400" /> Gerar Tudo do Período
           </button>
         </div>
@@ -260,10 +263,10 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
           className="fixed inset-0 bg-slate-900/80 backdrop-blur-lg z-[200] flex items-start justify-center p-4 overflow-y-auto print:bg-transparent print:backdrop-blur-none print:p-0 print:static print:overflow-visible"
           onClick={(e) => { if (e.target === e.currentTarget) setPrintingReport(null); }}
         >
-          <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-indigo-100 animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
+          <div className="w-full max-w-2xl lg:max-w-5xl mx-4 sm:mx-auto my-8 bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300 embedded-mode print:my-0 print:max-w-full print:rounded-none print:shadow-none print:border-0 print:overflow-visible">
             <div className="no-print sticky top-0 z-10 flex items-center justify-between p-4 sm:p-6 border-b border-slate-100 bg-white rounded-t-[2rem] sm:rounded-t-[3rem]">
               <div className="flex items-center gap-3">
-                <div className="bg-indigo-50 p-2.5 rounded-2xl text-indigo-600"><FileText size={20} /></div>
+                <div className="p-2.5 rounded-2xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><FileText size={20} /></div>
                 <div>
                   <h3 className="font-black text-lg text-slate-800">A Visualizar Relatório</h3>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">{printingReport.periodLabel || printingReport.month}</p>
@@ -281,7 +284,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Histórico Recente */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><History size={20} /></div>
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><History size={20} /></div>
           <h3 className="font-black text-lg text-slate-800">Histórico Recente</h3>
         </div>
         {reportHistory.length === 0 ? (
@@ -317,7 +320,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
                         } else {
                           setPrintingReport({ isGlobal: true, month: entry.month || null, periodLabel: entry.periodLabel });
                         }
-                      }} className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-100 transition-all">
+                      }} className="px-4 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-slate-50" style={{ color: '#869AAF' }}>
                         Ver
                       </button>
                     </td>
