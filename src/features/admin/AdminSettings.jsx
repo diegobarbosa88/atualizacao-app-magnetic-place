@@ -333,7 +333,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               </p>
               <div className="bg-white border border-blue-200 rounded-lg p-2.5 font-mono text-[10px] text-slate-600 space-y-0.5">
                 <div><span className="text-blue-500">SS_NISS_EMPRESA</span> = NISS da empresa (11 dígitos)</div>
-                <div><span className="text-blue-500">SS_PSI_PASSWORD</span> = password de login da Segurança Social Direta</div>
+                <div><span className="text-blue-500">SS_PSI_TOKEN</span> = token gerado em SSD → Gestão de autenticação → Tokens de acesso</div>
                 <div><span className="text-blue-500">SS_AMBIENTE</span> = <span className="text-orange-500">teste</span> <span className="text-slate-400">(mudar para "producao" após testes)</span></div>
               </div>
             </div>
@@ -359,7 +359,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                   </div>
                   <div className="flex gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 font-black text-[10px] flex items-center justify-center shrink-0">3</span>
-                    <div><strong>Configurar variáveis de ambiente:</strong> No Vercel Dashboard → Settings → Environment Variables, adicionar <code className="bg-slate-100 px-1 rounded text-[10px]">SS_NISS_EMPRESA</code>, <code className="bg-slate-100 px-1 rounded text-[10px]">SS_PSI_PASSWORD</code> e <code className="bg-slate-100 px-1 rounded text-[10px]">SS_AMBIENTE=teste</code>.</div>
+                    <div><strong>Configurar variáveis de ambiente:</strong> No Vercel Dashboard → Settings → Environment Variables, adicionar <code className="bg-slate-100 px-1 rounded text-[10px]">SS_NISS_EMPRESA</code>, <code className="bg-slate-100 px-1 rounded text-[10px]">SS_PSI_TOKEN</code> e <code className="bg-slate-100 px-1 rounded text-[10px]">SS_AMBIENTE=teste</code>. O token é gerado em SSD → Gestão de autenticação → Tokens de acesso → Criar token de acesso (o valor só é mostrado uma vez — se perdido, revogar e criar novo).</div>
                   </div>
                   <div className="flex gap-2.5">
                     <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-600 font-black text-[10px] flex items-center justify-center shrink-0">4</span>

@@ -16,7 +16,7 @@ function getAmbiente() {
 }
 
 function credenciaisConfiguradas() {
-  return Boolean(process.env.SS_NISS_EMPRESA && process.env.SS_PSI_PASSWORD);
+  return Boolean(process.env.SS_NISS_EMPRESA && process.env.SS_PSI_TOKEN);
 }
 
 export default async function handler(req, res) {
@@ -38,26 +38,23 @@ export default async function handler(req, res) {
   // ── GET ping: testar ligação à PSI REST ──
   if (req.method === 'GET' && action === 'ping') {
     if (!credenciaisConfiguradas()) {
-      return res.status(400).json({ ok: false, erro: 'Credenciais SS não configuradas (SS_NISS_EMPRESA / SS_PSI_PASSWORD).' });
+      return res.status(400).json({ ok: false, erro: 'Token PSI não configurado. Defina SS_NISS_EMPRESA e SS_PSI_TOKEN nas variáveis de ambiente.' });
     }
     try {
-      const niss = process.env.SS_NISS_EMPRESA;
-      const pass = process.env.SS_PSI_PASSWORD;
-      // Usar endpoint REST de admissão para testar autenticação
+      const token = process.env.SS_PSI_TOKEN;
       // qualidade: extwww.seg-social.pt; produção: app.seg-social.pt
       const host = process.env.SS_AMBIENTE === 'producao' ? 'app.seg-social.pt' : 'extwww.seg-social.pt';
       const url  = `https://${host}/ptss/rest/qlf/tco/vinculos/pedido`;
-      const auth = Buffer.from(`${niss}:${pass}`).toString('base64');
 
-      // Enviar corpo vazio — esperamos 400 (bad request com auth válida), não 401/403
+      // Enviar corpo vazio — esperamos 400 (payload inválido com auth válida), não 401/403
       const r = await fetch(url, {
         method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body:    JSON.stringify({}),
       });
 
-      if (r.status === 401) return res.status(200).json({ ok: false, erro: 'Credenciais inválidas (HTTP 401).' });
-      if (r.status === 403) return res.status(200).json({ ok: false, erro: 'Acesso negado (HTTP 403) — verifique a adesão à PSI.' });
+      if (r.status === 401) return res.status(200).json({ ok: false, erro: 'Token inválido ou expirado (HTTP 401). Verifique se o SS_PSI_TOKEN ainda é válido em SSD → Gestão de autenticação → Tokens de acesso. Se expirou, revogue e crie um novo.' });
+      if (r.status === 403) return res.status(200).json({ ok: false, erro: 'Acesso negado (HTTP 403) — verifique a adesão à PSI e se o serviço de comunicação de vínculos está autorizado.' });
 
       // 400/422/500 com corpo de erro PSI = ligação OK, apenas payload inválido (esperado)
       return res.status(200).json({ ok: true, ambiente: getAmbiente() });
@@ -80,7 +77,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ erro: 'Campo "workerId" obrigatório.' });
   }
   if (!credenciaisConfiguradas()) {
-    return res.status(500).json({ erro: 'Credenciais SS não configuradas. Defina SS_NISS_EMPRESA e SS_PSI_PASSWORD nas variáveis de ambiente do Vercel.' });
+    return res.status(500).json({ erro: 'Token PSI não configurado. Defina SS_NISS_EMPRESA e SS_PSI_TOKEN nas variáveis de ambiente do Vercel.' });
   }
 
   const db       = supabaseAdmin();

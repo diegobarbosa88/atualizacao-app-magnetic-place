@@ -66,13 +66,12 @@ function fmtDate(val) {
   return String(val).split('T')[0];
 }
 
-function getBasicAuth() {
-  const niss = process.env.SS_NISS_EMPRESA;
-  const pass = process.env.SS_PSI_PASSWORD;
-  if (!niss || !pass) {
-    throw new Error('Credenciais SS não configuradas. Defina SS_NISS_EMPRESA e SS_PSI_PASSWORD nas variáveis de ambiente.');
+function getBearerToken() {
+  const token = process.env.SS_PSI_TOKEN;
+  if (!token) {
+    throw new Error('Token PSI não configurado. Defina SS_PSI_TOKEN nas variáveis de ambiente (Segurança Social Direta → Gestão de autenticação → Tokens de acesso).');
   }
-  return Buffer.from(`${niss}:${pass}`).toString('base64');
+  return token;
 }
 
 // ── Admissão — REST/JSON (QLF-O1051) ────────────────────────────────────────
@@ -147,18 +146,18 @@ export function buildAdmissaoRest(dados) {
 }
 
 export async function callSSRest(jsonBody) {
-  const auth = getBasicAuth();
+  const token = getBearerToken();
 
   const res = await fetch(REST_URL(), {
     method:  'POST',
     headers: {
       'Content-Type':  'application/json',
-      'Authorization': `Basic ${auth}`,
+      'Authorization': `Bearer ${token}`,
     },
     body: JSON.stringify(jsonBody),
   });
 
-  if (res.status === 401) throw new Error('Autenticação rejeitada pela Segurança Social (HTTP 401). Verifique as credenciais PSI.');
+  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401). Verifique se o token SS_PSI_TOKEN ainda é válido na SSD → Gestão de autenticação → Tokens de acesso.');
   if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403). Verifique se aderiu à PSI e se o serviço está autorizado.');
 
   // 204 = sucesso sem corpo (operação efetuada com sucesso)
@@ -240,7 +239,7 @@ export function parseSoapResponse(xmlStr) {
 // Envia um envelope SOAP para a PSI.
 // soapAction: URI completo, ex: "http://interfaces.webservice.contrato.segsocial.pt#cessarVinculo"
 export async function callSS(operacao, soapBody, soapAction) {
-  const auth    = getBasicAuth();
+  const token   = getBearerToken();
   const url     = `${SOAP_BASE()}/${operacao}`;
   const action  = soapAction
     || `http://interfaces.webservice.contrato.segsocial.pt#${operacao}`;
@@ -249,7 +248,7 @@ export async function callSS(operacao, soapBody, soapAction) {
     method: 'POST',
     headers: {
       'Content-Type':  'text/xml; charset=utf-8',
-      'Authorization': `Basic ${auth}`,
+      'Authorization': `Bearer ${token}`,
       'SOAPAction':    `"${action}"`,
     },
     body: soapBody,
@@ -257,7 +256,7 @@ export async function callSS(operacao, soapBody, soapAction) {
 
   const texto = await res.text();
 
-  if (res.status === 401) throw new Error('Autenticação rejeitada pela Segurança Social (HTTP 401). Verifique as credenciais PSI.');
+  if (res.status === 401) throw new Error('Token PSI inválido ou expirado (HTTP 401). Verifique se o token SS_PSI_TOKEN ainda é válido na SSD → Gestão de autenticação → Tokens de acesso.');
   if (res.status === 403) throw new Error('Acesso negado pela Segurança Social (HTTP 403). Verifique se aderiu à PSI e se o serviço está autorizado.');
 
   return { httpStatus: res.status, xmlResposta: texto };
