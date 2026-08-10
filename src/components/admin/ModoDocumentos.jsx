@@ -84,7 +84,8 @@ const ModoDocumentos = ({ workers }) => {
         <div className="flex items-center gap-2">
           {selecionados.size > 0 && (
             <button onClick={enviarSelecionados} disabled={enviandoLote}
-              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white px-3 py-2 rounded-xl hover:bg-emerald-700 transition-colors disabled:opacity-40">
+              className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-white px-3 py-2 rounded-xl transition-colors disabled:opacity-40 hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               {enviandoLote ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
               Enviar ({selecionados.size})
             </button>
@@ -92,7 +93,7 @@ const ModoDocumentos = ({ workers }) => {
         </div>
       </div>
 
-      {filtrados.length === 0 && !carregando && (
+      {filtrados.length === 0 && (
         <p className="text-center text-slate-400 text-xs py-10">Nenhum documento encontrado.</p>
       )}
 
