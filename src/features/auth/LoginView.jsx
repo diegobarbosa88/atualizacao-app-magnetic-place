@@ -110,7 +110,7 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
             <CompanyLogo className="h-16 w-16 object-contain drop-shadow-xl" />
           </div>
           <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '4px' }}>Bem-vindo</p>
-          <h2 className="text-xl font-black text-white mb-8">{pendingAdminWorker.name}</h2>
+          <h2 className="text-xl font-black mb-8" style={{ color: 'white' }}>{pendingAdminWorker.name}</h2>
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: 700, marginBottom: '20px' }}>Como quer entrar?</p>
           <div className="flex flex-col gap-3">
             <button
