@@ -30,9 +30,12 @@ const EMPRESA = {
 // Trabalhadores que recebem sempre o máximo de ajudas de custo isentas
 const SEMPRE_AJUDAS_MAX = ['diego rocha barbosa', 'nicole emanuele rosa da costa galtieri'];
 const isMaxAjudasWorker = (name) => SEMPRE_AJUDAS_MAX.includes((name || '').trim().toLowerCase());
-// Função fiscal para cada trabalhador: gerência (taxa superior) ou geral
+// Função fiscal por trabalhador (fallback name-based para max-ajudas sem CPP definido)
 const funcaoMaxAjudasWorker = (name) =>
   (name || '').trim().toLowerCase() === 'diego rocha barbosa' ? 'gerencia' : 'geral';
+// CPP Grupo 1 (códigos iniciados por '1'): Diretores e Gestores → gerência; outros → geral
+const funcaoDeCPP = (codigoCPP) =>
+  codigoCPP && String(codigoCPP).startsWith('1') ? 'gerencia' : 'geral';
 
 const INPUT_DEFAULT = {
   nome: '',
@@ -460,8 +463,12 @@ export default function RecibosCalculadora() {
       localidade: dc.localidade || prev.localidade,
       pais: dc.pais || prev.pais,
       territorio: dc.territorio || prev.territorio,
-      // Para trabalhadores com ajudas máximas: bruto é livre, limpar alvo anterior e definir funcao correta
-      ...(isMaxAjudasWorker(w.name) ? { brutoAlvo: '', funcao: funcaoMaxAjudasWorker(w.name) } : {}),
+      // Funcao fiscal: derivada do CPP da profissão; fallback name-based para trabalhadores max-ajudas sem CPP
+      funcao: w.profissao_cnp
+        ? funcaoDeCPP(w.profissao_cnp)
+        : (isMaxAjudasWorker(w.name) ? funcaoMaxAjudasWorker(w.name) : prev.funcao),
+      // Para trabalhadores com ajudas máximas: bruto é livre (funcao já definida acima)
+      ...(isMaxAjudasWorker(w.name) ? { brutoAlvo: '' } : {}),
     }));
   };
 
