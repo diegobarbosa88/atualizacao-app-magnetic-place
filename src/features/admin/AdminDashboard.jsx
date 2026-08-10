@@ -61,7 +61,7 @@ import {
 } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';
 
-function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogout, onSwitchToWorker, onOpenMobileNav, showBackToTeam, onBackToTeam }) {
+function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogout, onSwitchToWorker, onOpenMobileNav, showBackToTeam, onBackToTeam, onGoHome }) {
   return (
     <div
       className="flex items-center px-4 sm:px-6 gap-3 sm:gap-4 shrink-0"
@@ -92,17 +92,25 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
         </button>
       )}
 
-      <div style={{
-        width: '68px', height: '68px', borderRadius: '50%',
-        overflow: 'hidden', flexShrink: 0, backgroundColor: '#EB8D00',
-      }}>
-        <CompanyLogo className="w-full h-full object-cover" />
-      </div>
-      <div className="hidden sm:block">
-        <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>MAGNETIC PLACE</p>
-        <p style={{ fontSize: '13px', fontWeight: 500, color: '#869AAF', lineHeight: 1.4, marginTop: '3px' }}>Unipessoal, Lda</p>
-        <p style={{ fontSize: '12px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: 1.4 }}>Gestão</p>
-      </div>
+      <button
+        onClick={onGoHome}
+        className="flex items-center gap-3 sm:gap-4 rounded-2xl transition-all shrink-0"
+        style={{ background: 'none', border: 'none', padding: '6px 8px', cursor: 'pointer' }}
+        aria-label="Ir para início"
+        title="Início"
+      >
+        <div style={{
+          width: '68px', height: '68px', borderRadius: '50%',
+          overflow: 'hidden', flexShrink: 0, backgroundColor: '#EB8D00',
+        }}>
+          <CompanyLogo className="w-full h-full object-cover" />
+        </div>
+        <div className="hidden sm:block text-left">
+          <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>MAGNETIC PLACE</p>
+          <p style={{ fontSize: '13px', fontWeight: 500, color: '#869AAF', lineHeight: 1.4, marginTop: '3px' }}>Unipessoal, Lda</p>
+          <p style={{ fontSize: '12px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: 1.4 }}>Gestão</p>
+        </div>
+      </button>
 
       <div className="flex-1" />
 
@@ -577,6 +585,7 @@ function AdminDashboard(props) {
             onOpenMobileNav={() => setMobileNavOpen(true)}
             showBackToTeam={!!auditWorkerId}
             onBackToTeam={() => setAuditWorkerId(null)}
+            onGoHome={() => setActiveTab('overview')}
           />
           <div className="flex-1 flex overflow-hidden min-h-0">
             <AdminSidebar
