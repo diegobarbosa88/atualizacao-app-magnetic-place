@@ -710,7 +710,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
   const barCls = progressoPct >= 95 ? 'bg-red-500' : progressoPct >= 75 ? 'bg-yellow-400' : 'bg-emerald-500';
 
   if (carregando) return (
-    <div className="flex justify-center py-16"><Loader2 size={22} className="animate-spin text-indigo-400" /></div>
+    <div className="flex justify-center py-16"><Loader2 size={22} className="animate-spin text-[#869AAF]" /></div>
   );
 
   return (
@@ -734,17 +734,20 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         {/* Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
           {[
-            { label: 'Total recibos ano', val: fmtEur(orcamentoAnual), cls: 'indigo' },
-            { label: 'Faturado no ano', val: fmtEur(jaFaturadoAno), cls: 'slate' },
-            { label: saldoCarregado >= 0 ? 'Saldo a acrescentar' : 'Saldo a descontar', val: fmtEur(Math.abs(saldoCarregado)), cls: saldoCarregado < 0 ? 'red' : saldoCarregado > 0 ? 'amber' : 'slate' },
-            { label: 'Taxa histórica', val: fmtPct(taxaAjudas * 100), cls: 'slate' },
-            { label: semDadosAjudas ? 'Sem dados' : eEstimativa ? 'Previsão este mês' : 'Recibos este mês', val: fmtEur(ajudasEfetivoMes), cls: semDadosAjudas ? 'slate' : eEstimativa ? 'amber' : 'indigo' },
-          ].map(({ label, val, cls }) => (
-            <div key={label} className={`bg-${cls}-50 border border-${cls}-100 rounded-xl p-3 text-center`}>
-              <p className={`text-base font-black text-${cls}-700`}>{val}</p>
-              <p className={`text-[9px] font-black uppercase tracking-widest text-${cls}-400 mt-0.5`}>{label}</p>
-            </div>
-          ))}
+            { label: 'Total recibos ano', val: fmtEur(orcamentoAnual), tone: 'navy' },
+            { label: 'Faturado no ano', val: fmtEur(jaFaturadoAno), tone: 'slate' },
+            { label: saldoCarregado >= 0 ? 'Saldo a acrescentar' : 'Saldo a descontar', val: fmtEur(Math.abs(saldoCarregado)), tone: saldoCarregado < 0 ? 'red' : saldoCarregado > 0 ? 'amber' : 'slate' },
+            { label: 'Taxa histórica', val: fmtPct(taxaAjudas * 100), tone: 'slate' },
+            { label: semDadosAjudas ? 'Sem dados' : eEstimativa ? 'Previsão este mês' : 'Recibos este mês', val: fmtEur(ajudasEfetivoMes), tone: semDadosAjudas ? 'slate' : eEstimativa ? 'amber' : 'navy' },
+          ].map(({ label, val, tone }) => {
+            const toneColor = tone === 'navy' ? '#1B3A57' : tone === 'red' ? '#dc2626' : tone === 'amber' ? '#d97706' : '#475569';
+            return (
+              <div key={label} className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-center">
+                <p className="text-base font-black" style={{ color: toneColor }}>{val}</p>
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-0.5">{label}</p>
+              </div>
+            );
+          })}
         </div>
 
         {/* Aviso de meses anteriores não confirmados */}
@@ -797,8 +800,8 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {semHoras && clientesMesFinal.length > 0 && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-xl">
-                <span className="text-[10px] font-bold text-blue-700">Faturas TOConline</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 border border-slate-200 rounded-xl">
+                <span className="text-[10px] font-bold text-[#869AAF]">Faturas TOConline</span>
               </div>
             )}
             {tocSemAuth && (
@@ -835,7 +838,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                     <input type="checkbox" title="Selecionar todos"
                       checked={selecionados.size === linhas.length && linhas.length > 0}
                       onChange={e => setSelecionados(e.target.checked ? new Set(linhas.map(l => l.clientId)) : new Set())}
-                      className="accent-indigo-600 cursor-pointer" />
+                      className="accent-[#1B3A57] cursor-pointer" />
                   </th>
                   <th className="px-3 py-2 text-left text-[9px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
                   <th className="px-3 py-2 text-right text-[9px] font-black uppercase tracking-widest text-slate-400 hidden sm:table-cell">Horas</th>
@@ -852,11 +855,11 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                     ? l.ajudasEstimadas - (flashInfo.prevMap[l.clientId] ?? l.ajudasEstimadas)
                     : null;
                   return (
-                  <tr key={l.clientId} className={`transition-colors ${isFlashEdited ? 'bg-amber-50' : selecionados.has(l.clientId) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                  <tr key={l.clientId} className={`transition-colors ${isFlashEdited ? 'bg-amber-50' : selecionados.has(l.clientId) ? 'bg-[#1B3A57]/5' : 'hover:bg-slate-50'}`}>
                     <td className="px-2 py-2.5 w-7">
                       <input type="checkbox" checked={selecionados.has(l.clientId)}
                         onChange={e => setSelecionados(prev => { const n = new Set(prev); e.target.checked ? n.add(l.clientId) : n.delete(l.clientId); return n; })}
-                        className="accent-indigo-600 cursor-pointer" />
+                        className="accent-[#1B3A57] cursor-pointer" />
                     </td>
                     <td className="px-3 py-2.5 font-bold text-slate-800">
                       {l.nome}
@@ -875,7 +878,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                           </span>
                         )}
                         {(obsAplicados.has(l.clientId) || (l.daObservacao && overrides[l.clientId] === undefined)) && (
-                          <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
+                          <span className="px-1.5 py-0.5 bg-slate-100 text-[#869AAF] rounded text-[8px] font-black uppercase tracking-wider" title="Valor obtido da observação da fatura TOConline">Obs.</span>
                         )}
                         <input
                           type="number"
@@ -892,7 +895,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                             setObsAplicados(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
                             setRedistribuidos(prev => { if (!prev.has(l.clientId)) return prev; const n = new Set(prev); n.delete(l.clientId); return n; });
                           }}
-                          className="w-20 sm:w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                          className="w-20 sm:w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-[#1B3A57] outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                         />
                       </div>
                     </td>
@@ -940,7 +943,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-t border-slate-100 gap-3">
               <p className="text-[10px] text-slate-400">
                 {eEstimativa ? 'Estimativa' : 'Recibos do mês'}:{' '}
-                <span className={`font-bold ${eEstimativa ? 'text-amber-600' : 'text-indigo-600'}`}>{fmtEur(ajudasEfetivoMes)}</span>
+                <span className="font-bold" style={{ color: eEstimativa ? '#d97706' : '#1B3A57' }}>{fmtEur(ajudasEfetivoMes)}</span>
                 {eEstimativa && <span className="ml-1 text-amber-500">(taxa {fmtPct(taxaAjudas * 100)})</span>}
                 {ajudasEfetivoMes > 0 && Math.abs(totalAjudasMes - ajudasEfetivoMes) > 0.5 && (
                   <span className="ml-2 text-amber-500 font-bold">
@@ -948,14 +951,14 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                   </span>
                 )}
                 {obsResult && (
-                  <span className={`ml-2 font-bold ${obsResult.startsWith('Erro') ? 'text-red-500' : obsResult.startsWith('Nenhuma') ? 'text-amber-500' : 'text-blue-600'}`}>
+                  <span className="ml-2 font-bold" style={{ color: obsResult.startsWith('Erro') ? '#ef4444' : obsResult.startsWith('Nenhuma') ? '#f59e0b' : '#1B3A57' }}>
                     · {obsResult}
                   </span>
                 )}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button onClick={handleExtrairObs} disabled={extraindoObs}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all disabled:opacity-40"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-40"
                   title="Procura as faturas TOConline do mês e preenche as ajudas com o valor da observação">
                   {extraindoObs ? <Loader2 size={12} className="animate-spin" /> : <FileSearch size={12} />}
                   {extraindoObs ? 'A extrair...' : 'Extrair obs.'}
@@ -979,7 +982,8 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                   XLS
                 </button>
                 <button onClick={handleConfirmar} disabled={confirmando || confirmado}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-900 transition-all disabled:opacity-40">
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40"
+                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
                   {confirmando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                   {confirmado ? 'Confirmado' : confirmando ? 'A guardar...' : 'Confirmar mês'}
                 </button>
@@ -1033,7 +1037,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                               <ChevronRight size={12} className={`text-slate-400 transition-transform shrink-0 ${aberto ? 'rotate-90' : ''}`} />
                               <span className="font-black text-slate-700">{formatarMes(h.mes)}</span>
                               {h.mes === selectedMonth && (
-                                <span className="px-1.5 py-0.5 bg-indigo-100 text-indigo-600 rounded text-[8px] font-black uppercase tracking-wider">Seleccionado</span>
+                                <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider text-white" style={{ backgroundColor: '#1B3A57' }}>Seleccionado</span>
                               )}
                               {h.ajudasRecibo > 0 ? (
                                 <span className="text-[9px] text-slate-400">
@@ -1066,7 +1070,8 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                               <button
                                 onClick={() => handleGuardarHist(h.mes)}
                                 disabled={gravandoHist === h.mes || !temEdicoes}
-                                className="flex items-center gap-1 px-2 py-1 bg-indigo-600 text-white rounded-lg text-[9px] font-black hover:bg-slate-900 transition-all disabled:opacity-30"
+                                className="flex items-center gap-1 px-2 py-1 text-white rounded-lg text-[9px] font-black hover:opacity-90 transition-all disabled:opacity-30"
+                                style={{ backgroundColor: '#1B3A57' }}
                                 title="Guardar edições"
                               >
                                 {gravandoHist === h.mes ? <Loader2 size={10} className="animate-spin" /> : <CheckCircle size={10} />}
@@ -1134,8 +1139,8 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                             const ajudasSalvo = parseFloat(r.valor_ajudas) || 0;
                             const ajudasTotal = ajudasSalvo > 0 ? ajudasSalvo : totalFaturaCliente * taxaAjudas;
                             const totalFaturaInv = invoices.reduce((s, inv) => s + inv.valor, 0);
-                            const rowCls = `border-t border-slate-50 transition-colors ${h.mes === selectedMonth ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`;
-                            const subRowCls = `border-t border-slate-50/50 ${h.mes === selectedMonth ? 'bg-indigo-50/20' : 'bg-white'}`;
+                            const rowCls = `border-t border-slate-50 transition-colors ${h.mes === selectedMonth ? 'bg-[#1B3A57]/5' : 'hover:bg-slate-50'}`;
+                            const subRowCls = `border-t border-slate-50/50 ${h.mes === selectedMonth ? 'bg-[#1B3A57]/[0.03]' : 'bg-white'}`;
 
                             if (invoices.length > 1) {
                               // Várias faturas: linha-cabeçalho do cliente (sem input) + sub-linha por fatura com input individual
@@ -1181,7 +1186,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                             step="0.01"
                                             value={invVal}
                                             onChange={e => setHistOverrides(prev => ({ ...prev, [invKey]: e.target.value }))}
-                                            className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                            className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-[#1B3A57] outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                                           />
                                         </td>
                                         <td />
@@ -1218,7 +1223,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                                       step="0.01"
                                       value={val}
                                       onChange={e => setHistOverrides(prev => ({ ...prev, [key]: e.target.value }))}
-                                      className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-400"
+                                      className="w-24 text-right p-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-[#1B3A57] outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                                     />
                                   </td>
                                   <td />

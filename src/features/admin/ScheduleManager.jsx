@@ -61,7 +61,7 @@ const ScheduleManagerContent = () => {
               {sortedSchedules.map(s => (
                 <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-black text-slate-800 text-sm uppercase truncate">{s.name}</p>
+                    <p className="font-black text-slate-800 text-sm truncate">{s.name}</p>
                     <p className="text-xs text-slate-400">{(s.assignedWorkers || []).length} Colaboradores</p>
                   </td>
                   <td className="px-4 py-3 text-sm font-bold text-slate-500 truncate">{s.isAdvanced ? 'Múltiplos' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</td>
@@ -80,7 +80,7 @@ const ScheduleManagerContent = () => {
                         const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                         setScheduleForm({ ...s, assignedWorkers: assigned });
                         setIsAddingInTab(true);
-                      }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all" title="Editar"><Edit2 size={13} /></button>
+                      }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all" style={{ color: '#869AAF' }} title="Editar"><Edit2 size={13} /></button>
                       <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-rose-400 hover:bg-rose-50 rounded-lg transition-all" title="Apagar"><Trash2 size={13} /></button>
                     </div>
                   </td>
@@ -103,12 +103,12 @@ const ScheduleManagerContent = () => {
                     const assigned = workers.filter(w => w.assignedSchedules?.includes(s.id)).map(w => w.id);
                     setScheduleForm({ ...s, assignedWorkers: assigned });
                     setIsAddingInTab(true);
-                  }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
+                  }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all border" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.3)' }} title="Editar"><Edit2 size={12} /></button>
                   <button onClick={() => handleDeleteSchedule(s.id)} className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all border border-slate-100"><Trash2 size={12} /></button>
                 </div>
               </div>
               {/* Name */}
-              <h4 className="font-black text-slate-800 text-sm uppercase truncate mb-0.5">{s.name}</h4>
+              <h4 className="font-black text-slate-800 text-sm truncate mb-0.5">{s.name}</h4>
               <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{s.isAdvanced ? 'Múltiplos (por dia)' : `${s.startTime || '--:--'} — ${s.endTime || '--:--'}`}</p>
               {/* Info */}
               <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">

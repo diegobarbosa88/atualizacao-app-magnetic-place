@@ -107,34 +107,31 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Sub-tab navigation */}
-      <div className="flex flex-wrap items-center gap-2 mb-5 border-b border-slate-100 pb-3">
+      <div className="flex flex-wrap items-end gap-1 mb-5 border-b border-slate-100">
         <button
           onClick={() => setClientSubTab('list')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'list' ? '' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
-          style={clientSubTab === 'list' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'list' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <Building2 size={14} /> Clientes
         </button>
         <button
           onClick={() => setClientSubTab('envios')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'envios' ? '' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
-          style={clientSubTab === 'envios' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'envios' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <Send size={14} /> Envios
         </button>
         <button
           onClick={() => setClientSubTab('correcoes')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'correcoes' ? 'bg-orange-500 text-white' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'correcoes' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <AlertTriangle size={14} /> Correções
           {pendingClientCorrections > 0 && (
-            <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${clientSubTab === 'correcoes' ? 'bg-white text-orange-500' : 'bg-red-500 text-white'}`}>{pendingClientCorrections}</span>
+            <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">{pendingClientCorrections}</span>
           )}
         </button>
         <button
           onClick={() => setClientSubTab('auditoria')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${clientSubTab === 'auditoria' ? '' : 'bg-slate-50 text-slate-500 hover:text-orange-600'}`}
-          style={clientSubTab === 'auditoria' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
+          className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${clientSubTab === 'auditoria' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
         >
           <Shield size={14} /> Auditoria Portal
         </button>
@@ -171,7 +168,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
             placeholder="Pesquisar cliente..."
             value={clientsSearch}
             onChange={e => setClientsSearch(e.target.value)}
-            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 w-48 sm:w-64"
+            className="pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-xl bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#1B3A57] w-48 sm:w-64"
           />
         </div>
         <div className="flex items-center gap-2">
@@ -239,10 +236,10 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                           <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-slate-200/80 rounded-2xl shadow-xl ring-1 ring-black/5 py-1.5 min-w-[190px]">
                             <button
                               onClick={() => { openEditClient(c); setOpenMenuId(null); }}
-                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
+                              className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
                             >
-                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-500 group-hover:bg-amber-200 transition-colors shrink-0"><Edit2 size={13} /></span>
-                              <span className="text-xs font-semibold text-slate-700 group-hover:text-amber-700">Editar</span>
+                              <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: '#869AAF' }}><Edit2 size={13} /></span>
+                              <span className="text-xs font-semibold text-slate-700">Editar</span>
                             </button>
                             <button
                               onClick={() => { loadClientValorHoraHistory(c.id, c.name); setOpenMenuId(null); }}
@@ -290,7 +287,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
                 </div>
                 <div className="flex items-center gap-1">
                   <button onClick={() => loadClientValorHoraHistory(c.id, c.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico">📊</button>
-                  <button onClick={() => { openEditClient(c); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
+                  <button onClick={() => { openEditClient(c); }} className="p-1.5 rounded-lg hover:bg-slate-50 transition-all border" style={{ color: '#869AAF', borderColor: 'rgba(134,154,175,0.3)' }} title="Editar"><Edit2 size={12} /></button>
                   {confirmDeleteClientId === c.id ? (
                     <div className="flex items-center gap-1">
                       <button onClick={() => { handleDeleteClient(c.id); setConfirmDeleteClientId(null); }} className="px-2 py-1 bg-red-600 text-white text-xs font-bold rounded-lg">Sim</button>

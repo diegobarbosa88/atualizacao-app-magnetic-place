@@ -3,7 +3,7 @@ import { useApp } from '../../../context/AppContext';
 import { useSafeTeam } from '../contexts/TeamContext';
 import { callGeminiVision } from '../../../utils/aiUtils';
 import { encontrarWorker } from '../../../utils/validacaoHelpers';
-import { MAPA_SCANNER_ACT, inferirCategoria } from '../../../constants/rhCategories';
+import { MAPA_SCANNER_ACT, inferirCategoria, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
 import {
   ScanSearch, X, Upload, Loader2, CheckCircle, AlertTriangle,
   User, FileText, Save, Search, RefreshCw, ChevronDown, ChevronUp,
@@ -80,6 +80,32 @@ const readFileAsBase64 = (file) => new Promise((resolve, reject) => {
   reader.onerror = reject;
   reader.readAsDataURL(file);
 });
+
+const VALIDADE_CLS = {
+  expirado: { box: 'bg-red-50 border-red-200',       txt: 'text-red-600',    strong: 'text-red-800' },
+  urgente:  { box: 'bg-amber-50 border-amber-200',   txt: 'text-amber-600',  strong: 'text-amber-800' },
+  aviso:    { box: 'bg-yellow-50 border-yellow-200', txt: 'text-yellow-700', strong: 'text-yellow-800' },
+  ok:       { box: 'bg-emerald-50 border-emerald-200', txt: 'text-emerald-600', strong: 'text-emerald-800' },
+};
+
+function ValidadeInfo({ dataValidade, iconSize = 11 }) {
+  if (!dataValidade) return null;
+  const status = getValidadeStatus(dataValidade);
+  const dias = getDiasRestantes(dataValidade);
+  const v = VALIDADE_CLS[status] || VALIDADE_CLS.ok;
+  return (
+    <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 mt-1 ${v.box}`}>
+      <Calendar size={iconSize} className={`flex-shrink-0 ${v.txt}`} />
+      <span className={`text-[9px] font-bold ${v.txt}`}>Válido até: </span>
+      <span className={`text-[10px] font-black ${v.strong}`}>{dataValidade}</span>
+      {status !== 'ok' && dias != null && (
+        <span className={`text-[9px] font-bold ml-auto ${v.txt}`}>
+          {status === 'expirado' ? `expirado há ${Math.abs(dias)}d` : `${dias}d restantes`}
+        </span>
+      )}
+    </div>
+  );
+}
 
 // Devolve updated results com groupId, groupRole, groupPeerIdx
 const detectPairs = (results) => {
@@ -348,7 +374,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-slate-100 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <div className="p-2 bg-violet-100 text-violet-600 rounded-xl"><ScanSearch size={18} /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><ScanSearch size={18} /></div>
             <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Scanner de Documentos</h3>
             {step === 'results' && <span className="text-xs font-black text-slate-400">{files.length} ficheiro{files.length !== 1 ? 's' : ''}</span>}
           </div>
@@ -368,7 +394,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
               )}
 
               <div
-                className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center cursor-pointer hover:border-violet-300 hover:bg-violet-50/30 transition-all"
+                className="border-2 border-dashed border-slate-200 rounded-2xl p-8 text-center cursor-pointer hover:border-[#869AAF] hover:bg-slate-50 transition-all"
                 onClick={() => inputRef.current?.click()}
                 onDragOver={e => e.preventDefault()}
                 onDrop={e => { e.preventDefault(); handleFilesChange(e.dataTransfer.files); }}
@@ -377,7 +403,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   <Upload size={32} />
                   <p className="font-bold text-sm">Arrasta ou clica para carregar</p>
                   <p className="text-xs">JPG, PNG, WEBP, PDF — podes selecionar vários ficheiros</p>
-                  <p className="text-[10px] text-violet-400 font-bold mt-1">Frente e verso são detetados e agrupados automaticamente</p>
+                  <p className="text-[10px] text-slate-400 font-bold mt-1">Frente e verso são detetados e agrupados automaticamente</p>
                 </div>
                 <input ref={inputRef} type="file" accept="image/*,application/pdf" multiple className="hidden" onChange={e => handleFilesChange(e.target.files)} />
               </div>
@@ -398,7 +424,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
               <button
                 onClick={handleAnalyze}
                 disabled={!files.length || !systemSettings.geminiApiKey}
-                className="w-full flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl font-black text-sm uppercase shadow-lg shadow-violet-200 transition-all"
+                className="w-full flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl font-black text-sm uppercase shadow-lg transition-all"
+                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
               >
                 <ScanSearch size={16} /> Analisar {files.length > 0 ? `${files.length} ficheiro${files.length !== 1 ? 's' : ''}` : 'com IA'}
               </button>
@@ -408,12 +435,12 @@ const DocumentScannerModal = ({ open, onClose }) => {
           {/* FASE: processing */}
           {step === 'processing' && (
             <div className="flex flex-col items-center gap-4 py-12">
-              <Loader2 size={40} className="text-violet-600 animate-spin" />
+              <Loader2 size={40} style={{ color: '#869AAF' }} className="animate-spin" />
               <p className="font-black text-slate-600 text-sm text-center">{processingLabel}</p>
               <div className="w-full bg-slate-100 rounded-full h-2">
                 <div
-                  className="bg-violet-500 h-2 rounded-full transition-all"
-                  style={{ width: `${(results.filter(r => r.status === 'done' || r.status === 'error').length / files.length) * 100}%` }}
+                  className="h-2 rounded-full transition-all"
+                  style={{ backgroundColor: '#1B3A57', width: `${(results.filter(r => r.status === 'done' || r.status === 'error').length / files.length) * 100}%` }}
                 />
               </div>
               <p className="text-xs text-slate-400">{results.filter(r => r.status === 'done' || r.status === 'error').length} de {files.length} processados</p>
@@ -429,9 +456,9 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   <p className="text-lg font-black text-emerald-700">{savedCount}</p>
                   <p className="text-[10px] font-black text-emerald-600 uppercase">Guardados</p>
                 </div>
-                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
-                  <p className="text-lg font-black text-indigo-700">{matchedCount}</p>
-                  <p className="text-[10px] font-black text-indigo-600 uppercase">Para guardar</p>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <p className="text-lg font-black" style={{ color: '#1B3A57' }}>{matchedCount}</p>
+                  <p className="text-[10px] font-black uppercase text-slate-500">Para guardar</p>
                 </div>
                 <div className="bg-amber-50 border border-amber-100 rounded-xl p-3">
                   <p className="text-lg font-black text-amber-700">{results.filter(r => !r.matchedWorker && r.status === 'done').length}</p>
@@ -442,7 +469,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
               {matchedCount > 0 && (
                 <button
                   onClick={handleSaveAll}
-                  className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-black text-xs uppercase shadow-lg shadow-emerald-200 transition-all"
+                  className="w-full flex items-center justify-center gap-2 text-white py-2.5 rounded-xl font-black text-xs uppercase shadow-lg transition-all hover:opacity-90"
+                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
                 >
                   <Save size={14} /> Guardar todos os encontrados ({matchedCount})
                 </button>
@@ -470,23 +498,23 @@ const DocumentScannerModal = ({ open, onClose }) => {
                   const groupExpanded = primary.expanded;
 
                   return (
-                    <div key={item.groupId} className="border-2 border-violet-200 rounded-xl overflow-hidden bg-violet-50/20">
+                    <div key={item.groupId} className="border-2 rounded-xl overflow-hidden bg-slate-50" style={{ borderColor: 'rgba(27,58,87,0.2)' }}>
                       {/* Header do par */}
                       <button
                         onClick={() => { if (fi >= 0) toggleExpanded(fi); if (vi >= 0) toggleExpanded(vi); }}
-                        className="w-full flex items-center gap-3 p-3 bg-violet-50 hover:bg-violet-100 transition-colors text-left"
+                        className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
                       >
-                        <div className="p-1.5 bg-violet-200 text-violet-700 rounded-lg flex-shrink-0">
+                        <div className="p-1.5 rounded-lg flex-shrink-0" style={{ backgroundColor: 'rgba(27,58,87,0.1)', color: '#1B3A57' }}>
                           <Layers size={13} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black text-violet-800">{tipoDoc} — Frente &amp; Verso</p>
-                          {worker && <p className="text-[10px] text-violet-600 font-bold">{worker.name}</p>}
+                          <p className="text-xs font-black" style={{ color: '#1B3A57' }}>{tipoDoc} — Frente &amp; Verso</p>
+                          {worker && <p className="text-[10px] text-slate-500 font-bold">{worker.name}</p>}
                         </div>
                         {isSaved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
                         {!isSaved && worker && <span className="text-[10px] font-black text-emerald-600 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">{worker.name}</span>}
                         {!worker && <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full flex-shrink-0">Sem match</span>}
-                        {groupExpanded ? <ChevronUp size={14} className="text-violet-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-violet-400 flex-shrink-0" />}
+                        {groupExpanded ? <ChevronUp size={14} className="text-slate-400 flex-shrink-0" /> : <ChevronDown size={14} className="text-slate-400 flex-shrink-0" />}
                       </button>
 
                       {groupExpanded && (
@@ -510,9 +538,9 @@ const DocumentScannerModal = ({ open, onClose }) => {
                           )}
 
                           {/* Info combinada */}
-                          <div className="bg-white border border-violet-100 rounded-xl p-3 space-y-2">
+                          <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-2">
                             <div className="flex items-center gap-1 mb-1">
-                              <FileText size={11} className="text-violet-600" />
+                              <FileText size={11} style={{ color: '#869AAF' }} />
                               <span className="text-[9px] font-black text-slate-400 uppercase">Informação do documento</span>
                             </div>
                             {nomeWorker && (
@@ -524,13 +552,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             {emissao && (
                               <div><span className="text-[9px] text-slate-400 font-bold">Emissão: </span><span className="text-[10px] font-black text-slate-700">{emissao}</span></div>
                             )}
-                            {validade && (
-                              <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mt-1">
-                                <Calendar size={11} className="text-amber-600 flex-shrink-0" />
-                                <span className="text-[9px] text-amber-600 font-bold">Válido até: </span>
-                                <span className="text-[10px] font-black text-amber-800">{validade}</span>
-                              </div>
-                            )}
+                            <ValidadeInfo dataValidade={validade} />
                           </div>
 
                           {/* Ação de guardar */}
@@ -547,7 +569,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
                               <button
                                 onClick={() => handleSaveGroup(item.groupId)}
                                 disabled={isSaving}
-                                className="w-full flex items-center justify-center gap-1.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2 rounded-lg font-black text-xs uppercase transition-all"
+                                className="w-full flex items-center justify-center gap-1.5 disabled:opacity-50 text-white py-2 rounded-lg font-black text-xs uppercase transition-all hover:opacity-90"
+                                style={{ backgroundColor: '#1B3A57' }}
                               >
                                 {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                                 Guardar Frente &amp; Verso em {worker.name}
@@ -557,7 +580,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             <div className="space-y-2">
                               <button
                                 onClick={() => handleCreateNewWorker(rf || rv)}
-                                className="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-black text-xs uppercase transition-all"
+                                className="w-full flex items-center justify-center gap-1.5 text-white py-2 rounded-lg font-black text-xs uppercase transition-all hover:opacity-90"
+                                style={{ backgroundColor: '#1B3A57' }}
                               >
                                 <User size={13} /> Criar Novo Colaborador
                               </button>
@@ -568,13 +592,13 @@ const DocumentScannerModal = ({ open, onClose }) => {
                                   value={primary.manualSearch || ''}
                                   onChange={e => { if (fi >= 0) setManualSearch(fi, e.target.value); if (vi >= 0) setManualSearch(vi, e.target.value); }}
                                   placeholder="Associar a colaborador..."
-                                  className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-violet-400 transition-all"
+                                  className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-[#1B3A57] transition-all"
                                 />
                               </div>
                               {(primary.manualSearch || '').length >= 2 && (
                                 <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
                                   {workers.filter(w => w.name.toLowerCase().includes(primary.manualSearch.toLowerCase())).slice(0, 5).map(w => (
-                                    <button key={w.id} onClick={() => { if (fi >= 0) setMatchedWorker(fi, w); if (vi >= 0) setMatchedWorker(vi, w); }} className="w-full text-left px-3 py-2 hover:bg-violet-50 transition-colors text-xs font-bold text-slate-700">
+                                    <button key={w.id} onClick={() => { if (fi >= 0) setMatchedWorker(fi, w); if (vi >= 0) setMatchedWorker(vi, w); }} className="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
                                       {w.name}
                                     </button>
                                   ))}
@@ -599,7 +623,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
                     >
                       <FileText size={14} className="text-slate-400 flex-shrink-0" />
                       <span className="text-xs font-black text-slate-700 truncate flex-1">{r.file.name}</span>
-                      {r.status === 'analyzing' && <Loader2 size={14} className="text-violet-500 animate-spin flex-shrink-0" />}
+                      {r.status === 'analyzing' && <Loader2 size={14} style={{ color: '#869AAF' }} className="animate-spin flex-shrink-0" />}
                       {r.status === 'error' && <AlertTriangle size={14} className="text-red-500 flex-shrink-0" />}
                       {r.status === 'done' && r.saved && <CheckCircle size={14} className="text-emerald-500 flex-shrink-0" />}
                       {r.status === 'done' && !r.saved && r.matchedWorker && <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full flex-shrink-0">{r.matchedWorker.name}</span>}
@@ -620,23 +644,17 @@ const DocumentScannerModal = ({ open, onClose }) => {
                             )}
                             <div className="grid grid-cols-2 gap-2">
                               <div className="bg-slate-50 rounded-lg p-3 space-y-1.5">
-                                <div className="flex items-center gap-1 mb-1"><User size={11} className="text-indigo-600" /><span className="text-[9px] font-black text-slate-400 uppercase">Trabalhador</span></div>
+                                <div className="flex items-center gap-1 mb-1"><User size={11} style={{ color: '#869AAF' }} /><span className="text-[9px] font-black text-slate-400 uppercase">Trabalhador</span></div>
                                 {[['Nome', r.extractedData.trabalhador?.nome_completo], ['NIF', r.extractedData.trabalhador?.nif], ['NISS', r.extractedData.trabalhador?.niss]].map(([l, v]) => v && (
                                   <div key={l}><span className="text-[9px] text-slate-400 font-bold">{l}: </span><span className="text-[10px] font-black text-slate-700">{v}</span></div>
                                 ))}
                               </div>
                               <div className="bg-slate-50 rounded-lg p-3 space-y-1.5">
-                                <div className="flex items-center gap-1 mb-1"><FileText size={11} className="text-indigo-600" /><span className="text-[9px] font-black text-slate-400 uppercase">Documento</span></div>
+                                <div className="flex items-center gap-1 mb-1"><FileText size={11} style={{ color: '#869AAF' }} /><span className="text-[9px] font-black text-slate-400 uppercase">Documento</span></div>
                                 {[['Tipo', r.extractedData.documento?.tipo_documento], ['Emissão', r.extractedData.documento?.data_emissao]].map(([l, v]) => v && (
                                   <div key={l}><span className="text-[9px] text-slate-400 font-bold">{l}: </span><span className="text-[10px] font-black text-slate-700">{v}</span></div>
                                 ))}
-                                {r.extractedData.documento?.data_validade && (
-                                  <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mt-1">
-                                    <Calendar size={9} className="text-amber-600" />
-                                    <span className="text-[9px] text-amber-600 font-bold">Válido até: </span>
-                                    <span className="text-[10px] font-black text-amber-800">{r.extractedData.documento.data_validade}</span>
-                                  </div>
-                                )}
+                                <ValidadeInfo dataValidade={r.extractedData.documento?.data_validade} iconSize={9} />
                               </div>
                             </div>
 
@@ -651,7 +669,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
                                 <button
                                   onClick={() => handleSave(idx)}
                                   disabled={r.saving}
-                                  className="w-full flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white py-2 rounded-lg font-black text-xs uppercase transition-all"
+                                  className="w-full flex items-center justify-center gap-1.5 disabled:opacity-50 text-white py-2 rounded-lg font-black text-xs uppercase transition-all hover:opacity-90"
+                                  style={{ backgroundColor: '#1B3A57' }}
                                 >
                                   {r.saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
                                   Guardar em {r.matchedWorker.name}
@@ -661,7 +680,8 @@ const DocumentScannerModal = ({ open, onClose }) => {
                               <div className="space-y-2">
                                 <button
                                   onClick={() => handleCreateNewWorker(r)}
-                                  className="w-full flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white py-2 rounded-lg font-black text-xs uppercase transition-all"
+                                  className="w-full flex items-center justify-center gap-1.5 text-white py-2 rounded-lg font-black text-xs uppercase transition-all hover:opacity-90"
+                                style={{ backgroundColor: '#1B3A57' }}
                                 >
                                   <User size={13} /> Criar Novo Colaborador
                                 </button>
@@ -672,13 +692,13 @@ const DocumentScannerModal = ({ open, onClose }) => {
                                     value={r.manualSearch}
                                     onChange={e => setManualSearch(idx, e.target.value)}
                                     placeholder="Associar a colaborador..."
-                                    className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-violet-400 transition-all"
+                                    className="w-full pl-7 pr-3 py-2 text-xs font-bold border border-slate-200 rounded-lg outline-none focus:border-[#1B3A57] transition-all"
                                   />
                                 </div>
                                 {r.manualSearch.length >= 2 && (
                                   <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
                                     {workers.filter(w => w.name.toLowerCase().includes(r.manualSearch.toLowerCase())).slice(0, 5).map(w => (
-                                      <button key={w.id} onClick={() => setMatchedWorker(idx, w)} className="w-full text-left px-3 py-2 hover:bg-violet-50 transition-colors text-xs font-bold text-slate-700">
+                                      <button key={w.id} onClick={() => setMatchedWorker(idx, w)} className="w-full text-left px-3 py-2 hover:bg-slate-100 transition-colors text-xs font-bold text-slate-700">
                                         {w.name}
                                       </button>
                                     ))}

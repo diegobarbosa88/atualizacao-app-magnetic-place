@@ -194,12 +194,12 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
   return (
     <div className="space-y-5">
       {/* Upload */}
-      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-indigo-300 transition-colors">
+      <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center gap-3 hover:border-[#869AAF] transition-colors">
         <Scissors size={28} className="text-slate-300" />
         <p className="text-[11px] font-black text-slate-400 tracking-widest">PDF AGREGADO TOCONLINE</p>
         <label className="cursor-pointer">
           <input type="file" accept="application/pdf" className="hidden" onChange={handleFicheiro} />
-          <span className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors">
+          <span className="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:opacity-90 transition-colors" style={{ backgroundColor: '#1B3A57' }}>
             <Upload size={12} /> Selecionar PDF
           </span>
         </label>
@@ -211,7 +211,8 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
       {/* Botão Separar */}
       {ficheiro && !resultado && (
         <button onClick={handleBurst} disabled={processando}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50">
+          className="w-full flex items-center justify-center gap-2 py-3 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:opacity-90"
+          style={{ backgroundColor: '#1B3A57' }}>
           {processando
             ? <><Loader2 size={13} className="animate-spin" /> A separar... {progresso.total > 0 ? `${progresso.atual}/${progresso.total} páginas` : ''}</>
             : <><Scissors size={13} /> Separar Recibos</>
@@ -222,7 +223,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
       {/* Barra de progresso */}
       {processando && progresso.total > 0 && (
         <div className="w-full bg-slate-100 rounded-full h-1.5">
-          <div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${pct}%` }} />
+          <div className="h-1.5 rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: '#1B3A57' }} />
         </div>
       )}
 
@@ -236,26 +237,27 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
               {selecionados.size > 0 && ` · ${selecionados.size} SEL.`}
             </p>
             <button onClick={handleGuardarValidacoes} disabled={guardando || guardados}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardando ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
               {guardados ? 'Guardado' : 'Guardar'}
             </button>
             <button onClick={handleAdicionarACustosBurst} disabled={adicionando || adicionado}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-emerald-400 hover:text-emerald-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {adicionando ? <Loader2 size={11} className="animate-spin" /> : <Coins size={11} />}
               {adicionado ? 'Adicionado' : 'A Custos'}
             </button>
             <button onClick={downloadTodos}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-indigo-400 hover:text-indigo-600 transition-all">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all">
               <FileDown size={11} /> PDF
             </button>
             <button onClick={handleGuardarNoPortal} disabled={guardandoPortal || guardadosPortal}
-              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-violet-400 hover:text-violet-600 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:border-[#869AAF] hover:text-[#869AAF] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
               {guardandoPortal ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
               {guardadosPortal ? 'Guardado' : 'Guardar no Portal'}
             </button>
             <button onClick={handleEnviarSelecionados} disabled={enviando || selecionados.size === 0}
-              className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+              className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-40 disabled:cursor-not-allowed hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               {enviando ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />}
               {selecionados.size > 0 ? `Enviar ${selecionados.size}` : 'Enviar'}
             </button>
@@ -276,7 +278,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                 })));
               }
             }}
-              className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-indigo-400">
+              className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[#1B3A57]">
               {['Recibo de Vencimento','Mapa de Ajudas de Custo','Mapa de Deslocamento','Contrato de Trabalho','Outro'].map(t => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -285,10 +287,11 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
               value={prefixo}
               onChange={e => setPrefixo(e.target.value)}
               placeholder="Nome base (ex: Mapa de Ajuda de Custo)"
-              className="flex-1 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-400 bg-white text-slate-700 placeholder:text-slate-300"
+              className="flex-1 text-[10px] border border-slate-200 rounded-xl px-3 py-2 focus:outline-none focus:border-[#1B3A57] bg-white text-slate-700 placeholder:text-slate-300"
             />
             <button onClick={aplicarPrefixo} disabled={!prefixo.trim()}
-              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-colors disabled:opacity-40">
+              className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               Aplicar a todos
             </button>
           </div>
@@ -299,7 +302,7 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                 <tr>
                   <th className="px-3 py-2.5">
                     <input type="checkbox" checked={todosSelected} onChange={() => toggleTodos(nifsTodos)}
-                      className="rounded accent-indigo-600 cursor-pointer" />
+                      className="rounded accent-[#1B3A57] cursor-pointer" />
                   </th>
                   {['Trabalhador','Mês','Nome do ficheiro',''].map(h => (
                     <th key={h} className="px-3 py-2.5 text-left font-black text-slate-400 tracking-widest">{h}</th>
@@ -312,10 +315,11 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                   const selecionado = selecionados.has(r.nif);
                   return (
                     <tr key={r.nif} onClick={() => !enviado && toggleSelecionado(r.nif)}
-                      className={`transition-colors cursor-pointer ${selecionado ? 'bg-indigo-50 hover:bg-indigo-100' : 'hover:bg-slate-50'} ${enviado ? 'opacity-50 cursor-default' : ''}`}>
+                      className={`transition-colors cursor-pointer ${selecionado ? '' : 'hover:bg-slate-50'} ${enviado ? 'opacity-50 cursor-default' : ''}`}
+                      style={selecionado ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                       <td className="px-3 py-2.5">
                         <input type="checkbox" checked={selecionado} readOnly disabled={enviado}
-                          className="rounded accent-indigo-600 pointer-events-none" />
+                          className="rounded accent-[#1B3A57] pointer-events-none" />
                       </td>
                       <td className="px-3 py-2.5">
                         {r.worker

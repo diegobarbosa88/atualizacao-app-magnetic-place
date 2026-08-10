@@ -245,7 +245,7 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
     }
   }
 
-  const inp = 'w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2.5 text-sm font-semibold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
+  const inp = 'w-full bg-white border border-slate-200 rounded-lg py-1.5 px-2.5 text-sm font-semibold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
   const lbl = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
 
   return (
@@ -270,7 +270,7 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
         {/* Cabeçalho */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2.5">
-            <ShieldCheck size={18} className="text-blue-600" />
+            <ShieldCheck size={18} className="text-[#1B3A57]" />
             <div>
               <h2 className="text-sm font-black text-slate-800">
                 Comunicar {isAdmissao ? 'Admissão' : 'Cessação'} à Segurança Social
@@ -452,7 +452,8 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
                   <label className="flex items-start gap-2.5 cursor-pointer group">
                     <div
                       onClick={() => setForm(p => ({ ...p, comunicacaoDesemprego: !p.comunicacaoDesemprego }))}
-                      className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${form.comunicacaoDesemprego ? 'bg-blue-600 border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}
+                      className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${form.comunicacaoDesemprego ? '' : 'border-slate-300 group-hover:border-[#869AAF]'}`}
+                      style={form.comunicacaoDesemprego ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}
                     >
                       {form.comunicacaoDesemprego && <CheckCircle2 size={10} className="text-white" />}
                     </div>
@@ -513,7 +514,8 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
             <label className="flex items-start gap-2.5 cursor-pointer group">
               <div
                 onClick={() => setConfirmado(v => !v)}
-                className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${confirmado ? 'bg-blue-600 border-blue-600' : 'border-slate-300 group-hover:border-blue-400'}`}
+                className={`mt-0.5 w-4 h-4 rounded border-2 shrink-0 flex items-center justify-center transition-all ${confirmado ? '' : 'border-slate-300 group-hover:border-[#869AAF]'}`}
+                style={confirmado ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}
               >
                 {confirmado && <CheckCircle2 size={10} className="text-white" />}
               </div>
@@ -545,7 +547,8 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
                 <button
                   onClick={handleEnviar}
                   disabled={!podaEnviar}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black transition-colors ${podaEnviar ? (modoTeste ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-red-600 hover:bg-red-700 text-white') : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black transition-colors ${podaEnviar ? (modoTeste ? 'text-white hover:opacity-90' : 'bg-red-600 hover:bg-red-700 text-white') : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+                  style={podaEnviar && modoTeste ? { backgroundColor: '#1B3A57' } : {}}
                 >
                   {enviando && <Loader2 size={14} className="animate-spin" />}
                   {enviando ? 'A enviar…' : 'Enviar para a Segurança Social'}

@@ -366,7 +366,7 @@ const CostReports = () => {
                           estado === 'PAGO' ? 'bg-emerald-100 text-emerald-700' :
                           estado === 'PARCIAL' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-600'
                         }`}>{estado}</span>
-                        <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg text-slate-300 hover:text-slate-600 hover:bg-slate-50 transition-all" title="Associar pagamento bancário">
+                        <button onClick={() => abrirLinkModal(item.id, item.name, item.cost)} className="p-1 rounded-lg hover:bg-slate-50 transition-all" style={{ color: '#869AAF' }} title="Associar pagamento bancário">
                           <Link2 size={13} />
                         </button>
                       </div>
@@ -561,7 +561,7 @@ const CostReports = () => {
                 </div>
               </div>
               <div className="mt-6 flex items-center gap-3">
-                <button onClick={handleSaveExpense} className="flex-1 bg-rose-600 text-white py-5 rounded-2xl font-black text-sm uppercase shadow-lg hover:bg-rose-700 transition-colors">Registar Gasto</button>
+                <button onClick={handleSaveExpense} className="flex-1 text-white py-5 rounded-2xl font-black text-sm uppercase shadow-lg transition-colors hover:opacity-90" style={{ backgroundColor: '#1B3A57' }}>Registar Gasto</button>
                 <button onClick={() => { setIsAddingExpense(false); setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); }} className="px-6 py-5 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm uppercase shadow-sm hover:bg-slate-200 transition-colors">Cancelar</button>
               </div>
             </div>
@@ -671,7 +671,7 @@ const CostReports = () => {
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {activeTab === 'expenses' && (
-            <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all ${isAddingExpense ? 'bg-slate-800 text-white' : 'bg-rose-600 text-white hover:bg-rose-700'}`}>
+            <button onClick={() => { setExpenseForm({ id: null, name: '', amount: '', type: 'fixo', date: toISODateLocal(new Date()) }); setIsAddingExpense(!isAddingExpense); }} className={`px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 ${isAddingExpense ? 'text-white' : 'hover:bg-slate-50'}`} style={isAddingExpense ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : { borderColor: '#869AAF', color: '#1B3A57' }}>
               {isAddingExpense ? 'Fechar' : '+ Despesa'}
             </button>
           )}
@@ -679,7 +679,7 @@ const CostReports = () => {
             <Download size={13} /> Exportar
           </button>
           <div className="relative" ref={relatorioMenuRef}>
-            <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl font-black text-xs uppercase shadow-sm transition-all" style={{ backgroundColor: '#1B3A57' }}>
+            <button onClick={() => setShowRelatorioMenu(v => !v)} className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-black text-xs uppercase shadow-sm transition-all border-2 hover:bg-slate-50" style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
               <BookOpen size={13} /> Geral <ChevronDown size={11} />
             </button>
             {showRelatorioMenu && (

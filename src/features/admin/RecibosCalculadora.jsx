@@ -88,7 +88,7 @@ function LabelInput({ label, children, hint, badge }) {
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 ml-1">
         <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</label>
-        {badge && <span className="text-[9px] font-bold text-indigo-400">{badge}</span>}
+        {badge && <span className="text-[9px] font-bold text-[#869AAF]">{badge}</span>}
       </div>
       {children}
       {hint && <span className="text-[10px] text-slate-400 ml-1">{hint}</span>}
@@ -107,7 +107,7 @@ function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, c
       min={min}
       max={max}
       className={`w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm transition-all
-        ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50'}
+        ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10'}
         ${className}`}
     />
   );
@@ -118,7 +118,7 @@ function SelectInput({ value, onChange, children }) {
     <select
       value={value}
       onChange={onChange}
-      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all lowercase"
+      className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all lowercase"
     >
       {children}
     </select>
@@ -2118,21 +2118,24 @@ ${hdrRow}${bodyRows}${totRow}
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={gerarRecibosBatchPDF}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 hover:bg-slate-50 transition-colors"
+                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
                 title="PDF dos recibos de vencimento — todos os trabalhadores"
               >
                 <FileText size={14} /> Recibos PDF
               </button>
               <button
                 onClick={exportRecibosBatchXLS}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-teal-50 text-teal-700 border border-teal-200 hover:bg-teal-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 hover:bg-slate-50 transition-colors"
+                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
                 title="Excel dos recibos de vencimento — todos os trabalhadores"
               >
                 <FileSpreadsheet size={14} /> Recibos XLS
               </button>
               <button
                 onClick={gerarMapasAjudasPDF}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-indigo-600 text-white hover:bg-indigo-700 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 hover:bg-slate-50 transition-colors"
+                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
                 title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
               >
                 <Download size={14} /> Mapas AC
@@ -2140,16 +2143,16 @@ ${hdrRow}${bodyRows}${totRow}
             </div>
           </div>
 
-          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+          <div className="flex items-center gap-1 border-b border-slate-100">
             <button
               onClick={() => setSubTab('calculadora')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all ${subTab === 'calculadora' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${subTab === 'calculadora' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
             >
               Calculadora
             </button>
             <button
               onClick={() => setSubTab('resumo')}
-              className="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wide transition-all text-slate-500 hover:text-slate-700"
+              className="px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px border-transparent text-slate-400 hover:text-[#1B3A57]"
             >
               Resumo Mensal
             </button>
@@ -2228,13 +2231,13 @@ ${hdrRow}${bodyRows}${totRow}
               <LabelInput label="Nome">
                 <div className="relative">
                   <TextInput value={inputs.nome} onChange={e => { set('nome', e.target.value); setCamposAuto(p => ({ ...p, nome: false })); }} className={camposAuto.nome ? 'pr-10' : ''} />
-                  {camposAuto.nome && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.nome && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="Categoria / Profissão">
                 <div className="relative">
                   <TextInput value={inputs.categoria} onChange={e => { set('categoria', e.target.value); setCamposAuto(p => ({ ...p, categoria: false })); }} className={camposAuto.categoria ? 'pr-10' : ''} />
-                  {camposAuto.categoria && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.categoria && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
             </div>
@@ -2242,13 +2245,13 @@ ${hdrRow}${bodyRows}${totRow}
               <LabelInput label="NIF">
                 <div className="relative">
                   <TextInput value={inputs.nif} onChange={e => { set('nif', e.target.value); setCamposAuto(p => ({ ...p, nif: false })); }} className={camposAuto.nif ? 'pr-10' : ''} />
-                  {camposAuto.nif && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.nif && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="NIS (SS)">
                 <div className="relative">
                   <TextInput value={inputs.nis} onChange={e => { set('nis', e.target.value); setCamposAuto(p => ({ ...p, nis: false })); }} className={camposAuto.nis ? 'pr-10' : ''} />
-                  {camposAuto.nis && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.nis && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="Dias processados">
@@ -2261,7 +2264,7 @@ ${hdrRow}${bodyRows}${totRow}
                     className={diasCalculados.diasMes ? 'pr-10' : ''}
                   />
                   {diasCalculados.diasMes && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none" title="Calculado automaticamente">auto</span>
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none" title="Calculado automaticamente">auto</span>
                   )}
                 </div>
               </LabelInput>
@@ -2310,7 +2313,7 @@ ${hdrRow}${bodyRows}${totRow}
               <LabelInput label="Vencimento Base (€/mês)">
                 <div className="relative">
                   <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => { set('vencimentoBase', e.target.value); setCamposAuto(p => ({ ...p, vencimentoBase: false })); }} className={camposAuto.vencimentoBase ? 'pr-10' : ''} />
-                  {camposAuto.vencimentoBase && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.vencimentoBase && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="Horas / semana">
@@ -2327,11 +2330,11 @@ ${hdrRow}${bodyRows}${totRow}
 
             <div className="flex flex-col gap-2 mb-3">
               <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+                <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
                 Incluir Subsídio de Férias (100% com duodécimos)
               </label>
               <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-indigo-600" />
+                <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
                 Incluir Subsídio de Natal (100% com duodécimos)
               </label>
             </div>
@@ -2359,7 +2362,7 @@ ${hdrRow}${bodyRows}${totRow}
               <LabelInput label="Subsídio Alimentação (€/dia)">
                 <div className="relative">
                   <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => { set('subsAlimValorDia', e.target.value); setCamposAuto(p => ({ ...p, subsAlimValorDia: false })); }} className={camposAuto.subsAlimValorDia ? 'pr-10' : ''} />
-                  {camposAuto.subsAlimValorDia && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.subsAlimValorDia && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="Pago em" badge={camposAuto.subsAlimTipo ? 'auto' : null}>
@@ -2377,7 +2380,7 @@ ${hdrRow}${bodyRows}${totRow}
                     className={diasCalculados.subsAlimDias ? 'pr-10' : ''}
                   />
                   {diasCalculados.subsAlimDias && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none" title="Calculado automaticamente">auto</span>
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none" title="Calculado automaticamente">auto</span>
                   )}
                 </div>
               </LabelInput>
@@ -2401,7 +2404,7 @@ ${hdrRow}${bodyRows}${totRow}
               >
                 <div className="relative">
                   <TextInput type="number" min="0" value={inputs.nDependentes} onChange={e => { set('nDependentes', e.target.value); setCamposAuto(p => ({ ...p, nDependentes: false })); }} className={camposAuto.nDependentes ? 'pr-10' : ''} />
-                  {camposAuto.nDependentes && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.nDependentes && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
             </div>
@@ -2426,7 +2429,7 @@ ${hdrRow}${bodyRows}${totRow}
                     className={selectedWorkerId ? 'pr-12' : ''}
                   />
                   {selectedWorkerId && !brutoAlvoEditado && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none" title="Calculado automaticamente dos registos de horas">auto</span>
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none" title="Calculado automaticamente dos registos de horas">auto</span>
                   )}
                   {brutoAlvoEditado && (
                     <button
@@ -2462,19 +2465,19 @@ ${hdrRow}${bodyRows}${totRow}
               <LabelInput label="Cliente">
                 <div className="relative">
                   <TextInput value={inputs.cliente} onChange={e => { set('cliente', e.target.value); setCamposAuto(p => ({ ...p, cliente: false })); }} className={camposAuto.cliente ? 'pr-10' : ''} />
-                  {camposAuto.cliente && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.cliente && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="Localidade">
                 <div className="relative">
                   <TextInput value={inputs.localidade} onChange={e => { set('localidade', e.target.value); setCamposAuto(p => ({ ...p, localidade: false })); }} className={camposAuto.localidade ? 'pr-10' : ''} />
-                  {camposAuto.localidade && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.localidade && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
               <LabelInput label="País">
                 <div className="relative">
                   <TextInput value={inputs.pais} onChange={e => { set('pais', e.target.value); setCamposAuto(p => ({ ...p, pais: false })); }} className={camposAuto.pais ? 'pr-10' : ''} />
-                  {camposAuto.pais && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-indigo-400 pointer-events-none">auto</span>}
+                  {camposAuto.pais && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
                 </div>
               </LabelInput>
             </div>
@@ -2624,7 +2627,8 @@ ${hdrRow}${bodyRows}${totRow}
             </button>
             <button
               onClick={gerarMapasAjudasPDF}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase bg-indigo-500 text-white hover:bg-indigo-600 transition-all shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase border-2 hover:bg-slate-50 transition-all"
+              style={{ borderColor: '#869AAF', color: '#1B3A57' }}
               title="PDF com os mapas de todos os trabalhadores"
             >
               <Download size={12} /> Exportar Todos
@@ -2632,7 +2636,8 @@ ${hdrRow}${bodyRows}${totRow}
             {mapaRows.length > 0 && (
               <button
                 onClick={gerarPDF}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase bg-indigo-700 text-white hover:bg-indigo-800 shadow-lg shadow-indigo-200 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase border-2 hover:bg-slate-50 transition-all"
+                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
               >
                 <Download size={12} /> Exportar PDF
               </button>
@@ -2647,7 +2652,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="date"
               value={mapa.dataInicio}
               onChange={e => setMapa(p => ({ ...p, dataInicio: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Hora partida">
@@ -2655,7 +2660,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="time"
               value={mapa.horaPartida}
               onChange={e => setMapa(p => ({ ...p, horaPartida: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Hora chegada">
@@ -2663,7 +2668,7 @@ ${hdrRow}${bodyRows}${totRow}
               type="time"
               value={mapa.horaChegada}
               onChange={e => setMapa(p => ({ ...p, horaChegada: e.target.value }))}
-              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 lowercase"
+              className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 lowercase"
             />
           </LabelInput>
           <LabelInput label="Complementar via">
@@ -2680,7 +2685,8 @@ ${hdrRow}${bodyRows}${totRow}
           <button
             onClick={autoFill}
             disabled={!r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase border-2 hover:bg-slate-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ borderColor: '#869AAF', color: '#1B3A57' }}
           >
             <RefreshCw size={12} /> Preencher automaticamente
           </button>
@@ -2705,30 +2711,30 @@ ${hdrRow}${bodyRows}${totRow}
                     <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-1 py-1">
                         <input type="date" value={row.dia} onChange={e => updateRow(row.id, 'dia', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.servico} onChange={e => updateRow(row.id, 'servico', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.cliente} onChange={e => updateRow(row.id, 'cliente', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.localidade} onChange={e => updateRow(row.id, 'localidade', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300">
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]">
                           <option value="Internacional">Internacional</option>
                           <option value="Nacional">Nacional</option>
                         </select>
                       </td>
                       <td className="px-1 py-1">
                         <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300">
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]">
                           <option value="Partida">Partida</option>
                           <option value="Consecutivo">Consecutivo</option>
                           <option value="Chegada">Chegada</option>
@@ -2736,12 +2742,12 @@ ${hdrRow}${bodyRows}${totRow}
                       </td>
                       <td className="px-1 py-1">
                         <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="number" value={row.pct} min="0" max="100" step="5"
                           onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
-                          className="w-16 border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-indigo-300" />
+                          className="w-16 border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-2 py-1 text-right font-bold text-slate-700">{eur(valor)}</td>
                       <td className="px-1 py-1 text-center">
@@ -2797,9 +2803,9 @@ ${hdrRow}${bodyRows}${totRow}
           </div>
         )}
         {(autoFillInfo || mapaRows.length > 0) && importanciaAReceber !== null && (
-          <div className="mt-2 px-4 py-2 bg-blue-50 border border-blue-100 rounded-xl text-xs text-slate-600 flex flex-wrap gap-4">
+          <div className="mt-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 flex flex-wrap gap-4">
             {autoFillInfo?.combo && (
-              <span className="w-full text-[10px] text-indigo-500 font-semibold">
+              <span className="w-full text-[10px] font-semibold" style={{ color: '#869AAF' }}>
                 {autoFillInfo.combo.N} dias · Partida {Math.round(autoFillInfo.combo.fP * 100)}%
                 ({horaDefaultPartida(autoFillInfo.combo.fP, mapa.horaPartida || null)}) · Chegada {Math.round(autoFillInfo.combo.fC * 100)}%
                 ({horaDefaultChegada(autoFillInfo.combo.fC, mapa.horaChegada || null)})
@@ -2838,7 +2844,7 @@ ${hdrRow}${bodyRows}${totRow}
             {complementTotalLive > 0 && (
               <span>
                 <span className="font-semibold text-slate-700">Total trabalhador (A082 + complemento):</span>{' '}
-                <span className="font-black text-indigo-700">{eur(importanciaAReceber ?? 0)}</span>
+                <span className="font-black" style={{ color: '#1B3A57' }}>{eur(importanciaAReceber ?? 0)}</span>
               </span>
             )}
           </div>
@@ -3243,9 +3249,12 @@ function ResumoMensalTable({ rows, mesLabel, mesStr, onBack, onNavMes }) {
   }, []);
 
   // Helpers de destaque por tipo de coluna
-  const hlHead = h => ({ blue: 'bg-sky-700 text-white', green: 'bg-emerald-700 text-white', rose: 'bg-rose-700 text-white', emerald: 'bg-emerald-600 text-white' }[h] || '');
-  const hlCell = h => ({ blue: 'bg-sky-50 text-sky-900 border-x border-sky-100', green: 'bg-emerald-50 text-emerald-900 border-x border-emerald-100', rose: 'bg-rose-50 text-rose-900 border-x border-rose-100', emerald: 'bg-emerald-50 text-emerald-800 border-x border-emerald-100' }[h] || '');
-  const hlFoot = h => ({ blue: 'bg-sky-200 text-sky-900 border-x border-sky-300', green: 'bg-emerald-200 text-emerald-900 border-x border-emerald-300', rose: 'bg-rose-200 text-rose-900 border-x border-rose-300', emerald: 'bg-emerald-200 text-emerald-800 border-x border-emerald-300' }[h] || '');
+  // 4 categorias reais de coluna-total (Total Abonos/Líquido/Custo Empresa/Ordenado Bruto) — mantidas
+  // com cores distintas dentro da paleta categórica já usada nas tags de documentos (sky/emerald/rose),
+  // trocando só 'emerald' por teal para não colidir com 'green' (ambas cairiam no mesmo tom de verde).
+  const hlHead = h => ({ blue: 'bg-sky-700 text-white', green: 'bg-emerald-700 text-white', rose: 'bg-rose-700 text-white', emerald: 'bg-teal-700 text-white' }[h] || '');
+  const hlCell = h => ({ blue: 'bg-sky-50 text-sky-900 border-x border-sky-100', green: 'bg-emerald-50 text-emerald-900 border-x border-emerald-100', rose: 'bg-rose-50 text-rose-900 border-x border-rose-100', emerald: 'bg-teal-50 text-teal-900 border-x border-teal-100' }[h] || '');
+  const hlFoot = h => ({ blue: 'bg-sky-200 text-sky-900 border-x border-sky-300', green: 'bg-emerald-200 text-emerald-900 border-x border-emerald-300', rose: 'bg-rose-200 text-rose-900 border-x border-rose-300', emerald: 'bg-teal-200 text-teal-900 border-x border-teal-300' }[h] || '');
   const tdAlign = col => col?.align === 'right' ? 'text-right' : col?.align === 'left' ? 'text-left' : 'text-center';
 
   return (
@@ -3330,7 +3339,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setSelectedWorkers(new Set())}
-                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wide"
+                      className="text-[10px] font-black text-[#1B3A57] hover:opacity-70 uppercase tracking-wide"
                     >
                       Todos
                     </button>
@@ -3380,14 +3389,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
           <div className="relative">
             <button
               onClick={() => { setShowColPicker(p => !p); setShowWorkerPicker(false); }}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}`}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${showColPicker ? 'text-white' : 'bg-white text-slate-600 border-slate-200 hover:border-[#869AAF] hover:text-[#1B3A57]'}`}
+              style={showColPicker ? { backgroundColor: '#1B3A57', borderColor: '#1B3A57' } : {}}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
                 <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
               </svg>
               Colunas
-              <span className="bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-md text-[9px] font-black">
+              <span className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-md text-[9px] font-black">
                 {visibleCols.size}/{RESUMO_COLS.length}
               </span>
             </button>
@@ -3399,7 +3409,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                   <div className="flex gap-2">
                     <button
                       onClick={() => setVisibleCols(new Set(RESUMO_COLS.map((_, i) => i)))}
-                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wide"
+                      className="text-[10px] font-black text-[#1B3A57] hover:opacity-70 uppercase tracking-wide"
                     >
                       Todas
                     </button>
@@ -3423,7 +3433,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                         checked={visibleCols.has(ci)}
                         onChange={() => toggleCol(ci)}
                         disabled={ci === 0}
-                        className="w-3.5 h-3.5 accent-indigo-600 shrink-0"
+                        className="w-3.5 h-3.5 accent-[#1B3A57] shrink-0"
                       />
                       <span className={`text-[11px] font-bold truncate ${col.highlight ? 'text-emerald-700' : 'text-slate-600'}`}>
                         {col.label}
@@ -3524,7 +3534,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               {displayRows.map((row, ri) => (
                 <tr
                   key={ri}
-                  className={`group/row transition-colors ${row.completo ? 'bg-emerald-50 hover:bg-emerald-100' : ri % 2 === 0 ? 'bg-white hover:bg-indigo-50' : 'bg-slate-50 hover:bg-indigo-50'}`}
+                  className={`group/row transition-colors ${row.completo ? 'bg-emerald-50 hover:bg-emerald-100' : ri % 2 === 0 ? 'bg-white hover:bg-slate-100' : 'bg-slate-50 hover:bg-slate-100'}`}
                 >
                   {activeCols.map(({ col, ci }, ai) => {
                     const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
@@ -3591,7 +3601,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                             value={observacoes[row.workerId] || ''}
                             onChange={e => updateObs(row.workerId, e.target.value)}
                             placeholder="—"
-                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-200 transition-all"
+                            className="w-full min-w-36 bg-transparent outline-none text-center text-xs font-bold text-slate-700 placeholder:text-slate-300 px-2 py-1 rounded-lg hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-[#1B3A57]/20 transition-all"
                           />
                         ) : isNome ? (
                           <span>{row[col.key]}</span>
@@ -3617,14 +3627,15 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-indigo-300" style={{ position: 'sticky', bottom: 0, zIndex: 9 }}>
+              <tr className="border-t-2" style={{ borderColor: 'rgba(27,58,87,0.3)', position: 'sticky', bottom: 0, zIndex: 9 }}>
                 {activeCols.map(({ col, ci }, ai) => {
                   const isLastInGroup = ai === activeCols.length - 1 || (activeCols[ai + 1]?.col.group || 'obs') !== (col.group || 'obs');
                   const def = GROUP_DEFS[col.group || 'obs'] || GROUP_DEFS.obs;
                   return (
                     <td
                       key={ci}
-                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-indigo-50 text-indigo-700'}`}
+                      className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-100'}`}
+                      style={col.highlight ? {} : { color: '#1B3A57' }}
                       style={{
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
                         ...(col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 5, background: '#eef2ff' } : {}),

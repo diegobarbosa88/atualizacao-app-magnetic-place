@@ -39,7 +39,7 @@ export default function FornecedorList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-slate-400">
-        <div className="w-6 h-6 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin mr-3" />
+        <div className="w-6 h-6 border-2 border-slate-200 rounded-full animate-spin mr-3" style={{ borderTopColor: '#1B3A57' }} />
         A carregar fornecedores...
       </div>
     );
@@ -55,12 +55,12 @@ export default function FornecedorList() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Pesquisar por nome ou NIF..."
-            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50"
+            className="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10"
           />
         </div>
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl">
-          <button onClick={() => setView('list')} className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><List size={15} /></button>
-          <button onClick={() => setView('grid')} className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}><LayoutGrid size={15} /></button>
+          <button onClick={() => setView('list')} className={`p-1.5 rounded-lg transition-colors ${view === 'list' ? 'bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} style={view === 'list' ? { color: '#1B3A57' } : {}}><List size={15} /></button>
+          <button onClick={() => setView('grid')} className={`p-1.5 rounded-lg transition-colors ${view === 'grid' ? 'bg-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} style={view === 'grid' ? { color: '#1B3A57' } : {}}><LayoutGrid size={15} /></button>
         </div>
       </div>
 
@@ -117,7 +117,7 @@ export default function FornecedorList() {
                   </td>
                   <td className="px-4 py-3">
                     {f.debito_automatico && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-violet-50 text-violet-700 text-[9px] font-black uppercase tracking-widest">D.A.</span>
+                      <span className="inline-flex items-center px-2 py-1 rounded-lg bg-slate-100 text-[#869AAF] text-[9px] font-black uppercase tracking-widest">D.A.</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -127,7 +127,7 @@ export default function FornecedorList() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
-                      <button onClick={() => editarFornecedor(f)} className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                      <button onClick={() => editarFornecedor(f)} className="p-1.5 text-slate-400 hover:text-[#869AAF] hover:bg-slate-100 rounded-lg transition-colors">
                         <Edit2 size={13} />
                       </button>
                       {confirmDeleteId === f.id ? (
@@ -155,16 +155,16 @@ export default function FornecedorList() {
           {filtered.map(f => (
             <div key={f.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
               {/* Card header */}
-              <div className="bg-indigo-50 px-4 py-3 flex items-center justify-between">
+              <div className="px-4 py-3 flex items-center justify-between" style={{ backgroundColor: 'rgba(134,154,175,0.1)' }}>
                 <div className="flex items-center gap-2">
-                  <div className="bg-indigo-100 p-1.5 rounded-lg">
-                    <Truck size={14} className="text-indigo-600" />
+                  <div className="p-1.5 rounded-lg" style={{ backgroundColor: 'rgba(134,154,175,0.2)' }}>
+                    <Truck size={14} style={{ color: '#869AAF' }} />
                   </div>
-                  <span className="text-xs font-black text-indigo-800 truncate max-w-[160px]">{f.nome}</span>
+                  <span className="text-xs font-black truncate max-w-[160px]" style={{ color: '#1B3A57' }}>{f.nome}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   {f.debito_automatico && (
-                    <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[8px] font-black uppercase">D.A.</span>
+                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-[#869AAF] text-[8px] font-black uppercase">D.A.</span>
                   )}
                   <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${f.status === 'ativo' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-600'}`}>
                     {f.status === 'ativo' ? 'Ativo' : 'Inativo'}
@@ -211,7 +211,7 @@ export default function FornecedorList() {
 
               {/* Card footer */}
               <div className="border-t border-slate-100 px-4 py-2 flex items-center justify-end gap-1">
-                <button onClick={() => editarFornecedor(f)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                <button onClick={() => editarFornecedor(f)} className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-black uppercase hover:bg-slate-100 rounded-lg transition-colors" style={{ color: '#869AAF' }}>
                   <Edit2 size={11} /> Editar
                 </button>
                 {confirmDeleteId === f.id ? (

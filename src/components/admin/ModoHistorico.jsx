@@ -44,7 +44,7 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">Ano</label>
             <select value={exportFilters.ano} onChange={e => setExportFilters(f => ({ ...f, ano: e.target.value, mes: '' }))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
               <option value="">Todos os anos</option>
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -52,7 +52,7 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">Mês</label>
             <select value={exportFilters.mes} onChange={e => setExportFilters(f => ({ ...f, mes: e.target.value }))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
               <option value="">Todos os meses</option>
               {availableMonths.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
@@ -60,7 +60,7 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">Trabalhador</label>
             <select value={exportFilters.workerId} onChange={e => setExportFilters(f => ({ ...f, workerId: e.target.value }))}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
               <option value="">Todos os trabalhadores</option>
               {workers.filter(w => !w.isAdmin).sort((a, b) => a.name.localeCompare(b.name)).map(w => (
                 <option key={w.id} value={w.id}>{w.name}</option>
@@ -69,10 +69,10 @@ function ExportModal({ show, onClose, onExportPdf, onExportCsv, exportFilters, s
           </div>
         </div>
         <div className="flex gap-2 pt-2">
-          <button onClick={onExportPdf} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors">
+          <button onClick={onExportPdf} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors" style={{ borderColor: '#869AAF', color: '#869AAF' }}>
             <FileDown size={14} /> PDF
           </button>
-          <button onClick={onExportCsv} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-colors">
+          <button onClick={onExportCsv} className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border rounded-xl text-xs font-bold hover:bg-slate-50 transition-colors" style={{ borderColor: '#869AAF', color: '#869AAF' }}>
             <FileDown size={14} /> CSV
           </button>
           <button onClick={onClose} className="px-4 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors">
@@ -478,7 +478,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
           className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-2">
-            <ReceiptText size={15} className="text-indigo-500" />
+            <ReceiptText size={15} style={{ color: '#869AAF' }} />
             <span className="text-sm font-black text-slate-700">Processar novos recibos</span>
           </div>
           <ChevronRight size={15} className={`text-slate-400 transition-transform ${uploadAberto ? 'rotate-90' : ''}`} />
@@ -489,7 +489,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             {/* Tolerâncias */}
             <div className="flex justify-end">
               <button onClick={() => setConfigAberto(o => !o)}
-                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-colors">
+                className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-[#869AAF] transition-colors">
                 <Settings size={12} /> Tolerâncias
                 <ChevronRight size={11} className={`transition-transform ${configAberto ? 'rotate-90' : ''}`} />
               </button>
@@ -514,7 +514,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             )}
 
             {/* Upload */}
-            <label className="flex flex-col items-center justify-center gap-2 p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 transition-all">
+            <label className="flex flex-col items-center justify-center gap-2 p-6 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#869AAF] hover:bg-slate-100 transition-all">
               <Files size={24} className="text-slate-300" />
               <span className="text-sm font-bold text-slate-500">
                 {files.length > 0
@@ -526,7 +526,8 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
             </label>
 
             <button onClick={handleProcessar} disabled={!files.length || processando}
-              className="w-full py-3 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-md shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              className="w-full py-3 text-white rounded-xl text-sm font-black uppercase tracking-widest transition-all shadow-md disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:opacity-90"
+              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
               {processando ? <Loader2 size={16} className="animate-spin" /> : <ReceiptText size={16} />}
               {processando ? 'A processar e guardar...' : files.length > 0 ? `Processar ${files.length} ficheiro${files.length > 1 ? 's' : ''}` : 'Processar'}
             </button>
@@ -539,19 +540,19 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       {/* ── Barra de filtros ── */}
       <div className="flex gap-2">
         <select value={filtroWorker} onChange={e => setFiltroWorker(e.target.value)}
-          className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-indigo-500">
+          className="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
           <option value="">Todos os trabalhadores</option>
           {workers.filter(w => !w.isAdmin).sort((a, b) => a.name.localeCompare(b.name)).map(w => (
             <option key={w.id} value={w.id}>{w.name}</option>
           ))}
         </select>
         <button onClick={carregar} disabled={carregando}
-          className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-indigo-600 hover:border-indigo-300 transition-all disabled:opacity-40">
+          className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-500 hover:text-[#869AAF] hover:border-[#869AAF] transition-all disabled:opacity-40">
           <RefreshCw size={15} className={carregando ? 'animate-spin' : ''} />
         </button>
         <div className="relative">
           <button onClick={() => setShowExportMenu(o => !o)}
-            className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-600 hover:bg-indigo-100 transition-all">
+            className="p-2.5 bg-slate-100 border border-slate-200 rounded-xl hover:bg-slate-200 transition-all" style={{ color: '#869AAF' }}>
             <Download size={15} />
           </button>
           {showExportMenu && (
@@ -566,7 +567,7 @@ const ModoHistorico = ({ workers, logs = [], saveToDb, systemSettings, saveSyste
       </div>
 
       {/* ── Tabela de recibos ── */}
-      {carregando && <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin text-indigo-400" /></div>}
+      {carregando && <div className="flex justify-center py-10"><Loader2 size={22} className="animate-spin" style={{ color: '#869AAF' }} /></div>}
 
       {!carregando && registosFiltrados.length === 0 && (
         <p className="text-center text-sm text-slate-400 py-10">Nenhum recibo guardado. Processe os PDFs acima para começar.</p>

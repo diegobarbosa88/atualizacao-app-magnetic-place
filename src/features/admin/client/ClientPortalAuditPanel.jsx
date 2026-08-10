@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, ChevronDown, ChevronRight, Filter, Building2 } from 'lucide-react';
+import { Shield, ChevronDown, ChevronRight, Filter } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 
 const ACTION_LABELS = {
   log_criado:      { label: 'Registo Criado',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   log_editado:     { label: 'Registo Editado',   color: 'bg-amber-100 text-amber-700 border-amber-200' },
   log_eliminado:   { label: 'Registo Eliminado', color: 'bg-rose-100 text-rose-700 border-rose-200' },
-  pedido_aprovado: { label: 'Pedido Aprovado',   color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  pedido_rejeitado:{ label: 'Pedido Rejeitado',  color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  pedido_aprovado: { label: 'Pedido Aprovado',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  pedido_rejeitado:{ label: 'Pedido Rejeitado',  color: 'bg-rose-100 text-rose-700 border-rose-200' },
 };
 
 function formatDateTime(isoStr) {
@@ -63,6 +63,14 @@ function AuditRow({ entry }) {
   );
 }
 
+function getClientInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return parts.length === 1
+    ? parts[0].slice(0, 2).toUpperCase()
+    : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 function ClientGroup({ clientName, clientId, entries }) {
   const [expanded, setExpanded] = useState(true);
 
@@ -72,8 +80,8 @@ function ClientGroup({ clientName, clientId, entries }) {
         onClick={() => setExpanded(e => !e)}
         className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-100"
       >
-        <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
-          <Building2 size={13} className="text-violet-500" />
+        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+          {getClientInitials(clientName || clientId)}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-black text-slate-800 text-sm truncate">{clientName || clientId}</p>
@@ -158,8 +166,8 @@ export default function ClientPortalAuditPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-violet-50 flex items-center justify-center">
-            <Shield size={16} className="text-violet-600" />
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
+            <Shield size={16} style={{ color: '#869AAF' }} />
           </div>
           <div>
             <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Auditoria Portal do Cliente</h3>
@@ -171,7 +179,8 @@ export default function ClientPortalAuditPanel() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilters(s => !s)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${showFilters || hasFilters ? 'bg-violet-600 text-white' : 'bg-slate-50 text-slate-500 hover:text-violet-600'}`}
+            className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border-2 hover:bg-slate-50"
+            style={showFilters || hasFilters ? { borderColor: '#869AAF', color: '#1B3A57', backgroundColor: 'rgba(134,154,175,0.1)' } : { borderColor: 'transparent', color: '#64748b' }}
           >
             <Filter size={13} /> Filtros {hasFilters && `(${[filterClient, filterAction, filterDateFrom, filterDateTo].filter(Boolean).length})`}
           </button>
@@ -182,43 +191,44 @@ export default function ClientPortalAuditPanel() {
       </div>
 
       {showFilters && (
-        <div className="bg-violet-50 border border-violet-100 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-violet-500 mb-1 block">Cliente</label>
+            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Cliente</label>
             <select
               value={filterClient}
               onChange={e => setFilterClient(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]"
             >
               <option value="">Todos</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-violet-500 mb-1 block">Ação</label>
+            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Ação</label>
             <select
               value={filterAction}
               onChange={e => setFilterAction(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300"
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]"
             >
               <option value="">Todas</option>
               {Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-violet-500 mb-1 block">De</label>
+            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">De</label>
             <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
           </div>
           <div>
-            <label className="text-[9px] font-black uppercase tracking-widest text-violet-500 mb-1 block">Até</label>
+            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Até</label>
             <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs border border-violet-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-300" />
+              className="w-full px-2 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]" />
           </div>
           {hasFilters && (
             <button
               onClick={() => { setFilterClient(''); setFilterAction(''); setFilterDateFrom(''); setFilterDateTo(''); }}
-              className="col-span-2 sm:col-span-4 text-[10px] font-black uppercase tracking-widest text-violet-500 hover:text-violet-700 transition-colors"
+              className="col-span-2 sm:col-span-4 text-[10px] font-black uppercase tracking-widest transition-colors hover:opacity-70"
+              style={{ color: '#1B3A57' }}
             >
               Limpar filtros
             </button>
@@ -237,7 +247,7 @@ export default function ClientPortalAuditPanel() {
         </div>
       ) : loading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-slate-200 rounded-full animate-spin" style={{ borderTopColor: '#1B3A57' }} />
         </div>
       ) : grouped.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-12 text-center">

@@ -77,22 +77,22 @@ export default function TOConlineAdmin() {
         <div className="flex items-center gap-3 flex-wrap">
           {/* Card de saldo */}
           {ligado && (
-            <div className="flex items-center gap-2.5 bg-emerald-50 border border-emerald-100 rounded-2xl px-4 py-2.5">
+            <div className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5">
               {saldoLoading ? (
-                <Loader2 size={13} className="text-emerald-400 animate-spin" />
+                <Loader2 size={13} style={{ color: '#869AAF' }} className="animate-spin" />
               ) : (
-                <TrendingUp size={14} className="text-emerald-500 shrink-0" />
+                <TrendingUp size={14} style={{ color: '#869AAF' }} className="shrink-0" />
               )}
               <div>
-                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400">Saldo Contas</p>
-                <p className="text-sm font-black text-emerald-700">
+                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saldo Contas</p>
+                <p className="text-sm font-black" style={{ color: '#1B3A57' }}>
                   {saldoContas != null
                     ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
                     : '—'}
                 </p>
               </div>
               {saldoContas && (
-                <span className="text-[9px] text-emerald-400 font-semibold self-end pb-0.5">
+                <span className="text-[9px] text-slate-400 font-semibold self-end pb-0.5">
                   {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
                 </span>
               )}
@@ -101,11 +101,13 @@ export default function TOConlineAdmin() {
           {!verificando && ligado && (
             <div className="flex gap-2">
               <button onClick={() => setMostrarFaturar(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-md shadow-emerald-100">
+                className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:opacity-90"
+                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
                 <Zap size={14} /> Faturar Cliente
               </button>
               <button onClick={() => setMostrarCriar(true)}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100">
+                className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-md hover:opacity-90"
+                style={{ backgroundColor: '#1B3A57' }}>
                 <Plus size={14} /> Criar Documento
               </button>
             </div>
@@ -120,7 +122,7 @@ export default function TOConlineAdmin() {
             onClick={() => setSubtab(id)}
             className={`flex items-center gap-2 px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all ${
               subtab === id
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-[#EB8D00] text-[#1B3A57]'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >

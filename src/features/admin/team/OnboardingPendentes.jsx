@@ -10,7 +10,7 @@ const TABELA_IRS_LABELS = {
 };
 
 const labelCls = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
-const inputCls = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all';
+const inputCls = 'w-full bg-white border border-slate-200 rounded-lg py-[3px] px-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all';
 
 function Row({ label, value }) {
   if (!value) return null;
@@ -125,7 +125,7 @@ export default function OnboardingPendentes() {
 
   if (loading) return (
     <div className="flex items-center justify-center py-16">
-      <Loader2 className="text-indigo-400 animate-spin" size={24} />
+      <Loader2 className="text-[#869AAF] animate-spin" size={24} />
     </div>
   );
 
@@ -139,7 +139,7 @@ export default function OnboardingPendentes() {
             <p className="text-[10px] text-slate-400 font-bold">Formulários de onboarding aguardando aprovação</p>
           </div>
         </div>
-        <button onClick={loadSubmissions} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="Atualizar">
+        <button onClick={loadSubmissions} className="p-2 text-slate-400 hover:text-[#869AAF] hover:bg-slate-100 rounded-xl transition-all" title="Atualizar">
           <RefreshCw size={16} />
         </button>
       </div>
@@ -182,7 +182,8 @@ export default function OnboardingPendentes() {
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => openModal(s)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase bg-indigo-600 text-white hover:bg-indigo-700 transition-all ml-auto"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-white hover:opacity-90 transition-all ml-auto"
+                      style={{ backgroundColor: '#1B3A57' }}
                     >
                       <Eye size={12} /> Rever
                     </button>
@@ -201,7 +202,7 @@ export default function OnboardingPendentes() {
         title={selected?.nome || 'Pedido de Onboarding'}
         subtitle="Reveja os dados e complete os campos necessários antes de aprovar."
         icon={<Users size={16} />}
-        accent="indigo"
+        accent="navy"
         size="lg"
         footer={
           <div className="flex items-center justify-between gap-3 w-full">
@@ -249,13 +250,13 @@ export default function OnboardingPendentes() {
         {selected && (
           <div className="space-y-5">
             {/* Tabs */}
-            <div className="flex gap-2 border-b border-slate-100 pb-3">
+            <div className="flex items-end gap-1 border-b border-slate-100">
               {['dados', 'completar'].map(t => (
                 <button
                   key={t}
                   onClick={() => setModalTab(t)}
-                  className={`px-4 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all
-                    ${modalTab === t ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-indigo-600'}`}
+                  className={`px-4 py-2 -mb-px border-b-2 text-[11px] font-black uppercase tracking-wide transition-all
+                    ${modalTab === t ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
                 >
                   {t === 'dados' ? 'Dados submetidos' : 'Completar registo'}
                 </button>

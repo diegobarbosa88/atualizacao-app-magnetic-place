@@ -55,13 +55,14 @@ function ComprovativosSection() {
             min={2020}
             max={CURRENT_YEAR}
             onChange={e => setAno(e.target.value)}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-24 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]"
           />
         </div>
         <button
           onClick={consultar}
           disabled={estado?.loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
+          style={{ borderColor: '#869AAF', color: '#869AAF' }}
         >
           <Search size={13} />
           {estado?.loading ? 'A consultar…' : 'Consultar'}
@@ -120,7 +121,8 @@ function DocumentosPagamentoSection() {
         <button
           onClick={consultar}
           disabled={estado?.loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
+          style={{ borderColor: '#869AAF', color: '#869AAF' }}
         >
           <Search size={13} />
           {estado?.loading ? 'A consultar…' : 'Consultar Documentos'}
@@ -198,24 +200,25 @@ function RemuneracoesSection() {
             placeholder="ex: 12345678901, 10987654321"
             value={form.nissTrabalhadores}
             onChange={e => setForm(f => ({ ...f, nissTrabalhadores: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[#1B3A57]"
           />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Data início</label>
           <input type="date" value={form.dataInicio} onChange={e => setForm(f => ({ ...f, dataInicio: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[#1B3A57]" />
         </div>
         <div>
           <label className="block text-xs text-gray-500 mb-1">Data fim</label>
           <input type="date" value={form.dataFim} onChange={e => setForm(f => ({ ...f, dataFim: e.target.value }))}
-            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-blue-500" />
+            className="border border-gray-300 rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-[#1B3A57]" />
         </div>
         <div className="flex items-end gap-2">
           <button
             onClick={consultar}
             disabled={estado?.loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 border rounded text-sm disabled:opacity-50 hover:bg-slate-50 transition-colors"
+          style={{ borderColor: '#869AAF', color: '#869AAF' }}
           >
             <Search size={13} />
             {estado?.loading ? 'A consultar…' : 'Consultar'}
@@ -275,7 +278,7 @@ export default function SSConsultasPanel() {
             onClick={() => setAba(id)}
             className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium border-b-2 -mb-px transition-colors ${
               aba === id
-                ? 'border-blue-600 text-blue-600'
+                ? 'border-[#EB8D00] text-[#1B3A57]'
                 : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}
           >

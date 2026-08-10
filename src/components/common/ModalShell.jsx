@@ -6,6 +6,7 @@ const ACCENT = {
   orange: { header: 'bg-orange-50 border-orange-100', iconBg: 'bg-orange-100', iconColor: 'text-orange-600' },
   rose:   { header: 'bg-rose-50 border-rose-100',     iconBg: 'bg-rose-100',   iconColor: 'text-rose-600'   },
   slate:  { header: 'bg-slate-50 border-slate-100',   iconBg: 'bg-slate-100',  iconColor: 'text-slate-600'  },
+  navy:   { header: 'bg-slate-50 border-slate-100',   iconBg: 'bg-slate-100',  iconColor: 'text-[#1B3A57]'  },
 };
 
 const SIZE_MAP = {

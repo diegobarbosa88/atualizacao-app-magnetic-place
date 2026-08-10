@@ -8,6 +8,14 @@ import { calculateDuration } from '../../../utils/formatUtils';
 import CorrectionDetail from './CorrectionDetail';
 import { STATUS_LABEL, TYPE_LABEL } from './correctionsUtils';
 
+function getClientInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return parts.length === 1
+    ? parts[0].slice(0, 2).toUpperCase()
+    : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 // ── Client corrections grouped view ──────────────────────────────────────────
 
 function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection, expandedCards, setExpandedCards, supabase, currentUser, setCorrections, setCorrectionItems, logs }) {
@@ -70,8 +78,8 @@ function ClientCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
           className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`p-2 rounded-xl flex-shrink-0 ${isPending ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500'}`}>
-              <Building2 size={16} />
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+              {getClientInitials(client?.name || g.clientId)}
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -225,8 +233,8 @@ function WorkerCorrectionsPanel({ filtered, clients, workers, itemsByCorrection,
           className="w-full flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className={`p-2 rounded-xl flex-shrink-0 ${isPending ? 'bg-amber-100 text-amber-600' : isResolved ? 'bg-slate-100 text-slate-500' : 'bg-slate-100 text-slate-500'}`}>
-              <Building2 size={16} />
+            <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 text-xs font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+              {getClientInitials(client?.name || g.clientId)}
             </div>
             <div className="text-left min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -443,7 +451,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
     // Worker corrections are redirected to the Workers tab via the useEffect above
     if (isWorkerType(correction)) return null;
     return (
-      <div className="p-6 md:p-8 bg-slate-50 min-h-screen">
+      <div className="p-6 md:p-8">
         <CorrectionDetail correction={correction} items={itemsByCorrection.get(selectedId) || []} onBack={() => setSelectedId(null)} />
       </div>
     );
@@ -461,7 +469,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
   };
 
   return (
-    <div className="p-6 md:p-8 bg-slate-50 min-h-screen">
+    <div className="p-6 md:p-8">
       <header className="mb-8 flex items-center gap-3">
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600"><AlertCircle size={20} /></div>
         <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Inbox de Correções</h3>
@@ -469,12 +477,12 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
 
       {/* Source selector — hidden when forcedSource is set */}
       {!forcedSource && (
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setSourceFilter('workers')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'workers' ? 'bg-emerald-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-emerald-300'}`}>
+        <div className="flex items-center gap-1 mb-4 border-b border-slate-100">
+          <button onClick={() => setSourceFilter('workers')} className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${sourceFilter === 'workers' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
             <Users size={14} /> Workers
             {workerOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{workerOpenCount}</span>}
           </button>
-          <button onClick={() => setSourceFilter('clients')} className={`flex items-center gap-2 px-4 py-2 rounded-xl font-black text-[10px] uppercase transition-all ${sourceFilter === 'clients' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-indigo-300'}`}>
+          <button onClick={() => setSourceFilter('clients')} className={`flex items-center gap-2 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${sourceFilter === 'clients' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
             <Building2 size={14} /> Clientes
             {clientOpenCount > 0 && <span className="bg-rose-500 text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{clientOpenCount}</span>}
           </button>

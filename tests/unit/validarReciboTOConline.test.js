@@ -28,19 +28,19 @@ Total Abonos  Total Descontos  Total a Receber  Total Abonos  Total Descontos  T
 1.000,00€  260,00€  740,00€  1.000,00€  260,00€  740,00€
 `;
 
-// Caso 3: Formato real com Abono intercalado antes do Desconto (pdfjs: coluna ABONO → DESCONTO).
-// SS: linha termina em 110,00€ (desconto), tendo 1000€ de abono antes
-// IRS: linha termina em 76,00€ (desconto), tendo 1251,23€ de incidência e 99,67€ parcela na desc.
-// Outros descontos (Adiantamento 100€) são ignorados no cálculo.
-// bruto=1251,23, SS=110, IRS=76 → liquidoCalculado=1065,23; liquidoPDF=1065,23 ✓
+// Caso 3: Andre Marcos Silva — valores reais de recibo TOConline.
+// vencBase=1000, excedenteSubsAlim=42.55, prémios=63.68, férias=83.33, natal=83.33
+// incVenc=1106.23 → escalão 15.7% → parcelaAbater=95.08 → IRS_venc=78€ (floor correto, TOConline=78€ ✓)
+// IRS_férias(3€) + IRS_natal(3€) → IRS_total=84€ (TOConline=84€ ✓ — confirma floor > round)
+// SS simplificado (11% × 1000€ = 110€). bruto=1272.89, SS=110, IRS=84 → liq=1078.89 ✓
 const TEXT_ABONO_INTERCALADO = `
 Emitido por TOConline
 Segurança Social (11%)   1.000,00€   110,00€   Segurança Social (11%)   1.000,00€   110,00€
-IRS ( Incidência 1251.23€ ; Taxa IRS 15.7% ; Parcela a 76,00€   IRS ( Incidência 1251.23€ ; Taxa IRS 15.7% ; Parcela a 76,00€
-abater 99.67€)   abater 99.67€)
+IRS ( Incidência 1272.89€ ; Taxa IRS 15.7% ; Parcela a 84,00€   IRS ( Incidência 1272.89€ ; Taxa IRS 15.7% ; Parcela a 84,00€
+abater 95.08€)   abater 95.08€)
 Adiantamento   100,00€   Adiantamento   100,00€
 Total Abonos  Total Descontos  Total a Receber  Total Abonos  Total Descontos  Total a Receber
-1.251,23€  286,00€  1.065,23€  1.251,23€  286,00€  1.065,23€
+1.272,89€  294,00€  1.078,89€  1.272,89€  294,00€  1.078,89€
 `;
 
 describe('parseReciboTOConline', () => {
@@ -65,13 +65,13 @@ describe('parseReciboTOConline', () => {
     expect(res.divergencia).toBe(0);
   });
 
-  it('extrai SS e IRS corretamente quando Abono está intercalado (formato real pdfjs)', () => {
-    // SS=110, IRS=76, bruto=1251.23 → liquidoCalculado=1065.23 = liquidoPDF → válido
-    const res = parseReciboTOConline(TEXT_ABONO_INTERCALADO, 1251.23);
+  it('extrai SS e IRS corretamente quando Abono está intercalado — Andre Marcos Silva (valores reais)', () => {
+    // vencBase=1000, excedente=42.55, prémios=63.68 → incVenc=1106.23, Tabela I, 0 dep → IRS=84€
+    const res = parseReciboTOConline(TEXT_ABONO_INTERCALADO, 1272.89);
     expect(res.sucesso).toBe(true);
     expect(res.ssExtraido).toBe(110.00);
-    expect(res.irsExtraido).toBe(76.00);
-    expect(res.liquidoExtraido).toBe(1065.23);
+    expect(res.irsExtraido).toBe(84.00);
+    expect(res.liquidoExtraido).toBe(1078.89);
     expect(res.valido).toBe(true);
   });
 

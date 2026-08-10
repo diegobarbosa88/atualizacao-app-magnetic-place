@@ -131,7 +131,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
         </div>
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="bg-emerald-50 text-emerald-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Building2 size={18} className="sm:hidden" /><Building2 size={24} className="hidden sm:block" /></div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-800">{activeClientsCount}</p>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Clientes Activos</p>
@@ -139,7 +139,7 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
           <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">no período seleccionado</p>
         </div>
         <div className="bg-white p-3 sm:p-4 md:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 flex flex-col gap-2">
-          <div className="bg-amber-50 text-amber-600 p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit"><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
+          <div className="p-2 sm:p-3 rounded-xl sm:rounded-2xl w-fit" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Activity size={18} className="sm:hidden" /><Activity size={24} className="hidden sm:block" /></div>
           <div>
             <p className="text-xl sm:text-3xl font-black text-slate-800">{activeReportsCount}</p>
             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registos</p>
@@ -151,25 +151,22 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
       {/* Filtros */}
       <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100 space-y-4 sm:space-y-6">
         {/* Toggle de modo de período */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-1 border-b border-slate-100">
           <button
             onClick={() => setFilterMode('month')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'month' ? 'shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-            style={filterMode === 'month' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
+            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filterMode === 'month' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
           >
             <Calendar size={13} /> Mês
           </button>
           <button
             onClick={() => setFilterMode('range')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'range' ? 'shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-            style={filterMode === 'range' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
+            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filterMode === 'range' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
           >
             <CalendarRange size={13} /> Intervalo
           </button>
           <button
             onClick={() => setFilterMode('dates')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filterMode === 'dates' ? 'shadow-md' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-            style={filterMode === 'dates' ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#EB8D00' } : {}}
+            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filterMode === 'dates' ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
           >
             <CalendarDays size={13} /> Dias
           </button>
@@ -178,14 +175,14 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecione o Cliente</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
+            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.clientId} onChange={e => setReportFilter({ ...reportFilter, clientId: e.target.value })}>
               <option value="">-- Escolher Cliente --</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Colaborador (Opcional)</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
+            <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.workerId} onChange={e => setReportFilter({ ...reportFilter, workerId: e.target.value })}>
               <option value="">-- Todos os Colaboradores --</option>
               {workers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
             </select>
@@ -196,16 +193,16 @@ export default function AdminReports({ printingReport, setPrintingReport }) {
             {filterMode === 'month' && (
               <>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Mês</label>
-                <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
+                <input type="month" className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.month} onChange={e => setReportFilter({ ...reportFilter, month: e.target.value })} />
               </>
             )}
             {filterMode === 'range' && (
               <>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Intervalo de Dias</label>
                 <div className="flex gap-2 items-center">
-                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, startDate: e.target.value })} />
+                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, startDate: e.target.value })} />
                   <span className="text-slate-400 font-black text-xs">→</span>
-                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
+                  <input type="date" className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold" value={reportFilter.endDate} min={reportFilter.startDate} onChange={e => setReportFilter({ ...reportFilter, endDate: e.target.value })} />
                 </div>
                 {activeDates.length > 0 && (
                   <p className="text-[10px] font-bold ml-1" style={{ color: '#EB8D00' }}>{activeDates.length} dias no intervalo</p>

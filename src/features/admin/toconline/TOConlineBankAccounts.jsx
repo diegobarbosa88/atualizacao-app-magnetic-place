@@ -49,27 +49,27 @@ function NovaConta({ onClose, onSalva }) {
             <div key={key} className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
               <input type="text" value={form[key]} onChange={e => set(key, e.target.value)} required={required}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           ))}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Moeda</p>
               <select value={form.moeda} onChange={e => set('moeda', e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                 <option value="EUR">EUR</option><option value="USD">USD</option><option value="GBP">GBP</option>
               </select>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Inicial</p>
               <input type="number" step="0.01" value={form.saldo_inicial} onChange={e => set('saldo_inicial', e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
             </div>
           </div>
           {erro && <p className="text-xs text-red-600 font-semibold">{erro}</p>}
           <div className="flex gap-2 pt-1">
             <button type="button" onClick={onClose} className="flex-1 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancelar</button>
-            <button type="submit" disabled={salvando} className="flex-1 px-4 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5">
+            <button type="submit" disabled={salvando} className="flex-1 px-4 py-2 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90" style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
               {salvando && <Loader2 size={13} className="animate-spin" />} Guardar
             </button>
           </div>
@@ -113,11 +113,11 @@ function PainelMovimentos({ conta, onClose }) {
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 rounded-xl"><Landmark size={14} className="text-emerald-600" /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={14} style={{ color: '#869AAF' }} /></div>
             <div>
               <p className="text-sm font-black text-slate-800">{a.name || '—'}</p>
               {conta.saldo_atual != null && (
-                <p className="text-xs font-bold text-emerald-600">{fmtEur(conta.saldo_atual)}</p>
+                <p className="text-xs font-bold" style={{ color: '#1B3A57' }}>{fmtEur(conta.saldo_atual)}</p>
               )}
             </div>
           </div>
@@ -164,7 +164,7 @@ function PainelMovimentos({ conta, onClose }) {
               {temMais && (
                 <div className="px-5 py-3 text-center">
                   <button onClick={() => carregar(page + 1)} disabled={loading}
-                    className="text-xs font-black uppercase tracking-widest text-blue-600 hover:text-blue-800 disabled:opacity-50 flex items-center gap-1 mx-auto">
+                    className="text-xs font-black uppercase tracking-widest hover:opacity-80 disabled:opacity-50 flex items-center gap-1 mx-auto" style={{ color: '#869AAF' }}>
                     {loading ? <Loader2 size={12} className="animate-spin" /> : null} Ver mais
                   </button>
                 </div>
@@ -208,22 +208,22 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     <div className="space-y-4">
       {/* Card de saldo total */}
       {contas.length > 0 && (
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div className="bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-100 rounded-xl"><Landmark size={16} className="text-emerald-600" /></div>
+            <div className="p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={16} style={{ color: '#869AAF' }} /></div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Saldo Total</p>
-              <p className="text-2xl font-black text-emerald-800">{fmtEur(totalSaldo)}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Total</p>
+              <p className="text-2xl font-black" style={{ color: '#1B3A57' }}>{fmtEur(totalSaldo)}</p>
             </div>
           </div>
-          <p className="text-[10px] text-emerald-400 font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
+          <p className="text-[10px] text-slate-400 font-semibold">{contas.length} conta{contas.length !== 1 ? 's' : ''}</p>
         </div>
       )}
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 rounded-xl"><Landmark size={16} className="text-emerald-600" /></div>
+            <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}><Landmark size={16} style={{ color: '#869AAF' }} /></div>
             <span className="text-sm font-black text-slate-800">Contas Bancárias</span>
           </div>
           <div className="flex items-center gap-2">
@@ -232,7 +232,8 @@ export default function TOConlineBankAccounts({ onDesligado }) {
               <RefreshCw size={13} /> Sincronizar
             </button>
             <button onClick={() => setMostrarModal(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm">
+              className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:opacity-90"
+              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
               <Plus size={13} /> Nova Conta
             </button>
           </div>
@@ -266,7 +267,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
                     {a.swift && <p className="text-[10px] text-slate-300 font-mono">{a.swift}</p>}
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-base font-black text-emerald-700">
+                    <p className="text-base font-black" style={{ color: '#1B3A57' }}>
                       {c.saldo_atual != null ? fmtEur(c.saldo_atual) : '—'}
                     </p>
                     <p className="text-[10px] text-slate-400">{a.account_type || '—'}</p>

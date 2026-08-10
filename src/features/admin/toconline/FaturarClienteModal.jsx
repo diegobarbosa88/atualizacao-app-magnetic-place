@@ -80,7 +80,8 @@ function Toggle({ checked, onChange }) {
     <button
       type="button"
       onClick={() => onChange(!checked)}
-      className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${checked ? 'bg-indigo-500' : 'bg-slate-200'}`}
+      className="w-9 h-5 rounded-full transition-colors relative shrink-0"
+      style={{ backgroundColor: checked ? '#869AAF' : '#E2E8F0' }}
     >
       <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
     </button>
@@ -386,7 +387,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente *</p>
               <select value={clienteId} onChange={e => setClienteId(e.target.value)}
                 disabled={!!clienteIdInicial}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-slate-50 disabled:text-slate-500">
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 disabled:bg-slate-50 disabled:text-slate-500">
                 <option value="">Selecionar cliente...</option>
                 {(clients || []).filter(c => c.valorHora > 0).map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
@@ -399,7 +400,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Período *</p>
               <input type="month" value={periodo} onChange={e => setPeriodo(e.target.value)}
                 disabled={!!periodoInicial}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:bg-slate-50 disabled:text-slate-500" />
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 disabled:bg-slate-50 disabled:text-slate-500" />
             </div>
 
             {/* Tipo + Série */}
@@ -407,7 +408,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Tipo de documento</p>
                 <select value={tipoDocumento} onChange={e => setTipoDocumento(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                   {TIPOS_DOCUMENTO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
@@ -415,7 +416,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Série</p>
                 <input type="text" value={serie} onChange={e => setSerie(e.target.value)}
                   placeholder="Ex: A"
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
               </div>
             </div>
 
@@ -424,12 +425,12 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Data da fatura</p>
                 <input type="date" value={dataFatura} onChange={e => setDataFatura(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Prazo de pagamento</p>
                 <select value={prazo} onChange={e => setPrazo(Number(e.target.value))}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                   {PRAZOS_PAGAMENTO.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
                 </select>
               </div>
@@ -443,7 +444,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               </p>
               <input type="date" value={dataVencimento} onChange={e => setDataVencimento(e.target.value)}
                 readOnly={prazo !== -1}
-                className={`w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 ${prazo !== -1 ? 'bg-slate-50 text-slate-500' : ''}`} />
+                className={`w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 ${prazo !== -1 ? 'bg-slate-50 text-slate-500' : ''}`} />
             </div>
 
             {/* Resumo horas/ajudas */}
@@ -491,7 +492,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 <div className="flex items-center justify-between">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Linhas da fatura</p>
                   <button onClick={handleGuardarConfig} disabled={guardandoConfig}
-                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50">
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-slate-100 rounded-lg transition-all disabled:opacity-50" style={{ color: '#869AAF' }}>
                     {guardandoConfig ? <Loader2 size={11} className="animate-spin" /> : configGuardada ? <CheckCircle size={11} className="text-emerald-500" /> : <Save size={11} />}
                     {configGuardada ? 'Guardado' : 'Guardar padrão'}
                   </button>
@@ -505,12 +506,12 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                         <input type="text" value={s.descricao}
                           onChange={e => updateLinha(s.id, 'descricao', e.target.value)}
                           placeholder="Descrição do serviço"
-                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                          className="flex-1 px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         <input type="text" value={s.codigo_artigo ?? ''}
                           onChange={e => updateLinha(s.id, 'codigo_artigo', e.target.value)}
                           placeholder="Cód."
                           title="Código do artigo no TOConline"
-                          className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                          className="w-14 px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         <button onClick={() => removerLinha(s.id)}
                           className="flex items-center justify-center w-7 h-7 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all shrink-0">
                           <Trash2 size={12} />
@@ -524,7 +525,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             value={s.quantidade ?? ''}
                             onChange={e => updateLinha(s.id, 'quantidade', e.target.value)}
                             placeholder="0"
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Unidade</p>
@@ -532,7 +533,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             value={s.unidade ?? ''}
                             onChange={e => updateLinha(s.id, 'unidade', e.target.value)}
                             placeholder="h / un"
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">Preço unit.</p>
@@ -540,13 +541,13 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             value={s.preco_unitario ?? s.valor_fixo ?? ''}
                             onChange={e => updateLinha(s.id, 'preco_unitario', e.target.value)}
                             placeholder="0.00"
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 pl-0.5">IVA</p>
                           <select value={s.taxa_iva}
                             onChange={e => updateLinha(s.id, 'taxa_iva', Number(e.target.value))}
-                            className="w-full px-1 py-1.5 rounded-lg border border-slate-200 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-indigo-300">
+                            className="w-full px-1 py-1.5 rounded-lg border border-slate-200 text-[10px] text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30">
                             {IVA_OPTS.map(v => <option key={v} value={v}>{v}%</option>)}
                           </select>
                         </div>
@@ -557,7 +558,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                             onChange={e => updateLinha(s.id, 'desconto', e.target.value)}
                             placeholder="10"
                             title='Desconto em %. Composto: "3+5"'
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                       </div>
                     </div>
@@ -565,7 +566,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
                   <div className="px-3 py-2 border-t border-slate-100">
                     <button onClick={adicionarLinhaFixa}
-                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-500 hover:text-indigo-700 transition-colors">
+                      className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest hover:opacity-80 transition-colors" style={{ color: '#869AAF' }}>
                       <Plus size={11} /> Adicionar linha
                     </button>
                   </div>
@@ -578,7 +579,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observações</p>
               <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)}
                 rows={2} placeholder="Observações que aparecerão na fatura..."
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none" />
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 resize-none" />
             </div>
 
             {/* ── Opções Avançadas ── */}
@@ -598,14 +599,14 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Desconto global no documento</p>
                     <input type="text" value={descontoGlobal} onChange={e => setDescontoGlobal(e.target.value)}
                       placeholder='Ex: "10" = 10% · "3+5" = composto'
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                   </div>
 
                   {/* Método de pagamento */}
                   <div className="space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Método de pagamento</p>
                     <select value={metodoPagamento} onChange={e => setMetodoPagamento(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300">
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
                       {METODOS_PAGAMENTO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                     </select>
                   </div>
@@ -615,7 +616,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Referência externa</p>
                     <input type="text" value={referenciaExterna} onChange={e => setReferenciaExterna(e.target.value)}
                       placeholder="Nº encomenda, PO, referência do cliente..."
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                   </div>
 
                   {/* Preços com IVA incluído */}
@@ -643,13 +644,13 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                           <input type="number" min="0" max="100" step="0.1"
                             value={retencao.percentagem}
                             onChange={e => setRetencao(r => ({ ...r, percentagem: Number(e.target.value) }))}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Tipo</p>
                           <select value={retencao.tipo}
                             onChange={e => setRetencao(r => ({ ...r, tipo: e.target.value }))}
-                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-300">
+                            className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30">
                             <option value="IRS">IRS</option>
                             <option value="IRC">IRC</option>
                           </select>
@@ -673,7 +674,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                         <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Código ISO</p>
                         <input type="text" value={moedaIso} onChange={e => setMoedaIso(e.target.value.toUpperCase())}
                           maxLength={3} placeholder="EUR"
-                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-300" />
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30" />
                       </div>
                       <div className="space-y-0.5">
                         <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Taxa de conversão</p>
@@ -681,7 +682,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                           onChange={e => setMoedaTaxa(e.target.value)}
                           placeholder="1.0000"
                           disabled={moedaIso.toUpperCase() === 'EUR'}
-                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-indigo-300 disabled:bg-slate-50 disabled:text-slate-400" />
+                          className="w-full px-2 py-1.5 rounded-lg border border-slate-200 text-xs text-center focus:outline-none focus:ring-1 focus:ring-[#1B3A57]/30 disabled:bg-slate-50 disabled:text-slate-400" />
                       </div>
                     </div>
                   </div>
@@ -699,18 +700,18 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                       <div className="space-y-1.5 pl-1">
                         <input type="text" value={moradaDetalhe} onChange={e => setMoradaDetalhe(e.target.value)}
                           placeholder="Morada (rua, nº, andar...)"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                         <div className="grid grid-cols-3 gap-1.5">
                           <input type="text" value={moradaCp} onChange={e => setMoradaCp(e.target.value)}
                             placeholder="Cód. Postal"
-                            className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                            className="px-2 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                           <input type="text" value={moradaCidade} onChange={e => setMoradaCidade(e.target.value)}
                             placeholder="Cidade"
-                            className="col-span-2 px-2 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                            className="col-span-2 px-2 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                         </div>
                         <input type="text" value={moradaPais} onChange={e => setMoradaPais(e.target.value)}
                           placeholder="País (PT)"
-                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                          className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
                       </div>
                     )}
                   </div>
@@ -720,7 +721,8 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             </div>
 
             <button onClick={() => setPasso(2)} disabled={!podeContinuar}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-100">
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-md hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               Ver Preview <ChevronRight size={14} />
             </button>
           </div>
@@ -869,7 +871,8 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   Voltar
                 </button>
                 <button onClick={handleEmitir} disabled={emitindo}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60 shadow-md shadow-blue-100">
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 shadow-md hover:opacity-90"
+                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
                   {emitindo ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
                   Emitir {tipoDocumento}
                 </button>
@@ -901,7 +904,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   <p className="text-xs text-red-600 mt-1">{resultado.erro}</p>
                 </div>
                 <button onClick={() => { setPasso(2); setResultado(null); }}
-                  className="px-4 py-2 text-xs font-black uppercase tracking-widest text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
+                  className="px-4 py-2 text-xs font-black uppercase tracking-widest hover:bg-slate-100 rounded-xl transition-all" style={{ color: '#869AAF' }}>
                   Tentar novamente
                 </button>
               </div>

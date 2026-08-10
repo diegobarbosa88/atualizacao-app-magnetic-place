@@ -4,6 +4,15 @@
  * Ao calcular, usa-se o ano mais recente disponível que não ultrapasse o ano pedido.
  */
 
+import {
+  calcularRetencaoVencimento,
+  calcularRetencaoSubsidioDuodecimo,
+  calcularRetencaoTrabalhoSuplementar,
+} from './irsCalculo2026.js';
+
+// Converte chave de tabela no formato legado ('tabelaI') para id do módulo 2026 ('I')
+const _TABELA_ID_MAP = { tabelaI: 'I', tabelaII: 'II', tabelaIII: 'III' };
+
 // ---------------------------------------------------------------------------
 // 2025 — Despacho n.º 28-A/2025 (Continente, trabalho dependente)
 // ---------------------------------------------------------------------------
@@ -243,17 +252,29 @@ export function calcularRecibo(inputs) {
 
   // IRS regular: vencimento efetivo + prémios + excedente de subsídio alimentação + abonos cessação
   const incidenciaRegular = vencimentoBase + premios + subsAlimExcedente + abonosCessacao;
-  const irsRegular  = calcularIRS(incidenciaRegular, tabelaKey, nDependentes, ano);
-  const taxaRegular = taxaEfetiva(incidenciaRegular, tabelaKey, nDependentes, ano);
+  const tabelaId          = _TABELA_ID_MAP[tabelaKey] || 'I';
 
-  // IRS subsídios: taxa calculada sobre vencimento contratual (não sobre o proporcional)
-  const taxaSubsidios = taxaEfetiva(vencBaseParaDuodecimos, tabelaKey, nDependentes, ano);
-  const irsFerias     = subsFerias * taxaSubsidios;
-  const irsNatal      = subsNatal  * taxaSubsidios;
+  // Vencimento regular — floor ao euro inferior (art. 99.º-E CIRS)
+  const irsVencResult = calcularRetencaoVencimento(incidenciaRegular, tabelaId, nDependentes);
+  const irsRegular    = irsVencResult.retencao;
+  const taxaRegular   = irsVencResult.taxaEfetiva / 100; // ratio para compatibilidade de interface
 
-  // Trabalho suplementar: 50% da taxa regular
-  const taxaOvertime = taxaRegular * 0.5;
-  const irsOvertime  = totalOvertime * taxaOvertime;
+  // Duodécimos — escalão pelo valor total do subsídio (art. 99.º-C, n.os 5 e 6 CIRS)
+  const irsFeriasResult = calcularRetencaoSubsidioDuodecimo(vencBaseParaDuodecimos, subsFerias, tabelaId, nDependentes);
+  const irsNatalResult  = calcularRetencaoSubsidioDuodecimo(vencBaseParaDuodecimos, subsNatal,  tabelaId, nDependentes);
+  const irsFerias       = irsFeriasResult.retencao;
+  const irsNatal        = irsNatalResult.retencao;
+
+  // Taxa dos subsídios para o label T001 (hipotética se não houver duodécimos este mês)
+  const _taxaSubsRef  = (subsFerias > 0 || subsNatal > 0)
+    ? irsFeriasResult
+    : calcularRetencaoSubsidioDuodecimo(vencBaseParaDuodecimos, vencBaseParaDuodecimos, tabelaId, nDependentes);
+  const taxaSubsidios = _taxaSubsRef.taxaEfetiva / 100;
+
+  // Trabalho suplementar — 50% da taxa efetiva do vencimento regular
+  const irsOvertimeResult = calcularRetencaoTrabalhoSuplementar(totalOvertime, irsVencResult.taxaEfetiva);
+  const irsOvertime       = irsOvertimeResult.retencao;
+  const taxaOvertime      = taxaRegular * 0.5;
 
   const irsTotal = irsRegular + irsFerias + irsNatal + irsOvertime;
 

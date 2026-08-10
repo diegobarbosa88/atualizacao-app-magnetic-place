@@ -3,16 +3,18 @@ import { Wallet, ChevronDown } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../../../utils/formatUtils';
 
+// Tons dentro da família emerald/rose já usada nos badges de tendência do Dashboard Geral
+// (AdminOverview.jsx) — não os tons genéricos green-500/red-500 do Tailwind.
 const PIE_SLICES = [
-  { name: 'R. Cliente',  tipo: 'credito', badgeKey: 'cliente',     color: '#22c55e' },
-  { name: 'R. Recibo',   tipo: 'credito', badgeKey: 'recibo',      color: '#16a34a' },
-  { name: 'R. Fatura',   tipo: 'credito', badgeKey: 'fatura',      color: '#15803d' },
-  { name: 'R. Justif.',  tipo: 'credito', badgeKey: 'justificado', color: '#166534' },
-  { name: 'D. Cliente',  tipo: 'debito',  badgeKey: 'cliente',     color: '#ef4444' },
-  { name: 'D. Recibo',   tipo: 'debito',  badgeKey: 'recibo',      color: '#dc2626' },
-  { name: 'D. Fatura',   tipo: 'debito',  badgeKey: 'fatura',      color: '#b91c1c' },
-  { name: 'D. Imposto',  tipo: 'debito',  badgeKey: 'imposto',     color: '#991b1b' },
-  { name: 'D. Justif.',  tipo: 'debito',  badgeKey: 'justificado', color: '#7f1d1d' },
+  { name: 'R. Cliente',  tipo: 'credito', badgeKey: 'cliente',     color: '#34d399' }, // emerald-400
+  { name: 'R. Recibo',   tipo: 'credito', badgeKey: 'recibo',      color: '#10b981' }, // emerald-500
+  { name: 'R. Fatura',   tipo: 'credito', badgeKey: 'fatura',      color: '#059669' }, // emerald-600
+  { name: 'R. Justif.',  tipo: 'credito', badgeKey: 'justificado', color: '#047857' }, // emerald-700
+  { name: 'D. Cliente',  tipo: 'debito',  badgeKey: 'cliente',     color: '#fda4af' }, // rose-300
+  { name: 'D. Recibo',   tipo: 'debito',  badgeKey: 'recibo',      color: '#fb7185' }, // rose-400
+  { name: 'D. Fatura',   tipo: 'debito',  badgeKey: 'fatura',      color: '#f43f5e' }, // rose-500
+  { name: 'D. Imposto',  tipo: 'debito',  badgeKey: 'imposto',     color: '#e11d48' }, // rose-600
+  { name: 'D. Justif.',  tipo: 'debito',  badgeKey: 'justificado', color: '#be123c' }, // rose-700
 ];
 
 export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTotals, currentMonth }) {
@@ -39,7 +41,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
   return (
     <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[2.5rem] shadow-sm border border-slate-100">
       <div className="flex items-center gap-3 mb-6">
-        <div className="bg-indigo-50 p-2 rounded-xl text-indigo-600"><Wallet size={20} /></div>
+        <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Wallet size={20} /></div>
         <h3 className="font-black text-lg text-slate-800">Resumo Financeiro</h3>
       </div>
 
@@ -83,7 +85,7 @@ export default function FinancialSummaryPanel({ badgeTotals, badgeDetails, ytdTo
                 className="flex items-center justify-between cursor-pointer hover:bg-slate-50 p-2 rounded-xl transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tipoKey === 'credito' ? '#22c55e' : '#ef4444' }} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tipoKey === 'credito' ? '#059669' : '#e11d48' }} />
                   <span className="text-sm font-bold text-slate-700">{tipoNome}</span>
                 </div>
                 <div className="flex items-center gap-2">

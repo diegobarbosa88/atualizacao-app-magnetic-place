@@ -11,7 +11,7 @@ function Field({ label, children }) {
   );
 }
 
-const inputCls = 'border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all w-full bg-white';
+const inputCls = 'border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10 transition-all w-full bg-white';
 
 export default function FornecedorForm() {
   const { form, setForm, saving, guardar, cancelar } = useFornecedor();
@@ -25,7 +25,7 @@ export default function FornecedorForm() {
       <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100 space-y-3">
         <div className="flex items-center gap-2 mb-1">
           <Building2 size={12} className="text-slate-500" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Dados da Empresa</span>
+          <span className="text-[10px] font-black tracking-widest text-slate-500">Dados da empresa</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -54,10 +54,10 @@ export default function FornecedorForm() {
       </div>
 
       {/* Secção 2 — Dados Bancários */}
-      <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100 space-y-3">
+      <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100 space-y-3">
         <div className="flex items-center gap-2 mb-1">
-          <CreditCard size={12} className="text-emerald-600" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Dados Bancários</span>
+          <CreditCard size={12} className="text-slate-500" />
+          <span className="text-[10px] font-black tracking-widest text-slate-500">Dados bancários</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div className="md:col-span-2">
@@ -82,14 +82,15 @@ export default function FornecedorForm() {
         </div>
 
         {/* Débito Automático toggle */}
-        <div className="flex items-center justify-between p-3 bg-violet-50 rounded-xl border border-violet-100">
+        <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
           <div>
-            <p className="text-xs font-black text-violet-800">Débito Automático</p>
-            <p className="text-[10px] text-violet-500 mt-0.5">As faturas deste fornecedor são pagas por débito direto — excluídas da Fila de Pagamentos</p>
+            <p className="text-xs font-black text-slate-700">Débito automático</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">As faturas deste fornecedor são pagas por débito direto — excluídas da Fila de Pagamentos</p>
           </div>
           <button
             onClick={tog('debito_automatico')}
-            className={`relative w-12 h-6 rounded-full transition-colors shrink-0 ml-3 ${form.debito_automatico ? 'bg-violet-600' : 'bg-slate-200'}`}
+            className="relative w-12 h-6 rounded-full transition-colors shrink-0 ml-3"
+            style={{ backgroundColor: form.debito_automatico ? '#1B3A57' : '#CBD5E1' }}
           >
             <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all ${form.debito_automatico ? 'left-7' : 'left-1'}`} />
           </button>
@@ -97,10 +98,10 @@ export default function FornecedorForm() {
       </div>
 
       {/* Secção 3 — Notas */}
-      <div className="bg-amber-50/60 p-4 rounded-2xl border border-amber-100">
+      <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
         <div className="flex items-center gap-2 mb-2">
-          <FileText size={12} className="text-amber-600" />
-          <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Notas</span>
+          <FileText size={12} className="text-slate-500" />
+          <span className="text-[10px] font-black tracking-widest text-slate-500">Notas</span>
         </div>
         <textarea
           value={form.notas}
@@ -116,7 +117,8 @@ export default function FornecedorForm() {
         <button
           onClick={guardar}
           disabled={saving}
-          className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors"
+          className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-colors disabled:opacity-60"
+          style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
         >
           {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           {saving ? 'A guardar...' : 'Guardar Fornecedor'}
