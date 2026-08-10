@@ -29,6 +29,7 @@ const TeamManagerContent = ({ onLogin }) => {
   const [linkCopied, setLinkCopied] = useState(false);
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [inviteError, setInviteError] = useState('');
 
   useEffect(() => {
     if (!supabase) return;
@@ -61,10 +62,11 @@ const TeamManagerContent = ({ onLogin }) => {
   const gerarConvite = async () => {
     if (!supabase || inviteLoading) return;
     setInviteLoading(true);
+    setInviteError('');
     try {
       const token = crypto.randomUUID();
       const id = 'onb_inv_' + Date.now();
-      await supabase.from('worker_onboarding_invites').insert({
+      const { error } = await supabase.from('worker_onboarding_invites').insert({
         id, token,
         email: inviteEmail || null,
         created_by: null,
@@ -72,12 +74,14 @@ const TeamManagerContent = ({ onLogin }) => {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'pending',
       });
+      if (error) throw error;
       const link = `${window.location.origin}/onboarding/${token}`;
       setGeneratedLink(link);
       setLinkCopied(false);
       setInviteEmailSent(false);
     } catch (e) {
       console.error('[onboarding] Erro ao gerar convite:', e);
+      setInviteError(e?.message || 'Erro ao gerar link. Verifica a ligação à base de dados.');
     } finally {
       setInviteLoading(false);
     }
@@ -282,7 +286,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); setInviteError(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -308,6 +312,11 @@ const TeamManagerContent = ({ onLogin }) => {
               />
               <p className="text-[10px] text-slate-400 mt-1.5">Se preenchido, pode enviar o link por email.</p>
             </div>
+            {inviteError && (
+              <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
+                <p className="text-xs font-bold text-rose-700">{inviteError}</p>
+              </div>
+            )}
             <button
               onClick={gerarConvite}
               disabled={inviteLoading}
@@ -346,7 +355,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </p>
             </div>
             <button
-              onClick={() => { setGeneratedLink(''); setInviteEmail(''); }}
+              onClick={() => { setGeneratedLink(''); setInviteEmail(''); setInviteError(''); }}
               className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1 transition-colors"
             >
               Gerar novo link

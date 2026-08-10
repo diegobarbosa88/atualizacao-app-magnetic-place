@@ -3,6 +3,19 @@ import { UserCircle, Lock, Download, AlertCircle, ExternalLink, X } from 'lucide
 import CompanyLogo from '../../components/common/CompanyLogo';
 import './LoginView.css';
 
+const PAGE_BG = { background: 'linear-gradient(160deg, #0F1F3D 0%, #1a3460 100%)' };
+const CARD_STYLE = {
+  backgroundColor: '#152843',
+  border: '1px solid rgba(255,255,255,0.08)',
+  boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
+};
+const INPUT_STYLE = {
+  backgroundColor: 'rgba(255,255,255,0.07)',
+  border: '1.5px solid rgba(255,255,255,0.10)',
+  color: 'white',
+};
+const INPUT_FOCUS_CLASS = 'outline-none transition-all focus:border-[#EB8D00]';
+
 const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
@@ -43,12 +56,9 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
     }
   };
 
-
-
   const handleSubmit = (e) => {
     e.preventDefault();
     if (user.trim().toLowerCase() === 'admin') {
-      // CR-01 fix: Require adminPassword to be set before allowing admin login
       if (!systemSettings.adminPassword) {
         setError('Sistema não configurado. Contacte o administrador.');
         return;
@@ -61,7 +71,6 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
       return;
     }
 
-    // Procura o trabalhador pelo primeiro e último nome juntos em minúsculas
     const found = workers.find(w => {
       if (!w.name) return false;
       const parts = w.name.trim().split(/\s+/);
@@ -95,22 +104,30 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
 
   if (pendingAdminWorker) {
     return (
-      <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans text-slate-900">
-        <div className="max-w-md w-full bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl p-8 sm:p-12 border border-slate-200 text-center">
-          <div className="flex justify-center mb-6">
-            <CompanyLogo className="h-20 w-20 object-contain drop-shadow-xl" />
+      <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 font-sans" style={PAGE_BG}>
+        <div className="max-w-md w-full rounded-[2rem] sm:rounded-[3rem] p-8 sm:p-12 text-center" style={CARD_STYLE}>
+          <div className="flex justify-center mb-5">
+            <CompanyLogo className="h-16 w-16 object-contain drop-shadow-xl" />
           </div>
-          <p className="text-xs text-slate-400 uppercase tracking-widest font-bold mb-1">Bem-vindo</p>
-          <h2 className="text-xl font-black text-slate-900 mb-8">{pendingAdminWorker.name}</h2>
-          <p className="text-sm font-bold text-slate-500 mb-5">Como quer entrar?</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: '4px' }}>Bem-vindo</p>
+          <h2 className="text-xl font-black text-white mb-8">{pendingAdminWorker.name}</h2>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: 700, marginBottom: '20px' }}>Como quer entrar?</p>
           <div className="flex flex-col gap-3">
-            <button onClick={() => onLogin('admin', { ...pendingAdminWorker, role: 'admin' })} className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg hover:bg-slate-700 active:scale-95 transition-all">
+            <button
+              onClick={() => onLogin('admin', { ...pendingAdminWorker, role: 'admin' })}
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
+              style={{ background: '#EB8D00', boxShadow: '0 4px 16px rgba(235,141,0,0.3)' }}
+            >
               Painel Admin
             </button>
-            <button onClick={() => onLogin('worker', pendingAdminWorker)} className="w-full bg-slate-100 text-slate-700 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 active:scale-95 transition-all">
+            <button
+              onClick={() => onLogin('worker', pendingAdminWorker)}
+              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
+              style={{ backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
+            >
               Meu Painel
             </button>
-            <button onClick={() => setPendingAdminWorker(null)} className="text-xs text-slate-400 hover:text-slate-600 mt-2 transition-colors">
+            <button onClick={() => setPendingAdminWorker(null)} className="text-xs text-slate-400 hover:text-slate-200 mt-2 transition-colors">
               Voltar
             </button>
           </div>
@@ -120,99 +137,141 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans text-slate-900">
-      <div className="max-w-md w-full bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl p-8 sm:p-12 border border-slate-200">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 font-sans" style={PAGE_BG}>
+      <div className="max-w-md w-full rounded-[2rem] sm:rounded-[3rem] p-8 sm:p-12" style={CARD_STYLE}>
+
+        {/* Cabeçalho de marca */}
         <div className="text-center mb-10">
-          <div className="flex justify-center mb-6">
-            <CompanyLogo className="h-32 w-32 object-contain drop-shadow-xl" />
+          <div className="flex justify-center mb-5">
+            <CompanyLogo className="h-20 w-20 object-contain drop-shadow-xl" />
           </div>
-          <div className="flex justify-center">
-            <h1 className="text-[11px] font-black tracking-[0.2em] uppercase whitespace-nowrap text-slate-800">MAGNETIC PLACE</h1>
-          </div>
-          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.3em] mt-2">Acesso ao Sistema</p>
+          <p className="text-white font-black text-2xl tracking-tight leading-none">MAGNETIC PLACE</p>
+          <p className="text-slate-400 text-sm font-medium mt-1">Unipessoal, Lda</p>
+          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: '12px' }}>Acesso ao Sistema</p>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Utilizador</label>
-            <div className="relative"><UserCircle className="absolute left-4 top-4 text-slate-300" size={20} /><input type="text" value={user} onChange={e => { setUser(e.target.value.toLowerCase().replace(/\s/g, '')); setError(''); }} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900 lowercase" placeholder="ex: joaosilva" autoCapitalize="none" autoCorrect="off" required /></div>
+            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Utilizador</label>
+            <div className="relative">
+              <UserCircle className="absolute left-4 top-4 text-slate-400" size={20} />
+              <input
+                type="text"
+                value={user}
+                onChange={e => { setUser(e.target.value.toLowerCase().replace(/\s/g, '')); setError(''); }}
+                className={`w-full rounded-2xl p-4 pl-12 text-sm ${INPUT_FOCUS_CLASS} placeholder:text-slate-500 lowercase`}
+                style={INPUT_STYLE}
+                placeholder="ex: joaosilva"
+                autoCapitalize="none"
+                autoCorrect="off"
+                required
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Senha</label>
-            <div className="relative"><Lock className="absolute left-4 top-4 text-slate-300" size={20} /><input type="password" value={pass} onChange={e => { setPass(e.target.value.replace(/\s/g, '')); setError(''); }} className="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-500 focus:bg-white rounded-2xl p-4 pl-12 text-sm outline-none transition-all shadow-inner text-slate-900" placeholder="O seu NIF" required /></div>
-          </div>
-          {error && <div className="p-4 bg-red-50 text-red-500 text-xs font-bold rounded-2xl flex items-center gap-3 animate-pulse"><AlertCircle size={16} /> {error}</div>}
-          <button type="submit" className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-slate-800 active:scale-95 transition-all">Entrar</button>
 
-          <div className="pt-4 border-t border-slate-100 flex flex-col gap-4">
-            {/* Botão de Instalação Unificado */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Senha</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-4 text-slate-400" size={20} />
+              <input
+                type="password"
+                value={pass}
+                onChange={e => { setPass(e.target.value.replace(/\s/g, '')); setError(''); }}
+                className={`w-full rounded-2xl p-4 pl-12 text-sm ${INPUT_FOCUS_CLASS} placeholder:text-slate-500`}
+                style={INPUT_STYLE}
+                placeholder="O seu NIF"
+                required
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-4 rounded-2xl flex items-center gap-3 text-xs font-bold" style={{ backgroundColor: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', color: '#fca5a5' }}>
+              <AlertCircle size={16} style={{ flexShrink: 0 }} /> {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
+            style={{ backgroundColor: '#1B3A57', border: '1px solid rgba(255,255,255,0.15)' }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#234d74'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#1B3A57'}
+          >
+            Entrar
+          </button>
+
+          <div className="pt-4 flex flex-col gap-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
             {showInstallButton && (
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:from-indigo-700 hover:to-indigo-800 shadow-xl shadow-indigo-100 flex justify-center items-center gap-3 animate-bounce-subtle transition-all transform active:scale-95"
+                className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest hover:opacity-90 flex justify-center items-center gap-3 animate-bounce-subtle transition-all transform active:scale-95 text-white"
+                style={{ background: 'linear-gradient(to right, #4f46e5, #4338ca)', boxShadow: '0 4px 20px rgba(79,70,229,0.25)' }}
               >
                 <div className="bg-white/20 p-1.5 rounded-lg"><Download size={20} /></div>
                 Instalar no Telemóvel
               </button>
             )}
 
-            {/* Instruções genéricas (Android/desktop sem prompt nativo) */}
             {!isIOS && !deferredPrompt && showIosInstructions && (
-              <div className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100 animate-in zoom-in-95 duration-300">
+              <div className="rounded-2xl p-5 animate-in zoom-in-95 duration-300" style={{ backgroundColor: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.25)' }}>
                 <div className="flex justify-between items-center mb-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-900">Como instalar</h4>
-                  <button onClick={() => setShowIosInstructions(false)} className="text-indigo-300 hover:text-indigo-600"><X size={16} /></button>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-indigo-300">Como instalar</h4>
+                  <button onClick={() => setShowIosInstructions(false)} className="text-indigo-400 hover:text-indigo-200"><X size={16} /></button>
                 </div>
                 <ul className="space-y-2">
-                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-800 bg-white/70 p-2.5 rounded-xl border border-indigo-100">
-                    <span className="bg-indigo-200 text-indigo-900 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]">1</span>
+                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(99,102,241,0.4)', color: '#c7d2fe' }}>1</span>
                     Abra o menu do browser (⋮ ou ···)
                   </li>
-                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-800 bg-white/70 p-2.5 rounded-xl border border-indigo-100">
-                    <span className="bg-indigo-200 text-indigo-900 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]">2</span>
+                  <li className="flex items-center gap-3 text-[10px] font-medium text-indigo-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(99,102,241,0.4)', color: '#c7d2fe' }}>2</span>
                     Escolha <span className="font-black mx-1">"Instalar aplicação"</span> ou <span className="font-black mx-1">"Adicionar ao ecrã inicial"</span>
                   </li>
                 </ul>
               </div>
             )}
 
-            {/* Instruções para iPhone (iOS) - Mostra apenas após clique */}
             {isIOS && showIosInstructions && (
-              <div id="ios-instructions" className="bg-amber-50 rounded-2xl p-5 border border-amber-200 animate-in zoom-in-95 duration-300 ring-2 ring-amber-100">
+              <div id="ios-instructions" className="rounded-2xl p-5 animate-in zoom-in-95 duration-300" style={{ backgroundColor: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)' }}>
                 <div className="flex justify-between items-center mb-4">
                   <div className="flex items-center gap-2">
-                    <ExternalLink size={18} className="text-amber-600" />
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-900">Guia Visual iPhone</h4>
+                    <ExternalLink size={18} className="text-amber-400" />
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-amber-300">Guia Visual iPhone</h4>
                   </div>
-                  <button onClick={() => setShowIosInstructions(false)} className="text-amber-400 p-1 hover:text-amber-600"><X size={16} /></button>
+                  <button onClick={() => setShowIosInstructions(false)} className="text-amber-400 p-1 hover:text-amber-200"><X size={16} /></button>
                 </div>
 
-                <div className="mb-4 rounded-xl overflow-hidden border border-amber-100 shadow-sm">
+                <div className="mb-4 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(245,158,11,0.2)' }}>
                   <img src="ios-guide.png" alt="Guia de Instalação iOS" className="w-full h-auto object-cover" />
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-[11px] font-bold text-amber-800 leading-relaxed">Mais fácil do que parece:</p>
+                  <p className="text-[11px] font-bold text-amber-300 leading-relaxed">Mais fácil do que parece:</p>
                   <ul className="space-y-2">
-                    <li className="flex items-center gap-3 text-[10px] font-medium text-amber-700 bg-white/70 p-2.5 rounded-xl border border-amber-100">
-                      <span className="bg-amber-200 text-amber-900 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]">1</span>
+                    <li className="flex items-center gap-3 text-[10px] font-medium text-amber-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                      <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }}>1</span>
                       Toque no ícone de <span className="font-black mx-1">Partilhar</span> em baixo.
                     </li>
-                    <li className="flex items-center gap-3 text-[10px] font-medium text-amber-700 bg-white/70 p-2.5 rounded-xl border border-amber-100">
-                      <span className="bg-amber-200 text-amber-900 w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]">2</span>
+                    <li className="flex items-center gap-3 text-[10px] font-medium text-amber-200 p-2.5 rounded-xl" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                      <span className="w-5 h-5 flex items-center justify-center rounded-full font-black text-[9px]" style={{ backgroundColor: 'rgba(245,158,11,0.3)', color: '#fcd34d' }}>2</span>
                       Escolha <span className="font-black mx-1">"Ecrã de Início"</span>.
                     </li>
                   </ul>
-                  <button onClick={() => setShowIosInstructions(false)} className="w-full py-2 bg-amber-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest mt-2 hover:bg-amber-700 transition-colors">Entendido</button>
+                  <button
+                    onClick={() => setShowIosInstructions(false)}
+                    className="w-full py-2 text-white rounded-xl text-[9px] font-black uppercase tracking-widest mt-2 transition-colors"
+                    style={{ backgroundColor: 'rgba(245,158,11,0.6)' }}
+                  >
+                    Entendido
+                  </button>
                 </div>
               </div>
             )}
-
           </div>
         </form>
       </div>
-
-      
     </div>
   );
 };

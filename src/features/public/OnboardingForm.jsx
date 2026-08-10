@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import {
   CheckCircle, ChevronLeft, ChevronRight, Loader2, AlertCircle, Check,
   User, Briefcase, Phone, Mail, CreditCard, MapPin, FileText, Users,
-  Building2, Shield, Lock, Calendar
+  Building2, Shield, Lock, Calendar, PenLine,
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
 import SelectProfissaoEmpresa from '../../components/SelectProfissaoEmpresa';
+import OnboardingCommitmentStep from './OnboardingCommitmentStep';
+
+const SUPABASE_URL      = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -24,6 +28,7 @@ const STEPS = [
   { label: 'Situação Fiscal',   icon: FileText },
   { label: 'Dados Financeiros', icon: CreditCard },
   { label: 'Revisão',           icon: CheckCircle },
+  { label: 'Compromisso',       icon: PenLine },
 ];
 
 function validarNIF(nif) {
@@ -230,6 +235,8 @@ export default function OnboardingForm({ token }) {
   const [errors, setErrors] = useState({});
   const [rgpd, setRgpd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [commitmentReady, setCommitmentReady] = useState(false);
+  const commitmentStepRef = useRef(null);
 
   useEffect(() => {
     if (!token) { setPageState('invalid'); return; }
@@ -264,6 +271,9 @@ export default function OnboardingForm({ token }) {
       if (form.nis && !validarNIS(form.nis)) errs.nis = 'NIS inválido — deve ter exatamente 11 dígitos.';
       if (form.iban && !validarIBAN(form.iban)) errs.iban = 'IBAN inválido — verifique o formato e o checksum.';
     }
+    if (s === 3) {
+      if (!rgpd) errs.rgpd = 'É necessário aceitar os termos para continuar.';
+    }
     return errs;
   }
 
@@ -280,8 +290,46 @@ export default function OnboardingForm({ token }) {
   };
 
   const handleSubmit = async () => {
+    // Obter dados do compromisso do componente filho via ref
+    const commitment = commitmentStepRef.current?.getSignature();
+    if (!commitment) {
+      setErrors({ _submit: 'Complete todos os campos do compromisso antes de finalizar.' });
+      return;
+    }
+
     setSubmitting(true);
+    setErrors({});
     try {
+      // 1. Chamar edge function — grava compromisso, gera PDF e envia email
+      const commitRes = await fetch(
+        `${SUPABASE_URL}/functions/v1/submit-onboarding-commitment`,
+        {
+          method:  'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            invite_id:        invite.id,
+            nome:             form.nome,
+            documento:        form.dni,
+            assinatura_base64: commitment.signature,
+            texto_hash:       commitment.hash,
+            texto_versao:     commitment.version,
+            user_agent:       navigator.userAgent,
+            email:            form.email || undefined,
+          }),
+        },
+      );
+
+      if (!commitRes.ok) {
+        const errData = await commitRes.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erro ao processar o compromisso.');
+      }
+      const { commitment_id } = await commitRes.json();
+
+      // 2. Inserir dados do formulário
       const submId = 'onb_sub_' + Date.now();
       const { error: insertErr } = await supabase.from('worker_onboarding_submissions').insert({
         id: submId, invite_id: invite.id, ...form,
@@ -290,14 +338,23 @@ export default function OnboardingForm({ token }) {
       });
       if (insertErr) throw insertErr;
 
+      // 3. Ligar submission ao compromisso
+      if (commitment_id) {
+        await supabase.from('onboarding_commitments')
+          .update({ submission_id: submId })
+          .eq('id', commitment_id);
+      }
+
+      // 4. Marcar convite como usado
       await supabase.from('worker_onboarding_invites')
         .update({ status: 'used', used_at: new Date().toISOString() })
         .eq('id', invite.id);
 
+      // 5. Notificação para o admin
       await supabase.from('app_notifications').insert({
         id: 'notif_onb_' + Date.now(),
         title: 'Novo formulário de onboarding',
-        message: `${form.nome} submeteu os seus dados. Reveja em Equipa → Pendentes.`,
+        message: `${form.nome} submeteu os dados e assinou o compromisso. Reveja em Equipa → Pendentes.`,
         type: 'info', target_type: 'admin', is_dismissible: true, is_active: true,
         created_at: new Date().toISOString(), dismissed_by_ids: [], viewed_by_ids: [],
       });
@@ -308,7 +365,7 @@ export default function OnboardingForm({ token }) {
       setPageState('success');
     } catch (e) {
       console.error('[onboarding] Erro na submissão:', e);
-      setErrors({ _submit: 'Ocorreu um erro ao enviar. Por favor tente novamente.' });
+      setErrors({ _submit: e.message || 'Ocorreu um erro ao enviar. Por favor tente novamente.' });
     } finally {
       setSubmitting(false);
     }
@@ -544,13 +601,31 @@ export default function OnboardingForm({ token }) {
                 </label>
               </div>
 
-              {errors._submit && (
+              {errors.rgpd && (
                 <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
                   <AlertCircle size={14} className="text-rose-500 shrink-0" />
-                  <p className="text-xs text-rose-600 font-semibold">{errors._submit}</p>
+                  <p className="text-xs text-rose-600 font-semibold">{errors.rgpd}</p>
                 </div>
               )}
             </>)}
+
+            {/* Passo 4 — Compromisso */}
+            {step === 4 && (
+              <OnboardingCommitmentStep
+                ref={commitmentStepRef}
+                nome={form.nome}
+                onReadyChange={setCommitmentReady}
+                submitting={submitting}
+              />
+            )}
+
+            {/* Erro global de submissão (passo 4) */}
+            {step === 4 && errors._submit && (
+              <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+                <AlertCircle size={14} className="text-rose-500 shrink-0" />
+                <p className="text-xs text-rose-600 font-semibold">{errors._submit}</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -576,11 +651,11 @@ export default function OnboardingForm({ token }) {
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!rgpd || submitting}
+                disabled={!commitmentReady || submitting}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-black text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] shadow-md shadow-emerald-200 transition-all ml-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
-                {submitting ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                Enviar dados
+                {submitting ? <Loader2 size={16} className="animate-spin" /> : <PenLine size={16} />}
+                {submitting ? 'A submeter…' : 'Confirmar Compromisso'}
               </button>
             )}
           </div>
