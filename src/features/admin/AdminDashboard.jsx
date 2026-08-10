@@ -101,6 +101,7 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
       <div className="hidden sm:block">
         <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>MAGNETIC PLACE</p>
         <p style={{ fontSize: '13px', fontWeight: 500, color: '#869AAF', lineHeight: 1.4, marginTop: '3px' }}>Unipessoal, Lda</p>
+        <p style={{ fontSize: '12px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: 1.4 }}>Gestão</p>
       </div>
 
       <div className="flex-1" />
