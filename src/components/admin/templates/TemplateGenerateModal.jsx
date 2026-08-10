@@ -30,7 +30,7 @@ export default function TemplateGenerateModal({
             value={selectedClientId}
             onChange={(e) => setSelectedClientId(e.target.value)}
             disabled={generating}
-            className="w-full border border-slate-200 rounded-xl p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full border border-slate-200 rounded-xl p-2 text-sm focus:ring-2 focus:ring-[#1B3A57]/30 outline-none"
           >
             <option value="">— Sem cliente —</option>
             {(clients || []).map((c) => (
@@ -77,7 +77,7 @@ export default function TemplateGenerateModal({
             </div>
             <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full bg-indigo-500 transition-all"
+                className="h-full transition-all" style={{ backgroundColor: '#1B3A57' }}
                 style={{ width: `${(genProgress.current / Math.max(genProgress.total, 1)) * 100}%` }}
               />
             </div>
@@ -94,7 +94,8 @@ export default function TemplateGenerateModal({
           <button
             onClick={onSubmit}
             disabled={generating || selectedWorkers.length === 0}
-            className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             Gerar {selectedWorkers.length} documento(s)

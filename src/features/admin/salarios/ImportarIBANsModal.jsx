@@ -196,7 +196,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                             ? <CheckCircle2 size={15} className="text-emerald-400" />
                             : semMatch
                             ? <HelpCircle size={15} className="text-amber-400" />
-                            : <CheckCircle2 size={15} className="text-indigo-500" />
+                            : <CheckCircle2 size={15} style={{ color: '#869AAF' }} />
                           }
                         </div>
                         <div className="flex-1 min-w-0">
@@ -209,7 +209,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
                             <select
                               value={wid || ''}
                               onChange={e => setOverrides(prev => ({ ...prev, [idx]: e.target.value || null }))}
-                              className="mt-2 w-full border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                              className="mt-2 w-full border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
                             >
                               <option value="">— sem correspondência —</option>
                               {workers

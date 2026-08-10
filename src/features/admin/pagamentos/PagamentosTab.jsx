@@ -4,9 +4,9 @@ import NovoPagamentoModal from './NovoPagamentoModal';
 
 const STATUS_BADGE = {
   pendente:           'bg-amber-50 text-amber-700 border-amber-100',
-  exportado:          'bg-blue-50 text-blue-700 border-blue-100',
-  enviado:            'bg-indigo-50 text-indigo-700 border-indigo-100',
-  iniciado_saltedge:  'bg-violet-50 text-violet-700 border-violet-100 animate-pulse',
+  exportado:          'bg-slate-100 text-slate-600 border-slate-200',
+  enviado:            'bg-teal-50 text-teal-700 border-teal-100',
+  iniciado_saltedge:  'bg-amber-50 text-amber-700 border-amber-200 animate-pulse',
   falhado_saltedge:   'bg-rose-50 text-rose-700 border-rose-100',
   confirmado:         'bg-emerald-50 text-emerald-700 border-emerald-100',
 };
@@ -211,14 +211,14 @@ export default function PagamentosTab() {
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-violet-50 rounded-xl">
-            <ArrowRightLeft size={16} className="text-violet-600" />
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
+            <ArrowRightLeft size={16} style={{ color: '#869AAF' }} />
           </div>
           <span className="text-sm font-black text-slate-800">Pagamentos a Fornecedores</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-violet-300">
+            className="px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
             <option value="">Todos os estados</option>
             <option value="pendente">Pendente</option>
             <option value="exportado">Exportado</option>
@@ -232,7 +232,8 @@ export default function PagamentosTab() {
             <RefreshCw size={13} /> Atualizar
           </button>
           <button onClick={() => setMostrarModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 transition-all shadow-sm">
+            className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
             <Plus size={13} /> Novo Pagamento
           </button>
         </div>
@@ -240,23 +241,26 @@ export default function PagamentosTab() {
 
       {/* Barra de ações em lote */}
       {selecionados.size > 0 && (
-        <div className="px-5 py-3 bg-violet-50 border-b border-violet-100 flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-xs font-bold text-violet-700">
+        <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-xs font-bold" style={{ color: '#1B3A57' }}>
             {selecionados.size} selecionado{selecionados.size > 1 ? 's' : ''} — {fmt(totalSelecionado)}
           </span>
           <div className="flex items-center gap-2">
             <button onClick={handleIniciarSaltedge} disabled={iniciandoSaltedge}
-              className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:from-violet-700 hover:to-indigo-700 transition-all disabled:opacity-60 shadow-sm">
+              className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 shadow-sm hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               {iniciandoSaltedge ? <Loader2 size={12} className="animate-spin" /> : <ArrowRightLeft size={12} />}
               Pagar Banco (Salt Edge)
             </button>
             <button onClick={handleExportarSEPA} disabled={exportando}
-              className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-violet-700 transition-all disabled:opacity-60">
+              className="flex items-center gap-1.5 px-3 py-2 border rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 hover:bg-slate-100"
+              style={{ borderColor: '#869AAF', color: '#869AAF' }}>
               {exportando ? <Loader2 size={12} className="animate-spin" /> : <Download size={12} />}
               Exportar SEPA XML
             </button>
             <button onClick={handleMarcarEnviado} disabled={marcando}
-              className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-60">
+              className="flex items-center gap-1.5 px-3 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               {marcando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
               Marcar Enviado
             </button>
@@ -283,7 +287,7 @@ export default function PagamentosTab() {
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-4 py-3 w-8">
                   <input type="checkbox" checked={todosSelecionados} onChange={toggleTodos}
-                    className="rounded accent-violet-600" />
+                    className="rounded accent-[#1B3A57]" />
                 </th>
                 {['Fornecedor', 'IBAN', 'Valor', 'Data', 'Referência', 'Estado', ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400 last:w-10">{h}</th>
@@ -292,11 +296,11 @@ export default function PagamentosTab() {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {pagamentos.map(p => (
-                <tr key={p.id} className={`hover:bg-slate-50 transition-colors ${selecionados.has(p.id) ? 'bg-violet-50/50' : ''}`}>
+                <tr key={p.id} className="hover:bg-slate-50 transition-colors" style={selecionados.has(p.id) ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                   <td className="px-4 py-3">
                     {p.status === 'pendente' && (
                       <input type="checkbox" checked={selecionados.has(p.id)} onChange={() => toggleSelecionado(p.id)}
-                        className="rounded accent-violet-600" />
+                        className="rounded accent-[#1B3A57]" />
                     )}
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-800">

@@ -282,10 +282,11 @@ export default function ReconciliacaoAdmin() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2">
-          <Landmark size={24} className="text-indigo-600" /> Reconciliação Bancária
+          <Landmark size={24} style={{ color: '#869AAF' }} /> Reconciliação Bancária
         </h2>
         <button onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-2xl border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest">
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
+          style={{ color: '#869AAF' }}>
           <Plus size={14} /> Inserir Fatura Manual
         </button>
       </div>
@@ -326,7 +327,8 @@ export default function ReconciliacaoAdmin() {
           </div>
           <div className="flex gap-2 pt-2">
             <button onClick={guardarFatura} disabled={savingFatura}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50">
+              className="flex items-center gap-2 px-4 py-2 text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50 hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               {savingFatura ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />} Guardar
             </button>
             <button onClick={() => setShowForm(false)}
@@ -344,22 +346,22 @@ export default function ReconciliacaoAdmin() {
           onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
           onClick={() => inputRef.current?.click()}
           className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
-            dragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-slate-50'
+            dragging ? 'border-[#869AAF] bg-slate-50' : 'border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'
           }`}
         >
           <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" multiple className="hidden" onChange={handleFileChange} />
-          <Upload size={32} className={`mx-auto mb-3 ${dragging ? 'text-indigo-500' : 'text-slate-300'}`} />
+          <Upload size={32} className="mx-auto mb-3" style={{ color: dragging ? '#869AAF' : '#CBD5E1' }} />
           {ficheiros.length > 0 ? (
             <div className="space-y-1.5" onClick={e => e.stopPropagation()}>
               {ficheiros.map((f, idx) => (
                 <div key={idx} className="flex items-center justify-center gap-2">
-                  <FileText size={14} className="text-indigo-600 flex-shrink-0" />
+                  <FileText size={14} style={{ color: '#869AAF' }} className="flex-shrink-0" />
                   <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{f.name}</span>
                   <button onClick={() => setFicheiros(prev => prev.filter((_, i) => i !== idx))}
                     className="text-slate-400 hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
                 </div>
               ))}
-              <p className="text-[10px] text-indigo-500 font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline"
+              <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: '#869AAF' }}
                 onClick={() => inputRef.current?.click()}>
                 + Adicionar mais ficheiros
               </p>
@@ -389,12 +391,13 @@ export default function ReconciliacaoAdmin() {
         )}
         {ficheiros.length > 0 && !previewing && !csvMapping && (
           <button onClick={previsar}
-            className="mt-4 w-full flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-2xl py-3 hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest">
+            className="mt-4 w-full flex items-center justify-center gap-2 text-white rounded-2xl py-3 transition-all text-[10px] font-black uppercase tracking-widest hover:opacity-90"
+            style={{ backgroundColor: '#1B3A57' }}>
             <ArrowLeftRight size={14} /> Pré-visualizar {ficheiros.length > 1 ? `${ficheiros.length} Ficheiros` : 'Movimentos'}
           </button>
         )}
         {previewing && (
-          <div className="mt-4 flex items-center justify-center gap-2 text-indigo-600">
+          <div className="mt-4 flex items-center justify-center gap-2" style={{ color: '#869AAF' }}>
             <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
           </div>
         )}
@@ -482,7 +485,8 @@ export default function ReconciliacaoAdmin() {
                   <X size={11} className="inline mr-1" />Cancelar
                 </button>
                 <button onClick={processar} disabled={processando || selTransacoes.size === 0}
-                  className="flex items-center gap-2 px-4 py-1.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40">
+                  className="flex items-center gap-2 px-4 py-1.5 text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:opacity-90"
+                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
                   {processando ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
                   Processar {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}
                 </button>
@@ -500,7 +504,7 @@ export default function ReconciliacaoAdmin() {
                     txTipoFiltro === key
                       ? key === 'debito' ? 'bg-rose-100 text-rose-700 ring-2 ring-rose-300'
                         : key === 'credito' ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300'
-                        : 'bg-indigo-100 text-indigo-700 ring-2 ring-indigo-300'
+                        : 'bg-slate-200 text-slate-700 ring-2 ring-slate-300'
                       : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                   }`}>{label}</button>
               ))}
@@ -508,7 +512,7 @@ export default function ReconciliacaoAdmin() {
 
             <input value={txSearch} onChange={e => setTxSearch(e.target.value)}
               placeholder="Filtrar por descrição ou valor..."
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30" />
 
             <div className="flex items-center gap-3 px-1">
               <label className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-500 cursor-pointer select-none">
@@ -518,7 +522,7 @@ export default function ReconciliacaoAdmin() {
                     allVisible.forEach(i => e.target.checked ? s.add(i) : s.delete(i));
                     return s;
                   })}
-                  className="accent-indigo-600 w-4 h-4" />
+                  className="accent-[#1B3A57] w-4 h-4" />
                 {allVisibleSelected ? 'Desseleccionar visíveis' : 'Seleccionar visíveis'}
               </label>
             </div>
@@ -528,15 +532,16 @@ export default function ReconciliacaoAdmin() {
                 <p className="text-center text-slate-400 py-6 text-sm">Nenhum movimento corresponde ao filtro.</p>
               )}
               {visibleIndices.map(({ tx, i }) => (
-                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-all ${selTransacoes.has(i) ? 'bg-indigo-50 border border-indigo-100' : 'bg-slate-50 border border-transparent hover:bg-slate-100'}`}>
+                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl transition-all border ${selTransacoes.has(i) ? 'border-transparent' : 'bg-slate-50 border-transparent hover:bg-slate-100'}`}
+                  style={selTransacoes.has(i) ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}>
                   <input type="checkbox" checked={selTransacoes.has(i)}
                     onChange={e => setSelTransacoes(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                    className="accent-indigo-600 w-4 h-4 flex-shrink-0 cursor-pointer" />
+                    className="accent-[#1B3A57] w-4 h-4 flex-shrink-0 cursor-pointer" />
                   <div className="flex-1 min-w-0">
-                    {tx._source && <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400 truncate mb-0.5">{tx._source}</p>}
+                    {tx._source && <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate mb-0.5">{tx._source}</p>}
                     {editingTxIdx === i ? (
                       <input autoFocus
-                        className="w-full text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                        className="w-full text-xs text-slate-700 font-medium border-b border-[#1B3A57] bg-transparent outline-none pb-0.5"
                         value={tx.descricao}
                         onChange={e => setPreviewTransacoes(prev => prev.map((t, j) => j === i ? { ...t, descricao: e.target.value } : t))}
                         onBlur={() => setEditingTxIdx(null)}
@@ -548,7 +553,8 @@ export default function ReconciliacaoAdmin() {
                     <p className="text-[10px] text-slate-400">{tx.data}</p>
                   </div>
                   <button onClick={() => setEditingTxIdx(editingTxIdx === i ? null : i)}
-                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
+                    className={`flex-shrink-0 transition-all ${editingTxIdx === i ? '' : 'text-slate-300 hover:text-[#869AAF]'}`}
+                    style={editingTxIdx === i ? { color: '#869AAF' } : {}}
                     title="Editar descrição"><Pencil size={12} /></button>
                   <div className="text-right flex-shrink-0 flex items-center gap-2">
                     <TipoBadge tipo={tx.tipo} />

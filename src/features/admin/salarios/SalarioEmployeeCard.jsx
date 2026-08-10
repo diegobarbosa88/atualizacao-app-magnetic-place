@@ -81,7 +81,7 @@ export default function SalarioEmployeeCard({
                   {!isMatch && !isJustified && (
                     <button
                       onClick={() => onJustificar({ employee_name: employee.employee_name, month: m.month, balance: m.balance })}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors flex-shrink-0"
+                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 transition-colors flex-shrink-0" style={{ color: '#869AAF' }}
                     >
                       <MessageSquare size={10} /> Justificar
                     </button>
@@ -110,7 +110,7 @@ export default function SalarioEmployeeCard({
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => window.__toggleTipoLink(t, supabase, onTipoUpdate)}
-                            className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0 ${t.type === 'Adiantamento' ? 'bg-blue-100 text-blue-700' : 'bg-violet-100 text-violet-700'}`}>
+                            className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest cursor-pointer hover:opacity-75 transition-opacity flex-shrink-0 ${t.type === 'Adiantamento' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                             {t.type === 'Adiantamento' ? 'Adiant.' : 'Liquid.'}
                           </button>
                           <span className="text-xs text-slate-500">{t.date}</span>

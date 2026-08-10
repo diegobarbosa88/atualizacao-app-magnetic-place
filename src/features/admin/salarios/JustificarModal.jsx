@@ -24,7 +24,7 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
             onChange={e => onTextChange(e.target.value)}
             placeholder="Ex: Adiantamento pago em numerário, remuneração acordada diferente, pagamento parcial pendente…"
             rows={3}
-            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-300 resize-none"
+            className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 resize-none"
           />
         </div>
         <div className="flex gap-2 pt-1">
@@ -35,7 +35,8 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
           <button
             disabled={!text.trim() || saving}
             onClick={onSave}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
           </button>

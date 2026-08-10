@@ -332,14 +332,14 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
                           <input
                             value={nomes.get(r.nif) ?? ''}
                             onChange={e => setNomes(prev => { const next = new Map(prev); next.set(r.nif, e.target.value); return next; })}
-                            className="text-[10px] text-slate-700 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:outline-none focus:border-indigo-400 bg-white"
+                            className="text-[10px] text-slate-700 border border-slate-200 rounded-lg px-2 py-1 w-48 focus:outline-none focus:border-[#1B3A57] bg-white"
                           />
                           <span className="text-[10px] text-slate-400">.pdf</span>
                         </div>
                       </td>
                       <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
                         <button onClick={() => downloadPdf(r)} title="Guardar PDF"
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-[#869AAF] hover:bg-slate-100 transition-colors">
                           <FileDown size={13} />
                         </button>
                       </td>

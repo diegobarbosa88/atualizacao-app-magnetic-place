@@ -148,7 +148,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
             onDrop={handleDrop}
             onDragOver={e => e.preventDefault()}
             className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-colors ${
-              pdfFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30'
+              pdfFile ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'
             }`}
             onClick={() => inputRef.current?.click()}
           >
@@ -170,7 +170,8 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
             <button
               onClick={extrairComIA}
               disabled={extraindo}
-              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60 transition-all"
+              className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-xs font-black text-white disabled:opacity-60 transition-all hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}
             >
               {extraindo ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
               {extraindo ? 'A extrair...' : extraido ? 'Re-extrair com IA' : 'Extrair campos com IA'}
@@ -184,7 +185,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               <select
                 value={fields.tipo}
                 onChange={e => set('tipo', e.target.value)}
-                className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full px-3 py-2 text-xs font-bold border border-slate-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               >
                 {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -196,7 +197,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
                 placeholder="ex: 2026-06"
                 value={fields.periodo}
                 onChange={e => set('periodo', e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               />
             </div>
             <div>
@@ -208,7 +209,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
                 placeholder="0.00"
                 value={fields.valor}
                 onChange={e => set('valor', e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               />
             </div>
             <div>
@@ -217,7 +218,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
                 type="date"
                 value={fields.data_vencimento}
                 onChange={e => set('data_vencimento', e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               />
             </div>
           </div>
@@ -229,7 +230,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               placeholder="PT50..."
               value={fields.iban_destino}
               onChange={e => set('iban_destino', e.target.value.toUpperCase())}
-              className={`w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 ${
+              className={`w-full px-3 py-2 text-xs border rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 ${
                 fields.iban_destino && !ibanValido(fields.iban_destino) ? 'border-red-300 bg-red-50' : 'border-slate-200'
               }`}
             />
@@ -241,7 +242,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               placeholder="Referência MB ou número de documento"
               value={fields.referencia}
               onChange={e => set('referencia', e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
             />
           </div>
           <div>
@@ -251,7 +252,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
               placeholder="ex: IVA Mensal Jun 2026"
               value={fields.descricao}
               onChange={e => set('descricao', e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
             />
           </div>
 
@@ -267,7 +268,8 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
           <button
             onClick={handleGuardar}
             disabled={guardando}
-            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 transition-all shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-2xl text-xs font-black text-white disabled:opacity-60 transition-all shadow-sm hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             {guardando ? <Loader2 size={14} className="animate-spin" /> : null}
             {guardando ? 'A guardar...' : 'Adicionar à Fila'}

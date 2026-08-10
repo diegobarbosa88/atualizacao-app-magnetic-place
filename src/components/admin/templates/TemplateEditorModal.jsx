@@ -132,12 +132,12 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase">Nome</label>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Contrato de Trabalho"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500" />
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B3A57]" />
           </div>
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase">Descrição (opcional)</label>
             <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Curta descrição interna"
-              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500" />
+              className="mt-1 w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:border-[#1B3A57]" />
           </div>
           <div>
             <label className="text-xs font-bold text-slate-600 uppercase">
@@ -166,7 +166,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
 
           <StampSection
             title="Carimbo do Trabalhador"
-            color="purple"
+            color="sky"
             x={stampX} setX={setStampX}
             y={stampY} setY={setStampY}
             page={stampPage} setPage={setStampPage}
@@ -174,7 +174,7 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
 
           <StampSection
             title="Carimbo da Empresa (Responsável)"
-            color="indigo"
+            color="amber"
             x={stampAdminX} setX={setStampAdminX}
             y={stampAdminY} setY={setStampAdminY}
             page={stampAdminPage} setPage={setStampAdminPage}
@@ -199,8 +199,8 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                 const isCopied = copiedTag === f.name;
                 return (
                   <button type="button" key={f.name} onClick={copy} title={`Copiar ${tag}`}
-                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'}`}>
-                    <code className={`font-mono ${isCopied ? 'text-emerald-700' : 'text-indigo-600'}`}>{tag}</code>
+                    className={`flex items-center gap-2 text-xs text-left px-2 py-1 rounded-md border transition-all ${isCopied ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'}`}>
+                    <code className={isCopied ? 'font-mono text-emerald-700' : 'font-mono'} style={isCopied ? {} : { color: '#869AAF' }}>{tag}</code>
                     <span className="text-slate-500 truncate flex-1">{f.label}</span>
                     <span className={`text-[10px] font-black uppercase tracking-widest ${isCopied ? 'text-emerald-600' : 'text-slate-300'}`}>
                       {isCopied ? 'Copiado' : 'Copiar'}
@@ -226,11 +226,11 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
                   <iframe src={`${pdfPreviewUrl}#toolbar=0&navpanes=0&scrollbar=0&view=Fit`}
                     className="absolute inset-0 w-full h-full rounded-lg border border-slate-300 bg-white"
                     title="Preview última página" />
-                  <div className="absolute bg-purple-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-purple-700"
+                  <div className="absolute bg-sky-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-sky-700"
                     style={{ width: `${(70 / 210) * 100}%`, height: `${(25 / 297) * 100}%`, left: `${(stampX / 210) * 100}%`, bottom: `${(stampY / 297) * 100}%` }}>
                     TRABALHADOR
                   </div>
-                  <div className="absolute bg-indigo-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-indigo-700"
+                  <div className="absolute bg-amber-500/70 rounded text-white text-[10px] font-bold flex items-center justify-center pointer-events-none border-2 border-amber-700"
                     style={{ width: `${(70 / 210) * 100}%`, height: `${(25 / 297) * 100}%`, left: `${(stampAdminX / 210) * 100}%`, bottom: `${(stampAdminY / 297) * 100}%` }}>
                     EMPRESA
                   </div>
@@ -247,8 +247,8 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
           </div>
 
           <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-3 space-y-1">
-            <p><span className="inline-block w-2 h-2 rounded-full bg-purple-500 mr-1" /><strong>Trabalhador</strong> — aplicado quando o trabalhador assina.</p>
-            <p><span className="inline-block w-2 h-2 rounded-full bg-indigo-500 mr-1" /><strong>Empresa</strong> — aplicado depois pelo responsável da Magnetic Place ao aprovar.</p>
+            <p><span className="inline-block w-2 h-2 rounded-full bg-sky-500 mr-1" /><strong>Trabalhador</strong> — aplicado quando o trabalhador assina.</p>
+            <p><span className="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1" /><strong>Empresa</strong> — aplicado depois pelo responsável da Magnetic Place ao aprovar.</p>
             <p className="text-slate-400 pt-1">Ambos os carimbos têm 70×25mm, posicionados a partir do canto inferior-esquerdo. O QR é colocado automaticamente em todas as páginas.</p>
           </div>
         </div>
@@ -264,7 +264,8 @@ export default function TemplateEditorModal({ template, supabase, onClose, onSav
       <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-200">
         <button onClick={onClose} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl">Cancelar</button>
         <button onClick={handleSubmit} disabled={submitting || saving || (!isEditing && !file)}
-          className="flex items-center gap-2 px-6 py-2 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:opacity-50">
+          className="flex items-center gap-2 px-6 py-2 text-white font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
+          style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
           {(submitting || saving) ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
           {isEditing ? 'Guardar Alterações' : 'Criar Template'}
         </button>

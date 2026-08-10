@@ -277,7 +277,7 @@ export default function FilaAprovacaoTab() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h4 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-            <ListChecks size={16} className="text-violet-600" />
+            <ListChecks size={16} style={{ color: '#869AAF' }} />
             Fila de Pagamentos
           </h4>
           <p className="text-[10px] font-semibold text-slate-400 mt-0.5">
@@ -312,12 +312,13 @@ export default function FilaAprovacaoTab() {
               key={key}
               onClick={() => { setTab(key); setSelecionados(new Set()); }}
               className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                tab === key ? 'bg-white text-violet-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                tab === key ? '' : 'text-slate-400 hover:text-slate-600'
               }`}
+              style={tab === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#1B3A57' } : {}}
             >
               {label}
               {count > 0 && (
-                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-violet-100 text-violet-700' : 'bg-slate-200 text-slate-500'}`}>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${tab === key ? 'bg-white text-[#1B3A57]' : 'bg-slate-200 text-slate-500'}`}>
                   {count}
                 </span>
               )}
@@ -349,7 +350,7 @@ export default function FilaAprovacaoTab() {
               type="checkbox"
               checked={selecionados.size === pendentes.length && pendentes.length > 0}
               onChange={toggleAll}
-              className="w-4 h-4 accent-violet-600 cursor-pointer"
+              className="w-4 h-4 accent-[#1B3A57] cursor-pointer"
             />
             <span className="text-[11px] font-black text-slate-600">
               {selecionados.size > 0
@@ -361,7 +362,8 @@ export default function FilaAprovacaoTab() {
           <button
             onClick={handleExportar}
             disabled={exportando || selecionados.size === 0}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white disabled:opacity-40 transition-all shadow-sm hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             {exportando ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
             {exportando ? 'A gerar...' : 'Gerar SEPA XML'}
@@ -399,9 +401,8 @@ export default function FilaAprovacaoTab() {
             return (
               <div
                 key={item.key}
-                className={`flex items-center gap-3 px-4 py-3.5 transition-colors ${
-                  isSel ? 'bg-violet-50/60' : 'hover:bg-slate-50/50'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3.5 transition-colors ${isSel ? '' : 'hover:bg-slate-50/50'}`}
+                style={isSel ? { backgroundColor: 'rgba(235,141,0,0.08)' } : {}}
               >
                 {/* Checkbox (pendente only) */}
                 {isPendente ? (
@@ -409,7 +410,7 @@ export default function FilaAprovacaoTab() {
                     type="checkbox"
                     checked={isSel}
                     onChange={() => toggleItem(item.key)}
-                    className="w-4 h-4 accent-violet-600 cursor-pointer shrink-0"
+                    className="w-4 h-4 accent-[#1B3A57] cursor-pointer shrink-0"
                   />
                 ) : (
                   <div className="w-4 shrink-0" />
@@ -420,8 +421,8 @@ export default function FilaAprovacaoTab() {
                   item.fonte === 'imposto'
                     ? 'bg-orange-100 text-orange-700'
                     : item.fonte === 'fatura-gmail'
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : 'bg-blue-100 text-blue-700'
+                    ? 'bg-slate-200 text-slate-700'
+                    : 'bg-slate-100 text-[#869AAF]'
                 }`}>
                   {item.fonte === 'imposto' ? (item.subtipo || 'Imp.') : item.fonte === 'fatura-gmail' ? 'Gmail' : 'Forn.'}
                 </span>
@@ -461,7 +462,7 @@ export default function FilaAprovacaoTab() {
                 <div className="flex items-center gap-1 shrink-0">
                   {item.url && (
                     <a href={item.url} target="_blank" rel="noopener noreferrer"
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-300 hover:text-[#869AAF] hover:bg-slate-100 transition-colors"
                       title="Ver PDF">
                       <FileText size={13} />
                     </a>

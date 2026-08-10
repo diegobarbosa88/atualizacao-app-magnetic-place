@@ -44,14 +44,14 @@ export default function AssocTransacaoModal({
               value={pattern}
               onChange={e => onPatternChange(e.target.value)}
               placeholder="Ex: João Silva"
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
             />
             {preview}
           </div>
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Trabalhador</label>
             <select value={worker} onChange={e => onWorkerChange(e.target.value)}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
               <option value="">Seleccionar…</option>
               {workers.map(name => (
                 <option key={name} value={name}>{name}</option>
@@ -67,7 +67,8 @@ export default function AssocTransacaoModal({
           <button
             disabled={!pattern.trim() || !worker || saving}
             onClick={onSave}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Guardar
           </button>
