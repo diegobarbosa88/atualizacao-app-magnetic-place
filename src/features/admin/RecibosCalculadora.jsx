@@ -615,7 +615,11 @@ export default function RecibosCalculadora() {
         : undefined;
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, wVencCalculoR);
+      const { rc, mapaLiqLive: mapaLiqCalc } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, wVencCalculoR);
+      // Para trabalhadores sempre incluídos: forçar ajudas máximas isentas (limite legal × todos os dias do mês)
+      const mapaLiqLive = sempreIncluir
+        ? Math.round(new Date(anoNum, mesNum, 0).getDate() * valorDiarioLegal('internacional', 'geral') * 100) / 100
+        : mapaLiqCalc;
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
