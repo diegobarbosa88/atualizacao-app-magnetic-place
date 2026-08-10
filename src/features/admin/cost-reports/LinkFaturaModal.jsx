@@ -100,15 +100,15 @@ const LinkFaturaModal = ({
                 key={`${section}_${index}`}
                 onClick={() => associarPagamentoFatura(section, index, tx)}
                 disabled={linkSaving}
-                className="w-full flex items-center justify-between bg-slate-50 hover:bg-indigo-50 border border-slate-100 hover:border-indigo-200 rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
+                className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-[#869AAF] rounded-2xl px-4 py-3 transition-all text-left disabled:opacity-50"
               >
                 <div>
                   <p className="text-sm font-bold text-slate-800">{formatCurrency(Number(tx.valor))}</p>
                   <p className="text-[10px] text-slate-500">{tx.data} · {(tx.descricao || '').slice(0, 55)}</p>
                 </div>
                 {linkSaving
-                  ? <Loader2 size={13} className="animate-spin text-indigo-500" />
-                  : <Plus size={14} className="text-indigo-400" />
+                  ? <Loader2 size={13} className="animate-spin" style={{ color: '#1B3A57' }} />
+                  : <Plus size={14} style={{ color: '#869AAF' }} />
                 }
               </button>
             ))}

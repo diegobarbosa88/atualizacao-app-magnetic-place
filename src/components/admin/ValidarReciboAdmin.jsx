@@ -20,14 +20,14 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-2xl">
+      <div className="flex items-center gap-1 border-b border-slate-100">
         {[
           { id: 'recibos',    icon: ReceiptText, label: 'Recibos'    },
           { id: 'burst',      icon: Scissors,    label: 'Burst'      },
           { id: 'documentos', icon: Files,       label: 'Documentos' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
-            className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${modo === id ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+            className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${modo === id ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
             <Icon size={13} /> {label}
           </button>
         ))}

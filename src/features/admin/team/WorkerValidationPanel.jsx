@@ -14,7 +14,7 @@ const SOURCE_CFG = {
   manual_admin: { label: 'Admin',      bg: 'bg-indigo-100',  text: 'text-indigo-700' },
   manual_worker:{ label: 'Manual',     bg: 'bg-blue-100',    text: 'text-blue-700' },
   batch:        { label: 'Lote',       bg: 'bg-amber-100',   text: 'text-amber-700' },
-  request:      { label: 'Pedido',     bg: 'bg-purple-100',  text: 'text-purple-700' },
+  request:      { label: 'Pedido',     bg: 'bg-slate-100',   text: 'text-[#869AAF]' },
   correction:   { label: 'Correcção',  bg: 'bg-orange-100',  text: 'text-orange-700' },
   client_portal:{ label: 'Portal',     bg: 'bg-teal-100',    text: 'text-teal-700' },
 };

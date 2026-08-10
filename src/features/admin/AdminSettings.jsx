@@ -254,8 +254,8 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <div key={w.id} className={`p-3 bg-slate-50 rounded-2xl border transition-all ${isEditing ? 'border-indigo-200 bg-indigo-50/30' : 'border-slate-100'}`}>
                   {isEditing ? (
                     <div className="space-y-2">
-                      <input type="text" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-                      <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+                      <input type="text" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} placeholder="Nome completo" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+                      <input type="text" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} placeholder="Senha (NIF)" className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
                       <div className="flex gap-2 pt-1">
                         <button onClick={handleSaveAdmin} className="flex-1 text-white py-2 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: '#1B3A57' }}>Guardar</button>
                         <button onClick={() => setAdminFormMode(null)} className="px-4 py-2 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
@@ -285,14 +285,14 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 <select
                   value={adminForm.selectedWorkerId}
                   onChange={e => handleSelectExistingWorker(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]"
                 >
                   <option value="">— Selecionar trabalhador existente —</option>
                   {nonAdminWorkers.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                 </select>
               )}
-              <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
-              <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-500" />
+              <input type="text" placeholder="Nome completo" value={adminForm.name} onChange={e => setAdminForm(p => ({ ...p, name: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
+              <input type="text" placeholder="Senha (NIF)" value={adminForm.nif} onChange={e => setAdminForm(p => ({ ...p, nif: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-[#1B3A57]" />
               <div className="flex gap-2">
                 <button onClick={handleSaveAdmin} className="flex-1 text-white py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all" style={{ backgroundColor: '#EB8D00' }}>Criar</button>
                 <button onClick={() => { setAdminFormMode(null); setAdminForm({ id: null, name: '', nif: '', selectedWorkerId: '' }); }} className="px-4 py-3 rounded-xl font-black text-xs text-slate-500 hover:bg-slate-100 transition-all">Cancelar</button>
@@ -311,7 +311,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Alterar Senha Administrador</p>
             <div className="flex gap-2">
               <input type="password" placeholder="Nova Senha" className="flex-1 bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none" id="new-admin-pass" />
-              <button onClick={() => { const passEl = document.getElementById('new-admin-pass'); if (!passEl) return; const newPass = passEl.value; if (!newPass) return; updateSetting('adminPassword', newPass); alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.'); passEl.value = ''; }} className="bg-slate-900 text-white px-6 py-2 rounded-xl font-bold text-xs uppercase hover:bg-slate-800 transition-all">Atualizar</button>
+              <button onClick={() => { const passEl = document.getElementById('new-admin-pass'); if (!passEl) return; const newPass = passEl.value; if (!newPass) return; updateSetting('adminPassword', newPass); alert('Senha alterada com sucesso! A nova senha será necessária no próximo login.'); passEl.value = ''; }} className="text-white px-6 py-2 rounded-xl font-bold text-xs uppercase transition-all hover:opacity-90" style={{ backgroundColor: '#1B3A57' }}>Atualizar</button>
             </div>
           </div>
         </div>
@@ -340,7 +340,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                 </div>
                 <div className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border ${ssStatus.ambiente === 'producao' ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-orange-50 border-orange-200 text-orange-700'}`}>
                   {ssStatus.ambiente === 'producao' ? <Globe size={13} /> : <TestTube2 size={13} />}
-                  {ssStatus.ambiente === 'producao' ? 'Produção' : 'MODO TESTE'}
+                  {ssStatus.ambiente === 'producao' ? 'Produção' : 'Modo teste'}
                 </div>
                 {ssStatus.nissEmpresa && (
                   <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold border bg-slate-50 border-slate-200 text-slate-500">
@@ -497,7 +497,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               value={systemSettings.companyName}
               onChange={(e) => setSystemSettings(prev => ({ ...prev, companyName: e.target.value }))}
               onBlur={(e) => updateSetting('companyName', e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold"
             />
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Morada</p>
             <input
@@ -506,7 +506,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               onChange={(e) => setSystemSettings(prev => ({ ...prev, companyAddress: e.target.value }))}
               onBlur={(e) => updateSetting('companyAddress', e.target.value)}
               placeholder="Rua, nº, código postal, localidade"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold"
             />
             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">NIF</p>
             <input
@@ -515,7 +515,7 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
               onChange={(e) => setSystemSettings(prev => ({ ...prev, companyNif: e.target.value }))}
               onBlur={(e) => updateSetting('companyNif', e.target.value)}
               placeholder="Nº de Identificação Fiscal"
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-[#1B3A57] outline-none font-bold"
             />
           </div>
         </div>
@@ -672,7 +672,8 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
                     saveAbsenceConfig({ ...absenceConfig, absence_reasons: [...(absenceConfig.absence_reasons || []), newReason.trim()] });
                     setNewReason('');
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-500 text-white rounded-xl text-xs font-black uppercase tracking-wider hover:bg-orange-600 transition-all"
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all hover:opacity-90"
+                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
                 >
                   <Plus size={13} /> Adicionar
                 </button>

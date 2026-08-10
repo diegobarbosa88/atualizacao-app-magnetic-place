@@ -103,7 +103,8 @@ function ModalDetalhe({ fatura, onClose }) {
             <a
               href={fatura.url}
               download={fatura.filename}
-              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-sm"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all border-2 hover:bg-slate-50"
+              style={{ borderColor: '#869AAF', color: '#1B3A57' }}
             >
               <Download size={16} /> Baixar PDF Original
             </a>
@@ -631,7 +632,8 @@ export default function FaturasAdmin() {
             {gerandoPdf ? <Loader2 size={13} className="animate-spin" /> : <Printer size={13} />} PDF
           </button>
           <button onClick={handleReextrairSelecionados} disabled={extraindo}
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50">
+            className="flex items-center gap-1.5 px-4 py-2 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 hover:opacity-90"
+            style={{ backgroundColor: '#1B3A57' }}>
             {extraindo ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Reextrair com IA
           </button>
           <button onClick={handleApagarSelecionados} disabled={apagando}
@@ -778,7 +780,8 @@ export default function FaturasAdmin() {
             <div className="flex gap-2 mt-4">
               <button
                 onClick={guardarIbanFornecedor}
-                className="flex-1 py-2 text-xs font-black bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 uppercase tracking-widest"
+                className="flex-1 py-2 text-xs font-black rounded-xl uppercase tracking-widest hover:opacity-90"
+                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
               >
                 Guardar
               </button>

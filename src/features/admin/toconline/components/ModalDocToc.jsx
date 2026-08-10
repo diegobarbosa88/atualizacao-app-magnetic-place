@@ -82,7 +82,8 @@ export default function ModalDocToc({ item, tipo, onClose }) {
           <button
             onClick={handleBaixarPdf}
             disabled={carregandoPdf}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm disabled:opacity-60"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-black uppercase tracking-widest transition-all disabled:opacity-60 border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#1B3A57' }}
           >
             {carregandoPdf ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
             {pdfUrl ? 'Abrir PDF' : 'Baixar PDF Original'}

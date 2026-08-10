@@ -68,7 +68,8 @@ function NovoClienteModal({ onClose, onSalvo }) {
               Cancelar
             </button>
             <button type="submit" disabled={salvando}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-blue-700 transition-all disabled:opacity-60 flex items-center justify-center gap-1.5">
+              className="flex-1 px-4 py-2 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-1.5 hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
               {salvando ? <Loader2 size={13} className="animate-spin" /> : null}
               Guardar
             </button>
@@ -121,8 +122,8 @@ export default function TOConlineClientes({ onDesligado }) {
       {/* Header */}
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-blue-50 rounded-xl">
-            <Users size={16} className="text-blue-600" />
+          <div className="p-2 rounded-xl" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
+            <Users size={16} style={{ color: '#869AAF' }} />
           </div>
           <span className="text-sm font-black text-slate-800">Clientes</span>
         </div>
@@ -132,7 +133,8 @@ export default function TOConlineClientes({ onDesligado }) {
             <RefreshCw size={13} /> Sincronizar
           </button>
           <button onClick={() => setMostrarModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-sm">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-sm hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
             <Plus size={13} /> Novo Cliente
           </button>
         </div>
