@@ -7,7 +7,7 @@ import { parseDeviceLabel } from '../../utils/deviceUtils';
 import {
   Settings2, CheckCircle, Users, X, Zap, Plus, Trash2, Unlock,
   Settings, FileText, Sparkles, Bell, Pencil, FileDown, CalendarX,
-  Menu, BarChart3, LogOut, ChevronLeft
+  BarChart3, LogOut, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 const SOURCE_CFG = {
@@ -64,10 +64,10 @@ import {
 } from '../../utils/formatUtils';
 import { callGemini } from '../../utils/aiUtils';
 
-function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogout, onSwitchToWorker, onOpenMobileNav, showBackToTeam, onBackToTeam, onGoHome }) {
+function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogout, onSwitchToWorker, showBackToTeam, onBackToTeam, onGoHome }) {
   return (
     <div
-      className="flex items-center px-4 sm:px-6 gap-3 sm:gap-4 shrink-0"
+      className="flex items-center px-2.5 sm:px-6 gap-1.5 sm:gap-4 shrink-0"
       style={{
         height: '104px',
         backgroundColor: '#1B3A57',
@@ -76,15 +76,6 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
         zIndex: 40,
       }}
     >
-      <button
-        onClick={onOpenMobileNav}
-        aria-label="Abrir menu"
-        className="md:hidden p-2 rounded-xl transition-all shrink-0"
-        style={{ color: 'rgba(255,255,255,0.7)', backgroundColor: 'rgba(255,255,255,0.08)' }}
-      >
-        <Menu size={20} />
-      </button>
-
       {showBackToTeam && (
         <button
           onClick={onBackToTeam}
@@ -97,35 +88,37 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
 
       <button
         onClick={onGoHome}
-        className="flex items-center gap-3 sm:gap-4 rounded-2xl transition-all shrink-0"
-        style={{ background: 'none', border: 'none', padding: '6px 8px', cursor: 'pointer' }}
+        className="flex items-center gap-2 sm:gap-4 rounded-2xl transition-all flex-1 min-w-0 sm:flex-initial"
+        style={{ background: 'none', border: 'none', padding: '6px 2px', cursor: 'pointer' }}
         aria-label="Ir para início"
         title="Início"
       >
-        <div style={{
-          width: '68px', height: '68px', borderRadius: '50%',
-          overflow: 'hidden', flexShrink: 0, backgroundColor: '#EB8D00',
+        <div className="w-12 h-12 sm:w-[68px] sm:h-[68px] shrink-0" style={{
+          borderRadius: '50%',
+          overflow: 'hidden', backgroundColor: '#EB8D00',
         }}>
           <CompanyLogo className="w-full h-full object-cover" />
         </div>
-        <div className="hidden sm:block text-left">
-          <p style={{ fontSize: '24px', fontWeight: 900, color: 'white', lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>MAGNETIC PLACE</p>
-          <p style={{ fontSize: '13px', fontWeight: 500, color: '#869AAF', lineHeight: 1.4, marginTop: '3px' }}>Unipessoal, Lda</p>
-          <p style={{ fontSize: '12px', fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.12em', lineHeight: 1.4 }}>Gestão</p>
+        <div className="text-left min-w-0">
+          <p className="text-sm sm:text-2xl truncate" style={{ fontWeight: 800, color: 'white', lineHeight: 1.2, letterSpacing: 'normal', textTransform: 'uppercase' }}>Magnetic Place</p>
+          <p className="text-[10px] sm:text-[13px] truncate" style={{ fontWeight: 500, color: '#869AAF', lineHeight: 1.3, marginTop: '2px' }}>Unipessoal, Lda</p>
+          <p className="text-[9px] sm:text-xs truncate" style={{ fontWeight: 500, color: '#EB8D00', textTransform: 'uppercase', letterSpacing: '0.08em', lineHeight: 1.3 }}>Gestão</p>
         </div>
       </button>
 
-      <div className="flex-1" />
+      <div className="hidden sm:block sm:flex-1" />
 
-      <div className="flex items-center gap-2">
+      {/* Ícones de ação — estilo suave, sem caixa sólida, só um leve realce ao tocar/passar o rato */}
+      <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
         <button
           data-notif-bell
           onClick={onToggleNotifDropdown}
-          className="flex items-center justify-center p-2.5 rounded-xl transition-all relative"
-          style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+          className="flex items-center justify-center p-1.5 sm:p-2.5 rounded-xl transition-colors active:bg-white/10 sm:hover:bg-white/10 relative"
+          style={{ color: 'rgba(255,255,255,0.75)' }}
           aria-label="Notificações"
         >
-          <Bell size={18} />
+          <Bell size={17} className="sm:hidden" />
+          <Bell size={18} className="hidden sm:block" />
           {unreadCount > 0 && (
             <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[8px] px-1.5 py-0.5 rounded-full font-black">
               {unreadCount}
@@ -135,8 +128,8 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
 
         <button
           onClick={onOpenFinReport}
-          className="hidden sm:flex items-center justify-center p-2.5 rounded-xl transition-all"
-          style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+          className="hidden sm:flex items-center justify-center p-2.5 rounded-xl transition-colors hover:bg-white/10"
+          style={{ color: 'rgba(255,255,255,0.75)' }}
           aria-label="Relatório financeiro"
           title="Relatório financeiro"
         >
@@ -146,23 +139,25 @@ function BrandBar({ unreadCount, onToggleNotifDropdown, onOpenFinReport, onLogou
         {onSwitchToWorker && (
           <button
             onClick={onSwitchToWorker}
-            className="flex items-center justify-center p-2.5 rounded-xl transition-all"
-            style={{ backgroundColor: 'rgba(255,255,255,0.12)', color: 'white' }}
+            className="flex items-center justify-center p-1.5 sm:p-2.5 rounded-xl transition-colors active:bg-white/10 sm:hover:bg-white/10"
+            style={{ color: 'rgba(255,255,255,0.75)' }}
             aria-label="Ver como trabalhador"
             title="Ver como trabalhador"
           >
-            <Users size={18} />
+            <Users size={17} className="sm:hidden" />
+            <Users size={18} className="hidden sm:block" />
           </button>
         )}
 
         <button
           onClick={onLogout}
-          className="p-2.5 rounded-xl transition-all"
+          className="p-1.5 sm:p-2.5 rounded-xl transition-colors active:bg-white/10 sm:hover:bg-white/10"
           style={{ color: 'rgba(255,255,255,0.5)' }}
           aria-label="Terminar sessão"
           title="Terminar sessão"
         >
-          <LogOut size={18} />
+          <LogOut size={17} className="sm:hidden" />
+          <LogOut size={18} className="hidden sm:block" />
         </button>
       </div>
     </div>
@@ -557,7 +552,9 @@ function AdminDashboard(props) {
   const navMode = systemSettings?.navMode || 'sidebar';
 
   return (
-    <div className={`bg-[#EEF2F5] font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}>
+    <div
+      className={`bg-[#EEF2F5] font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}
+    >
       {navMode === 'topbar' ? (
         <>
           <AdminClassicNav
@@ -587,7 +584,6 @@ function AdminDashboard(props) {
             onOpenFinReport={() => setShowFinReport(true)}
             onLogout={onLogout}
             onSwitchToWorker={currentUser?.isAdmin ? () => onLogin('worker', currentUser) : null}
-            onOpenMobileNav={() => setMobileNavOpen(true)}
             showBackToTeam={!!auditWorkerId}
             onBackToTeam={() => setAuditWorkerId(null)}
             onGoHome={() => setActiveTab('overview')}
@@ -614,6 +610,28 @@ function AdminDashboard(props) {
               </main>
             </div>
           </div>
+
+          {/* Pega fixa para abrir o menu mobile — visível, não depende só do gesto de deslizar */}
+          {!mobileNavOpen && (
+            <button
+              onClick={() => setMobileNavOpen(true)}
+              aria-label="Abrir menu"
+              className="md:hidden fixed left-0 top-1/2 -translate-y-1/2 z-30 flex items-center justify-center active:scale-95 transition-transform"
+              style={{
+                width: '20px',
+                height: '56px',
+                backgroundColor: '#1B3A57',
+                borderTopRightRadius: '10px',
+                borderBottomRightRadius: '10px',
+                borderTop: '1px solid rgba(235,141,0,0.5)',
+                borderRight: '1px solid rgba(235,141,0,0.5)',
+                borderBottom: '1px solid rgba(235,141,0,0.5)',
+                boxShadow: '2px 0 10px rgba(0,0,0,0.25)',
+              }}
+            >
+              <ChevronRight size={13} style={{ color: '#EB8D00' }} />
+            </button>
+          )}
         </>
       )}
 

@@ -429,7 +429,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
           .filter(Boolean);
         return (
           <div key={group.id} className={groupIdx > 0 ? 'mt-4' : ''}>
-            <p className="px-3 mb-1 text-[9.5px] font-medium tracking-wide uppercase text-slate-400">
+            <p className="px-3 mb-1 text-[9.5px] font-medium tracking-wide uppercase" style={{ color: B.sectionLabel }}>
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -445,16 +445,14 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                     <button
                       onClick={() => handleTabClick(tab)}
                       aria-current={isActive ? 'page' : undefined}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                        isActive ? '' : 'text-slate-600 active:bg-slate-100'
-                      }`}
-                      style={isActive ? {
-                        backgroundColor: 'rgba(235,141,0,0.10)',
-                        boxShadow: `inset 3px 0 0 0 ${B.orange}`,
-                      } : {}}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all"
+                      style={{
+                        backgroundColor: isActive ? B.activeItemBg : 'transparent',
+                        boxShadow: isActive ? `inset 3px 0 0 0 ${B.orange}` : 'none',
+                      }}
                     >
-                      <Icon size={18} className="shrink-0" style={{ color: isActive ? B.orange : undefined }} />
-                      <span className="flex-1 text-left truncate" style={{ color: isActive ? B.navy : undefined }}>
+                      <Icon size={18} className="shrink-0" style={{ color: isActive ? B.orange : B.inactiveIcon }} />
+                      <span className="flex-1 text-left truncate" style={{ color: isActive ? 'white' : B.inactiveText }}>
                         {tab.label}
                       </span>
                       {badge > 0 && (
@@ -469,7 +467,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                         <ChevronDown
                           size={13}
                           className={`shrink-0 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'}`}
-                          style={{ color: isActive ? B.orange : undefined }}
+                          style={{ color: isActive ? B.orange : B.inactiveIcon }}
                         />
                       )}
                     </button>
@@ -485,7 +483,7 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                       }}>
                         <div
                           className="mt-1 ml-4 pl-3 pb-1 space-y-0.5"
-                          style={{ borderLeft: `2px solid rgba(235,141,0,0.20)` }}
+                          style={{ borderLeft: `1px solid ${B.accordionGuide}` }}
                         >
                           {tab.subtabs.map(st => {
                             const StIcon = st.icon;
@@ -496,10 +494,14 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                               <div key={st.id}>
                                 <button
                                   onClick={() => handleSubtabClick(st)}
-                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all active:bg-slate-50"
-                                  style={{ color: subActive ? B.navy : '#475569' }}
+                                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all"
+                                  style={{
+                                    color: subActive ? 'white' : B.inactiveText,
+                                    backgroundColor: subActive ? B.flyoutActiveBg : 'transparent',
+                                    boxShadow: subActive ? `inset 2px 0 0 0 ${B.orange}` : 'none',
+                                  }}
                                 >
-                                  {StIcon && <StIcon size={13} className="shrink-0" style={{ color: subActive ? B.orange : undefined }} />}
+                                  {StIcon && <StIcon size={13} className="shrink-0" style={{ color: subActive ? B.orange : B.inactiveIcon }} />}
                                   <span className="flex-1 text-left truncate">{st.label}</span>
                                   {stBadge > 0 && (
                                     <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full shrink-0">
@@ -507,17 +509,18 @@ function MobileNavList({ activeTab, setActiveTab, setAuditWorkerId, counts, onIt
                                     </span>
                                   )}
                                   {st.subtabs && (
-                                    <ChevronDown size={12} className={`shrink-0 text-slate-400 transition-transform duration-200 ${isSubExpanded ? '' : '-rotate-90'}`} />
+                                    <ChevronDown size={12} className={`shrink-0 transition-transform duration-200 ${isSubExpanded ? '' : '-rotate-90'}`} style={{ color: B.inactiveIcon }} />
                                   )}
                                 </button>
 
                                 {isSubExpanded && st.subtabs && (
-                                  <div className="mt-0.5 ml-3 pl-3 border-l-2 border-slate-100 space-y-0.5">
+                                  <div className="mt-0.5 ml-3 pl-3 space-y-0.5" style={{ borderLeft: `1px solid ${B.divider}` }}>
                                     {st.subtabs.map(sst => (
                                       <button
                                         key={sst.id}
                                         onClick={() => { navigate(sst.path); onItemClick && onItemClick(); }}
-                                        className="w-full flex items-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-500 active:bg-slate-50 transition-colors text-left"
+                                        className="w-full flex items-center px-3 py-1.5 rounded-lg text-xs font-bold transition-colors text-left"
+                                        style={{ color: B.inactiveText }}
                                       >
                                         {sst.label}
                                       </button>
@@ -730,21 +733,22 @@ export default function AdminSidebar({
   const drawer = isMobileOpen ? (
     <div className="md:hidden fixed inset-0 z-50 flex" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} />
-      <aside ref={drawerRef} className="relative w-64 max-w-[85vw] bg-white h-full flex flex-col shadow-2xl">
-        <div className="px-5 py-5 border-b border-slate-100 flex items-center justify-between">
+      <aside ref={drawerRef} className="relative w-64 max-w-[85vw] h-full flex flex-col shadow-2xl" style={{ backgroundColor: B.navy }}>
+        <div className="px-5 py-5 flex items-center justify-between" style={{ borderBottom: `1px solid ${B.navBorder}` }}>
           <div className="flex items-center gap-3 min-w-0">
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, backgroundColor: B.orange }}>
               <CompanyLogo className="w-full h-full object-cover" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Admin</p>
-              <p className="text-xs font-black text-slate-700 truncate">Menu Principal</p>
+              <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: B.sectionLabel }}>Admin</p>
+              <p className="text-xs font-black truncate" style={{ color: 'white' }}>Menu Principal</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Fechar menu"
-            className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"
+            className="p-2 rounded-xl transition-all shrink-0"
+            style={{ color: B.inactiveText, backgroundColor: B.hoverBg }}
           >
             <X size={18} />
           </button>
