@@ -4,11 +4,8 @@ import { useApp } from '../../../context/AppContext';
 import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
 import UploadManualModal from './UploadManualModal';
-import { inferirCategoria } from '../../../constants/rhCategories';
+import { mapManualDoc, mapGeneratedDoc } from './unifyDocuments';
 import { toSentenceCase } from '../../../utils/textUtils';
-
-const isSigned = s => ['signed', 'Assinado', 'assinado'].includes(s);
-const isAwaitingAdmin = s => ['awaiting_admin', 'pending_admin'].includes(s);
 
 export default function WorkerFolderModal({ workerId, workerName, onClose }) {
   const { documents, supabase, workers, setDocuments } = useApp();
@@ -27,66 +24,19 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
     return m;
   }, [workers]);
 
+  // Reutiliza os mesmos mapeadores puros da página Documentos (unifyDocuments.js)
+  // em vez de re-derivar o formato unificado à parte.
   const workerDocs = useMemo(() => {
     return (documents || [])
       .filter(d => d.workerId === workerId && d.status !== 'Rascunho')
-      .map(d => ({
-        id: `manual:${d.id}`,
-        source: 'manual',
-        workerId: d.workerId,
-        workerName: workerName,
-        title: d.nomeFicheiro || d.tipo,
-        tipo: d.tipo,
-        categoria: d.categoria || inferirCategoria?.(d.tipo) || null,
-        data_validade: d.data_validade || null,
-        state: d.status === 'Assinado' ? 'signed' : 'pending',
-        createdAt: d.dataEmissao ? new Date(d.dataEmissao) : null,
-        signedAtWorker: d.dataAssinatura ? new Date(d.dataAssinatura) : null,
-        signedAtAdmin: null,
-        viewUrl: d.url,
-        signedPdfUrl: d.pdfAssinadoUrl,
-        grupo_id: d.grupo_id || null,
-        lado: d.lado || null,
-        dados_extraidos: d.dados_extraidos || null,
-        visivel_worker: d.visivel_worker ?? false,
-        workerNif:       workerById[d.workerId]?.nif       || null,
-        workerNiss:      workerById[d.workerId]?.nis        || null,
-        workerProfissao: workerById[d.workerId]?.profissao  || null,
-        raw: d,
-      }));
-  }, [documents, workerId, workerName, workerById]);
+      .map(d => mapManualDoc(d, workerById, {}));
+  }, [documents, workerId, workerById]);
 
   const templateDocs = useMemo(() => {
     return (generatedDocs || [])
       .filter(d => d.worker_id === workerId)
-      .map(d => {
-        const state = isSigned(d.status) ? 'signed' : isAwaitingAdmin(d.status) ? 'awaiting_admin' : 'pending';
-        const tipo = d.tipo_doc || d.template_name || d.title || 'Documento';
-        return {
-          id: `template:${d.id}`,
-          source: 'template',
-          workerId: d.worker_id,
-          workerName,
-          title: d.title,
-          tipo,
-          categoria: d.categoria || inferirCategoria?.(tipo) || null,
-          data_validade: null,
-          state,
-          createdAt: d.created_at ? new Date(d.created_at) : null,
-          signedAtWorker: d.signed_at ? new Date(d.signed_at) : null,
-          signedAtAdmin:  d.admin_signed_at ? new Date(d.admin_signed_at) : null,
-          viewUrl: null,
-          signedPdfUrl: d.signed_pdf_url || null,
-          grupo_id: null,
-          lado: null,
-          dados_extraidos: null,
-          workerNif:       workerById[d.worker_id]?.nif       || null,
-          workerNiss:      workerById[d.worker_id]?.nis        || null,
-          workerProfissao: workerById[d.worker_id]?.profissao  || null,
-          raw: d,
-        };
-      });
-  }, [generatedDocs, workerId, workerName, workerById]);
+      .map(d => mapGeneratedDoc(d, workerById, {}));
+  }, [generatedDocs, workerId, workerById]);
 
   const handleUpload = async () => {
     if (!selFile || !supabase) return;

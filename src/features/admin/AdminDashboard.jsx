@@ -44,6 +44,9 @@ import FornecedorManager from './FornecedorManager';
 import ScheduleManager from './ScheduleManager';
 import CostReports from './CostReports';
 import DocumentsAdmin from './DocumentsAdmin';
+import FaturacaoAdmin from './FaturacaoAdmin';
+import ReconciliacaoTab from './ReconciliacaoTab';
+import PagamentosAdmin from './PagamentosAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
 import AdminOverview from './AdminOverview';
 import AdminReports from './AdminReports';
@@ -184,8 +187,6 @@ function AdminDashboard(props) {
     approvals,
     clientApprovals,
     systemSettings,
-    documents,
-    setDocuments,
     correctionNotifications,
     setClienteSelecionado,
     setModalEmailAberto,
@@ -527,9 +528,13 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'costs' && <CostReports />}
 
-{!auditWorkerId && activeTab === 'documentos' && (
-        <DocumentsAdmin workers={workers} documents={documents} setDocuments={setDocuments} systemSettings={systemSettings} supabase={supabase} reportFilter={reportFilter} setReportFilter={setReportFilter} reportHistory={reportHistory} setReportHistory={setReportHistory} printingReport={printingReport} setPrintingReport={setPrintingReport} clients={clients} handleGenerateClientReport={handleGenerateClientReport} activeWorkersCount={activeWorkersCount} activeClientsCount={activeClientsCount} logs={logs} clientApprovals={clientApprovals} />
-      )}
+      {!auditWorkerId && activeTab === 'documentos' && <DocumentsAdmin />}
+
+      {!auditWorkerId && activeTab === 'faturacao' && <FaturacaoAdmin />}
+
+      {!auditWorkerId && activeTab === 'reconciliacao' && <ReconciliacaoTab />}
+
+      {!auditWorkerId && activeTab === 'pagamentos' && <PagamentosAdmin />}
 
       {!auditWorkerId && activeTab === 'notificacoes' && (
         <NotificationsAdmin workers={workers} appNotifications={appNotifications} saveToDb={saveToDb} handleDelete={handleDelete} supabase={supabase} />
@@ -761,7 +766,7 @@ function AdminDashboard(props) {
                         {n.body && <p className="text-[10px] text-slate-500 mt-0.5">{n.body}</p>}
                         {n.created_at && <p className="text-[9px] text-slate-400 mt-0.5">{new Date(n.created_at).toLocaleString('pt-PT')}</p>}
                         <div className="flex gap-2 mt-2">
-                          <button onClick={() => { markNotifRead(n.id); navigate('/admin/documentos/pagamentos/fila'); setShowNotifDropdown(false); }}
+                          <button onClick={() => { markNotifRead(n.id); navigate('/admin/pagamentos/fila'); setShowNotifDropdown(false); }}
                             className="flex-1 py-1.5 text-[10px] font-black bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 uppercase tracking-widest">
                             Ver Fila
                           </button>

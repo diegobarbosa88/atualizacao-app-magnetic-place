@@ -1,16 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
-import {
-  LayoutGrid, Trophy, Building2, Clock, FileText, BarChart3,
-  Wallet, Settings, LogOut, X, Users, CalendarX, ShieldCheck,
-  AlertTriangle, Send, ChevronRight, ChevronDown, ChevronLeft,
-  FolderOpen, Mail, ReceiptText, Coins, Receipt, FileSignature,
-  BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
-  Truck, Shield,
-} from 'lucide-react';
+import { LogOut, X, ChevronRight, ChevronDown, ChevronLeft, Users } from 'lucide-react';
 import CompanyLogo from '../../components/common/CompanyLogo';
-import { resolveBadge } from './adminNavConfig';
+import { ADMIN_SECTIONS, resolveBadge } from './adminNavConfig';
 
 // Paleta de marca
 const B = {
@@ -27,67 +20,13 @@ const B = {
   accordionGuide: 'rgba(235,141,0,0.35)',
 };
 
-const MENU_STRUCTURE = [
-  { id: 'overview', label: 'Geral', icon: LayoutGrid },
-  {
-    id: 'team', label: 'Equipa', icon: Trophy, badgeType: 'team',
-    subtabs: [
-      { id: 'workers', label: 'Colaboradores', icon: Users, path: '/admin/team?subtab=workers' },
-      { id: 'absences', label: 'Faltas', icon: CalendarX, path: '/admin/team?subtab=absences', badgeType: 'absences' },
-      { id: 'validacao', label: 'Validação', icon: ShieldCheck, path: '/admin/team?subtab=validacao' },
-      { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/team?subtab=correcoes', badgeType: 'workerCorrections' },
-      { id: 'onboarding', label: 'Pendentes', icon: Clock, path: '/admin/team?subtab=onboarding' },
-    ],
-  },
-  {
-    id: 'clients', label: 'Clientes', icon: Building2, badgeType: 'clients',
-    subtabs: [
-      { id: 'list', label: 'Clientes', icon: Building2, path: '/admin/clients?subtab=list' },
-      { id: 'envios', label: 'Envios', icon: Send, path: '/admin/clients?subtab=envios' },
-      { id: 'correcoes', label: 'Correções', icon: AlertTriangle, path: '/admin/clients?subtab=correcoes', badgeType: 'clientCorrections' },
-      { id: 'auditoria', label: 'Auditoria Portal', icon: Shield, path: '/admin/clients?subtab=auditoria' },
-    ],
-  },
-  {
-    id: 'fornecedores', label: 'Fornecedores', icon: Truck,
-    subtabs: [
-      { id: 'forn-list', label: 'Fornecedores', icon: Truck, path: '/admin/fornecedores?subtab=list' },
-    ],
-  },
-  { id: 'schedules', label: 'Horários', icon: Clock },
-  {
-    id: 'documentos', label: 'Documentos', icon: FolderOpen,
-    subtabs: [
-      { id: 'doc-docs', label: 'Documentos', icon: FileText, path: '/admin/documentos/documentos' },
-      { id: 'doc-templates', label: 'Templates', icon: FileSignature, path: '/admin/documentos/templates' },
-      { id: 'fat-importar', label: 'Importar Fat.', icon: Mail, path: '/admin/documentos/faturas/importar' },
-      { id: 'fat-fornec', label: 'Fat. Fornec.', icon: Receipt, path: '/admin/documentos/faturas/fornecedores' },
-      { id: 'rec-recibos', label: 'Recibos', icon: ReceiptText, path: '/admin/documentos/reconciliacao/recibos' },
-      { id: 'rec-salarios', label: 'Salários', icon: Coins, path: '/admin/documentos/reconciliacao/salarios' },
-      { id: 'rec-bancaria', label: 'Bancária', icon: Landmark, path: '/admin/documentos/reconciliacao/bancaria' },
-      { id: 'pag-fornecedores', label: 'Pagamentos', icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores' },
-      { id: 'pag-fila', label: 'Fila de Pag.', icon: ListChecks, path: '/admin/documentos/pagamentos/fila' },
-    ],
-  },
-  { id: 'reports', label: 'Folhas', icon: BarChart3 },
-  { id: 'costs', label: 'Custos', icon: Wallet },
-  { id: 'recibos', label: 'Calc. Recibos', icon: Receipt },
-  {
-    id: 'toconline', label: 'TOConline', icon: BookOpen,
-    subtabs: [
-      { id: 'toc-documentos', label: 'Documentos', icon: FileText, path: '/admin/toconline?subtab=documentos' },
-      { id: 'toc-clientes', label: 'Clientes', icon: Users, path: '/admin/toconline?subtab=clientes' },
-      { id: 'toc-artigos', label: 'Artigos', icon: Receipt, path: '/admin/toconline?subtab=artigos' },
-      { id: 'toc-relatorios', label: 'Relatórios', icon: BarChart2, path: '/admin/toconline?subtab=relatorios' },
-    ],
-  },
-  { id: 'settings', label: 'Configurações', icon: Settings },
-];
+// Fonte única de navegação (partilhada com AdminClassicNav) — ver adminNavConfig.js
+const MENU_STRUCTURE = ADMIN_SECTIONS;
 
 const MENU_GROUPS = [
   { id: 'principal',   label: 'PRINCIPAL',   itemIds: ['overview', 'team'] },
   { id: 'operacional', label: 'OPERACIONAL', itemIds: ['clients', 'fornecedores', 'schedules', 'documentos'] },
-  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['reports', 'costs', 'recibos', 'toconline'] },
+  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['faturacao', 'reconciliacao', 'pagamentos', 'reports', 'costs', 'recibos', 'toconline'] },
   { id: 'sistema',     label: 'SISTEMA',     itemIds: ['settings'] },
 ];
 

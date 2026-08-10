@@ -246,10 +246,10 @@ export default function App() {
 
       if (paymentId) {
         // Callback de PIS (Iniciação de Pagamento Salt Edge)
-        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?saltedge=callback&payment_id=${paymentId}`, { replace: true });
+        navigate(`/admin/pagamentos/fornecedores?saltedge=callback&payment_id=${paymentId}`, { replace: true });
       } else if (connectionId) {
         // Callback de AIS (Ligação de Conta Salt Edge)
-        navigate(`/admin/documentos/pagamentos/pagamentos-fornecedores?saltedge=callback&connection_id=${connectionId}`, { replace: true });
+        navigate(`/admin/pagamentos/fornecedores?saltedge=callback&connection_id=${connectionId}`, { replace: true });
       } else {
         navigate('/', { replace: true });
       }

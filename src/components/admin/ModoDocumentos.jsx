@@ -71,12 +71,12 @@ const ModoDocumentos = ({ workers }) => {
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
         <div className="flex flex-col sm:flex-row gap-2">
           <select value={filtroWorker} onChange={e => setFiltroWorker(e.target.value)}
-            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-indigo-400">
+            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[#1B3A57]">
             <option value="">Todos os trabalhadores</option>
             {workersComDocs.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
           </select>
           <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
-            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-indigo-400">
+            className="text-[10px] font-black uppercase tracking-widest border border-slate-200 rounded-xl px-3 py-2 bg-white text-slate-600 focus:outline-none focus:border-[#1B3A57]">
             <option value="">Todos os estados</option>
             {Object.entries(STATUS_DOC).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
