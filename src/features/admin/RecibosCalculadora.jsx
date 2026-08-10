@@ -1093,7 +1093,7 @@ export default function RecibosCalculadora() {
       territorio: 'internacional', funcao, ano: anoNum,
     };
     const rc0             = calcularRecibo(baseParams);
-    const valorDiario     = valorDiarioLegal('internacional', 'geral');
+    const valorDiario     = valorDiarioLegal('internacional', funcao);
     const ajudaNecessaria = rc0.ajudaCustoNecessaria;
     if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
 
@@ -1137,7 +1137,12 @@ export default function RecibosCalculadora() {
       if (!bestResult || Math.abs(result.residuo) < Math.abs(bestResult.residuo)) bestResult = result;
     }
 
-    if (!bestResult) return { rc: rc0, premios: 0, mapaLiqLive: 0 };
+    if (!bestResult) {
+      // Gap demasiado pequeno para uma taxa diária completa → tratar como prémios
+      const premios = ajudaNecessaria > SYNC_TOLERANCE ? Math.round(ajudaNecessaria * 100) / 100 : 0;
+      if (premios > 0) return { rc: calcularRecibo({ ...baseParams, premios }), premios, mapaLiqLive: 0 };
+      return { rc: rc0, premios: 0, mapaLiqLive: 0 };
+    }
     const { bestCombo, subsAlimMapa } = bestResult;
 
     const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
@@ -1190,8 +1195,9 @@ export default function RecibosCalculadora() {
       const wMesParcial    = calcMesParcial(w.dataInicio || null, w.dataFim || null, anoNum, mesNum);
       const wVencOrig      = parseFloat(w.vencimento_base) || 0;
       const wVencCalculo   = wMesParcial.tipo !== 'completo' ? parseFloat((wVencOrig * wMesParcial.fator).toFixed(2)) : wVencOrig;
+      const funcaoW = w.profissao_cnp ? funcaoDeCPP(w.profissao_cnp) : funcaoMaxAjudasWorker(w.name);
       const { rc, premios: premiosBatch, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr,
-        wMesParcial.tipo !== 'completo' ? wVencCalculo : undefined);
+        wMesParcial.tipo !== 'completo' ? wVencCalculo : undefined, funcaoW);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       if (!isFirstPage) doc.addPage();
@@ -1237,7 +1243,7 @@ export default function RecibosCalculadora() {
       const bDiasNaoTrab = wMesParcial.tipo !== 'completo' ? 30 - wMesParcial.diasTrabalhados : 0;
       const bDescontoExtra = bDiasNaoTrab > 0 ? parseFloat((bDiasNaoTrab * wVencOrig / 30).toFixed(2)) : 0;
       if (bDiasNaoTrab > 0) {
-        const bHorasNaoTrab = parseFloat((bDiasNaoTrab * 40 / 5).toFixed(2));
+        const bHorasNaoTrab = parseFloat((bDiasNaoTrab * (Number(w.horas_semana) || 40) / 5).toFixed(2));
         const bLabel = wMesParcial.tipo === 'inicio' ? 'Desconto dias por início de contrato'
           : wMesParcial.tipo === 'fim' ? 'Desconto dias por cessação de contrato'
           : 'Desconto dias por início e cessação de contrato';
@@ -1398,13 +1404,8 @@ export default function RecibosCalculadora() {
       return;
     }
 
-    // Buscar histórico de taxas + dias editáveis — mesma lógica da aba Contabilidade
-    const [rateRes, contabRes] = await Promise.all([
-      supabase.from('worker_valorhora_history').select('*'),
-      supabase.from('contabilidade_mensal').select('*').eq('mes', mesStr),
-    ]);
-    const rateHistory = rateRes.data || [];
-    const contabRows  = contabRes.data || [];
+    // Buscar histórico de taxas + ausências — mesma lógica dos exports batch
+    const { rateHistory, absenceData } = await _fetchBatchData(mesStr);
 
     // Logs do mês (todos os trabalhadores)
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
@@ -1426,27 +1427,22 @@ export default function RecibosCalculadora() {
         return s + (parseFloat(l.hours) || 0) * rate;
       }, 0);
 
-      // Dias de subsídio alimentação = valor da aba Contabilidade (editável, default 22)
-      const contabRow  = contabRows.find(r => r.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
-
-      const rc = calcularRecibo({
-        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
-        horasSemana:      40,
-        premios:          0,
-        he1: 0, he2: 0,
-        incluirFerias:    true,
-        incluirNatal:     true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo:     w.subsidio_alimentacao_tipo || 'dinheiro',
-        tabelaKey:        w.tabela_irs || 'tabelaI',
-        nDependentes:     w.n_dependentes ?? 0,
-        brutoAlvo:        brutoAlvo || (parseFloat(w.vencimento_base) || 0),
-        territorio:       'internacional',
-        funcao:           'geral',
-        ano:              anoNum,
+      const workerAusencias = absenceData
+        .filter(a => a.worker_id === w.id)
+        .flatMap(a => a.dates || [])
+        .filter(d => d.startsWith(mesStr));
+      const subsAlimDias = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
+        ausencias:    workerAusencias,
       });
+      const funcaoW = w.profissao_cnp ? funcaoDeCPP(w.profissao_cnp) : funcaoMaxAjudasWorker(w.name);
+      const { rc, premios: premiosMapa, mapaLiqLive } = _calcReciboComMapa(
+        w, subsAlimDias, brutoAlvo || (parseFloat(w.vencimento_base) || 0), anoNum, mesStr,
+        undefined, funcaoW,
+      );
+      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
 
@@ -1490,12 +1486,17 @@ export default function RecibosCalculadora() {
         ['A001', 'Vencimento Base', '', '', eur2(parseFloat(w.vencimento_base)), ''],
       ];
       if (subsAlimDias > 0) {
-        linhas.push(['A002', 'Sub. Alimentação — Cartão (isento ≤ €10,46)', `${subsAlimDias}d`, eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal), '']);
+        const tipoAlim = w.subsidio_alimentacao_tipo || 'cartao';
+        const descAlim = tipoAlim === 'dinheiro'
+          ? 'Sub. Alimentação — Dinheiro (isento ≤ €6,15)'
+          : 'Sub. Alimentação — Cartão / vale (isento ≤ €10,46)';
+        linhas.push(['A002', descAlim, `${subsAlimDias}d`, eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal), '']);
       }
       if (rc.subsAlimExcedente > 0) linhas.push(['', '  → Excedente sujeito a IRS/SS', '', '', eur2(rc.subsAlimExcedente), '']);
-      if (rc.subsFerias > 0)  linhas.push(['A004', 'Sub. Férias (duodécimo 1/12)', '', '', eur2(rc.subsFerias), '']);
-      if (rc.subsNatal > 0)   linhas.push(['A021', 'Sub. Natal (duodécimo 1/12)', '', '', eur2(rc.subsNatal), '']);
-      if (rc.ajudaCustoNecessaria > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (isento)', '', '', eur2(rc.ajudaCustoNecessaria), '']);
+      if (rc.subsFerias > 0) linhas.push(['A004', 'Sub. Férias (duodécimo 1/12)', '', '', eur2(rc.subsFerias), '']);
+      if (premiosMapa > 0)   linhas.push(['A008', 'Prémios / Bónus', '', '', eur2(premiosMapa), '']);
+      if (rc.subsNatal > 0)  linhas.push(['A021', 'Sub. Natal (duodécimo 1/12)', '', '', eur2(rc.subsNatal), '']);
+      if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (isento)', '', '', eur2(mapaLiqLive), '']);
       linhas.push(['T001', `IRS — ${tabelaNome.split('—')[0].trim()} / ${w.n_dependentes ?? 0} dep. (venc. ${eur2(rc.incidenciaRegular)}·${pct(rc.taxaRegular)} + subs.·${pct(rc.taxaSubsidios)})`, '', '', '', eur2(rc.irsTotal)]);
       linhas.push(['T003', 'Seg. Social — Trabalhador (11%)', '', '', '', eur2(rc.ssTrabalhador)]);
 
@@ -1521,13 +1522,13 @@ export default function RecibosCalculadora() {
         body: [
           [
             { content: 'TOTAL ABONOS', styles: { fontStyle: 'bold' } },
-            { content: eur2(rc.totalAbonos), styles: { fontStyle: 'bold', halign: 'right' } },
+            { content: eur2(rc.totalAbonos + mapaAjudasDiff), styles: { fontStyle: 'bold', halign: 'right' } },
             { content: 'TOTAL DESCONTOS', styles: { fontStyle: 'bold' } },
             { content: eur2(rc.totalDescontos), styles: { fontStyle: 'bold', halign: 'right' } },
           ],
           [
             { content: 'LÍQUIDO A RECEBER', styles: { fontStyle: 'bold', fontSize: 9, fillColor: [236, 253, 245], textColor: [5, 150, 105] } },
-            { content: eur2(rc.liquido), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right', fillColor: [236, 253, 245], textColor: [5, 150, 105] } },
+            { content: eur2(rc.liquido + mapaAjudasDiff), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right', fillColor: [236, 253, 245], textColor: [5, 150, 105] } },
             { content: 'Custo empresa (+ TSU 23,75%)' },
             { content: eur2(rc.custoEmpresa), styles: { halign: 'right' } },
           ],
@@ -1548,7 +1549,7 @@ export default function RecibosCalculadora() {
       doc.setFontSize(6.5);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(120, 120, 120);
-      doc.text('Prémios, horas suplementares e ajustamentos manuais não incluídos — adicionar no TOConline conforme necessário.', 14, yAviso);
+      doc.text('Horas suplementares e ajustamentos manuais não incluídos — confirmar sempre no TOConline antes de processar.', 14, yAviso);
       doc.setTextColor(0, 0, 0);
     });
 
@@ -1609,7 +1610,7 @@ export default function RecibosCalculadora() {
 
     if (trabalhadores.length === 0) { alert('Nenhum trabalhador activo com vencimento base configurado.'); return; }
 
-    const { rateHistory, contabRows } = await _fetchBatchData(mesStr);
+    const { rateHistory, absenceData } = await _fetchBatchData(mesStr);
     const logsDoMes = (logs || []).filter(l => l.date?.startsWith(mesStr));
 
     const eur2 = v => (isNaN(v) ? 0 : v).toFixed(2);
@@ -1621,6 +1622,7 @@ export default function RecibosCalculadora() {
       'Tabela IRS', 'Nº Dep.',
       'Venc. Base (€)', 'Sub. Alim. Dias', 'Sub. Alim. €/dia', 'Sub. Alim. Total (€)',
       'Sub. Férias / Duod. (€)', 'Sub. Natal / Duod. (€)',
+      'Prémios / Bónus (€)',
       'Ajudas Custo Inter. (€)',
       'Base IRS (€)', 'Taxa IRS', 'IRS (€)',
       'SS Trab. 11% (€)', 'Total Abonos (€)', 'Total Descontos (€)',
@@ -1629,23 +1631,24 @@ export default function RecibosCalculadora() {
     ];
 
     const dataRows = trabalhadores.map(w => {
-      const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
-      const brutoAlvo    = _calcBruto(w.id, workerLogs, rateHistory, w.valorHora);
-      const contabRow    = contabRows.find(r => r.worker_id === w.id);
-      const subsAlimDias = Number(contabRow?.dias_trabalhados ?? 22);
-
-      const rc = calcularRecibo({
-        vencimentoBase:   parseFloat(w.vencimento_base) || 0,
-        horasSemana: 40, premios: 0, he1: 0, he2: 0,
-        incluirFerias: true, incluirNatal: true,
-        subsAlimValorDia: parseFloat(w.subsidio_alimentacao_dia) || 0,
-        subsAlimDias,
-        subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
-        tabelaKey:    w.tabela_irs || 'tabelaI',
-        nDependentes: w.n_dependentes ?? 0,
-        brutoAlvo:    brutoAlvo || parseFloat(w.vencimento_base) || 0,
-        territorio: 'internacional', funcao: 'geral', ano: anoNum,
+      const workerLogs      = logsDoMes.filter(l => l.workerId === w.id);
+      const brutoAlvo       = _calcBruto(w.id, workerLogs, rateHistory, w.valorHora);
+      const workerAusencias = absenceData
+        .filter(a => a.worker_id === w.id)
+        .flatMap(a => a.dates || [])
+        .filter(d => d.startsWith(mesStr));
+      const subsAlimDias = calcularDiasUteisNoMes(anoNum, mesNum, {
+        feriadoMunicipal,
+        dataAdmissao: w.dataInicio || null,
+        dataCessacao: w.dataFim    || null,
+        ausencias:    workerAusencias,
       });
+      const funcaoW = w.profissao_cnp ? funcaoDeCPP(w.profissao_cnp) : funcaoMaxAjudasWorker(w.name);
+      const { rc, premios: premiosMapa, mapaLiqLive } = _calcReciboComMapa(
+        w, subsAlimDias, brutoAlvo || parseFloat(w.vencimento_base) || 0, anoNum, mesStr,
+        undefined, funcaoW,
+      );
+      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
 
@@ -1655,16 +1658,18 @@ export default function RecibosCalculadora() {
         eur2(parseFloat(w.vencimento_base)), String(subsAlimDias),
         eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal),
         eur2(rc.subsFerias), eur2(rc.subsNatal),
-        eur2(rc.ajudaCustoNecessaria),
+        eur2(premiosMapa),
+        eur2(mapaLiqLive),
         eur2(rc.incidenciaRegular), pct2(rc.taxaRegular), eur2(rc.irsTotal),
-        eur2(rc.ssTrabalhador), eur2(rc.totalAbonos), eur2(rc.totalDescontos),
-        eur2(rc.liquido), eur2(rc.ssPatronal), eur2(rc.custoEmpresa),
+        eur2(rc.ssTrabalhador), eur2(rc.totalAbonos + mapaAjudasDiff), eur2(rc.totalDescontos),
+        eur2(rc.liquido + mapaAjudasDiff), eur2(rc.ssPatronal), eur2(rc.custoEmpresa),
         eur2(brutoAlvo),
       ];
     });
 
     // Totais
-    const sumIdx = [6, 9, 10, 11, 12, 15, 16, 17, 18, 19, 20, 21, 22];
+    // índices das colunas numéricas para totalizar (0-based): acrescentada col 12 (Prémios)
+    const sumIdx = [6, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21, 22, 23];
     const totais = cols.map((_, ci) => {
       if (ci === 0) return 'TOTAIS';
       if (!sumIdx.includes(ci)) return '';
@@ -1688,7 +1693,7 @@ export default function RecibosCalculadora() {
 <table border="0" cellspacing="0" style="border-collapse:collapse;font-family:Arial;font-size:10px">
 ${hdrRow}${bodyRows}${totRow}
 </table>
-<p style="font-family:Arial;font-size:9px;color:#64748B;margin-top:12px">Estimativa — confirmar sempre no TOConline antes de processar. Prémios e horas suplementares não incluídos.</p>
+<p style="font-family:Arial;font-size:9px;color:#64748B;margin-top:12px">Estimativa — confirmar sempre no TOConline antes de processar. Horas suplementares não incluídas.</p>
 </body></html>`;
 
     const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
@@ -1903,14 +1908,15 @@ ${hdrRow}${bodyRows}${totRow}
         ausencias:    workerAusencias,
       });
 
-      const { rc } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr);
+      const funcaoW = w.profissao_cnp ? funcaoDeCPP(w.profissao_cnp) : funcaoMaxAjudasWorker(w.name);
+      const { rc } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, undefined, funcaoW);
 
       if (rc.ajudaCustoNecessaria <= 0) return; // sem ajudas de custo, pula
 
       // Cliente carry-forward por dia
       const clienteParaDia = _clientePorDiaFn(w.id, mesStr);
 
-      const limiteDia    = valorDiarioLegal('internacional', 'geral');
+      const limiteDia    = valorDiarioLegal('internacional', funcaoW);
       const valorAlimDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
       const totalDiasMes = new Date(anoNum, mesNum, 0).getDate();
 
@@ -2546,7 +2552,7 @@ ${hdrRow}${bodyRows}${totRow}
                         <td className="py-1.5 px-1 text-right" />
                       </tr>
                     )}
-                    <ReciboLinha desc={`T001 - IRS (venc.·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`} desconto={r.irsTotal} />
+                    <ReciboLinha desc={`T001 - IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
                     {/* Total — soma directa de todas as linhas; D001 cancela-se → Líquido = BrutoAlvo − IRS − SS */}
                     <tr className="border-t-2 border-slate-800 font-black">

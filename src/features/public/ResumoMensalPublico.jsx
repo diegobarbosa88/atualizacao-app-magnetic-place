@@ -18,7 +18,11 @@ const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) :
 
 const EMPRESA = { nome: 'Magnetic Place Unipessoal, Lda', nif: '517379740' };
 
-function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride) {
+const funcaoDeCPP = (cpp) => cpp && String(cpp).startsWith('1') ? 'gerencia' : 'geral';
+const funcaoMaxAjudasWorker = (name) =>
+  (name || '').trim().toLowerCase() === 'diego rocha barbosa' ? 'gerencia' : 'geral';
+
+function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride, funcao = 'geral') {
   const vencBase         = vencBaseOverride ?? (parseFloat(w.vencimento_base) || 0);
   const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
   const baseParams = {
@@ -28,10 +32,10 @@ function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBase
     tabelaKey: w.tabela_irs || 'tabelaI',
     nDependentes: w.n_dependentes ?? 0,
     brutoAlvo: brutoAlvo || vencBase,
-    territorio: 'internacional', funcao: 'geral', ano: anoNum,
+    territorio: 'internacional', funcao, ano: anoNum,
   };
   const rc0             = calcularRecibo(baseParams);
-  const valorDiario     = valorDiarioLegal('internacional', 'geral');
+  const valorDiario     = valorDiarioLegal('internacional', funcao);
   const ajudaNecessaria = rc0.ajudaCustoNecessaria;
   if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, mapaLiqLive: 0 };
 
@@ -75,7 +79,11 @@ function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBase
     if (!bestResult || Math.abs(result.residuo) < Math.abs(bestResult.residuo)) bestResult = result;
   }
 
-  if (!bestResult) return { rc: rc0, mapaLiqLive: 0 };
+  if (!bestResult) {
+    const premios = ajudaNecessaria > SYNC_TOLERANCE ? Math.round(ajudaNecessaria * 100) / 100 : 0;
+    if (premios > 0) return { rc: calcularRecibo({ ...baseParams, premios }), mapaLiqLive: 0 };
+    return { rc: rc0, mapaLiqLive: 0 };
+  }
   const { bestCombo, subsAlimMapa } = bestResult;
   const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
   const valorNecFinal = ajudaNecessaria + subsAlimMapa;
@@ -337,7 +345,8 @@ export default function ResumoMensalPublico() {
         ? parseFloat((vencOrig * wMesParcial.fator).toFixed(2))
         : undefined;
 
-      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencCalculo);
+      const funcaoW = w.profissao_cnp ? funcaoDeCPP(w.profissao_cnp) : funcaoMaxAjudasWorker(w.name);
+      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencCalculo, funcaoW);
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
       const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
