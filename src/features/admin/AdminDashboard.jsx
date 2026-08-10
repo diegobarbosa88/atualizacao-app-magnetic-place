@@ -552,7 +552,7 @@ function AdminDashboard(props) {
   const navMode = systemSettings?.navMode || 'sidebar';
 
   return (
-    <div className={`bg-slate-50 font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}>
+    <div className={`bg-[#EEF2F5] font-sans text-slate-900 ${navMode === 'topbar' ? 'min-h-screen' : 'h-screen overflow-hidden flex flex-col'}`}>
       {navMode === 'topbar' ? (
         <>
           <AdminClassicNav

@@ -79,11 +79,11 @@ export default function DocumentsFilters({
           </div>
           <button
             onClick={onShowUpload}
-            className="p-2.5 text-white rounded-xl flex items-center justify-center transition-all shadow-md shrink-0"
-            style={{ backgroundColor: '#1B3A57' }}
-            title="Upload Manual"
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all shadow-md shrink-0 whitespace-nowrap"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            title="Adicionar documento"
           >
-            <Plus size={16} />
+            <Plus size={16} /> Adicionar
           </button>
         </div>
         <div className="flex gap-2">

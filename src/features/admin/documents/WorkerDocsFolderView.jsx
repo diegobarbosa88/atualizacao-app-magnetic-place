@@ -3,13 +3,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../../context/AppContext';
 import { renderPdfFirstPage, renderPdfToSrcDoc } from '../../../components/common/workerDocuments/useDocumentPreview';
 import {
-  FileText, Coins, ShieldCheck, Heart, GraduationCap, Clock,
+  FileText, Clock,
   FolderOpen, Eye, EyeOff, CheckCircle, AlertTriangle, ChevronDown, ChevronUp, ChevronRight,
-  Folder, User, ArrowLeft, Search, X, FileSignature, Download, Trash2,
+  Folder, ArrowLeft, Search, X, FileSignature, Download, Trash2,
   Layers, Calendar, Plus, ScanSearch,
 } from 'lucide-react';
-import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes } from '../../../constants/rhCategories';
-import { formatDocDate } from '../../../utils/dateUtils';
+import { CATEGORIAS_RH_ACT, getValidadeStatus, getDiasRestantes, getExpiryRelativeLabel, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
+import { getCategoryFields } from '../../../constants/documentFieldsByCategory';
+import { toSentenceCase, toSentenceCaseFilename, getInitials } from '../../../utils/textUtils';
 import DocumentScannerModal from '../team/DocumentScannerModal';
 import UploadManualModal from './UploadManualModal';
 
@@ -21,7 +22,8 @@ const temFluxoAssinatura = (d) =>
   TIPOS_COM_ASSINATURA.some(t => (d?.tipo || '').toLowerCase().includes(t));
 
 function buildDocTitle(d) {
-  const base = (d.title || d.tipo || 'Documento').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
+  const rawBase = (d.title || d.tipo || 'Documento').replace(/ \(Frente\)| \(Verso\)/g, '').trim();
+  const base = toSentenceCaseFilename(rawBase);
   if (d.createdAt) {
     return `${base} - ${MESES_PT[d.createdAt.getMonth()]} ${d.createdAt.getFullYear()}`;
   }
@@ -82,27 +84,7 @@ function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
   return <img src={src} alt={alt || ''} className={imgClassName || 'w-full h-full object-cover'} />;
 }
 
-const CATEGORIA_CONFIG = {
-  "Contratual":                    { icon: FileText,       color: 'indigo' },
-  "Remuneração":                   { icon: Coins,          color: 'emerald' },
-  "Identificação e Legalização":   { icon: ShieldCheck,    color: 'sky' },
-  "Saúde e Segurança no Trabalho": { icon: Heart,          color: 'rose' },
-  "Segurança Social e Fiscal":     { icon: ShieldCheck,    color: 'violet' },
-  "Formação Profissional":         { icon: GraduationCap,  color: 'amber' },
-  "Tempo de Trabalho":             { icon: Clock,          color: 'orange' },
-  "Outros":                        { icon: FolderOpen,     color: 'slate' },
-};
-
-const COLOR_MAP = {
-  indigo:  { bg: 'bg-indigo-50',  text: 'text-indigo-600',  border: 'border-indigo-100' },
-  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-100' },
-  sky:     { bg: 'bg-sky-50',     text: 'text-sky-600',     border: 'border-sky-100' },
-  rose:    { bg: 'bg-rose-50',    text: 'text-rose-600',    border: 'border-rose-100' },
-  violet:  { bg: 'bg-violet-50',  text: 'text-violet-600',  border: 'border-violet-100' },
-  amber:   { bg: 'bg-amber-50',   text: 'text-amber-600',   border: 'border-amber-100' },
-  orange:  { bg: 'bg-orange-50',  text: 'text-orange-600',  border: 'border-orange-100' },
-  slate:   { bg: 'bg-slate-100',  text: 'text-slate-500',   border: 'border-slate-200' },
-};
+const COLOR_MAP = CATEGORIA_COLOR_MAP;
 
 function ValidadeChip({ dataValidade }) {
   const status = getValidadeStatus(dataValidade);
@@ -275,39 +257,24 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
           <ThumbImg url={url} alt={title} imgClassName="w-full h-full object-cover" wrapperClassName="w-full h-full flex items-center justify-center bg-slate-100" />
         </div>
 
-        {/* Info do documento */}
+        {/* Info do documento — campos específicos da categoria */}
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
-          {(() => {
-            const ex = d.dados_extraidos;
-            const nome       = ex?.trabalhador?.nome_completo || d.workerName;
-            const nif        = ex?.trabalhador?.nif    || d.workerNif;
-            const niss       = ex?.trabalhador?.niss   || d.workerNiss;
-            const profissao  = d.workerProfissao;
-            const nascimento = ex?.trabalhador?.data_nascimento;
-            const numDoc     = ex?.documento?.numero_documento;
-            const emissao    = ex?.documento?.data_emissao || (d.createdAt ? formatDocDate(d.createdAt.toISOString(), true) : null);
-            const validade   = d.data_validade;
-            const assinadoEm = d.signedAtWorker ? formatDocDate(d.signedAtWorker.toISOString(), true) : null;
-            const aprovadoEm = d.signedAtAdmin  ? formatDocDate(d.signedAtAdmin.toISOString(), true)  : null;
-            const infoRow = (label, val) => val ? (
-              <div key={label}><span className="text-[9px] text-slate-400 font-bold">{label}: </span><span className="text-[10px] font-black text-slate-700">{val}</span></div>
-            ) : null;
+          {getCategoryFields(d).map(({ label, value }) => {
+            const isValidadeField = label === 'Válido até' || label === 'Validade';
+            const expiry = isValidadeField ? getExpiryRelativeLabel(d.data_validade) : null;
             return (
-              <>
-                {infoRow('Nome', nome)}
-                {infoRow('NIF', nif)}
-                {infoRow('NISS', niss)}
-                {infoRow('Profissão', profissao)}
-                {infoRow('Data Nasc.', nascimento)}
-                {infoRow('Nº Documento', numDoc)}
-                {infoRow('Emissão', emissao)}
-                {infoRow('Válido até', validade)}
-                {infoRow('Assinado em', assinadoEm)}
-                {infoRow('Aprovado em', aprovadoEm)}
-              </>
+              <div key={label}>
+                <span className="text-[9px] text-slate-400 font-bold">{label}: </span>
+                {value ? (
+                  <span className="text-[10px] font-black text-slate-700">{value}</span>
+                ) : (
+                  <span className="text-[10px] font-bold text-slate-300 italic">Não disponível</span>
+                )}
+                {expiry && <p className={`text-[9px] font-bold ${expiry.colorClass}`}>{expiry.label}</p>}
+              </div>
             );
-          })()}
+          })}
           <div className="flex flex-wrap gap-1 pt-0.5">
             {temFluxoAssinatura(d) && <StateBadgeSmall state={d.state} />}
             <ValidadeChip dataValidade={d.data_validade} />
@@ -324,8 +291,8 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
             </div>
           </div>
         ) : (
-          <div className="flex gap-2">
-            <button onClick={() => onOpenDoc(d)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors text-[10px] font-black"><Eye size={12} /> Ver</button>
+          <div className="flex items-center justify-center gap-6 pt-2.5 border-t border-slate-100">
+            <button onClick={() => onOpenDoc(d)} title="Ver" className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: '#869AAF' }}><Eye size={16} /></button>
             {d.source === 'manual' && (
               <button
                 onClick={async () => {
@@ -334,12 +301,13 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
                   await supabase?.from('documents').update({ visivel_worker: next }).eq('id', d.raw.id);
                 }}
                 title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
-                className={`px-2.5 py-2 rounded-lg transition-colors text-[10px] font-black flex items-center gap-1 ${visivelWorker ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                style={{ color: '#869AAF' }}
               >
-                {visivelWorker ? <Eye size={12} /> : <EyeOff size={12} />}
+                {visivelWorker ? <Eye size={16} /> : <EyeOff size={16} />}
               </button>
             )}
-            <button onClick={() => setConfirmDeleteId(d.id)} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-slate-400 bg-slate-50 hover:bg-rose-50 hover:text-rose-500 transition-colors text-[10px] font-black"><Trash2 size={12} /> Apagar</button>
+            <button onClick={() => setConfirmDeleteId(d.id)} title="Apagar" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={16} /></button>
           </div>
         )}
       </div>
@@ -401,7 +369,8 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
               }
             }}
             title={visivelWorker ? 'Visível ao trabalhador — clique para ocultar' : 'Oculto ao trabalhador — clique para tornar visível'}
-            className={`p-1.5 rounded-lg transition-colors ${visivelWorker ? 'text-emerald-600 bg-emerald-100 hover:bg-emerald-200' : 'text-slate-400 bg-slate-100 hover:bg-slate-200'}`}
+            className="p-1.5 rounded-lg hover:bg-white/60 transition-colors"
+            style={{ color: '#869AAF' }}
           >
             {visivelWorker ? <Eye size={11} /> : <EyeOff size={11} />}
           </button>
@@ -415,38 +384,36 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
           <PreviewThumb doc={verso}  label="Verso" />
         </div>
 
-        {/* Info do documento */}
+        {/* Info do documento — campos específicos da categoria */}
         <div className="bg-slate-50 border border-slate-100 rounded-xl p-2.5 space-y-1.5">
           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Informação do documento</p>
           {(() => {
-            const ex = frente?.dados_extraidos || verso?.dados_extraidos;
             const ref = frente || verso;
-            const nome       = ex?.trabalhador?.nome_completo || workerName;
-            const nif        = ex?.trabalhador?.nif    || ref?.workerNif;
-            const niss       = ex?.trabalhador?.niss   || ref?.workerNiss;
-            const profissao  = ref?.workerProfissao;
-            const nascimento = ex?.trabalhador?.data_nascimento;
-            const numDoc     = ex?.documento?.numero_documento;
-            const emissaoStr = ex?.documento?.data_emissao || (emissao ? formatDocDate(emissao.toISOString(), true) : null);
-            const assinadoEm = ref?.signedAtWorker ? formatDocDate(ref.signedAtWorker.toISOString(), true) : null;
-            const aprovadoEm = ref?.signedAtAdmin  ? formatDocDate(ref.signedAtAdmin.toISOString(), true)  : null;
-            const infoRow = (label, val) => val ? (
-              <div key={label}><span className="text-[9px] text-slate-400 font-bold">{label}: </span><span className="text-[10px] font-black text-slate-700">{val}</span></div>
-            ) : null;
-            return (
-              <>
-                {infoRow('Nome', nome)}
-                {infoRow('NIF', nif)}
-                {infoRow('NISS', niss)}
-                {infoRow('Profissão', profissao)}
-                {infoRow('Data Nasc.', nascimento)}
-                {infoRow('Nº Documento', numDoc)}
-                {infoRow('Emissão', emissaoStr)}
-                {infoRow('Válido até', validade)}
-                {infoRow('Assinado em', assinadoEm)}
-                {infoRow('Aprovado em', aprovadoEm)}
-              </>
-            );
+            const mergedDoc = {
+              categoria: ref?.categoria,
+              tipo: tipoBase,
+              data_validade: validade,
+              createdAt: emissao,
+              signedAtWorker: ref?.signedAtWorker,
+              dados_extraidos: frente?.dados_extraidos || verso?.dados_extraidos,
+              viewUrl: frente?.viewUrl || verso?.viewUrl || null,
+              signedPdfUrl: frente?.signedPdfUrl || verso?.signedPdfUrl || null,
+            };
+            return getCategoryFields(mergedDoc).map(({ label, value }) => {
+              const isValidadeField = label === 'Válido até' || label === 'Validade';
+              const expiry = isValidadeField ? getExpiryRelativeLabel(validade) : null;
+              return (
+                <div key={label}>
+                  <span className="text-[9px] text-slate-400 font-bold">{label}: </span>
+                  {value ? (
+                    <span className="text-[10px] font-black text-slate-700">{value}</span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-slate-300 italic">Não disponível</span>
+                  )}
+                  {expiry && <p className={`text-[9px] font-bold ${expiry.colorClass}`}>{expiry.label}</p>}
+                </div>
+              );
+            });
           })()}
           <div className="flex flex-wrap gap-1 pt-0.5">
             {temFluxoAssinatura(frente) && frente?.state && <StateBadgeSmall state={frente.state} />}
@@ -455,7 +422,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
         </div>
 
         {/* Ações por lado */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 pt-2.5 border-t border-slate-100">
           {[{ doc: frente, label: 'Frente' }, { doc: verso, label: 'Verso' }].map(({ doc, label }) => (
             doc ? (
               <div key={doc.id} className="space-y-1">
@@ -469,9 +436,9 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
                     </div>
                   </div>
                 ) : (
-                  <div className="flex gap-1 justify-center">
-                    <button onClick={() => onOpenDoc(doc)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors text-[10px] font-black" title="Ver"><Eye size={11} /></button>
-                    <button onClick={() => setConfirmDeleteId(doc.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded-lg text-slate-400 bg-slate-50 hover:bg-rose-50 hover:text-rose-500 transition-colors text-[10px] font-black" title="Apagar"><Trash2 size={11} /></button>
+                  <div className="flex items-center justify-center gap-4">
+                    <button onClick={() => onOpenDoc(doc)} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors" style={{ color: '#869AAF' }} title="Ver"><Eye size={14} /></button>
+                    <button onClick={() => setConfirmDeleteId(doc.id)} className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Apagar"><Trash2 size={14} /></button>
                   </div>
                 )}
               </div>
@@ -510,6 +477,8 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
   const temExpirado = docs.some(d => getValidadeStatus(d.data_validade) === 'expirado');
   const temUrgente  = docs.some(d => getValidadeStatus(d.data_validade) === 'urgente');
   const alertBorder = temExpirado ? 'border-red-300' : temUrgente ? 'border-amber-300' : 'border-slate-200';
+  const aExpirarCount = docs.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
+  const validosCount = docs.length - aExpirarCount;
 
   return (
     <>
@@ -521,8 +490,17 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
           <Icon size={14} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-700 truncate">{categoria}</p>
-          <p className={`text-[10px] font-bold ${colors.text}`}>{docs.length} doc{docs.length !== 1 ? 's' : ''}</p>
+          <p className="text-xs font-black text-slate-700 truncate">{toSentenceCase(categoria)}</p>
+          <div className="flex flex-wrap gap-1 mt-1">
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700">
+              {validosCount} válido{validosCount !== 1 ? 's' : ''}
+            </span>
+            {aExpirarCount > 0 && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700">
+                {aExpirarCount} a expirar
+              </span>
+            )}
+          </div>
         </div>
         {temExpirado && <AlertTriangle size={12} className="text-red-500 flex-shrink-0" />}
         {!temExpirado && temUrgente && <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />}
@@ -538,7 +516,7 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
             {/* Header */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100 flex-shrink-0">
               <div className={`p-2 rounded-xl ${colors.bg} ${colors.text} flex-shrink-0`}><Icon size={16} /></div>
-              <h3 className="flex-1 font-black text-slate-800">{categoria}</h3>
+              <h3 className="flex-1 font-black text-slate-800">{toSentenceCase(categoria)}</h3>
               <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg ${colors.bg} ${colors.text}`}>
                 {docs.length} doc{docs.length !== 1 ? 's' : ''}
               </span>
@@ -604,11 +582,9 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
         <button onClick={onBack} className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
           <ArrowLeft size={16} />
         </button>
-        <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
-          <User size={18} />
-        </div>
+        <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(worker.workerName)}</div>
         <div className="flex-1">
-          <h4 className="font-black text-slate-800 text-base">{worker.workerName}</h4>
+          <h4 className="font-black text-slate-800 text-base">{toSentenceCase(worker.workerName)}</h4>
           <p className="text-[10px] text-slate-400 font-bold">{docs.length} documento{docs.length !== 1 ? 's' : ''}</p>
         </div>
         {expirados > 0 && (
@@ -619,7 +595,8 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
         {onScan && (
           <button
             onClick={onScan}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors"
+            style={{ borderColor: '#869AAF', color: '#869AAF' }}
           >
             <ScanSearch size={13} /> Scanner
           </button>
@@ -627,7 +604,8 @@ export function WorkerPastaView({ worker, docs, onBack, onOpenDoc, onDelete, onA
         {onAddDoc && (
           <button
             onClick={onAddDoc}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             <Plus size={13} /> Adicionar
           </button>
@@ -789,7 +767,8 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
         </div>
         <button
           onClick={() => setScannerOpen(true)}
-          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-xs font-black transition-colors flex-shrink-0"
+          className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-2 hover:bg-slate-50 text-xs font-black transition-colors flex-shrink-0"
+          style={{ borderColor: '#869AAF', color: '#869AAF' }}
         >
           <ScanSearch size={13} /> Scanner
         </button>
@@ -817,11 +796,9 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                 className={`text-left border-2 rounded-2xl p-4 hover:shadow-md transition-all duration-200 bg-white ${alertBorder}`}
               >
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600 flex-shrink-0">
-                    <User size={18} />
-                  </div>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.workerName)}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-slate-800 truncate">{w.workerName}</p>
+                    <p className="text-sm font-black text-slate-800 truncate">{toSentenceCase(w.workerName)}</p>
                     <p className="text-[10px] text-slate-400 font-bold mt-0.5">
                       {w.docs.length} doc{w.docs.length !== 1 ? 's' : ''}
                     </p>
@@ -854,16 +831,9 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                 {/* Alertas de validade */}
                 {(expirados > 0 || urgentes > 0) && (
                   <div className="mt-2 flex items-center gap-1">
-                    {expirados > 0 && (
-                      <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded">
-                        {expirados} expirado{expirados !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {urgentes > 0 && (
-                      <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
-                        {urgentes} urgente{urgentes !== 1 ? 's' : ''}
-                      </span>
-                    )}
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700">
+                      <AlertTriangle size={9} className="mr-0.5" /> {expirados + urgentes} a expirar
+                    </span>
                   </div>
                 )}
               </button>

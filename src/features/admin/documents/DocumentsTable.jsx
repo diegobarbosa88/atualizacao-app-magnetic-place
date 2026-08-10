@@ -3,23 +3,27 @@ import {
   FileText, Eye, Trash2, Loader2, Clock, FileSignature, CheckCircle, AlertTriangle, Pencil,
 } from 'lucide-react';
 import { formatDocDate } from '../../../utils/dateUtils';
+import { toSentenceCase, toSentenceCaseFilename } from '../../../utils/textUtils';
 import SortableTh from './SortableTh';
-import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT } from '../../../constants/rhCategories';
+import { getValidadeStatus, getDiasRestantes, CATEGORIAS_RH_ACT, CATEGORIA_CONFIG, CATEGORIA_COLOR_MAP } from '../../../constants/rhCategories';
+
+const ACTION_ICON_CLS = "p-1.5 bg-white rounded-lg border border-slate-200 hover:text-white transition-all shadow-sm";
+const ACTION_ICON_STYLE = { color: '#869AAF' };
 
 function StateBadge({ state }) {
   if (state === 'signed') return (
-    <span title="Assinado" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600">
-      <CheckCircle size={14} />
+    <span title="Assinado" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-emerald-100 text-emerald-700">
+      <CheckCircle size={12} /> Assinado
     </span>
   );
   if (state === 'awaiting_admin') return (
-    <span title="Aguarda Aprovação" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-indigo-100 text-indigo-600">
-      <FileSignature size={14} />
+    <span title="Aguarda aprovação" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-slate-100 text-[#1B3A57]">
+      <FileSignature size={12} /> Aguarda aprovação
     </span>
   );
   return (
-    <span title="Pendente" className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-100 text-amber-500">
-      <Clock size={14} />
+    <span title="Pendente" className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black bg-amber-100 text-amber-700">
+      <Clock size={12} /> Pendente
     </span>
   );
 }
@@ -53,13 +57,19 @@ function CategoriaEditor({ docId, source, categoria, onSave }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
+  const semCategoria = !categoria;
+  const colors = semCategoria
+    ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
+    : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[categoria] || CATEGORIA_CONFIG["Outros"]).color];
+
   return (
     <div className="relative inline-block" ref={ref}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[9px] font-black border transition-all bg-indigo-50 text-indigo-600 border-indigo-100 hover:bg-indigo-100 group"
-        title="Editar categoria"
+        className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[9px] font-black border transition-all group ${colors.bg} ${colors.text} ${colors.border} hover:brightness-95`}
+        title={semCategoria ? 'Sem categoria — clique para definir' : 'Editar categoria'}
       >
+        {semCategoria && <AlertTriangle size={8} />}
         {categoria || 'Sem categoria'}
         <Pencil size={8} className="opacity-50 group-hover:opacity-100" />
       </button>
@@ -137,10 +147,10 @@ export default function DocumentsTable({
                     </span>
                   </td>
                   <td className="hidden md:table-cell px-4 py-4 border-y border-slate-100">
-                    <p className="text-sm font-black text-slate-800">{d.workerName}</p>
+                    <p className="text-sm font-black text-slate-800">{toSentenceCase(d.workerName)}</p>
                   </td>
                   <td className="px-4 py-4 border-y border-slate-100">
-                    <p className="text-xs font-bold text-slate-700 truncate max-w-[260px]" title={d.title}>{d.title}</p>
+                    <p className="text-xs font-bold text-slate-700 truncate max-w-[260px]" title={d.title}>{toSentenceCaseFilename(d.title)}</p>
                     {d.subtitle && <p className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[260px]">{d.subtitle}</p>}
                     {(d.signedAtWorker || d.signedAtAdmin) && (
                       <div className="mt-1 flex flex-col gap-0.5">
@@ -158,11 +168,18 @@ export default function DocumentsTable({
                         categoria={d.categoria}
                         onSave={onEditCategoria}
                       />
-                    ) : d.categoria ? (
-                      <span className="inline-block mt-1 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide bg-indigo-50 text-indigo-600 border border-indigo-100">
-                        {d.categoria}
-                      </span>
-                    ) : null}
+                    ) : (() => {
+                      const semCategoria = !d.categoria;
+                      const colors = semCategoria
+                        ? { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' }
+                        : CATEGORIA_COLOR_MAP[(CATEGORIA_CONFIG[d.categoria] || CATEGORIA_CONFIG["Outros"]).color];
+                      return (
+                        <span className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-md text-[9px] font-black border ${colors.bg} ${colors.text} ${colors.border}`}>
+                          {semCategoria && <AlertTriangle size={8} />}
+                          {d.categoria || 'Sem categoria'}
+                        </span>
+                      );
+                    })()}
                     <ValidadeBadge dataValidade={d.data_validade} />
                   </td>
                   <td className="px-4 py-4 border-y border-slate-100"><StateBadge state={d.state} /></td>
@@ -172,41 +189,41 @@ export default function DocumentsTable({
                         <>
                           {d.viewUrl && (
                             <a href={d.viewUrl} target="_blank" rel="noreferrer"
-                              className="p-1.5 bg-white text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Visualizar original">
+                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Visualizar original">
                               <Eye size={12} />
                             </a>
                           )}
                           {d.signedPdfUrl && (
                             <a href={d.signedPdfUrl} target="_blank" rel="noreferrer"
-                              className="p-1.5 bg-white text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Visualizar assinado">
+                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
                               <CheckCircle size={12} />
                             </a>
                           )}
                           <button onClick={() => onDeleteManual(d.raw)}
-                            className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Eliminar">
+                            className="p-1.5 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Eliminar">
                             <Trash2 size={12} />
                           </button>
                         </>
                       ) : (
                         <>
                           <button onClick={() => onPreview(d.raw)}
-                            className="p-1.5 bg-white text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm" title="Pré-visualizar">
+                            className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Pré-visualizar">
                             <Eye size={12} />
                           </button>
                           {d.signedPdfUrl && (
                             <a href={d.signedPdfUrl} target="_blank" rel="noreferrer"
-                              className="p-1.5 bg-white text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all shadow-sm" title="Visualizar assinado">
+                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF]`} style={ACTION_ICON_STYLE} title="Visualizar assinado">
                               <CheckCircle size={12} />
                             </a>
                           )}
                           {d.state === 'awaiting_admin' && (
                             <button onClick={() => onApprove(d.raw)} disabled={isApproving || saving}
-                              className="p-1.5 bg-indigo-600 text-white rounded-lg border border-indigo-600 hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50" title="Aplicar carimbo">
+                              className={`${ACTION_ICON_CLS} hover:bg-[#869AAF] disabled:opacity-50`} style={ACTION_ICON_STYLE} title="Aplicar carimbo">
                               {isApproving ? <Loader2 size={12} className="animate-spin" /> : <FileSignature size={12} />}
                             </button>
                           )}
                           <button onClick={() => onDeleteGenerated(d.raw.id)}
-                            className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Eliminar">
+                            className="p-1.5 bg-white text-red-600 rounded-lg border border-red-100 hover:bg-red-600 hover:text-white transition-all shadow-sm" title="Eliminar">
                             <Trash2 size={12} />
                           </button>
                         </>

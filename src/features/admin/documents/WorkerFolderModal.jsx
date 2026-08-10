@@ -5,6 +5,7 @@ import { useDocumentTemplates } from '../../../hooks/useDocumentTemplates';
 import { WorkerPastaView, DocumentViewerModal } from './WorkerDocsFolderView';
 import UploadManualModal from './UploadManualModal';
 import { inferirCategoria } from '../../../constants/rhCategories';
+import { toSentenceCase } from '../../../utils/textUtils';
 
 const isSigned = s => ['signed', 'Assinado', 'assinado'].includes(s);
 const isAwaitingAdmin = s => ['awaiting_admin', 'pending_admin'].includes(s);
@@ -149,11 +150,12 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
         <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-100">
           <div className="flex-1 min-w-0">
             <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Pasta de Documentos</p>
-            <h3 className="font-black text-slate-800 truncate">{workerName}</h3>
+            <h3 className="font-black text-slate-800 truncate">{toSentenceCase(workerName)}</h3>
           </div>
           <button
             onClick={() => setShowUpload(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-colors flex-shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black text-xs transition-colors flex-shrink-0"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
           >
             <Plus size={13} /> Adicionar
           </button>
