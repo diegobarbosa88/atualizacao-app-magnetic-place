@@ -304,7 +304,7 @@ function DocCardSingle({ d, onOpenDoc, onDelete, confirmDeleteId, setConfirmDele
                 className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
                 style={{ color: '#869AAF' }}
               >
-                {visivelWorker ? <Eye size={16} /> : <EyeOff size={16} />}
+                <EyeOff size={16} />
               </button>
             )}
             <button onClick={() => setConfirmDeleteId(d.id)} title="Apagar" className="p-1.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors"><Trash2 size={16} /></button>
@@ -372,7 +372,7 @@ function DocCardPair({ pair, onOpenDoc, onDelete, confirmDeleteId, setConfirmDel
             className="p-1.5 rounded-lg hover:bg-white/60 transition-colors"
             style={{ color: '#869AAF' }}
           >
-            {visivelWorker ? <Eye size={11} /> : <EyeOff size={11} />}
+            <EyeOff size={11} />
           </button>
         )}
       </div>

@@ -61,7 +61,7 @@ export default function WorkerFolderModal({ workerId, workerName, onClose }) {
       .filter(d => d.worker_id === workerId)
       .map(d => {
         const state = isSigned(d.status) ? 'signed' : isAwaitingAdmin(d.status) ? 'awaiting_admin' : 'pending';
-        const tipo = d.tipo_doc || d.template_name || 'Documento';
+        const tipo = d.tipo_doc || d.template_name || d.title || 'Documento';
         return {
           id: `template:${d.id}`,
           source: 'template',

@@ -16,6 +16,7 @@ export const MAPA_SCANNER_ACT = {
   "Fiscal e Segurança Social":    "Segurança Social e Fiscal",
   "Saúde e Segurança no Trabalho":"Saúde e Segurança no Trabalho",
   "Contratual e Habilitações":    "Contratual",
+  "Remuneração":                  "Remuneração",
   "Outros":                       "Outros",
 };
 

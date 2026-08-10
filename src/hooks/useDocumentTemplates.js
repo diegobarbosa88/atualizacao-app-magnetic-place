@@ -13,6 +13,7 @@ import {
 import { sendWorkerDocumentEmail } from '../utils/emailUtils';
 import { applyAdminStampToPage } from '../utils/pdfSigningService';
 import { DOC_STATUS } from '../constants/documentStatus';
+import { inferirCategoria } from '../constants/rhCategories';
 
 export function useDocumentTemplates(supabase, { onError } = {}) {
   const [templates, setTemplates] = useState([]);
@@ -287,6 +288,7 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
               title: selectedTemplate.name,
               status: 'pending',
               created_at: new Date().toISOString(),
+              categoria: inferirCategoria(selectedTemplate.name) || null,
             }])
             .select()
             .single();

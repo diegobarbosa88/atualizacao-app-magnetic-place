@@ -10,7 +10,7 @@ import {
   Layers, Calendar,
 } from 'lucide-react';
 
-const DOCUMENT_SCANNER_PROMPT = `A tua função é analisar imagens e PDFs de documentos de trabalhadores em Portugal (como Cartão de Cidadão, Título de Residência, Comprovativo de NIF, NISS, Ficha de Aptidão Médica SST, Contratos de Trabalho, Comprovativo de IBAN, etc.).
+const DOCUMENT_SCANNER_PROMPT = `A tua função é analisar imagens e PDFs de documentos de trabalhadores em Portugal (como Cartão de Cidadão, Título de Residência, Comprovativo de NIF, NISS, Ficha de Aptidão Médica SST, Contratos de Trabalho, Recibos de Vencimento, Comprovativo de IBAN, etc.).
 
 Ao receberes uma imagem ou documento, deves extrair as informações e responder EXCLUSIVAMENTE num formato JSON válido, sem texto adicional antes ou depois.
 
@@ -23,6 +23,7 @@ Regras de Extração e Validação para Portugal:
    - "Fiscal e Segurança Social" (Comprovativo NIF, NISS, Início de Atividade, Comprovativo IBAN)
    - "Saúde e Segurança no Trabalho" (Ficha de Aptidão Médica SST, Baixa Médica)
    - "Contratual e Habilitações" (Contrato de Trabalho, Comprovativo de Morada, Certificado de Habilitações)
+   - "Remuneração" (Recibo de Vencimento, Recibo Verde, Mapa de Ajuda de Custo, Mapa de Deslocamento)
    - "Outros"
 
 5. Extrai as datas no formato AAAA-MM-DD:
@@ -31,6 +32,16 @@ Regras de Extração e Validação para Portugal:
    - data_validade (se aplicável)
 
 6. Identifica se esta imagem é a FRENTE ou o VERSO de um documento de identidade (Cartão de Cidadão, Carta de Condução, Título de Residência). Responde com "frente", "verso" ou null se não aplicável.
+
+7. Se o documento for um Recibo de Vencimento (categoria "Remuneração"), extrai também:
+   - periodo_referencia: o mês/ano a que o recibo se refere (ex.: "Junho 2026"), null se não identificado.
+   - valor_bruto: valor bruto/total de vencimento em euros, como número (ex.: 1200.50), null se não identificado.
+   - valor_liquido: valor líquido a receber em euros, como número (ex.: 980.30), null se não identificado. Procura rótulos como "Líquido a Receber", "Total Líquido", "Valor a Pagar".
+
+8. Se o documento for um Contrato de Trabalho (categoria "Contratual e Habilitações"), extrai também:
+   - tipo_contrato: o tipo de vínculo tal como está escrito no documento (ex.: "Sem Termo", "A Termo Certo", "A Termo Incerto"), null se não identificado.
+   - data_inicio: data de início de funções/vigência do contrato (AAAA-MM-DD), null se não identificada.
+   - data_fim: data de termo do contrato, se o contrato for a termo e a data estiver definida (AAAA-MM-DD), null se for sem termo ou não identificada.
 
 A tua resposta DEVE seguir rigorosamente esta estrutura JSON:
 
@@ -47,7 +58,13 @@ A tua resposta DEVE seguir rigorosamente esta estrutura JSON:
     "numero_documento": "string ou null",
     "data_emissao": "YYYY-MM-DD ou null",
     "data_validade": "YYYY-MM-DD ou null",
-    "lado": "frente" | "verso" | null
+    "lado": "frente" | "verso" | null,
+    "periodo_referencia": "string ou null",
+    "valor_bruto": "número ou null",
+    "valor_liquido": "número ou null",
+    "tipo_contrato": "string ou null",
+    "data_inicio": "YYYY-MM-DD ou null",
+    "data_fim": "YYYY-MM-DD ou null"
   }
 }`;
 

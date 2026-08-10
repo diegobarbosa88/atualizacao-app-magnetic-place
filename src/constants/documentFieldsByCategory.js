@@ -15,6 +15,13 @@ const getFileExt = (url) => {
   return ext && ext.length <= 5 ? ext.toUpperCase() : null;
 };
 
+const fmtEur = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (Number.isNaN(n)) return null;
+  return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(n);
+};
+
 const row = (label, value) => ({ label, value: value || null });
 
 /**
@@ -32,11 +39,11 @@ export function getCategoryFields(d) {
 
   switch (d?.categoria) {
     case 'Remuneração': {
-      const periodo = d?.createdAt ? `${MESES_PT[d.createdAt.getMonth()]} ${d.createdAt.getFullYear()}` : null;
+      const periodo = doc.periodo_referencia || (d?.createdAt ? `${MESES_PT[d.createdAt.getMonth()]} ${d.createdAt.getFullYear()}` : null);
       return [
         row('Período de referência', periodo),
-        row('Valor bruto', null),
-        row('Valor líquido', null),
+        row('Valor bruto', fmtEur(doc.valor_bruto)),
+        row('Valor líquido', fmtEur(doc.valor_liquido)),
         row('Data de emissão', fmtDate(emissao)),
         row('Data de assinatura', fmtDate(d?.signedAtWorker)),
       ];
@@ -51,9 +58,9 @@ export function getCategoryFields(d) {
     }
     case 'Contratual': {
       return [
-        row('Tipo de contrato', null),
-        row('Data de início', null),
-        row('Data de fim', null),
+        row('Tipo de contrato', doc.tipo_contrato),
+        row('Data de início', fmtDate(doc.data_inicio)),
+        row('Data de fim', fmtDate(doc.data_fim)),
         row('Data de assinatura', fmtDate(d?.signedAtWorker)),
       ];
     }
