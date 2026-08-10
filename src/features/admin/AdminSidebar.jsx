@@ -770,28 +770,6 @@ export default function AdminSidebar({
         zIndex: 1,
       }}
     >
-      {/* Cabeçalho de marca */}
-      <div style={{ borderBottom: `1px solid ${B.navBorder}`, padding: collapsed ? '12px 8px 12px' : '14px 16px 14px', flexShrink: 0 }}>
-        <div className={`flex items-center ${collapsed ? 'justify-center' : 'gap-3'}`}>
-          <img
-            src="/MAGNETIC (3).png"
-            alt="Logo"
-            style={{ width: collapsed ? '36px' : '38px', height: collapsed ? '36px' : '38px', objectFit: 'contain', flexShrink: 0 }}
-            onError={e => { e.target.src = 'https://ui-avatars.com/api/?name=MP&background=1B3A57&color=fff'; }}
-          />
-          {!collapsed && (
-            <div className="min-w-0">
-              <p style={{ color: 'white', fontWeight: 900, fontSize: '14px', letterSpacing: '-0.01em', lineHeight: 1, textTransform: 'uppercase' }}>
-                MAGNETIC PLACE
-              </p>
-              <p style={{ color: B.sectionLabel, fontWeight: 700, fontSize: '9px', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: '3px' }}>
-                Unipessoal, Lda
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-
       <NavList
         activeTab={activeTab}
         setActiveTab={setActiveTab}
