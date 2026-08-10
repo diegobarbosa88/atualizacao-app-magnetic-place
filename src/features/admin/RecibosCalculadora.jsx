@@ -20,6 +20,7 @@ import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
 import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraPartida, pctFromHoraChegada, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
 import { calcMesParcial, calcDiasFeriasAnoAdmissao } from '../../lib/payroll/mesParcial.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
+import HistoricoDeslocacao from './HistoricoDeslocacao.jsx';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -189,12 +190,14 @@ export default function RecibosCalculadora() {
     const w = workers?.find(x => x.id === selectedWorkerId);
     return isMaxAjudasWorker(w?.name);
   }, [selectedWorkerId, workers]);
+
   const [inputs, setInputs] = useState(() => ({ ...INPUT_DEFAULT, ...(_s.inputs || {}) }));
   const [mapa, setMapa] = useState(() => ({ ...MAPA_DEFAULT, ...(_s.mapa || {}) }));
   const [mapaRows, setMapaRows] = useState(() => _s.mapaRows || []);
   const [autoFillInfo, setAutoFillInfo] = useState(() => _s.autoFillInfo || null);
   const [workerRateHistory, setWorkerRateHistory] = useState([]);
   const logoRef = useRef(null);
+  const dataInicioInputRef = useRef(null);
   const [subTab, setSubTab] = useState(() => _s.subTab || 'calculadora');
   const [contabData, setContabData] = useState([]);
   // Indica se o valor de cada campo foi calculado automaticamente (true) ou editado manualmente (false)
@@ -209,6 +212,10 @@ export default function RecibosCalculadora() {
   const [brutoAlvoEditado, setBrutoAlvoEditado] = useState(() => _s.brutoAlvoEditado || false);
   const [camposAuto, setCamposAuto] = useState(() => ({ ...CAMPOS_AUTO_DEFAULT, ...(_s.camposAuto || {}) }));
   const [complementMethod, setComplementMethod] = useState(() => _s.complementMethod || 'A008');
+  const mesStr = useMemo(
+    () => `${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`,
+    [inputs.ano, inputs.mes]
+  );
   // ── Mês parcial (admissão / cessação no mês em processamento) ──
   const [mesParcialDados, setMesParcialDados] = useState(null);
   // null | { tipo, diaInicio, diaFim, diasTrabalhados, vencBaseOriginal, vencProporcional, fator }
@@ -1985,6 +1992,20 @@ ${hdrRow}${bodyRows}${totRow}
 
       if (mapaLinhas.length === 0) return;
 
+      // Persistir histórico de deslocação (fire-and-forget)
+      if (supabase && w.id) {
+        const pRow = mapaLinhas.find(r => r.tipo === 'Partida');
+        const cRow = [...mapaLinhas].reverse().find(r => r.tipo === 'Chegada');
+        if (pRow && cRow) {
+          supabase.from('mapa_viagens_historico').upsert(
+            { worker_id: w.id, mes: mesStr, data_partida: pRow.dia, data_chegada: cRow.dia,
+              hora_partida: pRow.hora || '07:30', hora_chegada: cRow.hora || '20:30',
+              n_dias: mapaLinhas.length, updated_at: new Date().toISOString() },
+            { onConflict: 'worker_id,mes' }
+          ).then(() => {});
+        }
+      }
+
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
 
@@ -2075,6 +2096,21 @@ ${hdrRow}${bodyRows}${totRow}
         }).length
       : 0;
     const subsAlimMapaPDF = diasUteisPDF * valorAlimDia;
+
+    // Persistir histórico de deslocação (fire-and-forget)
+    if (supabase && selectedWorkerId && mapaRows.length > 0) {
+      const pRow = mapaRows.find(r => r.tipo === 'Partida');
+      const cRow = [...mapaRows].reverse().find(r => r.tipo === 'Chegada');
+      const mes2 = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
+      if (pRow && cRow) {
+        supabase.from('mapa_viagens_historico').upsert(
+          { worker_id: selectedWorkerId, mes: mes2, data_partida: pRow.dia, data_chegada: cRow.dia,
+            hora_partida: pRow.hora || mapa.horaPartida, hora_chegada: cRow.hora || mapa.horaChegada,
+            n_dias: mapaRows.length, updated_at: new Date().toISOString() },
+          { onConflict: 'worker_id,mes' }
+        ).then(() => {});
+      }
+    }
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     _renderMapaPagina(doc, {
@@ -2651,10 +2687,19 @@ ${hdrRow}${bodyRows}${totRow}
           </div>
         </div>
 
+        <HistoricoDeslocacao
+          supabase={supabase}
+          workers={workers}
+          mesStr={mesStr}
+          setMapa={setMapa}
+          dataInicioInputRef={dataInicioInputRef}
+        />
+
         {/* Toolbar de preenchimento automático */}
         <div className="flex gap-3 flex-wrap items-end mb-4 p-3.5 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
           <LabelInput label="Data de início" hint={!mapa.dataInicio ? 'Auto (dias 1–20)' : null}>
             <input
+              ref={dataInicioInputRef}
               type="date"
               value={mapa.dataInicio}
               onChange={e => setMapa(p => ({ ...p, dataInicio: e.target.value }))}

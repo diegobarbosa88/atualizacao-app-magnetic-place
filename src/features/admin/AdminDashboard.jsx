@@ -738,12 +738,12 @@ function AdminDashboard(props) {
                 const workerNameFallback = n.title?.split('·').slice(-1)[0]?.trim() || 'Trabalhador';
                 const isExpanded = expandedCards[n.id];
                 return (
-                  <div key={n.id} className={`px-4 py-3 ${badge.resolved ? 'bg-slate-50' : 'hover:bg-indigo-50'} transition-colors`}>
+                  <div key={n.id} className={`px-4 py-3 ${badge.resolved ? 'bg-slate-50' : 'hover:bg-amber-50'} transition-colors`}>
                     <div className="flex items-start gap-3">
-                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${badge.resolved ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'}`}><FileText size={14} /></div>
+                      <div className={`p-2 rounded-xl shrink-0 mt-0.5 ${badge.resolved ? 'bg-slate-100 text-slate-400' : 'bg-amber-100 text-amber-600'}`}><FileText size={14} /></div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
-                          <span className={`text-[8px] font-black uppercase tracking-widest block ${badge.resolved ? 'text-slate-400' : 'text-indigo-500'}`}>Submissão Trabalhador</span>
+                          <span className={`text-[8px] font-black uppercase tracking-widest block ${badge.resolved ? 'text-slate-400' : 'text-amber-500'}`}>Submissão Trabalhador</span>
                           {badge.resolved && <span className="text-[8px] font-black text-slate-400">{badge.label}</span>}
                         </div>
                         <p className="text-xs font-black text-slate-800 truncate">{worker?.name || workerNameFallback}</p>
@@ -758,7 +758,7 @@ function AdminDashboard(props) {
                           if (corrId) setSelectedCorrectionId(corrId);
                           navigate('/admin/team?source=workers');
                           setShowNotifDropdown(false);
-                        }} className="flex-1 py-1.5 text-[10px] font-black bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 uppercase tracking-widest">Ver</button>
+                        }} className="flex-1 py-1.5 text-[10px] font-black bg-amber-600 text-white rounded-lg hover:bg-amber-700 uppercase tracking-widest">Ver</button>
                         <button onClick={() => { markNotifRead(n.id); handleDismissAdminNotif(n.id); }} className="px-3 py-1.5 text-[10px] font-black bg-slate-100 text-slate-500 rounded-lg hover:bg-slate-200 uppercase tracking-widest">Ignorar</button>
                       </div>
                     )}
@@ -798,8 +798,8 @@ function AdminDashboard(props) {
                   );
                 }
                 return (
-                  <div key={n.id} className="px-4 py-3 hover:bg-indigo-50 transition-colors flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600 shrink-0 mt-0.5"><Bell size={14} /></div>
+                  <div key={n.id} className="px-4 py-3 hover:bg-slate-50 transition-colors flex items-start gap-3">
+                    <div className="p-2 rounded-xl shrink-0 mt-0.5" style={{ backgroundColor: 'rgba(134,154,175,0.15)', color: '#869AAF' }}><Bell size={14} /></div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-black text-slate-800">{n.title || 'Notificação'}</p>
                       {(n.message || n.body) && <p className="text-[10px] text-slate-500 mt-0.5 truncate">{n.message || n.body}</p>}
@@ -814,7 +814,7 @@ function AdminDashboard(props) {
               <div className="px-4 py-8 text-center text-slate-400 text-xs font-bold">Sem notificações novas</div>
             )}
           </div>
-          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-widest py-1.5 hover:bg-indigo-50 rounded-xl transition-colors">
+          <button onClick={() => { setActiveTab('notificacoes'); setShowNotifDropdown(false); }} className="w-full text-center text-[10px] font-black uppercase tracking-widest py-1.5 hover:bg-slate-50 rounded-xl transition-colors" style={{ color: '#1B3A57' }}>
             Ver Todas as Notificações
           </button>
         </div>
