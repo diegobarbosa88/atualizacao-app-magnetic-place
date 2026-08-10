@@ -27,6 +27,10 @@ const EMPRESA = {
   nif: '517379740',
 };
 
+// Trabalhadores que recebem sempre o máximo de ajudas de custo isentas
+const SEMPRE_AJUDAS_MAX = ['diego rocha barbosa', 'nicole emanuele rosa da costa galtieri'];
+const isMaxAjudasWorker = (name) => SEMPRE_AJUDAS_MAX.includes((name || '').trim().toLowerCase());
+
 const INPUT_DEFAULT = {
   nome: '',
   nif: '',
@@ -174,6 +178,11 @@ export default function RecibosCalculadora() {
   const [_s] = useState(_loadSession);
 
   const [selectedWorkerId, setSelectedWorkerId] = useState(() => _s.selectedWorkerId || '');
+  const selectedWorkerIsMaxAjudas = useMemo(() => {
+    if (!selectedWorkerId) return false;
+    const w = workers?.find(x => x.id === selectedWorkerId);
+    return isMaxAjudasWorker(w?.name);
+  }, [selectedWorkerId, workers]);
   const [inputs, setInputs] = useState(() => ({ ...INPUT_DEFAULT, ...(_s.inputs || {}) }));
   const [mapa, setMapa] = useState(() => ({ ...MAPA_DEFAULT, ...(_s.mapa || {}) }));
   const [mapaRows, setMapaRows] = useState(() => _s.mapaRows || []);
@@ -448,6 +457,8 @@ export default function RecibosCalculadora() {
       localidade: dc.localidade || prev.localidade,
       pais: dc.pais || prev.pais,
       territorio: dc.territorio || prev.territorio,
+      // Para trabalhadores com ajudas máximas: bruto é livre, limpar qualquer alvo anterior
+      ...(isMaxAjudasWorker(w.name) ? { brutoAlvo: '' } : {}),
     }));
   };
 
@@ -489,7 +500,8 @@ export default function RecibosCalculadora() {
   // Corre duas vezes por design: primeiro com brutoAlvo (rápido), depois com subsAlimDias correcto
   // (quando a query de ausências retorna e reset a chave). Edições manuais ao mapa não são sobrescritas.
   useEffect(() => {
-    if (!selectedWorkerId || !r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0) return;
+    if (!selectedWorkerId || !r || n(inputs.vdl) <= 0) return;
+    if (!selectedWorkerIsMaxAjudas && r.ajudaCustoNecessaria <= 0) return;
     const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}-${n(inputs.vencimentoBase)}-${inputs.subsAlimTipo}-${n(inputs.nDependentes)}-${inputs.tabelaKey}-${n(inputs.subsAlimValorDia)}-${n(inputs.subsAlimDias)}-${n(inputs.brutoAlvo)}-${String(inputs.incluirFerias)}-${String(inputs.incluirNatal)}-${n(inputs.he1)}-${n(inputs.he2)}`;
     if (mapaAutoFillKeyRef.current === key) return;
     mapaAutoFillKeyRef.current = key;
@@ -586,7 +598,6 @@ export default function RecibosCalculadora() {
     const pct2    = v => (v * 100).toFixed(2) + '%';
 
     // Trabalhadores sempre incluídos no resumo mesmo sem horas no mês
-    const SEMPRE_INCLUIR = ['diego rocha barbosa', 'nicole emanuele rosa da costa galtieri'];
 
     const trabalhadores = (workers || [])
       .filter(w => w.vencimento_base != null)
@@ -596,7 +607,7 @@ export default function RecibosCalculadora() {
 
     return trabalhadores.map(w => {
       const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
-      const sempreIncluir = SEMPRE_INCLUIR.includes((w.name || '').trim().toLowerCase());
+      const sempreIncluir = isMaxAjudasWorker(w.name);
       if (workerLogs.length === 0 && !sempreIncluir) return null; // sem registos neste mês
       const hist         = workerRateHistory.filter(h => h.worker_id === w.id);
       const brutoAlvo    = workerLogs.reduce((s, l) => {
@@ -760,13 +771,19 @@ export default function RecibosCalculadora() {
     const valorAlim   = n(inputs.subsAlimValorDia);
     if (valorDiario <= 0) return;
 
-    // Soma de volta TODOS os complementos actuais para obter o alvo puro (sem considerar o complemento anterior)
+    const mesStr_af    = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
+    const totalDias_af = new Date(parseInt(inputs.ano), parseInt(inputs.mes), 0).getDate();
+
+    // Para trabalhadores com ajudas máximas: alvo = limite legal × todos os dias do mês (bruto é livre)
+    // Para os restantes: alvo = ajudas necessárias para atingir o bruto
     const heComplement = n(inputs.he1) * r.valorHe1un + n(inputs.he2) * r.valorHe2un;
-    const ajudaNecessaria = r.ajudaCustoNecessaria + n(inputs.premios) + heComplement;
+    const ajudaNecessaria = selectedWorkerIsMaxAjudas
+      ? totalDias_af * valorDiario
+      : r.ajudaCustoNecessaria + n(inputs.premios) + heComplement;
     if (ajudaNecessaria <= 0) return;
 
-    const mesStr       = `${inputs.ano}-${String(inputs.mes).padStart(2, '0')}`;
-    const totalDiasMes = new Date(parseInt(inputs.ano), parseInt(inputs.mes), 0).getDate();
+    const mesStr       = mesStr_af;
+    const totalDiasMes = totalDias_af;
 
     // Conta dias úteis (Seg–Sex) nas primeiras nDias a partir de dataInicio
     function contarDiasUteis(di, nDias) {
@@ -859,9 +876,8 @@ export default function RecibosCalculadora() {
       cursor.setDate(cursor.getDate() + 1);
     }
 
-    // Só complementar se o resíduo exceder a tolerância de sincronização;
-    // resíduos pequenos ficam dentro do limiar de mapaDesviado sem necessidade de prémios.
-    const usarComplemento = residuo > SYNC_TOLERANCE;
+    // Para trabalhadores max ajudas: bruto é livre, sem complemento
+    const usarComplemento = !selectedWorkerIsMaxAjudas && residuo > SYNC_TOLERANCE;
     if (usarComplemento) {
       if (complementMethod === 'he1' && r.valorHe1un > 0) {
         const h = Math.ceil((residuo / r.valorHe1un) * 100) / 100;
