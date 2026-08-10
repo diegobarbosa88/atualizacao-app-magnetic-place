@@ -67,7 +67,6 @@ const MENU_STRUCTURE = [
       { id: 'rec-bancaria', label: 'Bancária', icon: Landmark, path: '/admin/documentos/reconciliacao/bancaria' },
       { id: 'pag-fornecedores', label: 'Pagamentos', icon: ArrowRightLeft, path: '/admin/documentos/pagamentos/pagamentos-fornecedores' },
       { id: 'pag-fila', label: 'Fila de Pag.', icon: ListChecks, path: '/admin/documentos/pagamentos/fila' },
-      { id: 'banco-movs', label: 'Conta Bancária', icon: Landmark, path: '/admin/documentos/banco/movimentacoes' },
     ],
   },
   { id: 'reports', label: 'Folhas', icon: BarChart3 },

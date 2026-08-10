@@ -128,7 +128,8 @@ export default function TOConlinePanel() {
             </button>
           ) : (
             <button onClick={handleLigar} disabled={ligando}
-              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-60">
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 text-white hover:opacity-90"
+              style={{ backgroundColor: '#EB8D00' }}>
               {ligando ? <Loader2 size={13} className="animate-spin" /> : <Link2 size={13} />}
               Ligar TOConline
             </button>
@@ -153,7 +154,8 @@ export default function TOConlinePanel() {
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setTipoRel(key)}
-                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${tipoRel === key ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
+                  className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                  style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#1B3A57' } : { color: '#94A3B8' }}>
                   {label}
                 </button>
               ))}
@@ -171,7 +173,8 @@ export default function TOConlinePanel() {
               </div>
             </div>
             <button onClick={handleCarregarRelatorio} disabled={carregandoRel}
-              className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-100 disabled:opacity-60 self-end">
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 self-end text-white hover:opacity-90"
+              style={{ backgroundColor: '#EB8D00' }}>
               {carregandoRel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               Carregar
             </button>

@@ -13,7 +13,6 @@ import FaturasTab from './FaturasTab';
 import FaturasAdmin from './FaturasAdmin';
 import PagamentosTab from './pagamentos/PagamentosTab';
 import FilaAprovacaoTab from './pagamentos/FilaAprovacaoTab';
-import MovimentacoesBancariasTab from './MovimentacoesBancariasTab';
 import ReconciliacaoAdmin from './ReconciliacaoAdmin';
 import { fetchPublicIp } from '../../utils/deviceUtils';
 import { getValidadeStatus, inferirCategoria } from '../../constants/rhCategories';
@@ -62,22 +61,15 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         { id: 'fila', label: 'Fila de Pag.', icon: ListChecks },
       ],
     },
-    {
-      id: 'banco', label: 'Banco', icon: Landmark, color: 'sky',
-      sections: [
-        { id: 'movimentacoes', label: 'Movimentações', icon: Landmark },
-      ],
-    },
   ];
 
-  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos', pagamentos: 'fila', banco: 'movimentacoes' };
+  const DEFAULT_SECTION = { arquivo: 'documentos', faturas: 'importar', reconciliacao: 'recibos', pagamentos: 'fila' };
 
   const GROUP_COLOR = {
     indigo:  { icon: 'bg-slate-100 text-[#1B3A57]' },
     blue:    { icon: 'bg-slate-100 text-[#869AAF]' },
     emerald: { icon: 'bg-emerald-50 text-emerald-600' },
     violet:  { icon: 'bg-amber-50 text-[#EB8D00]' },
-    sky:     { icon: 'bg-slate-50 text-slate-500' },
   };
 
   const activeGroup = useMemo(() => {
@@ -87,7 +79,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
     if (first === 'faturas') return 'faturas';
     if (first === 'reconciliacao') return 'reconciliacao';
     if (first === 'pagamentos') return 'pagamentos';
-    if (first === 'banco') return 'banco';
     // compatibilidade com rotas antigas /validar/*
     if (first === 'validar') return 'reconciliacao';
     return 'arquivo';
@@ -440,7 +431,26 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       </div>
 
       {/* Secções do grupo ativo (linha 2) */}
-      {currentGroup && (
+      {currentGroup && activeGroup === 'faturas' && (
+        <div className="flex items-center gap-5 mb-5">
+          {currentGroup.sections.map(sec => {
+            const Icon = sec.icon;
+            const isActive = activeSection === sec.id;
+            return (
+              <button
+                key={sec.id}
+                onClick={() => navigateTo(activeGroup, sec.id)}
+                className={`flex items-center gap-1.5 text-sm transition-all ${
+                  isActive ? 'text-[#1B3A57] font-medium' : 'text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                <Icon size={13} /> {sec.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {currentGroup && activeGroup !== 'faturas' && (
         <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl mb-5 w-full sm:w-auto inline-flex overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
           {currentGroup.sections.map(sec => {
             const Icon = sec.icon;
@@ -477,10 +487,10 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
         </div>
       )}
       {activeGroup === 'faturas' && activeSection === 'importar' && (
-        <div className={CARD_CLS}><FaturasAdmin /></div>
+        <FaturasAdmin />
       )}
       {activeGroup === 'faturas' && activeSection === 'fornecedores' && (
-        <div className={CARD_CLS}><FaturasTab /></div>
+        <FaturasTab />
       )}
       {activeGroup === 'reconciliacao' && activeSection === 'recibos' && (
         <div className={CARD_CLS}><ValidarReciboAdmin workers={workers} /></div>
@@ -496,9 +506,6 @@ const DocumentsAdmin = ({ workers = [], documents = [], setDocuments, systemSett
       )}
       {activeGroup === 'pagamentos' && activeSection === 'fila' && (
         <div className={CARD_CLS}><FilaAprovacaoTab /></div>
-      )}
-      {activeGroup === 'banco' && activeSection === 'movimentacoes' && (
-        <div className={CARD_CLS}><MovimentacoesBancariasTab /></div>
       )}
       {(activeGroup === 'arquivo' && activeSection === 'documentos') && (
         <>

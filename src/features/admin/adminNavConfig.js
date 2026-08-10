@@ -33,7 +33,6 @@ export const ADMIN_SECTIONS = [
       { id: 'rec-bancaria',     label: 'Bancária',       path: '/admin/documentos/reconciliacao/bancaria' },
       { id: 'pag-fornecedores', label: 'Pagamentos',     path: '/admin/documentos/pagamentos/pagamentos-fornecedores' },
       { id: 'pag-fila',         label: 'Fila de Pag.',   path: '/admin/documentos/pagamentos/fila' },
-      { id: 'banco-movs',       label: 'Conta Bancária', path: '/admin/documentos/banco/movimentacoes' },
     ],
   },
   { id: 'reports',       label: 'Folhas',          badgeType: null },

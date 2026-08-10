@@ -441,25 +441,28 @@ export default function FaturasAdmin() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2">
-          <FileText size={22} className="text-emerald-600" />
+        <h2 className="text-xl sm:text-2xl font-black flex items-center gap-2" style={{ color: '#1B3A57' }}>
+          <FileText size={22} style={{ color: '#1B3A57' }} />
           Faturas Importadas
         </h2>
         <div className="flex items-center gap-2">
           <button onClick={() => handleGerarPDF(faturas.filter(f => f.status === 'PAGO'))}
             disabled={gerandoPdf || faturas.filter(f => f.status === 'PAGO').length === 0}
-            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-sm">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
             {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
             <span className="hidden sm:inline">Reconciliadas</span>
           </button>
           <button onClick={() => handleGerarPDF()}
             disabled={gerandoPdf || faturasFiltradas.length === 0}
-            className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50 shadow-sm">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#1B3A57' }}>
             {gerandoPdf ? <Loader2 size={14} className="animate-spin" /> : <Printer size={14} />}
             <span className="hidden sm:inline">{selecionados.size > 0 ? `PDF (${selecionados.size})` : 'PDF'}</span>
           </button>
           <button onClick={carregar} disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50">
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 text-white hover:opacity-90"
+            style={{ backgroundColor: '#1B3A57' }}>
             {loading ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
             <span className="hidden sm:inline">Atualizar</span>
           </button>
@@ -481,8 +484,8 @@ export default function FaturasAdmin() {
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-3">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-rose-50 flex items-center justify-center shrink-0">
-              <Receipt size={18} className="text-rose-500" />
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
+              <Receipt size={18} style={{ color: '#869AAF' }} />
             </div>
             <div>
               <p className="text-sm font-black text-slate-700">Comprovativos novobanco</p>
@@ -492,7 +495,8 @@ export default function FaturasAdmin() {
           <button
             onClick={handleImportarComprovativos}
             disabled={importandoComp}
-            className="flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-rose-700 transition-all disabled:opacity-50 shadow-sm"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
+            style={{ borderColor: '#869AAF', color: '#1B3A57' }}
           >
             {importandoComp ? <Loader2 size={14} className="animate-spin" /> : <Receipt size={14} />}
             {importandoComp ? 'A importar...' : 'Importar Comprovativos'}
@@ -539,13 +543,15 @@ export default function FaturasAdmin() {
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input value={pesquisa} onChange={e => setPesquisa(e.target.value)}
               placeholder="Pesquisar por ficheiro, fornecedor ou nº fatura..."
-              className="w-full pl-9 pr-4 py-2.5 rounded-2xl border border-slate-200 text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+              className="w-full pl-9 pr-4 py-2.5 rounded-2xl border text-sm text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+              style={{ borderColor: '#DDE3E8' }} />
             {pesquisa && <button onClick={() => setPesquisa('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"><X size={13} /></button>}
           </div>
           <button onClick={() => setMostrarFiltros(v => !v)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all ${mostrarFiltros || (filtrosAtivos && !pesquisa) ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-200'}`}>
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border text-xs font-black uppercase tracking-widest transition-all bg-white text-slate-500 hover:text-[#1B3A57]"
+            style={{ borderColor: mostrarFiltros || (filtrosAtivos && !pesquisa) ? '#869AAF' : '#DDE3E8', color: mostrarFiltros || (filtrosAtivos && !pesquisa) ? '#1B3A57' : undefined }}>
             {mostrarFiltros ? <ChevronUp size={13} /> : <ChevronDown size={13} />} Filtros
-            {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+            {filtrosAtivos && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#869AAF' }} />}
           </button>
           {filtrosAtivos && <button onClick={limparFiltros} className="flex items-center gap-1 px-3 py-2.5 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors"><X size={12} /> Limpar</button>}
         </div>
@@ -603,20 +609,15 @@ export default function FaturasAdmin() {
       </div>
 
       {faturas.length > 0 && (
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+        <div className="flex items-center gap-1 border-b border-slate-100">
           {[
-            { key: 'todas', label: `Todas (${faturas.length})` },
-            { key: 'pendentes', label: `Pendentes (${faturas.filter(f => (f.status || 'PENDENTE') === 'PENDENTE').length})` },
-            { key: 'pagas', label: null, jsx: (
-              <span className="flex items-center gap-1">
-                <CheckCircle size={11} className={filtroStatus === 'pagas' ? 'text-emerald-500' : 'text-slate-400'} />
-                {`Reconciliadas (${faturas.filter(f => f.status === 'PAGO').length})`}
-              </span>
-            )},
-          ].map(({ key, label, jsx }) => (
+            { key: 'todas', label: 'Todas', count: faturas.length, countColor: '#94A3B8' },
+            { key: 'pendentes', label: 'Pendentes', count: faturas.filter(f => (f.status || 'PENDENTE') === 'PENDENTE').length, countColor: '#854F0B' },
+            { key: 'pagas', label: 'Reconciliadas', count: faturas.filter(f => f.status === 'PAGO').length, countColor: '#3B6D11' },
+          ].map(({ key, label, count, countColor }) => (
             <button key={key} onClick={() => setFiltroStatus(key)}
-              className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filtroStatus === key ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>
-              {jsx ?? label}
+              className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${filtroStatus === key ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
+              {label} <span style={{ color: countColor }}>({count})</span>
             </button>
           ))}
         </div>
@@ -706,18 +707,18 @@ export default function FaturasAdmin() {
                       </td>
                       <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center gap-2">
-                          <button onClick={() => setFaturaDetalhe(f)} className="p-1.5 text-slate-400 hover:text-indigo-600 transition-colors" title="Ver detalhes e descarregar">
+                          <button onClick={() => setFaturaDetalhe(f)} className="p-1.5 text-slate-400 hover:text-[#869AAF] transition-colors" title="Ver detalhes e descarregar">
                             <Eye size={14} />
                           </button>
                           {f.url && (
-                            <a href={f.url} download={f.filename} className="p-1.5 text-slate-400 hover:text-emerald-600 transition-colors" title="Download PDF">
+                            <a href={f.url} download={f.filename} className="p-1.5 text-slate-400 hover:text-[#869AAF] transition-colors" title="Download PDF">
                               <Download size={14} />
                             </a>
                           )}
                           <button
                             onClick={() => toggleDebitoAutomatico(f)}
                             title={debitoNifs.has(f.dados?.nif_fornecedor) ? `Fornecedor marcado como Déb. Automático — clique para remover` : 'Marcar fornecedor como Débito Automático (todas as faturas)'}
-                            className={`p-1.5 transition-colors rounded ${debitoNifs.has(f.dados?.nif_fornecedor) ? 'text-violet-600 bg-violet-50 hover:bg-violet-100' : 'text-slate-400 hover:text-violet-600'}`}
+                            className={`p-1.5 transition-colors rounded ${debitoNifs.has(f.dados?.nif_fornecedor) ? 'text-violet-600 bg-violet-50 hover:bg-violet-100' : 'text-slate-400 hover:text-[#869AAF]'}`}
                           >
                             <Repeat size={14} />
                           </button>
@@ -730,7 +731,7 @@ export default function FaturasAdmin() {
                                 setIbanInputVal(currentIban);
                               }}
                               title={fornecedoresIban[f.dados?.nif_fornecedor] ? `IBAN guardado: ${fornecedoresIban[f.dados?.nif_fornecedor]}` : 'Guardar IBAN do fornecedor'}
-                              className={`p-1.5 transition-colors rounded ${fornecedoresIban[f.dados?.nif_fornecedor] ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 hover:text-emerald-600'}`}
+                              className={`p-1.5 transition-colors rounded ${fornecedoresIban[f.dados?.nif_fornecedor] ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100' : 'text-slate-400 hover:text-[#869AAF]'}`}
                             >
                               <CreditCard size={14} />
                             </button>
