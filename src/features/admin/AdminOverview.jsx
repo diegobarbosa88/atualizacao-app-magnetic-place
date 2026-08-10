@@ -87,6 +87,8 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
     };
   }, [adminStats, prevMonthStats]);
 
+  const SEMPRE_NO_COMPARATIVO = ['diego rocha barbosa', 'nicole emanuele rosa da costa galtieri'];
+
   const workerComparisonData = useMemo(() => {
     const prevMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
     return workers
@@ -104,7 +106,7 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         const diffPct = prevHours > 0 ? Number(((currHours - prevHours) / prevHours * 100).toFixed(1)) : null;
         return { id: w.id, name: w.name, registered: currHours, prevRegistered: prevHours, expected: getWorkerExpectedHours(w.id), ratioPct, diffPct, isOver: currHours >= prevHours && prevHours > 0 };
       })
-      .filter(w => w.registered > 0 || w.prevRegistered > 0)
+      .filter(w => w.registered > 0 || w.prevRegistered > 0 || SEMPRE_NO_COMPARATIVO.includes((w.name || '').trim().toLowerCase()))
       .sort((a, b) => (b.ratioPct || 0) - (a.ratioPct || 0));
   }, [workers, logs, schedules, currentMonth, todayDay]);
 

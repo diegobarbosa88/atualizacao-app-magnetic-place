@@ -585,6 +585,9 @@ export default function RecibosCalculadora() {
     const eur2    = v => (isNaN(v) ? 0 : v).toFixed(2);
     const pct2    = v => (v * 100).toFixed(2) + '%';
 
+    // Trabalhadores sempre incluídos no resumo mesmo sem horas no mês
+    const SEMPRE_INCLUIR = ['diego rocha barbosa', 'nicole emanuele rosa da costa galtieri'];
+
     const trabalhadores = (workers || [])
       .filter(w => w.vencimento_base != null)
       .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -593,7 +596,8 @@ export default function RecibosCalculadora() {
 
     return trabalhadores.map(w => {
       const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
-      if (workerLogs.length === 0) return null; // sem registos neste mês
+      const sempreIncluir = SEMPRE_INCLUIR.includes((w.name || '').trim().toLowerCase());
+      if (workerLogs.length === 0 && !sempreIncluir) return null; // sem registos neste mês
       const hist         = workerRateHistory.filter(h => h.worker_id === w.id);
       const brutoAlvo    = workerLogs.reduce((s, l) => {
         const rate = getRateAtDate(l.date, hist, parseFloat(w.valorHora) || 0);
