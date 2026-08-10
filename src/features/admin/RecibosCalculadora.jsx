@@ -30,6 +30,9 @@ const EMPRESA = {
 // Trabalhadores que recebem sempre o máximo de ajudas de custo isentas
 const SEMPRE_AJUDAS_MAX = ['diego rocha barbosa', 'nicole emanuele rosa da costa galtieri'];
 const isMaxAjudasWorker = (name) => SEMPRE_AJUDAS_MAX.includes((name || '').trim().toLowerCase());
+// Função fiscal para cada trabalhador: gerência (taxa superior) ou geral
+const funcaoMaxAjudasWorker = (name) =>
+  (name || '').trim().toLowerCase() === 'diego rocha barbosa' ? 'gerencia' : 'geral';
 
 const INPUT_DEFAULT = {
   nome: '',
@@ -457,8 +460,8 @@ export default function RecibosCalculadora() {
       localidade: dc.localidade || prev.localidade,
       pais: dc.pais || prev.pais,
       territorio: dc.territorio || prev.territorio,
-      // Para trabalhadores com ajudas máximas: bruto é livre, limpar qualquer alvo anterior
-      ...(isMaxAjudasWorker(w.name) ? { brutoAlvo: '' } : {}),
+      // Para trabalhadores com ajudas máximas: bruto é livre, limpar alvo anterior e definir funcao correta
+      ...(isMaxAjudasWorker(w.name) ? { brutoAlvo: '', funcao: funcaoMaxAjudasWorker(w.name) } : {}),
     }));
   };
 
@@ -608,6 +611,7 @@ export default function RecibosCalculadora() {
     return trabalhadores.map(w => {
       const workerLogs   = logsDoMes.filter(l => l.workerId === w.id);
       const sempreIncluir = isMaxAjudasWorker(w.name);
+      const funcaoW       = sempreIncluir ? funcaoMaxAjudasWorker(w.name) : 'geral';
       if (workerLogs.length === 0 && !sempreIncluir) return null; // sem registos neste mês
       const hist         = workerRateHistory.filter(h => h.worker_id === w.id);
       const brutoAlvo    = workerLogs.reduce((s, l) => {
@@ -626,10 +630,10 @@ export default function RecibosCalculadora() {
         : undefined;
 
       // eslint-disable-next-line react-hooks/exhaustive-deps
-      const { rc, mapaLiqLive: mapaLiqCalc } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, wVencCalculoR);
+      const { rc, mapaLiqLive: mapaLiqCalc } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, wVencCalculoR, funcaoW);
       // Para trabalhadores sempre incluídos: forçar ajudas máximas isentas (limite legal × todos os dias do mês)
       const mapaLiqLive = sempreIncluir
-        ? Math.round(new Date(anoNum, mesNum, 0).getDate() * valorDiarioLegal('internacional', 'geral') * 100) / 100
+        ? Math.round(new Date(anoNum, mesNum, 0).getDate() * valorDiarioLegal('internacional', funcaoW) * 100) / 100
         : mapaLiqCalc;
       const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
 
@@ -1069,7 +1073,7 @@ export default function RecibosCalculadora() {
     URL.revokeObjectURL(url);
   }
 
-  function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride) {
+  function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride, funcao = 'geral') {
     const vencBase         = vencBaseOverride ?? (parseFloat(w.vencimento_base) || 0);
     const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
     const baseParams = {
@@ -1079,7 +1083,7 @@ export default function RecibosCalculadora() {
       tabelaKey: w.tabela_irs || 'tabelaI',
       nDependentes: w.n_dependentes ?? 0,
       brutoAlvo: brutoAlvo || vencBase,
-      territorio: 'internacional', funcao: 'geral', ano: anoNum,
+      territorio: 'internacional', funcao, ano: anoNum,
     };
     const rc0             = calcularRecibo(baseParams);
     const valorDiario     = valorDiarioLegal('internacional', 'geral');
