@@ -960,94 +960,35 @@ export default function RecibosCalculadora() {
   function gerarReciboPDF() {
     if (!r) return;
     const doc = new jsPDF();
-    const mesNum = parseInt(inputs.mes, 10);
+    const mesNum   = parseInt(inputs.mes, 10);
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
-
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.text('RECIBO DE VENCIMENTO', 105, 16, { align: 'center' });
-
-    autoTable(doc, {
-      startY: 22,
-      body: [
-        ['Empresa:', EMPRESA.nome],
-        ['Morada:', EMPRESA.morada],
-        ['NIF:', EMPRESA.nif],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 8, cellPadding: 1.5 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
-    });
-
-    const vencBaseLabel = mesParcialDados ? mesParcialDados.vencBaseOriginal.toFixed(2) : n(inputs.vencimentoBase).toFixed(2);
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 2,
-      body: [
-        ['Trabalhador:', inputs.nome || '—', 'Mês / Ano:', `${mesLabel} ${inputs.ano}`],
-        ['NIF:', inputs.nif || '—', 'Profissão:', inputs.categoria || '—'],
-        ['NIS:', inputs.nis || '—', 'Venc. Base:', `${vencBaseLabel}€`],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 8, cellPadding: 1.5 },
-      columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
-    });
-
-    // A001 mantém-se sempre no valor contratual completo (formato TOConline)
     const a001Valor = mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase);
 
     const linhas = [
       ['A001', 'Vencimento Base', '', '', eur(a001Valor), ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, eur(n(inputs.subsAlimValorDia)), eur(r.subsAlimTotal), ''],
     ];
-    if (r.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(r.subsFerias), '']);
-    if (n(inputs.premios) > 0) linhas.push(['A008', 'Prémios / Bónus', '', '', eur(n(inputs.premios)), '']);
-    if (n(inputs.he1) > 0) linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
-    if (n(inputs.he2) > 0) linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
-    if (r.subsNatal > 0) linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
-    // A082: ajustado pelo D001 para que Total Abonos = BrutoAlvo
+    if (r.subsFerias > 0)        linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(r.subsFerias), '']);
+    if (n(inputs.premios) > 0)   linhas.push(['A008', 'Prémios / Bónus', '', '', eur(n(inputs.premios)), '']);
+    if (n(inputs.he1) > 0)       linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
+    if (n(inputs.he2) > 0)       linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
+    if (r.subsNatal > 0)         linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplayRecibo), '']);
-    // D001 — linha informativa; não entra em Total Descontos do rodapé
-    if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
-    linhas.push(['T001', `IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(r.irsTotal)]);
+    if (descontoDiasParcial)     linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
+    const irsParcelaAbater = Math.max(0, Math.round((r.incidenciaRegular * r.taxaRegular - r.irsRegular) * 100) / 100);
+    linhas.push(['T001', `IRS (Incidência ${eur(r.incidenciaRegular)} ; Taxa IRS ${(r.taxaRegular*100).toFixed(1)}% ; Parcela a abater ${eur(irsParcelaAbater)})`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
 
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 4,
-      head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
-      body: linhas,
-      theme: 'striped',
-      headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
-      styles: { fontSize: 7, cellPadding: 2 },
-      columnStyles: { 0: { cellWidth: 12 }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+    _renderReciboPagina(doc, {
+      mesLabel, ano: inputs.ano, mesNum,
+      nome: inputs.nome, nif: inputs.nif, nis: inputs.nis, profissao: inputs.categoria,
+      vencBase: n(inputs.vencimentoBase).toFixed(2),
+      linhas,
+      totalAbonos:    totalAbonosDisplay,
+      totalDescontos: totalDescontosDisplay,
+      liquido:        liquidoDisplay,
+      logo:           logoRef.current,
     });
-
-    autoTable(doc, {
-      startY: doc.lastAutoTable.finalY + 3,
-      body: [
-        [
-          { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-          { content: eur(totalAbonosDisplay), styles: { fontStyle: 'bold', halign: 'right' } },
-          { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
-          { content: eur(totalDescontosDisplay), styles: { fontStyle: 'bold', halign: 'right' } },
-        ],
-        [
-          { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-          { content: eur(liquidoDisplay), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
-          { content: 'Custo Empresa (c/ TSU 23,75%)' },
-          { content: eur(custoEmpDisplay), styles: { halign: 'right' } },
-        ],
-      ],
-      theme: 'plain',
-      styles: { fontSize: 8, cellPadding: 3 },
-      columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 28 }, 2: { cellWidth: 60 } },
-    });
-
-    const ySign = doc.lastAutoTable.finalY + 14;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`O(a) trabalhador(a),`, 14, ySign);
-    doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
-    doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
 
     const nomeFile = (inputs.nome || 'trabalhador').replace(/\s+/g, '-').toLowerCase();
     doc.save(`recibo-vencimento-${nomeFile}-${inputs.mes.padStart(2, '0')}-${inputs.ano}.pdf`);
@@ -1073,7 +1014,8 @@ export default function RecibosCalculadora() {
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplayRecibo.toFixed(2), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
-    linhas.push(['T001', `IRS (venc. ${r.incidenciaRegular.toFixed(2)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', r.irsTotal.toFixed(2)]);
+    const irsParcelaAbaterXls = Math.max(0, Math.round((r.incidenciaRegular * r.taxaRegular - r.irsRegular) * 100) / 100);
+    linhas.push(['T001', `IRS (Incidência ${r.incidenciaRegular.toFixed(2)} ; Taxa IRS ${(r.taxaRegular*100).toFixed(1)}% ; Parcela a abater ${irsParcelaAbaterXls.toFixed(2)})`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
     linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), totalDescontosDisplay.toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
@@ -1230,44 +1172,15 @@ export default function RecibosCalculadora() {
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
 
-      doc.setFontSize(15);
-      doc.setFont('helvetica', 'bold');
-      doc.text('RECIBO DE VENCIMENTO', 105, 16, { align: 'center' });
-
-      autoTable(doc, {
-        startY: 22,
-        body: [
-          ['Empresa:', EMPRESA.nome],
-          ['Morada:', EMPRESA.morada],
-          ['NIF:', EMPRESA.nif],
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 1.5 },
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 } },
-      });
-
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 2,
-        body: [
-          ['Trabalhador:', (w.name || '—').toUpperCase(), 'Mês / Ano:', `${mesLabel} ${inputs.ano}`],
-          ['NIF:', w.nif || '—', 'Profissão:', w.profissao || '—'],
-          ['NIS:', w.nis || '—', 'Venc. Base:', `${wVencOrig.toFixed(2)}€`],
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 1.5 },
-        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 22 }, 2: { fontStyle: 'bold', cellWidth: 26 } },
-      });
-
       const linhas = [
         ['A001', 'Vencimento Base', '', '', eur(wVencOrig), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
       ];
-      if (rc.subsFerias > 0)   linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
-      if (premiosBatch > 0)    linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
-      if (rc.subsNatal > 0)    linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
-      if (mapaLiqLive > 0)     linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
-      // Desconto proporcional (linha separada — formato TOConline)
-      const bDiasNaoTrab = wMesParcial.tipo !== 'completo' ? 30 - wMesParcial.diasTrabalhados : 0;
+      if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
+      if (premiosBatch > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
+      if (rc.subsNatal > 0)  linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
+      if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
+      const bDiasNaoTrab   = wMesParcial.tipo !== 'completo' ? 30 - wMesParcial.diasTrabalhados : 0;
       const bDescontoExtra = bDiasNaoTrab > 0 ? parseFloat((bDiasNaoTrab * wVencOrig / 30).toFixed(2)) : 0;
       if (bDiasNaoTrab > 0) {
         const bHorasNaoTrab = parseFloat((bDiasNaoTrab * (Number(w.horas_semana) || 40) / 5).toFixed(2));
@@ -1276,46 +1189,20 @@ export default function RecibosCalculadora() {
           : 'Desconto dias por início e cessação de contrato';
         linhas.push(['D001', bLabel, `${bHorasNaoTrab}h`, '', '', eur(bDescontoExtra)]);
       }
-      linhas.push(['T001', `IRS (venc. ${eur(rc.incidenciaRegular)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', eur(rc.irsTotal)]);
+      const bIrsParcelaAbater = Math.max(0, Math.round((rc.incidenciaRegular * rc.taxaRegular - rc.irsRegular) * 100) / 100);
+      linhas.push(['T001', `IRS (Incidência ${eur(rc.incidenciaRegular)} ; Taxa IRS ${(rc.taxaRegular*100).toFixed(1)}% ; Parcela a abater ${eur(bIrsParcelaAbater)})`, '', '', '', eur(rc.irsTotal)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
 
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 4,
-        head: [['Cód.', 'Descrição', 'Qtd', 'V.Unit.', 'Abonos', 'Descontos']],
-        body: linhas,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 31, 61], fontSize: 7, fontStyle: 'bold' },
-        styles: { fontSize: 7, cellPadding: 2 },
-        columnStyles: { 0: { cellWidth: 12 }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+      _renderReciboPagina(doc, {
+        mesLabel, ano: inputs.ano, mesNum,
+        nome: w.name, nif: w.nif, nis: w.nis, profissao: w.profissao,
+        vencBase: wVencOrig.toFixed(2),
+        linhas,
+        totalAbonos:    rc.totalAbonos + mapaAjudasDiff + bDescontoExtra,
+        totalDescontos: rc.totalDescontos + bDescontoExtra,
+        liquido:        rc.liquido + mapaAjudasDiff,
+        logo:           logoRef.current,
       });
-
-      autoTable(doc, {
-        startY: doc.lastAutoTable.finalY + 3,
-        body: [
-          [
-            { content: 'Total Abonos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalAbonos + mapaAjudasDiff + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
-            { content: 'Total Descontos', styles: { fontStyle: 'bold' } },
-            { content: eur(rc.totalDescontos + bDescontoExtra), styles: { fontStyle: 'bold', halign: 'right' } },
-          ],
-          [
-            { content: 'Líquido a Receber', styles: { fontStyle: 'bold', fontSize: 9 } },
-            { content: eur(rc.liquido + mapaAjudasDiff), styles: { fontStyle: 'bold', fontSize: 9, halign: 'right' } },
-            { content: 'Custo Empresa (c/ TSU 23,75%)' },
-            { content: eur(rc.custoEmpresa + mapaAjudasDiff), styles: { halign: 'right' } },
-          ],
-        ],
-        theme: 'plain',
-        styles: { fontSize: 8, cellPadding: 3 },
-        columnStyles: { 0: { cellWidth: 52 }, 1: { cellWidth: 28 }, 2: { cellWidth: 60 } },
-      });
-
-      const ySign = doc.lastAutoTable.finalY + 14;
-      doc.setFontSize(8);
-      doc.setFont('helvetica', 'normal');
-      doc.text('O(a) trabalhador(a),', 14, ySign);
-      doc.text(`Data: _______ / _______ / ${inputs.ano}`, 14, ySign + 8);
-      doc.text('Assinatura: _____________________________________________', 14, ySign + 18);
     });
 
     doc.save(`recibos-vencimento-${mesStr}.pdf`);
@@ -1381,7 +1268,8 @@ export default function RecibosCalculadora() {
           : 'Desconto dias por início e cessação de contrato';
         linhas.push(['D001', xlsBLabel, `${xlsBHorasNaoTrab}h`, '', '', xlsBDescontoExtra.toFixed(2)]);
       }
-      linhas.push(['T001', `IRS (venc. ${rc.incidenciaRegular.toFixed(2)}·${(rc.taxaRegular*100).toFixed(1)}% + subs.·${(rc.taxaSubsidios*100).toFixed(1)}%)`, '', '', '', rc.irsTotal.toFixed(2)]);
+      const bxIrsParcelaAbater = Math.max(0, Math.round((rc.incidenciaRegular * rc.taxaRegular - rc.irsRegular) * 100) / 100);
+      linhas.push(['T001', `IRS (Incidência ${rc.incidenciaRegular.toFixed(2)} ; Taxa IRS ${(rc.taxaRegular*100).toFixed(1)}% ; Parcela a abater ${bxIrsParcelaAbater.toFixed(2)})`, '', '', '', rc.irsTotal.toFixed(2)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
       linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBDescontoExtra).toFixed(2), (rc.totalDescontos + xlsBDescontoExtra).toFixed(2)]);
       linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff).toFixed(2), '']);
@@ -1732,16 +1620,208 @@ ${hdrRow}${bodyRows}${totRow}
     URL.revokeObjectURL(url);
   }
 
+  // ── Renderiza UMA página de recibo — 2 colunas ORIGINAL/DUPLICADO ────────
+  function _renderReciboPagina(doc, { mesLabel, ano, mesNum, nome, nif, nis, profissao, vencBase, linhas, totalAbonos, totalDescontos, liquido, logo }) {
+    const PW     = doc.internal.pageSize.getWidth();   // 210mm
+    const PH     = doc.internal.pageSize.getHeight();  // 297mm
+    const SEP_X  = PW / 2;                             // 105mm
+    const COL_W  = SEP_X - 3;                          // 102mm por coluna
+    const NAVY   = [27, 58, 87];
+    const ORANGE = [235, 141, 0];
+    const SLATE  = [134, 154, 175];
+    const LGRAY  = [238, 241, 245];
+    const BG     = [247, 248, 250];
+    const fmtEur = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '€';
+    const mN     = parseInt(mesNum || inputs.mes, 10);
+    const daysInMonth = new Date(parseInt(ano), mN, 0).getDate();
+
+    // Separador central
+    doc.setDrawColor(220, 226, 232);
+    doc.setLineWidth(0.2);
+    doc.line(SEP_X, 2, SEP_X, PH - 2);
+
+    let tableStartY = null;
+    let tableEndY   = null;
+
+    ['ORIGINAL', 'DUPLICADO'].forEach((tipo, colIdx) => {
+      const xOff  = colIdx === 0 ? 1.5 : SEP_X + 1.5;
+      const cW    = COL_W;
+      const LOGO_SZ = 12;
+      const HDR_H   = 25;
+
+      // ── 1. Cabeçalho navy ─────────────────────────────────────────────
+      doc.setFillColor(...NAVY);
+      doc.rect(xOff, 0, cW, HDR_H, 'F');
+
+      if (logo) doc.addImage(logo, 'PNG', xOff + 1.5, (HDR_H - LOGO_SZ) / 2, LOGO_SZ, LOGO_SZ);
+      const cxL = xOff + (logo ? LOGO_SZ + 3 : 2);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.setTextColor(255, 255, 255);
+      doc.text(EMPRESA.nome.toUpperCase(), cxL, 8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(4.8);
+      doc.setTextColor(...SLATE);
+      doc.text(`NIF: ${EMPRESA.nif}`, cxL, 12.5);
+      const moradaLines = doc.splitTextToSize(EMPRESA.morada, 42);
+      doc.text(moradaLines, cxL, 16.5);
+
+      const cxR = xOff + cW - 1;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      doc.text('RECIBO DE VENCIMENTO', cxR, 9, { align: 'right' });
+      doc.setFontSize(5.5);
+      doc.setTextColor(...ORANGE);
+      doc.text(tipo, cxR, 14, { align: 'right' });
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(4.5);
+      doc.setTextColor(170, 195, 220);
+      doc.text(`De 1 de ${mesLabel} ${ano} até ${daysInMonth} de ${mesLabel} ${ano}`, cxR, 21, { align: 'right' });
+
+      // ── 2. Faixa laranja com nome ──────────────────────────────────────
+      let y = HDR_H + 1;
+      doc.setFillColor(...ORANGE);
+      doc.rect(xOff, y, cW, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(255, 255, 255);
+      doc.text((nome || '—').toUpperCase(), xOff + 2, y + 5);
+      y += 8.5;
+
+      // ── 3. Campos do trabalhador ───────────────────────────────────────
+      const fldSz = 5.5;
+      const fldH  = 6;
+      const fx1   = xOff + 2;
+      const fx2   = xOff + cW / 2 + 1;
+
+      doc.setFontSize(fldSz);
+      [
+        ['Nº Contribuinte', nif || '—',   'NIS / Beneficiário',    nis || '—'],
+        ['Categoria/Profissão', profissao || '—', 'Vencimento',     `${vencBase}€`],
+        ['Tipo de Processamento', 'Normalizado', 'Horas Semana',    '40'],
+        ['Base do Processamento', 'Mensal',      'Dias do Mês',     String(daysInMonth)],
+      ].forEach(([l1, v1, l2, v2]) => {
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE);
+        doc.text(l1, fx1, y);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY);
+        doc.text(v1, fx1, y + 3);
+        if (l2) {
+          doc.setFont('helvetica', 'normal'); doc.setTextColor(...SLATE);
+          doc.text(l2, fx2, y);
+          doc.setFont('helvetica', 'bold'); doc.setTextColor(...NAVY);
+          doc.text(v2, fx2, y + 3);
+        }
+        y += fldH;
+      });
+
+      y += 1;
+      doc.setDrawColor(...LGRAY);
+      doc.setLineWidth(0.3);
+      doc.line(xOff + 1, y, xOff + cW - 1, y);
+      y += 2;
+
+      // ── 4. Tabela de linhas ────────────────────────────────────────────
+      if (tableStartY === null) tableStartY = y;
+      autoTable(doc, {
+        startY: tableStartY,
+        tableWidth: cW - 2,
+        margin: { left: xOff + 1, top: 0 },
+        head: [['DESCRIÇÃO', 'QTD', 'V.UNIT.', 'ABONOS', 'DESCONTOS']],
+        body: linhas.map(r => [r[1], r[2], r[3], r[4], r[5]]),
+        theme: 'plain',
+        headStyles: {
+          fillColor: NAVY, textColor: [255, 255, 255],
+          fontSize: 5.5, fontStyle: 'bold',
+          cellPadding: { top: 2, bottom: 2, left: 2, right: 1 },
+        },
+        bodyStyles: { fontSize: 5.5, cellPadding: { top: 1.5, bottom: 1.5, left: 2, right: 1 }, textColor: NAVY },
+        alternateRowStyles: { fillColor: BG },
+        columnStyles: {
+          0: { cellWidth: 'auto' },
+          1: { cellWidth: 10, halign: 'right' },
+          2: { cellWidth: 14, halign: 'right' },
+          3: { cellWidth: 17, halign: 'right' },
+          4: { cellWidth: 17, halign: 'right' },
+        },
+        didParseCell(data) {
+          if (data.section === 'body') {
+            const cod = linhas[data.row.index]?.[0];
+            if (cod === 'T001' || cod === 'T003' || cod === 'D001') {
+              data.cell.styles.textColor = [185, 28, 28];
+            }
+          }
+        },
+      });
+
+      if (tableEndY === null) tableEndY = doc.lastAutoTable.finalY;
+      y = tableEndY + 2;
+
+      // ── 5. Barra totais — 3 colunas ────────────────────────────────────
+      const totSegW = (cW - 2) / 3;
+      [
+        ['Total Abonos',    totalAbonos,    false],
+        ['Total Descontos', totalDescontos, false],
+        ['Total a Receber', liquido,        true ],
+      ].forEach(([label, val, hi], j) => {
+        const tx = xOff + 1 + j * totSegW;
+        doc.setFillColor(...(hi ? NAVY : LGRAY));
+        doc.rect(tx, y, totSegW, 11, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(5.5);
+        doc.setTextColor(...(hi ? [255, 255, 255] : SLATE));
+        doc.text(label, tx + totSegW / 2, y + 4, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...(hi ? [255, 255, 255] : NAVY));
+        doc.text(fmtEur(val), tx + totSegW / 2, y + 9, { align: 'center' });
+      });
+      y += 13;
+
+      // ── 6. Declaração ──────────────────────────────────────────────────
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(...SLATE);
+      doc.text(`O Valor de ${fmtEur(liquido)} foi pago por Transferência bancária.`, xOff + 1, y);
+      y += 4;
+      const decl  = `Declaro que recebi a quantia constante neste recibo no valor de: ${fmtEur(liquido)}.`;
+      const dLines = doc.splitTextToSize(decl, cW - 3);
+      doc.text(dLines, xOff + 1, y);
+      y += dLines.length * 3 + 5;
+
+      // Linha de assinatura
+      doc.setDrawColor(200, 212, 224);
+      doc.setLineWidth(0.2);
+      doc.line(xOff + 1, y + 5, xOff + cW * 0.65, y + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(...SLATE);
+      doc.text('Assinatura:', xOff + 1, y + 9);
+
+      // ── 7. Rodapé laranja ─────────────────────────────────────────────
+      doc.setDrawColor(...ORANGE);
+      doc.setLineWidth(0.8);
+      doc.line(xOff, PH - 5, xOff + cW, PH - 5);
+      doc.setFontSize(5);
+      doc.setTextColor(...SLATE);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Página 1 / 1', xOff + 1, PH - 2);
+      doc.text('Magnetic Place, Lda', xOff + cW - 1, PH - 2, { align: 'right' });
+    });
+  }
+
   // ── Renderiza UMA página do mapa (A4 vertical) ───────────────────────────
   function _renderMapaPagina(doc, { mesLabel, ano, nome, nif, nis, profissao, mapaLinhas, subsAlimTotal, logo }) {
     const W  = doc.internal.pageSize.getWidth();   // 210mm portrait
     const H  = doc.internal.pageSize.getHeight();  // 297mm portrait
     const MX = 5;
     const TW = W - 2 * MX;  // 200mm
-    const NAVY  = [15, 31, 61];
-    const GOLD  = [212, 175, 55];
-    const LGRAY = [242, 244, 247];
-    const MGRAY = [90, 105, 125];
+    const NAVY   = [27, 58, 87];
+    const ORANGE = [235, 141, 0];
+    const LGRAY  = [238, 241, 245];
+    const SLATE  = [134, 154, 175];
+    const BG     = [247, 248, 250];
     const fmt   = v => (isNaN(v) ? 0 : v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
     const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
     const fmtDia  = iso => { const d = new Date(iso + 'T00:00:00'); return `${DIAS_PT[d.getDay()]} ${String(d.getDate()).padStart(2, '0')}`; };
@@ -1770,7 +1850,7 @@ ${hdrRow}${bodyRows}${totRow}
     doc.setFontSize(12);
     doc.setTextColor(255, 255, 255);
     doc.text('MAPA DE AJUDAS DE CUSTO', W / 2, 9.5, { align: 'center' });
-    doc.setDrawColor(...GOLD);
+    doc.setDrawColor(...ORANGE);
     doc.setLineWidth(0.4);
     doc.line(W / 2 - 45, 12, W / 2 + 45, 12);
     doc.setFont('helvetica', 'normal');
@@ -1789,7 +1869,7 @@ ${hdrRow}${bodyRows}${totRow}
     doc.text((nome || '—').toUpperCase(), MX + 3, Y_TRAB + 5.5);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6);
-    doc.setTextColor(...MGRAY);
+    doc.setTextColor(...SLATE);
     doc.text(profissao || '—', MX + 3, Y_TRAB + 9.5);
 
     doc.setFontSize(6);
@@ -1840,7 +1920,7 @@ ${hdrRow}${bodyRows}${totRow}
         minCellHeight: rowH,
         halign: 'center',
       },
-      alternateRowStyles: { fillColor: [248, 249, 251] },
+      alternateRowStyles: { fillColor: BG },
       columnStyles: {
         0: { cellWidth: colW[0], fontStyle: 'bold' },
         1: { cellWidth: colW[1] },
@@ -1860,47 +1940,55 @@ ${hdrRow}${bodyRows}${totRow}
     const importancia = mapaTotal - subsAlimTotal;
     const tableEnd    = (doc.lastAutoTable && doc.lastAutoTable.finalY) || Y_FOOTER;
     const XT          = MX + 55;
-    const YT          = Math.min(tableEnd + 5, H - 38);
+    const YT          = Math.min(tableEnd + 4, H - 40);
+    const XR          = W - MX - 1;
+    const totW        = XR - XT + 3;
 
-    // Fundo suave na zona de totais
-    doc.setFillColor(245, 247, 250);
-    doc.rect(XT - 2, YT - 3, W - MX - XT + 2, 24, 'F');
-
+    // Total Ajudas de Custo — fundo LGRAY
+    doc.setFillColor(...LGRAY);
+    doc.rect(XT - 2, YT - 2.5, totW, 7, 'F');
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 75, 95);
+    doc.setTextColor(...SLATE);
     doc.text('Total Ajudas de Custo', XT, YT + 2);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...NAVY);
-    doc.text(fmt(mapaTotal), W - MX - 1, YT + 2, { align: 'right' });
+    doc.text(fmt(mapaTotal), XR, YT + 2, { align: 'right' });
 
+    // Dedução Sub. Alimentação — fundo LGRAY continuado
+    doc.setFillColor(...LGRAY);
+    doc.rect(XT - 2, YT + 4.5, totW, 7, 'F');
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(60, 75, 95);
-    doc.text('Dedução Sub. Alimentação', XT, YT + 8);
+    doc.setTextColor(...SLATE);
+    doc.text('Dedução Sub. Alimentação', XT, YT + 8.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...NAVY);
-    doc.text(`- ${fmt(subsAlimTotal)}`, W - MX - 1, YT + 8, { align: 'right' });
+    doc.text(`- ${fmt(subsAlimTotal)}`, XR, YT + 8.5, { align: 'right' });
 
-    doc.setDrawColor(...NAVY);
-    doc.setLineWidth(0.3);
-    doc.line(XT, YT + 11, W - MX - 1, YT + 11);
-
+    // Importância a Receber — fundo NAVY
+    doc.setFillColor(...NAVY);
+    doc.rect(XT - 2, YT + 11.5, totW, 9, 'F');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(...NAVY);
-    doc.text('Importância a Receber', XT, YT + 18);
-    doc.text(fmt(importancia), W - MX - 1, YT + 18, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.setTextColor(255, 255, 255);
+    doc.text('Importância a Receber', XT, YT + 17.5);
+    doc.text(fmt(importancia), XR, YT + 17.5, { align: 'right' });
 
     // ── ZONA 5: Assinatura ──────────────────────────────────────────────────
     const YS = H - 12;
-    doc.setDrawColor(190, 200, 215);
-    doc.setLineWidth(0.2);
+    doc.setDrawColor(...LGRAY);
+    doc.setLineWidth(0.3);
     doc.line(MX, YS - 1, W - MX, YS - 1);
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7);
-    doc.setTextColor(55, 65, 80);
+    doc.setTextColor(...SLATE);
     doc.text(`Recebi a importância de ${fmt(importancia)}, referente a ajudas de custo (${mesLabel} de ${ano}).`, MX, YS + 5);
+
+    // Linha laranja no rodapé
+    doc.setDrawColor(...ORANGE);
+    doc.setLineWidth(1.2);
+    doc.line(MX, H - 3, W - MX, H - 3);
   }
 
   async function gerarMapasAjudasPDF() {
@@ -2140,52 +2228,52 @@ ${hdrRow}${bodyRows}${totRow}
       {subTab !== 'resumo' && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-rose-100 text-rose-700 rounded-xl">
-                <FileText size={20} />
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl" style={{ background: '#EEF1F5' }}>
+                <FileText size={18} style={{ color: '#1B3A57' }} />
               </div>
               <div>
-                <h2 className="text-lg font-black text-slate-800 leading-tight">Calculadora de Recibos</h2>
+                <h2 className="text-lg font-black leading-tight" style={{ color: '#1B3A57' }}>Calculadora de Recibos</h2>
                 <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Estimativas salariais</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
-              <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-                <ChevronLeft size={16} className="text-slate-500" />
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-1 py-0.5">
+              <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                <ChevronLeft size={15} style={{ color: '#869AAF' }} />
               </button>
-              <span className="px-3 py-1 text-sm font-black text-slate-700 min-w-[140px] text-center">
+              <span className="px-3 py-1 text-sm font-black min-w-[140px] text-center" style={{ color: '#1B3A57' }}>
                 {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
               </span>
-              <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
-                <ChevronRight size={16} className="text-slate-500" />
+              <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-slate-50 transition-colors">
+                <ChevronRight size={15} style={{ color: '#869AAF' }} />
               </button>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 onClick={gerarRecibosBatchPDF}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 hover:bg-slate-50 transition-colors"
-                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-50 transition-colors"
+                style={{ color: '#1B3A57' }}
                 title="PDF dos recibos de vencimento — todos os trabalhadores"
               >
-                <FileText size={14} /> Recibos PDF
+                <FileText size={13} /> Recibos PDF
               </button>
               <button
                 onClick={exportRecibosBatchXLS}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 hover:bg-slate-50 transition-colors"
-                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-50 transition-colors"
+                style={{ color: '#1B3A57' }}
                 title="Excel dos recibos de vencimento — todos os trabalhadores"
               >
-                <FileSpreadsheet size={14} /> Recibos XLS
+                <FileSpreadsheet size={13} /> Recibos XLS
               </button>
               <button
                 onClick={gerarMapasAjudasPDF}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 hover:bg-slate-50 transition-colors"
-                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border border-slate-200 hover:bg-slate-50 transition-colors"
+                style={{ color: '#1B3A57' }}
                 title="PDF dos mapas de ajudas de custo — todos os trabalhadores"
               >
-                <Download size={14} /> Mapas AC
+                <Download size={13} /> Mapas AC
               </button>
             </div>
           </div>
@@ -2209,30 +2297,49 @@ ${hdrRow}${bodyRows}${totRow}
 
       {/* Selector de trabalhador — oculto na subaba Resumo */}
       {subTab !== 'resumo' && (
-      <Card className="p-5">
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="flex-1 min-w-48">
-            <LabelInput label="Trabalhador (preenchimento automático)">
-              <SelectInput value={selectedWorkerId} onChange={handleSelectWorker}>
-                <option value="">— Introduzir manualmente —</option>
-                {(workers || [])
-                  .filter(w => { const m = `${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`; return (w.is_active !== false && w.status !== 'inativo') || w.dataFim?.startsWith(m) || w.dataInicio?.startsWith(m); })
-                  .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-                  .map(w => (
-                    <option key={w.id} value={w.id}>{w.name}</option>
-                  ))}
-              </SelectInput>
-            </LabelInput>
+      <InputVariant.Provider value="line">
+      <Card className="p-4">
+        {/* Header: label + badge de estado + mês */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Trabalhador</span>
+            {selectedWorkerId && (
+              <span className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
+                style={isValidado
+                  ? { background: '#d1fae5', color: '#065f46' }
+                  : { background: '#dce6f0', color: '#1B3A57' }}>
+                {isValidado ? 'Validado' : 'Em elaboração'}
+              </span>
+            )}
           </div>
           {selectedWorkerId && (
-            <div className="flex gap-2 pb-0.5">
+            <span className="text-[10px] font-bold text-slate-400">
+              {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
+            </span>
+          )}
+        </div>
+        {/* Body: dropdown + botões */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <SelectInput value={selectedWorkerId} onChange={handleSelectWorker}>
+              <option value="">— Introduzir manualmente —</option>
+              {(workers || [])
+                .filter(w => { const m = `${inputs.ano}-${String(parseInt(inputs.mes, 10)).padStart(2, '0')}`; return (w.is_active !== false && w.status !== 'inativo') || w.dataFim?.startsWith(m) || w.dataInicio?.startsWith(m); })
+                .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+                .map(w => (
+                  <option key={w.id} value={w.id}>{w.name}</option>
+                ))}
+            </SelectInput>
+          </div>
+          {selectedWorkerId && (
+            <div className="flex gap-2 flex-shrink-0">
               <button
                 onClick={saveWorkerProfile}
                 disabled={saveStatus === 'saving'}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase transition-all shadow-sm
-                  ${saveStatus === 'saved'  ? 'bg-emerald-600 text-white' :
-                    saveStatus === 'error'  ? 'bg-rose-600 text-white' :
-                                             'bg-slate-700 text-white hover:bg-slate-900'}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black uppercase transition-all border
+                  ${saveStatus === 'saved'  ? 'border-emerald-200 text-emerald-600' :
+                    saveStatus === 'error'  ? 'border-rose-200 text-rose-600' :
+                                             'border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
                 title="Guarda vencimento base, subsídio alimentação, tipo, tabela IRS e nº dependentes no perfil do trabalhador"
               >
                 <Save size={12} />
@@ -2240,17 +2347,20 @@ ${hdrRow}${bodyRows}${totRow}
               </button>
               <button
                 onClick={toggleValidado}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase transition-all shadow-sm
-                  ${isValidado ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[11px] font-black uppercase text-white transition-colors"
+                style={{ background: isValidado ? '#869AAF' : '#1B3A57' }}
+                onMouseEnter={e => { e.currentTarget.style.background = isValidado ? '#6b7f91' : '#142d45'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = isValidado ? '#869AAF' : '#1B3A57'; }}
                 title={isValidado ? 'Recibo validado — clique para remover validação' : 'Marcar recibo deste mês como validado'}
               >
                 <CheckCircle size={12} />
-                {isValidado ? 'Validado' : 'Validar'}
+                {isValidado ? 'Validado ✓' : 'Validar e concluir'}
               </button>
             </div>
           )}
         </div>
       </Card>
+      </InputVariant.Provider>
       )}
 
       {/* ── Resumo Mensal ── */}
@@ -2418,28 +2528,6 @@ ${hdrRow}${bodyRows}${totRow}
         </div>
       ) : (
       <div className="space-y-5">
-      {selectedWorkerId && (
-        <div className="flex items-center justify-between px-5 py-4 rounded-2xl" style={{ background: '#1B3A57' }}>
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black" style={{ background: '#869AAF', color: '#fff' }}>
-              Em elaboração
-            </span>
-            <div>
-              <p className="font-black text-white text-sm leading-tight">{inputs.nome || '—'}</p>
-              <p className="text-xs font-bold" style={{ color: '#869AAF' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
-            </div>
-          </div>
-          <button
-            onClick={toggleValidado}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white transition-colors"
-            style={{ background: '#EB8D00' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#c97700'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#EB8D00'; }}
-          >
-            <CheckCircle size={12} /> Validar e concluir
-          </button>
-        </div>
-      )}
       <div className="grid lg:grid-cols-2 gap-5 items-start">
 
         {/* ── COLUNA INPUTS ── */}
@@ -2683,7 +2771,7 @@ ${hdrRow}${bodyRows}${totRow}
                         <td className="py-1.5 px-1 text-right" />
                       </tr>
                     )}
-                    <ReciboLinha desc={`T001 - IRS (venc. ${eur(r.incidenciaRegular)}·${(r.taxaRegular*100).toFixed(1)}% + subs.·${(r.taxaSubsidios*100).toFixed(1)}%)`} desconto={r.irsTotal} />
+                    <ReciboLinha desc={`T001 - IRS (Incidência ${eur(r.incidenciaRegular)} ; Taxa IRS ${(r.taxaRegular*100).toFixed(1)}% ; Parcela a abater ${eur(Math.max(0, Math.round((r.incidenciaRegular * r.taxaRegular - r.irsRegular) * 100) / 100))})`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
                     {/* Total — soma directa de todas as linhas; D001 cancela-se → Líquido = BrutoAlvo − IRS − SS */}
                     <tr className="border-t-2 border-slate-800 font-black">
