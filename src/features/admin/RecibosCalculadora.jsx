@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useDragScroll } from '../../lib/useDragScroll.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronDown, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
@@ -160,6 +160,96 @@ function SectionHeader({ n: num, label }) {
     <div className="flex items-center gap-2.5 mb-4">
       <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center shrink-0" style={{ background: '#1B3A57' }}>{num}</span>
       <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#1B3A57' }}>{label}</h3>
+    </div>
+  );
+}
+
+// ── Card mobile para uma linha do mapa de ajudas de custo ──────────────────
+function MobileMapaCard({ row, vdl, updateRow, removeRow }) {
+  const [open, setOpen] = useState(false);
+  const limite = row.territorio === 'Nacional' ? LIMITES.ajudaNacional : n(vdl);
+  const valor  = limite * (row.pct / 100);
+  const tipoBg    = row.tipo === 'Partida' ? '#dce6f0' : row.tipo === 'Chegada' ? '#fef0d5' : '#edf0f3';
+  const tipoColor = row.tipo === 'Partida' ? '#1B3A57' : row.tipo === 'Chegada' ? '#c57800' : '#6B7A8D';
+  return (
+    <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+      {/* Cabeçalho — sempre visível, clicável */}
+      <div
+        className="flex items-center justify-between gap-2 px-3 py-2.5 cursor-pointer select-none"
+        onClick={() => setOpen(o => !o)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <input
+            type="date" value={row.dia}
+            onChange={e => updateRow(row.id, 'dia', e.target.value)}
+            onClick={e => e.stopPropagation()}
+            className="text-sm font-bold text-slate-800 bg-transparent border-none outline-none min-w-0 shrink"
+          />
+          <span style={{ background: tipoBg, color: tipoColor, borderRadius: 20, padding: '2px 8px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em', flexShrink: 0 }}>
+            {row.tipo}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-sm font-black text-[#1B3A57] tabular-nums">{eur(valor)}</span>
+          <ChevronDown size={14} className="text-slate-400 transition-transform" style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+        </div>
+      </div>
+      {/* Corpo — colapsável */}
+      {open && (
+        <div className="border-t border-slate-100 px-3 pb-3 pt-2 space-y-2.5">
+          {[
+            { label: 'Serviço',    field: 'servico',    type: 'text' },
+            { label: 'Cliente',    field: 'cliente',    type: 'text' },
+            { label: 'Localidade', field: 'localidade', type: 'text' },
+          ].map(({ label, field }) => (
+            <div key={field}>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">{label}</div>
+              <input
+                type="text" value={row[field]}
+                onChange={e => updateRow(row.id, field, e.target.value)}
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent"
+                style={{ overflowWrap: 'break-word', wordBreak: 'break-word' }}
+              />
+            </div>
+          ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Território</div>
+              <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent">
+                <option value="Internacional">Internacional</option>
+                <option value="Nacional">Nacional</option>
+              </select>
+            </div>
+            <div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Tipo</div>
+              <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent">
+                <option value="Partida">Partida</option>
+                <option value="Consecutivo">Consecutivo</option>
+                <option value="Chegada">Chegada</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">Hora</div>
+              <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent" />
+            </div>
+            <div>
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-1">% Ajuda</div>
+              <input type="number" value={row.pct} min="0" max="100" step="5"
+                onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
+                className="w-full border-b border-slate-200 py-1 text-sm font-bold outline-none focus:border-[#1B3A57] bg-transparent" />
+            </div>
+          </div>
+          <button onClick={() => removeRow(row.id)}
+            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all mt-1">
+            <Trash2 size={12} /> Remover linha
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -2640,17 +2730,19 @@ ${hdrRow}${bodyRows}${totRow}
                   Incluir Subsídio de Natal
                 </label>
                 {(inputs.incluirFerias || inputs.incluirNatal) && (
-                  <div className="mt-1 flex items-center gap-2">
-                    <span className="text-xs text-slate-500">Método IRS subsídios:</span>
-                    <SelectInput
-                      value={inputs.subsidiosMetodo}
-                      onChange={e => { set('subsidiosMetodo', e.target.value); setCamposAuto(p => ({ ...p, subsidiosMetodo: false })); }}
-                    >
-                      <option value="duodecimos">Duodécimos (art. 99.º-C) — 3,6% ou 0,17%</option>
-                      <option value="valor">Valor — IRS = 0%</option>
-                    </SelectInput>
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-slate-500 shrink-0">Método IRS subsídios:</span>
+                    <div className="flex-1 min-w-[180px]">
+                      <SelectInput
+                        value={inputs.subsidiosMetodo}
+                        onChange={e => { set('subsidiosMetodo', e.target.value); setCamposAuto(p => ({ ...p, subsidiosMetodo: false })); }}
+                      >
+                        <option value="duodecimos">Duodécimos (art. 99.º-C) — 3,6% ou 0,17%</option>
+                        <option value="valor">Valor — IRS = 0%</option>
+                      </SelectInput>
+                    </div>
                     {camposAuto.subsidiosMetodo && (
-                      <span className="text-[10px] font-bold text-[#1B3A57] bg-[#EEF1F5] px-2 py-0.5 rounded-full">auto</span>
+                      <span className="text-[10px] font-bold text-[#1B3A57] bg-[#EEF1F5] px-2 py-0.5 rounded-full shrink-0">auto</span>
                     )}
                   </div>
                 )}
@@ -2689,7 +2781,7 @@ ${hdrRow}${bodyRows}${totRow}
             {/* 3 - IRS */}
             <div className="pb-5 mb-5 border-b border-slate-100">
               <SectionHeader n="3" label="IRS — Situação Fiscal" />
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <LabelInput label="Tabela de retenção" badge={camposAuto.tabelaKey ? 'auto' : null}>
                   <SelectInput value={inputs.tabelaKey} onChange={e => { set('tabelaKey', e.target.value); setCamposAuto(p => ({ ...p, tabelaKey: false })); }}>
                     {Object.entries(getIRSTabelasPorAno(n(inputs.ano))).map(([k, t]) => (
@@ -2710,7 +2802,7 @@ ${hdrRow}${bodyRows}${totRow}
             {/* 4 - Bruto Alvo & Deslocação */}
             <div>
               <SectionHeader n="4" label="Bruto Alvo & Deslocação Internacional" />
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 mb-4">
                 <LabelInput label="Valor Bruto Total Alvo (€)" badge={selectedWorkerId && !brutoAlvoEditado ? 'auto' : null}>
                   <div className="relative">
                     <TextInput
@@ -2730,7 +2822,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <TextInput type="number" step="0.01" value={inputs.vdl} onChange={e => set('vdl', e.target.value)} />
                 </LabelInput>
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 mb-4">
                 <LabelInput label="Território" badge={camposAuto.territorio ? 'auto' : null}>
                   <SelectInput value={inputs.territorio} onChange={e => { set('territorio', e.target.value); setCamposAuto(p => ({ ...p, territorio: false })); }}>
                     <option value="internacional">Internacional</option>
@@ -2755,7 +2847,7 @@ ${hdrRow}${bodyRows}${totRow}
                   <TextInput value={inputs.pais} onChange={e => { set('pais', e.target.value); setCamposAuto(p => ({ ...p, pais: false })); }} />
                 </LabelInput>
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <LabelInput label="Abreviação Cliente (mapa)">
                   <TextInput value={inputs.clienteAbrev} onChange={e => set('clienteAbrev', e.target.value)} placeholder={inputs.cliente || 'Ex: Calcosa'} />
                 </LabelInput>
@@ -2981,7 +3073,21 @@ ${hdrRow}${bodyRows}${totRow}
 
         {/* Tabela do mapa */}
         {mapaRows.length > 0 ? (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: cards colapsáveis (< sm) */}
+          <div className="sm:hidden space-y-2">
+            {mapaRows.map(row => (
+              <MobileMapaCard
+                key={row.id}
+                row={row}
+                vdl={inputs.vdl}
+                updateRow={updateRow}
+                removeRow={removeRow}
+              />
+            ))}
+          </div>
+          {/* Desktop: tabela (≥ sm) */}
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full border-collapse text-xs">
               <thead>
                 <tr className="bg-[#EEF1F5] border-b border-[#E3E7EC]">
@@ -3059,6 +3165,7 @@ ${hdrRow}${bodyRows}${totRow}
               </tbody>
             </table>
           </div>
+          </>
         ) : (
           <div className="py-10 text-center text-slate-400">
             <p className="text-xs font-bold">Sem linhas — use "Preencher automaticamente" ou adicione manualmente.</p>
