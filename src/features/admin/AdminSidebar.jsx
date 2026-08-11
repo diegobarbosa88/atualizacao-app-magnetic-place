@@ -26,7 +26,7 @@ const MENU_STRUCTURE = ADMIN_SECTIONS;
 const MENU_GROUPS = [
   { id: 'principal',   label: 'PRINCIPAL',   itemIds: ['overview', 'team'] },
   { id: 'operacional', label: 'OPERACIONAL', itemIds: ['clients', 'fornecedores', 'schedules', 'documentos'] },
-  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['faturacao', 'reconciliacao', 'pagamentos', 'reports', 'costs', 'recibos', 'toconline'] },
+  { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['faturacao', 'reconciliacao', 'pagamentos', 'reports', 'costs', 'recibos', 'mapa-salarios', 'toconline'] },
   { id: 'sistema',     label: 'SISTEMA',     itemIds: ['settings'] },
 ];
 

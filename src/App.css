@@ -6,6 +6,9 @@
 
 input.lowercase { text-transform: lowercase !important; }
 
+/* Permite elementos do Mapa de Salários manter capitalização mista */
+.text-natural, .text-natural * { text-transform: none !important; }
+
 /* Custom Scrollbar for Menu */
 .menu-scroll {
   overflow-x: auto;

@@ -3,7 +3,7 @@ import {
   Wallet, Settings, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, FolderOpen, Mail, ReceiptText, Coins, Receipt,
   FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
-  Truck, Shield,
+  Truck, Shield, Table2,
 } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
@@ -67,6 +67,7 @@ export const ADMIN_SECTIONS = [
   { id: 'costs',         label: 'Custos',          icon: Wallet,    badgeType: null },
   { id: 'contabilidade', label: 'Contabilidade',   icon: FileText,  badgeType: null },
   { id: 'recibos',       label: 'Calc. Recibos',   icon: Receipt,   badgeType: null },
+  { id: 'mapa-salarios', label: 'Mapa Salários',   icon: Table2,    badgeType: null },
   {
     id: 'toconline', label: 'TOConline', icon: BookOpen, badgeType: null,
     subtabs: [

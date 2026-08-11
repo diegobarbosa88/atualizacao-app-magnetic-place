@@ -56,6 +56,7 @@ import AdminClassicNav from './AdminClassicNav';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import TOConlineAdmin from './TOConlineAdmin';
 import RecibosCalculadora from './RecibosCalculadora';
+import MapaSalarios from './mapa-salarios/MapaSalarios.jsx';
 import {
   toISODateLocal, isSameMonth
 } from '../../utils/dateUtils';
@@ -541,6 +542,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'recibos' && (
         <RecibosCalculadora />
+      )}
+
+      {!auditWorkerId && activeTab === 'mapa-salarios' && (
+        <MapaSalarios />
       )}
 
       {!auditWorkerId && activeTab === 'settings' && (
