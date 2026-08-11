@@ -3841,8 +3841,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                     <td
                       key={ci}
                       className={`px-2 py-2.5 text-[11px] font-black whitespace-nowrap text-center ${col.highlight ? hlFoot(col.highlight) : 'bg-slate-100'}`}
-                      style={col.highlight ? {} : { color: '#1B3A57' }}
                       style={{
+                        ...(col.highlight ? {} : { color: '#1B3A57' }),
                         ...(ai === 0 ? { position: 'sticky', left: 0, zIndex: 5, background: '#eef2ff', color: '#4338ca' } : {}),
                         ...(col.key === 'completo' ? { position: 'sticky', right: 0, zIndex: 5, background: '#eef2ff' } : {}),
                         ...(isLastInGroup && def.border ? { borderRight: `2px solid ${def.border}` } : {}),
