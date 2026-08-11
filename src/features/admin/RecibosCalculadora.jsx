@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useDragScroll } from '../../lib/useDragScroll.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle, ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText, Pencil, Plus, RefreshCw, Save, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { getRateAtDate } from './cost-reports/useCostReportsData.js';
 import {
@@ -1992,20 +1992,6 @@ ${hdrRow}${bodyRows}${totRow}
 
       if (mapaLinhas.length === 0) return;
 
-      // Persistir histórico de deslocação (fire-and-forget)
-      if (supabase && w.id) {
-        const pRow = mapaLinhas.find(r => r.tipo === 'Partida');
-        const cRow = [...mapaLinhas].reverse().find(r => r.tipo === 'Chegada');
-        if (pRow && cRow) {
-          supabase.from('mapa_viagens_historico').upsert(
-            { worker_id: w.id, mes: mesStr, data_partida: pRow.dia, data_chegada: cRow.dia,
-              hora_partida: pRow.hora || '07:30', hora_chegada: cRow.hora || '20:30',
-              n_dias: mapaLinhas.length, updated_at: new Date().toISOString() },
-            { onConflict: 'worker_id,mes' }
-          ).then(() => {});
-        }
-      }
-
       if (!isFirstPage) doc.addPage();
       isFirstPage = false;
 
@@ -2051,17 +2037,31 @@ ${hdrRow}${bodyRows}${totRow}
 
   async function toggleValidado() {
     if (!selectedWorkerId) return;
-    const mesStr   = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
+    const mesStr2  = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
     const novoValor = !isValidado;
     await supabase.from('resumo_observacoes').upsert(
       {
         worker_id:    selectedWorkerId,
-        mes:          mesStr,
+        mes:          mesStr2,
         completo:     novoValor,
         ajuste_bruto: brutoAlvoEditado ? n(inputs.brutoAlvo) : null,
       },
       { onConflict: 'worker_id,mes' }
     );
+    if (novoValor && mapaRows.length > 0) {
+      const pRow = mapaRows.find(row => row.tipo === 'Partida');
+      const cRow = [...mapaRows].reverse().find(row => row.tipo === 'Chegada');
+      if (pRow && cRow) {
+        supabase.from('mapa_viagens_historico').upsert(
+          { worker_id: selectedWorkerId, mes: mesStr2,
+            data_partida: pRow.dia, data_chegada: cRow.dia,
+            hora_partida: pRow.hora || mapa.horaPartida,
+            hora_chegada: cRow.hora || mapa.horaChegada,
+            n_dias: mapaRows.length, updated_at: new Date().toISOString() },
+          { onConflict: 'worker_id,mes' }
+        );
+      }
+    }
     setIsValidado(novoValor);
   }
 
@@ -2096,21 +2096,6 @@ ${hdrRow}${bodyRows}${totRow}
         }).length
       : 0;
     const subsAlimMapaPDF = diasUteisPDF * valorAlimDia;
-
-    // Persistir histórico de deslocação (fire-and-forget)
-    if (supabase && selectedWorkerId && mapaRows.length > 0) {
-      const pRow = mapaRows.find(r => r.tipo === 'Partida');
-      const cRow = [...mapaRows].reverse().find(r => r.tipo === 'Chegada');
-      const mes2 = `${inputs.ano}-${String(mesNum).padStart(2, '0')}`;
-      if (pRow && cRow) {
-        supabase.from('mapa_viagens_historico').upsert(
-          { worker_id: selectedWorkerId, mes: mes2, data_partida: pRow.dia, data_chegada: cRow.dia,
-            hora_partida: pRow.hora || mapa.horaPartida, hora_chegada: cRow.hora || mapa.horaChegada,
-            n_dias: mapaRows.length, updated_at: new Date().toISOString() },
-          { onConflict: 'worker_id,mes' }
-        ).then(() => {});
-      }
-    }
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     _renderMapaPagina(doc, {
@@ -2260,7 +2245,181 @@ ${hdrRow}${bodyRows}${totRow}
       )}
 
       {/* Grid 2 colunas: inputs + preview + mapa */}
-      {subTab === 'calculadora' && <>
+      {subTab === 'calculadora' && (isValidado && selectedWorkerId ? (
+        <div className="space-y-5">
+          {/* Barra de estado validado */}
+          <div className="flex items-center justify-between px-5 py-4 rounded-2xl" style={{ background: '#1B3A57' }}>
+            <div className="flex items-center gap-3">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black" style={{ background: '#EB8D00', color: '#fff' }}>
+                <CheckCircle size={12} /> Validado
+              </span>
+              <div>
+                <p className="font-black text-white text-sm leading-tight">{inputs.nome || '—'}</p>
+                <p className="text-xs font-bold" style={{ color: '#869AAF' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+              </div>
+            </div>
+            <button
+              onClick={toggleValidado}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-colors"
+              style={{ border: '1px solid #495f74', color: '#EEF1F5', background: 'transparent' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <Pencil size={12} /> Editar
+            </button>
+          </div>
+
+          {/* Documentos */}
+          <div className="grid sm:grid-cols-2 gap-5 items-start">
+            {/* ── Recibo ── */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #1B3A57' }}>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: '#869AAF' }}>Recibo de Vencimento</p>
+              {r ? (
+                <>
+                  <div className="space-y-2 text-sm mb-4">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Vencimento base</span>
+                      <span className="font-black text-slate-800">{eur(n(inputs.vencimentoBase))}</span>
+                    </div>
+                    {r.subsAlimTotal > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Sub. alimentação</span>
+                        <span className="font-black text-slate-800">{eur(r.subsAlimTotal)}</span>
+                      </div>
+                    )}
+                    {n(inputs.premios) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Prémios / bónus</span>
+                        <span className="font-black text-slate-800">{eur(n(inputs.premios))}</span>
+                      </div>
+                    )}
+                    {r.subsFerias > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Sub. férias (duo.)</span>
+                        <span className="font-black text-slate-800">{eur(r.subsFerias)}</span>
+                      </div>
+                    )}
+                    {r.subsNatal > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Sub. natal (duo.)</span>
+                        <span className="font-black text-slate-800">{eur(r.subsNatal)}</span>
+                      </div>
+                    )}
+                    <div className="border-t border-slate-100 pt-2 flex justify-between">
+                      <span className="text-rose-500">IRS</span>
+                      <span className="font-black text-rose-600">−{eur(r.irsTotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-rose-500">Seg. Social (11%)</span>
+                      <span className="font-black text-rose-600">−{eur(r.ssTrabalhador)}</span>
+                    </div>
+                  </div>
+                  <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#EEF1F5' }}>
+                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: '#869AAF' }}>Líquido a receber</p>
+                    <p className="text-xl font-black" style={{ color: '#1B3A57' }}>{eur(liquidoDisplay)}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-400 mb-4">Sem dados de recibo.</p>
+              )}
+              <button
+                onClick={gerarReciboPDF}
+                disabled={!r}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: '#1B3A57' }}
+                onMouseEnter={e => { if (r) e.currentTarget.style.background = '#142d45'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#1B3A57'; }}
+              >
+                <Download size={14} /> Download Recibo PDF
+              </button>
+            </div>
+
+            {/* ── Mapa de Ajudas ── */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #EB8D00' }}>
+              <p className="text-[10px] font-black uppercase tracking-wider mb-3" style={{ color: '#869AAF' }}>Mapa de Ajudas de Custo</p>
+              {mapaRows.length > 0 ? (
+                <>
+                  <div className="space-y-2 text-sm mb-4">
+                    {(() => {
+                      const pRow = mapaRows.find(row => row.tipo === 'Partida');
+                      const cRow = [...mapaRows].reverse().find(row => row.tipo === 'Chegada');
+                      return (
+                        <>
+                          {pRow && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Partida</span>
+                              <span className="font-black text-slate-800">{pRow.dia}</span>
+                            </div>
+                          )}
+                          {cRow && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">Chegada</span>
+                              <span className="font-black text-slate-800">{cRow.dia}</span>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Nº dias</span>
+                      <span className="font-black text-slate-800">{mapaRows.length}</span>
+                    </div>
+                    <div className="border-t border-slate-100 pt-2 flex justify-between">
+                      <span className="text-slate-500">Ajudas de custo</span>
+                      <span className="font-black text-slate-800">{eur(mapaTotal)}</span>
+                    </div>
+                    {subsAlimMapaLive > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Sub. alim. (dias úteis)</span>
+                        <span className="font-black text-slate-800">−{eur(subsAlimMapaLive)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-xl px-4 py-3 mb-4" style={{ background: '#FDF1E0' }}>
+                    <p className="text-[9px] font-black uppercase tracking-wider mb-0.5" style={{ color: '#EB8D00' }}>Total A082 (recibo)</p>
+                    <p className="text-xl font-black" style={{ color: '#EB8D00' }}>{eur(mapaLiqLive ?? mapaTotal)}</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-400 mb-4">Sem mapa preenchido.</p>
+              )}
+              <button
+                onClick={gerarPDF}
+                disabled={mapaRows.length === 0}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-black text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{ background: '#EB8D00' }}
+                onMouseEnter={e => { if (mapaRows.length > 0) e.currentTarget.style.background = '#c97700'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#EB8D00'; }}
+              >
+                <Download size={14} /> Download Mapa PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+      <div className="space-y-5">
+      {selectedWorkerId && (
+        <div className="flex items-center justify-between px-5 py-4 rounded-2xl" style={{ background: '#1B3A57' }}>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-black" style={{ background: '#869AAF', color: '#fff' }}>
+              Em elaboração
+            </span>
+            <div>
+              <p className="font-black text-white text-sm leading-tight">{inputs.nome || '—'}</p>
+              <p className="text-xs font-bold" style={{ color: '#869AAF' }}>{MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}</p>
+            </div>
+          </div>
+          <button
+            onClick={toggleValidado}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black text-white transition-colors"
+            style={{ background: '#EB8D00' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#c97700'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#EB8D00'; }}
+          >
+            <CheckCircle size={12} /> Validar e concluir
+          </button>
+        </div>
+      )}
       <div className="grid lg:grid-cols-2 gap-5 items-start">
 
         {/* ── COLUNA INPUTS ── */}
@@ -2541,7 +2700,7 @@ ${hdrRow}${bodyRows}${totRow}
         {/* ── COLUNA PREVIEW ── */}
         <div>
           {r ? (
-            <Card className="p-5">
+            <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #1B3A57' }}>
               {/* Cabeçalho do recibo */}
               <div className="flex justify-between items-start border-b-2 border-slate-800 pb-3 mb-4 gap-3">
                 <div className="flex-1 min-w-0">
@@ -2637,51 +2796,54 @@ ${hdrRow}${bodyRows}${totRow}
                   <span><span className="font-black">Custo empresa (c/ TSU 23,75%):</span> {eur(custoEmpDisplay)}</span>
                 </div>
               </div>
-            </Card>
+            </div>
           ) : (
-            <Card className="p-10 flex flex-col items-center justify-center text-center gap-3">
+            <div className="bg-white rounded-2xl border border-slate-200 p-10 flex flex-col items-center justify-center text-center gap-3 min-h-[200px]" style={{ borderTop: '4px solid #1B3A57' }}>
               <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
                 <RefreshCw size={22} className="text-slate-400" />
               </div>
               <p className="text-sm font-black text-slate-400 uppercase tracking-wide">Preencha o vencimento base</p>
               <p className="text-xs font-bold text-slate-300">O preview do recibo aparece aqui</p>
-            </Card>
+            </div>
           )}
         </div>
       </div>
 
       {/* ── MAPA DE AJUDAS DE CUSTO ── */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-          <SectionHeader n="5" label="Mapa de Ajudas de Custo" />
-          <div className="flex gap-2 flex-wrap">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5" style={{ borderTop: '4px solid #EB8D00' }}>
+        <div className="flex items-center justify-between mb-5">
+          <p className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#EB8D00' }}>Mapa de Ajudas de Custo</p>
+          <div className="flex items-center gap-1">
             <button
               onClick={() => { setMapaRows([]); setAutoFillInfo(null); }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              title="Limpar mapa"
             >
-              <Trash2 size={12} /> Limpar
+              <Trash2 size={14} />
             </button>
             <button
               onClick={() => addRow()}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-slate-500 hover:bg-slate-100 transition-all"
             >
-              <Plus size={12} /> Linha manual
+              <Plus size={12} /> Linha
             </button>
             <button
               onClick={gerarMapasAjudasPDF}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-black uppercase border-2 hover:bg-slate-50 transition-all"
-              style={{ borderColor: '#869AAF', color: '#1B3A57' }}
-              title="PDF com os mapas de todos os trabalhadores"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black hover:bg-slate-100 transition-all"
+              style={{ color: '#869AAF' }}
+              title="PDF com todos os trabalhadores"
             >
-              <Download size={12} /> Exportar Todos
+              <Download size={12} /> Todos
             </button>
             {mapaRows.length > 0 && (
               <button
                 onClick={gerarPDF}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[11px] font-black uppercase border-2 hover:bg-slate-50 transition-all"
-                style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-black text-white transition-all"
+                style={{ background: '#EB8D00' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#c97700'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = '#EB8D00'; }}
               >
-                <Download size={12} /> Exportar PDF
+                <Download size={12} /> PDF
               </button>
             )}
           </div>
@@ -2693,10 +2855,11 @@ ${hdrRow}${bodyRows}${totRow}
           mesStr={mesStr}
           setMapa={setMapa}
           dataInicioInputRef={dataInicioInputRef}
+          selectedWorkerId={selectedWorkerId}
         />
 
         {/* Toolbar de preenchimento automático */}
-        <div className="flex gap-3 flex-wrap items-end mb-4 p-3.5 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+        <div className="flex gap-3 flex-wrap items-end mb-4 pb-4 border-b border-slate-100">
           <LabelInput label="Data de início" hint={!mapa.dataInicio ? 'Auto (dias 1–20)' : null}>
             <input
               ref={dataInicioInputRef}
@@ -2736,8 +2899,10 @@ ${hdrRow}${bodyRows}${totRow}
           <button
             onClick={autoFill}
             disabled={!r || r.ajudaCustoNecessaria <= 0 || n(inputs.vdl) <= 0}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black uppercase border-2 hover:bg-slate-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ borderColor: '#869AAF', color: '#1B3A57' }}
+            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-[11px] font-black text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: '#1B3A57' }}
+            onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#142d45'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#1B3A57'; }}
           >
             <RefreshCw size={12} /> Preencher automaticamente
           </button>
@@ -2820,23 +2985,25 @@ ${hdrRow}${bodyRows}${totRow}
 
         {/* Totais do mapa */}
         {mapaRows.length > 0 && (
-          <div className="mt-4 flex gap-5 flex-wrap p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total do Mapa</p>
-              <p className="text-lg font-black text-slate-800">{eur(mapaTotal)}</p>
-            </div>
+          <div className="mt-3 pt-3 border-t border-slate-100 flex items-baseline gap-4 flex-wrap text-sm">
+            <span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide mr-1.5">Total</span>
+              <span className="font-black text-slate-800">{eur(mapaTotal)}</span>
+            </span>
             {r && (
               <>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Necessário (do recibo)</p>
-                  <p className="text-lg font-black text-slate-800">{eur(r.ajudaCustoNecessaria)}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Diferença</p>
-                  <p className={`text-lg font-black ${Math.abs(mapaDiff) < 0.5 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                <span className="text-slate-300 select-none">·</span>
+                <span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide mr-1.5">Necessário</span>
+                  <span className="font-black text-slate-800">{eur(r.ajudaCustoNecessaria)}</span>
+                </span>
+                <span className="text-slate-300 select-none">·</span>
+                <span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wide mr-1.5">Dif.</span>
+                  <span className={`font-black ${Math.abs(mapaDiff) < 0.5 ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {mapaDiff >= 0 ? '+' : ''}{eur(mapaDiff)}
-                  </p>
-                </div>
+                  </span>
+                </span>
               </>
             )}
           </div>
@@ -2853,55 +3020,8 @@ ${hdrRow}${bodyRows}${totRow}
             </div>
           </div>
         )}
-        {(autoFillInfo || mapaRows.length > 0) && importanciaAReceber !== null && (
-          <div className="mt-2 px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 flex flex-wrap gap-4">
-            {autoFillInfo?.combo && (
-              <span className="w-full text-[10px] font-semibold" style={{ color: '#869AAF' }}>
-                {autoFillInfo.combo.N} dias · Partida {Math.round(autoFillInfo.combo.fP * 100)}%
-                ({horaDefaultPartida(autoFillInfo.combo.fP, mapa.horaPartida || null)}) · Chegada {Math.round(autoFillInfo.combo.fC * 100)}%
-                ({horaDefaultChegada(autoFillInfo.combo.fC, mapa.horaChegada || null)})
-                {autoFillInfo.dataInicio && ` · início ${autoFillInfo.dataInicio}`}
-                {' '}→ {eur(autoFillInfo.totalAjudas)}
-                {' '}(necessário: {eur(autoFillInfo.valorNecessario)}, diff: {autoFillInfo.residuo >= 0 ? '+' : ''}{eur(autoFillInfo.residuo)})
-              </span>
-            )}
-            <span>
-              <span className="font-semibold text-slate-700">Ajudas de custo (live):</span>{' '}
-              {eur(mapaTotal)}
-            </span>
-            {subsAlimMapaLive > 0 && (
-              <span>
-                <span className="font-semibold text-slate-700">Sub. alim. (dias úteis mapa):</span>{' '}
-                −{eur(subsAlimMapaLive)}
-              </span>
-            )}
-            {complementTotalLive > 0 && (
-              <span>
-                <span className="font-semibold text-slate-700">
-                  Complemento {autoFillInfo?.complementMethod === 'he1' ? 'HE 1ª' : autoFillInfo?.complementMethod === 'he2' ? 'HE seg.' : 'A008'}:
-                </span>{' '}
-                +{eur(complementTotalLive)}
-                {autoFillInfo?.complementMethod === 'he1' && r && ` (${n(inputs.he1).toFixed(2)}h × ${eur(r.valorHe1un)})`}
-                {autoFillInfo?.complementMethod === 'he2' && r && ` (${n(inputs.he2).toFixed(2)}h × ${eur(r.valorHe2un)})`}
-              </span>
-            )}
-            <span>
-              <span className="font-semibold text-slate-700">A082 (recibo):</span>{' '}
-              <span className={`font-black ${mapaDesviado ? 'text-rose-600' : 'text-emerald-700'}`}>{eur(mapaLiqLive ?? 0)}</span>
-              {r && <span className={`text-[10px] ml-1 ${mapaDesviado ? 'text-rose-500' : 'text-emerald-500'}`}>
-                ({mapaDesviado ? '⚠ dessincronizado' : '✓'} necessário: {eur(r.ajudaCustoNecessaria)})
-              </span>}
-            </span>
-            {complementTotalLive > 0 && (
-              <span>
-                <span className="font-semibold text-slate-700">Total trabalhador (A082 + complemento):</span>{' '}
-                <span className="font-black" style={{ color: '#1B3A57' }}>{eur(importanciaAReceber ?? 0)}</span>
-              </span>
-            )}
-          </div>
-        )}
-      </Card>
-      </>}
+      </div>
+      </div>))}
 
       {/* Rodapé de compliance */}
       <p className="text-center text-[10px] text-slate-400 font-bold leading-none py-0.5">

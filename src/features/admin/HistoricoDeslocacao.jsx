@@ -203,7 +203,7 @@ function WorkerRow({ worker, isOpen, onToggle, onUsarData, onEditarManualmente }
   );
 }
 
-export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa, dataInicioInputRef }) {
+export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa, dataInicioInputRef, selectedWorkerId }) {
   const [openIndex, setOpenIndex] = useState(0);
   const [historico, setHistorico] = useState(null); // null = a carregar
 
@@ -211,13 +211,18 @@ export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa
   const n2Mes = prevMes(n1Mes);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !selectedWorkerId) {
+      setHistorico({});
+      return;
+    }
     setHistorico(null);
     supabase
       .from('mapa_viagens_historico')
       .select('worker_id, mes, data_partida, data_chegada')
+      .eq('worker_id', selectedWorkerId)
       .in('mes', [n1Mes, n2Mes])
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) { setHistorico({}); return; }
         const byWorker = {};
         (data || []).forEach(r => {
           if (!byWorker[r.worker_id]) byWorker[r.worker_id] = {};
@@ -226,12 +231,26 @@ export default function HistoricoDeslocacao({ supabase, workers, mesStr, setMapa
         });
         setHistorico(byWorker);
       });
-  }, [supabase, n1Mes, n2Mes]);
+  }, [supabase, selectedWorkerId, n1Mes, n2Mes]);
 
-  if (!historico) return null; // a carregar — sem flash
+  const workerIds = historico ? Object.keys(historico) : [];
 
-  const workerIds = Object.keys(historico);
-  if (workerIds.length === 0) return null;
+  if (!selectedWorkerId) return null;
+
+  if (!historico || workerIds.length === 0) {
+    return (
+      <div className="mb-4 px-3.5 py-3 rounded-xl border border-dashed border-slate-200 bg-slate-50">
+        <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-0.5">
+          Histórico de deslocação
+        </p>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          {historico === null
+            ? 'A carregar histórico…'
+            : 'Sem registos para os meses anteriores. Ao validar e concluir o processamento deste trabalhador, o histórico fica guardado automaticamente.'}
+        </p>
+      </div>
+    );
+  }
 
   const rows = workerIds
     .map(wid => {
