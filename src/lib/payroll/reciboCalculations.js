@@ -307,6 +307,11 @@ export function calcularRecibo(inputs) {
     somaOutrosAbonos, ajudaCustoNecessaria,
     totalAbonos, totalDescontos, liquido, custoEmpresa,
     vencBaseParaDuodecimos,
+    // Sub-resultados detalhados de cada componente IRS (taxaMarginal, parcelaAbater, taxaEfetiva)
+    irsVencResult,
+    irsFeriasResult,
+    irsNatalResult,
+    irsOvertimeResult,
   };
 }
 
