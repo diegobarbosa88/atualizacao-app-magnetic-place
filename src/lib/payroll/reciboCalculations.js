@@ -206,6 +206,7 @@ export function valorDiarioLegal(territorio, funcao) {
  * @param {string}  inputs.territorio         'internacional' | 'nacional'
  * @param {string}  inputs.funcao             'geral' | 'gerencia'
  * @param {number}  inputs.ano               ano fiscal (default: ano actual)
+ * @param {string}  inputs.subsidiosMetodo   'duodecimos' | 'valor' — método IRS dos subsídios férias/natal
  */
 export function calcularRecibo(inputs) {
   const {
@@ -227,6 +228,7 @@ export function calcularRecibo(inputs) {
     territorio = 'internacional',
     funcao = 'geral',
     ano = new Date().getFullYear(),
+    subsidiosMetodo = 'duodecimos',
   } = inputs;
 
   // Vencimento contratual completo — usado para duodécimos, taxa de subsídios e hora suplementar
@@ -259,9 +261,13 @@ export function calcularRecibo(inputs) {
   const irsRegular    = irsVencResult.retencao;
   const taxaRegular   = irsVencResult.taxaEfetiva / 100; // ratio para compatibilidade de interface
 
-  // Duodécimos — escalão pelo valor total do subsídio (art. 99.º-C, n.os 5 e 6 CIRS)
-  const irsFeriasResult = calcularRetencaoSubsidioDuodecimo(vencBaseParaDuodecimos, subsFerias, tabelaId, nDependentes);
-  const irsNatalResult  = calcularRetencaoSubsidioDuodecimo(vencBaseParaDuodecimos, subsNatal,  tabelaId, nDependentes);
+  // Duodécimos/Valor — método configurável por trabalhador.
+  // 'duodecimos' (art. 99.º-C CIRS): escalão pelo total anual (= vencBaseParaDuodecimos).
+  // 'valor': escalão pelo valor pago este mês; como 83€ < 920€ (limiar), IRS = 0%.
+  const _feriasBase    = subsidiosMetodo === 'valor' ? subsFerias   : vencBaseParaDuodecimos;
+  const _natalBase     = subsidiosMetodo === 'valor' ? subsNatal    : vencBaseParaDuodecimos;
+  const irsFeriasResult = calcularRetencaoSubsidioDuodecimo(_feriasBase, subsFerias, tabelaId, nDependentes);
+  const irsNatalResult  = calcularRetencaoSubsidioDuodecimo(_natalBase,  subsNatal,  tabelaId, nDependentes);
   const irsFerias       = irsFeriasResult.retencao;
   const irsNatal        = irsNatalResult.retencao;
 

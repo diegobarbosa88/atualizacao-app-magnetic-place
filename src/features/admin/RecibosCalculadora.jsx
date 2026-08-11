@@ -53,6 +53,7 @@ const INPUT_DEFAULT = {
   he2: '0',
   incluirFerias: true,
   incluirNatal: true,
+  subsidiosMetodo: 'duodecimos',
   subsAlimValorDia: '8.00',
   subsAlimDias: '22',
   subsAlimTipo: 'dinheiro',
@@ -78,7 +79,7 @@ const MAPA_DEFAULT = {
 const CAMPOS_AUTO_DEFAULT = {
   nome: false, nif: false, categoria: false, nis: false,
   vencimentoBase: false, subsAlimValorDia: false, subsAlimTipo: false,
-  tabelaKey: false, nDependentes: false,
+  tabelaKey: false, nDependentes: false, subsidiosMetodo: false,
   cliente: false, localidade: false, pais: false, territorio: false,
 };
 
@@ -199,7 +200,7 @@ function _loadSession() {
 }
 
 export default function RecibosCalculadora() {
-  const { workers, logs, supabase, clients } = useApp();
+  const { workers, setWorkers, logs, supabase, clients } = useApp();
 
   // Lê sessionStorage UMA VEZ por mount; lazy initializers subsequentes usam este snapshot
   const [_s] = useState(_loadSession);
@@ -437,6 +438,7 @@ export default function RecibosCalculadora() {
     setSelectedWorkerId(id);
     setMapaRows([]);
     setAutoFillInfo(null);
+    setMapa(p => ({ ...p, dataInicio: '' }));
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     mesParcialKeyRef.current   = '';
@@ -469,6 +471,7 @@ export default function RecibosCalculadora() {
       subsAlimTipo:    true, // sempre auto ao selecionar trabalhador
       tabelaKey:       !!w.tabela_irs,
       nDependentes:    w.n_dependentes != null,
+      subsidiosMetodo: !!w.subsidios_metodo,
       cliente:         !!dc.cliente,
       localidade:      !!dc.localidade,
       pais:            !!dc.pais,
@@ -482,10 +485,12 @@ export default function RecibosCalculadora() {
       categoria: w.profissao || prev.categoria,
       nis: w.nis || prev.nis,
       vencimentoBase: w.vencimento_base != null ? String(w.vencimento_base) : prev.vencimentoBase,
+      horasSemana: w.horas_semanais != null ? String(w.horas_semanais) : prev.horasSemana,
       subsAlimValorDia: w.subsidio_alimentacao_dia != null ? String(w.subsidio_alimentacao_dia) : prev.subsAlimValorDia,
       subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
       tabelaKey: w.tabela_irs || prev.tabelaKey,
       nDependentes: w.n_dependentes != null ? String(w.n_dependentes) : prev.nDependentes,
+      subsidiosMetodo: w.subsidios_metodo || 'duodecimos',
       cliente: dc.cliente || prev.cliente,
       localidade: dc.localidade || prev.localidade,
       pais: dc.pais || prev.pais,
@@ -521,6 +526,7 @@ export default function RecibosCalculadora() {
       territorio: inputs.territorio,
       funcao: inputs.funcao,
       ano: n(inputs.ano),
+      subsidiosMetodo: inputs.subsidiosMetodo,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputs, mesParcialDados]);
@@ -539,7 +545,7 @@ export default function RecibosCalculadora() {
   useEffect(() => {
     if (!selectedWorkerId || !r || n(inputs.vdl) <= 0) return;
     if (!selectedWorkerIsMaxAjudas && r.ajudaCustoNecessaria <= 0) return;
-    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}-${n(inputs.vencimentoBase)}-${inputs.subsAlimTipo}-${n(inputs.nDependentes)}-${inputs.tabelaKey}-${n(inputs.subsAlimValorDia)}-${n(inputs.subsAlimDias)}-${n(inputs.brutoAlvo)}-${String(inputs.incluirFerias)}-${String(inputs.incluirNatal)}-${n(inputs.he1)}-${n(inputs.he2)}`;
+    const key = `${selectedWorkerId}-${inputs.mes}-${inputs.ano}-${n(inputs.vencimentoBase)}-${inputs.subsAlimTipo}-${n(inputs.nDependentes)}-${inputs.tabelaKey}-${n(inputs.subsAlimValorDia)}-${n(inputs.subsAlimDias)}-${n(inputs.brutoAlvo)}-${String(inputs.incluirFerias)}-${String(inputs.incluirNatal)}-${n(inputs.he1)}-${n(inputs.he2)}-${inputs.subsidiosMetodo}`;
     if (mapaAutoFillKeyRef.current === key) return;
     mapaAutoFillKeyRef.current = key;
     autoFill();
@@ -950,6 +956,7 @@ export default function RecibosCalculadora() {
     });
     setMapaRows([]);
     setAutoFillInfo(null);
+    setMapa(p => ({ ...p, dataInicio: '' }));
     diasAutoFillKeyRef.current = '';
     mapaAutoFillKeyRef.current = '';
     mesParcialKeyRef.current   = '';
@@ -959,7 +966,7 @@ export default function RecibosCalculadora() {
 
   function gerarReciboPDF() {
     if (!r) return;
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     const mesNum   = parseInt(inputs.mes, 10);
     const mesLabel = MESES_PT[mesNum] || inputs.mes;
     const a001Valor = mesParcialDados ? mesParcialDados.vencBaseOriginal : n(inputs.vencimentoBase);
@@ -968,23 +975,23 @@ export default function RecibosCalculadora() {
       ['A001', 'Vencimento Base', '', '', eur(a001Valor), ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, eur(n(inputs.subsAlimValorDia)), eur(r.subsAlimTotal), ''],
     ];
-    if (r.subsFerias > 0)        linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(r.subsFerias), '']);
+    if (r.subsFerias > 0)        linhas.push(['A004', inputs.subsidiosMetodo === 'valor' ? 'Subsídio de Férias (Valor)' : 'Subsídio de Férias (100% c/duodécimos)', '', '', eur(r.subsFerias), '']);
     if (n(inputs.premios) > 0)   linhas.push(['A008', 'Prémios / Bónus', '', '', eur(n(inputs.premios)), '']);
     if (n(inputs.he1) > 0)       linhas.push(['A052', 'Trab. Suplementar 1ª hora', `${inputs.he1}h`, eur(r.valorHe1un), eur(r.valorHe1), '']);
     if (n(inputs.he2) > 0)       linhas.push(['A053', 'Trab. Suplementar seguintes', `${inputs.he2}h`, eur(r.valorHe2un), eur(r.valorHe2), '']);
-    if (r.subsNatal > 0)         linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
+    if (r.subsNatal > 0)         linhas.push(['A021', inputs.subsidiosMetodo === 'valor' ? 'Subsídio de Natal (Valor)' : 'Subsídio de Natal (100% c/duodécimos)', '', '', eur(r.subsNatal), '']);
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplayRecibo), '']);
     if (descontoDiasParcial)     linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
     linhas.push(['T001', `IRS (Incidência ${eur(r.incidenciaSS)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(r.irsVencResult?.parcelaAbater ?? 0)})`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
     if (r.irsVencResult) {
-      linhas.push(['', `  ↳ IRS - Taxa efetiva (Vencimento e restantes abonos): ${r.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+      linhas.push(['', `  > IRS - Taxa efetiva (Vencimento e restantes abonos): ${r.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
       if (r.irsOvertimeResult?.retencao > 0)
-        linhas.push(['', `  ↳ IRS - Taxa efetiva (Trabalho suplementar): ${r.irsOvertimeResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+        linhas.push(['', `  > IRS - Taxa efetiva (Trabalho suplementar): ${r.irsOvertimeResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
       if (r.subsFerias > 0)
-        linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Férias): ${(r.irsFeriasResult?.taxaEfetiva ?? 0).toFixed(2)}%`, '', '', '', '']);
+        linhas.push(['', `  > IRS - Taxa efetiva (Subsidio de Ferias): ${(r.irsFeriasResult?.taxaEfetiva ?? 0).toFixed(2)}%`, '', '', '', '']);
       if (r.irsNatalResult?.retencao > 0)
-        linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Natal): ${r.irsNatalResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+        linhas.push(['', `  > IRS - Taxa efetiva (Subsidio de Natal): ${r.irsNatalResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
     }
 
     _renderReciboPagina(doc, {
@@ -1013,11 +1020,11 @@ export default function RecibosCalculadora() {
       ['A001', 'Vencimento Base', '', '', xlsA001Valor, ''],
       ['A002', 'Subsídio de Alimentação', `${inputs.subsAlimDias}d`, n(inputs.subsAlimValorDia).toFixed(2), r.subsAlimTotal.toFixed(2), ''],
     ];
-    if (r.subsFerias > 0)       linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', r.subsFerias.toFixed(2), '']);
+    if (r.subsFerias > 0)       linhas.push(['A004', inputs.subsidiosMetodo === 'valor' ? 'Subsídio de Férias (Valor)' : 'Subsídio de Férias (100% c/duodécimos)', '', '', r.subsFerias.toFixed(2), '']);
     if (n(inputs.premios) > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', n(inputs.premios).toFixed(2), '']);
     if (n(inputs.he1) > 0)      linhas.push(['A052', 'Trabalho Suplementar 1ª hora', `${inputs.he1}h`, r.valorHe1un.toFixed(4), r.valorHe1.toFixed(2), '']);
     if (n(inputs.he2) > 0)      linhas.push(['A053', 'Trabalho Suplementar seguintes', `${inputs.he2}h`, r.valorHe2un.toFixed(4), r.valorHe2.toFixed(2), '']);
-    if (r.subsNatal > 0)        linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', r.subsNatal.toFixed(2), '']);
+    if (r.subsNatal > 0)        linhas.push(['A021', inputs.subsidiosMetodo === 'valor' ? 'Subsídio de Natal (Valor)' : 'Subsídio de Natal (100% c/duodécimos)', '', '', r.subsNatal.toFixed(2), '']);
     // A082: ajustado pelo D001 para que Total Abonos = BrutoAlvo
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplayRecibo.toFixed(2), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
@@ -1067,6 +1074,7 @@ export default function RecibosCalculadora() {
       nDependentes: w.n_dependentes ?? 0,
       brutoAlvo: brutoAlvo || vencBase,
       territorio: 'internacional', funcao, ano: anoNum,
+      subsidiosMetodo: w.subsidios_metodo || 'duodecimos',
     };
     const rc0             = calcularRecibo(baseParams);
     const valorDiario     = valorDiarioLegal('internacional', funcao);
@@ -1147,7 +1155,7 @@ export default function RecibosCalculadora() {
     }
 
     const { rateHistory, absenceData } = await _fetchBatchData(mesStr);
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
     let isFirstPage = true;
 
     trabalhadores.forEach(w => {
@@ -1183,9 +1191,9 @@ export default function RecibosCalculadora() {
         ['A001', 'Vencimento Base', '', '', eur(wVencOrig), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, eur(parseFloat(w.subsidio_alimentacao_dia) || 0), eur(rc.subsAlimTotal), ''],
       ];
-      if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', eur(rc.subsFerias), '']);
+      if (rc.subsFerias > 0) linhas.push(['A004', (w.subsidios_metodo || 'duodecimos') === 'valor' ? 'Subsídio de Férias (Valor)' : 'Subsídio de Férias (100% c/duodécimos)', '', '', eur(rc.subsFerias), '']);
       if (premiosBatch > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', eur(premiosBatch), '']);
-      if (rc.subsNatal > 0)  linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(rc.subsNatal), '']);
+      if (rc.subsNatal > 0)  linhas.push(['A021', (w.subsidios_metodo || 'duodecimos') === 'valor' ? 'Subsídio de Natal (Valor)' : 'Subsídio de Natal (100% c/duodécimos)', '', '', eur(rc.subsNatal), '']);
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(mapaLiqLive), '']);
       const bDiasNaoTrab   = wMesParcial.tipo !== 'completo' ? 30 - wMesParcial.diasTrabalhados : 0;
       const bDescontoExtra = bDiasNaoTrab > 0 ? parseFloat((bDiasNaoTrab * wVencOrig / 30).toFixed(2)) : 0;
@@ -1200,13 +1208,13 @@ export default function RecibosCalculadora() {
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
       // Linhas informativas de taxa efectiva por componente IRS
       if (rc.irsVencResult) {
-        linhas.push(['', `  ↳ IRS - Taxa efetiva (Vencimento e restantes abonos): ${rc.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+        linhas.push(['', `  > IRS - Taxa efetiva (Vencimento e restantes abonos): ${rc.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
         if (rc.irsOvertimeResult?.retencao > 0)
-          linhas.push(['', `  ↳ IRS - Taxa efetiva (Trabalho suplementar): ${rc.irsOvertimeResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+          linhas.push(['', `  > IRS - Taxa efetiva (Trabalho suplementar): ${rc.irsOvertimeResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
         if (rc.subsFerias > 0)
-          linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Férias): ${(rc.irsFeriasResult?.taxaEfetiva ?? 0).toFixed(2)}%`, '', '', '', '']);
+          linhas.push(['', `  > IRS - Taxa efetiva (Subsidio de Ferias): ${(rc.irsFeriasResult?.taxaEfetiva ?? 0).toFixed(2)}%`, '', '', '', '']);
         if (rc.irsNatalResult?.retencao > 0)
-          linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Natal): ${rc.irsNatalResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+          linhas.push(['', `  > IRS - Taxa efetiva (Subsidio de Natal): ${rc.irsNatalResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
       }
 
       _renderReciboPagina(doc, {
@@ -1271,9 +1279,9 @@ export default function RecibosCalculadora() {
         ['A001', 'Vencimento Base', '', '', xlsWVencOrig.toFixed(2), ''],
         ['A002', 'Subsídio de Alimentação', `${subsAlimDias}d`, (parseFloat(w.subsidio_alimentacao_dia) || 0).toFixed(2), rc.subsAlimTotal.toFixed(2), ''],
       ];
-      if (rc.subsFerias > 0) linhas.push(['A004', 'Subsídio de Férias (duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
+      if (rc.subsFerias > 0) linhas.push(['A004', (w.subsidios_metodo || 'duodecimos') === 'valor' ? 'Subsídio de Férias (Valor)' : 'Subsídio de Férias (100% c/duodécimos)', '', '', rc.subsFerias.toFixed(2), '']);
       if (premiosBatch > 0)  linhas.push(['A008', 'Prémios / Bónus', '', '', premiosBatch.toFixed(2), '']);
-      if (rc.subsNatal > 0)  linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
+      if (rc.subsNatal > 0)  linhas.push(['A021', (w.subsidios_metodo || 'duodecimos') === 'valor' ? 'Subsídio de Natal (Valor)' : 'Subsídio de Natal (100% c/duodécimos)', '', '', rc.subsNatal.toFixed(2), '']);
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', mapaLiqLive.toFixed(2), '']);
       const xlsBDiasNaoTrab = xlsWMesParcial.tipo !== 'completo' ? 30 - xlsWMesParcial.diasTrabalhados : 0;
       const xlsBDescontoExtra = xlsBDiasNaoTrab > 0 ? parseFloat((xlsBDiasNaoTrab * xlsWVencOrig / 30).toFixed(2)) : 0;
@@ -1423,9 +1431,9 @@ export default function RecibosCalculadora() {
         linhas.push(['A002', descAlim, `${subsAlimDias}d`, eur2(parseFloat(w.subsidio_alimentacao_dia) || 0), eur2(rc.subsAlimTotal), '']);
       }
       if (rc.subsAlimExcedente > 0) linhas.push(['', '  → Excedente sujeito a IRS/SS', '', '', eur2(rc.subsAlimExcedente), '']);
-      if (rc.subsFerias > 0) linhas.push(['A004', 'Sub. Férias (duodécimo 1/12)', '', '', eur2(rc.subsFerias), '']);
+      if (rc.subsFerias > 0) linhas.push(['A004', (w.subsidios_metodo || 'duodecimos') === 'valor' ? 'Sub. Férias (Valor)' : 'Sub. Férias (100% c/duodécimos)', '', '', eur2(rc.subsFerias), '']);
       if (premiosMapa > 0)   linhas.push(['A008', 'Prémios / Bónus', '', '', eur2(premiosMapa), '']);
-      if (rc.subsNatal > 0)  linhas.push(['A021', 'Sub. Natal (duodécimo 1/12)', '', '', eur2(rc.subsNatal), '']);
+      if (rc.subsNatal > 0)  linhas.push(['A021', (w.subsidios_metodo || 'duodecimos') === 'valor' ? 'Sub. Natal (Valor)' : 'Sub. Natal (100% c/duodécimos)', '', '', eur2(rc.subsNatal), '']);
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (isento)', '', '', eur2(mapaLiqLive), '']);
       linhas.push(['T001', `IRS (Incidência ${eur2(rc.incidenciaSS)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(rc.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', eur2(rc.irsTotal)]);
       linhas.push(['T003', 'Seg. Social — Trabalhador (11%)', '', '', '', eur2(rc.ssTrabalhador)]);
@@ -1698,12 +1706,12 @@ ${hdrRow}${bodyRows}${totRow}
       // ── 2. Faixa laranja com nome ──────────────────────────────────────
       let y = HDR_H + 1;
       doc.setFillColor(...ORANGE);
-      doc.rect(xOff, y, cW, 7, 'F');
+      doc.rect(xOff, y, cW, 8, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(255, 255, 255);
-      doc.text((nome || '—').toUpperCase(), xOff + 2, y + 5);
-      y += 8.5;
+      doc.text((nome || '—').toUpperCase(), xOff + 2, y + 5.5);
+      y += 11;
 
       // ── 3. Campos do trabalhador ───────────────────────────────────────
       const fldSz = 5.5;
@@ -1810,9 +1818,13 @@ ${hdrRow}${bodyRows}${totRow}
       doc.setLineWidth(0.2);
       doc.line(xOff + 1, y + 5, xOff + cW * 0.65, y + 5);
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(5.5);
+      doc.setFontSize(4.5);
       doc.setTextColor(...SLATE);
-      doc.text('Assinatura:', xOff + 1, y + 9);
+      doc.text('Assinatura:', xOff + 1, y + 8.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(5.5);
+      doc.setTextColor(...NAVY);
+      doc.text((nome || '').toUpperCase(), xOff + 1, y + 13);
 
       // ── 7. Rodapé laranja ─────────────────────────────────────────────
       doc.setDrawColor(...ORANGE);
@@ -2135,14 +2147,17 @@ ${hdrRow}${bodyRows}${totRow}
     if (!selectedWorkerId) return;
     setSaveStatus('saving');
     const mesStr = `${inputs.ano}-${String(n(inputs.mes)).padStart(2, '0')}`;
+    const workerPatch = {
+      vencimento_base:           n(inputs.vencimentoBase),
+      horas_semanais:            n(inputs.horasSemana) || 40,
+      subsidio_alimentacao_dia:  n(inputs.subsAlimValorDia),
+      subsidio_alimentacao_tipo: inputs.subsAlimTipo,
+      tabela_irs:                inputs.tabelaKey,
+      n_dependentes:             n(inputs.nDependentes),
+      subsidios_metodo:          inputs.subsidiosMetodo,
+    };
     const [{ error: e1 }, { error: e2 }] = await Promise.all([
-      supabase.from('workers').update({
-        vencimento_base:           n(inputs.vencimentoBase),
-        subsidio_alimentacao_dia:  n(inputs.subsAlimValorDia),
-        subsidio_alimentacao_tipo: inputs.subsAlimTipo,
-        tabela_irs:                inputs.tabelaKey,
-        n_dependentes:             n(inputs.nDependentes),
-      }).eq('id', selectedWorkerId),
+      supabase.from('workers').update(workerPatch).eq('id', selectedWorkerId),
       supabase.from('resumo_observacoes').upsert(
         {
           worker_id:    selectedWorkerId,
@@ -2154,6 +2169,8 @@ ${hdrRow}${bodyRows}${totRow}
       ),
     ]);
     if (e1 || e2) { setSaveStatus('error'); return; }
+    // Atualiza o estado local imediatamente (sem esperar pelo real-time)
+    setWorkers(prev => prev.map(w => w.id === selectedWorkerId ? { ...w, ...workerPatch } : w));
     setSaveStatus('saved');
     setTimeout(() => setSaveStatus(null), 2500);
   }
@@ -2616,12 +2633,27 @@ ${hdrRow}${bodyRows}${totRow}
               <div className="flex flex-col gap-2 mb-4">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
                   <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
-                  Incluir Subsídio de Férias (100% com duodécimos)
+                  Incluir Subsídio de Férias
                 </label>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
                   <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
-                  Incluir Subsídio de Natal (100% com duodécimos)
+                  Incluir Subsídio de Natal
                 </label>
+                {(inputs.incluirFerias || inputs.incluirNatal) && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Método IRS subsídios:</span>
+                    <SelectInput
+                      value={inputs.subsidiosMetodo}
+                      onChange={e => { set('subsidiosMetodo', e.target.value); setCamposAuto(p => ({ ...p, subsidiosMetodo: false })); }}
+                    >
+                      <option value="duodecimos">Duodécimos (art. 99.º-C) — 3,6% ou 0,17%</option>
+                      <option value="valor">Valor — IRS = 0%</option>
+                    </SelectInput>
+                    {camposAuto.subsidiosMetodo && (
+                      <span className="text-[10px] font-bold text-[#1B3A57] bg-[#EEF1F5] px-2 py-0.5 rounded-full">auto</span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
                 <LabelInput label="Prémios / Bónus (€, tributável)">
@@ -2772,11 +2804,11 @@ ${hdrRow}${bodyRows}${totRow}
                       <ReciboLinha desc={`D001 - ${descontoDiasParcial.label}`} qtd={`${descontoDiasParcial.horasNaoTrab}h`} desconto={descontoDiasParcial.valor} />
                     )}
                     <ReciboLinha desc="A002 - Subs. Alimentação" qtd={`${inputs.subsAlimDias}d`} vUnit={n(inputs.subsAlimValorDia)} abono={r.subsAlimTotal} />
-                    {r.subsFerias > 0 && <ReciboLinha desc="A004 - Subs. Férias (duodécimos)" abono={r.subsFerias} />}
+                    {r.subsFerias > 0 && <ReciboLinha desc={`A004 - ${inputs.subsidiosMetodo === 'valor' ? 'Subs. Férias (Valor)' : 'Subs. Férias (100% c/duodécimos)'}`} abono={r.subsFerias} />}
                     {n(inputs.premios) > 0 && <ReciboLinha desc="A008 - Prémios / Bónus" abono={n(inputs.premios)} />}
                     {n(inputs.he1) > 0 && <ReciboLinha desc="A052 - Trabalho Suplementar 1ª hora" qtd={`${inputs.he1}h`} vUnit={r.valorHe1un} abono={r.valorHe1} />}
                     {n(inputs.he2) > 0 && <ReciboLinha desc="A053 - Trabalho Suplementar seguintes" qtd={`${inputs.he2}h`} vUnit={r.valorHe2un} abono={r.valorHe2} />}
-                    {r.subsNatal > 0 && <ReciboLinha desc="A021 - Subs. Natal (duodécimos)" abono={r.subsNatal} />}
+                    {r.subsNatal > 0 && <ReciboLinha desc={`A021 - ${inputs.subsidiosMetodo === 'valor' ? 'Subs. Natal (Valor)' : 'Subs. Natal (100% c/duodécimos)'}`} abono={r.subsNatal} />}
                     {ajudasDisplayRecibo > 0 && (
                       <tr className="bg-orange-50">
                         <td className="py-1.5 px-1 border-l-2 border-orange-400 font-bold text-slate-700">A082 - Ajudas de Custo Internacional <span className="text-[9px] text-orange-600 font-black ml-1">NÃO TRIBUTADO</span></td>
