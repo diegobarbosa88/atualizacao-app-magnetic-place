@@ -2860,7 +2860,7 @@ ${hdrRow}${bodyRows}${totRow}
 
         {/* Toolbar de preenchimento automático */}
         <div className="flex gap-3 flex-wrap items-end mb-4 pb-4 border-b border-slate-100">
-          <LabelInput label="Data de início" hint={!mapa.dataInicio ? 'Auto (dias 1–20)' : null}>
+          <LabelInput label="Data de início" badge={!mapa.dataInicio ? 'Auto' : null}>
             <input
               ref={dataInicioInputRef}
               type="date"
@@ -2913,9 +2913,9 @@ ${hdrRow}${bodyRows}${totRow}
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-800 text-white">
+                <tr className="bg-[#EEF1F5] border-b border-[#E3E7EC]">
                   {['Dia', 'Serviço', 'Cliente', 'Localidade', 'Território', 'Tipo', 'Hora', '%', 'Valor', ''].map(h => (
-                    <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
+                    <th key={h} className="px-2 py-2 text-left text-[10px] font-black uppercase tracking-wider text-[#869AAF] first:rounded-tl-xl last:rounded-tr-xl">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -2927,30 +2927,41 @@ ${hdrRow}${bodyRows}${totRow}
                     <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-1 py-1">
                         <input type="date" value={row.dia} onChange={e => updateRow(row.id, 'dia', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.servico} onChange={e => updateRow(row.id, 'servico', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.cliente} onChange={e => updateRow(row.id, 'cliente', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="text" value={row.localidade} onChange={e => updateRow(row.id, 'localidade', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <select value={row.territorio} onChange={e => updateRow(row.id, 'territorio', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]">
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]">
                           <option value="Internacional">Internacional</option>
                           <option value="Nacional">Nacional</option>
                         </select>
                       </td>
                       <td className="px-1 py-1">
-                        <select value={row.tipo} onChange={e => updateRow(row.id, 'tipo', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]">
+                        <select
+                          value={row.tipo}
+                          onChange={e => updateRow(row.id, 'tipo', e.target.value)}
+                          style={{
+                            border: 'none', outline: 'none', borderRadius: 20,
+                            padding: '3px 10px',
+                            fontSize: 10, fontWeight: 900, textTransform: 'uppercase',
+                            letterSpacing: '.04em', cursor: 'pointer', appearance: 'none',
+                            ...(row.tipo === 'Partida'    ? { background: '#dce6f0', color: '#1B3A57' }
+                              : row.tipo === 'Chegada'    ? { background: '#fef0d5', color: '#c57800' }
+                              :                            { background: '#edf0f3', color: '#6B7A8D' })
+                          }}
+                        >
                           <option value="Partida">Partida</option>
                           <option value="Consecutivo">Consecutivo</option>
                           <option value="Chegada">Chegada</option>
@@ -2958,16 +2969,16 @@ ${hdrRow}${bodyRows}${totRow}
                       </td>
                       <td className="px-1 py-1">
                         <input type="time" value={row.hora} onChange={e => updateRow(row.id, 'hora', e.target.value)}
-                          className="w-full border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
+                          className="w-full border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
                       </td>
                       <td className="px-1 py-1">
                         <input type="number" value={row.pct} min="0" max="100" step="5"
                           onChange={e => updateRow(row.id, 'pct', parseFloat(e.target.value) || 0)}
-                          className="w-16 border border-slate-200 rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none focus:border-[#1B3A57]" />
+                          className="w-16 border border-transparent rounded-lg px-1.5 py-1 text-xs font-bold lowercase outline-none hover:border-slate-200 focus:border-[#1B3A57]" />
                       </td>
-                      <td className="px-2 py-1 text-right font-bold text-slate-700">{eur(valor)}</td>
+                      <td className="px-2 py-1 text-right font-black text-[#1B3A57] tabular-nums">{eur(valor)}</td>
                       <td className="px-1 py-1 text-center">
-                        <button onClick={() => removeRow(row.id)} className="p-1 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all">
+                        <button onClick={() => removeRow(row.id)} className="p-1 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all">
                           <X size={13} />
                         </button>
                       </td>
