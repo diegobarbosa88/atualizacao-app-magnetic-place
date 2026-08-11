@@ -981,8 +981,8 @@ export default function RecibosCalculadora() {
       linhas.push(['', `  ↳ IRS - Taxa efetiva (Vencimento e restantes abonos): ${r.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
       if (r.irsOvertimeResult?.retencao > 0)
         linhas.push(['', `  ↳ IRS - Taxa efetiva (Trabalho suplementar): ${r.irsOvertimeResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
-      if (r.irsFeriasResult?.retencao > 0)
-        linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Férias): ${r.irsFeriasResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+      if (r.subsFerias > 0)
+        linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Férias): ${(r.irsFeriasResult?.taxaEfetiva ?? 0).toFixed(2)}%`, '', '', '', '']);
       if (r.irsNatalResult?.retencao > 0)
         linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Natal): ${r.irsNatalResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
     }
@@ -1203,8 +1203,8 @@ export default function RecibosCalculadora() {
         linhas.push(['', `  ↳ IRS - Taxa efetiva (Vencimento e restantes abonos): ${rc.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
         if (rc.irsOvertimeResult?.retencao > 0)
           linhas.push(['', `  ↳ IRS - Taxa efetiva (Trabalho suplementar): ${rc.irsOvertimeResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
-        if (rc.irsFeriasResult?.retencao > 0)
-          linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Férias): ${rc.irsFeriasResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
+        if (rc.subsFerias > 0)
+          linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Férias): ${(rc.irsFeriasResult?.taxaEfetiva ?? 0).toFixed(2)}%`, '', '', '', '']);
         if (rc.irsNatalResult?.retencao > 0)
           linhas.push(['', `  ↳ IRS - Taxa efetiva (Subsídio de Natal): ${rc.irsNatalResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
       }
