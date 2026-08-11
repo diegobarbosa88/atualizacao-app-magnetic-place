@@ -975,7 +975,7 @@ export default function RecibosCalculadora() {
     if (r.subsNatal > 0)         linhas.push(['A021', 'Subsídio de Natal (duodécimos)', '', '', eur(r.subsNatal), '']);
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', eur(ajudasDisplayRecibo), '']);
     if (descontoDiasParcial)     linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', eur(descontoDiasParcial.valor)]);
-    linhas.push(['T001', `IRS (Incidência ${eur(r.incidenciaRegular)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(r.irsVencResult?.parcelaAbater ?? 0)})`, '', '', '', eur(r.irsTotal)]);
+    linhas.push(['T001', `IRS (Incidência ${eur(r.incidenciaSS)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(r.irsVencResult?.parcelaAbater ?? 0)})`, '', '', '', eur(r.irsTotal)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(r.ssTrabalhador)]);
     if (r.irsVencResult) {
       linhas.push(['', `  ↳ IRS - Taxa efetiva (Vencimento e restantes abonos): ${r.irsVencResult.taxaEfetiva.toFixed(2)}%`, '', '', '', '']);
@@ -1022,7 +1022,7 @@ export default function RecibosCalculadora() {
     if (ajudasDisplayRecibo > 0) linhas.push(['A082', 'Ajudas de Custo Internacional (NÃO TRIBUTADO)', '', '', ajudasDisplayRecibo.toFixed(2), '']);
     // D001 — linha informativa; não entra em Total Descontos do rodapé
     if (descontoDiasParcial) linhas.push(['D001', descontoDiasParcial.label, `${descontoDiasParcial.horasNaoTrab}h`, '', '', descontoDiasParcial.valor.toFixed(2)]);
-    linhas.push(['T001', `IRS (Incidência ${r.incidenciaRegular.toFixed(2)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(r.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', r.irsTotal.toFixed(2)]);
+    linhas.push(['T001', `IRS (Incidência ${r.incidenciaSS.toFixed(2)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(r.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', r.irsTotal.toFixed(2)]);
     linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', r.ssTrabalhador.toFixed(2)]);
     linhas.push(['', 'TOTAL', '', '', totalAbonosDisplay.toFixed(2), totalDescontosDisplay.toFixed(2)]);
     linhas.push(['', 'Líquido a Receber', '', '', liquidoDisplay.toFixed(2), '']);
@@ -1196,7 +1196,7 @@ export default function RecibosCalculadora() {
           : 'Desconto dias por início e cessação de contrato';
         linhas.push(['D001', bLabel, `${bHorasNaoTrab}h`, '', '', eur(bDescontoExtra)]);
       }
-      linhas.push(['T001', `IRS (Incidência ${eur(rc.incidenciaRegular)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(rc.irsVencResult?.parcelaAbater ?? 0)})`, '', '', '', eur(rc.irsTotal)]);
+      linhas.push(['T001', `IRS (Incidência ${eur(rc.incidenciaSS)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(rc.irsVencResult?.parcelaAbater ?? 0)})`, '', '', '', eur(rc.irsTotal)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', eur(rc.ssTrabalhador)]);
       // Linhas informativas de taxa efectiva por componente IRS
       if (rc.irsVencResult) {
@@ -1284,7 +1284,7 @@ export default function RecibosCalculadora() {
           : 'Desconto dias por início e cessação de contrato';
         linhas.push(['D001', xlsBLabel, `${xlsBHorasNaoTrab}h`, '', '', xlsBDescontoExtra.toFixed(2)]);
       }
-      linhas.push(['T001', `IRS (Incidência ${rc.incidenciaRegular.toFixed(2)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(rc.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', rc.irsTotal.toFixed(2)]);
+      linhas.push(['T001', `IRS (Incidência ${rc.incidenciaSS.toFixed(2)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(rc.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', rc.irsTotal.toFixed(2)]);
       linhas.push(['T003', 'Segurança Social — Trabalhador (11%)', '', '', '', rc.ssTrabalhador.toFixed(2)]);
       linhas.push(['', 'TOTAL', '', '', (rc.totalAbonos + mapaAjudasDiff + xlsBDescontoExtra).toFixed(2), (rc.totalDescontos + xlsBDescontoExtra).toFixed(2)]);
       linhas.push(['', 'Líquido a Receber', '', '', (rc.liquido + mapaAjudasDiff).toFixed(2), '']);
@@ -1427,7 +1427,7 @@ export default function RecibosCalculadora() {
       if (premiosMapa > 0)   linhas.push(['A008', 'Prémios / Bónus', '', '', eur2(premiosMapa), '']);
       if (rc.subsNatal > 0)  linhas.push(['A021', 'Sub. Natal (duodécimo 1/12)', '', '', eur2(rc.subsNatal), '']);
       if (mapaLiqLive > 0)   linhas.push(['A082', 'Ajudas de Custo Internacional (isento)', '', '', eur2(mapaLiqLive), '']);
-      linhas.push(['T001', `IRS (Incidência ${eur2(rc.incidenciaRegular)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(rc.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', eur2(rc.irsTotal)]);
+      linhas.push(['T001', `IRS (Incidência ${eur2(rc.incidenciaSS)} ; Taxa IRS ${((rc.irsVencResult?.taxaMarginal ?? rc.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${(rc.irsVencResult?.parcelaAbater ?? 0).toFixed(2)})`, '', '', '', eur2(rc.irsTotal)]);
       linhas.push(['T003', 'Seg. Social — Trabalhador (11%)', '', '', '', eur2(rc.ssTrabalhador)]);
 
       autoTable(doc, {
@@ -2786,7 +2786,7 @@ ${hdrRow}${bodyRows}${totRow}
                         <td className="py-1.5 px-1 text-right" />
                       </tr>
                     )}
-                    <ReciboLinha desc={`T001 - IRS (Incidência ${eur(r.incidenciaRegular)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(r.irsVencResult?.parcelaAbater ?? 0)})`} desconto={r.irsTotal} />
+                    <ReciboLinha desc={`T001 - IRS (Incidência ${eur(r.incidenciaSS)} ; Taxa IRS ${((r.irsVencResult?.taxaMarginal ?? r.taxaRegular) * 100).toFixed(1)}% ; Parcela a abater ${eur(r.irsVencResult?.parcelaAbater ?? 0)})`} desconto={r.irsTotal} />
                     <ReciboLinha desc="T003 - Seg. Social (11%)" desconto={r.ssTrabalhador} />
                     {/* Total — soma directa de todas as linhas; D001 cancela-se → Líquido = BrutoAlvo − IRS − SS */}
                     <tr className="border-t-2 border-slate-800 font-black">
