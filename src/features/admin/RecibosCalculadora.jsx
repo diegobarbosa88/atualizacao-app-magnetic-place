@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, createContext, useContext } from 'react';
 import { createPortal } from 'react-dom';
 import { useDragScroll } from '../../lib/useDragScroll.js';
 import { jsPDF } from 'jspdf';
@@ -84,12 +84,14 @@ const CAMPOS_AUTO_DEFAULT = {
 
 function n(v) { return parseFloat(v) || 0; }
 
+const InputVariant = createContext('default');
+
 function LabelInput({ label, children, hint, badge }) {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-1 ml-1">
         <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider">{label}</label>
-        {badge && <span className="text-[9px] font-bold text-[#869AAF]">{badge}</span>}
+        {badge && <span className="text-[8px] font-black uppercase tracking-wide text-[#869AAF] bg-[#EEF1F5] px-1.5 py-0.5 rounded">{badge}</span>}
       </div>
       {children}
       {hint && <span className="text-[10px] text-slate-400 ml-1">{hint}</span>}
@@ -97,16 +99,23 @@ function LabelInput({ label, children, hint, badge }) {
   );
 }
 
-function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, className = '' }) {
+function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, className = '', placeholder }) {
+  const variant = useContext(InputVariant);
+  if (variant === 'line') {
+    return (
+      <input
+        type={type} value={value} onChange={onChange} readOnly={readOnly}
+        step={step} min={min} max={max} placeholder={placeholder}
+        className={`w-full bg-transparent border-0 border-b border-slate-200 rounded-none pl-0 py-1.5 text-sm font-bold outline-none transition-all
+          ${readOnly ? 'text-slate-400 cursor-default' : 'focus:border-[#1B3A57]'}
+          ${className}`}
+      />
+    );
+  }
   return (
     <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      readOnly={readOnly}
-      step={step}
-      min={min}
-      max={max}
+      type={type} value={value} onChange={onChange} readOnly={readOnly}
+      step={step} min={min} max={max} placeholder={placeholder}
       className={`w-full bg-white border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-bold outline-none shadow-sm transition-all
         ${readOnly ? 'bg-slate-50 text-slate-400 cursor-default' : 'focus:border-[#1B3A57] focus:ring-2 focus:ring-[#1B3A57]/10'}
         ${className}`}
@@ -115,6 +124,17 @@ function TextInput({ value, onChange, type = 'text', readOnly, step, min, max, c
 }
 
 function SelectInput({ value, onChange, children }) {
+  const variant = useContext(InputVariant);
+  if (variant === 'line') {
+    return (
+      <select
+        value={value} onChange={onChange}
+        className="w-full bg-transparent border-0 border-b border-slate-200 rounded-none px-0 py-1.5 text-sm font-bold outline-none transition-all focus:border-[#1B3A57] lowercase"
+      >
+        {children}
+      </select>
+    );
+  }
   return (
     <select
       value={value}
@@ -137,8 +157,8 @@ function Card({ children, className = '' }) {
 function SectionHeader({ n: num, label }) {
   return (
     <div className="flex items-center gap-2.5 mb-4">
-      <span className="w-6 h-6 rounded-full bg-slate-700 text-white text-[11px] font-black flex items-center justify-center shrink-0">{num}</span>
-      <h3 className="text-sm font-black text-slate-700 uppercase tracking-wide">{label}</h3>
+      <span className="w-5 h-5 rounded-full text-white text-[10px] font-black flex items-center justify-center shrink-0" style={{ background: '#1B3A57' }}>{num}</span>
+      <h3 className="text-[11px] font-black uppercase tracking-widest" style={{ color: '#1B3A57' }}>{label}</h3>
     </div>
   );
 }
@@ -2423,279 +2443,195 @@ ${hdrRow}${bodyRows}${totRow}
       <div className="grid lg:grid-cols-2 gap-5 items-start">
 
         {/* ── COLUNA INPUTS ── */}
-        <div className="space-y-4">
+        <InputVariant.Provider value="line">
+          <Card className="p-6">
 
-          {/* 1 - Dados do Trabalhador */}
-          <Card className="p-5">
-            <SectionHeader n="1" label="Dados do Trabalhador" />
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <LabelInput label="Nome">
-                <div className="relative">
-                  <TextInput value={inputs.nome} onChange={e => { set('nome', e.target.value); setCamposAuto(p => ({ ...p, nome: false })); }} className={camposAuto.nome ? 'pr-10' : ''} />
-                  {camposAuto.nome && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="Categoria / Profissão">
-                <div className="relative">
-                  <TextInput value={inputs.categoria} onChange={e => { set('categoria', e.target.value); setCamposAuto(p => ({ ...p, categoria: false })); }} className={camposAuto.categoria ? 'pr-10' : ''} />
-                  {camposAuto.categoria && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
+            {/* 1 - Dados do Trabalhador */}
+            <div className="pb-5 mb-5 border-b border-slate-100">
+              <SectionHeader n="1" label="Dados do Trabalhador" />
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="Nome" badge={camposAuto.nome ? 'auto' : null}>
+                  <TextInput value={inputs.nome} onChange={e => { set('nome', e.target.value); setCamposAuto(p => ({ ...p, nome: false })); }} />
+                </LabelInput>
+                <LabelInput label="Categoria / Profissão" badge={camposAuto.categoria ? 'auto' : null}>
+                  <TextInput value={inputs.categoria} onChange={e => { set('categoria', e.target.value); setCamposAuto(p => ({ ...p, categoria: false })); }} />
+                </LabelInput>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
+                <LabelInput label="NIF" badge={camposAuto.nif ? 'auto' : null}>
+                  <TextInput value={inputs.nif} onChange={e => { set('nif', e.target.value); setCamposAuto(p => ({ ...p, nif: false })); }} />
+                </LabelInput>
+                <LabelInput label="NIS (SS)" badge={camposAuto.nis ? 'auto' : null}>
+                  <TextInput value={inputs.nis} onChange={e => { set('nis', e.target.value); setCamposAuto(p => ({ ...p, nis: false })); }} />
+                </LabelInput>
+                <LabelInput label="Dias processados" badge={diasCalculados.diasMes ? 'auto' : null}>
+                  <TextInput type="number" value={inputs.diasMes} onChange={e => { set('diasMes', e.target.value); setDiasCalculados(p => ({ ...p, diasMes: false })); }} min="1" max="31" />
+                </LabelInput>
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <LabelInput label="NIF">
-                <div className="relative">
-                  <TextInput value={inputs.nif} onChange={e => { set('nif', e.target.value); setCamposAuto(p => ({ ...p, nif: false })); }} className={camposAuto.nif ? 'pr-10' : ''} />
-                  {camposAuto.nif && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="NIS (SS)">
-                <div className="relative">
-                  <TextInput value={inputs.nis} onChange={e => { set('nis', e.target.value); setCamposAuto(p => ({ ...p, nis: false })); }} className={camposAuto.nis ? 'pr-10' : ''} />
-                  {camposAuto.nis && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="Dias processados">
-                <div className="relative">
-                  <TextInput
-                    type="number"
-                    value={inputs.diasMes}
-                    onChange={e => { set('diasMes', e.target.value); setDiasCalculados(p => ({ ...p, diasMes: false })); }}
-                    min="1" max="31"
-                    className={diasCalculados.diasMes ? 'pr-10' : ''}
-                  />
-                  {diasCalculados.diasMes && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none" title="Calculado automaticamente">auto</span>
-                  )}
-                </div>
-              </LabelInput>
-            </div>
-          </Card>
 
-          {/* ── Banner: mês parcial ── */}
-          {mesParcialDados && (
-            <div className={`rounded-2xl border px-4 py-3 text-xs space-y-1 ${
-              mesParcialDados.tipo === 'fim' || mesParcialDados.tipo === 'ambos'
-                ? 'bg-rose-50 border-rose-300 text-rose-800'
-                : 'bg-amber-50 border-amber-300 text-amber-800'
-            }`}>
-              <p className="font-black uppercase tracking-wide text-[11px]">
-                {mesParcialDados.tipo === 'inicio' && 'Mês parcial — início de contrato'}
-                {mesParcialDados.tipo === 'fim'    && 'Mês parcial — cessação de contrato'}
-                {mesParcialDados.tipo === 'ambos'  && 'Mês parcial — admissão e cessação'}
-              </p>
-              <p>
-                Dias trabalhados (convenção 30 dias): <strong>dia {mesParcialDados.diaInicio} a dia {mesParcialDados.diaFim} = {mesParcialDados.diasTrabalhados} dias</strong>
-              </p>
-              <p>
-                Venc. base contratual: <strong>{mesParcialDados.vencBaseOriginal.toFixed(2)}€</strong>
-              </p>
-              {descontoDiasParcial && (
-                <p>
-                  {descontoDiasParcial.label}: <strong>−{descontoDiasParcial.valor.toFixed(2)}€</strong>
-                  {' '}({descontoDiasParcial.diasNaoTrab}d × {descontoDiasParcial.horasNaoTrab}h não trabalhadas)
+            {/* ── Banner: mês parcial ── */}
+            {mesParcialDados && (
+              <div className={`rounded-2xl border px-4 py-3 text-xs space-y-1 mb-5 ${
+                mesParcialDados.tipo === 'fim' || mesParcialDados.tipo === 'ambos'
+                  ? 'bg-rose-50 border-rose-300 text-rose-800'
+                  : 'bg-amber-50 border-amber-300 text-amber-800'
+              }`}>
+                <p className="font-black uppercase tracking-wide text-[11px]">
+                  {mesParcialDados.tipo === 'inicio' && 'Mês parcial — início de contrato'}
+                  {mesParcialDados.tipo === 'fim'    && 'Mês parcial — cessação de contrato'}
+                  {mesParcialDados.tipo === 'ambos'  && 'Mês parcial — admissão e cessação'}
                 </p>
-              )}
-              <p>
-                Venc. base neste mês: <strong>{mesParcialDados.vencProporcional.toFixed(2)}€</strong>
-              </p>
-              {feriasAnoAdmissao && (
-                <p className="text-[11px] opacity-80">
-                  Direito a férias no ano de admissão: <strong>{feriasAnoAdmissao.diasFerias} dias</strong> ({feriasAnoAdmissao.mesesCompletos} meses completos × 2){feriasAnoAdmissao.limitado ? ' — limitado a 20' : ''}
-                </p>
-              )}
-            </div>
-          )}
+                <p>Dias trabalhados (convenção 30 dias): <strong>dia {mesParcialDados.diaInicio} a dia {mesParcialDados.diaFim} = {mesParcialDados.diasTrabalhados} dias</strong></p>
+                <p>Venc. base contratual: <strong>{mesParcialDados.vencBaseOriginal.toFixed(2)}€</strong></p>
+                {descontoDiasParcial && (
+                  <p>{descontoDiasParcial.label}: <strong>−{descontoDiasParcial.valor.toFixed(2)}€</strong>{' '}({descontoDiasParcial.diasNaoTrab}d × {descontoDiasParcial.horasNaoTrab}h não trabalhadas)</p>
+                )}
+                <p>Venc. base neste mês: <strong>{mesParcialDados.vencProporcional.toFixed(2)}€</strong></p>
+                {feriasAnoAdmissao && (
+                  <p className="text-[11px] opacity-80">
+                    Direito a férias no ano de admissão: <strong>{feriasAnoAdmissao.diasFerias} dias</strong> ({feriasAnoAdmissao.mesesCompletos} meses completos × 2){feriasAnoAdmissao.limitado ? ' — limitado a 20' : ''}
+                  </p>
+                )}
+              </div>
+            )}
 
-          {/* 2 - Retribuição Base */}
-          <Card className="p-5">
-            <SectionHeader n="2" label="Retribuição Base" />
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-              <LabelInput label="Vencimento Base (€/mês)">
-                <div className="relative">
-                  <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => { set('vencimentoBase', e.target.value); setCamposAuto(p => ({ ...p, vencimentoBase: false })); }} className={camposAuto.vencimentoBase ? 'pr-10' : ''} />
-                  {camposAuto.vencimentoBase && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="Horas / semana">
-                <TextInput type="number" value={inputs.horasSemana} onChange={e => set('horasSemana', e.target.value)} />
-              </LabelInput>
-              <LabelInput label="Salário/hora (auto)">
-                <TextInput
-                  type="number"
-                  readOnly
-                  value={r ? r.salarioHora.toFixed(4) : ''}
-                />
-              </LabelInput>
-            </div>
-
-            <div className="flex flex-col gap-2 mb-3">
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
-                Incluir Subsídio de Férias (100% com duodécimos)
-              </label>
-              <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
-                <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
-                Incluir Subsídio de Natal (100% com duodécimos)
-              </label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <LabelInput label="Prémios / Bónus (€, tributável)">
-                <TextInput type="number" step="0.01" value={inputs.premios} onChange={e => set('premios', e.target.value)} />
-              </LabelInput>
-              <div />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-              <LabelInput label="H. Suplementares 1ª hora (qtd)">
-                <TextInput type="number" step="0.5" value={inputs.he1} onChange={e => set('he1', e.target.value)} />
-              </LabelInput>
-              <LabelInput label="H. Suplementares seguintes (qtd)">
-                <TextInput type="number" step="0.5" value={inputs.he2} onChange={e => set('he2', e.target.value)} />
-              </LabelInput>
-              <LabelInput label="" hint="1ª h: +25% · seguintes: +37,5%">
+            {/* 2 - Retribuição Base */}
+            <div className="pb-5 mb-5 border-b border-slate-100">
+              <SectionHeader n="2" label="Retribuição Base" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="Vencimento Base (€/mês)" badge={camposAuto.vencimentoBase ? 'auto' : null}>
+                  <TextInput type="number" step="0.01" value={inputs.vencimentoBase} onChange={e => { set('vencimentoBase', e.target.value); setCamposAuto(p => ({ ...p, vencimentoBase: false })); }} />
+                </LabelInput>
+                <LabelInput label="Horas / semana">
+                  <TextInput type="number" value={inputs.horasSemana} onChange={e => set('horasSemana', e.target.value)} />
+                </LabelInput>
+                <LabelInput label="Salário/hora" badge="auto">
+                  <TextInput type="number" readOnly value={r ? r.salarioHora.toFixed(4) : ''} />
+                </LabelInput>
+              </div>
+              <div className="flex flex-col gap-2 mb-4">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={inputs.incluirFerias} onChange={e => set('incluirFerias', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
+                  Incluir Subsídio de Férias (100% com duodécimos)
+                </label>
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer">
+                  <input type="checkbox" checked={inputs.incluirNatal} onChange={e => set('incluirNatal', e.target.checked)} className="w-4 h-4 accent-[#1B3A57]" />
+                  Incluir Subsídio de Natal (100% com duodécimos)
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="Prémios / Bónus (€, tributável)">
+                  <TextInput type="number" step="0.01" value={inputs.premios} onChange={e => set('premios', e.target.value)} />
+                </LabelInput>
                 <div />
-              </LabelInput>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="H. Suplementares 1ª hora (qtd)">
+                  <TextInput type="number" step="0.5" value={inputs.he1} onChange={e => set('he1', e.target.value)} />
+                </LabelInput>
+                <LabelInput label="H. Suplementares seguintes (qtd)">
+                  <TextInput type="number" step="0.5" value={inputs.he2} onChange={e => set('he2', e.target.value)} />
+                </LabelInput>
+                <LabelInput label="" hint="1ª h: +25% · seguintes: +37,5%"><div /></LabelInput>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4">
+                <LabelInput label="Subsídio Alimentação (€/dia)" badge={camposAuto.subsAlimValorDia ? 'auto' : null}>
+                  <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => { set('subsAlimValorDia', e.target.value); setCamposAuto(p => ({ ...p, subsAlimValorDia: false })); }} />
+                </LabelInput>
+                <LabelInput label="Pago em" badge={camposAuto.subsAlimTipo ? 'auto' : null}>
+                  <SelectInput value={inputs.subsAlimTipo} onChange={e => { set('subsAlimTipo', e.target.value); setCamposAuto(p => ({ ...p, subsAlimTipo: false })); }}>
+                    <option value="cartao">Cartão / vale (isento ≤ €10,46)</option>
+                    <option value="dinheiro">Dinheiro (isento ≤ €6,15)</option>
+                  </SelectInput>
+                </LabelInput>
+                <LabelInput label="Dias com subsídio" badge={diasCalculados.subsAlimDias ? 'auto' : null}>
+                  <TextInput type="number" value={inputs.subsAlimDias} onChange={e => { set('subsAlimDias', e.target.value); setDiasCalculados(p => ({ ...p, subsAlimDias: false })); }} />
+                </LabelInput>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <LabelInput label="Subsídio Alimentação (€/dia)">
-                <div className="relative">
-                  <TextInput type="number" step="0.01" value={inputs.subsAlimValorDia} onChange={e => { set('subsAlimValorDia', e.target.value); setCamposAuto(p => ({ ...p, subsAlimValorDia: false })); }} className={camposAuto.subsAlimValorDia ? 'pr-10' : ''} />
-                  {camposAuto.subsAlimValorDia && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="Pago em" badge={camposAuto.subsAlimTipo ? 'auto' : null}>
-                <SelectInput value={inputs.subsAlimTipo} onChange={e => { set('subsAlimTipo', e.target.value); setCamposAuto(p => ({ ...p, subsAlimTipo: false })); }}>
-                  <option value="cartao">Cartão / vale (isento ≤ €10,46)</option>
-                  <option value="dinheiro">Dinheiro (isento ≤ €6,15)</option>
-                </SelectInput>
-              </LabelInput>
-              <LabelInput label="Dias com subsídio">
-                <div className="relative">
-                  <TextInput
-                    type="number"
-                    value={inputs.subsAlimDias}
-                    onChange={e => { set('subsAlimDias', e.target.value); setDiasCalculados(p => ({ ...p, subsAlimDias: false })); }}
-                    className={diasCalculados.subsAlimDias ? 'pr-10' : ''}
-                  />
-                  {diasCalculados.subsAlimDias && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none" title="Calculado automaticamente">auto</span>
-                  )}
-                </div>
-              </LabelInput>
+            {/* 3 - IRS */}
+            <div className="pb-5 mb-5 border-b border-slate-100">
+              <SectionHeader n="3" label="IRS — Situação Fiscal" />
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <LabelInput label="Tabela de retenção" badge={camposAuto.tabelaKey ? 'auto' : null}>
+                  <SelectInput value={inputs.tabelaKey} onChange={e => { set('tabelaKey', e.target.value); setCamposAuto(p => ({ ...p, tabelaKey: false })); }}>
+                    {Object.entries(getIRSTabelasPorAno(n(inputs.ano))).map(([k, t]) => (
+                      <option key={k} value={k}>{t.nome}</option>
+                    ))}
+                  </SelectInput>
+                </LabelInput>
+                <LabelInput
+                  label="Nº de dependentes"
+                  badge={camposAuto.nDependentes ? 'auto' : null}
+                  hint={`Continente — tabelas ${Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a).find(a=>a<=n(inputs.ano)) || Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a)[0]}`}
+                >
+                  <TextInput type="number" min="0" value={inputs.nDependentes} onChange={e => { set('nDependentes', e.target.value); setCamposAuto(p => ({ ...p, nDependentes: false })); }} />
+                </LabelInput>
+              </div>
             </div>
-          </Card>
 
-          {/* 3 - IRS */}
-          <Card className="p-5">
-            <SectionHeader n="3" label="IRS — Situação Fiscal" />
-            <div className="grid grid-cols-2 gap-3">
-              <LabelInput label="Tabela de retenção" badge={camposAuto.tabelaKey ? 'auto' : null}>
-                <SelectInput value={inputs.tabelaKey} onChange={e => { set('tabelaKey', e.target.value); setCamposAuto(p => ({ ...p, tabelaKey: false })); }}>
-                  {Object.entries(getIRSTabelasPorAno(n(inputs.ano))).map(([k, t]) => (
-                    <option key={k} value={k}>{t.nome}</option>
-                  ))}
-                </SelectInput>
-              </LabelInput>
-              <LabelInput
-                label="Nº de dependentes"
-                hint={`Continente — tabelas ${Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a).find(a=>a<=n(inputs.ano)) || Object.keys(IRS_TABELAS_BY_YEAR).map(Number).sort((a,b)=>b-a)[0]}`}
-              >
-                <div className="relative">
-                  <TextInput type="number" min="0" value={inputs.nDependentes} onChange={e => { set('nDependentes', e.target.value); setCamposAuto(p => ({ ...p, nDependentes: false })); }} className={camposAuto.nDependentes ? 'pr-10' : ''} />
-                  {camposAuto.nDependentes && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
+            {/* 4 - Bruto Alvo & Deslocação */}
+            <div>
+              <SectionHeader n="4" label="Bruto Alvo & Deslocação Internacional" />
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="Valor Bruto Total Alvo (€)" badge={selectedWorkerId && !brutoAlvoEditado ? 'auto' : null}>
+                  <div className="relative">
+                    <TextInput
+                      type="number" step="0.01" value={inputs.brutoAlvo}
+                      onChange={e => { set('brutoAlvo', e.target.value); setBrutoAlvoEditado(true); }}
+                      className={brutoAlvoEditado ? 'pr-10' : ''}
+                    />
+                    {brutoAlvoEditado && (
+                      <button type="button" onClick={resetBrutoAlvoAuto}
+                        className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-bold text-amber-500 hover:text-slate-500 leading-none cursor-pointer"
+                        title="Repor valor automático dos registos de horas"
+                      >repor ×</button>
+                    )}
+                  </div>
+                </LabelInput>
+                <LabelInput label="Valor diário legal (€)" badge="auto">
+                  <TextInput type="number" step="0.01" value={inputs.vdl} onChange={e => set('vdl', e.target.value)} />
+                </LabelInput>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="Território" badge={camposAuto.territorio ? 'auto' : null}>
+                  <SelectInput value={inputs.territorio} onChange={e => { set('territorio', e.target.value); setCamposAuto(p => ({ ...p, territorio: false })); }}>
+                    <option value="internacional">Internacional</option>
+                    <option value="nacional">Nacional</option>
+                  </SelectInput>
+                </LabelInput>
+                <LabelInput label="Função">
+                  <SelectInput value={inputs.funcao} onChange={e => set('funcao', e.target.value)}>
+                    <option value="geral">Trabalhador em geral</option>
+                    <option value="gerencia">Gerência / Administração</option>
+                  </SelectInput>
+                </LabelInput>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+                <LabelInput label="Cliente" badge={camposAuto.cliente ? 'auto' : null}>
+                  <TextInput value={inputs.cliente} onChange={e => { set('cliente', e.target.value); setCamposAuto(p => ({ ...p, cliente: false })); }} />
+                </LabelInput>
+                <LabelInput label="Localidade" badge={camposAuto.localidade ? 'auto' : null}>
+                  <TextInput value={inputs.localidade} onChange={e => { set('localidade', e.target.value); setCamposAuto(p => ({ ...p, localidade: false })); }} />
+                </LabelInput>
+                <LabelInput label="País" badge={camposAuto.pais ? 'auto' : null}>
+                  <TextInput value={inputs.pais} onChange={e => { set('pais', e.target.value); setCamposAuto(p => ({ ...p, pais: false })); }} />
+                </LabelInput>
+              </div>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                <LabelInput label="Abreviação Cliente (mapa)">
+                  <TextInput value={inputs.clienteAbrev} onChange={e => set('clienteAbrev', e.target.value)} placeholder={inputs.cliente || 'Ex: Calcosa'} />
+                </LabelInput>
+                <LabelInput label="Abreviação Localidade (mapa)">
+                  <TextInput value={inputs.localidadeAbrev} onChange={e => set('localidadeAbrev', e.target.value)} placeholder={inputs.localidade || inputs.pais || 'Ex: Espanha'} />
+                </LabelInput>
+              </div>
             </div>
-          </Card>
 
-          {/* 4 - Bruto Alvo & Deslocação */}
-          <Card className="p-5">
-            <SectionHeader n="4" label="Bruto Alvo & Deslocação Internacional" />
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <LabelInput
-                label="Valor Bruto Total Alvo (€)"
-                hint={selectedWorkerId
-                  ? (brutoAlvoEditado ? 'Valor editado manualmente — clique "edit ×" para repor o valor automático.' : 'Auto: custo do mês em Custos/Equipa. Editável.')
-                  : 'Selecione um trabalhador para preencher automaticamente.'}
-              >
-                <div className="relative">
-                  <TextInput
-                    type="number"
-                    step="0.01"
-                    value={inputs.brutoAlvo}
-                    onChange={e => { set('brutoAlvo', e.target.value); setBrutoAlvoEditado(true); }}
-                    className={selectedWorkerId ? 'pr-12' : ''}
-                  />
-                  {selectedWorkerId && !brutoAlvoEditado && (
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none" title="Calculado automaticamente dos registos de horas">auto</span>
-                  )}
-                  {brutoAlvoEditado && (
-                    <button
-                      type="button"
-                      onClick={resetBrutoAlvoAuto}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-amber-500 hover:text-slate-500 leading-none cursor-pointer"
-                      title="Clique para repor o valor calculado automaticamente dos registos de horas"
-                    >
-                      edit ×
-                    </button>
-                  )}
-                </div>
-              </LabelInput>
-              <LabelInput label="Valor diário legal (€)" hint="Auto-preenchido por território/função. Editável.">
-                <TextInput type="number" step="0.01" value={inputs.vdl} onChange={e => set('vdl', e.target.value)} />
-              </LabelInput>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <LabelInput label="Território" badge={camposAuto.territorio ? 'auto' : null}>
-                <SelectInput value={inputs.territorio} onChange={e => { set('territorio', e.target.value); setCamposAuto(p => ({ ...p, territorio: false })); }}>
-                  <option value="internacional">Internacional</option>
-                  <option value="nacional">Nacional</option>
-                </SelectInput>
-              </LabelInput>
-              <LabelInput label="Função">
-                <SelectInput value={inputs.funcao} onChange={e => set('funcao', e.target.value)}>
-                  <option value="geral">Trabalhador em geral</option>
-                  <option value="gerencia">Gerência / Administração</option>
-                </SelectInput>
-              </LabelInput>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <LabelInput label="Cliente">
-                <div className="relative">
-                  <TextInput value={inputs.cliente} onChange={e => { set('cliente', e.target.value); setCamposAuto(p => ({ ...p, cliente: false })); }} className={camposAuto.cliente ? 'pr-10' : ''} />
-                  {camposAuto.cliente && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="Localidade">
-                <div className="relative">
-                  <TextInput value={inputs.localidade} onChange={e => { set('localidade', e.target.value); setCamposAuto(p => ({ ...p, localidade: false })); }} className={camposAuto.localidade ? 'pr-10' : ''} />
-                  {camposAuto.localidade && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-              <LabelInput label="País">
-                <div className="relative">
-                  <TextInput value={inputs.pais} onChange={e => { set('pais', e.target.value); setCamposAuto(p => ({ ...p, pais: false })); }} className={camposAuto.pais ? 'pr-10' : ''} />
-                  {camposAuto.pais && <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-[#869AAF] pointer-events-none">auto</span>}
-                </div>
-              </LabelInput>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              <LabelInput label="Abreviação Cliente (mapa)">
-                <TextInput value={inputs.clienteAbrev}
-                  onChange={e => set('clienteAbrev', e.target.value)}
-                  placeholder={inputs.cliente || 'Ex: Calcosa'} />
-              </LabelInput>
-              <LabelInput label="Abreviação Localidade (mapa)">
-                <TextInput value={inputs.localidadeAbrev}
-                  onChange={e => set('localidadeAbrev', e.target.value)}
-                  placeholder={inputs.localidade || inputs.pais || 'Ex: Espanha'} />
-              </LabelInput>
-            </div>
           </Card>
-        </div>
+        </InputVariant.Provider>
 
         {/* ── COLUNA PREVIEW ── */}
         <div>
