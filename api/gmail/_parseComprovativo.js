@@ -356,25 +356,22 @@ export async function extractPdfText(buffer) {
   const nativeText = extractPdfTextNative(buffer);
   if (nativeText.trim().length > 20) return nativeText;
 
-  // Fallback: pdf-parse via pdfjs-dist (requer DOMMatrix — pode falhar no Vercel)
+  // Fallback: pdf-parse via pdfjs-dist (requer DOMMatrix — pode falhar no Vercel).
+  // API de classes desde a v2 (breaking change face à v1, que exportava uma
+  // função só): const { PDFParse } = require('pdf-parse'); new PDFParse({data}).
+  // getText() já devolve o texto em ordem de leitura — não precisa do
+  // agrupamento manual por linha/coluna (pagerender) que a v1 exigia.
   if (typeof globalThis.DOMMatrix === 'undefined') {
     globalThis.DOMMatrix = _buildDomMatrixPolyfill();
   }
-  const pdfParse = _require('pdf-parse');
-  const renderPage = async (pageData) => {
-    const content = await pageData.getTextContent();
-    const lineMap = {};
-    for (const item of content.items) {
-      if (!item.str) continue;
-      const y = Math.round(item.transform?.[5] ?? 0);
-      if (!lineMap[y]) lineMap[y] = [];
-      lineMap[y].push({ x: item.transform?.[4] ?? 0, str: item.str });
-    }
-    return Object.keys(lineMap).map(Number).sort((a, b) => b - a)
-      .map(y => lineMap[y].sort((a, b) => a.x - b.x).map(i => i.str).join(' ')).join('\n');
-  };
-  const parsed = await pdfParse(buffer, { pagerender: renderPage });
-  return parsed.text;
+  const { PDFParse } = _require('pdf-parse');
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return result.text;
+  } finally {
+    await parser.destroy();
+  }
 }
 
 export async function extractFromPdf(buffer) {
