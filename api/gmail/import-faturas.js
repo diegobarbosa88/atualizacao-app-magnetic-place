@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
+import JSZip from 'jszip';
 import { callGeminiJSON } from '../parse-fatura.js';
 
 // Import dinâmico: evita que uma falha de inicialização do pdf-parse
@@ -9,18 +10,52 @@ async function getParser() {
 }
 
 const ALLOWED_MIME_TYPES = ['application/pdf', 'application/xml', 'text/xml'];
+const ZIP_MIME_TYPES = ['application/zip', 'application/x-zip-compressed'];
 const FATURAS_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
 const MAX_RESULTS = 50;
 
 function findAttachmentParts(parts = []) {
   const found = [];
   for (const part of parts) {
-    if (ALLOWED_MIME_TYPES.includes(part.mimeType) && part.body?.attachmentId) {
+    if ([...ALLOWED_MIME_TYPES, ...ZIP_MIME_TYPES].includes(part.mimeType) && part.body?.attachmentId) {
       found.push(part);
     }
     if (part.parts) found.push(...findAttachmentParts(part.parts));
   }
   return found;
+}
+
+function sanitizeFilename(name) {
+  return name.trim().replace(/[_\s]+$/, '').replace(/[^a-zA-Z0-9.\-_()]/g, '_');
+}
+
+// Upload + insert partilhado por anexos PDF/XML diretos e por PDFs extraídos
+// de dentro de um .zip — mesma lógica em ambos os casos, para nunca divergir
+// silenciosamente. O índice único (gmail_message_id, filename) na tabela
+// `faturas` é o que garante a deduplicação: um re-import do mesmo anexo (ou
+// da mesma entrada dentro do mesmo zip) simplesmente ignora o erro de
+// duplicado abaixo.
+async function guardarFaturaAnexo(supabase, { gmailMessageId, buffer, filename, mimeType, storagePath }) {
+  const { error: uploadError } = await supabase.storage
+    .from('faturas')
+    .upload(storagePath, buffer, { contentType: mimeType, upsert: true });
+
+  if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
+
+  const { data: { publicUrl } } = supabase.storage.from('faturas').getPublicUrl(storagePath);
+
+  const { error: dbError } = await supabase.from('faturas').insert({
+    gmail_message_id: gmailMessageId,
+    filename,
+    storage_path: storagePath,
+    url: publicUrl,
+    mime_type: mimeType,
+    tamanho: buffer.length,
+  });
+
+  if (dbError && !dbError.message.includes('duplicate')) {
+    throw new Error(`DB insert: ${dbError.message}`);
+  }
 }
 
 export default async function handler(req, res) {
@@ -91,10 +126,32 @@ async function importarFaturas(gmail, supabase, userId, queryOverride) {
     return { error: `Gmail list failed: ${e.message}` };
   }
 
-  let processados = 0, ficheiros = 0;
+  let processados = 0, ficheiros = 0, restantes = 0;
   const erros = [];
 
-  for (const msg of listRes.data.messages || []) {
+  // Orçamento de tempo: um zip com várias faturas multiplica o trabalho por
+  // mensagem (download + expansão + N uploads + N inserts), e maxDuration
+  // está limitado a 60s (vercel.json) — o mesmo padrão já usado em
+  // importarContador. A verificação só acontece ENTRE mensagens, nunca a
+  // meio dos anexos de uma mensagem: um zip é sempre expandido e processado
+  // por inteiro (todas as entradas) antes de decidir parar, para nunca
+  // deixar ficheiros a meio. A mensagem só é marcada como lida no fim do seu
+  // próprio processamento, por isso se o corte acontecer antes de a
+  // alcançar, ela continua "unread" e é retomada na próxima execução — os
+  // anexos já importados (mesmos desta mensagem ou de outras) não duplicam,
+  // graças ao índice único (gmail_message_id, filename).
+  const inicioExecucao = Date.now();
+  const ORCAMENTO_MS = 45_000;
+
+  const mensagens = listRes.data.messages || [];
+  for (let i = 0; i < mensagens.length; i++) {
+    const msg = mensagens[i];
+
+    if (Date.now() - inicioExecucao > ORCAMENTO_MS) {
+      restantes = mensagens.length - i;
+      break;
+    }
+
     let full;
     try {
       full = await gmail.users.messages.get({ userId, id: msg.id, format: 'full' });
@@ -110,32 +167,53 @@ async function importarFaturas(gmail, supabase, userId, queryOverride) {
         const attRes = await gmail.users.messages.attachments.get({
           userId, messageId: msg.id, id: part.body.attachmentId,
         });
-
         const buffer = Buffer.from(attRes.data.data, 'base64url');
-        const rawName = part.filename || `attachment_${Date.now()}.pdf`;
-        const filename = rawName.trim().replace(/[_\s]+$/, '').replace(/[^a-zA-Z0-9.\-_()]/g, '_') || `attachment_${Date.now()}.pdf`;
+
+        if (ZIP_MIME_TYPES.includes(part.mimeType)) {
+          const rawZipName = part.filename || `anexo_${Date.now()}.zip`;
+          const zipBaseName = sanitizeFilename(rawZipName.replace(/\.zip$/i, '')) || `anexo_${Date.now()}`;
+
+          const zip = await JSZip.loadAsync(buffer);
+          const entradasPdf = Object.values(zip.files).filter(
+            (entry) => !entry.dir && /\.pdf$/i.test(entry.name)
+          );
+
+          for (const entry of entradasPdf) {
+            try {
+              const pdfBuffer = await entry.async('nodebuffer');
+              const entryBaseName = sanitizeFilename(entry.name.split('/').pop() || `documento_${Date.now()}.pdf`) || `documento_${Date.now()}.pdf`;
+              // Prefixo com o nome do zip: garante um filename estável e
+              // único mesmo quando dois zips diferentes têm PDFs com o
+              // mesmo nome interno (ex: "fatura.pdf" em ambos).
+              const filename = `${zipBaseName}__${entryBaseName}`;
+              const storagePath = `faturas/${msg.id}/${zipBaseName}/${entryBaseName}`;
+
+              await guardarFaturaAnexo(supabase, {
+                gmailMessageId: msg.id,
+                buffer: pdfBuffer,
+                filename,
+                mimeType: 'application/pdf',
+                storagePath,
+              });
+
+              ficheiros++;
+            } catch (e) {
+              erros.push({ messageId: msg.id, filename: `${part.filename || 'zip'} > ${entry.name}`, error: e.message });
+            }
+          }
+          continue;
+        }
+
+        const filename = sanitizeFilename(part.filename || `attachment_${Date.now()}.pdf`) || `attachment_${Date.now()}.pdf`;
         const storagePath = `faturas/${msg.id}/${filename}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('faturas')
-          .upload(storagePath, buffer, { contentType: part.mimeType, upsert: true });
-
-        if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
-
-        const { data: { publicUrl } } = supabase.storage.from('faturas').getPublicUrl(storagePath);
-
-        const { error: dbError } = await supabase.from('faturas').insert({
-          gmail_message_id: msg.id,
+        await guardarFaturaAnexo(supabase, {
+          gmailMessageId: msg.id,
+          buffer,
           filename,
-          storage_path: storagePath,
-          url: publicUrl,
-          mime_type: part.mimeType,
-          tamanho: buffer.length,
+          mimeType: part.mimeType,
+          storagePath,
         });
-
-        if (dbError && !dbError.message.includes('duplicate')) {
-          throw new Error(`DB insert: ${dbError.message}`);
-        }
 
         ficheiros++;
       } catch (e) {
@@ -155,7 +233,13 @@ async function importarFaturas(gmail, supabase, userId, queryOverride) {
     processados++;
   }
 
-  return { processados, ficheiros, erros };
+  return {
+    processados, ficheiros, erros,
+    ...(restantes > 0 ? {
+      restantes,
+      aviso: `Limite de tempo atingido — ${restantes} email(s) por processar. Clica em "Importar do Gmail" outra vez para continuar (os já processados não são repetidos).`,
+    } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
