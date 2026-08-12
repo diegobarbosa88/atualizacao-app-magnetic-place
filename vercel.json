@@ -21,6 +21,9 @@
     "api/toconline/proxy.js": {
       "maxDuration": 30
     },
+    "api/contador/index.js": {
+      "maxDuration": 30
+    },
     "api/pagamentos/index.js": {
       "maxDuration": 30
     },
@@ -49,6 +52,11 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/contador-acesso", "destination": "/api/contador?tipo=acesso" },
+    { "source": "/api/contador-resumo", "destination": "/api/contador?tipo=resumo" },
+    { "source": "/api/gerar-resposta-contador", "destination": "/api/contador?tipo=gerar" },
+    { "source": "/api/aprovar-resposta-contador", "destination": "/api/contador?tipo=aprovar" },
+    { "source": "/api/toconline/bank-accounts", "destination": "/api/toconline/proxy?action=bank-accounts" },
     { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
     { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },
     { "source": "/api/toconline/relatorio", "destination": "/api/toconline/proxy?action=relatorio" },
