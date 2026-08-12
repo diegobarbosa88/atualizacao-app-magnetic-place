@@ -578,15 +578,61 @@ async function handleGerar(req, res) {
     return res.status(404).json({ error: `Email do contador não encontrado: ${fetchError?.message || email_contador_id}` });
   }
 
+  const gmail = gmailClient();
+
+  // Reprocessa sempre a partir do Gmail antes de gerar — a classificação de
+  // tipo e a deteção de anexo podem ter mudado desde a importação original
+  // (foi exatamente o caso do email "Faturas em falta 2026" da Bruna:
+  // importado antes da Fase A/B existirem, ficou com tipo_pedido null e
+  // anexo_path null, gerando sempre a resposta genérica de cobrança). Torna
+  // 'gerar' idempotente e usa-o também como "Regenerar Rascunho" no
+  // frontend — sem caminho de código separado para os dois casos.
+  try {
+    const parser = await import('../gmail/_parseComprovativo.js');
+    const { processarUmEmailContador } = await import('../gmail/import-faturas.js');
+    const fresco = await processarUmEmailContador(gmail, supabase, { gmailMessageId: emailContador.gmail_message_id }, parser);
+
+    const { error: syncError } = await supabase
+      .from('emails_contador')
+      .update({
+        assunto: fresco.subject || emailContador.assunto,
+        remetente: fresco.from || emailContador.remetente,
+        anexo_path: fresco.anexoPath,
+        tipo_pedido: fresco.tipoPedido,
+        dados_extraidos: fresco.dadosExtraidos,
+      })
+      .eq('id', email_contador_id);
+    if (syncError) return res.status(500).json({ error: `Falha ao atualizar email com dados reprocessados: ${syncError.message}` });
+
+    Object.assign(emailContador, {
+      assunto: fresco.subject || emailContador.assunto,
+      remetente: fresco.from || emailContador.remetente,
+      anexo_path: fresco.anexoPath,
+      tipo_pedido: fresco.tipoPedido,
+      dados_extraidos: fresco.dadosExtraidos,
+    });
+  } catch (e) {
+    return res.status(502).json({ error: `Falha ao reprocessar email a partir do Gmail: ${e.message}` });
+  }
+
   if (emailContador.tipo_pedido === 'outro') {
     return res.status(400).json({
       error: 'Este email não foi classificado como um dos tipos de pedido tratados automaticamente (faturas em falta, extratos bancários, cobrança). Requer resposta manual.',
     });
   }
 
+  // Qualquer rascunho pendente anterior para este email é arquivado antes de
+  // criar um novo — evita duplicados quando 'gerar' é chamado outra vez
+  // (não há constraint de unicidade em respostas_contador_pendentes.email_contador_id).
+  const { error: arquivarError } = await supabase
+    .from('respostas_contador_pendentes')
+    .update({ status: 'rejeitado', resolved_at: new Date().toISOString(), confirmado_por: 'sistema (substituído por regeneração)' })
+    .eq('email_contador_id', email_contador_id)
+    .eq('status', 'pendente');
+  if (arquivarError) return res.status(500).json({ error: `Falha ao arquivar rascunho anterior: ${arquivarError.message}` });
+
   let replyContext;
   try {
-    const gmail = gmailClient();
     replyContext = await getMessageReplyContext(gmail, { gmailMessageId: emailContador.gmail_message_id });
   } catch (e) {
     return res.status(502).json({ error: `Falha ao obter contexto da thread Gmail: ${e.message}` });
@@ -628,7 +674,6 @@ async function handleGerar(req, res) {
 
     if (emailContador.tipo_pedido === 'extratos_bancarios_em_falta') {
       const { extractBodyText } = await import('../gmail/_parseComprovativo.js');
-      const gmail = gmailClient();
       const full = await gmail.users.messages.get({ userId: 'me', id: emailContador.gmail_message_id, format: 'full' });
       const textoCorpo = extractBodyText(full.data.payload);
       const { pedidos, texto_livre: textoLivre } = await extrairPedidoExtratosBancarios(textoCorpo);

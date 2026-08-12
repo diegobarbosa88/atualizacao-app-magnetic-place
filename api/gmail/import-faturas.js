@@ -303,9 +303,75 @@ ${texto.slice(0, 6000)}`;
 
 const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
-async function importarContador(gmail, supabase, userId, queryOverride, fornecedorId, parser) {
+// Processa UM email do contador: descarrega/guarda o anexo (PDF ou .xlsx) e
+// classifica o tipo de pedido. Partilhado entre a importação em massa
+// (importarContador, abaixo) e o reprocessamento sob pedido em
+// api/contador?tipo=gerar (botão "Regenerar Rascunho") — mesma lógica em
+// ambos os sítios, para nunca haver os dois a divergir silenciosamente.
+// NÃO grava nada em emails_contador — quem chama decide insert vs update.
+export async function processarUmEmailContador(gmail, supabase, { userId = 'me', gmailMessageId }, parser) {
   const { extractBodyText, findContadorAttachmentParts, extractPdfText } = parser;
   const { classificarTipoPedido } = await import('../contador/_pedidosContador.js');
+
+  const full = await gmail.users.messages.get({ userId, id: gmailMessageId, format: 'full' });
+  const payload = full.data.payload;
+  const headers = payload?.headers || [];
+  const subject = headers.find(h => h.name === 'Subject')?.value || '';
+  const from = headers.find(h => h.name === 'From')?.value || '';
+  const internalDate = full.data.internalDate ? new Date(Number(full.data.internalDate)).toISOString() : null;
+
+  let anexoPath = null;
+  let textoPdfExtraido = '';
+
+  // Fase B: aceita anexo em PDF OU .xlsx (o contabilista mudou de formato
+  // sem aviso — um relatório mensal chegou em Excel em vez de PDF).
+  const attachmentParts = findContadorAttachmentParts(payload?.parts || []);
+  if (attachmentParts.length > 0) {
+    const part = attachmentParts[0];
+    const attRes = await gmail.users.messages.attachments.get({
+      userId, messageId: gmailMessageId, id: part.body.attachmentId,
+    });
+    const buffer = Buffer.from(attRes.data.data, 'base64url');
+    const extensaoPadrao = part.kind === 'xlsx' ? '.xlsx' : '.pdf';
+    const filename = (part.filename || `contador_${Date.now()}${extensaoPadrao}`).replace(/[^a-zA-Z0-9.\-_()]/g, '_');
+    anexoPath = `contador/${gmailMessageId}/${filename}`;
+    const contentType = part.kind === 'xlsx' ? XLSX_CONTENT_TYPE : 'application/pdf';
+
+    const { error: uploadError } = await supabase.storage
+      .from('faturas')
+      .upload(anexoPath, buffer, { contentType, upsert: true });
+    if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
+
+    if (part.kind === 'pdf') {
+      try {
+        textoPdfExtraido = await extractPdfText(buffer);
+      } catch { /* cai para o corpo do email abaixo */ }
+    }
+  }
+
+  const textoCorpo = extractBodyText(payload);
+  const textoParaClassificar = textoPdfExtraido || textoCorpo;
+
+  // Fase A: classifica o tipo de pedido ANTES de decidir que extração correr.
+  const tipoPedido = await classificarTipoPedido(subject, textoParaClassificar);
+
+  // A extração antiga (cobrança de valor único) só faz sentido para
+  // 'cobranca' — para os outros tipos os campos ficam quase todos null e
+  // desperdiça uma chamada Gemini. 'faturas_em_falta' e
+  // 'extratos_bancarios_em_falta' são processados sob pedido em
+  // api/contador?tipo=gerar (precisam do anexo completo, não só do texto).
+  let dadosExtraidos = null;
+  if (tipoPedido === 'cobranca' && textoParaClassificar) {
+    try {
+      const { data } = await callGeminiJSON(buildContadorPrompt(textoParaClassificar));
+      dadosExtraidos = data;
+    } catch { /* dadosExtraidos fica null — quem chama decide se regista aviso */ }
+  }
+
+  return { subject, from, internalDate, anexoPath, tipoPedido, dadosExtraidos };
+}
+
+async function importarContador(gmail, supabase, userId, queryOverride, fornecedorId, parser) {
   const query = queryOverride?.trim() || 'is:unread';
   let listRes;
   try {
@@ -349,64 +415,8 @@ async function importarContador(gmail, supabase, userId, queryOverride, forneced
     }
 
     try {
-      const full = await gmail.users.messages.get({ userId, id: msg.id, format: 'full' });
-      const payload = full.data.payload;
-      const headers = payload?.headers || [];
-      const subject = headers.find(h => h.name === 'Subject')?.value || '';
-      const from = headers.find(h => h.name === 'From')?.value || '';
-      const internalDate = full.data.internalDate ? new Date(Number(full.data.internalDate)).toISOString() : null;
-
-      let anexoPath = null;
-      let textoPdfExtraido = '';
-
-      // Fase B: aceita anexo em PDF OU .xlsx (o contabilista mudou de formato
-      // sem aviso — um relatório mensal chegou em Excel em vez de PDF).
-      const attachmentParts = findContadorAttachmentParts(payload?.parts || []);
-      if (attachmentParts.length > 0) {
-        const part = attachmentParts[0];
-        const attRes = await gmail.users.messages.attachments.get({
-          userId, messageId: msg.id, id: part.body.attachmentId,
-        });
-        const buffer = Buffer.from(attRes.data.data, 'base64url');
-        const extensaoPadrao = part.kind === 'xlsx' ? '.xlsx' : '.pdf';
-        const filename = (part.filename || `contador_${Date.now()}${extensaoPadrao}`).replace(/[^a-zA-Z0-9.\-_()]/g, '_');
-        anexoPath = `contador/${msg.id}/${filename}`;
-        const contentType = part.kind === 'xlsx' ? XLSX_CONTENT_TYPE : 'application/pdf';
-
-        const { error: uploadError } = await supabase.storage
-          .from('faturas')
-          .upload(anexoPath, buffer, { contentType, upsert: true });
-        if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
-
-        if (part.kind === 'pdf') {
-          try {
-            textoPdfExtraido = await extractPdfText(buffer);
-          } catch (pdfErr) {
-            erros.push({ messageId: msg.id, aviso: `Falha a extrair texto do PDF, a usar corpo do email: ${pdfErr.message}` });
-          }
-        }
-      }
-
-      const textoCorpo = extractBodyText(payload);
-      const textoParaClassificar = textoPdfExtraido || textoCorpo;
-
-      // Fase A: classifica o tipo de pedido ANTES de decidir que extração correr.
-      const tipoPedido = await classificarTipoPedido(subject, textoParaClassificar);
-
-      // A extração antiga (cobrança de valor único) só faz sentido para
-      // 'cobranca' — para os outros tipos os campos ficam quase todos null
-      // e desperdiça uma chamada Gemini. 'faturas_em_falta' e
-      // 'extratos_bancarios_em_falta' são processados sob pedido em
-      // api/contador?tipo=gerar (precisam do anexo completo, não só do texto).
-      let dadosExtraidos = null;
-      if (tipoPedido === 'cobranca' && textoParaClassificar) {
-        try {
-          const { data } = await callGeminiJSON(buildContadorPrompt(textoParaClassificar));
-          dadosExtraidos = data;
-        } catch (geminiErr) {
-          erros.push({ messageId: msg.id, aviso: `Extração Gemini falhou: ${geminiErr.message}` });
-        }
-      }
+      const { subject, from, internalDate, anexoPath, tipoPedido, dadosExtraidos } =
+        await processarUmEmailContador(gmail, supabase, { userId, gmailMessageId: msg.id }, parser);
 
       const { error: dbError } = await supabase.from('emails_contador').insert({
         gmail_message_id: msg.id,

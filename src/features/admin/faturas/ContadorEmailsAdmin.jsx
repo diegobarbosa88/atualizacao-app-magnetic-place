@@ -263,6 +263,18 @@ export default function ContadorEmailsAdmin() {
                         Gerar Rascunho
                       </button>
                     )}
+                    {resposta && !email.isMensal && (
+                      <button
+                        onClick={() => { if (aberto) fecharRevisao(); gerarRascunho(email.id); }}
+                        disabled={gerandoId === email.id}
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-slate-50"
+                        style={{ borderColor: '#EB8D00', color: '#EB8D00' }}
+                        title="Reclassifica o tipo de pedido a partir do Gmail e gera um novo rascunho, substituindo o atual"
+                      >
+                        {gerandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                        Regenerar Rascunho
+                      </button>
+                    )}
                     {resposta && resposta.status === 'pendente' && (
                       <button
                         onClick={() => aberto ? fecharRevisao() : abrirRevisao(email)}
