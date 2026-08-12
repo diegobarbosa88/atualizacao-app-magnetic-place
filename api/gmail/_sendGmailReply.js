@@ -47,9 +47,11 @@ function encodeRfc2047(str) {
  * anexos: multipart/mixed — uma parte de texto + uma parte base64 por
  * ficheiro, cada uma com Content-Disposition: attachment.
  */
-function buildRawMessage({ to, subject, bodyText, inReplyToMessageId, fromHeader, attachments = [] }) {
+function buildRawMessage({ to, subject, bodyText, inReplyToMessageId, fromHeader, attachments = [], isReply = true }) {
   const safeSubject = sanitizeHeaderValue(subject);
-  const finalSubject = encodeRfc2047(/^re:/i.test(safeSubject) ? safeSubject : `Re: ${safeSubject}`);
+  const finalSubject = encodeRfc2047(
+    isReply ? (/^re:/i.test(safeSubject) ? safeSubject : `Re: ${safeSubject}`) : safeSubject
+  );
   const baseHeaders = [
     `To: ${sanitizeHeaderValue(to)}`,
     fromHeader ? `From: ${sanitizeHeaderValue(fromHeader)}` : null,
@@ -117,6 +119,32 @@ export async function sendGmailReply(gmail, { userId = 'me', threadId, to, subje
   const res = await gmail.users.messages.send({
     userId,
     requestBody: { raw, threadId },
+  });
+
+  return { id: res.data.id, threadId: res.data.threadId };
+}
+
+/**
+ * Envia uma mensagem nova, sem thread de origem — usado para emails
+ * proativos (ex: envio mensal ao contador) que não respondem a nada
+ * recebido. Sem In-Reply-To/References e sem prefixo "Re: " no assunto.
+ * @param {import('googleapis').gmail_v1.Gmail} gmail
+ * @param {object} params
+ * @param {string} params.to
+ * @param {string} params.subject
+ * @param {string} params.bodyText
+ * @param {Array<{filename: string, mimeType: string, content: Buffer}>} [params.attachments]
+ * @returns {Promise<{id: string, threadId: string}>}
+ */
+export async function sendGmailNewMessage(gmail, { userId = 'me', to, subject, bodyText, attachments }) {
+  if (!to) throw new Error('Destinatário (to) é obrigatório');
+  if (!subject) throw new Error('Assunto (subject) é obrigatório');
+
+  const raw = buildRawMessage({ to, subject, bodyText, attachments, isReply: false });
+
+  const res = await gmail.users.messages.send({
+    userId,
+    requestBody: { raw },
   });
 
   return { id: res.data.id, threadId: res.data.threadId };

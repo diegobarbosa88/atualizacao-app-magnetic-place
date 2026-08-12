@@ -22,12 +22,25 @@ function formatDate(iso) {
   return new Date(iso).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
+function formatPeriodo(dataStr) {
+  if (!dataStr) return '';
+  const d = new Date(`${dataStr}T00:00:00Z`);
+  const texto = d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+// Envios mensais proativos não têm um emails_contador.status (não nascem de
+// um email recebido) — mapeia o status próprio de respostas_contador_pendentes
+// (pendente/aprovado/rejeitado/enviado) para as mesmas chaves usadas no badge.
+const STATUS_MENSAL_PARA_BADGE = { pendente: 'rascunho_gerado', aprovado: 'aprovado', rejeitado: 'rejeitado', enviado: 'enviado' };
+
 export default function ContadorEmailsAdmin() {
   const { supabase, currentUser, gmailQueryConfigContador, saveGmailQueryConfigContador } = useApp();
 
   const [fornecedor, setFornecedor] = useState(null);
   const [fornecedorErro, setFornecedorErro] = useState(null);
   const [emails, setEmails] = useState([]);
+  const [enviosMensais, setEnviosMensais] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
 
@@ -62,12 +75,14 @@ export default function ContadorEmailsAdmin() {
   const carregar = useCallback(async () => {
     setLoading(true); setErro(null);
     try {
-      const { data, error } = await supabase
-        .from('emails_contador')
-        .select('*, respostas_contador_pendentes(*)')
-        .order('recebido_em', { ascending: false });
-      if (error) throw error;
-      setEmails(data || []);
+      const [emailsRes, mensalRes] = await Promise.all([
+        supabase.from('emails_contador').select('*, respostas_contador_pendentes(*)').order('recebido_em', { ascending: false }),
+        supabase.from('respostas_contador_pendentes').select('*').eq('tipo_resposta', 'envio_mensal_proativo').order('created_at', { ascending: false }),
+      ]);
+      if (emailsRes.error) throw emailsRes.error;
+      if (mensalRes.error) throw mensalRes.error;
+      setEmails(emailsRes.data || []);
+      setEnviosMensais(mensalRes.data || []);
     } catch (e) { setErro(e.message); }
     finally { setLoading(false); }
   }, [supabase]);
@@ -143,6 +158,22 @@ export default function ContadorEmailsAdmin() {
 
   const textoEditado = revisao && revisao.texto.trim() !== revisao.resposta.rascunho.trim();
 
+  // Envios mensais proativos (cron do dia 5) não nascem de um email recebido
+  // — normalizados aqui como "cards" sintéticos para partilhar a mesma UI de
+  // revisão/aprovação da lista de emails do contador.
+  const cardsMensais = enviosMensais.map(r => ({
+    id: `mensal-${r.id}`,
+    isMensal: true,
+    status: STATUS_MENSAL_PARA_BADGE[r.status] || 'rascunho_gerado',
+    assunto: `Envio Mensal — ${formatPeriodo(r.periodo_referente)}`,
+    remetente: null,
+    recebido_em: r.created_at,
+    dados_extraidos: {},
+    respostas_contador_pendentes: [r],
+  }));
+  const itens = [...emails, ...cardsMensais]
+    .sort((a, b) => new Date(b.recebido_em || 0) - new Date(a.recebido_em || 0));
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       <div className="flex items-center justify-between">
@@ -180,11 +211,11 @@ export default function ContadorEmailsAdmin() {
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-slate-300" /></div>
-      ) : emails.length === 0 ? (
+      ) : itens.length === 0 ? (
         <div className="text-center py-16 text-slate-400 text-sm font-semibold">Nenhum email do contador importado ainda.</div>
       ) : (
         <div className="space-y-3">
-          {emails.map(email => {
+          {itens.map(email => {
             const resposta = email.respostas_contador_pendentes?.find(r => r.status === 'pendente')
               || [...(email.respostas_contador_pendentes || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
             const statusCfg = STATUS_CFG[email.status] || STATUS_CFG.importado;
@@ -202,7 +233,9 @@ export default function ContadorEmailsAdmin() {
                       <span className="text-[10px] text-slate-400 font-semibold">{formatDate(email.recebido_em)}</span>
                     </div>
                     <p className="text-sm font-bold text-slate-700 truncate">{email.assunto || '(sem assunto)'}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{email.remetente}</p>
+                    <p className="text-[11px] text-slate-400 truncate">
+                      {email.isMensal ? 'Envio proativo — gerado automaticamente, não é resposta a um email recebido' : email.remetente}
+                    </p>
                     {(d.numero_fatura || d.valor != null || d.mes_referencia) && (
                       <p className="text-[10px] text-slate-500 font-semibold mt-1.5">
                         {d.numero_fatura && <>Nº {d.numero_fatura} · </>}

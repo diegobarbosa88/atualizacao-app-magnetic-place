@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { google } from 'googleapis';
 import Anthropic from '@anthropic-ai/sdk';
-import { getMessageReplyContext, sendGmailReply } from '../gmail/_sendGmailReply.js';
+import { getMessageReplyContext, sendGmailReply, sendGmailNewMessage } from '../gmail/_sendGmailReply.js';
 import {
   extrairLinhasFaturasEmFalta, cruzarFaturasEmFalta, extrairPedidoExtratosBancarios,
 } from './_pedidosContador.js';
@@ -521,7 +521,10 @@ async function gerarComClaude(prompt) {
   return textBlock?.text?.trim() || null;
 }
 
-async function guardarRascunho(supabase, { email_contador_id, rascunho, gmail_thread_id, anexos_faturas_ids }) {
+async function guardarRascunho(supabase, {
+  email_contador_id = null, rascunho, gmail_thread_id = null, anexos_faturas_ids,
+  tipo_resposta = 'resposta_email', periodo_referente = null,
+}) {
   const { data: resposta, error: insertError } = await supabase
     .from('respostas_contador_pendentes')
     .insert({
@@ -530,17 +533,23 @@ async function guardarRascunho(supabase, { email_contador_id, rascunho, gmail_th
       editado_manualmente: false,
       status: 'pendente',
       gmail_thread_id,
+      tipo_resposta,
+      periodo_referente,
       ...(anexos_faturas_ids ? { anexos_faturas_ids } : {}),
     })
     .select()
     .single();
   if (insertError) throw new Error(`Erro ao guardar rascunho: ${insertError.message}`);
 
-  const { error: updateError } = await supabase
-    .from('emails_contador')
-    .update({ status: 'rascunho_gerado' })
-    .eq('id', email_contador_id);
-  if (updateError) throw new Error(`Rascunho guardado, mas falhou atualizar status do email: ${updateError.message}`);
+  // Envios mensais proativos não nascem de um email recebido — não há
+  // emails_contador a atualizar.
+  if (email_contador_id) {
+    const { error: updateError } = await supabase
+      .from('emails_contador')
+      .update({ status: 'rascunho_gerado' })
+      .eq('id', email_contador_id);
+    if (updateError) throw new Error(`Rascunho guardado, mas falhou atualizar status do email: ${updateError.message}`);
+  }
 
   return resposta;
 }
@@ -657,6 +666,181 @@ async function handleGerar(req, res) {
 }
 
 // ---------------------------------------------------------------------------
+// tipo=preparar_mensal — cron do dia 5: prepara (nunca envia) rascunho com as
+// faturas reconciliadas do mês anterior, para reduzir pedidos de faturas em
+// falta por parte do contador. Invocado pela Vercel Cron (vercel.json), que
+// injeta automaticamente Authorization: Bearer $CRON_SECRET — verificado
+// abaixo para bloquear qualquer chamada externa não autenticada.
+// ---------------------------------------------------------------------------
+
+function verificarAutorizacaoCron(req) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return req.headers['authorization'] === `Bearer ${secret}`;
+}
+
+// "Mês anterior" relativo a hoje, em UTC — evita ambiguidade de fuso horário
+// à volta da meia-noite do dia 5. Devolve o intervalo [inicio, fim) e o
+// próprio "inicio" serve como periodo_referente (primeiro dia do mês).
+function getMesAnterior(refDate = new Date()) {
+  const ano = refDate.getUTCFullYear();
+  const mes = refDate.getUTCMonth(); // mês corrente, 0-indexed
+  const anoAnterior = mes === 0 ? ano - 1 : ano;
+  const mesAnteriorIdx = mes === 0 ? 11 : mes - 1;
+  const fmt = d => d.toISOString().slice(0, 10);
+  return {
+    inicio: fmt(new Date(Date.UTC(anoAnterior, mesAnteriorIdx, 1))),
+    fim: fmt(new Date(Date.UTC(ano, mes, 1))),
+  };
+}
+
+async function getContadorFornecedor(supabase) {
+  const nif = process.env.VITE_CONTADOR_NIF;
+  if (!nif) return null;
+  const { data } = await supabase.from('fornecedores').select('id, nome, email').eq('nif', nif).maybeSingle();
+  return data || null;
+}
+
+function buildRespostaEnvioMensalPrompt({ comPdf, semPdf, mesNomeAno }) {
+  const fmt = f => `- ${f.dados?.fornecedor || 'Fornecedor não identificado'}${f.dados?.numero_fatura ? ` — doc. ${f.dados.numero_fatura}` : ''}${f.dados?.valor_total != null ? ` (${Number(f.dados.valor_total).toFixed(2)} €)` : ''}`;
+  const listaComPdf = comPdf.map(fmt).join('\n') || '(nenhuma)';
+  const listaSemPdf = semPdf.map(fmt).join('\n') || '(nenhuma)';
+
+  return `Atua como assistente administrativo da Magnetic Place Unipessoal, Lda a escrever um email PROATIVO (não é resposta a nenhum email recebido) para o contabilista, com as faturas de fornecedores já reconciliadas com o extrato bancário referentes a ${mesNomeAno}, para reduzir a necessidade de ele pedir estes documentos depois.
+
+DOCUMENTOS RECONCILIADOS ANEXADOS A ESTE EMAIL:
+${listaComPdf}
+
+DOCUMENTOS RECONCILIADOS MAS AINDA SEM FICHEIRO DISPONÍVEL (mencionar como "a disponibilizar em breve", NÃO estão anexados):
+${listaSemPdf}
+
+REGRAS DE ESCRITA:
+- Português de Portugal, tom profissional e cordial, direto.
+- É um email NOVO, não uma resposta — não uses "obrigado pelo email" nem qualquer referência a mensagens anteriores.
+- Explica em 1-2 frases o propósito: partilhar antecipadamente as faturas já reconciliadas do mês, para facilitar o trabalho de contabilidade.
+- Termina com uma frase de transparência deixando claro que podem seguir-se documentos adicionais deste mesmo período nos próximos dias, à medida que forem reconciliados (não há garantia de que a reconciliação do mês esteja 100% completa nesta data).
+- Não inventes fornecedores, números de documento ou valores além dos listados acima.
+- Escreve APENAS o corpo do email, sem "Assunto:", sem markdown, sem comentários sobre a tua resposta.`;
+}
+
+// Zero faturas reconciliadas para o mês anterior é sinal de que o extrato
+// bancário desse mês nunca foi carregado — não faz sentido gerar um rascunho
+// vazio, avisa-se um humano em vez disso. Idempotente por título (mesmo
+// padrão de registarAlertaDuplicados em api/auth.js): não duplica o alerta
+// se já existir um igual ainda por resolver para este período.
+async function registarAlertaExtratoNaoReconciliado(supabase, { mesNomeAno }) {
+  const titulo = `Extrato de ${mesNomeAno} não reconciliado — envio mensal ao contador não preparado`;
+  try {
+    const { data: existente } = await supabase
+      .from('gestao_alertas')
+      .select('id')
+      .eq('titulo', titulo)
+      .in('status', ['pendente', 'visto'])
+      .maybeSingle();
+    if (existente) return { criado: false, id: existente.id };
+
+    const { data: novo, error } = await supabase.from('gestao_alertas').insert({
+      tipo: 'operacional',
+      severidade: 'media',
+      titulo,
+      descricao: `O cron do dia 5 correu para preparar o envio mensal proativo ao contador, mas não encontrou nenhuma fatura reconciliada (fatura_pagamento_links) referente a ${mesNomeAno}. Isto normalmente significa que o extrato bancário desse mês ainda não foi carregado em Reconciliação.`,
+      status: 'pendente',
+      acao_sugerida: `Carregar o extrato bancário de ${mesNomeAno} em Reconciliação e, depois de reconciliado, disparar "preparar_mensal" manualmente para gerar o rascunho do envio ao contador.`,
+      created_at: new Date().toISOString(),
+    }).select('id').single();
+    if (error) throw error;
+    return { criado: true, id: novo.id };
+  } catch (e) {
+    console.error('[contador] falha ao registar alerta de extrato não reconciliado:', e.message);
+    return { criado: false, id: null };
+  }
+}
+
+async function handlePararMensal(req, res) {
+  if (!verificarAutorizacaoCron(req)) {
+    return res.status(401).json({ error: 'Não autorizado.' });
+  }
+
+  const missingEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ANTHROPIC_API_KEY']
+    .filter(k => !process.env[k]);
+  if (missingEnv.length) {
+    return res.status(500).json({ error: `Env vars em falta: ${missingEnv.join(', ')}` });
+  }
+
+  const supabase = supabaseAdmin();
+  const { inicio, fim } = getMesAnterior();
+
+  // Idempotência — o cron pode disparar mais de uma vez por engano; se já
+  // existir um envio mensal ativo (pendente, aprovado ou já enviado) para
+  // este período, não gera outro. 'rejeitado' não bloqueia — se o admin
+  // rejeitou, uma nova tentativa para o mesmo mês é legítima.
+  const { data: existente, error: existenteError } = await supabase
+    .from('respostas_contador_pendentes')
+    .select('id, status')
+    .eq('tipo_resposta', 'envio_mensal_proativo')
+    .eq('periodo_referente', inicio)
+    .in('status', ['pendente', 'aprovado', 'enviado'])
+    .maybeSingle();
+  if (existenteError) return res.status(500).json({ error: `Erro ao verificar duplicados: ${existenteError.message}` });
+  if (existente) {
+    return res.status(200).json({ ja_existe: true, resposta_id: existente.id, status: existente.status, periodo_referente: inicio });
+  }
+
+  const { data: faturasDoMes, error: faturasError } = await supabase
+    .from('faturas')
+    .select('id, filename, storage_path, mime_type, dados')
+    .gte('dados->>data_pagamento', inicio)
+    .lt('dados->>data_pagamento', fim);
+  if (faturasError) return res.status(500).json({ error: `Erro ao carregar faturas: ${faturasError.message}` });
+
+  const idsCandidatos = (faturasDoMes || []).map(f => f.id);
+  let idsReconciliados = new Set();
+  if (idsCandidatos.length > 0) {
+    const { data: links, error: linksError } = await supabase
+      .from('fatura_pagamento_links')
+      .select('fatura_id')
+      .in('fatura_id', idsCandidatos);
+    if (linksError) return res.status(500).json({ error: `Erro ao carregar reconciliações: ${linksError.message}` });
+    idsReconciliados = new Set((links || []).map(l => l.fatura_id));
+  }
+
+  const faturasReconciliadas = (faturasDoMes || []).filter(f => idsReconciliados.has(f.id));
+  const mesNomeAno = new Date(`${inicio}T00:00:00Z`)
+    .toLocaleDateString('pt-PT', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  if (faturasReconciliadas.length === 0) {
+    const alerta = await registarAlertaExtratoNaoReconciliado(supabase, { mesNomeAno });
+    return res.status(200).json({ sem_faturas: true, periodo_referente: inicio, alerta_criado: alerta.criado, alerta_id: alerta.id });
+  }
+
+  const comPdf = faturasReconciliadas.filter(f => f.storage_path);
+  const semPdf = faturasReconciliadas.filter(f => !f.storage_path);
+
+  const rascunho = await gerarComClaude(buildRespostaEnvioMensalPrompt({ comPdf, semPdf, mesNomeAno }));
+  if (!rascunho) return res.status(502).json({ error: 'A API da Anthropic não devolveu texto de resposta' });
+
+  let resposta;
+  try {
+    resposta = await guardarRascunho(supabase, {
+      rascunho,
+      anexos_faturas_ids: comPdf.map(f => f.id),
+      tipo_resposta: 'envio_mensal_proativo',
+      periodo_referente: inicio,
+    });
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
+  }
+
+  return res.status(200).json({
+    resposta_id: resposta.id,
+    periodo_referente: inicio,
+    rascunho,
+    com_pdf: comPdf.map(f => ({ id: f.id, filename: f.filename, fornecedor: f.dados?.fornecedor, valor: f.dados?.valor_total })),
+    sem_pdf: semPdf.map(f => ({ id: f.id, fornecedor: f.dados?.fornecedor, valor: f.dados?.valor_total })),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // tipo=aprovar — aprova (envia) ou rejeita um rascunho de resposta ao contador
 // ---------------------------------------------------------------------------
 
@@ -694,6 +878,8 @@ async function handleAprovar(req, res) {
   const rascunhoFinal = (rascunho_final ?? resposta.rascunho).trim();
   const foiEditado = rascunhoFinal !== resposta.rascunho.trim();
 
+  const isEnvioMensal = resposta.tipo_resposta === 'envio_mensal_proativo';
+
   if (action === 'rejeitar') {
     const { error: updateError } = await supabase
       .from('respostas_contador_pendentes')
@@ -701,14 +887,31 @@ async function handleAprovar(req, res) {
       .eq('id', resposta_id);
     if (updateError) return res.status(500).json({ error: `Erro ao registar rejeição: ${updateError.message}` });
 
-    await supabase.from('emails_contador').update({ status: 'rejeitado' }).eq('id', resposta.emails_contador.id);
+    // Envios mensais proativos não têm email de origem associado.
+    if (resposta.emails_contador) {
+      await supabase.from('emails_contador').update({ status: 'rejeitado' }).eq('id', resposta.emails_contador.id);
+    }
 
     return res.status(200).json({ sucesso: true, status: 'rejeitado' });
   }
 
-  const emailContador = resposta.emails_contador;
-  if (!emailContador?.remetente) {
-    return res.status(500).json({ error: 'Email do contador associado não tem remetente registado — não é possível responder' });
+  let destinatario, assuntoEnvio;
+  if (isEnvioMensal) {
+    const fornecedorContador = await getContadorFornecedor(supabase);
+    if (!fornecedorContador?.email) {
+      return res.status(500).json({ error: 'Não foi possível determinar o email do contador — o fornecedor com o NIF configurado em VITE_CONTADOR_NIF não tem email definido.' });
+    }
+    destinatario = fornecedorContador.email;
+    const mesNomeAno = resposta.periodo_referente
+      ? new Date(`${resposta.periodo_referente}T00:00:00Z`).toLocaleDateString('pt-PT', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+      : 'mês anterior';
+    assuntoEnvio = `Faturas reconciliadas — ${mesNomeAno}`;
+  } else {
+    if (!resposta.emails_contador?.remetente) {
+      return res.status(500).json({ error: 'Email do contador associado não tem remetente registado — não é possível responder' });
+    }
+    destinatario = resposta.emails_contador.remetente;
+    assuntoEnvio = resposta.emails_contador.assunto;
   }
 
   // Faturas encontradas automaticamente (Fase C) são anexadas ao envio real —
@@ -736,15 +939,25 @@ async function handleAprovar(req, res) {
   let sendResult;
   try {
     const gmail = gmailClient();
-    const replyContext = await getMessageReplyContext(gmail, { gmailMessageId: emailContador.gmail_message_id });
-    sendResult = await sendGmailReply(gmail, {
-      threadId: resposta.gmail_thread_id || replyContext.threadId,
-      to: emailContador.remetente,
-      subject: emailContador.assunto,
-      bodyText: rascunhoFinal,
-      inReplyToMessageId: replyContext.messageIdHeader,
-      attachments: anexos,
-    });
+    if (isEnvioMensal) {
+      // Email novo — não é reply a nenhuma thread existente.
+      sendResult = await sendGmailNewMessage(gmail, {
+        to: destinatario,
+        subject: assuntoEnvio,
+        bodyText: rascunhoFinal,
+        attachments: anexos,
+      });
+    } else {
+      const replyContext = await getMessageReplyContext(gmail, { gmailMessageId: resposta.emails_contador.gmail_message_id });
+      sendResult = await sendGmailReply(gmail, {
+        threadId: resposta.gmail_thread_id || replyContext.threadId,
+        to: destinatario,
+        subject: assuntoEnvio,
+        bodyText: rascunhoFinal,
+        inReplyToMessageId: replyContext.messageIdHeader,
+        attachments: anexos,
+      });
+    }
   } catch (e) {
     return res.status(502).json({ error: `Falha ao enviar via Gmail: ${e.message}` });
   }
@@ -768,7 +981,9 @@ async function handleAprovar(req, res) {
     });
   }
 
-  await supabase.from('emails_contador').update({ status: 'enviado' }).eq('id', emailContador.id);
+  if (!isEnvioMensal) {
+    await supabase.from('emails_contador').update({ status: 'enviado' }).eq('id', resposta.emails_contador.id);
+  }
 
   return res.status(200).json({ sucesso: true, status: 'enviado', gmail_message_id: sendResult.id, anexos_enviados: anexos.length });
 }
@@ -779,11 +994,12 @@ export default async function handler(req, res) {
   try {
     const { tipo } = req.query;
     switch (tipo) {
-      case 'acesso':  return await handleAcesso(req, res);
-      case 'resumo':  return await handleResumo(req, res);
-      case 'gerar':   return await handleGerar(req, res);
-      case 'aprovar': return await handleAprovar(req, res);
-      default:        return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
+      case 'acesso':          return await handleAcesso(req, res);
+      case 'resumo':          return await handleResumo(req, res);
+      case 'gerar':           return await handleGerar(req, res);
+      case 'aprovar':         return await handleAprovar(req, res);
+      case 'preparar_mensal': return await handlePararMensal(req, res);
+      default:                return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
     }
   } catch (e) {
     return res.status(500).json({ error: e.message, stack: e.stack });

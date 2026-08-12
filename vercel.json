@@ -25,6 +25,9 @@
       "maxDuration": 30
     }
   },
+  "crons": [
+    { "path": "/api/contador?tipo=preparar_mensal", "schedule": "0 9 5 * *" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
