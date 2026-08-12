@@ -17,7 +17,7 @@
       "maxDuration": 30
     },
     "api/contador/index.js": {
-      "maxDuration": 30,
+      "maxDuration": 60,
       "includeFiles": "node_modules/pdf-parse/dist/**"
     },
     "api/pagamentos/index.js": {
