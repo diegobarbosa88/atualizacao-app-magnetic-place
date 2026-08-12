@@ -1,0 +1,20 @@
+[33m6863f36[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: usar /auth/init para obter powens_user_id antes do webview e /users/{id}/transfers para PIS
+[33mf5ca2db[m fix: remover check powens_user_id — usar powens_connection_id para PIS
+[33m9c4e1dd[m fix: tentar /connections/{id}/transfers e /initiations antes de /users/{id}/transfers
+[33m0d6fb23[m fix: extrair id_user dos params do callback + log completo dos params
+[33m5795f85[m fix: remover declaração duplicada de const conexao (erro de sintaxe JS)
+[33m0755cdc[m fix: recuperar powens_user_id no callback + usar /users/{id}/transfers para PIS
+[33md4efd1b[m fix: usar POST /payment-requests para obter URL correcto do webview PIS
+[33me39778f[m fix: PIS sem pré-criar transferência — detalhes de pagamento no webview URL
+[33mdfeccc2[m fix: PIS sem user token — criar transferência ao nível da app (POST /transfers)
+[33m13a26dd[m fix: modo directo no handlePay para faturas da tabela faturas (não faturas_centro_documentos)
+[33m074a74e[m fix: colunas correctas faturas_centro_documentos (fornecedor, valor)
+[33mb76bfd6[m fix: substituir Pagar via Tink/SaltEdge por Powens no FaturasTab
+[33m5416208[m feat: desactivar AIS, usar scope=payments, histórico de pagamentos PIS na UI
+[33ma5e138f[m fix: remover scope inválido do auth/token Powens (INVALIDVALUE)
+[33m05cc1f2[m fix: adicionar scope=all ao auth/token da Powens (parâmetro obrigatório)
+[33m9989592[m fix: redirects callback para rotas correctas da app + log erro conexoes_bancarias
+[33mccf3617[m fix: connect sem user token + webhook 200 imediato + 4 variantes auth
+[33ma4a56ec[m fix: tentar /auth/token (actual) antes de /auth/token/new (legacy), grant_type + client_id int
+[33m4c4aef6[m debug: logar URL exacto do auth/token/new para diagnóstico
+[33m265549c[m fix: sanitizar POWENS_DOMAIN para aceitar URL completo ou só subdomínio

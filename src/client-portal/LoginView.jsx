@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
-export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, loginEmail, setLoginEmail, loginError, handleLogin, clients, systemSettings }) {
+export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, loginEmail, setLoginEmail, loginError, handleLogin, submitting, systemSettings }) {
     return (
         <div className="min-h-screen bg-white flex flex-col lg:flex-row overflow-hidden">
 
@@ -97,9 +97,9 @@ export default function LoginView({ t, lang, changeLang, loginNif, setLoginNif, 
                                 <AlertCircle size={14} className="flex-shrink-0" /> {loginError}
                             </div>
                         )}
-                        <button type="submit" disabled={clients.length === 0}
+                        <button type="submit" disabled={submitting}
                             className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-sm uppercase tracking-[0.15em] transition-all shadow-lg shadow-indigo-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {clients.length === 0 ? t('loading') : t('enter')}
+                            {submitting ? t('loading') : t('enter')}
                         </button>
                     </form>
                 </div>

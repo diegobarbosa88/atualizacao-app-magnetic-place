@@ -16,10 +16,11 @@ const INPUT_STYLE = {
 };
 const INPUT_FOCUS_CLASS = 'outline-none transition-all focus:border-[#EB8D00]';
 
-const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
+const LoginView = ({ onLogin }) => {
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [pendingAdminWorker, setPendingAdminWorker] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIosInstructions, setShowIosInstructions] = useState(false);
@@ -56,47 +57,41 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (user.trim().toLowerCase() === 'admin') {
-      if (!systemSettings.adminPassword) {
-        setError('Sistema não configurado. Contacte o administrador.');
+    if (submitting) return;
+    setError('');
+    setSubmitting(true);
+    try {
+      const isAdminUsername = user.trim().toLowerCase() === 'admin';
+      const body = isAdminUsername
+        ? { role: 'admin', password: pass.trim() }
+        : { role: 'worker', username: user.toLowerCase().trim(), nif: pass.trim() };
+
+      const res = await fetch('/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data.error || 'Não foi possível iniciar sessão. Tenta novamente.');
         return;
       }
-      if (pass.trim() !== systemSettings.adminPassword) {
-        setError('Senha incorreta.');
-        return;
-      }
-      onLogin('admin');
-      return;
-    }
 
-    const found = workers.find(w => {
-      if (!w.name) return false;
-      const parts = w.name.trim().split(/\s+/);
-      const first = parts[0].toLowerCase();
-      const last = parts.length > 1 ? parts[parts.length - 1].toLowerCase() : "";
-      const workerLogin = first + last;
-      return workerLogin === user.toLowerCase().trim();
-    });
-
-    if (found) {
-      const validPass = (found.nif || "").toString().trim();
-      if (validPass === pass.trim()) {
-        if (found.status === 'inativo') {
-          setError('A sua conta está inativa. Contacte a administração.');
-          return;
-        }
-        if (found.isAdmin) {
-          setPendingAdminWorker(found);
-        } else {
-          onLogin('worker', found);
-        }
+      const found = data.user;
+      if (isAdminUsername) {
+        onLogin('admin', found);
+      } else if (found.isAdmin) {
+        setPendingAdminWorker(found);
       } else {
-        setError('Senha incorreta (utilize o seu NIF)');
+        onLogin('worker', found);
       }
-    } else {
-      setError('Utilizador não encontrado (use o seu primeiro e último nome juntos, ex: joaosilva)');
+    } catch {
+      setError('Erro de ligação. Tenta novamente.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -193,12 +188,13 @@ const LoginView = ({ workers, onLogin, systemSettings, setSystemSettings }) => {
 
           <button
             type="submit"
-            className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
+            disabled={submitting}
+            className="w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white disabled:opacity-60 disabled:cursor-not-allowed"
             style={{ backgroundColor: '#1B3A57', border: '1px solid rgba(255,255,255,0.15)' }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#234d74'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = '#1B3A57'}
           >
-            Entrar
+            {submitting ? 'A entrar…' : 'Entrar'}
           </button>
 
           <div className="pt-4 flex flex-col gap-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>

@@ -70,6 +70,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     const [loginNif, setLoginNif] = useState('');
     const [loginEmail, setLoginEmail] = useState('');
     const [loginError, setLoginError] = useState('');
+    const [loginSubmitting, setLoginSubmitting] = useState(false);
     const [lang, setLang] = useState(() => localStorage.getItem('magnetic_lang') || 'pt');
     const t = (key) => (TRANSLATIONS[lang] || TRANSLATIONS.pt)[key] || key;
 
@@ -88,28 +89,37 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         localStorage.setItem('magnetic_lang', l);
     };
 
-    const handleLogin = () => {
-        if (clients.length === 0) { setLoginError('A carregar dados, por favor aguarde...'); return; }
-        const nifNorm = (loginNif || '').replace(/[\s.\-]/g, '').trim();
-        const emailNorm = (loginEmail || '').toLowerCase().trim();
-        const client = clients.find(c => {
-            const nifMatch = nifNorm && (c.nif || '').replace(/[\s.\-]/g, '').trim() === nifNorm;
-            const emailMatch = !emailNorm || (c.email || '').toLowerCase().trim() === emailNorm;
-            return nifMatch && emailMatch;
-        });
-        if (!client) { setLoginError('NIF ou email incorretos.'); return; }
-        const session = { clientId: client.id, name: client.name, expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 };
-        localStorage.setItem('magnetic_client_session', JSON.stringify(session));
-        setClientSession(session);
-        const months = [...new Set(
-            (initialLogs || [])
-                .filter(l => String(l.clientId) === String(client.id)
-                    && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0
-                    && l.date && /^\d{4}-\d{2}/.test(l.date))
-                .map(l => l.date.substring(0, 7))
-        )].sort((a, b) => b.localeCompare(a));
-        if (months.length > 0) setSelectedMonth(months[0]);
+    const handleLogin = async () => {
+        if (loginSubmitting) return;
         setLoginError('');
+        setLoginSubmitting(true);
+        try {
+            const res = await fetch('/api/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: 'client', nif: loginNif, email: loginEmail }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setLoginError(data.error || 'Não foi possível iniciar sessão. Tenta novamente.');
+                return;
+            }
+            const session = data.session;
+            localStorage.setItem('magnetic_client_session', JSON.stringify(session));
+            setClientSession(session);
+            const months = [...new Set(
+                (initialLogs || [])
+                    .filter(l => String(l.clientId) === String(session.clientId)
+                        && calculateHoursDiff(l.startTime, l.endTime, l.breakStart, l.breakEnd) > 0
+                        && l.date && /^\d{4}-\d{2}/.test(l.date))
+                    .map(l => l.date.substring(0, 7))
+            )].sort((a, b) => b.localeCompare(a));
+            if (months.length > 0) setSelectedMonth(months[0]);
+        } catch {
+            setLoginError('Erro de ligação. Tenta novamente.');
+        } finally {
+            setLoginSubmitting(false);
+        }
     };
 
     const handleLogout = () => {
@@ -353,7 +363,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     };
 
     if (!clientSession && !isDirectAccess && !initialTokenClientId && !initialClientId) {
-        return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={loginError} handleLogin={handleLogin} clients={clients} systemSettings={systemSettings} />;
+        return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={loginError} handleLogin={handleLogin} submitting={loginSubmitting} systemSettings={systemSettings} />;
     }
 
     // Dados ainda a carregar do Supabase — mostrar spinner em vez de "Cliente Não Encontrado"

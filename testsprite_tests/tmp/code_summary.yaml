@@ -1,0 +1,220 @@
+version: "2"
+type: frontend
+tech_stack:
+  - React 18
+  - Vite
+  - Tailwind CSS
+  - Supabase (auth + database)
+  - React Router DOM
+  - Vercel serverless API (api/ directory)
+routes:
+  - path: /
+    file: src/app.jsx
+    auth_required: false
+    description: Login page when not authenticated; redirects to admin or worker dashboard when authenticated
+  - path: /admin
+    file: src/features/admin/AdminDashboard.jsx
+    auth_required: true
+    description: Main admin dashboard with navigation tabs
+  - path: /worker
+    file: src/features/worker/WorkerDashboard.jsx
+    auth_required: true
+    description: Worker dashboard for time tracking and documents
+  - path: /client
+    file: src/ClientPortal.jsx
+    auth_required: false
+    description: Client portal for timesheet approvals
+  - path: /verificar
+    file: src/components/common/VerificationPortal.jsx
+    auth_required: false
+    description: Document verification portal
+
+features:
+  - name: Login
+    description: Admin and worker login with username/password credentials
+    files:
+      - src/features/auth/LoginView.jsx
+      - src/app.jsx
+      - src/context/AppContext.jsx
+    entry_route: /
+    user_interactions:
+      - Fill username input
+      - Fill password input
+      - Click login button
+      - See error message on invalid credentials
+      - Redirect to admin or worker dashboard on success
+    api_calls: []
+    auth_required: false
+
+  - name: Salários — Exportar SEPA XML
+    description: Export SEPA XML pain.001.001.03 file for salary payments, with worker selection, adjustments and download
+    files:
+      - src/features/admin/SalariosTab.jsx
+      - api/salarios/exportar-sepa.js
+      - api/salarios/_sepaXml.js
+    entry_route: /
+    user_interactions:
+      - Navigate to Salários tab in admin dashboard
+      - Select a salary month
+      - Click "SEPA XML" button to open export modal
+      - View list of eligible employees with IBAN
+      - Check/uncheck individual employees or use "Seleccionar todos"
+      - Adjust salary amounts per employee (adicionar/abater)
+      - Click "Exportar" to generate and download XML file
+      - File downloads as salarios_magnetic_place.xml
+    api_calls:
+      - method: POST
+        endpoint: /api/salarios/exportar-sepa
+    auth_required: true
+
+  - name: Salários — Transferência Imediata (SCT Inst)
+    description: Export SEPA XML with INST flag for immediate credit transfers
+    files:
+      - src/features/admin/SalariosTab.jsx
+      - api/salarios/exportar-sepa.js
+      - api/salarios/_sepaXml.js
+    entry_route: /
+    user_interactions:
+      - Navigate to Salários tab in admin dashboard
+      - Select a salary month
+      - Click "Transf. Imediata" button to open export modal
+      - Select workers and confirm
+      - File downloads as transferencias_imediatas_magnetic_place.xml
+    api_calls:
+      - method: POST
+        endpoint: /api/salarios/exportar-sepa
+    auth_required: true
+
+  - name: Salários — Gestão de Salários
+    description: View and manage worker salaries, justifications, and history per month
+    files:
+      - src/features/admin/SalariosTab.jsx
+      - src/features/admin/salarios/SalarioEmployeeCard.jsx
+      - src/features/admin/salarios/JustificarModal.jsx
+    entry_route: /
+    user_interactions:
+      - Select a month to view salaries
+      - View expected vs actual salary per worker
+      - Add or edit justifications for salary differences
+      - View salary history
+    api_calls: []
+    auth_required: true
+
+  - name: Reconciliação Salarial
+    description: Import and reconcile bank transactions against salary payments
+    files:
+      - src/features/admin/ReconciliacaoSalarialAdmin.jsx
+      - src/utils/reconciliacaoSalarialEngine.js
+    entry_route: /
+    user_interactions:
+      - Upload bank statement CSV
+      - View auto-matched and unmatched transactions
+      - Manually associate transactions to employees
+    api_calls: []
+    auth_required: true
+
+  - name: Gestão de Documentos
+    description: Upload, view and manage worker and admin documents with digital signatures
+    files:
+      - src/features/admin/DocumentsAdmin.jsx
+      - src/features/admin/documents/DocumentsTable.jsx
+    entry_route: /
+    user_interactions:
+      - View documents list
+      - Upload new document
+      - Preview document
+      - Request signature
+    api_calls: []
+    auth_required: true
+
+  - name: Registo de Horas (Admin)
+    description: Admin view of worker time logs with corrections and approvals
+    files:
+      - src/features/admin/AdminDashboard.jsx
+      - src/app.jsx
+    entry_route: /
+    user_interactions:
+      - Select worker and month
+      - View time entries
+      - Approve or reject corrections
+    api_calls: []
+    auth_required: true
+
+  - name: Worker Hero Stats
+    description: Painel de estatísticas do trabalhador com horas de hoje, horas do mês, meta mensal e navegação entre meses
+    files:
+      - src/features/worker/worker-dashboard/WorkerHeroStats.jsx
+      - src/features/worker/WorkerDashboard.jsx
+    entry_route: /
+    user_interactions:
+      - Ver horas do dia atual no card Hoje
+      - Ver horas totais do mês no card Mês
+      - Navegar para o mês anterior clicando na seta esquerda
+      - Navegar para o próximo mês clicando na seta direita
+      - Clicar no botão Ver Meta Mensal para mostrar ou ocultar barra de progresso
+      - Ver percentagem de conclusão da meta mensal na barra de progresso
+      - Ver ícone de aprovado quando o mês está aprovado
+    api_calls: []
+    auth_required: true
+
+  - name: In Service Card
+    description: Card de serviço ativo que mostra o estado atual do trabalhador em serviço ou em pausa com temporizador e botões de ação
+    files:
+      - src/features/worker/worker-dashboard/InServiceCard.jsx
+      - src/features/worker/WorkerDashboard.jsx
+    entry_route: /
+    user_interactions:
+      - Ver estado Em serviço com indicador verde pulsante
+      - Ver estado Em pausa com indicador âmbar
+      - Ver tempo decorrido desde entrada em serviço
+      - Ver nome do cliente associado ao registo aberto
+      - Clicar Pausa para iniciar pausa visível apenas quando em serviço
+      - Clicar Retomar para terminar pausa visível apenas quando em pausa
+      - Clicar Saída para registar saída
+      - Ver spinner de loading no botão Saída durante operação GPS
+    api_calls:
+      - method: POST
+        endpoint: /rest/v1/logs
+    auth_required: true
+
+  - name: Request Entry Card
+    description: Formulário colapsável para trabalhadores limitados solicitarem registos de horas que requerem aprovação
+    files:
+      - src/components/worker/RequestEntryCard.jsx
+      - src/features/worker/WorkerDashboard.jsx
+    entry_route: /
+    user_interactions:
+      - Clicar no header Solicitar Registo para expandir ou colapsar formulário
+      - Selecionar data no campo de data
+      - Selecionar cliente ou unidade
+      - Ver formulário de edição se já existe registo na data selecionada
+      - Submeter pedido de registo
+    api_calls:
+      - method: POST
+        endpoint: /rest/v1/logs
+    auth_required: true
+
+  - name: Month Approval Worker
+    description: Banner de confirmação de horas mensais e estado de mês validado ou fechado no dashboard do trabalhador
+    files:
+      - src/features/worker/WorkerDashboard.jsx
+    entry_route: /
+    user_interactions:
+      - Ver banner de aprovação quando há aprovações pendentes para o mês atual
+      - Clicar Confirmar e Enviar para aprovar as horas do mês
+      - Ver estado Mês Validado e Fechado quando o mês já está aprovado
+    api_calls:
+      - method: POST
+        endpoint: /rest/v1/approvals
+    auth_required: true
+
+known_limitations:
+  - issue: SEPA export requires MINHA_CONTA_IBAN and MINHA_CONTA_BIC environment variables on the API server
+    location: api/salarios/_sepaXml.js
+    impact: Export will fail with 500 error if env vars are not set
+  - issue: SEPA modal only shows workers with expected_amount > 0 for the selected month
+    location: src/features/admin/SalariosTab.jsx
+    impact: Workers without salary data for the month will not appear in export list
+  - issue: InServiceCard só é visível quando GPS está ativo e é o mês atual
+    location: src/features/worker/WorkerDashboard.jsx
+    impact: Trabalhadores sem GPS não veem o card de entrada ou saída mesmo com registo aberto

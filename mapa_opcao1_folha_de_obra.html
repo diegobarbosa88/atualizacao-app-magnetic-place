@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>Mapa de Salários — Julho 2026 — Folha de Obra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B3A57;
+    --slate:#869AAF;
+    --orange:#EB8D00;
+    --paper:#F3F1EA;
+    --paper-line:#D9D3C4;
+    --ink:#1F2420;
+    --ink-soft:#5B6660;
+    --ok:#3F6B4B;
+    --danger:#B5432A;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+  body{
+    background-image:
+      repeating-linear-gradient(0deg, transparent, transparent 39px, var(--paper-line) 40px);
+    padding:48px 24px 96px;
+  }
+  .sheet{max-width:1180px;margin:0 auto;}
+
+  /* header block: styled like a stamped work order header */
+  .head{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:24px;
+    align-items:end;
+    border-bottom:4px solid var(--navy);
+    padding-bottom:18px;
+    margin-bottom:6px;
+  }
+  .mark{
+    width:56px;height:56px;border:3px solid var(--navy);border-radius:6px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Space Grotesk';font-weight:700;font-size:22px;color:var(--navy);
+    background:var(--card);
+    transform:rotate(-2deg);
+  }
+  .titles h1{
+    font-family:'Space Grotesk';font-weight:700;font-size:28px;letter-spacing:.2px;
+    margin:0 0 2px;color:var(--navy);
+  }
+  .titles p{margin:0;color:var(--ink-soft);font-size:13px;letter-spacing:.4px;text-transform:uppercase;}
+  .doc-meta{
+    text-align:right;font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-soft);
+    line-height:1.7;
+  }
+  .doc-meta b{color:var(--navy);}
+
+  .stamp-row{
+    display:flex;gap:10px;margin:16px 0 28px;flex-wrap:wrap;
+  }
+  .stamp{
+    font-family:'IBM Plex Mono';font-size:11px;font-weight:600;letter-spacing:.6px;
+    text-transform:uppercase;border:1.5px solid var(--navy);color:var(--navy);
+    padding:5px 10px;border-radius:3px;background:var(--card);
+  }
+  .stamp.warn{border-color:var(--orange);color:#8a5800;background:#FFF3E0;}
+
+  /* KPI strip */
+  .kpis{
+    display:grid;grid-template-columns:repeat(5,1fr);gap:1px;
+    background:var(--navy);border:1px solid var(--navy);margin-bottom:32px;
+  }
+  .kpi{background:var(--card);padding:16px 18px;}
+  .kpi .lbl{font-size:10.5px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px;}
+  .kpi .val{font-family:'IBM Plex Mono';font-weight:600;font-size:20px;color:var(--navy);}
+  .kpi.accent{background:var(--navy);}
+  .kpi.accent .lbl{color:#B9C6D4;}
+  .kpi.accent .val{color:#fff;}
+
+  /* table styled like a technical measurement sheet */
+  .tablewrap{background:var(--card);border:1px solid var(--paper-line);}
+  table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono';font-size:12.5px;}
+  thead tr.g1 th{
+    background:var(--navy);color:#fff;font-family:'Inter';font-weight:600;font-size:10px;
+    letter-spacing:.6px;text-transform:uppercase;padding:8px 10px;text-align:center;
+    border-left:1px solid rgba(255,255,255,.15);
+  }
+  thead tr.g2 th{
+    background:#EDEAE0;color:var(--ink-soft);font-weight:600;font-size:10.5px;
+    padding:7px 8px;text-align:right;border-bottom:2px solid var(--navy);
+    border-left:1px solid var(--paper-line);
+  }
+  thead tr.g2 th:nth-child(1),thead tr.g2 th:nth-child(2){text-align:left;}
+  tbody td{padding:8px;text-align:right;border-bottom:1px solid var(--paper-line);white-space:nowrap;}
+  tbody td:nth-child(1){font-family:'Space Grotesk';font-weight:600;color:var(--slate);text-align:left;font-size:11px;}
+  tbody td:nth-child(2){text-align:left;font-family:'Inter';font-weight:600;color:var(--ink);font-size:12.5px;}
+  tbody tr:hover{background:#FBF9F3;}
+  tbody tr.flag{background:#FFF6EC;}
+  tbody tr.flag td:nth-child(2){color:#8a5800;}
+  .flagtag{
+    display:inline-block;margin-left:6px;font-family:'Inter';font-size:9px;font-weight:700;
+    color:#8a5800;background:#FFE0AC;border-radius:2px;padding:1px 5px;letter-spacing:.3px;vertical-align:2px;
+  }
+  tfoot td{
+    padding:10px 8px;font-weight:700;background:var(--navy);color:#fff;border-top:3px solid var(--orange);
+  }
+  tfoot td:nth-child(2){text-align:left;font-family:'Space Grotesk';}
+
+  .col-neg{color:var(--danger);}
+  .col-ac{color:var(--ok);}
+
+  .footer-note{
+    margin-top:20px;font-size:11.5px;color:var(--ink-soft);font-family:'IBM Plex Mono';
+    display:flex;justify-content:space-between;border-top:1px solid var(--paper-line);padding-top:12px;
+  }
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--ink-soft);margin-top:10px;}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:2px;display:inline-block;}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="head">
+    <div class="mark">MP</div>
+    <div class="titles">
+      <h1>Mapa Resumo de Salários</h1>
+      <p>Magnetic Place Unipessoal, Lda · NIF 517379740</p>
+    </div>
+    <div class="doc-meta">
+      Ref.ª <b>07/2026</b><br>
+      Período: 01–31 Julho 2026<br>
+      Emitido: TOConline
+    </div>
+  </div>
+
+  <div class="stamp-row">
+    <div class="stamp">21 trabalhadores</div>
+    <div class="stamp">Fecho mensal</div>
+    <div class="stamp warn">2 alertas de reconciliação</div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi accent"><div class="lbl">Total folha (recibo)</div><div class="val" id="k-total">—</div></div>
+    <div class="kpi"><div class="lbl">Ajudas de custo</div><div class="val" id="k-ac">—</div></div>
+    <div class="kpi"><div class="lbl">Segurança Social</div><div class="val" id="k-ss">—</div></div>
+    <div class="kpi"><div class="lbl">IRS retido</div><div class="val" id="k-irs">—</div></div>
+    <div class="kpi"><div class="lbl">Média / trab.</div><div class="val" id="k-avg">—</div></div>
+  </div>
+
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr class="g1">
+          <th colspan="2"></th>
+          <th>Dados cliente</th>
+          <th colspan="4">Vencimentos a pagar</th>
+          <th colspan="3">Recibo</th>
+          <th colspan="6">Descontos</th>
+        </tr>
+        <tr class="g2">
+          <th>Nº</th><th>Nome</th>
+          <th>A receber</th>
+          <th>Acréscimos</th><th>Retenção</th><th>Sub/Prém</th><th>Total</th>
+          <th>Mapa</th><th>A.C.</th><th>Total</th>
+          <th>Seg. Social</th><th>IRS</th><th>FCT</th><th>Penhora</th><th>A.C.</th><th>Retenção</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+      <tfoot>
+        <tr id="tfoot-row"></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#FFE0AC;"></span> Linha assinalada — divergência ou dado em falta a validar</span>
+    <span><span class="dot" style="background:var(--ok);"></span> Coluna A.C. — ajudas de custo não tributadas</span>
+  </div>
+
+  <div class="footer-note">
+    <span>Gerado a partir do Mapa de Controlo TOConline · Julho 2026</span>
+    <span>RecibosCalculadora · Magnetic Place</span>
+  </div>
+
+</div>
+
+<script>
+const ROWS = [["00001", "DIEGO BARBOSA", 6220.0, 0.0, -25.15, 0.0, 6194.85, 1216.47, 4831.47, 6047.94, 137.19, 35.0, 0.0, 0.0, 0.0, -25.28], ["00007", "NICOLE GALTIERI", 5000.0, 0.0, -22.23, 0.0, 4977.77, 1196.65, 3639.73, 4836.38, 133.01, 21.0, 0.0, 0.0, 0.0, -12.62], ["00008", "CRISTIANO MISMETTI", 4142.0, 0.0, -23.33, 0.0, 4118.67, 1173.33, 2772.66, 3945.99, 135.08, 61.0, 0.0, 0.0, 0.0, -23.4], ["00015", "RAFAEL GONÇALVES", 4158.0, 0.0, -0.66, 0.0, 4157.34, 1181.51, 2772.66, 3954.17, 136.83, 67.0, 0.0, 0.0, 0.0, -0.66], ["00016", "CASSIO ALMEIDA", 4420.5, 0.0, -16.35, 0.0, 4404.15, 1238.61, 3046.29, 4284.9, 135.6, 0.0, 0.0, 0.0, 0.0, -16.35], ["00019", "JOSE INÁCIO", 3816.0, 0.0, 0.0, 0.0, 3816.0, 1197.65, 2475.94, 3673.59, 133.01, 20.0, 0.0, 0.0, 0.0, -10.6], ["00020", "VICTOR VALADARES", 4940.5, 0.0, -1.09, 0.0, 4939.41, 1278.95, 3530.46, 4809.41, 140.59, 0.0, 0.0, 0.0, 0.0, -10.59], ["00025", "ROBSON ONORIO", 4570.0, 0.0, -18.48, 0.0, 4551.52, 1208.62, 3194.65, 4403.27, 135.73, 31.0, 0.0, 0.0, 0.0, -18.48], ["00026", "JEAN PIERO", 3287.0, 0.0, -0.85, 0.0, 3286.15, 1229.68, 1874.5, 3104.18, 139.82, 43.0, 0.0, 0.0, 0.0, -0.85], ["00028", "EDILSON NASCIMENTO", 4256.0, 0.0, -3.7, 0.0, 4252.3, 1231.36, 2889.93, 4121.29, 134.71, 0.0, 0.0, 0.0, 0.0, -3.7], ["00035", "ANDRE SILVA", 4203.0, 0.0, -3.59, 0.0, 4199.41, 1190.32, 2788.66, 3978.98, 140.02, 84.0, 0.0, 0.0, 0.0, -3.59], ["00038", "RAFAEL SANTOS", 5480.0, 0.0, -2.26, 0.0, 5477.74, 1254.29, 3991.54, 5245.83, 148.17, 86.0, 0.0, 0.0, 0.0, -2.26], ["00040", "JHONATAN MELO", 969.0, 0.0, -19.43, 0.0, 949.57, 872.56, 0.0, 872.56, 96.44, 0.0, 0.0, 0.0, 0.0, -19.43], ["00043", "GABRIEL SARAIVA", 4140.0, 0.0, -0.24, 0.0, 4139.76, 1163.93, 2788.66, 3952.59, 133.17, 55.0, 0.0, 0.0, 0.0, -1.0], ["00046", "IDEMILTON JUNIOR", 3996.0, 0.0, 0.0, 0.0, 3996.0, 1181.9, 2624.3, 3806.2, 135.39, 55.0, 0.0, 0.0, 0.0, -0.59], ["00049", "JOSUÉ RODRIGUES", 324.0, 0.0, 0.0, 0.0, 324.0, 289.71, 0.0, 289.71, 34.29, 0.0, 0.0, 0.0, 0.0, 0.0], ["00050", "LUCILENE LIMA", 4950.0, 0.0, -0.03, 0.0, 4949.97, 1199.95, 3530.46, 4730.41, 140.59, 79.0, 0.0, 0.0, 0.0, -0.03], ["00051", "JOSE COSTA", 3176.0, 0.0, 0.0, 0.0, 3176.0, 798.89, 2288.49, 3087.38, 88.86, 0.0, 0.0, 0.0, 0.0, -0.24], ["00052", "ADRIEL SANTOS", 3830.0, 0.0, 0.0, 0.0, 3830.0, 1226.96, 2327.58, 3554.54, 145.31, 84.0, 0.0, 0.0, 0.0, 46.15], ["00053", "ZELJKO BORANIC", 2161.25, 0.0, 0.0, 0.0, 2161.25, 1178.08, 780.89, 1958.97, 136.28, 66.0, 0.0, 0.0, 0.0, 0.0], ["00054", "FRANCISCO DINIZ", 3366.0, 0.0, 0.0, 0.0, 3366.0, 802.98, 2475.94, 3278.92, 87.84, 0.0, 0.0, 0.0, 0.0, -0.76]];
+const TOTALS = ["", "TOTAIS", 81405.25, 0.0, -137.39, 0.0, 81267.86, 23312.4, 54624.81, 77937.21, 2647.93, 787.0, 0.0, 0.0, 0.0, -104.28];
+
+const FLAGGED = { "00020": "Divergência recibo: mapa 4.809,41€ vs recibo 4.799,91€ (Δ 9,50€)", "00053": "Sem nº de apólice de seguro no recibo" };
+
+function fmt(n){
+  const neg = n < 0;
+  const s = Math.abs(n).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (neg? '−':'') + s + '€';
+}
+
+const tbody = document.getElementById('tbody');
+ROWS.forEach(r=>{
+  const [num,nome,...vals] = r;
+  const flagged = FLAGGED[num];
+  const tr = document.createElement('tr');
+  if(flagged) tr.className='flag';
+  tr.innerHTML = `
+    <td>${num}</td>
+    <td>${nome}${flagged?'<span class="flagtag">verificar</span>':''}</td>
+    ${vals.map((v,i)=>`<td class="${v<0?'col-neg':''} ${i===6?'col-ac':''}">${fmt(v)}</td>`).join('')}
+  `;
+  if(flagged){ tr.title = flagged; }
+  tbody.appendChild(tr);
+});
+
+const tfoot = document.getElementById('tfoot-row');
+tfoot.innerHTML = `<td>—</td><td>${TOTALS[1]}</td>${TOTALS.slice(2).map(v=>`<td>${fmt(v)}</td>`).join('')}`;
+
+document.getElementById('k-total').textContent = fmt(TOTALS[9]);
+document.getElementById('k-ac').textContent = fmt(TOTALS[8]);
+document.getElementById('k-ss').textContent = fmt(TOTALS[10]);
+document.getElementById('k-irs').textContent = fmt(TOTALS[11]);
+document.getElementById('k-avg').textContent = fmt(TOTALS[9]/ROWS.length);
+</script>
+</body>
+</html>

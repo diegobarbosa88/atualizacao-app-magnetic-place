@@ -1,0 +1,37 @@
+[33mcommit 104bfab8441b9159cc23b934db9914c698540d39[m
+Author: diegobarbosa88 <88diegobarbosa@gmail.com>
+Date:   Wed Aug 12 15:27:13 2026 +0200
+
+    feat: módulo Gestão de Alertas e automação de emails do contador
+    
+    - Gestão de Alertas: novo módulo admin transversal para tracking de
+      alertas administrativos/compliance/segurança, com fluxo de aprovação
+      de ações sugeridas (constraint UNIQUE para evitar duplicados) e
+      audit trail.
+    - Automação de emails do contador: estende api/gmail/import-faturas.js
+      com mode 'contador', extração de dados via Gemini, geração de
+      rascunho de resposta via Claude e envio de reply na thread Gmail
+      original — sempre com aprovação humana explícita antes de enviar.
+    
+    Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+
+ api/aprovar-resposta-contador.js                   | 113 [32m++++++++[m
+ api/gerar-resposta-contador.js                     | 204 [32m+++++++++++++[m
+ api/gmail/_sendGmailReply.js                       |  89 [32m++++++[m
+ api/gmail/import-faturas.js                        | 139 [32m++++++++[m[31m-[m
+ api/parse-fatura.js                                |  58 [32m++[m[31m--[m
+ package-lock.json                                  |  63 [32m++++[m
+ package.json                                       |   1 [32m+[m
+ src/context/AppContext.jsx                         |  12 [32m+[m
+ src/features/admin/AdminDashboard.jsx              |   5 [32m+[m
+ src/features/admin/AdminSidebar.jsx                |   2 [32m+[m[31m-[m
+ src/features/admin/AlertasAdmin.jsx                | 277 [32m++++++++++++++++++[m
+ src/features/admin/FaturacaoAdmin.jsx              |   5 [32m+[m[31m-[m
+ src/features/admin/adminNavConfig.js               |   4 [32m+[m[31m-[m
+ src/features/admin/faturas/ContadorEmailsAdmin.jsx | 319 [32m+++++++++++++++++++++[m
+ src/features/admin/faturas/faturasUtils.js         |  12 [32m+[m
+ supabase/migrations/20260812_gestao_alertas.sql    |  40 [32m+++[m
+ .../20260813_gestao_acoes_propostas_unique.sql     |   5 [32m+[m
+ supabase/migrations/20260814_emails_contador.sql   |  38 [32m+++[m
+ .../20260814_gmail_query_config_contador.sql       |   2 [32m+[m
+ 19 files changed, 1364 insertions(+), 24 deletions(-)

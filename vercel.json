@@ -6,14 +6,8 @@
     "api/parse-fatura.js": {
       "maxDuration": 30
     },
-    "api/reconciliacao/parse.js": {
+    "api/reconciliacao/index.js": {
       "maxDuration": 60
-    },
-    "api/reconciliacao/upload.js": {
-      "maxDuration": 60
-    },
-    "api/reconciliacao/process.js": {
-      "maxDuration": 30
     },
     "api/toconline/create-fatura.js": {
       "maxDuration": 30
@@ -52,6 +46,9 @@
     }
   ],
   "rewrites": [
+    { "source": "/api/reconciliacao/parse", "destination": "/api/reconciliacao?tipo=parse" },
+    { "source": "/api/reconciliacao/upload", "destination": "/api/reconciliacao?tipo=upload" },
+    { "source": "/api/reconciliacao/process", "destination": "/api/reconciliacao?tipo=process" },
     { "source": "/api/contador-acesso", "destination": "/api/contador?tipo=acesso" },
     { "source": "/api/contador-resumo", "destination": "/api/contador?tipo=resumo" },
     { "source": "/api/gerar-resposta-contador", "destination": "/api/contador?tipo=gerar" },

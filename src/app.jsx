@@ -449,7 +449,7 @@ export default function App() {
           ))}
         </div>
       )}
-      {view === 'login' && <LoginView workers={workers} onLogin={handleLogin} systemSettings={systemSettings} setSystemSettings={setSystemSettings} />}
+      {view === 'login' && <LoginView onLogin={handleLogin} />}
       {view === 'admin' && (
         <AdminDashboard
           onLogout={handleLogout}

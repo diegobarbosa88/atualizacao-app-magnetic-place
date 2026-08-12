@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>Mapa de Salários — Julho 2026 — Cartões</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B3A57;
+    --slate:#869AAF;
+    --orange:#EB8D00;
+    --bg:#EFF2F5;
+    --card:#FFFFFF;
+    --ink:#152232;
+    --ink-soft:#69798B;
+    --ok:#1E8E5A;
+    --danger:#D3572B;
+    --border:#E2E7EC;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;padding:0 0 70px;}
+
+  .hero{
+    background:var(--navy);color:#fff;padding:34px 28px 40px;
+    background-image:radial-gradient(circle at 88% 0%, rgba(235,141,0,.22), transparent 55%);
+  }
+  .hero-inner{max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px;}
+  .eyebrow{font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;color:#B9C6D4;margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+  .eyebrow .sq{width:8px;height:8px;background:var(--orange);border-radius:2px;}
+  h1{font-family:'Space Grotesk';font-weight:700;font-size:30px;margin:0 0 6px;}
+  .hero p{margin:0;color:#C9D5E0;font-size:14px;}
+  .hero-stats{display:flex;gap:26px;}
+  .hstat{text-align:right;}
+  .hstat .n{font-family:'Space Grotesk';font-weight:700;font-size:24px;color:var(--orange);}
+  .hstat .l{font-size:11px;color:#B9C6D4;text-transform:uppercase;letter-spacing:.4px;}
+
+  .wrap{max-width:1240px;margin:-20px auto 0;padding:0 28px;}
+
+  .summary-bar{
+    background:var(--card);border-radius:14px;border:1px solid var(--border);
+    display:flex;padding:4px;margin-bottom:24px;box-shadow:0 8px 24px -12px rgba(21,34,50,.18);
+    overflow-x:auto;
+  }
+  .sbar-item{flex:1;padding:14px 20px;min-width:150px;border-right:1px solid var(--border);}
+  .sbar-item:last-child{border-right:none;}
+  .sbar-item .l{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+  .sbar-item .v{font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--navy);}
+  .sbar-item.warn .v{color:#8a5800;}
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;
+    transition:box-shadow .15s;position:relative;
+  }
+  .card:hover{box-shadow:0 6px 18px -8px rgba(21,34,50,.18);}
+  .card.flag{border-color:#F0C077;background:#FFFCF6;}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .who{display:flex;flex-direction:column;}
+  .who .name{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;color:var(--ink);}
+  .who .mec{font-family:'IBM Plex Mono';font-size:11px;color:var(--slate);margin-top:2px;}
+  .alert-pin{
+    background:var(--orange);color:#fff;font-size:9.5px;font-weight:700;letter-spacing:.3px;
+    border-radius:5px;padding:3px 7px;text-transform:uppercase;
+  }
+  .liquid{
+    font-family:'Space Grotesk';font-weight:700;font-size:22px;color:var(--navy);margin-bottom:2px;
+  }
+  .liquid-lbl{font-size:11px;color:var(--ink-soft);margin-bottom:12px;}
+
+  .bar{
+    display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--border);margin-bottom:10px;
+  }
+  .bar .seg-base{background:var(--slate);}
+  .bar .seg-ac{background:var(--orange);}
+  .bar .seg-desc{background:#DDE3E9;}
+
+  .breakdown{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12px;}
+  .bd-row{display:flex;justify-content:space-between;color:var(--ink-soft);}
+  .bd-row b{color:var(--ink);font-family:'IBM Plex Mono';font-weight:600;font-size:12px;}
+  .bd-row.neg b{color:var(--danger);}
+
+  .card-footnote{
+    margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);
+    font-size:11.5px;color:#8a5800;background:none;
+  }
+
+  .legend-row{display:flex;gap:18px;flex-wrap:wrap;margin:22px 0 8px;font-size:12px;color:var(--ink-soft);}
+  .legend-row span{display:inline-flex;align-items:center;gap:6px;}
+  .legend-row i{width:10px;height:10px;border-radius:3px;display:inline-block;}
+
+  .footer{text-align:center;font-size:12px;color:var(--ink-soft);margin-top:30px;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div>
+      <div class="eyebrow"><span class="sq"></span>Magnetic Place · Folha de Salários</div>
+      <h1>Mapa Resumo — Julho 2026</h1>
+      <p>Vista por trabalhador · sectores eólico, naval e metalomecânico</p>
+    </div>
+    <div class="hero-stats">
+      <div class="hstat"><div class="n">21</div><div class="l">Trabalhadores</div></div>
+      <div class="hstat"><div class="n" id="h-total">—</div><div class="l">Total pago</div></div>
+      <div class="hstat"><div class="n" style="color:#fff;">2</div><div class="l">Alertas</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="summary-bar">
+    <div class="sbar-item"><div class="l">Total folha (recibos)</div><div class="v" id="s-total">—</div></div>
+    <div class="sbar-item"><div class="l">Ajudas de custo (não tributado)</div><div class="v" id="s-ac">—</div></div>
+    <div class="sbar-item"><div class="l">Segurança Social</div><div class="v" id="s-ss">—</div></div>
+    <div class="sbar-item"><div class="l">IRS retido</div><div class="v" id="s-irs">—</div></div>
+    <div class="sbar-item warn"><div class="l">Divergências a validar</div><div class="v">2</div></div>
+  </div>
+
+  <div class="legend-row">
+    <span><i style="background:var(--slate);"></i> Vencimento + subsídios</span>
+    <span><i style="background:var(--orange);"></i> Ajudas de custo</span>
+    <span><i style="background:#DDE3E9;"></i> Descontos (SS + IRS)</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">Gerado a partir do Mapa de Controlo TOConline · RecibosCalculadora — Magnetic Place Unipessoal, Lda</div>
+</div>
+
+<script>
+const ROWS = [["00001", "DIEGO BARBOSA", 6220.0, 0.0, -25.15, 0.0, 6194.85, 1216.47, 4831.47, 6047.94, 137.19, 35.0, 0.0, 0.0, 0.0, -25.28], ["00007", "NICOLE GALTIERI", 5000.0, 0.0, -22.23, 0.0, 4977.77, 1196.65, 3639.73, 4836.38, 133.01, 21.0, 0.0, 0.0, 0.0, -12.62], ["00008", "CRISTIANO MISMETTI", 4142.0, 0.0, -23.33, 0.0, 4118.67, 1173.33, 2772.66, 3945.99, 135.08, 61.0, 0.0, 0.0, 0.0, -23.4], ["00015", "RAFAEL GONÇALVES", 4158.0, 0.0, -0.66, 0.0, 4157.34, 1181.51, 2772.66, 3954.17, 136.83, 67.0, 0.0, 0.0, 0.0, -0.66], ["00016", "CASSIO ALMEIDA", 4420.5, 0.0, -16.35, 0.0, 4404.15, 1238.61, 3046.29, 4284.9, 135.6, 0.0, 0.0, 0.0, 0.0, -16.35], ["00019", "JOSE INÁCIO", 3816.0, 0.0, 0.0, 0.0, 3816.0, 1197.65, 2475.94, 3673.59, 133.01, 20.0, 0.0, 0.0, 0.0, -10.6], ["00020", "VICTOR VALADARES", 4940.5, 0.0, -1.09, 0.0, 4939.41, 1278.95, 3530.46, 4809.41, 140.59, 0.0, 0.0, 0.0, 0.0, -10.59], ["00025", "ROBSON ONORIO", 4570.0, 0.0, -18.48, 0.0, 4551.52, 1208.62, 3194.65, 4403.27, 135.73, 31.0, 0.0, 0.0, 0.0, -18.48], ["00026", "JEAN PIERO", 3287.0, 0.0, -0.85, 0.0, 3286.15, 1229.68, 1874.5, 3104.18, 139.82, 43.0, 0.0, 0.0, 0.0, -0.85], ["00028", "EDILSON NASCIMENTO", 4256.0, 0.0, -3.7, 0.0, 4252.3, 1231.36, 2889.93, 4121.29, 134.71, 0.0, 0.0, 0.0, 0.0, -3.7], ["00035", "ANDRE SILVA", 4203.0, 0.0, -3.59, 0.0, 4199.41, 1190.32, 2788.66, 3978.98, 140.02, 84.0, 0.0, 0.0, 0.0, -3.59], ["00038", "RAFAEL SANTOS", 5480.0, 0.0, -2.26, 0.0, 5477.74, 1254.29, 3991.54, 5245.83, 148.17, 86.0, 0.0, 0.0, 0.0, -2.26], ["00040", "JHONATAN MELO", 969.0, 0.0, -19.43, 0.0, 949.57, 872.56, 0.0, 872.56, 96.44, 0.0, 0.0, 0.0, 0.0, -19.43], ["00043", "GABRIEL SARAIVA", 4140.0, 0.0, -0.24, 0.0, 4139.76, 1163.93, 2788.66, 3952.59, 133.17, 55.0, 0.0, 0.0, 0.0, -1.0], ["00046", "IDEMILTON JUNIOR", 3996.0, 0.0, 0.0, 0.0, 3996.0, 1181.9, 2624.3, 3806.2, 135.39, 55.0, 0.0, 0.0, 0.0, -0.59], ["00049", "JOSUÉ RODRIGUES", 324.0, 0.0, 0.0, 0.0, 324.0, 289.71, 0.0, 289.71, 34.29, 0.0, 0.0, 0.0, 0.0, 0.0], ["00050", "LUCILENE LIMA", 4950.0, 0.0, -0.03, 0.0, 4949.97, 1199.95, 3530.46, 4730.41, 140.59, 79.0, 0.0, 0.0, 0.0, -0.03], ["00051", "JOSE COSTA", 3176.0, 0.0, 0.0, 0.0, 3176.0, 798.89, 2288.49, 3087.38, 88.86, 0.0, 0.0, 0.0, 0.0, -0.24], ["00052", "ADRIEL SANTOS", 3830.0, 0.0, 0.0, 0.0, 3830.0, 1226.96, 2327.58, 3554.54, 145.31, 84.0, 0.0, 0.0, 0.0, 46.15], ["00053", "ZELJKO BORANIC", 2161.25, 0.0, 0.0, 0.0, 2161.25, 1178.08, 780.89, 1958.97, 136.28, 66.0, 0.0, 0.0, 0.0, 0.0], ["00054", "FRANCISCO DINIZ", 3366.0, 0.0, 0.0, 0.0, 3366.0, 802.98, 2475.94, 3278.92, 87.84, 0.0, 0.0, 0.0, 0.0, -0.76]];
+const TOTALS = ["", "TOTAIS", 81405.25, 0.0, -137.39, 0.0, 81267.86, 23312.4, 54624.81, 77937.21, 2647.93, 787.0, 0.0, 0.0, 0.0, -104.28];
+
+const FLAGS = {
+  "00020": "Mapa indica 4.809,41€, recibo mostra 4.799,91€ (Δ 9,50€)",
+  "00053": "Recibo sem nº de apólice de seguro"
+};
+
+function fmt(n){
+  const neg = n < 0;
+  const s = Math.abs(n).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (neg? '−':'') + s + '€';
+}
+
+const grid = document.getElementById('grid');
+ROWS.forEach(r=>{
+  const [num,nome,receber,acr,ret,sub,total,mapa,ac,totalrecibo,ss,irs,fct,penhora,acdesc,retfinal] = r;
+  const flag = FLAGS[num];
+  const descontos = ss + irs;
+  const base = mapa; // taxable base portion
+  const sumBar = base + ac + descontos;
+  const pBase = (base/sumBar*100).toFixed(1);
+  const pAc = (ac/sumBar*100).toFixed(1);
+  const pDesc = (descontos/sumBar*100).toFixed(1);
+
+  const card = document.createElement('div');
+  card.className = 'card' + (flag? ' flag':'');
+  card.innerHTML = `
+    <div class="card-top">
+      <div class="who">
+        <div class="name">${nome}</div>
+        <div class="mec">Mec. ${num}</div>
+      </div>
+      ${flag?'<div class="alert-pin">Verificar</div>':''}
+    </div>
+    <div class="liquid">${fmt(totalrecibo)}</div>
+    <div class="liquid-lbl">Total a receber (recibo)</div>
+    <div class="bar">
+      <div class="seg-base" style="width:${pBase}%"></div>
+      <div class="seg-ac" style="width:${pAc}%"></div>
+      <div class="seg-desc" style="width:${pDesc}%"></div>
+    </div>
+    <div class="breakdown">
+      <div class="bd-row"><span>Base tributável</span><b>${fmt(mapa)}</b></div>
+      <div class="bd-row"><span>Ajudas de custo</span><b>${fmt(ac)}</b></div>
+      <div class="bd-row"><span>Seg. Social</span><b>${fmt(ss)}</b></div>
+      <div class="bd-row"><span>IRS</span><b>${fmt(irs)}</b></div>
+    </div>
+    ${flag?`<div class="card-footnote">⚠ ${flag}</div>`:''}
+  `;
+  grid.appendChild(card);
+});
+
+document.getElementById('h-total').textContent = fmt(TOTALS[9]);
+document.getElementById('s-total').textContent = fmt(TOTALS[9]);
+document.getElementById('s-ac').textContent = fmt(TOTALS[8]);
+document.getElementById('s-ss').textContent = fmt(TOTALS[10]);
+document.getElementById('s-irs').textContent = fmt(TOTALS[11]);
+</script>
+</body>
+</html>

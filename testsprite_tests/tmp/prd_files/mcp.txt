@@ -1,0 +1,83 @@
+Product Specification Document (PSD)
+Projeto: Módulo de Automação de Tesouraria e Salários (novobanco ➔ TOConline)
+
+Autor: Diego Rocha Barbosa
+
+Empresa: MAGNETIC PLACE UNIPESSOAL LDA
+
+Data: Junho de 2026
+
+Estado: Em Desenvolvimento
+
+1. Visão Geral do Produto (Overview)
+O objetivo deste produto é criar uma plataforma interna de gestão financeira que elimine os processos manuais de conciliação bancária e pagamento de salários. A aplicação irá ligar a "conta serviço" do novobanco (pacote Novo Negócio), que atualmente não suporta agregadores normais (Tink), diretamente à contabilidade do TOConline e ao motor de geração de ficheiros bancários SEPA nativos.
+
+Objetivos Principais:
+Automatizar a conciliação: Importar extratos diários sem intervenção manual humana.
+
+Centralizar a informação: Fornecer uma dashboard financeira idêntica ao agregador do banco.
+
+Agilizar os recursos humanos: Gerar ficheiros XML de salários validados e prontos a submeter no banco.
+
+2. Escopo das Funcionalidades (Features)
+Feature 1: Dashboard e Agregador Financeiro (Visão Visual)
+Descrição: Ecrã principal que consolida a saúde financeira da empresa.
+
+Métricas a Exibir:
+
+Saldo Total Disponível (atualizado com base no último fecho do extrato).
+
+Total de Receitas (soma de créditos CRDT do mês).
+
+Total de Despesas (soma de débitos DBIT do mês).
+
+Cash Flow Líquido (Receitas - Despesas).
+
+Componentes Visuais: Tabela com os últimos movimentos e um Calendário Financeiro com marcação de dias de forte atividade.
+
+Feature 2: Automatização do Extrato (Ingestão de Dados)
+Fluxo de Dados:
+
+O novobanco envia um email diário com o extrato em formato Camt.053 (XML).
+
+O backend Node.js (via cron-job IMAP) captura o email e descarrega o ficheiro.
+
+O parser quebra o XML, extrai os movimentos e envia-os para a API do TOConline.
+
+Fallback: Deve existir um botão no frontend para "Upload Manual" de ficheiros XML caso o fluxo de email falhe.
+
+Feature 3: Gerador de Folha de Salários SEPA
+Descrição: Exportação de ordens de transferência a crédito em lote.
+
+Especificação Técnica: Formato estrito ISO 20022 pain.001.001.03.
+
+Regras de Validação Obrigatórias (novobanco):
+
+Regra de Antecedência: O campo <ReqdExctnDt> deve ser calculado dinamicamente para Hoje + 2 dias úteis, mitigando rejeições no portal.
+
+Identificação de Categoria: Inclusão obrigatória da tag <CtgyPurp><Cd>SALA</Cd></CtgyPurp> para garantir privacidade e isenção de taxas.
+
+Limite do Portal: Se o lote contiver mais de 2000 trabalhadores, o sistema deve emitir um aviso ao utilizador de que os comprovativos individuais não estarão disponíveis.
+
+3. Requisitos Técnicos e Arquitetura
+Backend: Node.js com Express (ES Modules).
+
+Segurança / Configuração: Variáveis de ambiente (.env) para armazenar credenciais IMAP, IBAN/BIC da empresa e chaves de API do TOConline.
+
+Bibliotecas Principais:
+
+xmlbuilder2 (para a criação perfeita do SEPA XML).
+
+fast-xml-parser (para a leitura do Camt.053 do banco).
+
+imap-simple / mailparser (para a automação da caixa de correio).
+
+4. Restrições e Fora de Escopo (Out of Scope)
+Transferências Imediatas via Lote: Não serão suportadas nesta fase devido aos custos elevados de comissões por transação cobrados pelo novobanco.
+
+Execução Direta de API Bancária: Visto tratar-se de uma conta serviço do plano Novo Negócio, a comunicação de saída será feita exclusivamente por ficheiros (XML descarregado pelo utilizador), evitando custos de infraestrutura mTLS/Host-to-Host.
+
+5. Critérios de Aceitação e Testes (QA)
+O ficheiro XML gerado não pode conter caracteres especiais ou acentuação portuguesa que quebrem os validadores da SIBS.
+
+Automação de Testes: Utilização do TestSprite para simular payloads de trabalhadores com diferentes salários e validar a integridade da estrutura do ficheiro gerado antes de qualquer deploy em produção.

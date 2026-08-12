@@ -1,0 +1,21 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "diff",
+  "localEndpoint": "http://localhost:3000/worker",
+  "loginUser": "trabalhadorteste",
+  "loginPassword": "123456789",
+  "executionArgs": {
+    "projectName": "APP MAGNETIC PRODUCAO",
+    "projectPath": "C:\\Users\\diego\\APP MAGNETIC PRODUCAO",
+    "testIds": [
+      "TC001"
+    ],
+    "additionalInstruction": "Focus on the Worker Dashboard. Log in as a worker user (not admin). After login, verify: 1) WorkerHeroStats shows today hours and month hours cards, 2) month navigation arrows work (prev/next month), 3) the 'Ver Meta Mensal' button toggles the progress bar, 4) InServiceCard is rendered when there is an open log (shows Em servico or Em pausa status), 5) the bottom navigation tabs (Home, Perfil, Horarios) switch views correctly, 6) RequestEntryCard expands/collapses when clicking the header. Test the worker role, not the admin role.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-Gz-LJJmH9BSXOYYK5-cArpcrgXazw6aOj4P4EkAWW9zoGwMPb0Eg-06IJXd4_BLUzmYkuHiBeo0tSh7BuFFrBdSl5JEUK7-6mGGK0wxkOJk1aK3S2lHErxxFYsC_g0Qwq34"
+    }
+  },
+  "serverPort": 56140
+}

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<title>Mapa de Salários — Julho 2026 — Painel Executivo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B3A57;
+    --navy-deep:#122740;
+    --slate:#869AAF;
+    --slate-soft:#E7ECF1;
+    --orange:#EB8D00;
+    --bg:#F5F7F9;
+    --card:#FFFFFF;
+    --ink:#152232;
+    --ink-soft:#647587;
+    --ok:#1E8E5A;
+    --danger:#D3572B;
+    --border:#E4E9EE;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',sans-serif;}
+  .shell{max-width:1240px;margin:0 auto;padding:0 28px 80px;}
+
+  .topbar{
+    background:linear-gradient(135deg,var(--navy) 0%, var(--navy-deep) 100%);
+    color:#fff;padding:28px 28px 34px;margin:0 -28px 28px;
+    border-radius:0 0 20px 20px;
+    position:relative;overflow:hidden;
+  }
+  .topbar::after{
+    content:"";position:absolute;right:-40px;top:-60px;width:220px;height:220px;
+    border-radius:50%;background:radial-gradient(circle,rgba(235,141,0,.18),transparent 70%);
+  }
+  .topbar-inner{max-width:1184px;margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:16px;position:relative;}
+  .brandline{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .brandmark{width:34px;height:34px;border-radius:8px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk';font-weight:700;color:#1B3A57;font-size:15px;}
+  .brandline span{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#B9C6D4;}
+  .topbar h1{font-family:'Space Grotesk';font-weight:700;font-size:30px;margin:0;}
+  .topbar p{margin:4px 0 0;color:#C9D5E0;font-size:14px;}
+  .period-pill{
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:10px;
+    padding:12px 18px;font-family:'IBM Plex Mono';font-size:13px;color:#fff;text-align:right;
+  }
+  .period-pill b{display:block;font-size:18px;font-family:'Space Grotesk';color:var(--orange);}
+
+  /* KPI grid */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px;}
+  .kpi-card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;
+    box-shadow:0 1px 2px rgba(21,34,50,.04);
+  }
+  .kpi-card .top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;}
+  .kpi-card .lbl{font-size:12px;color:var(--ink-soft);font-weight:500;}
+  .kpi-card .icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;}
+  .kpi-card .val{font-family:'Space Grotesk';font-weight:700;font-size:25px;color:var(--navy);}
+  .kpi-card .sub{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+  .icon.i1{background:#E9F0F7;color:var(--navy);}
+  .icon.i2{background:#FFF1DC;color:#8a5800;}
+  .icon.i3{background:#E7ECF1;color:var(--slate);}
+  .icon.i4{background:#E7F5EC;color:var(--ok);}
+
+  /* Reconciliation banner — the signature element */
+  .recon{
+    background:#fff;border:1px solid #F3D9AE;border-left:5px solid var(--orange);
+    border-radius:12px;padding:18px 22px;margin-bottom:28px;
+    display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:start;
+  }
+  .recon .badge{
+    background:var(--orange);color:#fff;font-family:'Space Grotesk';font-weight:700;
+    border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:18px;
+  }
+  .recon h3{margin:0 0 6px;font-family:'Space Grotesk';font-size:15px;color:#8a5800;}
+  .recon-list{display:flex;flex-direction:column;gap:8px;margin-top:8px;}
+  .recon-item{
+    display:flex;justify-content:space-between;align-items:center;background:#FFF8EE;
+    border-radius:8px;padding:9px 14px;font-size:13px;
+  }
+  .recon-item .who{font-weight:600;color:var(--ink);}
+  .recon-item .what{color:var(--ink-soft);font-size:12.5px;}
+  .recon-item .delta{font-family:'IBM Plex Mono';font-weight:600;color:var(--danger);}
+
+  /* table panel */
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+  .panel-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .panel-head h2{font-family:'Space Grotesk';font-size:16px;margin:0;color:var(--navy);}
+  .panel-head span{font-size:12px;color:var(--ink-soft);}
+  .tablescroll{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:960px;}
+  thead th{
+    text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--ink-soft);
+    font-weight:600;padding:10px 14px;background:var(--slate-soft);white-space:nowrap;
+  }
+  thead th:nth-child(1),thead th:nth-child(2){text-align:left;}
+  tbody td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono';font-size:12.5px;white-space:nowrap;}
+  tbody td:nth-child(1){color:var(--slate);font-weight:600;text-align:left;font-family:'Inter';font-size:12px;}
+  tbody td:nth-child(2){text-align:left;font-family:'Inter';font-weight:600;color:var(--ink);font-size:13px;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:#FAFBFC;}
+  tbody tr.flag{background:#FFFAF1;}
+  .name-wrap{display:flex;align-items:center;gap:8px;}
+  .dot-flag{width:7px;height:7px;border-radius:50%;background:var(--orange);flex:none;}
+  .neg{color:var(--danger);}
+  .ac-col{color:var(--ok);font-weight:600;}
+  tfoot td{padding:14px;font-weight:700;background:var(--navy);color:#fff;font-family:'IBM Plex Mono';}
+  tfoot td:nth-child(2){font-family:'Space Grotesk';text-align:left;}
+
+  .footer{margin-top:20px;font-size:12px;color:var(--ink-soft);text-align:center;}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <div class="brandline"><div class="brandmark">MP</div><span>Magnetic Place · Painel de Folha</span></div>
+      <h1>Mapa Resumo de Salários</h1>
+      <p>21 trabalhadores · sectores eólico, naval e metalomecânico</p>
+    </div>
+    <div class="period-pill">Período<b>Julho 2026</b></div>
+  </div>
+</div>
+
+<div class="shell">
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="top"><span class="lbl">Total pago (recibos)</span><div class="icon i1">€</div></div>
+      <div class="val" id="k-total">—</div>
+      <div class="sub">Soma da coluna Recibo · Total</div>
+    </div>
+    <div class="kpi-card">
+      <div class="top"><span class="lbl">Ajudas de custo</span><div class="icon i4">AC</div></div>
+      <div class="val" id="k-ac">—</div>
+      <div class="sub">67,1% da folha · não tributado</div>
+    </div>
+    <div class="kpi-card">
+      <div class="top"><span class="lbl">Seg. Social + IRS</span><div class="icon i3">SS</div></div>
+      <div class="val" id="k-ss">—</div>
+      <div class="sub">Retenções do mês</div>
+    </div>
+    <div class="kpi-card">
+      <div class="top"><span class="lbl">Alertas de reconciliação</span><div class="icon i2">!</div></div>
+      <div class="val">2</div>
+      <div class="sub">Ver painel abaixo</div>
+    </div>
+  </div>
+
+  <div class="recon">
+    <div class="badge">!</div>
+    <div>
+      <h3>Divergências entre Mapa e Recibos individuais</h3>
+      <div class="recon-list">
+        <div class="recon-item">
+          <div><div class="who">Victor Johnson Valadares · mec. 20</div><div class="what">Mapa indica 4.809,41€, recibo emitido mostra 4.799,91€</div></div>
+          <div class="delta">Δ 9,50€</div>
+        </div>
+        <div class="recon-item">
+          <div><div class="who">Zeljko Boranic · mec. 53</div><div class="what">Recibo sem nº de apólice de seguro de acidentes de trabalho</div></div>
+          <div class="delta">a validar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Detalhe por trabalhador</h2>
+      <span>Fonte: Mapa de Controlo TOConline · 07/2026</span>
+    </div>
+    <div class="tablescroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Mec.</th><th>Nome</th>
+            <th>A receber</th><th>Acréscimos</th><th>Retenção</th><th>Sub/Prém</th><th>Total</th>
+            <th>Mapa</th><th>A.C.</th><th>Total recibo</th>
+            <th>Seg. Social</th><th>IRS</th><th>Retenção</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+        <tfoot><tr id="tfoot-row"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">Gerado automaticamente a partir do Mapa de Controlo · RecibosCalculadora — Magnetic Place Unipessoal, Lda</div>
+</div>
+
+<script>
+const ROWS = [["00001", "DIEGO BARBOSA", 6220.0, 0.0, -25.15, 0.0, 6194.85, 1216.47, 4831.47, 6047.94, 137.19, 35.0, 0.0, 0.0, 0.0, -25.28], ["00007", "NICOLE GALTIERI", 5000.0, 0.0, -22.23, 0.0, 4977.77, 1196.65, 3639.73, 4836.38, 133.01, 21.0, 0.0, 0.0, 0.0, -12.62], ["00008", "CRISTIANO MISMETTI", 4142.0, 0.0, -23.33, 0.0, 4118.67, 1173.33, 2772.66, 3945.99, 135.08, 61.0, 0.0, 0.0, 0.0, -23.4], ["00015", "RAFAEL GONÇALVES", 4158.0, 0.0, -0.66, 0.0, 4157.34, 1181.51, 2772.66, 3954.17, 136.83, 67.0, 0.0, 0.0, 0.0, -0.66], ["00016", "CASSIO ALMEIDA", 4420.5, 0.0, -16.35, 0.0, 4404.15, 1238.61, 3046.29, 4284.9, 135.6, 0.0, 0.0, 0.0, 0.0, -16.35], ["00019", "JOSE INÁCIO", 3816.0, 0.0, 0.0, 0.0, 3816.0, 1197.65, 2475.94, 3673.59, 133.01, 20.0, 0.0, 0.0, 0.0, -10.6], ["00020", "VICTOR VALADARES", 4940.5, 0.0, -1.09, 0.0, 4939.41, 1278.95, 3530.46, 4809.41, 140.59, 0.0, 0.0, 0.0, 0.0, -10.59], ["00025", "ROBSON ONORIO", 4570.0, 0.0, -18.48, 0.0, 4551.52, 1208.62, 3194.65, 4403.27, 135.73, 31.0, 0.0, 0.0, 0.0, -18.48], ["00026", "JEAN PIERO", 3287.0, 0.0, -0.85, 0.0, 3286.15, 1229.68, 1874.5, 3104.18, 139.82, 43.0, 0.0, 0.0, 0.0, -0.85], ["00028", "EDILSON NASCIMENTO", 4256.0, 0.0, -3.7, 0.0, 4252.3, 1231.36, 2889.93, 4121.29, 134.71, 0.0, 0.0, 0.0, 0.0, -3.7], ["00035", "ANDRE SILVA", 4203.0, 0.0, -3.59, 0.0, 4199.41, 1190.32, 2788.66, 3978.98, 140.02, 84.0, 0.0, 0.0, 0.0, -3.59], ["00038", "RAFAEL SANTOS", 5480.0, 0.0, -2.26, 0.0, 5477.74, 1254.29, 3991.54, 5245.83, 148.17, 86.0, 0.0, 0.0, 0.0, -2.26], ["00040", "JHONATAN MELO", 969.0, 0.0, -19.43, 0.0, 949.57, 872.56, 0.0, 872.56, 96.44, 0.0, 0.0, 0.0, 0.0, -19.43], ["00043", "GABRIEL SARAIVA", 4140.0, 0.0, -0.24, 0.0, 4139.76, 1163.93, 2788.66, 3952.59, 133.17, 55.0, 0.0, 0.0, 0.0, -1.0], ["00046", "IDEMILTON JUNIOR", 3996.0, 0.0, 0.0, 0.0, 3996.0, 1181.9, 2624.3, 3806.2, 135.39, 55.0, 0.0, 0.0, 0.0, -0.59], ["00049", "JOSUÉ RODRIGUES", 324.0, 0.0, 0.0, 0.0, 324.0, 289.71, 0.0, 289.71, 34.29, 0.0, 0.0, 0.0, 0.0, 0.0], ["00050", "LUCILENE LIMA", 4950.0, 0.0, -0.03, 0.0, 4949.97, 1199.95, 3530.46, 4730.41, 140.59, 79.0, 0.0, 0.0, 0.0, -0.03], ["00051", "JOSE COSTA", 3176.0, 0.0, 0.0, 0.0, 3176.0, 798.89, 2288.49, 3087.38, 88.86, 0.0, 0.0, 0.0, 0.0, -0.24], ["00052", "ADRIEL SANTOS", 3830.0, 0.0, 0.0, 0.0, 3830.0, 1226.96, 2327.58, 3554.54, 145.31, 84.0, 0.0, 0.0, 0.0, 46.15], ["00053", "ZELJKO BORANIC", 2161.25, 0.0, 0.0, 0.0, 2161.25, 1178.08, 780.89, 1958.97, 136.28, 66.0, 0.0, 0.0, 0.0, 0.0], ["00054", "FRANCISCO DINIZ", 3366.0, 0.0, 0.0, 0.0, 3366.0, 802.98, 2475.94, 3278.92, 87.84, 0.0, 0.0, 0.0, 0.0, -0.76]];
+const TOTALS = ["", "TOTAIS", 81405.25, 0.0, -137.39, 0.0, 81267.86, 23312.4, 54624.81, 77937.21, 2647.93, 787.0, 0.0, 0.0, 0.0, -104.28];
+const FLAGGED = new Set(["00020","00053"]);
+
+function fmt(n){
+  const neg = n < 0;
+  const s = Math.abs(n).toLocaleString('pt-PT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return (neg? '−':'') + s + '€';
+}
+
+// keep only the columns relevant to this table view: idx 0 nome,1 receber,2 acrésc,3 retenção,4 sub,5 total,6 mapa,7 ac,8 total recibo,9 ss,10 irs, 13 retenção-final(idx13 in vals array => original col idx 13 i.e. array pos 15)
+const tbody = document.getElementById('tbody');
+ROWS.forEach(r=>{
+  const [num,nome,receber,acr,ret,sub,total,mapa,ac,totalrecibo,ss,irs,fct,penhora,acdesc,retfinal] = r;
+  const flagged = FLAGGED.has(num);
+  const tr = document.createElement('tr');
+  if(flagged) tr.className='flag';
+  tr.innerHTML = `
+    <td>${num}</td>
+    <td><div class="name-wrap">${flagged?'<span class="dot-flag"></span>':''}${nome}</div></td>
+    <td>${fmt(receber)}</td>
+    <td>${fmt(acr)}</td>
+    <td class="${ret<0?'neg':''}">${fmt(ret)}</td>
+    <td>${fmt(sub)}</td>
+    <td>${fmt(total)}</td>
+    <td>${fmt(mapa)}</td>
+    <td class="ac-col">${fmt(ac)}</td>
+    <td><b>${fmt(totalrecibo)}</b></td>
+    <td>${fmt(ss)}</td>
+    <td>${fmt(irs)}</td>
+    <td class="${retfinal<0?'neg':''}">${fmt(retfinal)}</td>
+  `;
+  tbody.appendChild(tr);
+});
+
+const tfoot = document.getElementById('tfoot-row');
+const [,,receber,acr,ret,sub,total,mapa,ac,totalrecibo,ss,irs,fct,penhora,acdesc,retfinal] = TOTALS;
+tfoot.innerHTML = `<td>—</td><td>TOTAIS</td><td>${fmt(receber)}</td><td>${fmt(acr)}</td><td>${fmt(ret)}</td><td>${fmt(sub)}</td><td>${fmt(total)}</td><td>${fmt(mapa)}</td><td>${fmt(ac)}</td><td>${fmt(totalrecibo)}</td><td>${fmt(ss)}</td><td>${fmt(irs)}</td><td>${fmt(retfinal)}</td>`;
+
+document.getElementById('k-total').textContent = fmt(TOTALS[9]);
+document.getElementById('k-ac').textContent = fmt(TOTALS[8]);
+document.getElementById('k-ss').textContent = fmt(TOTALS[10]+TOTALS[11]);
+</script>
+</body>
+</html>
