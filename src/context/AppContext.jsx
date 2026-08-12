@@ -143,9 +143,147 @@ export const AppProvider = ({ children }) => {
     initSupabase();
   }, []);
 
-  // --- FETCH DATA ---
+  // --- DETEÇÃO DE SESSÃO (Fase 0 — só para atrasar os fetches, não para autenticar) ---
+  // currentUser cobre admin+trabalhador (localStorage 'magnetic_user', já reativo:
+  // handleLogin em app.jsx chama setCurrentUser diretamente). clientSession vive só
+  // em localStorage ('magnetic_client_session'), gerida dentro de ClientPortal.jsx,
+  // sem estado próprio aqui — por isso fazemos um poll leve só até aparecer.
+  const hasAnySessionSignal = () => {
+    try {
+      if (localStorage.getItem('magnetic_user')) return true;
+      const raw = localStorage.getItem('magnetic_client_session');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && Date.now() < parsed.expiry) return true;
+      }
+    } catch { /* ignore */ }
+    return false;
+  };
+
+  const [hasSession, setHasSession] = useState(hasAnySessionSignal);
+
+  useEffect(() => {
+    if (currentUser) setHasSession(true);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (hasSession) return;
+    const check = () => { if (hasAnySessionSignal()) setHasSession(true); };
+    check();
+    const interval = setInterval(check, 1000);
+    return () => clearInterval(interval);
+  }, [hasSession]);
+
+  // --- FETCH SEMPRE (dados mínimos exigidos pelos próprios ecrãs de login) ---
+  // workers/clients continuam a carregar sem sessão porque a validação de
+  // credenciais hoje é feita no cliente, comparando o NIF introduzido contra estas
+  // tabelas (LoginView.jsx e ClientPortal.jsx.handleLogin) — mudar isso é trabalho
+  // de autenticação a desenhar numa fase posterior, não desta correção. Só
+  // admin_password é pedido a system_settings aqui; o resto (gemini_api_key,
+  // tolerâncias, etc.) fica no bloco dependente de sessão abaixo.
   useEffect(() => {
     if (!isDbReady || !supabaseInstance) return;
+
+    const fetchTable = async (table, setter) => {
+      const tableName = table.toLowerCase();
+      const { data, error } = await supabaseInstance.from(tableName).select('*');
+      if (error) {
+        console.error(`Erro ao carregar ${tableName}:`, error);
+        return;
+      }
+      if (data) {
+        if (table === 'workers') {
+          const mapped = data.map(d => ({
+            ...d,
+            nis: d.nis !== undefined ? d.nis : '',
+            nif: d.nif !== undefined ? d.nif : '',
+            status: d.is_active === false ? 'inativo' : 'ativo',
+            tabela_irs: d.tabela_irs || 'tabelaI',
+            n_dependentes: d.n_dependentes ?? 0,
+            tipo_contrato: d.tipo_contrato || 'sem_termo',
+            regime: d.regime || 'tempo_inteiro',
+            horas_semanais: d.horas_semanais ?? 40,
+            modo_trabalho: d.modo_trabalho || 'presencial',
+            data_nascimento: d.data_nascimento || null,
+            enquadramento: d.enquadramento || 'REGE',
+            local_trabalho: d.local_trabalho || null,
+            profissao_cnp: d.profissao_cnp || null,
+            ss_admissao_comunicada_em: d.ss_admissao_comunicada_em || null,
+            ss_admissao_num_registo: d.ss_admissao_num_registo || null,
+            ss_cessacao_comunicada_em: d.ss_cessacao_comunicada_em || null,
+            ss_cessacao_num_registo: d.ss_cessacao_num_registo || null,
+          }));
+          setter(mapped);
+        } else {
+          const unique = [...new Map(data.map(d => [d.id, d])).values()];
+          setter(unique);
+        }
+      }
+    };
+
+    fetchTable('clients', setClients);
+    fetchTable('workers', setWorkers);
+
+    (async () => {
+      const { data, error } = await supabaseInstance
+        .from('system_settings')
+        .select('admin_password')
+        .eq('id', 1)
+        .maybeSingle();
+      if (error) { console.error('Erro ao carregar admin_password:', error); return; }
+      if (data && data.admin_password !== undefined) {
+        setSystemSettings(prev => ({ ...prev, adminPassword: data.admin_password }));
+      }
+    })();
+
+    const upsertById = (setter) => (row) => setter(prev => {
+      const exists = prev.some(x => x.id === row.id);
+      return exists ? prev.map(x => x.id === row.id ? row : x) : [row, ...prev];
+    });
+    const removeById = (setter) => (row) => setter(prev => prev.filter(x => x.id !== row.id));
+
+    const channelWorkers = supabaseInstance
+      .channel('realtime-workers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          upsertById(setWorkers)(payload.new);
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new;
+          setWorkers(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
+          setCurrentUser(prev => {
+            if (!prev || prev.id !== updated.id) return prev;
+            const hasChange = Object.keys(updated).some(k => prev[k] !== updated[k]);
+            if (!hasChange) return prev;
+            const merged = { ...prev, ...updated };
+            localStorage.setItem('magnetic_user', JSON.stringify(merged));
+            return merged;
+          });
+        } else if (payload.eventType === 'DELETE') {
+          removeById(setWorkers)(payload.old);
+        }
+      })
+      .subscribe();
+
+    const channelClients = supabaseInstance
+      .channel('realtime-clients')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, (payload) => {
+        if (payload.eventType === 'DELETE') removeById(setClients)(payload.old);
+        else upsertById(setClients)(payload.new);
+      }).subscribe();
+
+    return () => {
+      supabaseInstance.removeChannel(channelWorkers);
+      supabaseInstance.removeChannel(channelClients);
+    };
+  }, [isDbReady]);
+
+  // --- FETCH SÓ COM SESSÃO ATIVA ---
+  // Todo o resto (logs, documentos, despesas, aprovações, correções, pedidos de
+  // ausência, notificações, o resto de system_settings) só é pedido depois de
+  // existir qualquer sinal de sessão (admin, trabalhador ou cliente). Antes disso,
+  // este efeito nem corre — não é filtragem "por dentro", é o fetch não acontecer.
+  useEffect(() => {
+    if (!isDbReady || !supabaseInstance || !hasSession) return;
 
     const fetchData = async () => {
       const fetchTable = async (table, setter) => {
@@ -161,28 +299,6 @@ export const AppProvider = ({ children }) => {
               ...d,
               isAdvanced: d.isAdvanced !== undefined ? d.isAdvanced : d.isadvanced,
               dailyConfigs: d.dailyConfigs !== undefined ? d.dailyConfigs : d.dailyconfigs,
-            }));
-            setter(mapped);
-          } else if (table === 'workers') {
-            const mapped = data.map(d => ({
-              ...d,
-              nis: d.nis !== undefined ? d.nis : '',
-              nif: d.nif !== undefined ? d.nif : '',
-              status: d.is_active === false ? 'inativo' : 'ativo',
-              tabela_irs: d.tabela_irs || 'tabelaI',
-              n_dependentes: d.n_dependentes ?? 0,
-              tipo_contrato: d.tipo_contrato || 'sem_termo',
-              regime: d.regime || 'tempo_inteiro',
-              horas_semanais: d.horas_semanais ?? 40,
-              modo_trabalho: d.modo_trabalho || 'presencial',
-              data_nascimento: d.data_nascimento || null,
-              enquadramento: d.enquadramento || 'REGE',
-              local_trabalho: d.local_trabalho || null,
-              profissao_cnp: d.profissao_cnp || null,
-              ss_admissao_comunicada_em: d.ss_admissao_comunicada_em || null,
-              ss_admissao_num_registo: d.ss_admissao_num_registo || null,
-              ss_cessacao_comunicada_em: d.ss_cessacao_comunicada_em || null,
-              ss_cessacao_num_registo: d.ss_cessacao_num_registo || null,
             }));
             setter(mapped);
           } else {
@@ -216,8 +332,6 @@ export const AppProvider = ({ children }) => {
       };
 
       await Promise.all([
-        fetchTable('clients', setClients),
-        fetchTable('workers', setWorkers),
         fetchTable('schedules', setSchedules),
         fetchTable('personalschedules', setPersonalSchedules),
         fetchLogs(),
@@ -278,7 +392,7 @@ export const AppProvider = ({ children }) => {
 
     fetchData();
 
-    // --- REALTIME SUBSCRIPTIONS ---
+    // --- REALTIME SUBSCRIPTIONS (workers/clients já subscritos no efeito sempre-ativo acima) ---
     const channelNotif = supabaseInstance
       .channel('realtime-notifications')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'app_notifications' }, (payload) => {
@@ -360,35 +474,6 @@ export const AppProvider = ({ children }) => {
       })
       .subscribe();
 
-    const channelWorkers = supabaseInstance
-      .channel('realtime-workers')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'workers' }, (payload) => {
-        if (payload.eventType === 'INSERT') {
-          upsertById(setWorkers)(payload.new);
-        } else if (payload.eventType === 'UPDATE') {
-          const updated = payload.new;
-          setWorkers(prev => prev.map(w => w.id === updated.id ? { ...w, ...updated } : w));
-          setCurrentUser(prev => {
-            if (!prev || prev.id !== updated.id) return prev;
-            const hasChange = Object.keys(updated).some(k => prev[k] !== updated[k]);
-            if (!hasChange) return prev;
-            const merged = { ...prev, ...updated };
-            localStorage.setItem('magnetic_user', JSON.stringify(merged));
-            return merged;
-          });
-        } else if (payload.eventType === 'DELETE') {
-          removeById(setWorkers)(payload.old);
-        }
-      })
-      .subscribe();
-
-    const channelClients = supabaseInstance
-      .channel('realtime-clients')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'clients' }, (payload) => {
-        if (payload.eventType === 'DELETE') removeById(setClients)(payload.old);
-        else upsertById(setClients)(payload.new);
-      }).subscribe();
-
     const channelDocuments = supabaseInstance
       .channel('realtime-documents')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'documents' }, (payload) => {
@@ -438,8 +523,6 @@ export const AppProvider = ({ children }) => {
       supabaseInstance.removeChannel(channelLogs);
       supabaseInstance.removeChannel(channelChangeReqs);
       supabaseInstance.removeChannel(channelAbsences);
-      supabaseInstance.removeChannel(channelWorkers);
-      supabaseInstance.removeChannel(channelClients);
       supabaseInstance.removeChannel(channelDocuments);
       supabaseInstance.removeChannel(channelSchedules);
       supabaseInstance.removeChannel(channelPersonalSchedules);
@@ -447,7 +530,7 @@ export const AppProvider = ({ children }) => {
       supabaseInstance.removeChannel(channelExpenses);
       supabaseInstance.removeChannel(channelSettings);
     };
-  }, [isDbReady]);
+  }, [isDbReady, hasSession]);
 
   // --- DATABASE ACTIONS ---
   const saveToDb = async (colName, id, data) => {
