@@ -1,20 +1,5 @@
-export default async function handler(req, res) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
-
-  // GET /api/parse-fatura → lista modelos disponíveis (diagnóstico)
-  if (req.method === 'GET') {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
-    const d = await r.json();
-    return res.status(r.status).json(d);
-  }
-
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
-  const { texto } = req.body || {};
-  if (!texto) return res.status(400).json({ error: 'Missing texto' });
-
-  const prompt = `És um especialista em leitura de faturas portuguesas e europeias. Analisa o texto abaixo e extrai os seguintes campos com rigor:
+export function buildFaturaPrompt(texto) {
+  return `És um especialista em leitura de faturas portuguesas e europeias. Analisa o texto abaixo e extrai os seguintes campos com rigor:
 
 - numero_fatura: número/referência da fatura (ex: "FT 2024/123", "2024-456"). NÃO confundas com número de encomenda, guia ou cliente.
 - data_fatura: data de emissão da fatura em formato YYYY-MM-DD. NÃO uses a data de vencimento.
@@ -34,6 +19,15 @@ Regras importantes:
 
 Texto da fatura:
 ${texto.slice(0, 6000)}`;
+}
+
+// Chama o Gemini com um prompt já montado e devolve o JSON parseado.
+// Reutilizável por qualquer chamador que precise de extrair campos estruturados
+// de texto (faturas normais, emails do contador, etc.) — mesmo modelo/parsing
+// de sempre (gemini-2.5-flash, temperature 0, strip de markdown).
+export async function callGeminiJSON(prompt) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('Missing GEMINI_API_KEY');
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
@@ -49,7 +43,7 @@ ${texto.slice(0, 6000)}`;
 
   if (!response.ok) {
     const err = await response.text();
-    return res.status(response.status).json({ error: err });
+    throw new Error(`Gemini API error (${response.status}): ${err}`);
   }
 
   const data = await response.json();
@@ -57,8 +51,32 @@ ${texto.slice(0, 6000)}`;
   const jsonStr = raw.replace(/```json|```/g, '').trim();
 
   try {
-    return res.status(200).json(JSON.parse(jsonStr));
+    return { data: JSON.parse(jsonStr), raw: null };
   } catch {
-    return res.status(200).json({ raw });
+    return { data: null, raw };
+  }
+}
+
+export default async function handler(req, res) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
+
+  // GET /api/parse-fatura → lista modelos disponíveis (diagnóstico)
+  if (req.method === 'GET') {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`);
+    const d = await r.json();
+    return res.status(r.status).json(d);
+  }
+
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { texto } = req.body || {};
+  if (!texto) return res.status(400).json({ error: 'Missing texto' });
+
+  try {
+    const { data, raw } = await callGeminiJSON(buildFaturaPrompt(texto));
+    return res.status(200).json(data ?? { raw });
+  } catch (e) {
+    return res.status(502).json({ error: e.message });
   }
 }

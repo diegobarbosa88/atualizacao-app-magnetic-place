@@ -3,7 +3,7 @@ import {
   Wallet, Settings, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, FolderOpen, Mail, ReceiptText, Coins, Receipt,
   FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
-  Truck, Shield, Table2,
+  Truck, Shield, Table2, ShieldAlert, MessageSquareText,
 } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
@@ -46,6 +46,7 @@ export const ADMIN_SECTIONS = [
     subtabs: [
       { id: 'importar',     label: 'Importar',     icon: Mail,      path: '/admin/faturacao/importar' },
       { id: 'fornecedores', label: 'Fornecedores', icon: Building2, path: '/admin/faturacao/fornecedores' },
+      { id: 'contador',     label: 'Contador',     icon: MessageSquareText, path: '/admin/faturacao/contador' },
     ],
   },
   {
@@ -77,6 +78,7 @@ export const ADMIN_SECTIONS = [
       { id: 'toc-relatorios', label: 'Relatórios', icon: BarChart2,  path: '/admin/toconline?subtab=relatorios' },
     ],
   },
+  { id: 'alertas', label: 'Gestão de Alertas', icon: ShieldAlert, badgeType: null },
   { id: 'settings', label: 'Configurações', icon: Settings, badgeType: null },
 ];
 

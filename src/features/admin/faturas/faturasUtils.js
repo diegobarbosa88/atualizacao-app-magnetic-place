@@ -7,6 +7,18 @@ export const DEFAULT_GMAIL_CONFIG = {
   palavras: '',
 };
 
+// Query dedicada aos emails do contador (cobrança de faturas mensais) — remetente
+// fica vazio por default porque o email real do contador é configurado pelo admin
+// (evita hardcode de PII neste ficheiro partilhado)
+export const DEFAULT_GMAIL_CONFIG_CONTADOR = {
+  lidos: true,
+  naoLidos: true,
+  temAnexo: false,
+  assuntos: ['fatura', 'cobrança', 'honorários'],
+  remetente: '',
+  palavras: '',
+};
+
 export function configParaQuery(cfg) {
   const parts = [];
   if (cfg.naoLidos && !cfg.lidos) parts.push('is:unread');

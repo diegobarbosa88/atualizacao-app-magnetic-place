@@ -97,6 +97,7 @@ export const AppProvider = ({ children }) => {
   const [absenceRequests, setAbsenceRequests] = useState([]);
   const [isDbReady, setIsDbReady] = useState(false);
   const [gmailQueryConfig, setGmailQueryConfig] = useState(null);
+  const [gmailQueryConfigContador, setGmailQueryConfigContador] = useState(null);
 
   // Client notification preferences (granular control per notification type)
   const [notificationPreferences, setNotificationPreferences] = useState({
@@ -268,6 +269,7 @@ export const AppProvider = ({ children }) => {
               ...(data.absence_config && { absenceConfig: data.absence_config }),
             }));
             if (data.gmail_query_config) setGmailQueryConfig(data.gmail_query_config);
+            if (data.gmail_query_config_contador) setGmailQueryConfigContador(data.gmail_query_config_contador);
             if (data.notification_preferences) setNotificationPreferences(data.notification_preferences);
           }
         })(),
@@ -747,6 +749,15 @@ export const AppProvider = ({ children }) => {
     if (error) console.error('Erro ao gravar gmail_query_config:', error);
   };
 
+  const saveGmailQueryConfigContador = async (config) => {
+    setGmailQueryConfigContador(config);
+    if (!supabaseInstance) return;
+    const { error } = await supabaseInstance
+      .from('system_settings')
+      .upsert({ id: 1, gmail_query_config_contador: config, updated_at: new Date().toISOString() }, { onConflict: 'id' });
+    if (error) console.error('Erro ao gravar gmail_query_config_contador:', error);
+  };
+
   const saveSystemSettings = async (newSettings) => {
     setSystemSettings(newSettings);
     if (!supabaseInstance) return;
@@ -777,6 +788,7 @@ export const AppProvider = ({ children }) => {
   const value = {
     systemSettings, setSystemSettings, saveSystemSettings,
     gmailQueryConfig, saveGmailQueryConfig,
+    gmailQueryConfigContador, saveGmailQueryConfigContador,
     companySignature, saveCompanySignature,
     stampStyle, setStampStyle,
     view, setView,

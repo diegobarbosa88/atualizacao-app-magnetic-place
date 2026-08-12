@@ -17,6 +17,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "@emailjs/browser": "^4.4.1",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.101.1",

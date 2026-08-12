@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Building2 } from 'lucide-react';
+import { Mail, Building2, MessageSquareText } from 'lucide-react';
 import FaturasAdmin from './FaturasAdmin';
 import FaturasTab from './FaturasTab';
+import ContadorEmailsAdmin from './faturas/ContadorEmailsAdmin';
 
 const SECTIONS = [
   { id: 'importar',     label: 'Importar',     icon: Mail },
   { id: 'fornecedores', label: 'Fornecedores', icon: Building2 },
+  { id: 'contador',     label: 'Contador',     icon: MessageSquareText },
 ];
 
 export default function FaturacaoAdmin() {
@@ -43,6 +45,7 @@ export default function FaturacaoAdmin() {
 
       {activeSection === 'importar' && <FaturasAdmin />}
       {activeSection === 'fornecedores' && <FaturasTab />}
+      {activeSection === 'contador' && <ContadorEmailsAdmin />}
     </div>
   );
 }

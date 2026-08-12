@@ -1,5 +1,6 @@
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
+import { callGeminiJSON } from '../parse-fatura.js';
 
 // Import dinâmico: evita que uma falha de inicialização do pdf-parse
 // (que ocorre no Vercel ao carregar ficheiros de teste) quebre o modo faturas.
@@ -49,9 +50,18 @@ export default async function handler(req, res) {
     let body = {};
     try { body = req.body || {}; } catch (_) { /* ok */ }
 
-    // mode: 'faturas' (default) | 'comprovativos' | 'all'
+    // mode: 'faturas' (default) | 'comprovativos' | 'contador' | 'all'
     const mode = body.mode || 'faturas';
     const userId = 'me';
+
+    if (mode === 'contador') {
+      if (!body.fornecedorId) {
+        return res.status(400).json({ error: 'fornecedorId é obrigatório no modo contador' });
+      }
+      const parser = await getParser();
+      const result = await importarContador(gmail, supabase, userId, body.query, body.fornecedorId, parser);
+      return res.status(200).json(result);
+    }
 
     const result = { faturas: null, comprovativos: null };
 
@@ -265,4 +275,131 @@ async function importarComprovativos(gmail, supabase, userId, queryOverride, par
   }
 
   return { importados: processados.length, skipped, detalhes: processados, erros };
+}
+
+// ---------------------------------------------------------------------------
+// Modo "contador": emails de cobrança do contador → tabela emails_contador
+// (NÃO gera rascunho de resposta aqui — isso é feito por
+// api/gerar-resposta-contador.js, num passo seguinte e separado)
+// ---------------------------------------------------------------------------
+function buildContadorPrompt(texto) {
+  return `Analisa o texto abaixo, extraído de um email de cobrança do contador/contabilista da empresa. Extrai os seguintes campos com rigor:
+
+- numero_fatura: número/referência da fatura ou honorários (ex: "FT 2024/123"). Se não existir, usa null.
+- valor: valor total a pagar (número decimal, ex: 245.00). Se não existir, usa null.
+- mes_referencia: mês a que a cobrança se refere, formato YYYY-MM (ex: "2026-08"). Deduz pelo contexto (assunto, corpo) se não estiver explícito como data.
+- data_documento: data do documento/email em formato YYYY-MM-DD, se presente. Senão null.
+- descricao: breve descrição do que está a ser cobrado (ex: "Honorários mensais de contabilidade", "Fatura de serviços").
+- iban: IBAN indicado para pagamento, se presente. Formato limpo sem espaços. Senão null.
+
+Regras:
+- Se um campo não existir claramente no texto, usa null.
+- valor deve ser sempre número decimal, nunca string.
+- Responde APENAS com JSON válido, sem texto antes ou depois, sem markdown.
+
+Texto do email:
+${texto.slice(0, 6000)}`;
+}
+
+async function importarContador(gmail, supabase, userId, queryOverride, fornecedorId, parser) {
+  const { extractBodyText, findPdfParts, extractPdfText } = parser;
+  const query = queryOverride?.trim() || 'is:unread';
+  let listRes;
+  try {
+    listRes = await gmail.users.messages.list({ userId, q: query, maxResults: MAX_RESULTS });
+  } catch (e) {
+    return { error: `Gmail list failed: ${e.message}` };
+  }
+
+  const { data: existingRows } = await supabase
+    .from('emails_contador')
+    .select('gmail_message_id');
+  const importedIds = new Set((existingRows || []).map(r => r.gmail_message_id));
+
+  let processados = 0, ficheiros = 0, skipped = 0;
+  const erros = [];
+
+  for (const msg of listRes.data.messages || []) {
+    if (importedIds.has(msg.id)) {
+      try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch { /* best-effort */ }
+      skipped++;
+      continue;
+    }
+
+    try {
+      const full = await gmail.users.messages.get({ userId, id: msg.id, format: 'full' });
+      const payload = full.data.payload;
+      const headers = payload?.headers || [];
+      const subject = headers.find(h => h.name === 'Subject')?.value || '';
+      const from = headers.find(h => h.name === 'From')?.value || '';
+      const internalDate = full.data.internalDate ? new Date(Number(full.data.internalDate)).toISOString() : null;
+
+      let anexoPath = null;
+      let textoExtraido = '';
+
+      const pdfParts = findPdfParts(payload?.parts || []);
+      if (pdfParts.length > 0) {
+        const part = pdfParts[0];
+        const attRes = await gmail.users.messages.attachments.get({
+          userId, messageId: msg.id, id: part.body.attachmentId,
+        });
+        const buffer = Buffer.from(attRes.data.data, 'base64url');
+        const filename = (part.filename || `contador_${Date.now()}.pdf`).replace(/[^a-zA-Z0-9.\-_()]/g, '_');
+        anexoPath = `contador/${msg.id}/${filename}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('faturas')
+          .upload(anexoPath, buffer, { contentType: 'application/pdf', upsert: true });
+        if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
+
+        try {
+          textoExtraido = await extractPdfText(buffer);
+        } catch (pdfErr) {
+          erros.push({ messageId: msg.id, aviso: `Falha a extrair texto do PDF, a usar corpo do email: ${pdfErr.message}` });
+        }
+      }
+
+      if (!textoExtraido) {
+        textoExtraido = extractBodyText(payload);
+      }
+
+      let dadosExtraidos = null;
+      if (textoExtraido) {
+        try {
+          const { data } = await callGeminiJSON(buildContadorPrompt(textoExtraido));
+          dadosExtraidos = data;
+        } catch (geminiErr) {
+          erros.push({ messageId: msg.id, aviso: `Extração Gemini falhou: ${geminiErr.message}` });
+        }
+      }
+
+      const { error: dbError } = await supabase.from('emails_contador').insert({
+        gmail_message_id: msg.id,
+        fornecedor_id: fornecedorId,
+        assunto: subject,
+        remetente: from,
+        recebido_em: internalDate,
+        dados_extraidos: dadosExtraidos,
+        anexo_path: anexoPath,
+        status: 'importado',
+      });
+
+      if (dbError && !dbError.message.includes('duplicate')) {
+        throw new Error(`DB insert: ${dbError.message}`);
+      }
+
+      if (anexoPath) ficheiros++;
+      processados++;
+    } catch (e) {
+      erros.push({ messageId: msg.id, error: e.message });
+    }
+
+    try {
+      await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } });
+    } catch (e) {
+      erros.push({ messageId: msg.id, error: `mark-as-read failed: ${e.message}` });
+    }
+  }
+
+  return { processados, ficheiros, skipped, erros };
 }

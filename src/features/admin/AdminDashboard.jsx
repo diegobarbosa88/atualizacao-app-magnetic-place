@@ -48,6 +48,7 @@ import FaturacaoAdmin from './FaturacaoAdmin';
 import ReconciliacaoTab from './ReconciliacaoTab';
 import PagamentosAdmin from './PagamentosAdmin';
 import NotificationsAdmin from './NotificationsAdmin';
+import AlertasAdmin from './AlertasAdmin';
 import AdminOverview from './AdminOverview';
 import AdminReports from './AdminReports';
 import AdminSettings from './AdminSettings';
@@ -546,6 +547,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'mapa-salarios' && (
         <MapaSalarios />
+      )}
+
+      {!auditWorkerId && activeTab === 'alertas' && (
+        <AlertasAdmin />
       )}
 
       {!auditWorkerId && activeTab === 'settings' && (
