@@ -235,32 +235,67 @@ function extractFromInlineFormat(text) {
 // como os gerados pelo EvoPdf para o novobanco.
 // ---------------------------------------------------------------------------
 
-function _buildCMapFromPdf(raw) {
-  const cmap = new Map();
-  const rangeRe = /beginbfrange([\s\S]*?)endbfrange/g;
+// O stream do ToUnicode CMap (beginbfrange/beginbfchar) pode estar comprimido
+// (Flate), tal como os content streams de desenho — sem isto, _buildCMapsFromPdf
+// nunca encontra nada em PDFs que comprimem o CMap (ex: TOConline).
+function _inflateAllStreamsForScan(raw) {
+  const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
+  let combined = raw;
   let m;
-  while ((m = rangeRe.exec(raw)) !== null) {
-    const block = m[1];
-    const entryRe = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
-    let entry;
-    while ((entry = entryRe.exec(block)) !== null) {
-      const start = parseInt(entry[1], 16);
-      const end   = parseInt(entry[2], 16);
-      const uStart = parseInt(entry[3], 16);
-      for (let i = 0; i <= (end - start); i++) cmap.set(start + i, String.fromCodePoint(uStart + i));
+  while ((m = streamRe.exec(raw)) !== null) {
+    const chunk = m[1];
+    if (chunk.includes('beginbfrange') || chunk.includes('beginbfchar') || chunk.includes('BT')) continue;
+    try {
+      combined += '\n' + inflateSync(Buffer.from(chunk, 'latin1')).toString('latin1');
+    } catch {
+      try { combined += '\n' + inflateSync(Buffer.from(chunk, 'latin1').slice(2)).toString('latin1'); } catch { /* não é zlib, ignora */ }
     }
   }
-  const charRe = /beginbfchar([\s\S]*?)endbfchar/g;
-  while ((m = charRe.exec(raw)) !== null) {
-    const block = m[1];
-    const entryRe = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
-    let entry;
-    while ((entry = entryRe.exec(block)) !== null) {
-      cmap.set(parseInt(entry[1], 16), String.fromCodePoint(parseInt(entry[2], 16)));
-    }
-  }
-  return cmap;
+  return combined;
 }
+
+// PDFs com mais do que uma fonte embutida (ex: uma para títulos/cabeçalhos,
+// outra para os dados da tabela) podem ter VÁRIOS objetos ToUnicode CMap,
+// cada um delimitado por "begincmap...endcmap" — e os códigos de glifo
+// costumam SOBREPOR-SE entre fontes (o código 0x25 pode ser "A" numa fonte e
+// outra letra completamente diferente noutra). Fundir tudo num mapa só
+// (como uma versão anterior deste ficheiro fazia) causa decodificação
+// errada sempre que dois CMaps definem o mesmo código com significados
+// diferentes. Por isso mantemos os CMaps SEPARADOS e escolhemos, por cada
+// trecho de texto (cada Tj pertence sempre a uma única fonte), o que
+// decodifica mais códigos com sucesso.
+function _buildCMapsFromPdf(raw) {
+  const cmaps = [];
+  const cmapBlockRe = /begincmap([\s\S]*?)endcmap/g;
+  let cb;
+  while ((cb = cmapBlockRe.exec(raw)) !== null) {
+    const block = cb[1];
+    const map = new Map();
+    const rangeRe = /beginbfrange([\s\S]*?)endbfrange/g;
+    let m;
+    while ((m = rangeRe.exec(block)) !== null) {
+      const entryRe = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
+      let entry;
+      while ((entry = entryRe.exec(m[1])) !== null) {
+        const start = parseInt(entry[1], 16);
+        const end   = parseInt(entry[2], 16);
+        const uStart = parseInt(entry[3], 16);
+        for (let i = 0; i <= (end - start); i++) map.set(start + i, String.fromCodePoint(uStart + i));
+      }
+    }
+    const charRe = /beginbfchar([\s\S]*?)endbfchar/g;
+    while ((m = charRe.exec(block)) !== null) {
+      const entryRe = /<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g;
+      let entry;
+      while ((entry = entryRe.exec(m[1])) !== null) {
+        map.set(parseInt(entry[1], 16), String.fromCodePoint(parseInt(entry[2], 16)));
+      }
+    }
+    if (map.size > 0) cmaps.push(map);
+  }
+  return cmaps;
+}
+
 
 function _parsePdfStringBytes(raw) {
   // Resolve PDF string escape sequences → Buffer de bytes lógicos
@@ -290,40 +325,81 @@ function _parsePdfStringBytes(raw) {
   return Buffer.from(bytes);
 }
 
-function _decodeGlyphs2Byte(rawStr, cmap) {
+function _codesFromPdfString(rawStr) {
   const buf = _parsePdfStringBytes(rawStr);
-  let result = '';
-  for (let i = 0; i + 1 < buf.length; i += 2) result += cmap.get((buf[i] << 8) | buf[i + 1]) || '';
-  return result;
+  const codes = [];
+  for (let i = 0; i + 1 < buf.length; i += 2) codes.push((buf[i] << 8) | buf[i + 1]);
+  return codes;
 }
 
-function _extractTextItems(content, cmap) {
-  const items = [];
+// Alguns geradores (ex: EvoPdf/novobanco) escrevem os glifos como strings
+// literais escapadas "(...)"; outros (ex: TOConline) usam hex strings
+// "<0030...>" para o mesmo operador Tj — cada grupo de 4 dígitos hex é um
+// código de glifo de 2 bytes.
+function _codesFromHex(hexStr) {
+  const clean = hexStr.replace(/\s+/g, '');
+  const codes = [];
+  for (let i = 0; i + 3 < clean.length; i += 4) codes.push(parseInt(clean.slice(i, i + 4), 16));
+  return codes;
+}
+
+// Deteta "1 0 0 -1 0 <H> cm" logo no início do content stream — idioma comum
+// em geradores (ex: TOConline) que desenham já em coordenadas Y-para-baixo,
+// ao contrário da convenção PDF nativa (Y cresce para cima). Sem compensar
+// isto, a reconstrução de linhas por Y (mais abaixo) ficava invertida.
+function _detectYFlip(content) {
+  return /1\s+0\s+0\s+-1(?:\.0+)?\s+[\d.-]+\s+[\d.-]+\s+cm/.test(content);
+}
+
+// Nome da fonte ativa num bloco BT (ex: "/F0 8 Tf" → "F0") — usado para saber
+// a que CMap cada trecho de texto pertence quando há mais do que um no PDF.
+function _extractFontKey(block) {
+  const m = block.match(/\/(F\d+)\s+[\d.]+\s+Tf/);
+  return m ? m[1] : '__default__';
+}
+
+// Primeira passagem: recolhe cada bloco BT/ET (posição + fonte ativa + os
+// códigos de glifo de cada Tj, ainda por decodificar) sem decidir já qual
+// CMap usar — essa decisão só é fiável depois de agregar TODOS os códigos
+// vistos por fonte (ver extractPdfTextNative).
+function _extractRawBlocks(content, yFlip) {
+  const blocks = [];
   const btRe = /BT([\s\S]*?)ET/g;
   let m;
   while ((m = btRe.exec(content)) !== null) {
     const block = m[1];
     let x = 0, y = 0;
     const td = block.match(/([\d.-]+)\s+([\d.-]+)\s+Td/);
-    if (td) { x = parseFloat(td[1]); y = parseFloat(td[2]); }
-    let text = '';
-    const tjRe = /\(((?:[^()\\]|\\.)*)\)\s*Tj/g;
+    if (td) {
+      x = parseFloat(td[1]); y = parseFloat(td[2]);
+    } else {
+      // Sem Td, a posição vem dos dois últimos números de "a b c d e f Tm"
+      // (e=x, f=y) — usado por geradores que posicionam texto diretamente
+      // via matriz em vez de translação relativa.
+      const tm = block.match(/[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+[\d.-]+\s+([\d.-]+)\s+([\d.-]+)\s+Tm/);
+      if (tm) { x = parseFloat(tm[1]); y = parseFloat(tm[2]); }
+    }
+    if (yFlip) y = -y;
+    const fontKey = _extractFontKey(block);
+    const codesList = [];
+    const tjRe = /\(((?:[^()\\]|\\.)*)\)\s*Tj|<([0-9A-Fa-f\s]*)>\s*Tj/g;
     let tj;
-    while ((tj = tjRe.exec(block)) !== null) text += _decodeGlyphs2Byte(tj[1], cmap);
-    const t = text.trim();
-    if (t) items.push({ x, y, text: t });
+    while ((tj = tjRe.exec(block)) !== null) {
+      codesList.push(tj[1] !== undefined ? _codesFromPdfString(tj[1]) : _codesFromHex(tj[2]));
+    }
+    if (codesList.length) blocks.push({ x, y, fontKey, codesList });
   }
-  return items;
+  return blocks;
 }
 
 /** Extrai texto de um PDF usando apenas Node.js nativo (zlib + regex).
  *  Não depende de pdfjs-dist nem de DOMMatrix — funciona no Vercel. */
 export function extractPdfTextNative(buffer) {
   const raw = buffer.toString('latin1');
-  const cmap = _buildCMapFromPdf(raw);
-  if (cmap.size === 0) return '';
+  const cmaps = _buildCMapsFromPdf(_inflateAllStreamsForScan(raw));
+  if (cmaps.length === 0) return '';
 
-  const allItems = [];
+  const allBlocks = [];
   const streamRe = /stream\r?\n([\s\S]*?)\r?\nendstream/g;
   let m;
   while ((m = streamRe.exec(raw)) !== null) {
@@ -333,9 +409,42 @@ export function extractPdfTextNative(buffer) {
         try { content = inflateSync(Buffer.from(content, 'latin1').slice(2)).toString('latin1'); } catch { continue; }
       }
     }
-    if (content.includes('BT')) allItems.push(..._extractTextItems(content, cmap));
+    if (content.includes('BT')) allBlocks.push(..._extractRawBlocks(content, _detectYFlip(content)));
+  }
+  if (allBlocks.length === 0) return '';
+
+  // Segunda passagem: com só 1 CMap no PDF não há ambiguidade nenhuma. Com
+  // mais do que 1, calibra qual pertence a cada nome de fonte (/F0, /F1...)
+  // agregando TODOS os códigos vistos com essa fonte no documento inteiro —
+  // muito mais fiável do que decidir por cada Tj isolado (uma data ou um
+  // valor tem poucos códigos para desempatar com confiança; o texto todo
+  // de uma fonte já não deixa dúvidas sobre qual CMap é o dela).
+  let cmapPorFonte = null;
+  if (cmaps.length > 1) {
+    const codigosPorFonte = new Map();
+    for (const b of allBlocks) {
+      const acc = codigosPorFonte.get(b.fontKey) || [];
+      for (const codes of b.codesList) acc.push(...codes);
+      codigosPorFonte.set(b.fontKey, acc);
+    }
+    cmapPorFonte = new Map();
+    for (const [fontKey, codigos] of codigosPorFonte) {
+      let best = cmaps[0], bestScore = -1;
+      for (const map of cmaps) {
+        let score = 0;
+        for (const c of codigos) if (map.has(c)) score++;
+        if (score > bestScore) { bestScore = score; best = map; }
+      }
+      cmapPorFonte.set(fontKey, best);
+    }
   }
 
+  const allItems = [];
+  for (const b of allBlocks) {
+    const cmap = cmaps.length === 1 ? cmaps[0] : cmapPorFonte.get(b.fontKey);
+    const text = b.codesList.map(codes => codes.map(c => cmap.get(c) || '').join('')).join('').trim();
+    if (text) allItems.push({ x: b.x, y: b.y, text });
+  }
   if (allItems.length === 0) return '';
 
   // Ordena por Y decrescente; agrupa itens cujo Y difere ≤ 2 (label+valor estão 1 pt afastados)
