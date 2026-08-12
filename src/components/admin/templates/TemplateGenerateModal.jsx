@@ -77,8 +77,8 @@ export default function TemplateGenerateModal({
             </div>
             <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
               <div
-                className="h-full transition-all" style={{ backgroundColor: '#1B3A57' }}
-                style={{ width: `${(genProgress.current / Math.max(genProgress.total, 1)) * 100}%` }}
+                className="h-full transition-all"
+                style={{ backgroundColor: '#1B3A57', width: `${(genProgress.current / Math.max(genProgress.total, 1)) * 100}%` }}
               />
             </div>
           </div>
