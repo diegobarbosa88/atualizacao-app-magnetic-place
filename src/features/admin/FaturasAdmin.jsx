@@ -475,7 +475,7 @@ export default function FaturasAdmin() {
       <GmailConfigPanel
         cfg={cfg}
         onCfgChange={setCfg}
-        onSave={(novaCfg) => { saveGmailQueryConfig(novaCfg); }}
+        onSave={(novaCfg) => saveGmailQueryConfig(novaCfg)}
         onImport={handleImportar}
         importing={importando}
         importResult={importResult}

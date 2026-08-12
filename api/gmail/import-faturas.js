@@ -14,11 +14,17 @@ const ZIP_MIME_TYPES = ['application/zip', 'application/x-zip-compressed'];
 const FATURAS_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
 const MAX_RESULTS = 50;
 
+// Deteção por mimetype OU extensão do filename — muitos remetentes (ex:
+// novobanco) etiquetam .zip como 'application/octet-stream' em vez do
+// mimetype correto, por isso o mimetype sozinho não é fiável (mesmo padrão
+// de fallback por extensão já usado em findContadorAttachmentParts, abaixo).
 function findAttachmentParts(parts = []) {
   const found = [];
   for (const part of parts) {
-    if ([...ALLOWED_MIME_TYPES, ...ZIP_MIME_TYPES].includes(part.mimeType) && part.body?.attachmentId) {
-      found.push(part);
+    const isZip = ZIP_MIME_TYPES.includes(part.mimeType) || part.filename?.toLowerCase().endsWith('.zip');
+    const isAllowed = ALLOWED_MIME_TYPES.includes(part.mimeType);
+    if ((isZip || isAllowed) && part.body?.attachmentId) {
+      found.push({ ...part, isZip });
     }
     if (part.parts) found.push(...findAttachmentParts(part.parts));
   }
@@ -169,7 +175,7 @@ async function importarFaturas(gmail, supabase, userId, queryOverride) {
         });
         const buffer = Buffer.from(attRes.data.data, 'base64url');
 
-        if (ZIP_MIME_TYPES.includes(part.mimeType)) {
+        if (part.isZip) {
           const rawZipName = part.filename || `anexo_${Date.now()}.zip`;
           const zipBaseName = sanitizeFilename(rawZipName.replace(/\.zip$/i, '')) || `anexo_${Date.now()}`;
 

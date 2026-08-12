@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, X, Save, Search, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, X, Save, Search, Loader2, Check } from 'lucide-react';
 import { DEFAULT_GMAIL_CONFIG, configParaQuery } from './faturasUtils';
 
 export default function GmailConfigPanel({
@@ -12,7 +12,21 @@ export default function GmailConfigPanel({
 }) {
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [assuntoInput, setAssuntoInput] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [guardado, setGuardado] = useState(false);
   const query = configParaQuery(cfg);
+
+  const handleGuardar = async () => {
+    setGuardando(true);
+    setGuardado(false);
+    try {
+      await onSave(cfg);
+      setGuardado(true);
+      setTimeout(() => setGuardado(false), 2500);
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   const setCfgField = (field, val) => onCfgChange(prev => ({ ...prev, [field]: val }));
 
@@ -98,9 +112,10 @@ export default function GmailConfigPanel({
               className="px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">
               Repor padrão
             </button>
-            <button onClick={() => onSave(cfg)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all">
-              <Save size={13} /> Guardar
+            <button onClick={handleGuardar} disabled={guardando}
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-60">
+              {guardando ? <Loader2 size={13} className="animate-spin" /> : guardado ? <Check size={13} /> : <Save size={13} />}
+              {guardando ? 'A guardar...' : guardado ? 'Guardado' : 'Guardar'}
             </button>
           </div>
         </div>
