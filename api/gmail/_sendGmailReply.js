@@ -31,6 +31,16 @@ function wrapBase64(str) {
   return str.replace(/.{1,76}/g, '$&\r\n').trim();
 }
 
+// Headers de email são ASCII-only por norma (RFC 2822/5322) — assuntos em
+// português com acentos ("Faturas em falta — Março") precisam de ser
+// codificados conforme RFC 2047, senão ficam corrompidos (mojibake) em
+// clientes/servidores mais estritos. Confirmado ao vivo: sem isto, um
+// assunto com "—" e acentos chegava ilegível mesmo dentro do próprio Gmail.
+function encodeRfc2047(str) {
+  if (/^[\x00-\x7F]*$/.test(str)) return str;
+  return `=?UTF-8?B?${Buffer.from(str, 'utf-8').toString('base64')}?=`;
+}
+
 /**
  * Constrói a mensagem RFC 2822 em bruto (antes do base64url final exigido
  * pela Gmail API). Sem anexos: text/plain simples, como sempre foi. Com
@@ -39,7 +49,7 @@ function wrapBase64(str) {
  */
 function buildRawMessage({ to, subject, bodyText, inReplyToMessageId, fromHeader, attachments = [] }) {
   const safeSubject = sanitizeHeaderValue(subject);
-  const finalSubject = /^re:/i.test(safeSubject) ? safeSubject : `Re: ${safeSubject}`;
+  const finalSubject = encodeRfc2047(/^re:/i.test(safeSubject) ? safeSubject : `Re: ${safeSubject}`);
   const baseHeaders = [
     `To: ${sanitizeHeaderValue(to)}`,
     fromHeader ? `From: ${sanitizeHeaderValue(fromHeader)}` : null,

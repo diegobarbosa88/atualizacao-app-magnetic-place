@@ -96,7 +96,7 @@ export function similaridadeFornecedor(a, b) {
 // Parsing do anexo "faturas em falta" (Fase C, pontos 1-2)
 // ---------------------------------------------------------------------------
 
-const PALAVRAS_CHAVE_DOC = ['número do documento', 'numero do documento', 'nº documento', 'documento do fornecedor'];
+const PALAVRAS_CHAVE_DOC = ['número do documento', 'numero do documento', 'nº documento', 'documento do fornecedor', 'número', 'numero', 'nº'];
 const PALAVRAS_CHAVE_VALOR = ['valor líquido', 'valor liquido', 'total do documento', 'valor'];
 
 function pareceNif(v) {
@@ -105,16 +105,25 @@ function pareceNif(v) {
 
 function paraNumero(v) {
   if (v == null || v === '') return null;
-  const n = parseFloat(String(v).replace(/\s/g, '').replace(/\./g, '').replace(',', '.'));
+  const s = String(v).trim().replace(/\s/g, '');
+  if (!s) return null;
+  // Só assume formato PT (milhar com ponto, decimal com vírgula) se houver
+  // vírgula presente — senão o ponto já é o separador decimal (é o que o
+  // SheetJS devolve com raw:false para o ficheiro real da Fiscomelres).
+  const normalizado = s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s;
+  const n = parseFloat(normalizado);
   return isNaN(n) ? null : n;
 }
 
 // Parsing determinístico do .xlsx — sem passar por IA, já que é um relatório
-// tabular estruturado (export do TOConline "Mapa de conferência e-Fatura").
-// Estrutura assumida (confirmada em versões PDF do mesmo relatório):
-// linhas de cabeçalho de grupo "NIF  Nome do Fornecedor" seguidas de várias
-// linhas de documentos desse fornecedor. NÃO validado ainda contra um .xlsx
-// real (só contra a versão PDF) — documentado como limitação no relatório.
+// tabular estruturado. Estrutura CONFIRMADA contra o ficheiro real recebido
+// da Fiscomelres ("Faturas em falta.xlsx", 11/08/2026): folha única "Dados",
+// tabela plana de colunas NIF | Nome | Número | Data | Total do documento —
+// fornecedor repetido em cada linha, SEM agrupamento (ao contrário do que a
+// versão em PDF do mesmo relatório sugeria visualmente). Mantém-se como
+// segundo caminho (fallback) o formato agrupado — para o caso de o
+// contabilista voltar a exportar num formato diferente — mas o caminho
+// principal agora é o plano, validado contra dados reais.
 export function parseXlsxFaturasEmFalta(buffer) {
   const wb = XLSX.read(buffer, { type: 'buffer' });
   const linhas = [];
@@ -123,13 +132,15 @@ export function parseXlsxFaturasEmFalta(buffer) {
     const sheet = wb.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
 
-    let colDoc = -1, colData = -1, colValor = -1, headerRowIdx = -1;
+    let colNif = -1, colNome = -1, colDoc = -1, colData = -1, colValor = -1, headerRowIdx = -1;
     rows.forEach((row, i) => {
       if (headerRowIdx !== -1) return;
       const norm = row.map(c => String(c || '').toLowerCase().trim());
       const iDoc = norm.findIndex(c => PALAVRAS_CHAVE_DOC.some(k => c.includes(k)));
       if (iDoc === -1) return;
       colDoc = iDoc;
+      colNif = norm.findIndex(c => c === 'nif' || c.includes('nif fornecedor') || c.includes('nif do fornecedor'));
+      colNome = norm.findIndex(c => c === 'nome' || c.includes('fornecedor') || c.includes('entidade'));
       colData = norm.findIndex(c => c.includes('data') && !c.includes('lanc'));
       colValor = norm.findIndex(c => PALAVRAS_CHAVE_VALOR.some(k => c.includes(k)));
       headerRowIdx = i;
@@ -137,18 +148,31 @@ export function parseXlsxFaturasEmFalta(buffer) {
 
     if (headerRowIdx === -1) continue; // folha sem o formato esperado — ignora
 
-    let fornecedorAtual = null;
+    let fornecedorAtual = null; // só usado no fallback (formato agrupado)
     for (let i = headerRowIdx + 1; i < rows.length; i++) {
       const row = rows[i];
       if (!row || row.every(c => c === null || c === '')) continue;
 
+      // Caminho principal (confirmado): NIF e Nome em colunas próprias,
+      // preenchidos em todas as linhas.
+      if (colNif >= 0 && colNome >= 0) {
+        const numeroDoc = colDoc >= 0 ? String(row[colDoc] ?? '').trim() : '';
+        if (!numeroDoc) continue;
+        linhas.push({
+          fornecedor: String(row[colNome] ?? '').trim() || null,
+          nif_fornecedor: String(row[colNif] ?? '').trim() || null,
+          numero_documento: numeroDoc,
+          data: colData >= 0 ? (row[colData] || null) : null,
+          valor: colValor >= 0 ? paraNumero(row[colValor]) : null,
+        });
+        continue;
+      }
+
+      // Fallback: formato agrupado (linha "NIF Nome" isolada, seguida de
+      // linhas de documento sem NIF/Nome próprios) — não confirmado contra
+      // nenhum ficheiro real ainda, mantido por segurança.
       const col0 = String(row[0] ?? '').trim();
       const col1 = String(row[1] ?? '').trim();
-      // Linha de cabeçalho de grupo (fornecedor): só tem NIF+nome preenchidos,
-      // ao contrário de uma linha de documento (data, valores, estado, etc.).
-      // Não dá para distinguir pela coluna do número de documento estar vazia
-      // porque, neste relatório, o NIF do fornecedor ocupa a MESMA coluna 0
-      // que o número de documento nas linhas seguintes.
       const numPreenchidas = row.filter(c => c !== null && c !== '').length;
 
       if (pareceNif(col0) && col1 && numPreenchidas <= 3) {
