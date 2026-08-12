@@ -10,8 +10,8 @@
 //     Message-ID original (cabeçalho de email, distinto do id do Gmail)
 //   - Subject com prefixo "Re: " (se ainda não tiver)
 
-function encodeBase64Url(str) {
-  return Buffer.from(str, 'utf-8')
+function encodeBase64UrlBuffer(buffer) {
+  return buffer
     .toString('base64')
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
@@ -25,23 +25,64 @@ function sanitizeHeaderValue(value) {
   return String(value || '').replace(/[\r\n]+/g, ' ').trim();
 }
 
-function buildRawMessage({ to, subject, bodyText, inReplyToMessageId, fromHeader }) {
+// Quebra uma string base64 em linhas de 76 caracteres, como exige a RFC 2045
+// para Content-Transfer-Encoding: base64.
+function wrapBase64(str) {
+  return str.replace(/.{1,76}/g, '$&\r\n').trim();
+}
+
+/**
+ * Constrói a mensagem RFC 2822 em bruto (antes do base64url final exigido
+ * pela Gmail API). Sem anexos: text/plain simples, como sempre foi. Com
+ * anexos: multipart/mixed — uma parte de texto + uma parte base64 por
+ * ficheiro, cada uma com Content-Disposition: attachment.
+ */
+function buildRawMessage({ to, subject, bodyText, inReplyToMessageId, fromHeader, attachments = [] }) {
   const safeSubject = sanitizeHeaderValue(subject);
   const finalSubject = /^re:/i.test(safeSubject) ? safeSubject : `Re: ${safeSubject}`;
-  const headers = [
+  const baseHeaders = [
     `To: ${sanitizeHeaderValue(to)}`,
     fromHeader ? `From: ${sanitizeHeaderValue(fromHeader)}` : null,
     `Subject: ${finalSubject}`,
     'MIME-Version: 1.0',
+  ].filter(Boolean);
+  if (inReplyToMessageId) {
+    baseHeaders.push(`In-Reply-To: ${sanitizeHeaderValue(inReplyToMessageId)}`);
+    baseHeaders.push(`References: ${sanitizeHeaderValue(inReplyToMessageId)}`);
+  }
+
+  if (!attachments || attachments.length === 0) {
+    const headers = [...baseHeaders, 'Content-Type: text/plain; charset="UTF-8"', 'Content-Transfer-Encoding: 7bit'];
+    const message = `${headers.join('\r\n')}\r\n\r\n${bodyText}`;
+    return encodeBase64UrlBuffer(Buffer.from(message, 'utf-8'));
+  }
+
+  const boundary = `----magnetic-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  const parts = [
+    `--${boundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
     'Content-Transfer-Encoding: 7bit',
+    '',
+    bodyText,
+    '',
   ];
-  if (inReplyToMessageId) {
-    headers.push(`In-Reply-To: ${sanitizeHeaderValue(inReplyToMessageId)}`);
-    headers.push(`References: ${sanitizeHeaderValue(inReplyToMessageId)}`);
+  for (const att of attachments) {
+    const safeFilename = sanitizeHeaderValue(att.filename || 'anexo').replace(/"/g, "'");
+    parts.push(
+      `--${boundary}`,
+      `Content-Type: ${att.mimeType || 'application/octet-stream'}; name="${safeFilename}"`,
+      'Content-Transfer-Encoding: base64',
+      `Content-Disposition: attachment; filename="${safeFilename}"`,
+      '',
+      wrapBase64(att.content.toString('base64')),
+      '',
+    );
   }
-  const message = `${headers.filter(Boolean).join('\r\n')}\r\n\r\n${bodyText}`;
-  return encodeBase64Url(message);
+  parts.push(`--${boundary}--`);
+
+  const headers = [...baseHeaders, `Content-Type: multipart/mixed; boundary="${boundary}"`];
+  const message = `${headers.join('\r\n')}\r\n\r\n${parts.join('\r\n')}`;
+  return encodeBase64UrlBuffer(Buffer.from(message, 'utf-8'));
 }
 
 /**
@@ -54,13 +95,14 @@ function buildRawMessage({ to, subject, bodyText, inReplyToMessageId, fromHeader
  * @param {string} params.subject - assunto original (será prefixado com "Re: " se necessário)
  * @param {string} params.bodyText - corpo da resposta (texto simples)
  * @param {string} [params.inReplyToMessageId] - cabeçalho Message-ID do email original
+ * @param {Array<{filename: string, mimeType: string, content: Buffer}>} [params.attachments] - ficheiros a anexar
  * @returns {Promise<{id: string, threadId: string}>}
  */
-export async function sendGmailReply(gmail, { userId = 'me', threadId, to, subject, bodyText, inReplyToMessageId }) {
+export async function sendGmailReply(gmail, { userId = 'me', threadId, to, subject, bodyText, inReplyToMessageId, attachments }) {
   if (!threadId) throw new Error('threadId é obrigatório para responder na thread original');
   if (!to) throw new Error('Destinatário (to) é obrigatório');
 
-  const raw = buildRawMessage({ to, subject, bodyText, inReplyToMessageId });
+  const raw = buildRawMessage({ to, subject, bodyText, inReplyToMessageId, attachments });
 
   const res = await gmail.users.messages.send({
     userId,

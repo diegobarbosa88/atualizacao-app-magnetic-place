@@ -49,6 +49,7 @@
     "react-signature-canvas": "^1.1.0-alpha.2",
     "recharts": "^2.15.4",
     "tailwindcss": "^4.3.0",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xmlbuilder2": "^4.0.3"
   },
   "devDependencies": {

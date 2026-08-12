@@ -425,3 +425,27 @@ export function findPdfParts(parts = []) {
   }
   return found;
 }
+
+const XLSX_MIME_TYPES = [
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+  'application/vnd.ms-excel', // .xls (raro, mas alguns clientes de email etiquetam .xlsx assim)
+];
+
+/** Encontra partes com anexo PDF OU .xlsx num payload Gmail (recursivo) —
+ *  usado pelo modo 'contador', cujos emails vêm ora com relatório em PDF,
+ *  ora em Excel (ex: "Mapa de conferência e-Fatura" exportado do TOConline).
+ *  Devolve cada parte com um campo extra `kind`: 'pdf' | 'xlsx'. */
+export function findContadorAttachmentParts(parts = []) {
+  const found = [];
+  for (const part of parts) {
+    const looksLikePdf = part.mimeType === 'application/pdf'
+      || part.filename?.toLowerCase().endsWith('.pdf');
+    const looksLikeXlsx = XLSX_MIME_TYPES.includes(part.mimeType)
+      || part.filename?.toLowerCase().endsWith('.xlsx');
+    if ((looksLikePdf || looksLikeXlsx) && part.body?.attachmentId) {
+      found.push({ ...part, kind: looksLikeXlsx ? 'xlsx' : 'pdf' });
+    }
+    if (part.parts) found.push(...findContadorAttachmentParts(part.parts));
+  }
+  return found;
+}

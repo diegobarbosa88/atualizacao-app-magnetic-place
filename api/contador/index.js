@@ -2,6 +2,10 @@ import { createClient } from '@supabase/supabase-js';
 import { google } from 'googleapis';
 import Anthropic from '@anthropic-ai/sdk';
 import { getMessageReplyContext, sendGmailReply } from '../gmail/_sendGmailReply.js';
+import {
+  extrairLinhasFaturasEmFalta, cruzarFaturasEmFalta, extrairPedidoExtratosBancarios,
+} from './_pedidosContador.js';
+import { extractPdfText } from '../gmail/_parseComprovativo.js';
 import { calcularRecibo, valorDiarioLegal, getIRSTabelasPorAno } from '../../src/lib/payroll/reciboCalculations.js';
 import { calcMesParcial } from '../../src/lib/payroll/mesParcial.js';
 import { calcularDiasUteisNoMes } from '../../src/lib/payroll/feriadosPortugal.js';
@@ -449,6 +453,98 @@ REGRAS DE ESCRITA:
 - Escreve APENAS o corpo do email de resposta, sem "Assunto:", sem markdown, sem comentários sobre a tua resposta.`;
 }
 
+function inferirTipoAnexo(anexoPath) {
+  if (!anexoPath) return null;
+  return anexoPath.toLowerCase().endsWith('.xlsx') ? 'xlsx' : 'pdf';
+}
+
+async function baixarAnexoFaturas(supabase, anexoPath) {
+  const { data, error } = await supabase.storage.from('faturas').download(anexoPath);
+  if (error) throw new Error(`Erro ao descarregar anexo: ${error.message}`);
+  return Buffer.from(await data.arrayBuffer());
+}
+
+function buildRespostaFaturasEmFaltaPrompt({ encontradas, emFalta, assunto }) {
+  const fmt = l => `- ${l.fornecedor || 'Fornecedor não identificado'} — documento ${l.numero_documento}${l.valor != null ? ` (${Number(l.valor).toFixed(2)} €)` : ''}`;
+  const listaEncontradas = encontradas.map(fmt).join('\n') || '(nenhuma)';
+  const listaEmFalta = emFalta.map(fmt).join('\n') || '(nenhuma)';
+
+  return `Atua como assistente administrativo da Magnetic Place Unipessoal, Lda a responder por email ao contabilista, que pediu o envio de faturas de fornecedores em falta.
+
+CONTEXTO:
+- Assunto do email recebido: ${assunto || '(sem assunto)'}
+- Encontrámos no nosso sistema ${encontradas.length} do(s) documento(s) pedido(s) — vão seguir em anexo a esta resposta.
+- ${emFalta.length} documento(s) continuam sem correspondência no nosso sistema — vamos verificar internamente.
+
+DOCUMENTOS ENCONTRADOS (a mencionar como já anexados a este email):
+${listaEncontradas}
+
+DOCUMENTOS EM FALTA (a mencionar como a verificar internamente, sem prometer prazo):
+${listaEmFalta}
+
+REGRAS DE ESCRITA:
+- Português de Portugal, tom profissional e cordial, direto.
+- Menciona claramente que os documentos encontrados seguem em anexo, com uma lista breve.
+- Não inventes números de documento, valores ou fornecedores além dos listados acima.
+- Escreve APENAS o corpo do email de resposta, sem "Assunto:", sem markdown, sem comentários sobre a tua resposta.`;
+}
+
+function buildRespostaExtratosBancariosPrompt({ pedidos, textoLivre, assunto }) {
+  const listaPedidos = (pedidos || []).map(p => `- ${p.banco || 'Banco não identificado'}${p.mes_referencia ? ` (${p.mes_referencia})` : ''}`).join('\n');
+  const resumoPedido = listaPedidos
+    ? `Identificámos este pedido:\n${listaPedidos}`
+    : (textoLivre ? `Resumo do pedido: ${textoLivre}` : 'Não foi possível identificar automaticamente que banco(s)/mês(es) estão em causa a partir do texto do email — usa uma formulação genérica.');
+
+  return `Atua como assistente administrativo da Magnetic Place Unipessoal, Lda a responder por email ao contabilista, que pediu extratos bancários mensais em falta.
+
+CONTEXTO:
+- Assunto do email recebido: ${assunto || '(sem assunto)'}
+- ${resumoPedido}
+- IMPORTANTE: NÃO existe hoje no sistema um registo automático de que extratos já foram entregues ao contabilista — NÃO afirmes que algo já foi enviado nem que está confirmado.
+
+REGRAS DE ESCRITA:
+- Português de Portugal, tom profissional e cordial, direto.
+- Confirma a receção do pedido e resume o que percebeste estar a ser pedido.
+- NÃO prometas prazo nem confirmes envio — diz apenas que vai ser verificado internamente e enviado o que estiver em falta.
+- Escreve APENAS o corpo do email de resposta, sem "Assunto:", sem markdown, sem comentários sobre a tua resposta.`;
+}
+
+async function gerarComClaude(prompt) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const response = await anthropic.messages.create({
+    model: 'claude-opus-4-8',
+    max_tokens: 1024,
+    thinking: { type: 'adaptive' },
+    messages: [{ role: 'user', content: prompt }],
+  });
+  const textBlock = response.content.find(b => b.type === 'text');
+  return textBlock?.text?.trim() || null;
+}
+
+async function guardarRascunho(supabase, { email_contador_id, rascunho, gmail_thread_id, anexos_faturas_ids }) {
+  const { data: resposta, error: insertError } = await supabase
+    .from('respostas_contador_pendentes')
+    .insert({
+      email_contador_id,
+      rascunho,
+      editado_manualmente: false,
+      status: 'pendente',
+      gmail_thread_id,
+      ...(anexos_faturas_ids ? { anexos_faturas_ids } : {}),
+    })
+    .select()
+    .single();
+  if (insertError) throw new Error(`Erro ao guardar rascunho: ${insertError.message}`);
+
+  const { error: updateError } = await supabase
+    .from('emails_contador')
+    .update({ status: 'rascunho_gerado' })
+    .eq('id', email_contador_id);
+  if (updateError) throw new Error(`Rascunho guardado, mas falhou atualizar status do email: ${updateError.message}`);
+
+  return resposta;
+}
+
 async function handleGerar(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -473,9 +569,10 @@ async function handleGerar(req, res) {
     return res.status(404).json({ error: `Email do contador não encontrado: ${fetchError?.message || email_contador_id}` });
   }
 
-  const contadorNif = emailContador.fornecedores?.nif;
-  if (!contadorNif) {
-    return res.status(500).json({ error: 'Fornecedor "contador" associado não tem NIF definido — não é possível cruzar com faturas/pagamentos' });
+  if (emailContador.tipo_pedido === 'outro') {
+    return res.status(400).json({
+      error: 'Este email não foi classificado como um dos tipos de pedido tratados automaticamente (faturas em falta, extratos bancários, cobrança). Requer resposta manual.',
+    });
   }
 
   let replyContext;
@@ -486,61 +583,77 @@ async function handleGerar(req, res) {
     return res.status(502).json({ error: `Falha ao obter contexto da thread Gmail: ${e.message}` });
   }
 
-  const { situacao, valorRegistado } = await cruzarComRegistos(supabase, contadorNif, emailContador.dados_extraidos);
-
-  const prompt = buildRespostaPrompt({
-    situacao,
-    dadosExtraidos: emailContador.dados_extraidos,
-    valorRegistado,
-    assunto: emailContador.assunto,
-    nomeEmpresaContador: emailContador.fornecedores?.nome,
-  });
-
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  let rascunho;
   try {
-    const response = await anthropic.messages.create({
-      model: 'claude-opus-4-8',
-      max_tokens: 1024,
-      thinking: { type: 'adaptive' },
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const textBlock = response.content.find(b => b.type === 'text');
-    rascunho = textBlock?.text?.trim();
+    if (emailContador.tipo_pedido === 'faturas_em_falta') {
+      if (!emailContador.anexo_path) {
+        return res.status(400).json({ error: 'Este email foi classificado como "faturas em falta" mas não tem anexo guardado — não é possível cruzar a lista.' });
+      }
+      const kind = inferirTipoAnexo(emailContador.anexo_path);
+      const buffer = await baixarAnexoFaturas(supabase, emailContador.anexo_path);
+      let textoPdf = '';
+      if (kind === 'pdf') {
+        try { textoPdf = await extractPdfText(buffer); } catch (e) {
+          return res.status(502).json({ error: `Falha ao extrair texto do PDF anexo: ${e.message}` });
+        }
+      }
+      const linhas = await extrairLinhasFaturasEmFalta({ kind, buffer, textoPdf });
+      if (linhas.length === 0) {
+        return res.status(502).json({ error: 'Não foi possível extrair nenhuma linha de documento do anexo — verifica o formato manualmente.' });
+      }
+      const { encontradas, emFalta } = await cruzarFaturasEmFalta(supabase, linhas);
+
+      const rascunho = await gerarComClaude(buildRespostaFaturasEmFaltaPrompt({ encontradas, emFalta, assunto: emailContador.assunto }));
+      if (!rascunho) return res.status(502).json({ error: 'A API da Anthropic não devolveu texto de resposta' });
+
+      const anexosFaturasIds = encontradas.map(l => l.fatura.id);
+      const resposta = await guardarRascunho(supabase, {
+        email_contador_id, rascunho, gmail_thread_id: replyContext.threadId, anexos_faturas_ids: anexosFaturasIds,
+      });
+
+      return res.status(200).json({
+        resposta_id: resposta.id, rascunho, tipo_pedido: 'faturas_em_falta',
+        encontradas: encontradas.map(l => ({ fornecedor: l.fornecedor, numero_documento: l.numero_documento, valor: l.valor, fatura_id: l.fatura.id, filename: l.fatura.filename })),
+        em_falta: emFalta.map(l => ({ fornecedor: l.fornecedor, numero_documento: l.numero_documento, valor: l.valor, motivo: l.motivo })),
+      });
+    }
+
+    if (emailContador.tipo_pedido === 'extratos_bancarios_em_falta') {
+      const { extractBodyText } = await import('../gmail/_parseComprovativo.js');
+      const gmail = gmailClient();
+      const full = await gmail.users.messages.get({ userId: 'me', id: emailContador.gmail_message_id, format: 'full' });
+      const textoCorpo = extractBodyText(full.data.payload);
+      const { pedidos, texto_livre: textoLivre } = await extrairPedidoExtratosBancarios(textoCorpo);
+
+      const rascunho = await gerarComClaude(buildRespostaExtratosBancariosPrompt({ pedidos, textoLivre, assunto: emailContador.assunto }));
+      if (!rascunho) return res.status(502).json({ error: 'A API da Anthropic não devolveu texto de resposta' });
+
+      const resposta = await guardarRascunho(supabase, { email_contador_id, rascunho, gmail_thread_id: replyContext.threadId });
+
+      return res.status(200).json({
+        resposta_id: resposta.id, rascunho, tipo_pedido: 'extratos_bancarios_em_falta',
+        pedidos, texto_livre: textoLivre,
+        aviso: 'Não há confirmação automática de quais extratos já foram enviados — revê manualmente antes de aprovar.',
+      });
+    }
+
+    // Fallback: 'cobranca' ou tipo_pedido ainda não definido (registos antigos) — lógica original.
+    const contadorNif = emailContador.fornecedores?.nif;
+    if (!contadorNif) {
+      return res.status(500).json({ error: 'Fornecedor "contador" associado não tem NIF definido — não é possível cruzar com faturas/pagamentos' });
+    }
+
+    const { situacao, valorRegistado } = await cruzarComRegistos(supabase, contadorNif, emailContador.dados_extraidos);
+    const rascunho = await gerarComClaude(buildRespostaPrompt({
+      situacao, dadosExtraidos: emailContador.dados_extraidos, valorRegistado,
+      assunto: emailContador.assunto, nomeEmpresaContador: emailContador.fornecedores?.nome,
+    }));
+    if (!rascunho) return res.status(502).json({ error: 'A API da Anthropic não devolveu texto de resposta' });
+
+    const resposta = await guardarRascunho(supabase, { email_contador_id, rascunho, gmail_thread_id: replyContext.threadId });
+    return res.status(200).json({ resposta_id: resposta.id, rascunho, situacao, tipo_pedido: emailContador.tipo_pedido || 'cobranca' });
   } catch (e) {
-    return res.status(502).json({ error: `Falha ao gerar rascunho com a API da Anthropic: ${e.message}` });
+    return res.status(502).json({ error: e.message });
   }
-
-  if (!rascunho) {
-    return res.status(502).json({ error: 'A API da Anthropic não devolveu texto de resposta' });
-  }
-
-  const { data: resposta, error: insertError } = await supabase
-    .from('respostas_contador_pendentes')
-    .insert({
-      email_contador_id,
-      rascunho,
-      editado_manualmente: false,
-      status: 'pendente',
-      gmail_thread_id: replyContext.threadId,
-    })
-    .select()
-    .single();
-
-  if (insertError) {
-    return res.status(500).json({ error: `Erro ao guardar rascunho: ${insertError.message}` });
-  }
-
-  const { error: updateError } = await supabase
-    .from('emails_contador')
-    .update({ status: 'rascunho_gerado' })
-    .eq('id', email_contador_id);
-
-  if (updateError) {
-    return res.status(500).json({ error: `Rascunho guardado, mas falhou atualizar status do email: ${updateError.message}` });
-  }
-
-  return res.status(200).json({ resposta_id: resposta.id, rascunho, situacao });
 }
 
 // ---------------------------------------------------------------------------
@@ -598,6 +711,28 @@ async function handleAprovar(req, res) {
     return res.status(500).json({ error: 'Email do contador associado não tem remetente registado — não é possível responder' });
   }
 
+  // Faturas encontradas automaticamente (Fase C) são anexadas ao envio real —
+  // só aqui, nunca antes da aprovação humana.
+  let anexos = [];
+  if (Array.isArray(resposta.anexos_faturas_ids) && resposta.anexos_faturas_ids.length > 0) {
+    const { data: faturasParaAnexar, error: faturasErr } = await supabase
+      .from('faturas')
+      .select('id, filename, storage_path, mime_type')
+      .in('id', resposta.anexos_faturas_ids);
+    if (faturasErr) return res.status(500).json({ error: `Erro ao carregar faturas para anexar: ${faturasErr.message}` });
+
+    for (const f of faturasParaAnexar || []) {
+      if (!f.storage_path) continue;
+      const { data: ficheiro, error: downloadErr } = await supabase.storage.from('faturas').download(f.storage_path);
+      if (downloadErr) return res.status(500).json({ error: `Erro ao descarregar anexo "${f.filename}": ${downloadErr.message}` });
+      anexos.push({
+        filename: f.filename || f.storage_path.split('/').pop(),
+        mimeType: f.mime_type || 'application/pdf',
+        content: Buffer.from(await ficheiro.arrayBuffer()),
+      });
+    }
+  }
+
   let sendResult;
   try {
     const gmail = gmailClient();
@@ -608,6 +743,7 @@ async function handleAprovar(req, res) {
       subject: emailContador.assunto,
       bodyText: rascunhoFinal,
       inReplyToMessageId: replyContext.messageIdHeader,
+      attachments: anexos,
     });
   } catch (e) {
     return res.status(502).json({ error: `Falha ao enviar via Gmail: ${e.message}` });
@@ -634,7 +770,7 @@ async function handleAprovar(req, res) {
 
   await supabase.from('emails_contador').update({ status: 'enviado' }).eq('id', emailContador.id);
 
-  return res.status(200).json({ sucesso: true, status: 'enviado', gmail_message_id: sendResult.id });
+  return res.status(200).json({ sucesso: true, status: 'enviado', gmail_message_id: sendResult.id, anexos_enviados: anexos.length });
 }
 
 // ---------------------------------------------------------------------------
