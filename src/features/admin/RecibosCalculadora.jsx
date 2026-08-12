@@ -21,6 +21,7 @@ import { findBestCombo, horaDefaultPartida, horaDefaultChegada, pctFromHoraParti
 import { calcMesParcial, calcDiasFeriasAnoAdmissao } from '../../lib/payroll/mesParcial.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
 import HistoricoDeslocacao from './HistoricoDeslocacao.jsx';
+import AdminPasswordModal from './AdminPasswordModal.jsx';
 
 const EMPRESA = {
   nome: 'Magnetic Place Unipessoal, Lda',
@@ -3236,25 +3237,84 @@ function ReciboLinha({ desc, qtd, vUnit, abono, desconto }) {
 
 function CopiarLinkBtn({ mesStr }) {
   const [copiado, setCopiado] = useState(false);
-  const copiar = () => {
-    const url = `${window.location.origin}/partilha/resumo?mes=${mesStr}`;
+  const [token, setToken] = useState(null);
+  const [sessionPassword, setSessionPassword] = useState(null); // só em memória, nunca persistida
+  const [erro, setErro] = useState(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalErro, setModalErro] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
+
+  const copiarComToken = (tok) => {
+    setToken(tok);
+    const base = import.meta.env.VITE_ACCOUNTANT_PORTAL_URL || window.location.origin;
+    const url = `${base}/partilha/resumo?token=${tok}&mes=${mesStr}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2500);
     });
   };
+
+  const obterToken = async (password) => {
+    const res = await fetch('/api/contador-acesso', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'obter', admin_password: password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao obter token');
+    return data.token;
+  };
+
+  const copiar = async () => {
+    setErro(null);
+    if (token) { copiarComToken(token); return; }
+    if (sessionPassword) {
+      try {
+        const tok = await obterToken(sessionPassword);
+        copiarComToken(tok);
+      } catch (e) { setErro(e.message); }
+      return;
+    }
+    setModalErro(null); setModalOpen(true);
+  };
+
+  const confirmarPassword = async (password) => {
+    setModalLoading(true); setModalErro(null);
+    try {
+      const tok = await obterToken(password);
+      setSessionPassword(password);
+      setModalOpen(false);
+      copiarComToken(tok);
+    } catch (e) {
+      setModalErro(e.message);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
   return (
-    <button
-      onClick={copiar}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${copiado ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'}`}
-      title="Copiar link partilhável para o contabilista"
-    >
-      {copiado ? (
-        <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!</>
-      ) : (
-        <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Partilhar</>
-      )}
-    </button>
+    <div className="flex flex-col items-end gap-1">
+      <button
+        onClick={copiar}
+        className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase transition-all border shadow-sm ${copiado ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'}`}
+        title="Copiar link partilhável para o contabilista (com token de acesso)"
+      >
+        {copiado ? (
+          <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!</>
+        ) : (
+          <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Partilhar</>
+        )}
+      </button>
+      {erro && <span className="text-[10px] font-bold text-rose-500">{erro}</span>}
+      <AdminPasswordModal
+        open={modalOpen}
+        title="Confirmar acesso ao link do contabilista"
+        loading={modalLoading}
+        error={modalErro}
+        onConfirm={confirmarPassword}
+        onClose={() => setModalOpen(false)}
+      />
+    </div>
   );
 }
 

@@ -1,98 +1,21 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { createClient } from '@supabase/supabase-js';
-import { ChevronLeft, ChevronRight, FileSpreadsheet } from 'lucide-react';
-import {
-  calcularRecibo, valorDiarioLegal, getIRSTabelasPorAno, MESES_PT,
-} from '../../lib/payroll/reciboCalculations.js';
-import { calcMesParcial } from '../../lib/payroll/mesParcial.js';
-import { calcularDiasUteisNoMes } from '../../lib/payroll/feriadosPortugal.js';
-import { findBestCombo, SYNC_TOLERANCE } from '../../lib/payroll/mapaAutoFill.js';
-import { getRateAtDate } from '../admin/cost-reports/useCostReportsData.js';
+import { ChevronLeft, ChevronRight, FileSpreadsheet, ShieldAlert } from 'lucide-react';
+import { MESES_PT } from '../../lib/payroll/reciboCalculations.js';
 import { RESUMO_COLS, GROUP_DEFS } from '../../lib/payroll/resumoCols.js';
 import { useDragScroll } from '../../lib/useDragScroll.js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const sb = supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
 const EMPRESA = { nome: 'Magnetic Place Unipessoal, Lda', nif: '517379740' };
 
-const funcaoDeCPP = (cpp) => cpp && String(cpp).startsWith('1') ? 'gerencia' : 'geral';
-const funcaoMaxAjudasWorker = (name) =>
-  (name || '').trim().toLowerCase() === 'diego rocha barbosa' ? 'gerencia' : 'geral';
-
-function _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencBaseOverride, funcao = 'geral') {
-  const vencBase         = vencBaseOverride ?? (parseFloat(w.vencimento_base) || 0);
-  const subsAlimValorDia = parseFloat(w.subsidio_alimentacao_dia) || 0;
-  const baseParams = {
-    vencimentoBase: vencBase, horasSemana: 40, premios: 0,
-    he1: 0, he2: 0, incluirFerias: true, incluirNatal: true,
-    subsAlimValorDia, subsAlimDias, subsAlimTipo: w.subsidio_alimentacao_tipo || 'dinheiro',
-    tabelaKey: w.tabela_irs || 'tabelaI',
-    nDependentes: w.n_dependentes ?? 0,
-    brutoAlvo: brutoAlvo || vencBase,
-    territorio: 'internacional', funcao, ano: anoNum,
-  };
-  const rc0             = calcularRecibo(baseParams);
-  const valorDiario     = valorDiarioLegal('internacional', funcao);
-  const ajudaNecessaria = rc0.ajudaCustoNecessaria;
-  if (ajudaNecessaria <= 0 || valorDiario <= 0) return { rc: rc0, mapaLiqLive: 0 };
-
-  const totalDiasMes = new Date(anoNum, parseInt(mesStr.split('-')[1], 10), 0).getDate();
-
-  function contarDiasUteis(di, nDias) {
-    let count = 0;
-    const d = new Date(di + 'T00:00:00');
-    for (let i = 0; i < nDias; i++) {
-      const dow = d.getDay();
-      if (dow >= 1 && dow <= 5) count++;
-      d.setDate(d.getDate() + 1);
-    }
-    return count;
-  }
-
-  function runForStartDay(di) {
-    let subsAlimMapa = subsAlimValorDia > 0 ? rc0.subsAlimTotal : 0;
-    let bestCombo = null;
-    for (let iter = 0; iter < 6; iter++) {
-      const valorNec = ajudaNecessaria + subsAlimMapa;
-      if (valorNec <= 0) break;
-      bestCombo = findBestCombo(valorNec, valorDiario, totalDiasMes);
-      if (!bestCombo) break;
-      const novoSubsAlim = subsAlimValorDia > 0 ? contarDiasUteis(di, bestCombo.N) * subsAlimValorDia : 0;
-      if (Math.abs(novoSubsAlim - subsAlimMapa) < 0.005) break;
-      subsAlimMapa = novoSubsAlim;
-    }
-    if (!bestCombo) return null;
-    const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
-    const valorNecFinal = ajudaNecessaria + subsAlimMapa;
-    const residuo       = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
-    return { bestCombo, subsAlimMapa, totalAjudas, residuo };
-  }
-
-  let bestResult = null;
-  for (let day = 1; day <= 20; day++) {
-    const di     = `${mesStr}-${String(day).padStart(2, '0')}`;
-    const result = runForStartDay(di);
-    if (!result) continue;
-    if (!bestResult || Math.abs(result.residuo) < Math.abs(bestResult.residuo)) bestResult = result;
-  }
-
-  if (!bestResult) {
-    const premios = ajudaNecessaria > SYNC_TOLERANCE ? Math.round(ajudaNecessaria * 100) / 100 : 0;
-    if (premios > 0) return { rc: calcularRecibo({ ...baseParams, premios }), mapaLiqLive: 0 };
-    return { rc: rc0, mapaLiqLive: 0 };
-  }
-  const { bestCombo, subsAlimMapa } = bestResult;
-  const totalAjudas   = Math.round(bestCombo.total * 100) / 100;
-  const valorNecFinal = ajudaNecessaria + subsAlimMapa;
-  const residuo       = Math.round((valorNecFinal - totalAjudas) * 100) / 100;
-  const premios       = residuo > SYNC_TOLERANCE ? Math.round(residuo * 100) / 100 : 0;
-  const mapaLiqLive   = Math.round((totalAjudas - subsAlimMapa) * 100) / 100;
-  const rc            = premios > 0 ? calcularRecibo({ ...baseParams, premios }) : rc0;
-  return { rc, mapaLiqLive };
-}
+// Cliente Supabase (anon key) usado EXCLUSIVAMENTE para subscrições em tempo
+// real a `resumo_config` e `resumo_observacoes` — as únicas duas tabelas deste
+// fluxo com RLS aberta e sem dados pessoais sensíveis. NUNCA usar este cliente
+// para .from('workers'/'clients'/'logs'/'worker_valorhora_history') — esses
+// dados vêm só de api/contador-resumo.js, server-side, com o token validado.
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const sbRealtime = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 function parseMes(str) {
   const [a, m] = (str || '').split('-');
@@ -100,6 +23,16 @@ function parseMes(str) {
 }
 function toMesStr(ano, mes) {
   return `${ano}-${String(mes).padStart(2, '0')}`;
+}
+
+async function callContadorResumo(payload) {
+  const res = await fetch('/api/contador-resumo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
 }
 
 // Célula que expande no hover quando o texto está truncado
@@ -140,32 +73,40 @@ function ExpandCell({ text, maxWidth, style, className }) {
   );
 }
 
+function AcessoInvalido({ mensagem }) {
+  return (
+    <div className="h-screen flex items-center justify-center bg-slate-50 px-4">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 max-w-md text-center">
+        <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4">
+          <ShieldAlert size={22} />
+        </div>
+        <h1 className="font-black text-slate-800 text-lg mb-2">Acesso inválido</h1>
+        <p className="text-sm text-slate-500 font-medium leading-relaxed">
+          {mensagem || 'Este link não é válido ou foi revogado. Contacte a Magnetic Place para obter um novo link.'}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function ResumoMensalPublico() {
   const params  = new URLSearchParams(window.location.search);
+  const token   = params.get('token') || '';
   const inicial = params.get('mes') || toMesStr(new Date().getFullYear(), new Date().getMonth() + 1);
   const { ano: a0, mes: m0 } = parseMes(inicial);
 
   const [ano, setAno] = useState(a0);
   const [mes, setMes] = useState(m0);
 
-  const [workers,     setWorkers]     = useState([]);
-  const [clients,     setClients]     = useState([]);
-  const [rateHistory, setRateHistory] = useState([]);
-  const [staticReady, setStaticReady] = useState(false);
-
+  const [rows,        setRows]        = useState([]);
   const [visibleCols, setVisibleCols] = useState(() => new Set(RESUMO_COLS.map((_, i) => i)));
 
-  const [logs,       setLogs]       = useState([]);
-  const [contab,     setContab]     = useState([]);
-  const [obs,        setObs]        = useState({});
-  const [completos,  setCompletos]  = useState({});
-  const [ajustes,    setAjustes]    = useState({});
-  const [loading,          setLoading]          = useState(true);
-  const [saveStatus,       setSaveStatus]       = useState(null);
-  const [dbError,          setDbError]          = useState(null);
-  const [feriadoMunicipal, setFeriadoMunicipal] = useState(null);
-  const [copiedCell,       setCopiedCell]       = useState(null);
-  const { ref: tableScrollRef, dragProps }       = useDragScroll();
+  const [loading,     setLoading]     = useState(true);
+  const [saveStatus,  setSaveStatus]  = useState(null);
+  const [dataError,   setDataError]   = useState(null);
+  const [acessoNegado, setAcessoNegado] = useState(null); // null = a validar, string = mensagem, false = válido
+  const [copiedCell,  setCopiedCell]  = useState(null);
+  const { ref: tableScrollRef, dragProps } = useDragScroll();
 
   const copyCell = (ri, ci, text) => {
     if (text === '' || text == null || !navigator.clipboard) return;
@@ -182,121 +123,72 @@ export default function ResumoMensalPublico() {
 
   const ms = toMesStr(ano, mes);
 
+  // Sem token na URL — nem sequer tenta carregar dados
   useEffect(() => {
-    if (!sb) return;
-    sb.from('resumo_observacoes').select('completo, ajuste_bruto').limit(1)
-      .then(({ error }) => { setDbError(error ? error.message : null); });
-  }, []);
+    if (!token) setAcessoNegado('Este link está incompleto — falta o token de acesso.');
+  }, [token]);
 
   useEffect(() => {
-    if (!sb) return;
-    sb.from('system_settings').select('*').eq('id', 1).maybeSingle()
-      .then(({ data }) => setFeriadoMunicipal(data?.feriado_municipal || null));
-  }, []);
-
-  useEffect(() => {
-    if (!sb) return;
-    Promise.all([
-      sb.from('workers').select('*').limit(1000),
-      sb.from('clients').select('*').limit(1000),
-      sb.from('worker_valorhora_history').select('*').limit(5000),
-    ]).then(([w, c, r]) => {
-      setWorkers(w.data || []);
-      setClients(c.data || []);
-      setRateHistory(r.data || []);
-      setStaticReady(true);
+    if (!token) return;
+    setLoading(true);
+    setDataError(null);
+    callContadorResumo({ token, action: 'get', mes: ms }).then(({ ok, status, data }) => {
+      if (!ok) {
+        if (status === 401 || status === 403) setAcessoNegado(data.error || 'Acesso inválido.');
+        else setDataError(data.error || 'Erro ao carregar dados.');
+        setLoading(false);
+        return;
+      }
+      setAcessoNegado(false);
+      setRows(data.rows || []);
+      if (Array.isArray(data.visibleCols)) setVisibleCols(new Set(data.visibleCols));
+      setLoading(false);
     });
-  }, []);
+  }, [token, ms]);
 
-  // Colunas visíveis sincronizadas com admin
+  // Tempo real — colunas visíveis sincronizadas com o admin (só resumo_config)
   useEffect(() => {
-    if (!sb) return;
+    if (!sbRealtime) return;
     const parseValor = v => {
       if (Array.isArray(v)) return v;
       if (typeof v === 'string') { try { return JSON.parse(v); } catch { return null; } }
       return null;
     };
-    let lastHash = '';
-    const syncCols = () =>
-      sb.from('resumo_config').select('valor').eq('chave', 'visible_cols').maybeSingle()
-        .then(({ data }) => {
-          const arr = parseValor(data?.valor);
-          if (!arr) return;
-          const hash = [...arr].sort().join(',');
-          if (hash === lastHash) return;
-          lastHash = hash;
-          setVisibleCols(new Set(arr));
-        });
-    syncCols();
-    const interval = setInterval(syncCols, 3000);
-    const ch = sb.channel('pub_config_cols')
+    const ch = sbRealtime.channel('pub_config_cols')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'resumo_config' },
         ({ new: row }) => {
           if (row?.chave !== 'visible_cols') return;
           const arr = parseValor(row?.valor);
-          if (arr) { lastHash = [...arr].sort().join(','); setVisibleCols(new Set(arr)); }
+          if (arr) setVisibleCols(new Set(arr));
         })
       .subscribe();
-    return () => { clearInterval(interval); sb.removeChannel(ch); };
+    return () => { sbRealtime.removeChannel(ch); };
   }, []);
 
-  // Dados do mês
+  // Tempo real — observação/completo/ajuste editados no admin para o mês atual
+  // (só resumo_observacoes, filtrado por mes=eq.${ms})
   useEffect(() => {
-    if (!sb) return;
-    setLoading(true);
-    const dataInicio = `${ms}-01`;
-    const nextMes    = mes === 12 ? `${ano + 1}-01-01` : `${ano}-${String(mes + 1).padStart(2, '0')}-01`;
-    Promise.all([
-      sb.from('logs').select('*').gte('date', dataInicio).lt('date', nextMes).limit(5000),
-      sb.from('contabilidade_mensal').select('*').eq('mes', ms),
-      sb.from('resumo_observacoes').select('worker_id, observacao, completo, ajuste_bruto').eq('mes', ms),
-    ]).then(([l, c, o]) => {
-      setLogs(l.data || []);
-      setContab(c.data || []);
-      const obsMap = {}, compMap = {}, ajMap = {};
-      (o.data || []).forEach(r => {
-        obsMap[r.worker_id]  = r.observacao;
-        compMap[r.worker_id] = !!r.completo;
-        if (r.ajuste_bruto)  ajMap[r.worker_id] = parseFloat(r.ajuste_bruto) || 0;
-      });
-      setObs(obsMap); setCompletos(compMap); setAjustes(ajMap);
-      setLoading(false);
-    });
-
-    const channel = sb.channel(`pub_obs_${ms}`)
+    if (!sbRealtime) return;
+    const channel = sbRealtime.channel(`pub_obs_${ms}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'resumo_observacoes', filter: `mes=eq.${ms}`,
       }, ({ new: row, eventType }) => {
         if (!row?.worker_id) return;
-        setObs(prev => eventType === 'DELETE'
-          ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== row.worker_id))
-          : { ...prev, [row.worker_id]: row.observacao || '' });
-        if (eventType !== 'DELETE') {
-          setCompletos(prev => ({ ...prev, [row.worker_id]: !!row.completo }));
-          setAjustes(prev =>   ({ ...prev, [row.worker_id]: parseFloat(row.ajuste_bruto) || 0 }));
-        } else {
-          setCompletos(prev => { const n = { ...prev }; delete n[row.worker_id]; return n; });
-          setAjustes(prev =>   { const n = { ...prev }; delete n[row.worker_id]; return n; });
-        }
+        const apagado = eventType === 'DELETE';
+        setRows(prev => prev.map(r => {
+          if (r.workerId !== row.worker_id) return r;
+          const ajusteVal = apagado ? 0 : (parseFloat(row.ajuste_bruto) || 0);
+          return {
+            ...r,
+            observacao: apagado ? '' : (row.observacao || ''),
+            completo: apagado ? false : !!row.completo,
+            ajuste: ajusteVal,
+            _ajusteNum: ajusteVal,
+          };
+        }));
       })
       .subscribe();
-
-    const syncData = () =>
-      sb.from('resumo_observacoes')
-        .select('worker_id, observacao, completo, ajuste_bruto').eq('mes', ms)
-        .then(({ data }) => {
-          if (!data) return;
-          const obsMap = {}, compMap = {}, ajMap = {};
-          data.forEach(r => {
-            obsMap[r.worker_id]  = r.observacao || '';
-            compMap[r.worker_id] = !!r.completo;
-            ajMap[r.worker_id]   = parseFloat(r.ajuste_bruto) || 0;
-          });
-          setObs(obsMap); setCompletos(compMap); setAjustes(ajMap);
-        });
-    const poll = setInterval(syncData, 4000);
-
-    return () => { sb.removeChannel(channel); clearInterval(poll); };
+    return () => { sbRealtime.removeChannel(channel); };
   }, [ms]);
 
   function navMes(dir) {
@@ -304,133 +196,27 @@ export default function ResumoMensalPublico() {
     if (m > 12) { m = 1; a++; }
     if (m < 1)  { m = 12; a--; }
     setMes(m); setAno(a);
-    window.history.replaceState(null, '', `?mes=${toMesStr(a, m)}`);
+    window.history.replaceState(null, '', `?token=${encodeURIComponent(token)}&mes=${toMesStr(a, m)}`);
   }
 
-  const anoNum = ano;
-  const mesNum = mes;
-
-  const rows = useMemo(() => {
-    if (!staticReady) return [];
-    const eur2   = v => (isNaN(v) ? 0 : v).toFixed(2);
-    const pct2   = v => (v * 100).toFixed(2) + '%';
-    const fmtData = d => d ? String(d).split('T')[0] : '';
-    const mesStr = `${anoNum}-${String(mesNum).padStart(2, '0')}`;
-
-    const ativos = workers
-      .filter(w => w.vencimento_base != null)
-      .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-
-    const logsDoMes = logs.filter(l => l.date?.startsWith(mesStr));
-
-    return ativos.map(w => {
-      const workerLogs = logsDoMes.filter(l => l.workerId === w.id);
-      if (workerLogs.length === 0) return null;
-      const hist = rateHistory.filter(h => h.worker_id === w.id);
-
-      const brutoAlvo = workerLogs.reduce((s, l) => {
-        const rate = getRateAtDate(l.date, hist, parseFloat(w.valorHora) || 0);
-        return s + (parseFloat(l.hours) || 0) * rate;
-      }, 0);
-
-      const subsAlimDias = calcularDiasUteisNoMes(anoNum, mesNum, {
-        feriadoMunicipal,
-        dataAdmissao: w.dataInicio || null,
-        dataCessacao: w.dataFim    || null,
-      });
-
-      const wMesParcial = calcMesParcial(w.dataInicio || null, w.dataFim || null, anoNum, mesNum);
-      const vencOrig    = parseFloat(w.vencimento_base) || 0;
-      const vencCalculo = wMesParcial.tipo !== 'completo'
-        ? parseFloat((vencOrig * wMesParcial.fator).toFixed(2))
-        : undefined;
-
-      const funcaoW = w.profissao_cnp ? funcaoDeCPP(w.profissao_cnp) : funcaoMaxAjudasWorker(w.name);
-      const { rc, mapaLiqLive } = _calcReciboComMapa(w, subsAlimDias, brutoAlvo, anoNum, mesStr, vencCalculo, funcaoW);
-      const mapaAjudasDiff = mapaLiqLive - rc.ajudaCustoNecessaria;
-
-      const tabelaNome = (getIRSTabelasPorAno(anoNum)[w.tabela_irs || 'tabelaI'] || {}).nome || 'Tabela I';
-      const empresa = [...new Set(workerLogs.map(l => l.clientId).filter(Boolean))]
-        .map(id => clients.find(c => c.id === id)?.name || '').filter(Boolean).join(' / ');
-
-      const ajusteVal = ajustes[w.id] || 0;
-
-      return {
-        workerId: w.id, nome: w.name || '', nif: w.nif || '', nis: w.nis || '',
-        profissao: w.profissao || '', empresa: empresa || '—',
-        inicioVinculo: fmtData(w.dataInicio), cessacaoVinculo: fmtData(w.dataFim),
-        tabelaNome, nDep: String(w.n_dependentes ?? 0),
-        vencBase:      eur2(vencOrig),
-        subsAlimDias:  String(subsAlimDias),
-        subsAlimDia:   eur2(parseFloat(w.subsidio_alimentacao_dia) || 0),
-        subsAlimTotal: eur2(rc.subsAlimTotal),
-        subsFerias:    eur2(rc.subsFerias),
-        subsNatal:     eur2(rc.subsNatal),
-        ajudas:        eur2(mapaLiqLive),
-        baseIRS:       eur2(rc.incidenciaRegular),
-        taxaIRS:       pct2(rc.taxaRegular),
-        irsTotal:      eur2(rc.irsTotal),
-        ssTrab:        eur2(rc.ssTrabalhador),
-        totalAbonos:   eur2(rc.totalAbonos + mapaAjudasDiff),
-        totalDesc:     eur2(rc.totalDescontos),
-        liquido:       eur2(rc.liquido + mapaAjudasDiff),
-        ssPatronal:    eur2(rc.ssPatronal),
-        custoEmpresa:  eur2(rc.custoEmpresa + mapaAjudasDiff),
-        ajuste:        ajusteVal,
-        brutoAlvo:     eur2(brutoAlvo),
-        observacao:    obs[w.id] || '',
-        completo:      completos[w.id] || false,
-        _ajusteNum:    ajusteVal,
-        _vencNum:      parseFloat(w.vencimento_base) || 0,
-        _subsAlimNum:  rc.subsAlimTotal,
-        _feriasNum:    rc.subsFerias,
-        _natalNum:     rc.subsNatal,
-        _ajudasNum:    mapaLiqLive,
-        _irsNum:       rc.irsTotal,
-        _ssTrabNum:    rc.ssTrabalhador,
-        _abonosNum:    rc.totalAbonos + mapaAjudasDiff,
-        _descNum:      rc.totalDescontos,
-        _liquidoNum:   rc.liquido + mapaAjudasDiff,
-        _ssPatNum:     rc.ssPatronal,
-        _custoNum:     rc.custoEmpresa + mapaAjudasDiff,
-        _brutoNum:     brutoAlvo,
-      };
-    }).filter(Boolean);
-  }, [staticReady, workers, clients, rateHistory, logs, obs, completos, ajustes, anoNum, mesNum, feriadoMunicipal]);
-
-  const upsertObs = (workerId, patch) => {
-    if (!sb || !workerId || !ms) return;
+  const updateObs = (workerId, patch) => {
+    setRows(prev => prev.map(r => r.workerId === workerId ? { ...r, ...patch } : r));
     setSaveStatus('saving');
-    sb.from('resumo_observacoes').upsert(
-      {
-        worker_id:    workerId,
-        mes:          ms,
-        observacao:   obs[workerId]      || '',
-        completo:     completos[workerId] || false,
-        ajuste_bruto: ajustes[workerId]   || 0,
-        updated_at:   new Date().toISOString(),
-        ...patch,
-      },
-      { onConflict: 'worker_id,mes' }
-    ).then(({ error }) => {
-      if (error) { setDbError(error.message); setSaveStatus('error'); }
-      else       { setDbError(null);           setSaveStatus('ok'); }
+    const row = rows.find(r => r.workerId === workerId) || {};
+    callContadorResumo({
+      token, action: 'upsert_obs', mes: ms, worker_id: workerId,
+      observacao: patch.observacao ?? row.observacao ?? '',
+      completo: patch.completo ?? row.completo ?? false,
+      ajuste_bruto: row._ajusteNum || 0,
+    }).then(({ ok, data }) => {
+      setSaveStatus(ok ? 'ok' : 'error');
+      if (!ok) setDataError(data.error || 'Erro ao guardar.');
       setTimeout(() => setSaveStatus(null), 2500);
     });
   };
 
-  const updateObs = (workerId, valor) => {
-    setObs(prev => ({ ...prev, [workerId]: valor }));
-    upsertObs(workerId, { observacao: valor });
-  };
-
-  const updateCompleto = (workerId, valor) => {
-    setCompletos(prev => ({ ...prev, [workerId]: valor }));
-    upsertObs(workerId, { completo: valor });
-  };
-
   const mesLabel   = `${MESES_PT[mes] || ''} ${ano}`;
-  const isReady    = staticReady && !loading;
+  const isReady    = acessoNegado === false && !loading;
   const activeCols = RESUMO_COLS.map((col, ci) => ({ col, ci })).filter(({ ci }) => visibleCols.has(ci));
 
   const hlHead = h => ({ blue: 'bg-sky-700 text-white', green: 'bg-emerald-700 text-white', rose: 'bg-rose-700 text-white', emerald: 'bg-emerald-600 text-white' }[h] || '');
@@ -464,11 +250,7 @@ export default function ResumoMensalPublico() {
     a.click(); URL.revokeObjectURL(url);
   }
 
-  if (!sb) return (
-    <div className="h-screen flex items-center justify-center bg-slate-50">
-      <p className="text-slate-500 font-bold">Configuração Supabase em falta.</p>
-    </div>
-  );
+  if (acessoNegado) return <AcessoInvalido mensagem={acessoNegado} />;
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
@@ -492,7 +274,7 @@ export default function ResumoMensalPublico() {
           {saveStatus === 'saving' && <span className="text-[10px] text-slate-300 animate-pulse">A guardar…</span>}
           {saveStatus === 'ok'     && <span className="text-[10px] text-emerald-400 font-black">✓ Guardado</span>}
           {saveStatus === 'error'  && <span className="text-[10px] text-red-400 font-black">✗ Erro ao guardar</span>}
-          {isReady && !saveStatus  && <span className="text-[10px] text-slate-400">{rows.length} trabalhadores · {logs.length} registos</span>}
+          {isReady && !saveStatus  && <span className="text-[10px] text-slate-400">{rows.length} trabalhadores</span>}
           <button
             onClick={exportXLS}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black uppercase bg-emerald-600 text-white hover:bg-emerald-700 transition-all border border-emerald-600 shadow-sm"
@@ -502,25 +284,10 @@ export default function ResumoMensalPublico() {
         </div>
       </div>
 
-      {/* Banner erro BD */}
-      {dbError && (
+      {/* Banner erro */}
+      {dataError && (
         <div className="mx-4 mt-3 p-3 bg-red-50 border border-red-300 rounded-xl text-xs text-red-800 flex-shrink-0">
-          <strong>⚠️ Erro na base de dados:</strong> {dbError}
-          <br />Execute este SQL no Supabase → SQL Editor:
-          <pre className="mt-1 bg-red-100 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap">
-{`DROP TABLE IF EXISTS resumo_observacoes;
-CREATE TABLE resumo_observacoes (
-  worker_id    TEXT        NOT NULL,
-  mes          TEXT        NOT NULL,
-  observacao   TEXT        NOT NULL DEFAULT '',
-  completo     BOOLEAN     NOT NULL DEFAULT FALSE,
-  ajuste_bruto NUMERIC     DEFAULT 0,
-  updated_at   TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (worker_id, mes)
-);
-ALTER TABLE resumo_observacoes DISABLE ROW LEVEL SECURITY;
-ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
-          </pre>
+          <strong>⚠️ Erro:</strong> {dataError}
         </div>
       )}
 
@@ -538,7 +305,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
             </span>
           )}
           <span className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg font-bold ml-auto">
-            Vista partilhada · colunas sincronizadas com admin
+            Vista partilhada · acesso registado
           </span>
         </div>
 
@@ -658,7 +425,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           {col.tipo === 'toggle' ? (
                             <div className="flex justify-center">
                               <button
-                                onClick={() => updateCompleto(row.workerId, !row.completo)}
+                                onClick={() => updateObs(row.workerId, { completo: !row.completo })}
                                 title={row.completo ? 'Desmarcar como completo' : 'Marcar como completo'}
                                 className={`w-4 h-4 rounded-full flex items-center justify-center transition-all ${
                                   row.completo
@@ -674,9 +441,9 @@ ALTER PUBLICATION supabase_realtime ADD TABLE resumo_observacoes;`}
                           ) : col.editable ? (
                             <input
                               type="text"
-                              value={obs[row.workerId] || ''}
-                              onChange={e => updateObs(row.workerId, e.target.value)}
-                              onBlur={e => upsertObs(row.workerId, { observacao: e.target.value })}
+                              value={row.observacao || ''}
+                              onChange={e => setRows(prev => prev.map(r => r.workerId === row.workerId ? { ...r, observacao: e.target.value } : r))}
+                              onBlur={e => updateObs(row.workerId, { observacao: e.target.value })}
                               placeholder="—"
                               className="w-full bg-transparent outline-none text-[10px] font-bold text-slate-600 placeholder-slate-300"
                               style={{ minWidth: 0 }}

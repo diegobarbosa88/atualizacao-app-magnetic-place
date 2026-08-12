@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
+import ContadorAcessoPanel from './ContadorAcessoPanel';
 import SSConsultasPanel from './team/SSConsultasPanel';
 import ImportarContratosSSDModal from './team/ImportarContratosSSDModal';
 import {
@@ -315,6 +316,8 @@ function NavModeOption({ selected, onClick, title, subtitle, preview }) {
             </div>
           </div>
         </div>
+
+        <ContadorAcessoPanel />
         </>)}
 
         {activeTab === 'psi' && (<>
