@@ -203,7 +203,7 @@ export default function ContadorEmailsAdmin() {
           onSave={(novaCfg) => saveGmailQueryConfigContador(novaCfg)}
           onImport={handleImportar}
           importing={importando}
-          importResult={importResult ? { processados: importResult.processados, ficheiros: importResult.ficheiros, erros: importResult.erros, error: importResult.error } : null}
+          importResult={importResult ? { processados: importResult.processados, ficheiros: importResult.ficheiros, erros: importResult.erros, error: importResult.error, aviso: importResult.aviso } : null}
         />
       )}
 

@@ -319,14 +319,33 @@ async function importarContador(gmail, supabase, userId, queryOverride, forneced
     .select('gmail_message_id');
   const importedIds = new Set((existingRows || []).map(r => r.gmail_message_id));
 
-  let processados = 0, ficheiros = 0, skipped = 0;
+  let processados = 0, ficheiros = 0, skipped = 0, restantes = 0;
   const erros = [];
 
-  for (const msg of listRes.data.messages || []) {
+  // Orçamento de tempo: a classificação de tipo (Fase A) acrescentou uma
+  // chamada Gemini por email a processar, e maxDuration está limitado a 60s
+  // (vercel.json) — com muitos emails a lista inteira pode não caber numa
+  // única invocação (confirmado: causava FUNCTION_INVOCATION_TIMEOUT/504,
+  // que chegava ao frontend como HTML não-JSON). Em vez de arriscar o
+  // timeout, pára com margem e devolve o que já processou — os já
+  // importados são saltados (importedIds), por isso clicar "Importar do
+  // Gmail" outra vez retoma exatamente de onde ficou.
+  const inicioExecucao = Date.now();
+  const ORCAMENTO_MS = 45_000;
+
+  const mensagens = listRes.data.messages || [];
+  for (let i = 0; i < mensagens.length; i++) {
+    const msg = mensagens[i];
+
     if (importedIds.has(msg.id)) {
       try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch { /* best-effort */ }
       skipped++;
       continue;
+    }
+
+    if (Date.now() - inicioExecucao > ORCAMENTO_MS) {
+      restantes = mensagens.length - i;
+      break;
     }
 
     try {
@@ -418,5 +437,11 @@ async function importarContador(gmail, supabase, userId, queryOverride, forneced
     }
   }
 
-  return { processados, ficheiros, skipped, erros };
+  return {
+    processados, ficheiros, skipped, erros,
+    ...(restantes > 0 ? {
+      restantes,
+      aviso: `Limite de tempo atingido — ${restantes} email(s) por processar. Clica em "Importar do Gmail" outra vez para continuar (os já processados não são repetidos).`,
+    } : {}),
+  };
 }

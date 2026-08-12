@@ -118,6 +118,7 @@ export default function GmailConfigPanel({
             {importResult.error
               ? `Erro: ${importResult.error}`
               : `${importResult.processados} email(s) · ${importResult.ficheiros} ficheiro(s)${importResult.erros?.length ? ` · ${importResult.erros.length} erro(s)` : ''}`}
+            {importResult.aviso && <span className="block text-amber-600 font-bold mt-0.5">{importResult.aviso}</span>}
           </span>
         )}
       </div>
