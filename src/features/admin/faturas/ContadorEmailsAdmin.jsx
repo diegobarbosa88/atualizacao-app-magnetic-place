@@ -54,6 +54,10 @@ export default function ContadorEmailsAdmin() {
   const [apagandoId, setApagandoId] = useState(null);
   const [apagarErro, setApagarErro] = useState(null);
 
+  const [selecionados, setSelecionados] = useState(() => new Set());
+  const [apagandoLote, setApagandoLote] = useState(false);
+  const [loteErro, setLoteErro] = useState(null);
+
   const [revisao, setRevisao] = useState(null); // { emailId, resposta, texto }
   const [confirmado, setConfirmado] = useState(false);
   const [processando, setProcessando] = useState(false);
@@ -130,21 +134,56 @@ export default function ContadorEmailsAdmin() {
     finally { setGerandoId(null); }
   };
 
+  const apagarEmailPorId = async (id) => {
+    const res = await fetch('/api/apagar-email-contador', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email_contador_id: id }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+  };
+
   const apagarEmail = async (email) => {
     if (!confirm(`Apagar "${email.assunto || '(sem assunto)'}"? Esta ação apaga o email, o rascunho associado e o anexo — não pode ser desfeita.`)) return;
     setApagandoId(email.id); setApagarErro(null);
     try {
-      const res = await fetch('/api/apagar-email-contador', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email_contador_id: email.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+      await apagarEmailPorId(email.id);
       if (revisao?.emailId === email.id) fecharRevisao();
       setEmails(prev => prev.filter(e => e.id !== email.id));
+      setSelecionados(prev => { const next = new Set(prev); next.delete(email.id); return next; });
     } catch (e) { setApagarErro({ emailId: email.id, msg: e.message }); }
     finally { setApagandoId(null); }
+  };
+
+  const toggleSelecionado = (id) => {
+    setSelecionados(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const limparSelecao = () => { setSelecionados(new Set()); setLoteErro(null); };
+
+  const apagarSelecionados = async () => {
+    const ids = [...selecionados];
+    if (ids.length === 0) return;
+    if (!confirm(`Apagar ${ids.length} email(s) selecionado(s)? Esta ação apaga os emails, rascunhos e anexos associados — não pode ser desfeita.`)) return;
+    setApagandoLote(true); setLoteErro(null);
+    const falhas = [];
+    for (const id of ids) {
+      try {
+        await apagarEmailPorId(id);
+        if (revisao?.emailId === id) fecharRevisao();
+        setEmails(prev => prev.filter(e => e.id !== id));
+      } catch (e) {
+        falhas.push({ id, msg: e.message });
+      }
+    }
+    setSelecionados(new Set(falhas.map(f => f.id)));
+    if (falhas.length > 0) setLoteErro(`${falhas.length} de ${ids.length} falharam a apagar: ${falhas.map(f => f.msg).join('; ')}`);
+    setApagandoLote(false);
   };
 
   const abrirRevisao = (email) => {
@@ -235,6 +274,28 @@ export default function ContadorEmailsAdmin() {
 
       {erro && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-2xl text-sm font-semibold">Erro: {erro}</div>}
 
+      {selecionados.size > 0 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-red-50 border border-red-200 rounded-2xl px-4 py-3">
+          <span className="text-xs font-black uppercase tracking-widest text-red-700">
+            {selecionados.size} selecionado{selecionados.size !== 1 ? 's' : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={limparSelecao} disabled={apagandoLote}
+              className="px-3 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 transition-colors disabled:opacity-50">
+              Cancelar
+            </button>
+            <button onClick={apagarSelecionados} disabled={apagandoLote}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white hover:opacity-90 transition-all disabled:opacity-50"
+              style={{ backgroundColor: '#EF4444' }}>
+              {apagandoLote ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+              Apagar selecionados
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loteErro && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-2xl text-sm font-semibold">{loteErro}</div>}
+
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-slate-300" /></div>
       ) : itens.length === 0 ? (
@@ -251,7 +312,13 @@ export default function ContadorEmailsAdmin() {
             return (
               <div key={email.id} className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
                 <div className="p-4 sm:p-5 flex items-start justify-between gap-4 flex-wrap">
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 flex items-start gap-3">
+                    {!email.isMensal && (
+                      <input type="checkbox" checked={selecionados.has(email.id)}
+                        onChange={() => toggleSelecionado(email.id)}
+                        className="mt-1 rounded border-slate-300 text-red-600 focus:ring-red-300 cursor-pointer shrink-0" />
+                    )}
+                    <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest ${statusCfg.bg} ${statusCfg.text}`}>
                         {statusCfg.label}
@@ -269,6 +336,7 @@ export default function ContadorEmailsAdmin() {
                         {d.mes_referencia && <>Ref. {d.mes_referencia}</>}
                       </p>
                     )}
+                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
