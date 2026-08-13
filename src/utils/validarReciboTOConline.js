@@ -129,6 +129,15 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
   const abonosExtraidos = parseMoeda(totaisMatch[1]); // 1º valor = Total Abonos
   const liquidoExtraido = parseMoeda(totaisMatch[3]); // 3º valor = Total a Receber
 
+  // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o caso do Rafael
+  console.log('[DIAGNÓSTICO SS/IRS] texto completo (2000 primeiros caracteres):', JSON.stringify(text.slice(0, 2000)));
+  // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o caso do Rafael
+  console.log('[DIAGNÓSTICO SS/IRS] linhas relevantes:');
+  text.split('\n')
+    .filter(l => /Segurança Social|IRS|148,17|86,00/.test(l))
+    // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o caso do Rafael
+    .forEach(l => console.log(JSON.stringify(l)));
+
   // SS: encontra a linha com "Segurança Social" e extrai o último € (= coluna Desconto).
   // Fallback: se a linha não tiver nenhum €, tenta a linha seguinte do texto —
   // cobre o caso de a linha da tabela ficar partida entre página 1 e 2 (rótulo

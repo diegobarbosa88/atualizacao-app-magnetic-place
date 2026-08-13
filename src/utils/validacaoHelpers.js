@@ -88,10 +88,18 @@ export function estadoStringToFlags(estado) {
 }
 
 // ─── Guardar no Supabase ───────────────────────────────────────────────────────
+// upsert (não insert) em worker_id+mes: reprocessar o mesmo lote (ex: correr o
+// Burst duas vezes sobre o mesmo mês) atualiza o registo existente em vez de
+// criar um duplicado silencioso. Quando worker_id é null (trabalhador não
+// reconhecido automaticamente), o Postgres nunca considera NULL=NULL num
+// índice único, por isso continua sempre a inserir uma linha nova nesse caso
+// — não funde por engano validações de trabalhadores diferentes e não
+// identificados. Requer o índice único de
+// supabase/migrations/20260820_receipt_validations_unique_worker_mes.sql.
 export async function guardarValidacao(r, extra = {}) {
   const db = window.supabaseInstance;
   if (!db) throw new Error('Supabase não disponível');
-  const { error } = await db.from('receipt_validations').insert({
+  const { error } = await db.from('receipt_validations').upsert({
     worker_id:        extra.worker?.id   ?? r.worker?.id   ?? null,
     worker_name:      extra.worker?.name ?? r.worker?.name ?? r.nomeExtraido ?? null,
     mes:              extra.mes  ?? r.mes  ?? null,
@@ -107,7 +115,7 @@ export async function guardarValidacao(r, extra = {}) {
     origem:           r.origem ?? extra.origem ?? null,
     session_id:       extra.sessionId ?? null,
     bruto_extraido:   r.abonosExtraidos ?? null,
-  });
+  }, { onConflict: 'worker_id,mes' });
   if (error) throw error;
 }
 

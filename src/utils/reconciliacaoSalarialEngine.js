@@ -59,6 +59,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
       const monthData = {
         month: r.mes,
         expected_amount: parseFloat(r.liquido_extraido) || 0,
+        receipt_validation_id: r.id ?? null,
         transfers: [],
       };
       entry._monthsMap[r.mes] = monthData;
@@ -148,6 +149,7 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
           return {
             month: m.month,
             expected_amount: m.expected_amount,
+            receipt_validation_id: m.receipt_validation_id,
             total_paid,
             balance,
             status: Math.abs(balance) <= tolerancia ? 'Match Exato' : 'Saldo Pendente',

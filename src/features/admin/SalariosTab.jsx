@@ -166,9 +166,10 @@ export default function SalariosTab({ month }) {
 
     const { data: recibos } = await supabase
       .from('receipt_validations')
-      .select('worker_id, worker_name, mes, liquido_extraido, bruto_plataforma, bruto_extraido')
+      .select('id, worker_id, worker_name, mes, liquido_extraido, bruto_plataforma, bruto_extraido')
       .like('mes', `${year}-%`)
-      .not('estado', 'in', '("erro","invalido")');
+      .not('estado', 'in', '("erro","invalido")')
+      .order('created_at', { ascending: false });
 
     const aliases = aliasesOverride ?? salarioAliases;
     const tol = tolOverride !== undefined ? tolOverride : tolerancia;
@@ -343,6 +344,7 @@ export default function SalariosTab({ month }) {
     setSepaCarregando(true);
 
     const trabalhadores = [];
+    const itemsParaGuardar = [];
     for (const emp of employeesFiltered) {
       if (!sepaSelecao.has(emp.employee_name)) continue;
       const aj = sepaAjustes[emp.employee_name] || {};
@@ -354,12 +356,21 @@ export default function SalariosTab({ month }) {
         setSepaCarregando(false);
         return;
       }
+      const ibanLimpo = worker.iban.replace(/\s/g, '').toUpperCase();
       trabalhadores.push({
         nome: emp.employee_name,
-        iban: worker.iban.replace(/\s/g, '').toUpperCase(),
+        iban: ibanLimpo,
         salario: valorFinal,
         mes: MESES_PT[parseInt(mesAlvo.split('-')[1], 10) - 1],
         ano: mesAlvo.split('-')[0],
+      });
+      const m = emp.months.find(x => x.month === mesAlvo);
+      itemsParaGuardar.push({
+        worker_id: worker.id != null ? String(worker.id) : null,
+        worker_name: emp.employee_name,
+        iban: ibanLimpo,
+        receipt_validation_id: m?.receipt_validation_id ?? null,
+        valor: valorFinal,
       });
     }
 
@@ -391,6 +402,31 @@ export default function SalariosTab({ month }) {
         : `salarios_${mesAlvo}_magnetic_place.xml`;
       a.click();
       URL.revokeObjectURL(url);
+
+      // Regista o export no histórico — não faz parte do fluxo de geração/
+      // download em si (já concluído acima); uma falha aqui fica só em
+      // consola, não interrompe nem reverte o download já feito.
+      try {
+        const valorTotal = Math.round(itemsParaGuardar.reduce((s, it) => s + it.valor, 0) * 100) / 100;
+        const { data: exportRow, error: exportErr } = await supabase
+          .from('sepa_exports')
+          .insert({
+            mes_referencia: mesAlvo,
+            tipo: isInstant ? 'instant' : 'normal',
+            valor_total: valorTotal,
+            filename: a.download,
+            worker_count: itemsParaGuardar.length,
+          })
+          .select('id')
+          .single();
+        if (exportErr) throw exportErr;
+        const { error: itemsErr } = await supabase
+          .from('sepa_export_items')
+          .insert(itemsParaGuardar.map(it => ({ ...it, sepa_export_id: exportRow.id })));
+        if (itemsErr) throw itemsErr;
+      } catch (logErr) {
+        console.error('[SEPA] Erro ao gravar histórico do export:', logErr.message);
+      }
     } catch (e) {
       alert(`Erro de rede: ${e.message}`);
     }

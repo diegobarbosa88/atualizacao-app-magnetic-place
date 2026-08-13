@@ -163,6 +163,7 @@ export default function ReconciliacaoSalarialAdmin() {
       .select('worker_id, worker_name, mes, liquido_extraido, bruto_plataforma, bruto_extraido, estado')
       .like('mes', `${ano}-%`)
       .not('estado', 'in', '("erro","invalido")')
+      .order('created_at', { ascending: false })
       .then(({ data, error }) => {
         setLoadingRecibos(false);
         if (error) { setErro('Erro ao carregar recibos: ' + error.message); return; }
