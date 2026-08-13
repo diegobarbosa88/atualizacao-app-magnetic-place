@@ -58,6 +58,7 @@
     { "source": "/api/contador-resumo", "destination": "/api/contador?tipo=resumo" },
     { "source": "/api/gerar-resposta-contador", "destination": "/api/contador?tipo=gerar" },
     { "source": "/api/aprovar-resposta-contador", "destination": "/api/contador?tipo=aprovar" },
+    { "source": "/api/apagar-email-contador", "destination": "/api/contador?tipo=apagar" },
     { "source": "/api/toconline/bank-accounts", "destination": "/api/toconline/proxy?action=bank-accounts" },
     { "source": "/api/toconline/clientes", "destination": "/api/toconline/proxy?action=clientes" },
     { "source": "/api/toconline/fornecedores", "destination": "/api/toconline/proxy?action=fornecedores" },

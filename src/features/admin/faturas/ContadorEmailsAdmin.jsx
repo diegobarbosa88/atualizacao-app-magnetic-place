@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   MessageSquareText, Loader2, RefreshCw, Sparkles, CheckCircle2, XCircle,
-  AlertTriangle, ChevronDown, ChevronUp, Send, ShieldAlert,
+  AlertTriangle, ChevronDown, ChevronUp, Send, ShieldAlert, Trash2,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { DEFAULT_GMAIL_CONFIG_CONTADOR, configParaQuery } from './faturasUtils';
@@ -50,6 +50,9 @@ export default function ContadorEmailsAdmin() {
 
   const [gerandoId, setGerandoId] = useState(null);
   const [gerarErro, setGerarErro] = useState(null);
+
+  const [apagandoId, setApagandoId] = useState(null);
+  const [apagarErro, setApagarErro] = useState(null);
 
   const [revisao, setRevisao] = useState(null); // { emailId, resposta, texto }
   const [confirmado, setConfirmado] = useState(false);
@@ -125,6 +128,23 @@ export default function ContadorEmailsAdmin() {
       await carregar();
     } catch (e) { setGerarErro({ emailId, msg: e.message }); }
     finally { setGerandoId(null); }
+  };
+
+  const apagarEmail = async (email) => {
+    if (!confirm(`Apagar "${email.assunto || '(sem assunto)'}"? Esta ação apaga o email, o rascunho associado e o anexo — não pode ser desfeita.`)) return;
+    setApagandoId(email.id); setApagarErro(null);
+    try {
+      const res = await fetch('/api/apagar-email-contador', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email_contador_id: email.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
+      if (revisao?.emailId === email.id) fecharRevisao();
+      setEmails(prev => prev.filter(e => e.id !== email.id));
+    } catch (e) { setApagarErro({ emailId: email.id, msg: e.message }); }
+    finally { setApagandoId(null); }
   };
 
   const abrirRevisao = (email) => {
@@ -291,12 +311,29 @@ export default function ContadorEmailsAdmin() {
                         {STATUS_CFG[resposta.status]?.label}
                       </span>
                     )}
+                    {!email.isMensal && (
+                      <button
+                        onClick={() => apagarEmail(email)}
+                        disabled={apagandoId === email.id}
+                        title="Apagar este email (e rascunho/anexo associados)"
+                        className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50 border-2 hover:bg-red-50"
+                        style={{ borderColor: '#EF4444', color: '#EF4444' }}
+                      >
+                        {apagandoId === email.id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 {gerarErro?.emailId === email.id && (
                   <div className="mx-4 sm:mx-5 mb-4 px-3 py-2 bg-red-50 text-red-700 rounded-xl text-xs font-semibold">
                     Erro ao gerar rascunho: {gerarErro.msg}
+                  </div>
+                )}
+
+                {apagarErro?.emailId === email.id && (
+                  <div className="mx-4 sm:mx-5 mb-4 px-3 py-2 bg-red-50 text-red-700 rounded-xl text-xs font-semibold">
+                    Erro ao apagar: {apagarErro.msg}
                   </div>
                 )}
 

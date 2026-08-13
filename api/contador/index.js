@@ -1033,6 +1033,59 @@ async function handleAprovar(req, res) {
   return res.status(200).json({ sucesso: true, status: 'enviado', gmail_message_id: sendResult.id, anexos_enviados: anexos.length });
 }
 
+async function handleApagar(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { email_contador_id } = req.body || {};
+  if (!email_contador_id) return res.status(400).json({ error: 'email_contador_id é obrigatório' });
+
+  const missingEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter(k => !process.env[k]);
+  if (missingEnv.length) {
+    return res.status(500).json({ error: `Env vars em falta: ${missingEnv.join(', ')}` });
+  }
+
+  const supabase = supabaseAdmin();
+
+  const { data: email, error: fetchError } = await supabase
+    .from('emails_contador')
+    .select('id, anexo_path')
+    .eq('id', email_contador_id)
+    .single();
+
+  if (fetchError || !email) {
+    return res.status(404).json({ error: `Email não encontrado: ${fetchError?.message || email_contador_id}` });
+  }
+
+  // respostas_contador_pendentes.email_contador_id → emails_contador(id) não
+  // tem ON DELETE CASCADE (confirmado: ON DELETE NO ACTION) — apagar
+  // primeiro qualquer resposta associada, senão o delete abaixo falha por
+  // violação de FK.
+  const { error: respError } = await supabase
+    .from('respostas_contador_pendentes')
+    .delete()
+    .eq('email_contador_id', email_contador_id);
+  if (respError) {
+    return res.status(500).json({ error: `Erro ao apagar respostas associadas: ${respError.message}` });
+  }
+
+  if (email.anexo_path) {
+    const { error: storageError } = await supabase.storage.from('faturas').remove([email.anexo_path]);
+    // Falha a apagar o ficheiro não deve impedir o registo de desaparecer da
+    // lista — fica só registado, não bloqueia a operação principal.
+    if (storageError) console.error('[contador/apagar] falha ao apagar anexo do Storage:', storageError.message);
+  }
+
+  const { error: deleteError } = await supabase
+    .from('emails_contador')
+    .delete()
+    .eq('id', email_contador_id);
+  if (deleteError) {
+    return res.status(500).json({ error: `Erro ao apagar email: ${deleteError.message}` });
+  }
+
+  return res.status(200).json({ sucesso: true });
+}
+
 // ---------------------------------------------------------------------------
 
 export default async function handler(req, res) {
@@ -1043,6 +1096,7 @@ export default async function handler(req, res) {
       case 'resumo':          return await handleResumo(req, res);
       case 'gerar':           return await handleGerar(req, res);
       case 'aprovar':         return await handleAprovar(req, res);
+      case 'apagar':          return await handleApagar(req, res);
       case 'preparar_mensal': return await handlePararMensal(req, res);
       default:                return res.status(400).json({ error: `tipo desconhecido: ${tipo || '(não definido)'}` });
     }
