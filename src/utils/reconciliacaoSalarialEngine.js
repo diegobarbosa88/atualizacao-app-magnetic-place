@@ -41,23 +41,28 @@ function txKeyDe(tx) {
   return `${tx.data}|${tx.descricao}|${tx.amount}`;
 }
 
-function diasEntre(a, b) {
-  if (!a || !b) return Infinity;
-  const da = new Date(a);
-  const db = new Date(b);
-  if (isNaN(da) || isNaN(db)) return Infinity;
-  return Math.abs((da - db) / 86400000);
+// Mesmo critério de janela usado por classifyTransfer: um pagamento
+// referente ao mês N pode legitimamente aparecer no extrato bancário
+// no próprio mês N ou até meados do mês seguinte (N+1).
+function dentroDaJanelaMesReferencia(txDate, mesReferencia) {
+  if (!txDate || !mesReferencia) return false;
+  const [refYear, refMonth] = mesReferencia.split('-').map(Number);
+  const [txYear, txMonth] = txDate.split('-').map(Number);
+  if (!refYear || !refMonth || !txYear || !txMonth) return false;
+  const monthDiff = (txYear - refYear) * 12 + (txMonth - refMonth);
+  return monthDiff === 0 || monthDiff === 1;
 }
 
 // Deteta se uma transação não identificada corresponde a um lote SEPA já
-// gravado (sepa_exports) — valor bate (±1 cêntimo) e data próxima (±5 dias)
-// da data em que o lote foi gerado.
+// gravado (sepa_exports) — valor bate (±1 cêntimo) e a transação cai dentro
+// da janela válida para o mes_referencia do lote (mesmo critério de
+// classifyTransfer — created_at do XML não é fiável para isto, já que pode
+// ser gerado/reprocessado muito depois do pagamento real ter sido feito).
 function encontrarLoteCandidato(tx, sepaExports) {
   const valorAbs = Math.abs(Number(tx.amount) || 0);
   for (const exp of sepaExports) {
     if (Math.abs(valorAbs - Number(exp.valor_total || 0)) > 0.01) continue;
-    const dataExport = (exp.created_at || '').slice(0, 10);
-    if (diasEntre(tx.data, dataExport) > 5) continue;
+    if (!dentroDaJanelaMesReferencia(tx.data, exp.mes_referencia)) continue;
     return exp;
   }
   return null;
