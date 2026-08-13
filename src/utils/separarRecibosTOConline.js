@@ -39,7 +39,12 @@ export async function separarRecibosTOConline(file, onProgresso) {
     onProgresso?.(i + 1, numPages);
 
     const texto = paginas[i];
-    const nif   = extrairNif(texto) ?? ultimoNif;
+    const nifDaPagina = extrairNif(texto);
+    // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar o agrupamento por NIF
+    console.log(
+      `[DIAGNÓSTICO Burst] página ${i + 1}/${numPages} — extrairNif(texto)=${JSON.stringify(nifDaPagina)} · ultimoNif (antes)=${JSON.stringify(ultimoNif)} · início do texto: ${JSON.stringify(texto.slice(0, 150))}`
+    );
+    const nif = nifDaPagina ?? ultimoNif;
 
     if (!nif) {
       orfaos.push({ pageIndex: i, texto: texto.slice(0, 200) });
@@ -62,6 +67,10 @@ export async function separarRecibosTOConline(file, onProgresso) {
     const pagsCopied    = await docIndividual.copyPages(pdfLib, grupo.paginas);
     pagsCopied.forEach(p => docIndividual.addPage(p));
     const pdfBytes = await docIndividual.save();
+    // eslint-disable-next-line no-console -- DIAGNÓSTICO TEMPORÁRIO, remover depois de investigar a construção do PDF final
+    console.log(
+      `[DIAGNÓSTICO Burst] grupo NIF=${JSON.stringify(nif)} — grupo.paginas=${JSON.stringify(grupo.paginas)} (${grupo.paginas.length} índices) · pagsCopied.length=${pagsCopied.length} · docIndividual.getPageCount()=${docIndividual.getPageCount()}`
+    );
     const { textos, ...grupoSemTextos } = grupo;
     resultados.push({ nif, ...grupoSemTextos, texto: textos.join('\n'), pdfBytes });
   }
