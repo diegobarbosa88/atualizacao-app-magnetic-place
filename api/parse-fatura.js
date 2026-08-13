@@ -1,3 +1,5 @@
+import { requireAuth } from './_authUtils.js';
+
 export function buildFaturaPrompt(texto) {
   return `És um especialista em leitura de faturas portuguesas e europeias. Analisa o texto abaixo e extrai os seguintes campos com rigor:
 
@@ -58,6 +60,8 @@ export async function callGeminiJSON(prompt) {
 }
 
 export default async function handler(req, res) {
+  if (!requireAuth(req, res, ['admin'])) return;
+
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: 'Missing GEMINI_API_KEY' });
 

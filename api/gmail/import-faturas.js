@@ -2,6 +2,7 @@ import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 import JSZip from 'jszip';
 import { callGeminiJSON } from '../parse-fatura.js';
+import { requireAuth } from '../_authUtils.js';
 
 // Import dinâmico: evita que uma falha de inicialização do pdf-parse
 // (que ocorre no Vercel ao carregar ficheiros de teste) quebre o modo faturas.
@@ -68,9 +69,10 @@ export default async function handler(req, res) {
   try {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-    if (req.headers['x-import-secret'] !== process.env.GMAIL_IMPORT_SECRET) {
-      return res.status(401).json({ error: 'Unauthorized' });
-    }
+    // CR-07: x-import-secret substituído por sessão assinada — o "secret"
+    // vivia em VITE_GMAIL_IMPORT_SECRET, exposto no bundle do frontend a
+    // qualquer visitante (mesma família de falha do share_token do CR-06).
+    if (!requireAuth(req, res, ['admin'])) return;
 
     if (!process.env.GMAIL_CLIENT_ID || !process.env.GMAIL_CLIENT_SECRET || !process.env.GMAIL_REFRESH_TOKEN) {
       return res.status(500).json({ error: 'Missing GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET or GMAIL_REFRESH_TOKEN env vars' });

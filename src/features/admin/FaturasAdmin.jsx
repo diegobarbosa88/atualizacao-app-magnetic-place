@@ -8,6 +8,7 @@ import GmailConfigPanel from './faturas/GmailConfigPanel';
 import TOConlinePanel from './faturas/TOConlinePanel';
 import FaturaConfigPanel from './faturas/FaturaConfigPanel';
 import CelEditTd from './faturas/CelEditTd';
+import { authFetch } from '../../utils/authFetch';
 import { gerarRelatorioFaturasPDF } from './faturas/faturasExport';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
@@ -175,7 +176,7 @@ export default function FaturasAdmin() {
   };
 
   const parsearComGemini = async (texto) => {
-    const res = await fetch('/api/parse-fatura', {
+    const res = await authFetch('/api/parse-fatura', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ texto }),
@@ -221,9 +222,9 @@ export default function FaturasAdmin() {
   const handleImportarComprovativos = async () => {
     setImportandoComp(true); setImportResultComp(null);
     try {
-      const res = await fetch('/api/gmail/import-faturas', {
+      const res = await authFetch('/api/gmail/import-faturas', {
         method: 'POST',
-        headers: { 'x-import-secret': import.meta.env.VITE_GMAIL_IMPORT_SECRET || '', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'comprovativos' }),
       });
       const data = await res.json();
@@ -236,9 +237,9 @@ export default function FaturasAdmin() {
     setImportando(true); setImportResult(null);
     try {
       const query = configParaQuery(cfg);
-      const res = await fetch('/api/gmail/import-faturas', {
+      const res = await authFetch('/api/gmail/import-faturas', {
         method: 'POST',
-        headers: { 'x-import-secret': import.meta.env.VITE_GMAIL_IMPORT_SECRET || '', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
       });
       const data = await res.json();
@@ -366,7 +367,7 @@ export default function FaturasAdmin() {
   const [ibanInputVal, setIbanInputVal] = useState('');
 
   useEffect(() => {
-    fetch('/api/pagamentos?action=listar-fornecedores-debito')
+    authFetch('/api/pagamentos?action=listar-fornecedores-debito')
       .then(r => r.json())
       .then(d => {
         setDebitoNifs(new Set((d.data || []).map(f => f.nif)));
@@ -380,7 +381,7 @@ export default function FaturasAdmin() {
   const guardarIbanFornecedor = async () => {
     if (!ibanModal || !ibanInputVal.trim()) return;
     const iban = ibanInputVal.replace(/\s/g, '').toUpperCase();
-    const res = await fetch('/api/pagamentos?action=guardar-iban-fornecedor', {
+    const res = await authFetch('/api/pagamentos?action=guardar-iban-fornecedor', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
     });
@@ -393,7 +394,7 @@ export default function FaturasAdmin() {
     const nif = f.dados?.nif_fornecedor;
     if (!nif) { alert('Esta fatura não tem NIF do fornecedor extraído — extrai com IA primeiro.'); return; }
     const nome = f.dados?.fornecedor || nif;
-    const res = await fetch('/api/pagamentos?action=toggle-fornecedor-debito', {
+    const res = await authFetch('/api/pagamentos?action=toggle-fornecedor-debito', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nif, nome }),
     });

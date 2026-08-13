@@ -1,5 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import { gerarSEPAXml } from '../salarios/_sepaXml.js';
+import { requireAuth } from '../_authUtils.js';
+
+// CR-07: só resolver-token-cliente (validação pública de share_token, por
+// desenho) e saltedge-* (Salt Edge não está ativo — decisão explícita de
+// não mexer agora) ficam de fora do requireAuth abaixo.
+const ACOES_SEM_AUTH = ['resolver-token-cliente'];
 
 const SALTEDGE_APP_ID = process.env.SALTEDGE_APP_ID;
 const SALTEDGE_SECRET = process.env.SALTEDGE_SECRET;
@@ -51,6 +57,11 @@ async function getOrCreateCustomer(db) {
 export default async function handler(req, res) {
   try {
     const { action } = req.query;
+
+    if (!ACOES_SEM_AUTH.includes(action) && !String(action || '').startsWith('saltedge-')) {
+      if (!requireAuth(req, res, ['admin'])) return;
+    }
+
     const db = supabase();
 
     if (action === 'listar') {

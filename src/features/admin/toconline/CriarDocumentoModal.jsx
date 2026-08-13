@@ -30,7 +30,7 @@ function AutocompleteCliente({ value, onChange }) {
     timer.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/toconline/clientes?q=${encodeURIComponent(q)}`);
+        const res = await authFetch(`/api/toconline/clientes?q=${encodeURIComponent(q)}`);
         const data = await res.json();
         setResultados(data.data || []);
         setAberto(true);

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { authFetch } from '../../../utils/authFetch';
 
 const FornecedorContext = createContext();
 
@@ -18,7 +19,7 @@ export function FornecedorProvider({ children }) {
   const carregar = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/pagamentos?action=listar-fornecedores');
+      const res = await authFetch('/api/pagamentos?action=listar-fornecedores');
       const json = await res.json();
       setFornecedores(json.data || []);
     } finally {
@@ -32,7 +33,7 @@ export function FornecedorProvider({ children }) {
     if (!form.nome.trim()) return alert('Nome do fornecedor é obrigatório');
     setSaving(true);
     try {
-      const res = await fetch('/api/pagamentos?action=guardar-fornecedor', {
+      const res = await authFetch('/api/pagamentos?action=guardar-fornecedor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, id: editingId }),
@@ -49,7 +50,7 @@ export function FornecedorProvider({ children }) {
   }, [form, editingId, carregar]);
 
   const apagar = useCallback(async (id) => {
-    const res = await fetch('/api/pagamentos?action=apagar-fornecedor', {
+    const res = await authFetch('/api/pagamentos?action=apagar-fornecedor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id }),

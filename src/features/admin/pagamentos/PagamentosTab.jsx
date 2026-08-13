@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ArrowRightLeft, Plus, Loader2, RefreshCw, Download, CheckCircle, Trash2 } from 'lucide-react';
 import NovoPagamentoModal from './NovoPagamentoModal';
+import { authFetch } from '../../../utils/authFetch';
 
 const STATUS_BADGE = {
   pendente:           'bg-amber-50 text-amber-700 border-amber-100',
@@ -41,7 +42,7 @@ export default function PagamentosTab() {
     try {
       const params = new URLSearchParams();
       if (filtroStatus) params.set('status', filtroStatus);
-      const res = await fetch(`/api/pagamentos?action=listar&${params}`);
+      const res = await authFetch(`/api/pagamentos?action=listar&${params}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
       setPagamentos(data.data || []);
@@ -116,7 +117,7 @@ export default function PagamentosTab() {
     if (ids.length === 0) return;
     setExportando(true);
     try {
-      const res = await fetch('/api/pagamentos?action=exportar-sepa', {
+      const res = await authFetch('/api/pagamentos?action=exportar-sepa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
@@ -171,7 +172,7 @@ export default function PagamentosTab() {
     if (ids.length === 0) return;
     setMarcando(true);
     try {
-      const res = await fetch('/api/pagamentos?action=marcar-enviado', {
+      const res = await authFetch('/api/pagamentos?action=marcar-enviado', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids }),
@@ -190,7 +191,7 @@ export default function PagamentosTab() {
   const handleApagar = async (id) => {
     if (!confirm('Apagar este pagamento pendente?')) return;
     try {
-      const res = await fetch(`/api/pagamentos?action=apagar&id=${id}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/pagamentos?action=apagar&id=${id}`, { method: 'DELETE' });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Erro ao apagar');
       setPagamentos(prev => prev.filter(p => p.id !== id));

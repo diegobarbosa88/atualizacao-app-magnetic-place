@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '../_authUtils.js';
 import { google } from 'googleapis';
 import Anthropic from '@anthropic-ai/sdk';
 import { getMessageReplyContext, sendGmailReply, sendGmailNewMessage } from '../gmail/_sendGmailReply.js';
@@ -556,6 +557,7 @@ async function guardarRascunho(supabase, {
 
 async function handleGerar(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
 
   const missingEnv = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ANTHROPIC_API_KEY', 'GMAIL_CLIENT_ID', 'GMAIL_CLIENT_SECRET', 'GMAIL_REFRESH_TOKEN']
     .filter(k => !process.env[k]);
@@ -891,6 +893,7 @@ async function handlePararMensal(req, res) {
 
 async function handleAprovar(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
 
   const { resposta_id, action, confirmado_por, rascunho_final } = req.body || {};
   if (!resposta_id) return res.status(400).json({ error: 'resposta_id é obrigatório' });
@@ -1035,6 +1038,7 @@ async function handleAprovar(req, res) {
 
 async function handleApagar(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
 
   const { email_contador_id } = req.body || {};
   if (!email_contador_id) return res.status(400).json({ error: 'email_contador_id é obrigatório' });

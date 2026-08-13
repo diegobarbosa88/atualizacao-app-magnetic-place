@@ -3,6 +3,7 @@ import {
   X, ShieldCheck, AlertTriangle, CheckCircle2, Loader2, TestTube2, ShieldAlert
 } from 'lucide-react';
 import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
+import { authFetch } from '../../../utils/authFetch';
 
 // Motivos de cessação — códigos oficiais PSI (cessarVinculoTrabalhador WSDL, Agosto 2026)
 const MOTIVOS_CESSACAO = [
@@ -225,7 +226,7 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
             },
       };
 
-      const r    = await fetch('/api/seguranca-social', {
+      const r    = await authFetch('/api/seguranca-social', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(body),

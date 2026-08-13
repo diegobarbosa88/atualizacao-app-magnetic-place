@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Landmark, Plus, Loader2, RefreshCw, X, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 
 function fmtEur(val, currency = 'EUR') {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).format(val ?? 0);
@@ -21,7 +22,7 @@ function NovaConta({ onClose, onSalva }) {
     setSalvando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/bank-accounts', {
+      const res = await authFetch('/api/toconline/bank-accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, saldo_inicial: Number(form.saldo_inicial) || 0 }),
@@ -91,7 +92,7 @@ function PainelMovimentos({ conta, onClose }) {
     setLoading(true);
     setErro(null);
     try {
-      const res = await fetch(`/api/toconline/bank-accounts?movimentos=1&id=${conta.id}&page=${p}`);
+      const res = await authFetch(`/api/toconline/bank-accounts?movimentos=1&id=${conta.id}&page=${p}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
       const items = data.data || [];
@@ -187,7 +188,7 @@ export default function TOConlineBankAccounts({ onDesligado }) {
     setLoading(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/bank-accounts?com_saldo=1');
+      const res = await authFetch('/api/toconline/bank-accounts?com_saldo=1');
       const data = await res.json();
       if (res.status === 401) { onDesligado?.(); return; }
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);

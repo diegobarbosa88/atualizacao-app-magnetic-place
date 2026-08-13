@@ -7,6 +7,7 @@ import TOConlineRelatorios from './toconline/TOConlineRelatorios';
 import TOConlineBankAccounts from './toconline/TOConlineBankAccounts';
 import CriarDocumentoModal from './toconline/CriarDocumentoModal';
 import FaturarClienteModal from './toconline/FaturarClienteModal';
+import { authFetch } from '../../utils/authFetch';
 
 const TABS = [
   { id: 'documentos', label: 'Documentos', icon: FileText },
@@ -31,7 +32,7 @@ export default function TOConlineAdmin() {
   const carregarSaldo = useCallback(async () => {
     setSaldoLoading(true);
     try {
-      const res = await fetch('/api/toconline/bank-accounts?com_saldo=1');
+      const res = await authFetch('/api/toconline/bank-accounts?com_saldo=1');
       const data = await res.json();
       if (!res.ok) { setSaldoContas(null); return; }
       const lista = data.data || [];
@@ -45,7 +46,7 @@ export default function TOConlineAdmin() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/toconline/status')
+    authFetch('/api/toconline/status')
       .then(r => r.json())
       .then(d => {
         const ok = !!d.ligado;

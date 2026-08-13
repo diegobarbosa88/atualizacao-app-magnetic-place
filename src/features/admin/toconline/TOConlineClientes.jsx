@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Search, Plus, Loader2, RefreshCw, User, X, Users } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 
 function NovoClienteModal({ onClose, onSalvo }) {
   const [form, setForm] = useState({ nome: '', nif: '', email: '', morada: '', codigo_postal: '', localidade: '' });
@@ -13,7 +14,7 @@ function NovoClienteModal({ onClose, onSalvo }) {
     setSalvando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/clientes', {
+      const res = await authFetch('/api/toconline/clientes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
@@ -95,7 +96,7 @@ export default function TOConlineClientes({ onDesligado }) {
     try {
       const params = new URLSearchParams({ page: pg });
       if (q) params.set('q', q);
-      const res = await fetch(`/api/toconline/clientes?${params}`);
+      const res = await authFetch(`/api/toconline/clientes?${params}`);
       const data = await res.json();
       if (res.status === 401) { onDesligado?.(); return; }
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);

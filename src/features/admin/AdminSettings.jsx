@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { authFetch } from '../../utils/authFetch';
 import CompanySignatureSettings from '../../components/common/CompanySignatureSettings';
 import ContadorAcessoPanel from './ContadorAcessoPanel';
 import SSConsultasPanel from './team/SSConsultasPanel';
@@ -60,7 +61,7 @@ export default function AdminSettings() {
   const [ssPsiGuideOpen, setSsPsiGuideOpen] = useState(false);
 
   React.useEffect(() => {
-    fetch('/api/seguranca-social?action=status')
+    authFetch('/api/seguranca-social?action=status')
       .then(r => r.json())
       .then(d => setSsStatus(d))
       .catch(() => setSsStatus({ configurado: false, ambiente: 'teste', nissEmpresa: null }));
@@ -70,7 +71,7 @@ export default function AdminSettings() {
     setSsPingLoading(true);
     setSsPingResult(null);
     try {
-      const r = await fetch('/api/seguranca-social?action=ping');
+      const r = await authFetch('/api/seguranca-social?action=ping');
       const d = await r.json();
       setSsPingResult(d);
     } catch {

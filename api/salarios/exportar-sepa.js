@@ -1,9 +1,11 @@
 import { gerarSepaSalariosXML } from '../../services/sepaSalariosService.js';
+import { requireAuth } from '../_authUtils.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido. Use POST.' });
   }
+  if (!requireAuth(req, res, ['admin'])) return;
 
   const { trabalhadores, instant = false, urgente = false } = req.body || {};
   const isInstant = Boolean(instant || urgente);

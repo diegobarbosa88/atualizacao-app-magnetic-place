@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Loader2, RefreshCw, Download, Plus, X, ExternalLink, FileText, AlertTriangle, ListChecks } from 'lucide-react';
 import ImpostoPdfUploadModal from './ImpostoPdfUploadModal';
+import { authFetch } from '../../../utils/authFetch';
 
 function fmt(val) {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(val ?? 0);
@@ -76,9 +77,9 @@ export default function FilaAprovacaoTab() {
     setErro('');
     try {
       const [rPag, rImp, rFat] = await Promise.all([
-        fetch('/api/pagamentos?action=listar'),
-        fetch('/api/pagamentos?action=listar-impostos'),
-        fetch('/api/pagamentos?action=listar-faturas-fila'),
+        authFetch('/api/pagamentos?action=listar'),
+        authFetch('/api/pagamentos?action=listar-impostos'),
+        authFetch('/api/pagamentos?action=listar-faturas-fila'),
       ]);
       const [dPag, dImp, dFat] = await Promise.all([rPag.json(), rImp.json(), rFat.json()]);
       if (!rPag.ok) throw new Error(dPag.error || 'Erro fornecedores');
@@ -206,7 +207,7 @@ export default function FilaAprovacaoTab() {
     setExportando(true);
     setExportResult(null);
     try {
-      const res = await fetch('/api/pagamentos?action=gerar-sepa-lote', {
+      const res = await authFetch('/api/pagamentos?action=gerar-sepa-lote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pagamentos_ids, impostos_ids, faturas_gmail_ids }),
@@ -238,7 +239,7 @@ export default function FilaAprovacaoTab() {
     const item = rejeitarItem;
     setRejeitarItem(null);
     if (item.fonte === 'imposto') {
-      await fetch('/api/pagamentos?action=rejeitar-imposto', {
+      await authFetch('/api/pagamentos?action=rejeitar-imposto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: item.id, motivo }),
@@ -255,7 +256,7 @@ export default function FilaAprovacaoTab() {
   const guardarIbanInline = async () => {
     if (!ibanModal || !ibanInputVal.trim()) return;
     const iban = ibanInputVal.replace(/\s/g, '').toUpperCase();
-    const res = await fetch('/api/pagamentos?action=guardar-iban-fornecedor', {
+    const res = await authFetch('/api/pagamentos?action=guardar-iban-fornecedor', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nif: ibanModal.nif, nome: ibanModal.nome, iban }),
     });

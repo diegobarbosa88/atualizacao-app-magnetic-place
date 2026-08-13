@@ -3,6 +3,7 @@ import {
   ChevronDown, ChevronUp, Link2, Link2Off, Loader2,
   Search, X, Eye, ArrowUpDown, ArrowUp, ArrowDown, RefreshCw,
 } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 import { useApp } from '../../../context/AppContext';
 import { MESES, getAttrs, getNomeEntidade, getValorTotal, getIva, getDocNum } from '../toconline/utils/tocUtils';
 import { useTableFilters } from '../toconline/hooks/useTableFilters';
@@ -71,7 +72,7 @@ export default function TOConlinePanel() {
     setLigando(true);
     setErroAuth(null);
     try {
-      const res = await fetch('/api/toconline/auth-init');
+      const res = await authFetch('/api/toconline/auth-init');
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       if (!data.authUrl) throw new Error(`Resposta inválida: ${JSON.stringify(data)}`);

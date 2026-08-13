@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import * as pdfjsLib from 'pdfjs-dist';
 import pdfjsWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { X, Upload, Sparkles, Loader2, CheckCircle } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorkerUrl;
 
 const TIPOS = ['IRC', 'IVA', 'IRS', 'SS', 'Outro'];
@@ -64,7 +65,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
         texto += content.items.map(it => it.str).join(' ') + '\n';
       }
 
-      const res = await fetch('/api/pagamentos?action=parse-imposto', {
+      const res = await authFetch('/api/pagamentos?action=parse-imposto', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto }),
@@ -103,7 +104,7 @@ export default function ImpostoPdfUploadModal({ onClose, onSaved }) {
     setGuardando(true);
     setErro('');
     try {
-      const res = await fetch('/api/pagamentos?action=importar-imposto-pdf', {
+      const res = await authFetch('/api/pagamentos?action=importar-imposto-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

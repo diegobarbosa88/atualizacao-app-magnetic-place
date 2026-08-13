@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { authFetch } from '../../../utils/authFetch';
 
 export function useMovUpload({ supabase, onProcessed }) {
   const [ficheiros, setFicheiros] = useState([]);
@@ -47,7 +48,7 @@ export function useMovUpload({ supabase, onProcessed }) {
       try {
         const fp = new FormData();
         fp.append('file', f);
-        const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
+        const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
         const data = await res.json();
         if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); continue; }
         if (data.needs_mapping) {
@@ -82,7 +83,7 @@ export function useMovUpload({ supabase, onProcessed }) {
       const formPayload = new FormData();
       formPayload.append('file', ficheiroAtual);
       formPayload.append('column_mapping', JSON.stringify(colMap));
-      const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
+      const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); setPreviewing(false); return; }
       const novasTx = data.transactions.map(tx => ({ ...tx, _source: ficheiroAtual.name }));
@@ -106,7 +107,7 @@ export function useMovUpload({ supabase, onProcessed }) {
     setProcessando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/reconciliacao/process', {
+      const res = await authFetch('/api/reconciliacao/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transactions_json: selected, filename: previewFilename }),

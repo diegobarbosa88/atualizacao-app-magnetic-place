@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, FileText, CreditCard, TrendingUp, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 
 const CURRENT_YEAR = new Date().getFullYear();
 
@@ -37,7 +38,7 @@ function ComprovativosSection() {
   async function consultar() {
     setEstado({ loading: true });
     try {
-      const r = await fetch(`/api/seguranca-social?action=comprovativos&ano=${ano}`);
+      const r = await authFetch(`/api/seguranca-social?action=comprovativos&ano=${ano}`);
       const json = await r.json();
       if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
       setEstado({ dados: json.dados || [], ambiente: json.ambiente, semRegistos: json.semRegistos });
@@ -108,7 +109,7 @@ function DocumentosPagamentoSection() {
   async function consultar() {
     setEstado({ loading: true });
     try {
-      const r = await fetch('/api/seguranca-social?action=documentos-pagamento');
+      const r = await authFetch('/api/seguranca-social?action=documentos-pagamento');
       const json = await r.json();
       if (!r.ok) { setEstado({ erro: json.erro || `HTTP ${r.status}` }); return; }
       setEstado({ dados: json.dados || [], ambiente: json.ambiente, semRegistos: json.semRegistos });
@@ -179,7 +180,7 @@ function RemuneracoesSection() {
       dataFim:    form.dataFim    || undefined,
     };
     try {
-      const r = await fetch('/api/seguranca-social', {
+      const r = await authFetch('/api/seguranca-social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

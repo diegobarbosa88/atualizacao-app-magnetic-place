@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { AlertCircle, ChevronDown, Download, FileText, Landmark, Loader2, Scissors, X, Zap } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { authFetch } from '../../utils/authFetch';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
 import '../../utils/toggleTipoLink';
 import { MESES_PT_SAL, fmtEur, fmtMes } from './salarios/salarioUtils';
@@ -370,7 +371,7 @@ export default function SalariosTab({ month }) {
 
     try {
       const isInstant = sepaModo === 'instant';
-      const res = await fetch('/api/salarios/exportar-sepa', {
+      const res = await authFetch('/api/salarios/exportar-sepa', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ trabalhadores, urgente: isInstant }),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
+import { authFetch } from '../../../utils/authFetch';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 
@@ -48,7 +49,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   const [ssAmbiente, setSsAmbiente] = useState('teste');
 
   useEffect(() => {
-    fetch('/api/seguranca-social?action=status')
+    authFetch('/api/seguranca-social?action=status')
       .then(r => r.json())
       .then(d => { if (d.ambiente) setSsAmbiente(d.ambiente); })
       .catch(() => {});

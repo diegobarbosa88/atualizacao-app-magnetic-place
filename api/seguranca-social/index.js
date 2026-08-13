@@ -10,6 +10,7 @@ import {
   CI_BASE,
   REMUN_URL,
 } from './_soapUtils.js';
+import { requireAuth } from '../_authUtils.js';
 
 function supabaseAdmin() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -24,6 +25,8 @@ function credenciaisConfiguradas() {
 }
 
 export default async function handler(req, res) {
+  if (!requireAuth(req, res, ['admin'])) return;
+
   const action = req.method === 'GET'
     ? req.query?.action
     : req.body?.action;

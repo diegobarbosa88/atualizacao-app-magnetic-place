@@ -2,6 +2,16 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'node:crypto';
 import { getValidToken, exchangeCode } from './_token.js';
 import { tocFetch, fetchAllPages } from './_fetch.js';
+import { requireAuth } from '../_authUtils.js';
+
+// CR-07: token-exchange fica de fora do requireAuth — não é uma ação
+// disparada por um clique autenticado na nossa UI, é a conclusão do fluxo
+// OAuth (chamada automaticamente pelo SPA em app.jsx quando o TOConline
+// redireciona de volta com ?code&state, exatamente como callback.js — só
+// que aqui é o caminho de fallback quando o redirect não atinge a função
+// serverless diretamente). Reportado como caso a confirmar, não decidido
+// silenciosamente.
+const ACOES_SEM_AUTH = ['token-exchange'];
 
 const OAUTH_URL = process.env.TOCONLINE_OAUTH_URL || 'https://app12.toconline.pt/oauth';
 const CLIENT_ID = process.env.TOCONLINE_CLIENT_ID;
@@ -33,6 +43,10 @@ async function getSaldoAtual(contaId, initialBalance, accessToken) {
 
 export default async function handler(req, res) {
   const { action } = req.query;
+
+  if (!ACOES_SEM_AUTH.includes(action)) {
+    if (!requireAuth(req, res, ['admin'])) return;
+  }
 
   if (action === 'status') {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });

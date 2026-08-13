@@ -13,6 +13,7 @@ import ResultadosTabs from './reconciliacao/ResultadosTabs';
 import HistoricoSection from './reconciliacao/HistoricoSection';
 import { useReconciliacaoRun } from './reconciliacao/useReconciliacaoRun';
 import { useApp } from '../../context/AppContext';
+import { authFetch } from '../../utils/authFetch';
 
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
@@ -50,7 +51,7 @@ export default function ReconciliacaoAdmin() {
     setTocErro(null);
     run.setResultado(null);
     try {
-      const res = await fetch('/api/reconciliacao/process', {
+      const res = await authFetch('/api/reconciliacao/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fonte: 'toconline', de: tocDe, ate: tocAte }),
@@ -151,7 +152,7 @@ export default function ReconciliacaoAdmin() {
       try {
         const fp = new FormData();
         fp.append('file', f);
-        const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
+        const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
         const data = await res.json();
         if (!res.ok) { errors.push({ filename: f.name, error: data.error || 'Erro ao ler' }); continue; }
         if (data.needs_mapping) {
@@ -196,7 +197,7 @@ export default function ReconciliacaoAdmin() {
       const formPayload = new FormData();
       formPayload.append('file', ficheiroAtual);
       formPayload.append('column_mapping', JSON.stringify({ ...colMap }));
-      const res = await fetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
+      const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
       const data = await res.json();
       if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); return; }
       const novasTx = data.transactions.map(tx => ({ ...tx, _source: restantes.length || previewTransacoes?.length ? ficheiroAtual.name : undefined }));
@@ -223,7 +224,7 @@ export default function ReconciliacaoAdmin() {
     setErro(null);
     run.setResultado(null);
     try {
-      const res = await fetch('/api/reconciliacao/process', {
+      const res = await authFetch('/api/reconciliacao/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ transactions_json: selected, filename: previewFilename }),

@@ -3,6 +3,7 @@ import { Loader2, CheckCircle, Copy, ChevronDown, ChevronRight, AlertTriangle, F
 import { useRef } from 'react';
 import FaturarClienteModal from '../toconline/FaturarClienteModal';
 import { MESES_PT, mesesDisponiveis, formatarMes } from '../../../utils/validacaoHelpers';
+import { authFetch } from '../../../utils/authFetch';
 
 const fmtEur = v => (parseFloat(v) || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 const fmtPct = v => (parseFloat(v) || 0).toFixed(2) + '%';
@@ -244,7 +245,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           data_de: `${mesFat}-01`,
           data_ate: `${mesFat}-${String(ultimoDia).padStart(2, '0')}`,
         });
-        const res = await fetch(`/api/toconline/relatorio?${params}`);
+        const res = await authFetch(`/api/toconline/relatorio?${params}`);
         if (cancelled) return;
         if (res.status === 401) { setTocSemAuth(true); return; }
         if (!res.ok) return;
@@ -273,7 +274,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
           data_de: `${mesFat}-01`,
           data_ate: `${mesFat}-${String(ultimoDia).padStart(2, '0')}`,
         });
-        const res = await fetch(`/api/toconline/relatorio?${params}`);
+        const res = await authFetch(`/api/toconline/relatorio?${params}`);
         if (cancelled) return;
         if (res.status === 401) { setTocSemAuth(true); return; }
         if (!res.ok) return;
@@ -446,7 +447,7 @@ export default function AjudasCalculadora({ logs, clients, selectedMonth }) {
         data_de: `${mesFaturas}-01`,
         data_ate: `${mesFaturas}-${String(ultimoDia).padStart(2, '0')}`,
       });
-      const res = await fetch(`/api/toconline/relatorio?${params}`);
+      const res = await authFetch(`/api/toconline/relatorio?${params}`);
       if (!res.ok) throw new Error(`Erro ${res.status}`);
       const data = await res.json();
       const faturas = data.data || [];
@@ -688,7 +689,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         data_de: `${mesFaturas}-01`,
         data_ate: `${mesFaturas}-${String(ultimoDia).padStart(2, '0')}`,
       });
-      const res = await fetch(`/api/toconline/relatorio?${params}`);
+      const res = await authFetch(`/api/toconline/relatorio?${params}`);
       const data = res.ok ? await res.json() : {};
       setFaturasHist(prev => ({ ...prev, [mes]: data.data || [] }));
     } catch {

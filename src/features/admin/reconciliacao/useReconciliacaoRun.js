@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { matchClientByTokens, previousMonth } from '../movimentacoes/txUtils';
+import { authFetch } from '../../../utils/authFetch';
 
 export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
   // ── Run results state ─────────────────────────────────────────────────────
@@ -748,7 +749,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     e.stopPropagation();
     setReprocessando(runId);
     try {
-      const res = await fetch('/api/reconciliacao/process?action=reprocess', {
+      const res = await authFetch('/api/reconciliacao/process?action=reprocess', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ runId }),

@@ -6,6 +6,7 @@ import {
 import { useApp } from '../../../context/AppContext';
 import { DEFAULT_GMAIL_CONFIG_CONTADOR, configParaQuery } from './faturasUtils';
 import GmailConfigPanel from './GmailConfigPanel';
+import { authFetch } from '../../../utils/authFetch';
 
 const STATUS_CFG = {
   importado:       { label: 'Importado',       bg: 'bg-slate-100',  text: 'text-slate-500' },
@@ -78,7 +79,7 @@ export default function ContadorEmailsAdmin() {
     // Lookup server-side (api/pagamentos, service role) em vez de
     // supabase.from('fornecedores') direto: RLS está ativo em `fornecedores`
     // sem policies, por isso a anon key nunca veria este registo.
-    fetch(`/api/pagamentos?action=buscar-fornecedor-por-nif&nif=${encodeURIComponent(CONTADOR_NIF)}`)
+    authFetch(`/api/pagamentos?action=buscar-fornecedor-por-nif&nif=${encodeURIComponent(CONTADOR_NIF)}`)
       .then(res => res.json())
       .then(({ data, error }) => {
         if (error) { setFornecedorErro(error); return; }
@@ -111,9 +112,9 @@ export default function ContadorEmailsAdmin() {
     setImportando(true); setImportResult(null);
     try {
       const query = configParaQuery(cfg);
-      const res = await fetch('/api/gmail/import-faturas', {
+      const res = await authFetch('/api/gmail/import-faturas', {
         method: 'POST',
-        headers: { 'x-import-secret': import.meta.env.VITE_GMAIL_IMPORT_SECRET || '', 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mode: 'contador', query, fornecedorId: fornecedor.id }),
       });
       const data = await res.json();
@@ -126,7 +127,7 @@ export default function ContadorEmailsAdmin() {
   const gerarRascunho = async (emailId) => {
     setGerandoId(emailId); setGerarErro(null);
     try {
-      const res = await fetch('/api/gerar-resposta-contador', {
+      const res = await authFetch('/api/gerar-resposta-contador', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email_contador_id: emailId }),
@@ -139,7 +140,7 @@ export default function ContadorEmailsAdmin() {
   };
 
   const apagarEmailPorId = async (id) => {
-    const res = await fetch('/api/apagar-email-contador', {
+    const res = await authFetch('/api/apagar-email-contador', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email_contador_id: id }),
@@ -207,7 +208,7 @@ export default function ContadorEmailsAdmin() {
     if (action === 'rejeitar' && !confirm('Rejeitar este rascunho? Esta ação fica registada e não pode ser desfeita.')) return;
     setProcessando(true); setAcaoErro(null);
     try {
-      const res = await fetch('/api/aprovar-resposta-contador', {
+      const res = await authFetch('/api/aprovar-resposta-contador', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

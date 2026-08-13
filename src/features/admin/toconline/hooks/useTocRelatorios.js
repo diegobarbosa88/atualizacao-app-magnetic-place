@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { authFetch } from '../../../../utils/authFetch';
 
 export function useTocRelatorios({ onDesligado } = {}) {
   const [docs, setDocs] = useState([]);
@@ -15,7 +16,7 @@ export function useTocRelatorios({ onDesligado } = {}) {
       const params = new URLSearchParams({ tipo, page: '1' });
       if (dataDe) params.set('data_de', dataDe);
       if (dataAte) params.set('data_ate', dataAte);
-      const res = await fetch(`/api/toconline/relatorio?${params}`);
+      const res = await authFetch(`/api/toconline/relatorio?${params}`);
       const data = await res.json();
       if (res.status === 401) { onDesligado?.(); return; }
       if (!res.ok) throw new Error(data.error || 'Erro ao carregar dados');

@@ -1,6 +1,7 @@
 import formidable from 'formidable';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '../_authUtils.js';
 import { runMatchingEngine } from './_matchingEngine.js';
 import { parseCsv, parseCsvColumns, parseCsvWithMapping, parseOfxContent } from './_parseUtils.js';
 import { getValidToken } from '../toconline/_token.js';
@@ -691,6 +692,8 @@ async function handleProcess(req, res) {
 // ---------------------------------------------------------------------------
 
 export default async function handler(req, res) {
+  if (!requireAuth(req, res, ['admin'])) return;
+
   const { tipo } = req.query;
   if (tipo === 'parse') return handleParse(req, res);
   if (tipo === 'upload') return handleUpload(req, res);

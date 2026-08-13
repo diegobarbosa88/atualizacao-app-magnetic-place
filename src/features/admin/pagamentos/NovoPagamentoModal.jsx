@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, Loader2, ArrowRightLeft } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 
 function AutocompleteFornecedor({ value, onChange }) {
   const [q, setQ] = useState(value?.nome || '');
@@ -86,7 +87,7 @@ export default function NovoPagamentoModal({ onClose, onCriado }) {
     setCriando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/pagamentos?action=criar', {
+      const res = await authFetch('/api/pagamentos?action=criar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, valor: Number(form.valor) }),
