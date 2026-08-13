@@ -1,4 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import { assinarSessao } from './_authUtils.js';
+
+const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
+const TRINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
 
 // Fase 1 — validação de credenciais no servidor para os 3 papéis (admin,
 // trabalhador, cliente), substituindo a comparação feita no browser contra
@@ -88,7 +92,8 @@ async function handleAdmin(supabase, req, res) {
     return res.status(401).json({ error: 'Senha incorreta.' });
   }
 
-  return res.status(200).json({ user: { id: 'admin_system', name: 'Admin', role: 'admin' } });
+  const token = assinarSessao({ role: 'admin', id: 'admin_system', exp: Date.now() + SETE_DIAS_MS });
+  return res.status(200).json({ user: { id: 'admin_system', name: 'Admin', role: 'admin' }, token });
 }
 
 async function handleWorker(supabase, req, res) {
@@ -129,7 +134,11 @@ async function handleWorker(supabase, req, res) {
     return res.status(403).json({ error: 'A sua conta está inativa. Contacte a administração.' });
   }
 
-  return res.status(200).json({ user: mapWorkerRow(full) });
+  // isAdmin fica no token para cobrir o trabalhador com privilégio de admin
+  // (escolhe "Painel Admin" ou entrar como trabalhador — ver LoginView.jsx —
+  // mas a permissão real já vem confirmada aqui, do registo da BD).
+  const token = assinarSessao({ role: 'worker', id: full.id, isAdmin: !!full.isAdmin, exp: Date.now() + SETE_DIAS_MS });
+  return res.status(200).json({ user: mapWorkerRow(full), token });
 }
 
 async function handleClient(supabase, req, res) {
@@ -158,8 +167,11 @@ async function handleClient(supabase, req, res) {
   }
 
   const client = matches[0];
+  const expiry = Date.now() + TRINTA_DIAS_MS;
+  const token = assinarSessao({ role: 'client', id: client.id, exp: expiry });
   return res.status(200).json({
-    session: { clientId: client.id, name: client.name, expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 },
+    session: { clientId: client.id, name: client.name, expiry },
+    token,
   });
 }
 

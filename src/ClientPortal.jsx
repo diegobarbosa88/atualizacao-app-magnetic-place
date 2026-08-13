@@ -106,6 +106,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             }
             const session = data.session;
             localStorage.setItem('magnetic_client_session', JSON.stringify(session));
+            if (data.token) localStorage.setItem('magnetic_session_token', data.token);
             setClientSession(session);
             const months = [...new Set(
                 (initialLogs || [])
@@ -124,6 +125,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     const handleLogout = () => {
         localStorage.removeItem('magnetic_client_session');
+        localStorage.removeItem('magnetic_session_token');
         setClientSession(null);
         setLoginNif('');
         setLoginEmail('');

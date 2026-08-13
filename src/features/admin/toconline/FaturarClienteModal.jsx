@@ -4,6 +4,7 @@ import {
   FileText, Plus, Trash2, Save,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { authFetch } from '../../../utils/authFetch';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -312,7 +313,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
         } : undefined,
       };
 
-      const res = await fetch('/api/toconline/create-fatura', {
+      const res = await authFetch('/api/toconline/create-fatura', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(bodyPayload),

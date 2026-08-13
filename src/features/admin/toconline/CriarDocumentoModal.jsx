@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
+import { authFetch } from '../../../utils/authFetch';
 
 const TIPOS_DOC = [
   { value: 'FT', label: 'FT — Fatura' },
@@ -172,7 +173,7 @@ export default function CriarDocumentoModal({ onClose, onCriado }) {
     setCriando(true);
     setErro(null);
     try {
-      const res = await fetch('/api/toconline/create-fatura', {
+      const res = await authFetch('/api/toconline/create-fatura', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

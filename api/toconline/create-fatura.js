@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { getValidToken } from './_token.js';
 import { tocFetch } from './_fetch.js';
+import { requireAuth } from '../_authUtils.js';
 
 const TIPOS_VENDA = ['FT', 'FR', 'FS', 'FRS', 'NC', 'ND', 'VD', 'GT', 'GR', 'ORC', 'PROJ', 'NAFT'];
 
@@ -13,6 +14,10 @@ function hojeEmPortugal() {
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Prova de conceito CR-07 — primeiro endpoint de alto risco a exigir
+  // sessão assinada. Só admin: cria faturas reais no TOConline.
+  if (!requireAuth(req, res, ['admin'])) return;
 
   const body = req.body || {};
   const {

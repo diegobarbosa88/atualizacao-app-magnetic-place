@@ -199,12 +199,13 @@ export default function App() {
     }
   };
 
-  const handleLogin = (role, user = null) => {
+  const handleLogin = (role, user = null, token = null) => {
     const userData = user || { id: 'admin_system', name: 'Admin', role: 'admin' };
     setCurrentUser(userData);
     setView(role);
     localStorage.setItem('magnetic_view', role);
     localStorage.setItem('magnetic_user', JSON.stringify(userData));
+    if (token) localStorage.setItem('magnetic_session_token', token);
     if (role === 'admin') navigate('/admin/overview');
     else if (role === 'worker') navigate('/worker');
   };
@@ -214,6 +215,7 @@ export default function App() {
     setView('login');
     localStorage.removeItem('magnetic_view');
     localStorage.removeItem('magnetic_user');
+    localStorage.removeItem('magnetic_session_token');
     navigate('/login');
   };
 

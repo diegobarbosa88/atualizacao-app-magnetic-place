@@ -22,6 +22,7 @@ const LoginView = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [pendingAdminWorker, setPendingAdminWorker] = useState(null);
+  const [pendingToken, setPendingToken] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showIosInstructions, setShowIosInstructions] = useState(false);
 
@@ -82,11 +83,12 @@ const LoginView = ({ onLogin }) => {
 
       const found = data.user;
       if (isAdminUsername) {
-        onLogin('admin', found);
+        onLogin('admin', found, data.token);
       } else if (found.isAdmin) {
         setPendingAdminWorker(found);
+        setPendingToken(data.token);
       } else {
-        onLogin('worker', found);
+        onLogin('worker', found, data.token);
       }
     } catch {
       setError('Erro de ligação. Tenta novamente.');
@@ -109,14 +111,14 @@ const LoginView = ({ onLogin }) => {
           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: 700, marginBottom: '20px' }}>Como quer entrar?</p>
           <div className="flex flex-col gap-3">
             <button
-              onClick={() => onLogin('admin', { ...pendingAdminWorker, role: 'admin' })}
+              onClick={() => onLogin('admin', { ...pendingAdminWorker, role: 'admin' }, pendingToken)}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
               style={{ background: '#EB8D00', boxShadow: '0 4px 16px rgba(235,141,0,0.3)' }}
             >
               Painel Admin
             </button>
             <button
-              onClick={() => onLogin('worker', pendingAdminWorker)}
+              onClick={() => onLogin('worker', pendingAdminWorker, pendingToken)}
               className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest active:scale-95 transition-all text-white"
               style={{ backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
             >
