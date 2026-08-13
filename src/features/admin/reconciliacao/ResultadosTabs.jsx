@@ -60,21 +60,17 @@ export default function ResultadosTabs({
 
       {/* Sub-tab buttons + actions */}
       <div className="flex flex-col gap-2 mb-6">
-        <div className="flex gap-6 border-b border-slate-200">
+        <div className="recon-tabs">
           {[
             { key: 'matched',       labelFull: 'Reconciliados', labelShort: 'Recon.',  count: (displayData.matched?.length ?? 0) + clientAssocMatched.length },
             { key: 'orphan_bank',   labelFull: 'Órfãos Banco',  labelShort: 'Banco',   count: Math.max(0, (displayData.orphan_bank?.length ?? 0) - orphanBankAssocSet.size) },
             { key: 'orphan_system', labelFull: 'Órfãos Sistema', labelShort: 'Sistema', count: displayData.orphan_system?.length ?? 0 },
           ].map(tab => (
             <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
-              className={`flex items-center gap-1.5 pb-2.5 text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all border-b-2 -mb-px ${
-                activeSubTab === tab.key ? 'text-[#1B3A57] border-[#EB8D00]' : 'text-slate-400 border-transparent hover:text-slate-600'
-              }`}>
+              className={`recon-tab ${activeSubTab === tab.key ? 'active' : ''}`}>
               <span className="hidden sm:inline">{tab.labelFull}</span>
               <span className="sm:hidden">{tab.labelShort}</span>
-              {tab.count !== null && (
-                <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded-full ${activeSubTab === tab.key ? 'bg-[#1B3A57] text-white' : 'bg-slate-100 text-slate-400'}`}>{tab.count}</span>
-              )}
+              {tab.count !== null && <span className="recon-tab-count">{tab.count}</span>}
             </button>
           ))}
         </div>
@@ -123,7 +119,8 @@ export default function ResultadosTabs({
           const isPago = item.fatura?.status === 'PAGO' || item.rule === 'confirmed_manual' || isInterno || (item.rule === 'client_association' && item.confirmed_entrada);
           const ruleTag = getRuleTag(item);
           return (
-            <div key={i} className={`flex flex-col sm:flex-row sm:items-start gap-2 sm:gap-3 bg-white border border-slate-100 border-l-4 rounded-2xl p-3 sm:p-4 ${isPago ? 'border-l-emerald-400' : 'border-l-amber-400'}`}>
+            <div key={i} className="recon-txn-row flex-col sm:flex-row sm:items-start gap-2 sm:gap-3"
+              style={{ borderLeftColor: isPago ? 'var(--green)' : 'var(--amber)' }}>
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 {(item.rule === 'client_association'
                   ? !item.confirmed_entrada
@@ -136,8 +133,8 @@ export default function ResultadosTabs({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <TipoBadge tipo={item.transacao?.tipo} />
-                    <span className="text-sm font-bold text-slate-700">€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
-                    <span className="text-[10px] text-slate-400">{item.transacao?.data}</span>
+                    <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left', color: item.transacao?.tipo === 'credito' ? 'var(--green)' : 'var(--text)' }}>€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
+                    <span className="recon-doc-ref">{item.transacao?.data}</span>
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                       {isInterno ? 'Transf. Interna' : item.rule === 'client_association' ? 'Banco' : item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                     </span>
@@ -208,18 +205,14 @@ export default function ResultadosTabs({
                   );
                 })()}
                 {isInterno ? (
-                  <span className="flex items-center gap-1 text-cyan-600 text-[10px] font-black uppercase tracking-widest">
-                    <CheckCircle size={14} /> {item.rule === 'internal_transfer_confirmed' ? 'Transferência' : 'Presumida'}
+                  <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>
+                    {item.rule === 'internal_transfer_confirmed' ? 'Transferência' : 'Presumida'}
                   </span>
                 ) : item.rule === 'confirmed_manual' ? (
-                  <span className="flex items-center gap-1 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
-                    <CheckCircle size={14} /> Confirmado
-                  </span>
+                  <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>Confirmado</span>
                 ) : item.rule === 'client_association' ? (
                   item.confirmed_entrada ? (
-                    <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
-                      <CheckCircle size={14} /> Confirmado
-                    </span>
+                    <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>Confirmado</span>
                   ) : (
                     <button onClick={() => confirmarEntrada(item, i)} disabled={confirmandoEntrada.has(i)}
                       className="flex items-center gap-1 bg-emerald-600 text-white rounded-xl px-3 py-1.5 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50">
@@ -228,9 +221,7 @@ export default function ResultadosTabs({
                     </button>
                   )
                 ) : item.fatura?.status === 'PAGO' ? (
-                  <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
-                    <CheckCircle size={14} /> Pago
-                  </span>
+                  <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>Pago</span>
                 ) : (
                   <button onClick={() => confirmarPagamento(item.fatura?.id, item.fatura?.fonte, item.transacao?.data)}
                     disabled={confirmando.has(item.fatura?.id)}
@@ -293,29 +284,24 @@ export default function ResultadosTabs({
             )}
 
             {internalEntries.length > 0 && (
-              <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-                <button type="button" onClick={() => setTransfersOpen(v => !v)}
-                  className="w-full flex items-center gap-3 p-4 text-left hover:bg-slate-50 transition-colors">
-                  <ChevronRight size={14} className={`text-slate-400 flex-shrink-0 transition-transform ${transfersOpen ? 'rotate-90' : ''}`} />
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-white" style={{ backgroundColor: '#869AAF' }}>
-                    <Wallet size={14} />
-                  </div>
+              <div className="recon-group-card">
+                <button type="button" onClick={() => setTransfersOpen(v => !v)} className="recon-group-header">
+                  <ChevronRight size={12} style={{ color: 'var(--text-faint)', flexShrink: 0, transition: 'transform 0.15s ease', transform: transfersOpen ? 'rotate(90deg)' : 'none' }} />
+                  <div className="recon-icon-badge"><Wallet size={13} /></div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-black" style={{ color: '#1B3A57' }}>Transferências Internas — Novobanco Poupança</p>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+                    <p className="recon-group-title">Transferências Internas — Novobanco Poupança</p>
+                    <p className="recon-group-subtitle">
                       {internalEntries.length} movimento{internalEntries.length > 1 ? 's' : ''} · {nConfirmadas} confirmada{nConfirmadas !== 1 ? 's' : ''} · {nPresumidas + nAmbiguas} presumida{(nPresumidas + nAmbiguas) !== 1 ? 's' : ''}
-                      {nAmbiguas > 0 && <span className="text-amber-600"> ({nAmbiguas} ambígua{nAmbiguas > 1 ? 's' : ''}, a rever)</span>}
+                      {nAmbiguas > 0 && <span style={{ color: 'var(--amber)' }}> ({nAmbiguas} ambígua{nAmbiguas > 1 ? 's' : ''}, a rever)</span>}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Saldo Poupança</p>
-                    <p className="font-mono text-sm font-bold" style={{ color: '#869AAF' }}>
-                      {saldoManual == null ? '—' : `€${Number(saldoManual.saldo).toFixed(2)}`}
-                    </p>
+                  <div className="recon-group-total">
+                    <span className="recon-group-total-label">Saldo Poupança</span>
+                    {saldoManual == null ? '—' : `€${Number(saldoManual.saldo).toFixed(2)}`}
                   </div>
                 </button>
                 {transfersOpen && (
-                  <div className="border-t border-slate-100 p-3 sm:p-4 space-y-2 bg-slate-50/60">
+                  <div className="recon-group-body space-y-2" style={{ padding: '12px 16px' }}>
                     {internalEntries.map(({ item, i }) => renderMatchedItem(item, i))}
                   </div>
                 )}
@@ -323,7 +309,7 @@ export default function ResultadosTabs({
             )}
 
             {internalEntries.length > 0 && normalEntries.length > 0 && (
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 pt-2">Pagamentos e outros movimentos</p>
+              <p className="recon-stat-label" style={{ paddingTop: '8px' }}>Pagamentos e outros movimentos</p>
             )}
 
             {normalEntries.map(({ item, i }) => renderMatchedItem(item, i))}
@@ -362,15 +348,15 @@ export default function ResultadosTabs({
               if (isConfirmed) {
                 const classif = orphanClassificacoes[i];
                 return (
-                  <div key={i} className="bg-white border border-slate-100 border-l-4 border-l-emerald-400 rounded-2xl p-3 sm:p-4 opacity-80">
+                  <div key={i} className="recon-txn-row" style={{ borderLeftColor: 'var(--green)', opacity: 0.8 }}>
                     <div className="flex items-start gap-3">
                       <CheckCircle size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <TipoBadge tipo={item.transacao.tipo} />
-                          <span className="text-sm font-bold text-slate-500">€{Number(item.transacao.valor).toFixed(2)}</span>
-                          <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
-                          <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">confirmado</span>
+                          <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left' }}>€{Number(item.transacao.valor).toFixed(2)}</span>
+                          <span className="recon-doc-ref">{item.transacao.data}</span>
+                          <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>confirmado</span>
                           {classif && <TagBadge nome={classif.nome} cor={classif.cor} />}
                         </div>
                         {orphanObservacoes[i] && (
@@ -385,7 +371,7 @@ export default function ResultadosTabs({
                 );
               }
               return (
-                <div key={i} className="bg-white border border-slate-100 border-l-4 border-l-rose-400 rounded-2xl p-3 sm:p-4">
+                <div key={i} className="recon-txn-row ambiguous">
                   <div className="flex items-start gap-3">
                     <input type="checkbox" checked={selOrphan.has(i)}
                       onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
@@ -393,9 +379,9 @@ export default function ResultadosTabs({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-2">
                         <TipoBadge tipo={item.transacao.tipo} />
-                        <span className="text-sm font-bold text-slate-700">€{Number(item.transacao.valor).toFixed(2)}</span>
-                        <span className="text-[10px] text-slate-400">{item.transacao.data}</span>
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest ${item.reason === 'ambiguous' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                        <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left' }}>€{Number(item.transacao.valor).toFixed(2)}</span>
+                        <span className="recon-doc-ref">{item.transacao.data}</span>
+                        <span className="recon-status-pill ambiguous" style={{ textTransform: 'uppercase' }}>
                           {item.reason === 'ambiguous' ? 'ambíguo' : 'sem correspondência'}
                         </span>
                       </div>
@@ -482,12 +468,12 @@ export default function ResultadosTabs({
             <p className="text-center text-slate-400 py-8 text-sm">Todas as faturas têm correspondência.</p>
           )}
           {(displayData.orphan_system || []).map((item, i) => (
-            <div key={i} className="bg-white border border-slate-100 border-l-4 border-l-rose-400 rounded-2xl p-3 sm:p-4 flex items-center gap-3">
+            <div key={i} className="recon-txn-row ambiguous flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <span className="text-[9px] bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full uppercase tracking-widest">sem pagamento</span>
-                  <span className="text-sm font-bold text-slate-700">€{Number(item.fatura.valor).toFixed(2)}</span>
-                  <span className="text-[10px] text-slate-400 uppercase tracking-widest">pendente</span>
+                  <span className="recon-status-pill ambiguous" style={{ textTransform: 'uppercase' }}>sem pagamento</span>
+                  <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left' }}>€{Number(item.fatura.valor).toFixed(2)}</span>
+                  <span className="recon-doc-ref" style={{ textTransform: 'uppercase' }}>pendente</span>
                 </div>
                 <p className="text-xs text-slate-600 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
               </div>

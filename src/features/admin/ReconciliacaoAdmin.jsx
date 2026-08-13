@@ -14,6 +14,7 @@ import HistoricoSection from './reconciliacao/HistoricoSection';
 import { useReconciliacaoRun } from './reconciliacao/useReconciliacaoRun';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
+import './reconciliacao/reconciliacao-mockup.css';
 
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
@@ -309,7 +310,7 @@ export default function ReconciliacaoAdmin() {
   };
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
+    <div className="recon-scope animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2">
@@ -328,22 +329,22 @@ export default function ReconciliacaoAdmin() {
         const nOrphanBank = Math.max(0, (run.displayData.orphan_bank?.length ?? 0) - run.orphanBankAssocSet.size);
         const nOrphanSystem = run.displayData.orphan_system?.length ?? 0;
         return (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden mb-6">
-            <div className="bg-white p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Reconciliados</p>
-              <p className="font-mono text-xl font-bold text-emerald-600 mt-0.5">{nMatched}</p>
+          <div className="recon-stat-strip mb-6">
+            <div className="recon-stat">
+              <p className="recon-stat-label">Reconciliados</p>
+              <p className="recon-stat-value" style={{ color: 'var(--green)' }}>{nMatched}</p>
             </div>
-            <div className="bg-white p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Órfãos Banco</p>
-              <p className="font-mono text-xl font-bold text-amber-600 mt-0.5">{nOrphanBank}</p>
+            <div className="recon-stat">
+              <p className="recon-stat-label">Órfãos Banco</p>
+              <p className="recon-stat-value" style={{ color: 'var(--amber)' }}>{nOrphanBank}</p>
             </div>
-            <div className="bg-white p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Órfãos Sistema</p>
-              <p className="font-mono text-xl font-bold mt-0.5" style={{ color: '#1B3A57' }}>{nOrphanSystem}</p>
+            <div className="recon-stat">
+              <p className="recon-stat-label">Órfãos Sistema</p>
+              <p className="recon-stat-value">{nOrphanSystem}</p>
             </div>
-            <div className="bg-white p-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Novobanco Poupança</p>
-              <p className="font-mono text-xl font-bold mt-0.5" style={{ color: '#869AAF' }}>
+            <div className="recon-stat">
+              <p className="recon-stat-label">Novobanco Poupança</p>
+              <p className="recon-stat-value" style={{ color: 'var(--slate)' }}>
                 {run.saldoManual == null ? '—' : `€${Number(run.saldoManual.saldo).toFixed(2)}`}
               </p>
             </div>
@@ -401,16 +402,12 @@ export default function ReconciliacaoAdmin() {
 
       {/* Seletor de origem — simétrico, sem acordeão escondido */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8 space-y-5">
-        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
+        <div className="recon-segmented">
           {[
             { key: 'toconline', label: 'TOConline', icon: Zap },
             { key: 'ficheiro', label: 'Ficheiro', icon: Upload },
           ].map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => setOrigem(key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                origem === key ? 'text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}
-              style={origem === key ? { backgroundColor: '#1B3A57' } : {}}>
+            <button key={key} onClick={() => setOrigem(key)} className={origem === key ? 'active' : ''}>
               <Icon size={13} /> {label}
             </button>
           ))}

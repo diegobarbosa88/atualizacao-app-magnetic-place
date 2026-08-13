@@ -1,0 +1,187 @@
+/* Tokens e classes portadas literalmente de reconciliacao-redesign.html
+   (mockup aprovado) — valores exatos, não aproximações Tailwind.
+   Escopado a .recon-scope para não vazar para o resto da app (que tem
+   uppercase global forçado em App.css: `* { text-transform: uppercase
+   !important }`) — dentro deste escopo, o uppercase só se aplica onde o
+   próprio mockup o pede (labels), tudo o resto fica em case normal. */
+
+.recon-scope, .recon-scope * {
+  text-transform: none !important;
+}
+
+.recon-scope {
+  --navy: #1B3A57;
+  --navy-light: #2A4E70;
+  --orange: #EB8D00;
+  --slate: #869AAF;
+  --bg: #F5F7FA;
+  --card: #FFFFFF;
+  --border: #E3E7EC;
+  --text: #1F2937;
+  --text-muted: #6B7280;
+  --text-faint: #9CA3AF;
+  --green: #1D8A5E;
+  --green-bg: #EAF7F1;
+  --amber: #B4700A;
+  --amber-bg: #FDF3E3;
+  --red: #C0362C;
+  --red-bg: #FCEBEA;
+  --recon-mono: 'IBM Plex Mono', 'SF Mono', ui-monospace, monospace;
+  --recon-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--recon-sans);
+}
+
+.recon-font-mono { font-family: var(--recon-mono); }
+
+/* ===== Stat strip ===== */
+.recon-stat-strip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+@media (min-width: 640px) {
+  .recon-stat-strip { grid-template-columns: repeat(4, 1fr); }
+}
+.recon-stat { background: var(--card); padding: 14px 18px; }
+.recon-stat-label {
+  font-size: 11px;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.recon-stat-value { font-family: var(--recon-mono); font-size: 20px; font-weight: 600; color: var(--navy); }
+.recon-stat-sub { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+
+/* ===== Segmented control ===== */
+.recon-segmented {
+  display: inline-flex;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.recon-segmented button {
+  border: none;
+  background: transparent;
+  padding: 7px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--recon-sans);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.recon-segmented button.active { background: var(--navy); color: white; }
+
+/* ===== Tabs ===== */
+.recon-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+}
+.recon-tab {
+  padding: 10px 4px;
+  margin-right: 24px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--recon-sans);
+}
+.recon-tab-count {
+  font-family: var(--recon-mono);
+  font-size: 11px;
+  background: var(--bg);
+  color: var(--text-faint);
+  padding: 1px 7px;
+  border-radius: 10px;
+}
+.recon-tab.active { color: var(--navy); border-bottom-color: var(--orange); }
+.recon-tab.active .recon-tab-count { background: var(--navy); color: white; }
+
+/* ===== Group card (transferências internas / lote) ===== */
+.recon-group-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.recon-group-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: var(--recon-sans);
+}
+.recon-icon-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--slate);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.recon-group-title { font-size: 13.5px; font-weight: 700; color: var(--navy); }
+.recon-group-subtitle { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
+.recon-group-total { font-family: var(--recon-mono); font-size: 15px; font-weight: 700; color: var(--slate); text-align: right; }
+.recon-group-total-label { display: block; font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase !important; }
+.recon-group-body { border-top: 1px solid var(--border); }
+.recon-mini-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 16px 9px 58px;
+  font-size: 12px;
+  border-top: 1px solid #F0F2F5;
+}
+.recon-mini-row:first-child { border-top: none; }
+
+/* ===== Transaction rows ===== */
+.recon-txn-row {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--green);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.recon-txn-row.ambiguous { border-left-color: var(--red); }
+.recon-entity { font-size: 13px; font-weight: 700; color: var(--text); }
+.recon-doc-ref { font-size: 11.5px; color: var(--text-faint); font-family: var(--recon-mono); }
+.recon-desc { font-size: 11.5px; color: var(--text-muted); }
+.recon-amount-col { font-family: var(--recon-mono); font-size: 14px; font-weight: 700; width: 100px; text-align: right; }
+.recon-amount-col.debit { color: var(--text); }
+.recon-amount-col.credit { color: var(--green); }
+.recon-status-pill { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.recon-status-pill.paid { background: var(--green-bg); color: var(--green); }
+.recon-status-pill.ambiguous { background: var(--red-bg); color: var(--red); }
+
+/* ===== Container ===== */
+.recon-container { max-width: 1180px; margin: 0 auto; }
