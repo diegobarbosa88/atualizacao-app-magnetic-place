@@ -1,7 +1,7 @@
 // ─── Matching Engine ──────────────────────────────────────────────────────────
 
 // Extrai nome da entidade de descrições de transferência bancária
-function extractEntityFromDesc(desc) {
+export function extractEntityFromDesc(desc) {
   const patterns = [
     /TRF\s+IMEDIATA\s+DE\s+/i,
     /TRANSFERENCIA\s+DE\s+/i,
@@ -21,7 +21,7 @@ function extractEntityFromDesc(desc) {
 }
 
 // Normaliza nome para comparação (remove sufixos legais, acentos, pontuação)
-function normalizeEntityName(name) {
+export function normalizeEntityName(name) {
   return String(name)
     .toLowerCase()
     .normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -54,7 +54,7 @@ function normalizeEntityName(name) {
  *   - orphan_system → sem transação correspondente
  */
 
-function dateDiffDays(dateA, dateB) {
+export function dateDiffDays(dateA, dateB) {
   if (!dateA || !dateB) return Infinity;
   const a = new Date(dateA);
   const b = new Date(dateB);
@@ -149,4 +149,65 @@ export function runMatchingEngine(transacoes, faturas, aliases = []) {
     .map(f => ({ fatura: f, reason: 'no_transaction' }));
 
   return { matched, orphan_bank, orphan_system };
+}
+
+// ─── Deteção de transferências internas ──────────────────────────────────────
+//
+// Transferências entre contas próprias da empresa mostram o nome legal dela
+// na descrição do lado do banco (confirmado com dados reais: "TRF.IMED. DE/P/
+// MAGNETIC PLACE...", "TRF CRED INTRAB DE MAGNETIC PLACE..."). Reaproveita
+// extractEntityFromDesc/normalizeEntityName já usados no matching normal.
+//
+// Regras (decididas depois de verificar ambiguidade real nos dados — valores
+// repetidos como 10000€ aparecem várias vezes no mesmo período):
+//   - Agrupa candidatas (menção ao nome próprio) por valor absoluto exato.
+//   - Grupo com exatamente 1 crédito + 1 débito → par confirmado.
+//   - Grupo só com um lado (nenhum contra-valor) → presumida (foi para/veio
+//     da conta não ligada, tipicamente a poupança).
+//   - Grupo com mais de uma candidata em qualquer lado (mesmo valor a repetir-
+//     se) → AMBÍGUO, propositadamente NÃO emparelhado — cai como presumida
+//     mas marcada `ambiguous: true`, para o admin resolver manualmente. Nunca
+//     adivinha qual par é o certo quando há mais que uma hipótese.
+export function detectInternalTransfers(transacoes, companyNameNorm) {
+  if (!companyNameNorm) return { confirmadas: [], presumidas: [], ambiguas: [] };
+
+  const candidateIdx = [];
+  transacoes.forEach((t, i) => {
+    const extracted = extractEntityFromDesc(t.descricao || '');
+    const extractedNorm = normalizeEntityName(extracted);
+    const descNorm = normalizeEntityName(t.descricao || '');
+    const bate =
+      (extractedNorm && (companyNameNorm.includes(extractedNorm) || extractedNorm.includes(companyNameNorm))) ||
+      descNorm.includes(companyNameNorm);
+    if (bate) candidateIdx.push(i);
+  });
+
+  // Agrupa por valor absoluto em cêntimos (evita problemas de float)
+  const porValor = new Map();
+  for (const i of candidateIdx) {
+    const cents = Math.round(transacoes[i].valor * 100);
+    if (!porValor.has(cents)) porValor.set(cents, { creditos: [], debitos: [] });
+    const grupo = porValor.get(cents);
+    (transacoes[i].tipo === 'credito' ? grupo.creditos : grupo.debitos).push(i);
+  }
+
+  const confirmadas = []; // [ [idxCredito, idxDebito], ... ]
+  const presumidas = [];
+  const ambiguas = [];
+
+  for (const { creditos, debitos } of porValor.values()) {
+    if (creditos.length === 1 && debitos.length === 1) {
+      confirmadas.push([creditos[0], debitos[0]]);
+    } else if (creditos.length === 0) {
+      presumidas.push(...debitos);
+    } else if (debitos.length === 0) {
+      presumidas.push(...creditos);
+    } else {
+      // ambos os lados têm candidatas, mas mais que uma nalgum lado — sem
+      // forma fiável de saber qual par é o certo
+      ambiguas.push(...creditos, ...debitos);
+    }
+  }
+
+  return { confirmadas, presumidas, ambiguas };
 }

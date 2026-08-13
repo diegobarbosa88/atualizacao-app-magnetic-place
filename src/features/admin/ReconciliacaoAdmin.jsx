@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Landmark, Upload, CheckCircle, X, ChevronDown, ChevronUp,
-  AlertCircle, FileText, Loader2, Plus, ArrowLeftRight, Pencil, Zap
+  Landmark, Upload, CheckCircle, X, AlertCircle, FileText, Loader2, Plus,
+  ArrowLeftRight, Pencil, Zap, Wallet,
 } from 'lucide-react';
 import RelatorioModal from './RelatorioModal';
 import CsvMappingCard from './CsvMappingCard';
@@ -18,7 +18,10 @@ import { authFetch } from '../../utils/authFetch';
 export default function ReconciliacaoAdmin() {
   const { supabase, clients } = useApp();
 
-  // ── Upload state ──────────────────────────────────────────────────────────
+  // ── Origem selecionada — escolha simétrica, sem acordeão escondido ────────
+  const [origem, setOrigem] = useState('toconline'); // 'toconline' | 'ficheiro'
+
+  // ── Upload (ficheiro) ──────────────────────────────────────────────────────
   const [ficheiros, setFicheiros] = useState([]);
   const [previewErrors, setPreviewErrors] = useState([]);
   const [dragging, setDragging] = useState(false);
@@ -26,57 +29,216 @@ export default function ReconciliacaoAdmin() {
   const [previewing, setPreviewing] = useState(false);
   const [erro, setErro] = useState(null);
   const inputRef = useRef(null);
+  const [csvMapping, setCsvMapping] = useState(null);
+  const [colMap, setColMap] = useState({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
 
-  // ── Preview state ─────────────────────────────────────────────────────────
+  // ── TOConline ──────────────────────────────────────────────────────────────
+  const hoje = new Date();
+  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  const [contasDisponiveis, setContasDisponiveis] = useState([]);
+  const [contasCarregadas, setContasCarregadas] = useState(false);
+  const [tocContaId, setTocContaId] = useState('');
+  const [tocDe, setTocDe] = useState(mesAtual);
+  const [tocAte, setTocAte] = useState(mesAtual);
+  const [tocBuscando, setTocBuscando] = useState(false);
+  const [tocErro, setTocErro] = useState(null);
+
+  useEffect(() => {
+    if (origem !== 'toconline' || contasCarregadas) return;
+    setContasCarregadas(true);
+    authFetch('/api/toconline/bank-accounts')
+      .then(r => r.json())
+      .then(d => {
+        const conectadas = (d.data || []).filter(c => (c.attributes || c).is_connected);
+        setContasDisponiveis(conectadas);
+        if (conectadas.length) setTocContaId(String(conectadas[0].id));
+      })
+      .catch(() => {});
+  }, [origem, contasCarregadas]);
+
+  // ── Preview acumulativo — o "cesto" partilhado por qualquer origem ────────
   const [previewTransacoes, setPreviewTransacoes] = useState(null);
-  const [previewFilename, setPreviewFilename] = useState('');
+  const [previewFontes, setPreviewFontes] = useState([]); // rótulos das fontes já acumuladas
   const [selTransacoes, setSelTransacoes] = useState(new Set());
   const [txSearch, setTxSearch] = useState('');
   const [txTipoFiltro, setTxTipoFiltro] = useState('todos');
   const [editingTxIdx, setEditingTxIdx] = useState(null);
-  const [csvMapping, setCsvMapping] = useState(null);
-  const [colMap, setColMap] = useState({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
 
-  // ── TOConline import state ────────────────────────────────────────────────
-  const hoje = new Date();
-  const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
-  const [tocPainelAberto, setTocPainelAberto] = useState(false);
-  const [tocDe, setTocDe] = useState(mesAtual);
-  const [tocAte, setTocAte] = useState(mesAtual);
-  const [tocProcessando, setTocProcessando] = useState(false);
-  const [tocErro, setTocErro] = useState(null);
+  const adicionarAoPreview = (novasTx, fonteLabel) => {
+    if (!novasTx.length) return;
+    setPreviewTransacoes(prev => {
+      const base = prev || [];
+      const comFonte = novasTx.map(tx => ({ ...tx, _source: tx._source || fonteLabel }));
+      const merged = [...base, ...comFonte];
+      setSelTransacoes(prevSel => {
+        const s = new Set(prevSel);
+        for (let i = base.length; i < merged.length; i++) s.add(i);
+        return s;
+      });
+      return merged;
+    });
+    setPreviewFontes(prev => [...prev, fonteLabel]);
+    setTxSearch(''); setTxTipoFiltro('todos');
+  };
 
-  const importarDoTOConline = async () => {
-    setTocProcessando(true);
+  const limparPreview = () => {
+    setPreviewTransacoes(null);
+    setPreviewFontes([]);
+    setFicheiros([]);
+    setPreviewErrors([]);
+    setErro(null);
     setTocErro(null);
-    run.setResultado(null);
+  };
+
+  // ── Buscar do TOConline (preview, não processa direto) ────────────────────
+  const buscarDoTOConline = async () => {
+    if (!tocContaId || !tocDe || !tocAte) return;
+    setTocBuscando(true); setTocErro(null);
     try {
-      const res = await authFetch('/api/reconciliacao/process', {
+      const res = await authFetch('/api/reconciliacao/process?action=toconline-fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fonte: 'toconline', de: tocDe, ate: tocAte }),
+        body: JSON.stringify({ contaId: tocContaId, de: tocDe, ate: tocAte }),
       });
       const data = await res.json();
-      if (!res.ok) { setTocErro(data.error || 'Erro ao importar.'); return; }
-      run.setResultado(data);
-      run.setActiveSubTab('matched');
-      setTocPainelAberto(false);
-      carregarHistorico();
-      if (data.run_id) {
-        await run.autoAssociarEntradas(data, data.run_id);
-        const fullResults = { matched: data.matched || [], orphan_bank: data.orphan_bank || [], orphan_system: data.orphan_system || [] };
-        const newMatched = await run.autoConfirmarMatched(data.matched || [], data.run_id, fullResults);
-        run.setResultado(prev => ({ ...prev, matched: newMatched }));
-        await run.carregarPagamentosLinks(data.run_id);
-      }
+      if (!res.ok) { setTocErro(data.error || 'Erro ao buscar movimentos.'); return; }
+      if (!data.transactions?.length) { setTocErro(`Sem movimentos em "${data.conta}" entre ${tocDe} e ${tocAte}.`); return; }
+      const label = `${data.conta} (${tocDe} a ${tocAte})`;
+      adicionarAoPreview(data.transactions, label);
     } catch (err) {
       setTocErro(err.message || 'Erro de rede.');
     } finally {
-      setTocProcessando(false);
+      setTocBuscando(false);
     }
   };
 
-  // ── Form state ────────────────────────────────────────────────────────────
+  // ── Upload de ficheiro (mantém parse/mapeamento, mas acrescenta ao preview) ─
+  const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const handleDragLeave = () => setDragging(false);
+  const handleDrop = (e) => { e.preventDefault(); setDragging(false); adicionarFicheiros(e.dataTransfer.files); };
+  const handleFileChange = (e) => { adicionarFicheiros(e.target.files); e.target.value = ''; };
+
+  const adicionarFicheiros = (fileList) => {
+    setErro(null);
+    const validos = [];
+    const invalidos = [];
+    for (const f of fileList) {
+      const ext = f.name.split('.').pop().toLowerCase();
+      if (['csv', 'ofx', 'qfx', 'pdf'].includes(ext)) validos.push(f);
+      else invalidos.push(f.name);
+    }
+    if (invalidos.length) setErro(`Formato não suportado: ${invalidos.join(', ')}. Aceites: CSV, OFX, QFX, PDF.`);
+    if (validos.length) setFicheiros(prev => {
+      const existentes = new Set(prev.map(f => f.name));
+      return [...prev, ...validos.filter(f => !existentes.has(f.name))];
+    });
+  };
+
+  const previsar = async () => {
+    if (!ficheiros.length) return;
+    setPreviewing(true);
+    setErro(null);
+    setPreviewErrors([]);
+    const allTx = [];
+    const errors = [];
+    for (let idx = 0; idx < ficheiros.length; idx++) {
+      const f = ficheiros[idx];
+      try {
+        const fp = new FormData();
+        fp.append('file', f);
+        const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
+        const data = await res.json();
+        if (!res.ok) { errors.push({ filename: f.name, error: data.error || 'Erro ao ler' }); continue; }
+        if (data.needs_mapping) {
+          const remaining = ficheiros.slice(idx + 1);
+          if (allTx.length) adicionarAoPreview(allTx, ficheiros.slice(0, idx).map(x => x.name).join(', '));
+          setFicheiros([f, ...remaining]);
+          setCsvMapping({ columns: data.columns, preview: data.preview });
+          setColMap({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
+          if (errors.length) setPreviewErrors(errors);
+          setPreviewing(false);
+          return;
+        }
+        allTx.push(...data.transactions.map(tx => ({ ...tx, _source: f.name })));
+      } catch (err) {
+        errors.push({ filename: f.name, error: err.message || 'Erro de rede' });
+      }
+    }
+    if (errors.length) setPreviewErrors(errors);
+    if (allTx.length) adicionarAoPreview(allTx, ficheiros.map(f => f.name).join(', '));
+    setFicheiros([]);
+    setPreviewing(false);
+  };
+
+  const confirmarMapeamento = async () => {
+    if (!ficheiros.length) return;
+    const ficheiroAtual = ficheiros[0];
+    const restantes = ficheiros.slice(1);
+    setPreviewing(true);
+    setErro(null);
+    try {
+      const formPayload = new FormData();
+      formPayload.append('file', ficheiroAtual);
+      formPayload.append('column_mapping', JSON.stringify({ ...colMap }));
+      const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
+      const data = await res.json();
+      if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); return; }
+      const novasTx = data.transactions.map(tx => ({ ...tx, _source: ficheiroAtual.name }));
+      setCsvMapping(null);
+      adicionarAoPreview(novasTx, ficheiroAtual.name);
+      setFicheiros(restantes.length ? restantes : []);
+    } catch (err) {
+      setErro(err.message || 'Erro de rede.');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  // ── Processar — único ponto de entrada, independente da mistura de origens ─
+  const processar = async () => {
+    if (!previewTransacoes) return;
+    const selected = previewTransacoes.filter((_, i) => selTransacoes.has(i));
+    if (!selected.length) { setErro('Seleccione pelo menos um movimento.'); return; }
+    setProcessando(true);
+    setErro(null);
+    try {
+      const filenameLabel = previewFontes.join(' + ') || 'movimentos';
+      const res = await authFetch('/api/reconciliacao/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactions_json: selected, filename: filenameLabel }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
+
+      const runShape = {
+        id: data.run_id,
+        filename: data.filename,
+        created_at: new Date().toISOString(),
+        matched_count: data.matched_count,
+        orphan_bank_count: data.orphan_bank_count,
+        orphan_system_count: data.orphan_system_count,
+        transactions_json: selected,
+        results_json: { matched: data.matched, orphan_bank: data.orphan_bank, orphan_system: data.orphan_system },
+      };
+      run.iniciarRunCriado(runShape);
+      run.setActiveSubTab('matched');
+      limparPreview();
+      carregarHistorico();
+      run.carregarSaldoManual();
+
+      await run.autoAssociarEntradas(runShape.results_json, data.run_id);
+      const newMatched = await run.autoConfirmarMatched(data.matched || [], data.run_id, runShape.results_json);
+      run.setActiveRun(prev => (prev ? { ...prev, results_json: { ...prev.results_json, matched: newMatched } } : prev));
+      await run.carregarPagamentosLinks(data.run_id);
+    } catch (err) {
+      setErro(err.message || 'Erro de rede.');
+    } finally {
+      setProcessando(false);
+    }
+  };
+
+  // ── Form state (inserção manual de fatura) ───────────────────────────────
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ tipo: 'fatura', valor: '', data_documento: '', descricao: '', entidade: '', fonte: 'manual' });
   const [savingFatura, setSavingFatura] = useState(false);
@@ -116,140 +278,6 @@ export default function ReconciliacaoAdmin() {
     }
   };
 
-  // ── Drag & Drop ───────────────────────────────────────────────────────────
-  const handleDragOver = (e) => { e.preventDefault(); setDragging(true); };
-  const handleDragLeave = () => setDragging(false);
-  const handleDrop = (e) => { e.preventDefault(); setDragging(false); adicionarFicheiros(e.dataTransfer.files); };
-  const handleFileChange = (e) => { adicionarFicheiros(e.target.files); e.target.value = ''; };
-
-  const adicionarFicheiros = (fileList) => {
-    setErro(null);
-    const validos = [];
-    const invalidos = [];
-    for (const f of fileList) {
-      const ext = f.name.split('.').pop().toLowerCase();
-      if (['csv', 'ofx', 'qfx', 'pdf'].includes(ext)) validos.push(f);
-      else invalidos.push(f.name);
-    }
-    if (invalidos.length) setErro(`Formato não suportado: ${invalidos.join(', ')}. Aceites: CSV, OFX, QFX, PDF.`);
-    if (validos.length) setFicheiros(prev => {
-      const existentes = new Set(prev.map(f => f.name));
-      return [...prev, ...validos.filter(f => !existentes.has(f.name))];
-    });
-  };
-
-  // ── Pré-visualizar movimentos ─────────────────────────────────────────────
-  const previsar = async () => {
-    if (!ficheiros.length) return;
-    setPreviewing(true);
-    setErro(null);
-    setPreviewErrors([]);
-    const allTx = [];
-    const errors = [];
-    const multiSource = ficheiros.length > 1;
-    for (let idx = 0; idx < ficheiros.length; idx++) {
-      const f = ficheiros[idx];
-      try {
-        const fp = new FormData();
-        fp.append('file', f);
-        const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: fp });
-        const data = await res.json();
-        if (!res.ok) { errors.push({ filename: f.name, error: data.error || 'Erro ao ler' }); continue; }
-        if (data.needs_mapping) {
-          const remaining = ficheiros.slice(idx + 1);
-          if (allTx.length) {
-            setPreviewTransacoes(allTx);
-            setSelTransacoes(new Set(allTx.map((_, i) => i)));
-          }
-          setFicheiros([f, ...remaining]);
-          setCsvMapping({ columns: data.columns, preview: data.preview });
-          setColMap({ dataCol: '', valorCol: '', descricaoCol: '', debitoCol: '', creditoCol: '', tipoCol: '', modo: 'valor' });
-          setPreviewFilename(data.filename);
-          if (errors.length) setPreviewErrors(errors);
-          setPreviewing(false);
-          return;
-        }
-        allTx.push(...data.transactions.map(tx => ({ ...tx, _source: multiSource ? f.name : undefined })));
-      } catch (err) {
-        errors.push({ filename: f.name, error: err.message || 'Erro de rede' });
-      }
-    }
-    if (errors.length) setPreviewErrors(errors);
-    if (allTx.length) {
-      setPreviewTransacoes(allTx);
-      setPreviewFilename(ficheiros.map(f => f.name).join(', '));
-      setSelTransacoes(new Set(allTx.map((_, i) => i)));
-      setTxSearch('');
-      setTxTipoFiltro('todos');
-    }
-    setFicheiros([]);
-    setPreviewing(false);
-  };
-
-  // ── Confirmar mapeamento CSV ───────────────────────────────────────────────
-  const confirmarMapeamento = async () => {
-    if (!ficheiros.length) return;
-    const ficheiroAtual = ficheiros[0];
-    const restantes = ficheiros.slice(1);
-    setPreviewing(true);
-    setErro(null);
-    try {
-      const formPayload = new FormData();
-      formPayload.append('file', ficheiroAtual);
-      formPayload.append('column_mapping', JSON.stringify({ ...colMap }));
-      const res = await authFetch('/api/reconciliacao/parse', { method: 'POST', body: formPayload });
-      const data = await res.json();
-      if (!res.ok) { setErro(data.error || 'Erro ao ler ficheiro.'); return; }
-      const novasTx = data.transactions.map(tx => ({ ...tx, _source: restantes.length || previewTransacoes?.length ? ficheiroAtual.name : undefined }));
-      const merged = [...(previewTransacoes || []), ...novasTx];
-      setCsvMapping(null);
-      setPreviewTransacoes(merged);
-      setSelTransacoes(new Set(merged.map((_, i) => i)));
-      setTxSearch('');
-      setTxTipoFiltro('todos');
-      setFicheiros(restantes.length ? restantes : []);
-    } catch (err) {
-      setErro(err.message || 'Erro de rede.');
-    } finally {
-      setPreviewing(false);
-    }
-  };
-
-  // ── Processar movimentos seleccionados ────────────────────────────────────
-  const processar = async () => {
-    if (!previewTransacoes) return;
-    const selected = previewTransacoes.filter((_, i) => selTransacoes.has(i));
-    if (!selected.length) { setErro('Seleccione pelo menos um movimento.'); return; }
-    setProcessando(true);
-    setErro(null);
-    run.setResultado(null);
-    try {
-      const res = await authFetch('/api/reconciliacao/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ transactions_json: selected, filename: previewFilename }),
-      });
-      const data = await res.json();
-      if (!res.ok) { setErro(data.error || 'Erro ao processar.'); return; }
-      run.setResultado(data);
-      run.setActiveSubTab('matched');
-      setPreviewTransacoes(null);
-      setFicheiros([]);
-      carregarHistorico();
-      if (data.run_id) {
-        await run.autoAssociarEntradas(data, data.run_id);
-        const fullResults = { matched: data.matched || [], orphan_bank: data.orphan_bank || [], orphan_system: data.orphan_system || [] };
-        const newMatched = await run.autoConfirmarMatched(data.matched || [], data.run_id, fullResults);
-        run.setResultado(prev => ({ ...prev, matched: newMatched }));
-        await run.carregarPagamentosLinks(data.run_id);
-      }
-    } catch (err) {
-      setErro(err.message || 'Erro de rede.');
-    } finally {
-      setProcessando(false);
-    }
-  };
-
   // ── Guardar fatura manual ─────────────────────────────────────────────────
   const guardarFatura = async () => {
     if (!formData.valor || !formData.data_documento) { alert('Valor e data são obrigatórios.'); return; }
@@ -285,11 +313,19 @@ export default function ReconciliacaoAdmin() {
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2">
           <Landmark size={24} style={{ color: '#869AAF' }} /> Reconciliação Bancária
         </h2>
-        <button onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
-          style={{ color: '#869AAF' }}>
-          <Plus size={14} /> Inserir Fatura Manual
-        </button>
+        <div className="flex items-center gap-2">
+          {run.saldoManual != null && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-cyan-50 border border-cyan-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-cyan-700"
+              title="Soma dos movimentos presumidos da Novobanco Poupança (conta sem ligação PSD2)">
+              <Wallet size={13} /> Poupança: €{Number(run.saldoManual.saldo || 0).toFixed(2)}
+            </div>
+          )}
+          <button onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
+            style={{ color: '#869AAF' }}>
+            <Plus size={14} /> Inserir Fatura Manual
+          </button>
+        </div>
       </div>
 
       {/* Formulário inserção manual */}
@@ -340,88 +376,42 @@ export default function ReconciliacaoAdmin() {
         </div>
       )}
 
-      {/* Zona de Upload */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8">
-        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-4">Importar Extrato Bancário</h3>
-        <div
-          onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
-            dragging ? 'border-[#869AAF] bg-slate-50' : 'border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'
-          }`}
-        >
-          <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" multiple className="hidden" onChange={handleFileChange} />
-          <Upload size={32} className="mx-auto mb-3" style={{ color: dragging ? '#869AAF' : '#CBD5E1' }} />
-          {ficheiros.length > 0 ? (
-            <div className="space-y-1.5" onClick={e => e.stopPropagation()}>
-              {ficheiros.map((f, idx) => (
-                <div key={idx} className="flex items-center justify-center gap-2">
-                  <FileText size={14} style={{ color: '#869AAF' }} className="flex-shrink-0" />
-                  <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{f.name}</span>
-                  <button onClick={() => setFicheiros(prev => prev.filter((_, i) => i !== idx))}
-                    className="text-slate-400 hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
-                </div>
-              ))}
-              <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: '#869AAF' }}
-                onClick={() => inputRef.current?.click()}>
-                + Adicionar mais ficheiros
-              </p>
-            </div>
-          ) : (
-            <>
-              <p className="text-slate-500 font-medium">Arraste ficheiros CSV, OFX ou PDF aqui</p>
-              <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">ou clique para escolher (múltiplos permitidos)</p>
-            </>
-          )}
+      {/* Seletor de origem — simétrico, sem acordeão escondido */}
+      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8 space-y-5">
+        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl w-fit">
+          {[
+            { key: 'toconline', label: 'TOConline', icon: Zap },
+            { key: 'ficheiro', label: 'Ficheiro', icon: Upload },
+          ].map(({ key, label, icon: Icon }) => (
+            <button key={key} onClick={() => setOrigem(key)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                origem === key ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              }`}>
+              <Icon size={13} /> Origem: {label}
+            </button>
+          ))}
         </div>
 
-        {erro && (
-          <div className="mt-3 flex items-start gap-2 bg-rose-50 text-rose-700 rounded-xl p-3 text-sm">
-            <AlertCircle size={16} className="mt-0.5 flex-shrink-0" /><span>{erro}</span>
-          </div>
-        )}
-        {previewErrors.length > 0 && (
-          <div className="mt-3 space-y-1">
-            {previewErrors.map((e, i) => (
-              <div key={i} className="flex items-start gap-2 bg-amber-50 text-amber-700 rounded-xl p-3 text-xs">
-                <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
-                <span><strong>{e.filename}</strong>: {e.error}</span>
+        {origem === 'toconline' ? (
+          <div className="space-y-4">
+            {contasCarregadas && contasDisponiveis.length === 0 && (
+              <div className="flex items-start gap-2 bg-amber-50 text-amber-700 rounded-xl p-3 text-xs">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <span>Nenhuma conta ligada ao TOConline encontrada. Liga uma conta em Faturação → TOConline primeiro.</span>
               </div>
-            ))}
-          </div>
-        )}
-        {ficheiros.length > 0 && !previewing && !csvMapping && (
-          <button onClick={previsar}
-            className="mt-4 w-full flex items-center justify-center gap-2 text-white rounded-2xl py-3 transition-all text-[10px] font-black uppercase tracking-widest hover:opacity-90"
-            style={{ backgroundColor: '#1B3A57' }}>
-            <ArrowLeftRight size={14} /> Pré-visualizar {ficheiros.length > 1 ? `${ficheiros.length} Ficheiros` : 'Movimentos'}
-          </button>
-        )}
-        {previewing && (
-          <div className="mt-4 flex items-center justify-center gap-2" style={{ color: '#869AAF' }}>
-            <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
-          </div>
-        )}
-      </div>
-
-      {/* Importar do TOConline */}
-      <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-        <button
-          onClick={() => setTocPainelAberto(v => !v)}
-          className="w-full px-6 sm:px-8 py-5 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 rounded-xl"><Zap size={15} className="text-emerald-600" /></div>
-            <div className="text-left">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Importar do TOConline</p>
-              <p className="text-xs text-slate-400">Busca movimentos directamente da API bancária</p>
-            </div>
-          </div>
-          {tocPainelAberto ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
-        </button>
-        {tocPainelAberto && (
-          <div className="px-6 sm:px-8 pb-6 space-y-4 border-t border-slate-100">
-            <div className="pt-4 grid grid-cols-2 gap-4">
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Conta</label>
+                <select value={tocContaId} onChange={e => setTocContaId(e.target.value)}
+                  disabled={!contasDisponiveis.length}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-300 disabled:opacity-50">
+                  {contasDisponiveis.map(c => {
+                    const a = c.attributes || c;
+                    return <option key={c.id} value={c.id}>{a.name} {a.iban ? `— ${a.iban.slice(-6)}` : ''}</option>;
+                  })}
+                </select>
+              </div>
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">De (mês)</label>
                 <input type="month" value={tocDe} onChange={e => setTocDe(e.target.value)}
@@ -439,13 +429,75 @@ export default function ReconciliacaoAdmin() {
               </div>
             )}
             <button
-              onClick={importarDoTOConline}
-              disabled={tocProcessando || !tocDe || !tocAte}
+              onClick={buscarDoTOConline}
+              disabled={tocBuscando || !tocContaId || !tocDe || !tocAte}
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 text-white rounded-2xl py-3 hover:bg-emerald-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
             >
-              {tocProcessando ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-              {tocProcessando ? 'A importar movimentos...' : 'Importar e Reconciliar'}
+              {tocBuscando ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+              {tocBuscando ? 'A buscar movimentos...' : 'Buscar Movimentos'}
             </button>
+          </div>
+        ) : (
+          <div>
+            <div
+              onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+              onClick={() => inputRef.current?.click()}
+              className={`border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center cursor-pointer transition-all ${
+                dragging ? 'border-[#869AAF] bg-slate-50' : 'border-slate-200 hover:border-[#869AAF] hover:bg-slate-50'
+              }`}
+            >
+              <input ref={inputRef} type="file" accept=".csv,.ofx,.qfx,.pdf" multiple className="hidden" onChange={handleFileChange} />
+              <Upload size={32} className="mx-auto mb-3" style={{ color: dragging ? '#869AAF' : '#CBD5E1' }} />
+              {ficheiros.length > 0 ? (
+                <div className="space-y-1.5" onClick={e => e.stopPropagation()}>
+                  {ficheiros.map((f, idx) => (
+                    <div key={idx} className="flex items-center justify-center gap-2">
+                      <FileText size={14} style={{ color: '#869AAF' }} className="flex-shrink-0" />
+                      <span className="text-sm font-medium text-slate-700 truncate max-w-xs">{f.name}</span>
+                      <button onClick={() => setFicheiros(prev => prev.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-rose-500 flex-shrink-0"><X size={13} /></button>
+                    </div>
+                  ))}
+                  <p className="text-[10px] font-bold uppercase tracking-widest pt-1 cursor-pointer hover:underline" style={{ color: '#869AAF' }}
+                    onClick={() => inputRef.current?.click()}>
+                    + Adicionar mais ficheiros
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-slate-500 font-medium">Arraste ficheiros CSV, OFX ou PDF aqui</p>
+                  <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">ou clique para escolher (múltiplos permitidos)</p>
+                </>
+              )}
+            </div>
+
+            {erro && (
+              <div className="mt-3 flex items-start gap-2 bg-rose-50 text-rose-700 rounded-xl p-3 text-sm">
+                <AlertCircle size={16} className="mt-0.5 flex-shrink-0" /><span>{erro}</span>
+              </div>
+            )}
+            {previewErrors.length > 0 && (
+              <div className="mt-3 space-y-1">
+                {previewErrors.map((e, i) => (
+                  <div key={i} className="flex items-start gap-2 bg-amber-50 text-amber-700 rounded-xl p-3 text-xs">
+                    <AlertCircle size={14} className="mt-0.5 flex-shrink-0" />
+                    <span><strong>{e.filename}</strong>: {e.error}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {ficheiros.length > 0 && !previewing && !csvMapping && (
+              <button onClick={previsar}
+                className="mt-4 w-full flex items-center justify-center gap-2 text-white rounded-2xl py-3 transition-all text-[10px] font-black uppercase tracking-widest hover:opacity-90"
+                style={{ backgroundColor: '#1B3A57' }}>
+                <ArrowLeftRight size={14} /> Adicionar {ficheiros.length > 1 ? `${ficheiros.length} Ficheiros` : 'Movimentos'} ao Preview
+              </button>
+            )}
+            {previewing && (
+              <div className="mt-4 flex items-center justify-center gap-2" style={{ color: '#869AAF' }}>
+                <Loader2 size={18} className="animate-spin" /> A ler ficheiros...
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -459,7 +511,7 @@ export default function ReconciliacaoAdmin() {
         />
       )}
 
-      {/* Preview de movimentos */}
+      {/* Preview acumulativo — cesto partilhado por qualquer origem já adicionada */}
       {previewTransacoes && (() => {
         const q = txSearch.trim().toLowerCase();
         const visibleIndices = previewTransacoes
@@ -478,18 +530,18 @@ export default function ReconciliacaoAdmin() {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Seleccionar Movimentos</h3>
-                <p className="text-xs text-slate-400 mt-0.5">{selTransacoes.size} de {previewTransacoes.length} seleccionados</p>
+                <p className="text-xs text-slate-400 mt-0.5">{selTransacoes.size} de {previewTransacoes.length} seleccionados · fontes: {previewFontes.join(', ')}</p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => { setPreviewTransacoes(null); setFicheiros([]); setPreviewErrors([]); setErro(null); }}
+                <button onClick={limparPreview}
                   className="px-3 py-1.5 text-slate-400 hover:text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all">
-                  <X size={11} className="inline mr-1" />Cancelar
+                  <X size={11} className="inline mr-1" />Limpar tudo
                 </button>
                 <button onClick={processar} disabled={processando || selTransacoes.size === 0}
                   className="flex items-center gap-2 px-4 py-1.5 text-white rounded-xl transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 hover:opacity-90"
                   style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
                   {processando ? <Loader2 size={12} className="animate-spin" /> : <ArrowLeftRight size={12} />}
-                  Processar {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}
+                  Processar Selecionados {selTransacoes.size > 0 ? `(${selTransacoes.size})` : ''}
                 </button>
               </div>
             </div>
@@ -571,7 +623,7 @@ export default function ReconciliacaoAdmin() {
       {/* Resultados */}
       <ResultadosTabs
         displayData={run.displayData}
-        runSelecionado={run.runSelecionado} setRunSelecionado={run.setRunSelecionado}
+        activeRun={run.activeRun} lastCreatedRun={run.lastCreatedRun} voltarAoRunAtual={run.voltarAoRunAtual}
         activeSubTab={run.activeSubTab} setActiveSubTab={run.setActiveSubTab}
         selMatched={run.selMatched} setSelMatched={run.setSelMatched}
         selOrphan={run.selOrphan} setSelOrphan={run.setSelOrphan}
@@ -604,7 +656,7 @@ export default function ReconciliacaoAdmin() {
         relatorioRuns={relatorioRuns} setRelatorioRuns={setRelatorioRuns}
         showRelatorio={showRelatorio} setShowRelatorio={setShowRelatorio}
         loadingMultiRel={loadingMultiRel} setLoadingMultiRel={setLoadingMultiRel}
-        runSelecionado={run.runSelecionado} setRunSelecionado={run.setRunSelecionado}
+        activeRun={run.activeRun} setActiveRun={run.setActiveRun}
         reprocessando={run.reprocessando}
         supabase={supabase}
         autoAssociarEntradas={run.autoAssociarEntradas}
@@ -644,9 +696,9 @@ export default function ReconciliacaoAdmin() {
       {showRelatorio && (relatorioRuns || run.displayData) && (
         <RelatorioModal
           displayData={relatorioRuns ? null : run.displayData}
-          filename={run.runSelecionado?.filename ?? run.resultado?.filename ?? 'extrato'}
-          dataRun={run.runSelecionado
-            ? new Date(run.runSelecionado.created_at).toLocaleDateString('pt-PT')
+          filename={run.activeRun?.filename ?? 'extrato'}
+          dataRun={run.activeRun
+            ? new Date(run.activeRun.created_at).toLocaleDateString('pt-PT')
             : new Date().toLocaleDateString('pt-PT')}
           runs={relatorioRuns}
           onClose={() => { setShowRelatorio(false); setRelatorioRuns(null); }}

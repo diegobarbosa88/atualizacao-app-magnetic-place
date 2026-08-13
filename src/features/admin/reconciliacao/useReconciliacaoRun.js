@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react';
 import { matchClientByTokens, previousMonth } from '../movimentacoes/txUtils';
 import { authFetch } from '../../../utils/authFetch';
 
+// activeRun representa sempre o run atualmente em ecrã — recém-criado ou
+// carregado do histórico, sem distinção: mesma forma de uma linha de
+// reconciliation_runs ({ id, filename, created_at, results_json,
+// matched_count, orphan_bank_count, orphan_system_count, transactions_json }).
+// Substitui o antigo par resultado/runSelecionado, que obrigava quase todas
+// as ações abaixo a um if/else repetido para saber qual dos dois atualizar.
 export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
-  // ── Run results state ─────────────────────────────────────────────────────
-  const [resultado, setResultado] = useState(null);
-  const [runSelecionado, setRunSelecionado] = useState(null);
+  // ── Run ativo ────────────────────────────────────────────────────────────
+  const [activeRun, setActiveRun] = useState(null);
+  const [lastCreatedRun, setLastCreatedRun] = useState(null); // para "voltar ao run atual" depois de navegar no histórico
   const [activeSubTab, setActiveSubTab] = useState('matched');
   const [selMatched, setSelMatched] = useState(new Set());
   const [selOrphan, setSelOrphan] = useState(new Set());
@@ -29,11 +35,10 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
   const [showAliases, setShowAliases] = useState(false);
   const [tags, setTags] = useState([]);
   const [reprocessando, setReprocessando] = useState(null);
+  const [saldoManual, setSaldoManual] = useState(null);
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const displayData = runSelecionado
-    ? { ...runSelecionado.results_json, run_id: runSelecionado.id }
-    : resultado;
+  const displayData = activeRun ? { ...activeRun.results_json, run_id: activeRun.id } : null;
 
   const clientAssocMatched = pagamentosLinks
     .filter(p => p.transaction_section === 'orphan_bank')
@@ -57,15 +62,12 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
 
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const runId = runSelecionado?.id ?? resultado?.run_id;
-    if (runId) carregarPagamentosLinks(runId);
+    if (activeRun?.id) carregarPagamentosLinks(activeRun.id);
     else setPagamentosLinks([]);
-  }, [runSelecionado?.id, resultado?.run_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeRun?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const bank = runSelecionado
-      ? (runSelecionado.results_json?.orphan_bank || [])
-      : (resultado?.orphan_bank || []);
+    const bank = activeRun?.results_json?.orphan_bank || [];
     const confirmed = new Set();
     const obs = {};
     const classif = {};
@@ -79,12 +81,22 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     setConfirmedOrphans(confirmed);
     setOrphanObservacoes(obs);
     setOrphanClassificacoes(classif);
-  }, [runSelecionado?.id, resultado?.run_id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeRun?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!supabase) return;
     carregarTags();
+    carregarSaldoManual();
   }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Saldo da conta manual (Novobanco Poupança) ───────────────────────────
+  const carregarSaldoManual = async () => {
+    try {
+      const res = await authFetch('/api/reconciliacao/process?action=saldo-manual');
+      const data = await res.json();
+      if (res.ok) setSaldoManual(data);
+    } catch { /* card fica sem valor, não é crítico */ }
+  };
 
   // ── Tags ──────────────────────────────────────────────────────────────────
   const carregarTags = async () => {
@@ -125,9 +137,8 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     pagamentosLinks.find(p => p.transaction_section === section && p.transaction_index === index);
 
   const abrirAssociarCliente = (section, index, tx) => {
-    const runId = runSelecionado?.id ?? resultado?.run_id;
     const defaultPeriod = previousMonth(tx?.data || '');
-    setAssocClienteModal({ section, index, tx, runId, defaultPeriod });
+    setAssocClienteModal({ section, index, tx, runId: activeRun?.id, defaultPeriod });
   };
 
   const salvarAssociacaoCliente = async (modal, clienteId, periodo) => {
@@ -155,8 +166,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     if (existente) {
       await supabase.from('faturacao_clientes_pagamentos').delete().eq('id', existente.id);
     }
-    const runId = runSelecionado?.id ?? resultado?.run_id;
-    await carregarPagamentosLinks(runId);
+    await carregarPagamentosLinks(activeRun?.id);
   };
 
   // ── Auto-associação ───────────────────────────────────────────────────────
@@ -250,7 +260,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     );
 
     if (runId && confirmedIds.size > 0) {
-      const base = fullResults ?? runSelecionado?.results_json ?? resultado ?? {};
+      const base = fullResults ?? activeRun?.results_json ?? {};
       await supabase.from('reconciliation_runs').update({
         results_json: { ...base, matched: newMatched },
       }).eq('id', runId);
@@ -275,26 +285,13 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
           .eq('id', faturaId);
         if (error) throw error;
       }
-      const updateMatched = matched => matched.map(m =>
+      const newMatched = (activeRun.results_json.matched || []).map(m =>
         m.fatura?.id === faturaId ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
       );
-      const runId = runSelecionado?.id ?? resultado?.run_id;
-      let newMatched;
-      if (runSelecionado) {
-        newMatched = updateMatched(runSelecionado.results_json.matched || []);
-        setRunSelecionado(prev => ({ ...prev, results_json: { ...prev.results_json, matched: newMatched } }));
-      } else {
-        newMatched = updateMatched(resultado?.matched || []);
-        setResultado(prev => ({ ...prev, matched: newMatched }));
-      }
-      if (runId) {
-        const baseResults = runSelecionado?.results_json ?? {
-          matched: resultado?.matched || [],
-          orphan_bank: resultado?.orphan_bank || [],
-          orphan_system: resultado?.orphan_system || [],
-        };
-        await supabase.from('reconciliation_runs').update({ results_json: { ...baseResults, matched: newMatched } }).eq('id', runId);
-      }
+      setActiveRun(prev => ({ ...prev, results_json: { ...prev.results_json, matched: newMatched } }));
+      await supabase.from('reconciliation_runs').update({
+        results_json: { ...activeRun.results_json, matched: newMatched },
+      }).eq('id', activeRun.id);
     } catch (err) {
       alert(`Erro ao confirmar pagamento: ${err.message}`);
     } finally {
@@ -304,10 +301,10 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
 
   // ── Confirmar bulk matched ────────────────────────────────────────────────
   const confirmarBulkMatched = async () => {
-    if (!selMatched.size) return;
+    if (!selMatched.size || !activeRun) return;
     setBulkConfirmando(true);
     try {
-      const allDisplayItems = [...((runSelecionado ? runSelecionado.results_json : resultado)?.matched || []), ...clientAssocMatched];
+      const allDisplayItems = [...(activeRun.results_json?.matched || []), ...clientAssocMatched];
       const selectedItems = allDisplayItems.filter((_, i) => selMatched.has(i));
       const faturaSelected = selectedItems.filter(m => m.fatura?.id && m.fatura?.status !== 'PAGO' && m.rule !== 'confirmed_manual');
       const entradaSelected = selectedItems.filter(m => m.rule === 'client_association' && !m.confirmed_entrada);
@@ -334,13 +331,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
         return supabase.from('faturas').update({ status: 'PAGO', dados: { ...existenteB, data_pagamento: dataPagamento } }).eq('id', item.fatura.id);
       }));
 
-      const runId = runSelecionado?.id ?? resultado?.run_id;
-      const baseResults = runSelecionado?.results_json ?? {
-        matched: resultado?.matched || [],
-        orphan_bank: resultado?.orphan_bank || [],
-        orphan_system: resultado?.orphan_system || [],
-      };
-
+      const baseResults = activeRun.results_json;
       const idSet = new Set(allFaturaIds);
       const newMatched = (baseResults.matched || []).map(m =>
         m.fatura?.id && idSet.has(m.fatura.id) ? { ...m, fatura: { ...m.fatura, status: 'PAGO' } } : m
@@ -352,14 +343,8 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
       );
 
       const newResults = { ...baseResults, matched: newMatched, orphan_bank: newOrphanBank };
-      if (runId) {
-        await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', runId);
-      }
-      if (runSelecionado) {
-        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-      } else {
-        setResultado(prev => ({ ...prev, matched: newMatched, orphan_bank: newOrphanBank }));
-      }
+      await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', activeRun.id);
+      setActiveRun(prev => ({ ...prev, results_json: newResults }));
       setSelMatched(new Set());
       setConfirmando(new Set());
     } catch (err) {
@@ -373,7 +358,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
   const pedirObservacaoOrphan = (indices) => setPendingOrphanConfirm({ indices });
 
   const confirmarMovimento = async ({ tag: selectedTag, obs: orphanObs }) => {
-    if (!pendingOrphanConfirm) return;
+    if (!pendingOrphanConfirm || !activeRun) return;
     const { indices } = pendingOrphanConfirm;
     const idxSet = new Set(indices);
     const obsText = orphanObs.trim();
@@ -382,15 +367,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     setPendingOrphanConfirm(null);
     setSelOrphan(new Set());
 
-    const runId = runSelecionado?.id ?? resultado?.run_id;
-    if (!runId) return;
-
-    const baseResults = runSelecionado?.results_json ?? {
-      matched: resultado?.matched || [],
-      orphan_bank: resultado?.orphan_bank || [],
-      orphan_system: resultado?.orphan_system || [],
-    };
-
+    const baseResults = activeRun.results_json;
     const sourceBank = baseResults.orphan_bank;
     const newOrphanBank = sourceBank.filter((_, i) => !idxSet.has(i));
     const newManualMatches = sourceBank
@@ -406,13 +383,9 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     const newMatched = [...(baseResults.matched || []), ...newManualMatches];
     const newResults = { ...baseResults, matched: newMatched, orphan_bank: newOrphanBank };
 
-    if (runSelecionado) {
-      setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-    } else {
-      setResultado(prev => ({ ...prev, matched: newMatched, orphan_bank: newOrphanBank }));
-    }
+    setActiveRun(prev => ({ ...prev, results_json: newResults }));
 
-    const { error } = await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', runId);
+    const { error } = await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', activeRun.id);
     if (error) console.error('Erro ao persistir confirmação:', error.message);
   };
 
@@ -455,31 +428,22 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
   };
 
   const confirmarAssociacaoManual = async (fatura, saveAlias) => {
-    if (!pendingAssociacao) return;
+    if (!pendingAssociacao || !activeRun) return;
     const { index, transacao } = pendingAssociacao;
 
-    const sourceMatchedCheck = runSelecionado
-      ? (runSelecionado.results_json?.matched || [])
-      : (resultado?.matched || []);
+    const sourceMatchedCheck = activeRun.results_json?.matched || [];
     const isSplit = sourceMatchedCheck.some(m => m.fatura?.id === fatura.id);
     const novoMatch = { transacao, fatura: { ...fatura, valor: fatura.valor ?? fatura.dados?.valor_total }, rule: isSplit ? 'manual_split' : 'manual' };
 
-    const runId = runSelecionado?.id ?? resultado?.run_id;
-    if (!runId) { setPendingAssociacao(null); return; }
-
-    const sourceBank = runSelecionado ? (runSelecionado.results_json?.orphan_bank || []) : (resultado?.orphan_bank || []);
-    const sourceMatched = runSelecionado ? (runSelecionado.results_json?.matched || []) : (resultado?.matched || []);
-    const sourceSystem = runSelecionado ? (runSelecionado.results_json?.orphan_system || []) : (resultado?.orphan_system || []);
+    const baseResults = activeRun.results_json;
+    const sourceBank = baseResults.orphan_bank || [];
+    const sourceMatched = baseResults.matched || [];
+    const sourceSystem = baseResults.orphan_system || [];
 
     const newOrphanBank = sourceBank.filter((_, i) => i !== index);
     const newMatched = [...sourceMatched, novoMatch];
     const newOrphanSystem = sourceSystem.filter(s => s.fatura?.id !== fatura.id);
 
-    const baseResults = runSelecionado?.results_json ?? {
-      matched: resultado?.matched || [],
-      orphan_bank: resultado?.orphan_bank || [],
-      orphan_system: resultado?.orphan_system || [],
-    };
     const newResults = { ...baseResults, matched: newMatched, orphan_bank: newOrphanBank, orphan_system: newOrphanSystem };
 
     const { error } = await supabase.from('reconciliation_runs').update({
@@ -487,25 +451,17 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
       matched_count: newMatched.length,
       orphan_bank_count: newOrphanBank.length,
       orphan_system_count: newOrphanSystem.length,
-    }).eq('id', runId);
+    }).eq('id', activeRun.id);
     if (error) { alert(`Erro ao guardar associação: ${error.message}`); return; }
 
-    if (runSelecionado) {
-      setRunSelecionado(prev => ({
-        ...prev,
-        matched_count: newMatched.length,
-        orphan_bank_count: newOrphanBank.length,
-        orphan_system_count: newOrphanSystem.length,
-        results_json: newResults,
-      }));
-    } else {
-      setResultado(prev => ({
-        ...prev,
-        matched: newMatched, orphan_bank: newOrphanBank, orphan_system: newOrphanSystem,
-        matched_count: newMatched.length, orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length,
-      }));
-    }
-    setHistorico(prev => prev.map(r => r.id === runId
+    setActiveRun(prev => ({
+      ...prev,
+      matched_count: newMatched.length,
+      orphan_bank_count: newOrphanBank.length,
+      orphan_system_count: newOrphanSystem.length,
+      results_json: newResults,
+    }));
+    setHistorico(prev => prev.map(r => r.id === activeRun.id
       ? { ...r, matched_count: newMatched.length, orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length }
       : r
     ));
@@ -542,10 +498,8 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     const key = `${matchIndex}`;
     setDesvinculando(prev => new Set(prev).add(key));
     try {
-      const runId = runSelecionado?.id ?? resultado?.run_id;
-      const base = runSelecionado?.results_json ?? {
-        matched: resultado?.matched || [], orphan_bank: resultado?.orphan_bank || [], orphan_system: resultado?.orphan_system || [],
-      };
+      if (!activeRun) return;
+      const base = activeRun.results_json;
       const newMatched = base.matched.filter((_, i) => i !== matchIndex);
       const newOrphanBank = [...base.orphan_bank, { transacao: matchItem.transacao, reason: 'desvinculado' }];
       const newOrphanSystem = matchItem.fatura
@@ -560,19 +514,13 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
           await supabase.from('faturas').update({ status: 'PENDENTE' }).eq('id', matchItem.fatura.id);
         }
       }
-      if (runId) {
-        await supabase.from('reconciliation_runs').update({
-          results_json: newResults, matched_count: newMatched.length,
-          orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length,
-        }).eq('id', runId);
-        await limparEReindexarLinks(runId, 'matched', matchIndex);
-        await carregarPagamentosLinks(runId);
-      }
-      if (runSelecionado) {
-        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-      } else {
-        setResultado(prev => ({ ...prev, ...newResults }));
-      }
+      await supabase.from('reconciliation_runs').update({
+        results_json: newResults, matched_count: newMatched.length,
+        orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length,
+      }).eq('id', activeRun.id);
+      await limparEReindexarLinks(activeRun.id, 'matched', matchIndex);
+      await carregarPagamentosLinks(activeRun.id);
+      setActiveRun(prev => ({ ...prev, results_json: newResults }));
     } catch (err) {
       alert(`Erro ao desvincular: ${err.message}`);
     } finally {
@@ -584,10 +532,8 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     const key = `${section}_${index}`;
     setExcluindo(prev => new Set(prev).add(key));
     try {
-      const runId = runSelecionado?.id ?? resultado?.run_id;
-      const base = runSelecionado?.results_json ?? {
-        matched: resultado?.matched || [], orphan_bank: resultado?.orphan_bank || [], orphan_system: resultado?.orphan_system || [],
-      };
+      if (!activeRun) return;
+      const base = activeRun.results_json;
       let newMatched = [...base.matched];
       let newOrphanBank = [...base.orphan_bank];
       let newOrphanSystem = [...base.orphan_system];
@@ -609,21 +555,15 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
       }
 
       const newResults = { matched: newMatched, orphan_bank: newOrphanBank, orphan_system: newOrphanSystem };
-      if (runId) {
-        await supabase.from('reconciliation_runs').update({
-          results_json: newResults, matched_count: newMatched.length,
-          orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length,
-        }).eq('id', runId);
-        if (section !== 'orphan_system') {
-          await limparEReindexarLinks(runId, section, index);
-          await carregarPagamentosLinks(runId);
-        }
+      await supabase.from('reconciliation_runs').update({
+        results_json: newResults, matched_count: newMatched.length,
+        orphan_bank_count: newOrphanBank.length, orphan_system_count: newOrphanSystem.length,
+      }).eq('id', activeRun.id);
+      if (section !== 'orphan_system') {
+        await limparEReindexarLinks(activeRun.id, section, index);
+        await carregarPagamentosLinks(activeRun.id);
       }
-      if (runSelecionado) {
-        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-      } else {
-        setResultado(prev => ({ ...prev, ...newResults }));
-      }
+      setActiveRun(prev => ({ ...prev, results_json: newResults }));
     } catch (err) {
       alert(`Erro ao excluir: ${err.message}`);
     } finally {
@@ -634,22 +574,14 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
   const confirmarEntrada = async (item, displayIndex) => {
     setConfirmandoEntrada(prev => new Set(prev).add(displayIndex));
     try {
-      const runId = runSelecionado?.id ?? resultado?.run_id;
-      const base = runSelecionado?.results_json ?? {
-        matched: resultado?.matched || [], orphan_bank: resultado?.orphan_bank || [], orphan_system: resultado?.orphan_system || [],
-      };
+      if (!activeRun) return;
+      const base = activeRun.results_json;
       const newOrphanBank = (base.orphan_bank || []).map((ob, idx) =>
         idx === item._orig_index ? { ...ob, confirmed_entrada: true } : ob
       );
       const newResults = { ...base, orphan_bank: newOrphanBank };
-      if (runId) {
-        await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', runId);
-      }
-      if (runSelecionado) {
-        setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-      } else {
-        setResultado(prev => ({ ...prev, orphan_bank: newOrphanBank }));
-      }
+      await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', activeRun.id);
+      setActiveRun(prev => ({ ...prev, results_json: newResults }));
     } catch (err) {
       alert(`Erro ao confirmar entrada: ${err.message}`);
     } finally {
@@ -659,22 +591,14 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
 
   const saveResultDescricao = async (section, index, newDesc) => {
     setEditingResultDesc(null);
-    const runId = runSelecionado?.id ?? resultado?.run_id;
-    const base = runSelecionado?.results_json ?? {
-      matched: resultado?.matched || [], orphan_bank: resultado?.orphan_bank || [], orphan_system: resultado?.orphan_system || [],
-    };
+    if (!activeRun) return;
+    const base = activeRun.results_json;
     const newSection = base[section].map((item, i) =>
       i === index ? { ...item, transacao: { ...item.transacao, descricao: newDesc } } : item
     );
     const newResults = { ...base, [section]: newSection };
-    if (runId) {
-      await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', runId);
-    }
-    if (runSelecionado) {
-      setRunSelecionado(prev => ({ ...prev, results_json: newResults }));
-    } else {
-      setResultado(prev => ({ ...prev, [section]: newSection }));
-    }
+    await supabase.from('reconciliation_runs').update({ results_json: newResults }).eq('id', activeRun.id);
+    setActiveRun(prev => ({ ...prev, results_json: newResults }));
   };
 
   // ── Histórico: apagar / reprocessar run ───────────────────────────────────
@@ -730,6 +654,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     }
 
     await supabase.from('faturacao_clientes_pagamentos').delete().eq('reconciliation_run_id', runId);
+    await supabase.from('conta_manual_movimentos').delete().eq('reconciliation_run_id', runId);
 
     const { data: linksFaturas } = await supabase.from('fatura_pagamento_links').select('fatura_id').eq('run_id', runId);
     if (linksFaturas?.length > 0) {
@@ -742,7 +667,9 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     if (error) { alert(`Erro ao apagar: ${error.message}`); return; }
     if (count === 0) { alert('Sem permissão para apagar. Aplique a política RLS de DELETE na tabela reconciliation_runs.'); return; }
     setHistorico(prev => prev.filter(r => r.id !== runId));
-    if (runSelecionado?.id === runId) setRunSelecionado(null);
+    if (activeRun?.id === runId) setActiveRun(null);
+    if (lastCreatedRun?.id === runId) setLastCreatedRun(null);
+    carregarSaldoManual();
   };
 
   const reprocessarRun = async (e, runId) => {
@@ -763,8 +690,8 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
         ? { ...r, matched_count: data.matched_count, orphan_bank_count: data.orphan_bank_count, orphan_system_count: data.orphan_system_count }
         : r
       ));
-      if (runSelecionado?.id === runId) {
-        setRunSelecionado(prev => ({
+      if (activeRun?.id === runId) {
+        setActiveRun(prev => ({
           ...prev,
           matched_count: data.matched_count,
           orphan_bank_count: data.orphan_bank_count,
@@ -772,9 +699,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
           results_json: { matched: data.matched, orphan_bank: data.orphan_bank, orphan_system: data.orphan_system },
         }));
       }
-      if (resultado?.run_id === runId) {
-        setResultado(prev => ({ ...prev, ...data }));
-      }
+      carregarSaldoManual();
     } catch (err) {
       alert(err.message || 'Erro de rede.');
     } finally {
@@ -782,10 +707,18 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     }
   };
 
+  // ── Chamado depois de criar um run novo (upload/TOConline/misto) ─────────
+  const iniciarRunCriado = (runShape) => {
+    setActiveRun(runShape);
+    setLastCreatedRun(runShape);
+  };
+
+  const voltarAoRunAtual = () => { if (lastCreatedRun) setActiveRun(lastCreatedRun); };
+
   return {
     // state
-    resultado, setResultado,
-    runSelecionado, setRunSelecionado,
+    activeRun, setActiveRun,
+    lastCreatedRun,
     activeSubTab, setActiveSubTab,
     selMatched, setSelMatched,
     selOrphan, setSelOrphan,
@@ -809,12 +742,14 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     showAliases, setShowAliases,
     tags,
     reprocessando,
+    saldoManual,
     // derived
     displayData,
     clientAssocMatched,
     orphanBankAssocSet,
     // actions
     carregarPagamentosLinks,
+    carregarSaldoManual,
     autoAssociarEntradas,
     autoConfirmarMatched,
     txLinkInfo,
@@ -835,5 +770,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     saveResultDescricao,
     apagarRun,
     reprocessarRun,
+    iniciarRunCriado,
+    voltarAoRunAtual,
   };
 }

@@ -10,7 +10,7 @@ export default function HistoricoSection({
   relatorioRuns, setRelatorioRuns,
   showRelatorio, setShowRelatorio,
   loadingMultiRel, setLoadingMultiRel,
-  runSelecionado, setRunSelecionado,
+  activeRun, setActiveRun,
   reprocessando,
   supabase,
   autoAssociarEntradas, autoConfirmarMatched, carregarPagamentosLinks,
@@ -23,12 +23,12 @@ export default function HistoricoSection({
       .eq('id', run.id)
       .single();
     if (!data) return;
-    setRunSelecionado(data);
+    setActiveRun(data);
     if (data.results_json) {
       await autoAssociarEntradas(data.results_json, data.id);
       const newMatched = await autoConfirmarMatched(data.results_json.matched || [], data.id, data.results_json);
       if (newMatched !== data.results_json.matched) {
-        setRunSelecionado(prev => prev
+        setActiveRun(prev => prev
           ? { ...prev, results_json: { ...prev.results_json, matched: newMatched } }
           : prev
         );

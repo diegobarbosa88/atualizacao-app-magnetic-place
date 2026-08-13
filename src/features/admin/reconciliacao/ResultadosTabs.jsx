@@ -6,7 +6,7 @@ import TagBadge from '../TagBadge';
 import TipoBadge from '../TipoBadge';
 
 export default function ResultadosTabs({
-  displayData, runSelecionado, setRunSelecionado,
+  displayData, activeRun, lastCreatedRun, voltarAoRunAtual,
   activeSubTab, setActiveSubTab,
   selMatched, setSelMatched,
   selOrphan, setSelOrphan,
@@ -29,13 +29,13 @@ export default function ResultadosTabs({
 
   return (
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-4 sm:p-8">
-      {runSelecionado && (
+      {activeRun && lastCreatedRun && activeRun.id !== lastCreatedRun.id && (
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-          <button onClick={() => setRunSelecionado(null)}
+          <button onClick={voltarAoRunAtual}
             className="text-indigo-600 hover:underline text-[10px] font-black uppercase tracking-widest flex-shrink-0">
             ← Voltar ao run actual
           </button>
-          <span className="text-xs text-slate-500 truncate">· {runSelecionado.filename} ({new Date(runSelecionado.created_at).toLocaleDateString('pt-PT')})</span>
+          <span className="text-xs text-slate-500 truncate">· a ver: {activeRun.filename} ({new Date(activeRun.created_at).toLocaleDateString('pt-PT')})</span>
         </div>
       )}
 
@@ -60,8 +60,8 @@ export default function ResultadosTabs({
         <div className="flex flex-wrap gap-2">
           <button
             onClick={async () => {
-              const runId = runSelecionado?.id ?? displayData?.run_id;
-              const rj = runSelecionado?.results_json ?? { matched: displayData?.matched || [], orphan_bank: displayData?.orphan_bank || [] };
+              const runId = activeRun?.id ?? displayData?.run_id;
+              const rj = activeRun?.results_json ?? { matched: displayData?.matched || [], orphan_bank: displayData?.orphan_bank || [] };
               if (!runId) return;
               setAutoAssociando(true);
               const n = await autoAssociarEntradas(rj, runId);
@@ -139,10 +139,12 @@ export default function ResultadosTabs({
                       <span className="text-sm font-bold text-slate-700">€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
                       <span className="text-[10px] text-slate-400">{item.transacao?.data}</span>
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
-                        {item.rule === 'client_association' ? 'Banco' : item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
+                        {item.rule?.startsWith('internal_transfer') ? 'Transf. Interna' : item.rule === 'client_association' ? 'Banco' : item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                       </span>
                       <span className="text-[10px] text-slate-500">
-                        {item.rule === 'client_association' ? item.client_name : item.fatura?.entidade}
+                        {item.rule === 'internal_transfer_confirmed' ? item.pair_transacao?.descricao
+                          : item.rule === 'internal_transfer_presumed' ? 'Novobanco Poupança'
+                          : item.rule === 'client_association' ? item.client_name : item.fatura?.entidade}
                       </span>
                       {item.rule === 'client_association' && <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">cliente · {item.period}</span>}
                       {item.rule === 'confirmed_manual' && <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">confirmado</span>}
@@ -151,6 +153,9 @@ export default function ResultadosTabs({
                       {item.rule === 'manual_split' && <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">split</span>}
                       {item.rule === 'description_match' && <span className="text-[9px] bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded-full uppercase tracking-widest">desc</span>}
                       {item.rule === 'date_proximity' && <span className="text-[9px] bg-sky-100 text-sky-600 px-2 py-0.5 rounded-full uppercase tracking-widest">data</span>}
+                      {item.rule === 'internal_transfer_confirmed' && <span className="text-[9px] bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full uppercase tracking-widest">interna · confirmada</span>}
+                      {item.rule === 'internal_transfer_presumed' && !item.ambiguous && <span className="text-[9px] bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded-full uppercase tracking-widest">interna · presumida</span>}
+                      {item.rule === 'internal_transfer_presumed' && item.ambiguous && <span className="text-[9px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-widest">interna · ambígua, revê</span>}
                       {faturaIdCount[item.fatura?.id] > 1 && item.rule !== 'manual_split' && <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">2 movimentos</span>}
                     </div>
                     <div className="flex items-center gap-1 mt-1">
@@ -184,7 +189,7 @@ export default function ResultadosTabs({
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5 justify-start sm:justify-end sm:flex-shrink-0">
-                  {item.transacao?.tipo === 'credito' && (() => {
+                  {item.transacao?.tipo === 'credito' && !item.rule?.startsWith('internal_transfer') && (() => {
                     if (item.rule === 'client_association') {
                       return (
                         <span title={`Associado a ${item.client_name} (${item.period}) — clique para remover`}
@@ -210,7 +215,11 @@ export default function ResultadosTabs({
                       </button>
                     );
                   })()}
-                  {item.rule === 'confirmed_manual' ? (
+                  {item.rule?.startsWith('internal_transfer') ? (
+                    <span className="flex items-center gap-1 text-cyan-600 text-[10px] font-black uppercase tracking-widest">
+                      <CheckCircle size={14} /> {item.rule === 'internal_transfer_confirmed' ? 'Transferência' : 'Presumida'}
+                    </span>
+                  ) : item.rule === 'confirmed_manual' ? (
                     <span className="flex items-center gap-1 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
                       <CheckCircle size={14} /> Confirmado
                     </span>
