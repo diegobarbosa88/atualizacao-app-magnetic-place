@@ -389,10 +389,22 @@ export default function App() {
   const urlVerifyId = urlParams.get('id');
   const urlToken = urlParams.get('token');
 
-  // Resolver clientId a partir do token (links públicos sem login)
-  const tokenResolvedClientId = urlToken
-    ? (clients.find(c => c.share_token === urlToken)?.id || null)
-    : null;
+  // Resolver clientId a partir do token (links públicos sem login) — via
+  // servidor (service role), não contra o array `clients` já carregado em
+  // memória: esse array pode estar populado por causa de OUTRA sessão
+  // (admin/trabalhador) ativa no mesmo browser, sem relação com este pedido
+  // (CR-06 — ver api/pagamentos?action=resolver-token-cliente).
+  const [tokenResolvedClientId, setTokenResolvedClientId] = useState(null);
+  useEffect(() => {
+    if (!urlToken) { setTokenResolvedClientId(null); return; }
+    let cancelado = false;
+    fetch(`/api/pagamentos?action=resolver-token-cliente&token=${encodeURIComponent(urlToken)}`)
+      .then(res => res.json())
+      .then(({ data }) => { if (!cancelado) setTokenResolvedClientId(data?.id || null); })
+      .catch(() => { if (!cancelado) setTokenResolvedClientId(null); });
+    return () => { cancelado = true; };
+  }, [urlToken]);
+
   const resolvedClientId = tokenResolvedClientId || urlClient || null;
 
   // Portal público de verificação de assinaturas (não requer login)

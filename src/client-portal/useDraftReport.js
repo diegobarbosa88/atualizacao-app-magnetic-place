@@ -17,7 +17,7 @@ const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     return Number(Math.max(0, diffMins / 60).toFixed(2));
 };
 
-export function useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView, supabase, companySignature }) {
+export function useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, effectiveClientId, initialMonth, saveToDb, goToView, supabase, companySignature }) {
     const [draftData, setDraftData] = useState([]);
     const [reportJustification, setReportJustification] = useState('');
 
@@ -167,7 +167,7 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
         }
 
         await submitCorrection(supabase, {
-            clientId: initialClientId,
+            clientId: effectiveClientId,
             month: initialMonth,
             type: 'precision',
             justification: reportJustification,
@@ -177,7 +177,7 @@ export function useDraftReport({ originalWorkersData, selectedMonth, logs, origi
         });
 
         goToView('sucesso_reporte');
-    }, [draftData, logs, initialClientId, initialMonth, supabase, companySignature, clientData, reportJustification, goToView]);
+    }, [draftData, logs, effectiveClientId, initialMonth, supabase, companySignature, clientData, reportJustification, goToView]);
 
     return {
         draftData, setDraftData, draftTotal,

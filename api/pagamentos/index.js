@@ -581,6 +581,22 @@ export default async function handler(req, res) {
       return res.json({ data: data || null });
     }
 
+    // ─── PORTAL DO CLIENTE: RESOLVER TOKEN ───
+    // CR-06: resolve um share_token de cliente diretamente no servidor (service
+    // role), em vez do frontend fazer clients.find(share_token===token) contra
+    // o array `clients` já carregado em memória — esse array podia já estar
+    // preenchido por causa de OUTRA sessão (admin/trabalhador) ativa no mesmo
+    // browser, sem qualquer relação com este pedido. Devolve só o essencial
+    // (id/nome), nunca a tabela toda.
+    if (action === 'resolver-token-cliente') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      const { token } = req.query;
+      if (!token) return res.status(400).json({ error: 'token obrigatório' });
+      const { data, error } = await db.from('clients').select('id, name').eq('share_token', token).maybeSingle();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ data: data || null });
+    }
+
     // ─── FORNECEDORES: GUARDAR (criar ou editar) ───
     if (action === 'guardar-fornecedor') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

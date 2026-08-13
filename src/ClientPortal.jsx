@@ -166,25 +166,25 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     }, []);
 
     useEffect(() => {
-        if (currentView !== 'hoje' || !supabase || !initialClientId) return;
+        if (currentView !== 'hoje' || !supabase || !effectiveClientId) return;
         const today = new Date().toLocaleDateString('en-CA');
-        supabase.from('logs').select('*').eq('clientId', initialClientId).eq('date', today)
+        supabase.from('logs').select('*').eq('clientId', effectiveClientId).eq('date', today)
             .then(({ data, error }) => {
                 if (error) { console.error('[ClientPortal] todayLogs fetch error:', error); return; }
                 setTodayLogs(data || []);
             });
-    }, [currentView, supabase, initialClientId]);
+    }, [currentView, supabase, effectiveClientId]);
 
     useEffect(() => {
         if (!lastRealtimeUpdate) return;
-        if (currentView !== 'hoje' || !supabase || !initialClientId) return;
+        if (currentView !== 'hoje' || !supabase || !effectiveClientId) return;
         const today = new Date().toLocaleDateString('en-CA');
-        supabase.from('logs').select('*').eq('clientId', initialClientId).eq('date', today)
+        supabase.from('logs').select('*').eq('clientId', effectiveClientId).eq('date', today)
             .then(({ data, error }) => {
                 if (error) { console.error('[ClientPortal] todayLogs fetch error:', error); return; }
                 setTodayLogs(data || []);
             });
-    }, [lastRealtimeUpdate, currentView, supabase, initialClientId]);
+    }, [lastRealtimeUpdate, currentView, supabase, effectiveClientId]);
 
     useEffect(() => {
         setLogs(initialLogs || []);
@@ -192,14 +192,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
 
     useEffect(() => {
         if (!supabase) return;
-        if (!initialClientId || typeof initialClientId !== 'string') return;
+        if (!effectiveClientId || typeof effectiveClientId !== 'string') return;
         // CR-05 fix: Use unique channel name per client to prevent subscription collisions
-        const channelName = `client-portal-logs-${initialClientId}`;
+        const channelName = `client-portal-logs-${effectiveClientId}`;
         const channel = supabase
             .channel(channelName)
             .on('postgres_changes', {
                 event: '*', schema: 'public', table: 'logs',
-                filter: `clientId=eq.${initialClientId}`
+                filter: `clientId=eq.${effectiveClientId}`
             }, (payload) => {
                 if (payload.eventType === 'UPDATE') {
                     setLogs(prev => prev.map(log => log.id === payload.new.id ? { ...log, ...payload.new } : log));
@@ -210,7 +210,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
             })
             .subscribe();
         return () => { supabase.removeChannel(channel); };
-    }, [supabase, initialClientId]);
+    }, [supabase, effectiveClientId]);
 
     useEffect(() => {
         fetch('https://api.ipify.org?format=json')
@@ -237,7 +237,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         handleApproveCreationRequest, handleRejectCreationRequest,
     } = useClientNotifications({
         appNotifications, effectiveClientId, corrections, correctionItems,
-        initialClientId, logs, setLogs, saveToDb, clientData, workers, supabase,
+        logs, setLogs, saveToDb, clientData, workers, supabase,
     });
 
     const availableMonths = useMemo(() => {
@@ -310,7 +310,7 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         draftData, setDraftData, draftTotal,
         reportJustification, setReportJustification,
         startReport, handleTimeChange, handleDeleteDay, handleRevertDay, generateCorrectionMessage, handlePrecisionConfirm,
-    } = useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, initialClientId, initialMonth, saveToDb, goToView, supabase, companySignature });
+    } = useDraftReport({ originalWorkersData, selectedMonth, logs, originalTotal, clientData, effectiveClientId, initialMonth, saveToDb, goToView, supabase, companySignature });
 
     const {
         canvasRef, isDrawing, hasSignature, setHasSignature,

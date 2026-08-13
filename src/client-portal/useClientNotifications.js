@@ -5,7 +5,6 @@ export function useClientNotifications({
   effectiveClientId,
   corrections,
   correctionItems,
-  initialClientId,
   logs,
   setLogs,
   saveToDb,
@@ -96,7 +95,7 @@ export function useClientNotifications({
       for (const w of changes) {
         for (const d of w.dailyRecords) {
           const targetWorkerId = String(w.id);
-          const targetClientId = String(initialClientId);
+          const targetClientId = String(effectiveClientId);
           const targetDate = d.date || d.dateLabel || d.rawDate;
           const originalLog = logs.find(l =>
             String(l.workerId || l.worker_id) === targetWorkerId &&
@@ -141,7 +140,7 @@ export function useClientNotifications({
       console.error('Erro ao aplicar contra-proposta:', error);
       alert('Ocorreu um erro ao atualizar os dados. Por favor, tente novamente.');
     }
-  }, [clientData, initialClientId, logs, saveToDb, setLogs, handleDismissNotif]);
+  }, [clientData, effectiveClientId, logs, saveToDb, setLogs, handleDismissNotif]);
 
   const handleApproveCreationRequest = useCallback(async (notif) => {
     const correctionId = notif.payload?.correction_id;
