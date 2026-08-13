@@ -25,7 +25,7 @@ export function useReconciliationBadges(supabase, currentMonth) {
         const runIds = runs.map(r => r.id);
 
         const [pags, rls, fatLinks, ints, imps, justs, allClients] = await Promise.all([
-          supabase.from('faturacao_clientes_pagamentos').select('tx_key, valor_pago, client_id').in('run_id', runIds),
+          supabase.from('faturacao_clientes_pagamentos').select('tx_key, valor_pago, client_id').in('reconciliation_run_id', runIds),
           supabase.from('movimentacao_recibo_links').select('tx_key, worker_name').in('run_id', runIds),
           supabase.from('fatura_pagamento_links').select('tx_key, fatura_id').in('run_id', runIds),
           supabase.from('entrada_internos').select('tx_key').in('run_id', runIds),

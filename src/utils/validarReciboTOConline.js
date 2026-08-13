@@ -129,16 +129,36 @@ export function parseReciboTOConline(text, brutoPlataforma, tolerancias = {}) {
   const abonosExtraidos = parseMoeda(totaisMatch[1]); // 1º valor = Total Abonos
   const liquidoExtraido = parseMoeda(totaisMatch[3]); // 3º valor = Total a Receber
 
-  // SS: encontra a linha com "Segurança Social" e extrai o último € (= coluna Desconto)
+  // SS: encontra a linha com "Segurança Social" e extrai o último € (= coluna Desconto).
+  // Fallback: se a linha não tiver nenhum €, tenta a linha seguinte do texto —
+  // cobre o caso de a linha da tabela ficar partida entre página 1 e 2 (rótulo
+  // numa página, valor no início da seguinte), mesmo princípio já usado abaixo
+  // para "Ajudas de Custo".
   const ssLinha = text.match(/^.*Segurança Social.*$/m)?.[0] ?? '';
-  const ssExtraido = ultimoEuroDaLinha(ssLinha);
+  let ssExtraido = ultimoEuroDaLinha(ssLinha);
+  if (ssExtraido === 0 && ssLinha) {
+    const posSS = text.indexOf(ssLinha);
+    const proxLinhaSS = text.slice(posSS + ssLinha.length).match(/^\n([^\n]+)/)?.[1] ?? '';
+    if (proxLinhaSS) ssExtraido = ultimoEuroDaLinha(proxLinhaSS);
+  }
 
-  // IRS: encontra a linha com "IRS" e extrai o último € (= coluna Desconto)
-  // Quando taxa=0%, a linha não contém €, logo irsExtraido fica 0.
+  // IRS: encontra a linha com "IRS" e extrai o último € (= coluna Desconto).
+  // Quando taxa=0%, a linha não contém € e 0 é o valor correto — nesse caso
+  // NÃO aplica o fallback de linha seguinte (testado: sem esta guarda, uma
+  // linha "IRS ... 0%" seguida de qualquer outra rubrica com € mais abaixo
+  // no recibo era lida por engano como se fosse o desconto de IRS). Só tenta
+  // a linha seguinte quando a linha do IRS não menciona "0%" — sinal de que
+  // a ausência de € é mesmo uma linha partida entre páginas, não uma taxa
+  // legítima de 0%.
   // O pdfjs coloca o valor da coluna Abono antes do Desconto, por isso
   // o último € é sempre o desconto de IRS e não a base tributável.
   const irsLinha = text.match(/^.*\bIRS\b.*$/m)?.[0] ?? '';
-  const irsExtraido = ultimoEuroDaLinha(irsLinha);
+  let irsExtraido = ultimoEuroDaLinha(irsLinha);
+  if (irsExtraido === 0 && irsLinha && !/\b0([.,]0+)?\s*%/.test(irsLinha)) {
+    const posIRS = text.indexOf(irsLinha);
+    const proxLinhaIRS = text.slice(posIRS + irsLinha.length).match(/^\n([^\n]+)/)?.[1] ?? '';
+    if (proxLinhaIRS) irsExtraido = ultimoEuroDaLinha(proxLinhaIRS);
+  }
 
   // Validação: apenas SS e IRS entram no cálculo; outros descontos são ignorados
 const liquidoCalculado = (brutoPlataforma && brutoPlataforma > 0)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Landmark, Upload, CheckCircle, X, AlertCircle, FileText, Loader2, Plus,
-  ArrowLeftRight, Pencil, Zap, Wallet,
+  ArrowLeftRight, Pencil, Zap,
 } from 'lucide-react';
 import RelatorioModal from './RelatorioModal';
 import CsvMappingCard from './CsvMappingCard';
@@ -257,10 +257,12 @@ export default function ReconciliacaoAdmin() {
 
   // ── Mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!supabase) return;
     carregarHistorico();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const carregarHistorico = async () => {
+    if (!supabase) return;
     setLoadingHistorico(true);
     try {
       const [{ data, error }, { data: aliasData }] = await Promise.all([
@@ -309,24 +311,45 @@ export default function ReconciliacaoAdmin() {
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2">
           <Landmark size={24} style={{ color: '#869AAF' }} /> Reconciliação Bancária
         </h2>
-        <div className="flex items-center gap-2">
-          {run.saldoManual != null && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-cyan-50 border border-cyan-100 rounded-2xl text-[10px] font-black uppercase tracking-widest text-cyan-700"
-              title="Soma dos movimentos presumidos da Novobanco Poupança (conta sem ligação PSD2)">
-              <Wallet size={13} /> Poupança: €{Number(run.saldoManual.saldo || 0).toFixed(2)}
-            </div>
-          )}
-          <button onClick={() => setShowForm(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
-            style={{ color: '#869AAF' }}>
-            <Plus size={14} /> Inserir Fatura Manual
-          </button>
-        </div>
+        <button onClick={() => setShowForm(v => !v)}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
+          style={{ color: '#869AAF' }}>
+          <Plus size={14} /> Inserir Fatura Manual
+        </button>
       </div>
+
+      {/* Faixa de estatísticas — substitui os contadores espalhados pelas tabs + o chip solto de saldo */}
+      {run.displayData && (() => {
+        const nMatched = (run.displayData.matched?.length ?? 0) + run.clientAssocMatched.length;
+        const nOrphanBank = Math.max(0, (run.displayData.orphan_bank?.length ?? 0) - run.orphanBankAssocSet.size);
+        const nOrphanSystem = run.displayData.orphan_system?.length ?? 0;
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden mb-6">
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Reconciliados</p>
+              <p className="font-mono text-xl font-bold text-emerald-600 mt-0.5">{nMatched}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Órfãos Banco</p>
+              <p className="font-mono text-xl font-bold text-amber-600 mt-0.5">{nOrphanBank}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Órfãos Sistema</p>
+              <p className="font-mono text-xl font-bold mt-0.5" style={{ color: '#1B3A57' }}>{nOrphanSystem}</p>
+            </div>
+            <div className="bg-white p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Novobanco Poupança</p>
+              <p className="font-mono text-xl font-bold mt-0.5" style={{ color: '#869AAF' }}>
+                {run.saldoManual == null ? '—' : `€${Number(run.saldoManual.saldo).toFixed(2)}`}
+              </p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Formulário inserção manual */}
       {showForm && (
@@ -378,16 +401,17 @@ export default function ReconciliacaoAdmin() {
 
       {/* Seletor de origem — simétrico, sem acordeão escondido */}
       <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 p-6 sm:p-8 space-y-5">
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl w-fit">
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-2xl w-fit">
           {[
             { key: 'toconline', label: 'TOConline', icon: Zap },
             { key: 'ficheiro', label: 'Ficheiro', icon: Upload },
           ].map(({ key, label, icon: Icon }) => (
             <button key={key} onClick={() => setOrigem(key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                origem === key ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'
-              }`}>
-              <Icon size={13} /> Origem: {label}
+                origem === key ? 'text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'
+              }`}
+              style={origem === key ? { backgroundColor: '#1B3A57' } : {}}>
+              <Icon size={13} /> {label}
             </button>
           ))}
         </div>
@@ -622,7 +646,7 @@ export default function ReconciliacaoAdmin() {
 
       {/* Resultados */}
       <ResultadosTabs
-        displayData={run.displayData}
+        displayData={run.displayData} saldoManual={run.saldoManual}
         activeRun={run.activeRun} lastCreatedRun={run.lastCreatedRun} voltarAoRunAtual={run.voltarAoRunAtual}
         activeSubTab={run.activeSubTab} setActiveSubTab={run.setActiveSubTab}
         selMatched={run.selMatched} setSelMatched={run.setSelMatched}
