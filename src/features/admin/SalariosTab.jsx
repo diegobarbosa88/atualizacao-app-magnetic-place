@@ -11,6 +11,7 @@ import SalarioEmployeeCard from './salarios/SalarioEmployeeCard';
 import AssocTransacaoModal from './salarios/AssocTransacaoModal';
 import JustificarModal from './salarios/JustificarModal';
 import ImportarIBANsModal from './salarios/ImportarIBANsModal';
+import './reconciliacao/reconciliacao-mockup.css';
 
 export default function SalariosTab({ month }) {
   const { supabase, workers } = useApp();
@@ -690,39 +691,45 @@ export default function SalariosTab({ month }) {
                     const lote = tx.loteCandidato;
                     const aberto = loteExpandido.has(i);
                     return (
-                      <div key={i} className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-                        <button type="button"
-                          onClick={() => setLoteExpandido(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s; })}
-                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 transition-colors">
-                          <ChevronRight size={13} className={`text-slate-400 flex-shrink-0 transition-transform ${aberto ? 'rotate-90' : ''}`} />
-                          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-white" style={{ backgroundColor: '#869AAF' }}>
-                            <Coins size={13} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[11px] font-black" style={{ color: '#1B3A57' }}>Lote SEPA de {tx.date} — {lote.items.length} trabalhadores</p>
-                            <p className="text-[10px] text-slate-400 truncate">{tx.descricao}</p>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total</p>
-                            <p className="font-mono text-xs font-bold" style={{ color: '#869AAF' }}>{fmtEur(tx.amount)}</p>
-                          </div>
-                        </button>
-                        {aberto && (
-                          <div className="border-t border-slate-100 p-3 space-y-1.5 bg-slate-50/60">
-                            {lote.items.map((it, j) => (
-                              <div key={j} className="flex items-center justify-between text-[10px] px-2 py-1">
-                                <span className="text-slate-600 truncate">{it.worker_name}</span>
-                                <span className="font-mono font-bold text-slate-700">{fmtEur(it.valor)}</span>
+                      <div key={i} className="recon-scope">
+                        <div className="recon-group-card">
+                          <button type="button"
+                            onClick={() => setLoteExpandido(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s; })}
+                            className="recon-group-header">
+                            <ChevronRight size={12} style={{ color: 'var(--text-faint)', flexShrink: 0, transition: 'transform 0.15s ease', transform: aberto ? 'rotate(90deg)' : 'none' }} />
+                            <div className="recon-icon-badge"><Coins size={13} /></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="recon-group-title">Lote SEPA de {tx.date} — {lote.items.length} trabalhadores</p>
+                              <p className="recon-group-subtitle truncate">{tx.descricao}</p>
+                            </div>
+                            <div className="recon-group-total">
+                              <span className="recon-group-total-label">Total</span>
+                              {fmtEur(tx.amount)}
+                            </div>
+                          </button>
+                          {aberto && (
+                            <div className="recon-group-body">
+                              {lote.items.map((it, j) => (
+                                <div key={j} className="recon-mini-row">
+                                  <span className="recon-mini-date">{tx.date}</span>
+                                  <span className="recon-mini-desc truncate">{it.worker_name}</span>
+                                  <span style={{ fontFamily: 'var(--recon-mono)', fontSize: '11px', color: 'var(--text-faint)' }}>
+                                    {it.iban ? `•••• ${it.iban.slice(-4)}` : ''}
+                                  </span>
+                                  <span className="recon-mini-amount">{fmtEur(it.valor)}</span>
+                                </div>
+                              ))}
+                              <div style={{ padding: '9px 16px' }}>
+                                <button onClick={() => confirmarLoteSepa(tx)} disabled={confirmandoLote === lote.id}
+                                  className="w-full flex items-center justify-center gap-1.5 py-2 text-white rounded-xl text-[10px] font-black tracking-widest disabled:opacity-50 hover:opacity-90"
+                                  style={{ backgroundColor: 'var(--navy)', textTransform: 'uppercase' }}>
+                                  {confirmandoLote === lote.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                                  Confirmar associação
+                                </button>
                               </div>
-                            ))}
-                            <button onClick={() => confirmarLoteSepa(tx)} disabled={confirmandoLote === lote.id}
-                              className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 hover:opacity-90"
-                              style={{ backgroundColor: '#1B3A57' }}>
-                              {confirmandoLote === lote.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
-                              Confirmar associação
-                            </button>
-                          </div>
-                        )}
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   }
