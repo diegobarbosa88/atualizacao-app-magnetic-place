@@ -64,18 +64,18 @@ export default function ContadorEmailsAdmin() {
       setLoading(false);
       return;
     }
-    // supabase só fica disponível depois do AppContext inicializar o cliente
-    // (script assíncrono) — no primeiro render, ao recarregar diretamente
-    // nesta rota, ainda é null. Este efeito volta a correr quando supabase
-    // deixar de o ser, graças à dependência [supabase] abaixo.
-    if (!supabase) return;
-    supabase.from('fornecedores').select('*').eq('nif', CONTADOR_NIF).maybeSingle()
+    // Lookup server-side (api/pagamentos, service role) em vez de
+    // supabase.from('fornecedores') direto: RLS está ativo em `fornecedores`
+    // sem policies, por isso a anon key nunca veria este registo.
+    fetch(`/api/pagamentos?action=buscar-fornecedor-por-nif&nif=${encodeURIComponent(CONTADOR_NIF)}`)
+      .then(res => res.json())
       .then(({ data, error }) => {
-        if (error) { setFornecedorErro(error.message); return; }
+        if (error) { setFornecedorErro(error); return; }
         if (!data) { setFornecedorErro(`Nenhum fornecedor encontrado com NIF ${CONTADOR_NIF} — cria o fornecedor "contador" primeiro.`); return; }
         setFornecedor(data);
-      });
-  }, [supabase]);
+      })
+      .catch(e => setFornecedorErro(e.message));
+  }, []);
 
   const carregar = useCallback(async () => {
     if (!supabase) return; // mesma corrida com a inicialização do AppContext — ver efeito acima

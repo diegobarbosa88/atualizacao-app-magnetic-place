@@ -568,6 +568,19 @@ export default async function handler(req, res) {
       return res.json({ data: data || [] });
     }
 
+    // ─── FORNECEDORES: BUSCAR POR NIF ───
+    // Usado pelo frontend (ex: ContadorEmailsAdmin) para identificar um
+    // fornecedor específico por NIF sem precisar de acesso direto à tabela
+    // `fornecedores` com a anon key — RLS está ativo lá sem policies.
+    if (action === 'buscar-fornecedor-por-nif') {
+      if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+      const { nif } = req.query;
+      if (!nif) return res.status(400).json({ error: 'nif obrigatório' });
+      const { data, error } = await db.from('fornecedores').select('*').eq('nif', nif).maybeSingle();
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ data: data || null });
+    }
+
     // ─── FORNECEDORES: GUARDAR (criar ou editar) ───
     if (action === 'guardar-fornecedor') {
       if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
