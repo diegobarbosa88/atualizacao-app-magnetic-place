@@ -173,13 +173,6 @@ export default function AppLayout() {
     }
   }
 
-  const toClientLinkId = (id) => {
-    if (!id) return null
-    if (id.startsWith('c')) return id
-    if (id.startsWith('client_')) return 'c' + id.replace('client_', '')
-    return 'c' + id
-  }
-
   // Route protection
   useEffect(() => {
     const publicPaths = ['/login', '/verify', '/client']
@@ -195,9 +188,13 @@ export default function AppLayout() {
   // Business logic - handleDisparoEmail
   const handleDisparoEmail = async () => {
     if (!clienteSelecionado) return
+    if (!clienteSelecionado.share_token) {
+      alert('Este cliente não tem share_token gerado — não é possível criar um link seguro. Contacta o suporte técnico.')
+      return
+    }
     setIsSendingEmail(true)
     const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`
-    const modalLinkUnico = `${CLIENT_PORTAL_URL}?client=${toClientLinkId(clienteSelecionado.id)}&month=${monthStr}`
+    const modalLinkUnico = `${CLIENT_PORTAL_URL}?token=${encodeURIComponent(clienteSelecionado.share_token)}&month=${monthStr}`
     const totalHoras = formatHours(logs.filter(l => l.clientId === clienteSelecionado.id && l.date?.substring(0, 7) === monthStr).reduce((acc, l) => acc + l.hours, 0))
     const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID
     const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID_PORTAL
@@ -429,13 +426,9 @@ export default function AppLayout() {
 
 function EmailModal({ clienteSelecionado, portalMonth, logs, setModalEmailAberto, isSendingEmail, handleDisparoEmail }) {
   const monthStr = `${portalMonth.getFullYear()}-${String(portalMonth.getMonth() + 1).padStart(2, '0')}`
-  const toClientLinkId = (id) => {
-    if (!id) return null
-    if (id.startsWith('c')) return id
-    if (id.startsWith('client_')) return 'c' + id.replace('client_', '')
-    return 'c' + id
-  }
-  const modalLinkUnico = `${window.location.origin}${window.location.pathname}?client=${toClientLinkId(clienteSelecionado.id)}&month=${monthStr}`
+  const modalLinkUnico = clienteSelecionado.share_token
+    ? `${window.location.origin}${window.location.pathname}?token=${encodeURIComponent(clienteSelecionado.share_token)}&month=${monthStr}`
+    : null
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4">

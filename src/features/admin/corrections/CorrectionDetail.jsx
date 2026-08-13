@@ -76,7 +76,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
     if (!confirm(`Aplicar ${draftItems.length} alteração(ões) ao relatório de ${clientName}?`)) return;
     setBusy(true);
     try {
-      await applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer: currentUser?.id, clientName, clientEmail });
+      await applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer: currentUser?.id, clientName, clientEmail, portalBase: window.location.origin, shareToken: client?.share_token });
       setCorrections((prev) => prev.map((c) => c.id === correction.id ? { ...c, status: 'applied', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id || null } : c));
       alert('Alterações aplicadas. Cliente notificado.');
       onBack();
@@ -101,7 +101,7 @@ export default function CorrectionDetail({ correction, items, onBack }) {
     if (!confirm('Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.')) return;
     setBusy(true);
     try {
-      await applyCreationRequest(supabase, { correction, items, logs, clientName, clientEmail, portalBase: window.location.origin });
+      await applyCreationRequest(supabase, { correction, items, logs, clientName, clientEmail, portalBase: window.location.origin, shareToken: client?.share_token });
       setCorrections((prev) => prev.map((c) => c.id === correction.id ? { ...c, status: 'applied', reviewed_at: new Date().toISOString(), reviewed_by: currentUser?.id || null } : c));
       alert('Pedido aprovado. Relatório atualizado.');
       onBack();

@@ -129,9 +129,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         setLoginEmail('');
     };
 
-    // Direct access bypass disabled — require proper login always (security: CR-06)
-    const isDirectAccess = false;
-
     const [selectedTab, setSelectedTab] = useState(() => {
         const tokenOrClientId = initialTokenClientId || initialClientId;
         if (tokenOrClientId && initialMonth) return 'validar';
@@ -162,13 +159,6 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         } catch { return null; }
     });
     const [validarSubView, setValidarSubView] = useState('selector');
-
-    useEffect(() => {
-        if (isDirectAccess && initialMonth) {
-            setSelectedMonth(initialMonth);
-            setValidarSubView('page');
-        }
-    }, [isDirectAccess, initialMonth]);
 
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 30000);
@@ -362,7 +352,11 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
         setExpandedWorkers(prev => prev.includes(id) ? prev.filter(wId => wId !== id) : [...prev, id]);
     };
 
-    if (!clientSession && !isDirectAccess && !initialTokenClientId && !initialClientId) {
+    // CR-06: só sessão de cliente já autenticada ou um token válido (resolvido
+    // via share_token, ver AppContext/app.jsx) saltam o login. initialClientId
+    // (o ?client=<id> cru da URL, sem validação nenhuma) já NÃO conta — era o
+    // bypass de autenticação que este ecrã tinha.
+    if (!clientSession && !initialTokenClientId) {
         return <LoginView t={t} lang={lang} changeLang={changeLang} loginNif={loginNif} setLoginNif={setLoginNif} loginEmail={loginEmail} setLoginEmail={setLoginEmail} loginError={loginError} handleLogin={handleLogin} submitting={loginSubmitting} systemSettings={systemSettings} />;
     }
 

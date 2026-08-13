@@ -9,13 +9,6 @@ import { toISODateLocal } from '../../../utils/dateUtils';
 import { sendValidationEmail } from '../../../utils/emailUtils';
 import { shouldSendNotification } from '../../../config';
 
-const toClientLinkId = (id) => {
-  if (!id) return null;
-  if (id.startsWith('c')) return id;
-  if (id.startsWith('client_')) return 'c' + id.replace('client_', '');
-  return 'c' + id;
-};
-
 export default function ClientEnviosPanel({
   portalMonth,
   setPortalMonth,
@@ -31,12 +24,12 @@ export default function ClientEnviosPanel({
     if (!appr) return;
     try {
       await handleDelete('client_approvals', appr.id);
-      if (c.email && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) {
+      if (c.email && c.share_token && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) {
         sendValidationEmail({
           to: c.email, name: c.name,
           title: `Validação Anulada · ${portalMonthStr}`,
           message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador.`,
-          link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}`
+          link: `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`
         }).catch(() => {});
       }
       if (shouldSendNotification('validacao_anulada', 'db', notificationPreferences)) {
@@ -125,7 +118,8 @@ export default function ClientEnviosPanel({
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => {
-                      const link = `https://painelcliente.magneticplace.pt/?client=${encodeURIComponent(toClientLinkId(c.id))}&month=${encodeURIComponent(portalMonthStr)}`;
+                      if (!c.share_token) { alert('Este cliente não tem share_token gerado.'); return; }
+                      const link = `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`;
                       navigator.clipboard.writeText(link);
                     }} className="p-1.5 rounded-lg hover:bg-slate-100 transition-all" style={{ color: '#869AAF' }} title="Copiar Link"><Link size={13} /></button>
                   </td>
@@ -151,7 +145,9 @@ export default function ClientEnviosPanel({
       {view === 'grid' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           {enrichedClients.map(c => {
-            const linkUnico = `https://painelcliente.magneticplace.pt/?client=${encodeURIComponent(toClientLinkId(c.id))}&month=${encodeURIComponent(portalMonthStr)}`;
+            const linkUnico = c.share_token
+              ? `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`
+              : null;
             return (
               <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-200">
                 <div className="flex justify-between items-start mb-3">
@@ -165,8 +161,8 @@ export default function ClientEnviosPanel({
                 <h4 className="font-black text-slate-800 text-sm truncate mb-0.5">{c.name}</h4>
                 <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.email || 'Sem email'}</p>
                 <div className="flex items-center gap-1.5 mb-3 bg-slate-50 rounded-xl p-2 border border-slate-100">
-                  <span className="text-[9px] font-mono text-slate-400 truncate flex-1">{linkUnico.replace(/.*\?/, '?')}</span>
-                  <button onClick={() => navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-[#869AAF] transition-colors shrink-0"><Copy size={12} /></button>
+                  <span className="text-[9px] font-mono text-slate-400 truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
+                  <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-[#869AAF] transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
                 </div>
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (

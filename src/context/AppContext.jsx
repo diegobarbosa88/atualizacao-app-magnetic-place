@@ -148,6 +148,12 @@ export const AppProvider = ({ children }) => {
   // handleLogin em app.jsx chama setCurrentUser diretamente). clientSession vive só
   // em localStorage ('magnetic_client_session'), gerida dentro de ClientPortal.jsx,
   // sem estado próprio aqui — por isso fazemos um poll leve só até aparecer.
+  // CR-06: um ?token= na URL também conta como sinal — é o que permite resolver
+  // tokenResolvedClientId (clients.find por share_token) num primeiro acesso sem
+  // sessão prévia em localStorage (link mágico de cliente, ainda sem login feito).
+  // Propositadamente NÃO inclui ?client= sozinho — esse é o parâmetro que a
+  // correção CR-06 deixa de aceitar como bypass de login, e não deve voltar a
+  // disparar o fetch completo sem autenticação.
   const hasAnySessionSignal = () => {
     try {
       if (localStorage.getItem('magnetic_user')) return true;
@@ -156,6 +162,7 @@ export const AppProvider = ({ children }) => {
         const parsed = JSON.parse(raw);
         if (parsed && Date.now() < parsed.expiry) return true;
       }
+      if (new URLSearchParams(window.location.search).has('token')) return true;
     } catch { /* ignore */ }
     return false;
   };

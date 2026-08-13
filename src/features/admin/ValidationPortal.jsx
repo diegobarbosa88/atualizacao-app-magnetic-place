@@ -12,12 +12,6 @@ import CorrectionsInbox from './corrections/CorrectionsInbox';
 import NotificationPreferences from '../../components/admin/NotificationPreferences';
 import { DISABLE_CLIENT_NOTIFICATIONS, shouldSendNotification } from '../../config';
 
-const toClientLinkId = (id) => {
-  if (!id) return null;
-  if (id.startsWith('c')) return id;
-  if (id.startsWith('client_')) return 'c' + id.replace('client_', '');
-  return 'c' + id;
-};
 
 const ValidationPortal = ({
   onLogin,
@@ -162,7 +156,8 @@ const ValidationPortal = ({
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button onClick={() => {
-                      const link = `https://painelcliente.magneticplace.pt/?client=${encodeURIComponent(toClientLinkId(c.id))}&month=${encodeURIComponent(portalMonthStr)}`;
+                      if (!c.share_token) { alert('Este cliente não tem share_token gerado.'); return; }
+                      const link = `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`;
                       navigator.clipboard.writeText(link);
                     }} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all" title="Copiar Link"><Link size={13} /></button>
                   </td>
@@ -201,7 +196,9 @@ const ValidationPortal = ({
             }
             return valSortConfig.direction === 'asc' ? res : -res;
           })).map(c => {
-            const linkUnico = `https://painelcliente.magneticplace.pt/?client=${encodeURIComponent(toClientLinkId(c.id))}&month=${encodeURIComponent(portalMonthStr)}`;
+            const linkUnico = c.share_token
+              ? `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}`
+              : null;
             return (
               <div key={c.id} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 hover:-translate-y-0.5 transition-all duration-200">
                 {/* Header */}
@@ -218,14 +215,14 @@ const ValidationPortal = ({
                 <p className="text-[10px] text-slate-400 font-bold truncate mb-3">{c.email || 'Sem email'}</p>
                 {/* Link */}
                 <div className="flex items-center gap-1.5 mb-3 bg-slate-50 rounded-xl p-2 border border-slate-100">
-                  <span className="text-[9px] font-mono text-slate-400 truncate flex-1">{linkUnico.replace(/.*\?/, '?')}</span>
-                  <button onClick={() => navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-indigo-600 transition-colors shrink-0"><Copy size={12} /></button>
+                  <span className="text-[9px] font-mono text-slate-400 truncate flex-1">{linkUnico ? linkUnico.replace(/.*\?/, '?') : 'Sem share_token'}</span>
+                  <button disabled={!linkUnico} onClick={() => linkUnico && navigator.clipboard.writeText(linkUnico)} className="text-slate-300 hover:text-indigo-600 transition-colors shrink-0 disabled:opacity-30"><Copy size={12} /></button>
                 </div>
                 {/* Actions */}
                 <div className="flex gap-2">
                   {c.status === 'validado' ? (
                     <>
-                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?view=client_portal&client=${encodeURIComponent(c.id)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
+                      <button onClick={async () => { if (!window.confirm('Anular validação?')) return; const appr = clientApprovals?.find(a => (String(a.client_id || a.clientId || '') === String(c.id)) && a.month === portalMonthStr); if (!appr) return; try { await handleDelete('client_approvals', appr.id); if (c.email && c.share_token && shouldSendNotification('validacao_anulada', 'email', notificationPreferences)) { sendValidationEmail({ to: c.email, name: c.name, title: `Validação Anulada · ${portalMonthStr}`, message: `A validação do relatório de ${portalMonthStr} foi anulada pelo administrador. Aceda ao portal para submeter um novo reporte ou validar novamente.`, link: `https://painelcliente.magneticplace.pt/?token=${encodeURIComponent(c.share_token)}&month=${encodeURIComponent(portalMonthStr)}` }).catch(() => { }); } } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); } }} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-rose-500 hover:bg-rose-50 rounded-xl text-[10px] font-black uppercase transition-all border border-rose-100"><RotateCcw size={12} /> Anular</button>
                       <button onClick={() => setPrintingReport({ client: c, logs, workers, clients, month: portalMonthStr, clientApprovals })} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-emerald-600 hover:bg-emerald-50 rounded-xl text-[10px] font-black uppercase transition-all border border-emerald-100"><Download size={12} /> Relatório</button>
                     </>
                   ) : (

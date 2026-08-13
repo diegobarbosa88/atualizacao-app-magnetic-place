@@ -136,7 +136,7 @@ export async function setItemResolution(supabase, itemId, { itemStatus, finalVal
  * Apply a correction: write resolved items into `logs`, mark correction applied,
  * notify the client. Items still `pending` block the apply.
  */
-export async function applyCorrection(supabase, { correction, items, logs, clientName, clientEmail, portalBase }) {
+export async function applyCorrection(supabase, { correction, items, logs, clientName, clientEmail, portalBase, shareToken }) {
   if (!supabase) throw new Error('Supabase indisponível');
 
   const unresolved = items.filter((it) => it.item_status === 'pending');
@@ -252,7 +252,7 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
       name: clientName,
       title: `Correção Aplicada · ${correction.month}`,
       message: `A sua correção para ${correction.month} foi aplicada. Pode consultar o relatório actualizado no portal.`,
-      link: buildClientLink(correction.client_id, correction.month, portalBase),
+      link: buildClientLink(correction.client_id, correction.month, portalBase, shareToken),
     });
   }
 }
@@ -262,7 +262,7 @@ export async function applyCorrection(supabase, { correction, items, logs, clien
  * straight away. Each draft item is inserted as `accepted` with `final = proposed`,
  * then standard apply runs.
  */
-export async function applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer, clientName, clientEmail, portalBase }) {
+export async function applyAdminDraftToQuick(supabase, { correction, draftItems, logs, reviewer, clientName, clientEmail, portalBase, shareToken }) {
   if (!supabase) throw new Error('Supabase indisponível');
   if (!draftItems || draftItems.length === 0) throw new Error('Nenhuma alteração para aplicar.');
 
@@ -284,14 +284,14 @@ export async function applyAdminDraftToQuick(supabase, { correction, draftItems,
   const { error: e1 } = await supabase.from('correction_items').insert(rows);
   if (e1) throw e1;
 
-  await applyCorrection(supabase, { correction, items: rows, logs, reviewer, clientName, clientEmail, portalBase });
+  await applyCorrection(supabase, { correction, items: rows, logs, reviewer, clientName, clientEmail, portalBase, shareToken });
 }
 
 /**
  * Close a correction as applied without writing to logs (admin handled it elsewhere
  * or the message did not require a change).
  */
-export async function markResolved(supabase, { correctionId, clientId, month, note, reviewer, clientName, clientEmail, portalBase }) {
+export async function markResolved(supabase, { correctionId, clientId, month, note, reviewer, clientName, clientEmail, portalBase, shareToken }) {
   const { error } = await supabase
     .from('corrections')
     .update({
@@ -326,12 +326,12 @@ export async function markResolved(supabase, { correctionId, clientId, month, no
       name: clientName,
       title: `Correção Resolvida · ${month}`,
       message: resolvedMsg,
-      link: buildClientLink(clientId, month, portalBase),
+      link: buildClientLink(clientId, month, portalBase, shareToken),
     });
   }
 }
 
-export async function applyCreationRequest(supabase, { correction, items, clientName, clientEmail, portalBase }) {
+export async function applyCreationRequest(supabase, { correction, items, clientName, clientEmail, portalBase, shareToken }) {
   if (!supabase) throw new Error('Supabase indisponível');
 
   for (const item of items) {
@@ -476,12 +476,12 @@ export async function applyCreationRequest(supabase, { correction, items, client
       name: clientName,
       title: `Pedido de Registo Aprovado · ${correction.month}`,
       message: msg,
-      link: buildClientLink(correction.client_id, correction.month, portalBase),
+      link: buildClientLink(correction.client_id, correction.month, portalBase, shareToken),
     });
   }
 }
 
-export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName, clientEmail, portalBase }) {
+export async function rejectCorrection(supabase, { correctionId, clientId, month, reason, reviewer, clientName, clientEmail, portalBase, shareToken }) {
   // Apagar log provisional em aberto se o pedido rejeitado era para hoje
   const today = new Date().toLocaleDateString('en-CA');
   const { data: rejectedItems } = await supabase
@@ -530,7 +530,7 @@ export async function rejectCorrection(supabase, { correctionId, clientId, month
       name: clientName,
       title: `Correção Rejeitada · ${month}`,
       message: rejectMsg,
-      link: buildClientLink(clientId, month, portalBase),
+      link: buildClientLink(clientId, month, portalBase, shareToken),
     });
   }
 }

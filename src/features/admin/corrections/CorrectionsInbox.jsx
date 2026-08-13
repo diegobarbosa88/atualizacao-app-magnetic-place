@@ -422,7 +422,7 @@ const CorrectionsInbox = ({ initialCorrectionId, onCorrectionNavigated, forcedSo
     if (!confirm('Aprovar este pedido de registo? Os horários serão atualizados/criados no relatório.')) return;
     try {
       const client = clients.find(cl => String(cl.id) === String(correction.client_id));
-      await applyCreationRequest(supabase, { correction, items: itemsByCorrection.get(correction.id) || [], logs: logs || [], clientName: client?.name, clientEmail: client?.email, portalBase: window.location.origin });
+      await applyCreationRequest(supabase, { correction, items: itemsByCorrection.get(correction.id) || [], logs: logs || [], clientName: client?.name, clientEmail: client?.email, portalBase: window.location.origin, shareToken: client?.share_token });
       setCorrections(prev => prev.map(c => c.id === correction.id ? { ...c, status: 'applied' } : c));
       alert('Pedido aprovado. Relatório atualizado.');
     } catch (e) {
