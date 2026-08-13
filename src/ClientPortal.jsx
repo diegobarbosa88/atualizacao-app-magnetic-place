@@ -160,6 +160,24 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
     });
     const [validarSubView, setValidarSubView] = useState('selector');
 
+    // Reforço para o caminho assíncrono: initialTokenClientId (resolvido via
+    // fetch a api/pagamentos?action=resolver-token-cliente, ver app.jsx) só
+    // fica disponível DEPOIS do primeiro render — o useState inicializador de
+    // selectedTab acima só cobre o caso em que já vinha pronto de início
+    // (ex: ?client= sem token). Este efeito dispara só a primeira vez que o
+    // identificador de cliente + mês ficam disponíveis, para não "prender" o
+    // utilizador em 'validar' se ele já tiver navegado manualmente noutra
+    // direção depois disso.
+    const jaAplicouTabInicial = useRef(false);
+    useEffect(() => {
+        if (jaAplicouTabInicial.current) return;
+        const tokenOrClientId = initialTokenClientId || initialClientId;
+        if (tokenOrClientId && initialMonth) {
+            jaAplicouTabInicial.current = true;
+            setSelectedTab('validar');
+        }
+    }, [initialTokenClientId, initialClientId, initialMonth]);
+
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 30000);
         return () => clearInterval(timer);
