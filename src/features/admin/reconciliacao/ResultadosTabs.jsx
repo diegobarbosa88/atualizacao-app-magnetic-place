@@ -31,7 +31,7 @@ export default function ResultadosTabs({
   bulkConfirmando, confirmando, confirmedOrphans, orphanObservacoes, orphanClassificacoes,
   confirmandoEntrada, desvinculando, excluindo,
   editingResultDesc, setEditingResultDesc,
-  pagamentosLinks, clientAssocMatched, orphanBankAssocSet,
+  pagamentosLinks, clientAssocMatched, orphanBankAssocSet, orphanBankSepaLoteSet,
   autoAssociando, setAutoAssociando,
   aliases, showAliases, setShowAliases,
   showRelatorio, setShowRelatorio, relatorioRuns, setRelatorioRuns,
@@ -63,7 +63,7 @@ export default function ResultadosTabs({
         <div className="recon-tabs">
           {[
             { key: 'matched',       labelFull: 'Reconciliados', labelShort: 'Recon.',  count: (displayData.matched?.length ?? 0) + clientAssocMatched.length },
-            { key: 'orphan_bank',   labelFull: 'Órfãos Banco',  labelShort: 'Banco',   count: Math.max(0, (displayData.orphan_bank?.length ?? 0) - orphanBankAssocSet.size) },
+            { key: 'orphan_bank',   labelFull: 'Órfãos Banco',  labelShort: 'Banco',   count: Math.max(0, (displayData.orphan_bank?.length ?? 0) - orphanBankAssocSet.size - orphanBankSepaLoteSet.size) },
             { key: 'orphan_system', labelFull: 'Órfãos Sistema', labelShort: 'Sistema', count: displayData.orphan_system?.length ?? 0 },
           ].map(tab => (
             <button key={tab.key} onClick={() => { setActiveSubTab(tab.key); setSelMatched(new Set()); setSelOrphan(new Set()); }}
@@ -319,7 +319,7 @@ export default function ResultadosTabs({
 
       {/* Sub-tab: Órfãos Banco */}
       {activeSubTab === 'orphan_bank' && (() => {
-        const allIndices = (displayData.orphan_bank || []).map((_, i) => i).filter(i => !confirmedOrphans.has(i) && !orphanBankAssocSet.has(i));
+        const allIndices = (displayData.orphan_bank || []).map((_, i) => i).filter(i => !confirmedOrphans.has(i) && !orphanBankAssocSet.has(i) && !orphanBankSepaLoteSet.has(i));
         return (
           <div className="space-y-3">
             {allIndices.length === 0 && (displayData.orphan_bank || []).filter((_, i) => !orphanBankAssocSet.has(i)).length === 0 && (
@@ -382,7 +382,14 @@ export default function ResultadosTabs({
                       className="recon-checkbox mt-1 self-start" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap justify-between mb-2">
-                        <TipoBadge tipo={item.transacao.tipo} />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <TipoBadge tipo={item.transacao.tipo} />
+                          {orphanBankSepaLoteSet.has(i) && (
+                            <span className="recon-status-pill" style={{ textTransform: 'uppercase', background: 'var(--green-bg)', color: 'var(--green)' }}>
+                              reconciliado via lote salarial
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 flex-wrap ml-auto">
                           <span className="recon-doc-ref">{item.transacao.data}</span>
                           <span className="recon-amount-col recon-font-mono">€{Number(item.transacao.valor).toFixed(2)}</span>

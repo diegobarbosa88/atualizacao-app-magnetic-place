@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Landmark, Upload, CheckCircle, X, AlertCircle, FileText, Loader2, Plus,
   ArrowLeftRight, Pencil, Zap,
@@ -12,6 +12,7 @@ import AssocClienteModal from './reconciliacao/AssocClienteModal';
 import ResultadosTabs from './reconciliacao/ResultadosTabs';
 import HistoricoSection from './reconciliacao/HistoricoSection';
 import { useReconciliacaoRun } from './reconciliacao/useReconciliacaoRun';
+import { fmtMes } from './movimentacoes/txUtils';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 import './reconciliacao/reconciliacao-mockup.css';
@@ -256,11 +257,34 @@ export default function ReconciliacaoAdmin() {
   // ── Run hook ──────────────────────────────────────────────────────────────
   const run = useReconciliacaoRun(supabase, clients, { setHistorico });
 
+  // ── Seletor de mês/ano — um run por mês (data da primeira transação),
+  // o mais recente de cada mês quando há reimportações ─────────────────────
+  const mesesDisponiveis = useMemo(() => {
+    const porMes = new Map();
+    historico.forEach(r => {
+      const mesAno = (r.transactions_json?.[0]?.data || '').slice(0, 7);
+      if (!mesAno || porMes.has(mesAno)) return; // historico já vem ordenado created_at desc → 1º = mais recente
+      porMes.set(mesAno, r.id);
+    });
+    return [...porMes.entries()]
+      .sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([mesAno, runId]) => ({ mesAno, label: fmtMes(mesAno), runId }));
+  }, [historico]);
+
+  const mesAtivo = run.activeRun?.transactions_json?.[0]?.data?.slice(0, 7) || '';
+
   // ── Mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!supabase) return;
     carregarHistorico();
   }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Ao carregar o histórico, se ainda não há nada em ecrã, mostra logo o
+  // mês mais recente — evita ecrã vazio até o Diego abrir o histórico.
+  useEffect(() => {
+    if (run.activeRun || !mesesDisponiveis.length) return;
+    run.selecionarRun(mesesDisponiveis[0].runId);
+  }, [mesesDisponiveis]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const carregarHistorico = async () => {
     if (!supabase) return;
@@ -316,17 +340,35 @@ export default function ReconciliacaoAdmin() {
         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black flex items-center gap-2">
           <Landmark size={24} style={{ color: '#869AAF' }} /> Reconciliação Bancária
         </h2>
-        <button onClick={() => setShowForm(v => !v)}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
-          style={{ color: '#869AAF' }}>
-          <Plus size={14} /> Inserir Fatura Manual
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {mesesDisponiveis.length > 0 && (
+            <select
+              value={mesAtivo}
+              onChange={e => {
+                const alvo = mesesDisponiveis.find(m => m.mesAno === e.target.value);
+                if (alvo) run.selecionarRun(alvo.runId);
+              }}
+              className="border border-slate-200 rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-slate-600 bg-white hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+              style={{ textTransform: 'uppercase' }}
+            >
+              {!mesAtivo && <option value="">Selecionar mês…</option>}
+              {mesesDisponiveis.map(m => (
+                <option key={m.mesAno} value={m.mesAno}>{m.label}</option>
+              ))}
+            </select>
+          )}
+          <button onClick={() => setShowForm(v => !v)}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 rounded-2xl border border-slate-200 hover:bg-slate-200 transition-all text-[10px] font-black uppercase tracking-widest"
+            style={{ color: '#869AAF' }}>
+            <Plus size={14} /> Inserir Fatura Manual
+          </button>
+        </div>
       </div>
 
       {/* Faixa de estatísticas — substitui os contadores espalhados pelas tabs + o chip solto de saldo */}
       {run.displayData && (() => {
         const nMatched = (run.displayData.matched?.length ?? 0) + run.clientAssocMatched.length;
-        const nOrphanBank = Math.max(0, (run.displayData.orphan_bank?.length ?? 0) - run.orphanBankAssocSet.size);
+        const nOrphanBank = Math.max(0, (run.displayData.orphan_bank?.length ?? 0) - run.orphanBankAssocSet.size - run.orphanBankSepaLoteSet.size);
         const nOrphanSystem = run.displayData.orphan_system?.length ?? 0;
         return (
           <div className="recon-stat-strip mb-6">
@@ -653,6 +695,7 @@ export default function ReconciliacaoAdmin() {
         confirmandoEntrada={run.confirmandoEntrada} desvinculando={run.desvinculando} excluindo={run.excluindo}
         editingResultDesc={run.editingResultDesc} setEditingResultDesc={run.setEditingResultDesc}
         pagamentosLinks={run.pagamentosLinks} clientAssocMatched={run.clientAssocMatched} orphanBankAssocSet={run.orphanBankAssocSet}
+        orphanBankSepaLoteSet={run.orphanBankSepaLoteSet}
         autoAssociando={run.autoAssociando} setAutoAssociando={run.setAutoAssociando}
         aliases={run.aliases} showAliases={run.showAliases} setShowAliases={run.setShowAliases}
         showRelatorio={showRelatorio} setShowRelatorio={setShowRelatorio}
@@ -670,19 +713,16 @@ export default function ReconciliacaoAdmin() {
 
       {/* Histórico */}
       <HistoricoSection
-        historico={historico} setHistorico={setHistorico}
+        historico={historico}
         historicoAberto={historicoAberto} setHistoricoAberto={setHistoricoAberto}
         loadingHistorico={loadingHistorico}
         selHistorico={selHistorico} setSelHistorico={setSelHistorico}
-        relatorioRuns={relatorioRuns} setRelatorioRuns={setRelatorioRuns}
-        showRelatorio={showRelatorio} setShowRelatorio={setShowRelatorio}
+        setRelatorioRuns={setRelatorioRuns}
+        setShowRelatorio={setShowRelatorio}
         loadingMultiRel={loadingMultiRel} setLoadingMultiRel={setLoadingMultiRel}
-        activeRun={run.activeRun} setActiveRun={run.setActiveRun}
         reprocessando={run.reprocessando}
         supabase={supabase}
-        autoAssociarEntradas={run.autoAssociarEntradas}
-        autoConfirmarMatched={run.autoConfirmarMatched}
-        carregarPagamentosLinks={run.carregarPagamentosLinks}
+        selecionarRun={run.selecionarRun}
         apagarRun={run.apagarRun} reprocessarRun={run.reprocessarRun}
       />
 

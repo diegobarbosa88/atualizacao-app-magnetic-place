@@ -3,48 +3,18 @@ import { Clock, ChevronDown, ChevronUp, Loader2, RefreshCw, Trash2 } from 'lucid
 import { extractMonthYearName } from '../movimentacoes/txUtils';
 
 export default function HistoricoSection({
-  historico, setHistorico,
+  historico,
   historicoAberto, setHistoricoAberto,
   loadingHistorico,
   selHistorico, setSelHistorico,
-  relatorioRuns, setRelatorioRuns,
-  showRelatorio, setShowRelatorio,
+  setRelatorioRuns,
+  setShowRelatorio,
   loadingMultiRel, setLoadingMultiRel,
-  activeRun, setActiveRun,
   reprocessando,
   supabase,
-  autoAssociarEntradas, autoConfirmarMatched, carregarPagamentosLinks,
+  selecionarRun,
   apagarRun, reprocessarRun,
 }) {
-  const handleRunClick = async (run) => {
-    const { data } = await supabase
-      .from('reconciliation_runs')
-      .select('*')
-      .eq('id', run.id)
-      .single();
-    if (!data) return;
-    setActiveRun(data);
-    if (data.results_json) {
-      await autoAssociarEntradas(data.results_json, data.id);
-      const newMatched = await autoConfirmarMatched(data.results_json.matched || [], data.id, data.results_json);
-      if (newMatched !== data.results_json.matched) {
-        setActiveRun(prev => prev
-          ? { ...prev, results_json: { ...prev.results_json, matched: newMatched } }
-          : prev
-        );
-      }
-      const { data: pLinksCount } = await supabase
-        .from('faturacao_clientes_pagamentos')
-        .select('transaction_section')
-        .eq('reconciliation_run_id', data.id);
-      const nAssoc = (pLinksCount || []).filter(p => p.transaction_section === 'orphan_bank').length;
-      setHistorico(prev => prev.map(r => r.id === data.id
-        ? { ...r, matched_count: (data.results_json.matched?.length ?? 0) + nAssoc, orphan_bank_count: Math.max(0, (data.results_json.orphan_bank?.length ?? 0) - nAssoc) }
-        : r
-      ));
-    }
-  };
-
   return (
     <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100">
       <button
@@ -104,7 +74,7 @@ export default function HistoricoSection({
           {historico.map(run => (
             <div
               key={run.id}
-              onClick={() => handleRunClick(run)}
+              onClick={() => selecionarRun(run.id)}
               className={`w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0 cursor-pointer ${selHistorico.has(run.id) ? 'bg-indigo-50' : ''}`}
             >
               <input

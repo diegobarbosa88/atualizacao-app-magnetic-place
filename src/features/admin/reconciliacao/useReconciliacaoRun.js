@@ -22,6 +22,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
   const [orphanClassificacoes, setOrphanClassificacoes] = useState({});
   const [pendingOrphanConfirm, setPendingOrphanConfirm] = useState(null);
   const [pagamentosLinks, setPagamentosLinks] = useState([]);
+  const [sepaBatchLinks, setSepaBatchLinks] = useState([]);
   const [autoAssociando, setAutoAssociando] = useState(false);
   const [desvinculando, setDesvinculando] = useState(new Set());
   const [excluindo, setExcluindo] = useState(new Set());
@@ -60,10 +61,32 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     pagamentosLinks.filter(p => p.transaction_section === 'orphan_bank').map(p => p.transaction_index)
   );
 
+  // Órfãos bancários já cobertos por um lote SEPA confirmado do lado da
+  // Reconciliação Salarial (sepa_batch_links) — cruzados por conteúdo
+  // (data|descricao|valor), mesmo formato de txKeyDe usado lá, já que
+  // sepa_batch_links não guarda transaction_index (guarda run_id+tx_key,
+  // uma linha por trabalhador do lote). Camada de exibição pura — não
+  // mexe em results_json nem no motor de faturas.
+  const orphanBankSepaLoteSet = (() => {
+    if (!sepaBatchLinks.length) return new Set();
+    const txKeys = new Set(sepaBatchLinks.map(l => l.tx_key));
+    const set = new Set();
+    (displayData?.orphan_bank || []).forEach((item, i) => {
+      const key = `${item.transacao?.data}|${item.transacao?.descricao}|${item.transacao?.valor}`;
+      if (txKeys.has(key)) set.add(i);
+    });
+    return set;
+  })();
+
   // ── Effects ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (activeRun?.id) carregarPagamentosLinks(activeRun.id);
-    else setPagamentosLinks([]);
+    if (activeRun?.id) {
+      carregarPagamentosLinks(activeRun.id);
+      carregarSepaBatchLinks(activeRun.id);
+    } else {
+      setPagamentosLinks([]);
+      setSepaBatchLinks([]);
+    }
   }, [activeRun?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -135,6 +158,18 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
 
   const txLinkInfo = (section, index) =>
     pagamentosLinks.find(p => p.transaction_section === section && p.transaction_index === index);
+
+  // ── Lotes SEPA confirmados (sepa_batch_links) — só leitura para cruzar
+  // com os órfãos bancários; a gravação em si é feita em SalariosTab.jsx ──
+  const carregarSepaBatchLinks = async (runId) => {
+    if (!supabase || !runId) { setSepaBatchLinks([]); return; }
+    const { data } = await supabase
+      .from('sepa_batch_links')
+      .select('tx_key')
+      .eq('run_id', runId);
+    const distinct = [...new Set((data || []).map(l => l.tx_key))].map(tx_key => ({ tx_key }));
+    setSepaBatchLinks(distinct);
+  };
 
   const abrirAssociarCliente = (section, index, tx) => {
     const defaultPeriod = previousMonth(tx?.data || '');
@@ -707,6 +742,44 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     }
   };
 
+  // ── Selecionar um run existente (histórico ou seletor de mês/ano) ────────
+  // Carrega o run completo, aplica auto-associação/auto-confirmação e
+  // atualiza as contagens exibidas na linha correspondente do histórico
+  // (a coluna orphan_bank_count em BD não reflete associações/lotes SEPA
+  // feitos depois da importação).
+  const selecionarRun = async (runId) => {
+    if (!supabase || !runId) return;
+    const { data } = await supabase.from('reconciliation_runs').select('*').eq('id', runId).single();
+    if (!data) return;
+    setActiveRun(data);
+    if (!data.results_json) return;
+
+    await autoAssociarEntradas(data.results_json, data.id);
+    const newMatched = await autoConfirmarMatched(data.results_json.matched || [], data.id, data.results_json);
+    if (newMatched !== data.results_json.matched) {
+      setActiveRun(prev => prev
+        ? { ...prev, results_json: { ...prev.results_json, matched: newMatched } }
+        : prev
+      );
+    }
+
+    const [{ data: pLinksCount }, { data: sepaLinks }] = await Promise.all([
+      supabase.from('faturacao_clientes_pagamentos').select('transaction_section').eq('reconciliation_run_id', data.id),
+      supabase.from('sepa_batch_links').select('tx_key').eq('run_id', data.id),
+    ]);
+    const nAssoc = (pLinksCount || []).filter(p => p.transaction_section === 'orphan_bank').length;
+    const sepaTxKeys = new Set((sepaLinks || []).map(l => l.tx_key));
+    const nSepaLote = sepaTxKeys.size
+      ? (data.results_json.orphan_bank || []).filter(item =>
+          sepaTxKeys.has(`${item.transacao?.data}|${item.transacao?.descricao}|${item.transacao?.valor}`)
+        ).length
+      : 0;
+    setHistorico(prev => prev.map(r => r.id === data.id
+      ? { ...r, matched_count: (data.results_json.matched?.length ?? 0) + nAssoc, orphan_bank_count: Math.max(0, (data.results_json.orphan_bank?.length ?? 0) - nAssoc - nSepaLote) }
+      : r
+    ));
+  };
+
   // ── Chamado depois de criar um run novo (upload/TOConline/misto) ─────────
   const iniciarRunCriado = (runShape) => {
     setActiveRun(runShape);
@@ -747,8 +820,10 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     displayData,
     clientAssocMatched,
     orphanBankAssocSet,
+    orphanBankSepaLoteSet,
     // actions
     carregarPagamentosLinks,
+    carregarSepaBatchLinks,
     carregarSaldoManual,
     autoAssociarEntradas,
     autoConfirmarMatched,
@@ -770,6 +845,7 @@ export function useReconciliacaoRun(supabase, clients, { setHistorico }) {
     saveResultDescricao,
     apagarRun,
     reprocessarRun,
+    selecionarRun,
     iniciarRunCriado,
     voltarAoRunAtual,
   };
