@@ -196,7 +196,7 @@ export default function MovimentacoesTab() {
               <option value="">Mostrar todos</option>
               {allRuns.map(r => (
                 <option key={r.id} value={r.id}>
-                  {runMonthYear[r.id] || extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
+                  {runMonthYear[r.id] || r.filename || extractMonthYearName(r.transactions_json) || 'Extrato'} — {new Date(r.created_at).toLocaleDateString('pt-PT')}
                 </option>
               ))}
             </select>
@@ -205,7 +205,7 @@ export default function MovimentacoesTab() {
             {allRuns.map(r => (
               <div key={r.id} className={`flex items-center gap-1 px-2 py-1 rounded-xl text-[10px] font-bold border ${activeRunId === r.id ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500'}`}>
                 <button onClick={() => { setActiveRunId(r.id); loadRun(r.id); }} className="hover:underline">
-                  {runMonthYear[r.id] || extractMonthYearName(r.transactions_json) || r.filename || 'Extrato'}
+                  {runMonthYear[r.id] || r.filename || extractMonthYearName(r.transactions_json) || 'Extrato'}
                 </button>
                 <button onClick={() => handleDeleteRun(r)} className="ml-1 text-rose-400 hover:text-rose-600" title="Apagar extrato">
                   <X size={10} />

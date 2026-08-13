@@ -122,7 +122,7 @@ export default function HistoricoSection({
                 className="accent-indigo-600 w-4 h-4 flex-shrink-0 mr-2 cursor-pointer"
               />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-700 truncate">{extractMonthYearName(run.transactions_json) || run.filename}</p>
+                <p className="text-sm font-semibold text-slate-700 truncate">{run.filename || extractMonthYearName(run.transactions_json)}</p>
                 <p className="text-[10px] text-slate-400">
                   {new Date(run.created_at).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>

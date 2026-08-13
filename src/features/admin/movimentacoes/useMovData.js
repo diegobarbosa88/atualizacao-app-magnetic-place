@@ -119,10 +119,8 @@ export function useMovData({ supabase, clients }) {
 
         for (const run of allRunsData) {
           const { data: runTxs } = await supabase.from('reconciliation_runs').select('transactions_json').eq('id', run.id).single();
-          if (runTxs?.transactions_json?.length) {
-            const monthYear = extractMonthYearName(runTxs.transactions_json);
-            if (monthYear) setRunMonthYear(prev => ({ ...prev, [run.id]: monthYear }));
-          }
+          const monthYear = run.filename || (runTxs?.transactions_json?.length ? extractMonthYearName(runTxs.transactions_json) : null);
+          if (monthYear) setRunMonthYear(prev => ({ ...prev, [run.id]: monthYear }));
         }
 
         const runIds = allRunsData.map(r => r.id);
@@ -179,8 +177,8 @@ export function useMovData({ supabase, clients }) {
     const txs = txsData?.transactions_json || [];
     setAllTxs(txs);
 
-    if (txs.length > 0) {
-      const monthYear = extractMonthYearName(txs);
+    {
+      const monthYear = run.filename || (txs.length > 0 ? extractMonthYearName(txs) : null);
       if (monthYear) setRunMonthYear(prev => ({ ...prev, [rid]: monthYear }));
     }
 
