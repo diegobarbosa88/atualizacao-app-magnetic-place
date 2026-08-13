@@ -37,9 +37,37 @@ function toDisplayDate(isoDate) {
   return `${d}.${m}.${y}`;
 }
 
+function txKeyDe(tx) {
+  return `${tx.data}|${tx.descricao}|${tx.amount}`;
+}
+
+function diasEntre(a, b) {
+  if (!a || !b) return Infinity;
+  const da = new Date(a);
+  const db = new Date(b);
+  if (isNaN(da) || isNaN(db)) return Infinity;
+  return Math.abs((da - db) / 86400000);
+}
+
+// Deteta se uma transação não identificada corresponde a um lote SEPA já
+// gravado (sepa_exports) — valor bate (±1 cêntimo) e data próxima (±5 dias)
+// da data em que o lote foi gerado.
+function encontrarLoteCandidato(tx, sepaExports) {
+  const valorAbs = Math.abs(Number(tx.amount) || 0);
+  for (const exp of sepaExports) {
+    if (Math.abs(valorAbs - Number(exp.valor_total || 0)) > 0.01) continue;
+    const dataExport = (exp.created_at || '').slice(0, 10);
+    if (diasEntre(tx.data, dataExport) > 5) continue;
+    return exp;
+  }
+  return null;
+}
+
 // aliases: [{ pattern: string, worker_name: string }]
 // paymentsMap: optional { [workerKey]: { [mes]: [{ amount, data, type }, ...] } } — pre-populated from movimentacao_recibo_links
-export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [], tolerancia = 0.01, paymentsMap = null }) {
+// sepaExports: optional [{ id, created_at, mes_referencia, tipo, valor_total, items: [{worker_id, worker_name, valor, receipt_validation_id}] }]
+// batchLinks: optional [{ tx_key, worker_id, mes, amount, tx_data, sepa_export_id }] — já confirmados, de sepa_batch_links
+export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [], tolerancia = 0.01, paymentsMap = null, sepaExports = [], batchLinks = [] }) {
   const txDebito = transacoes.filter(t => t.tipo === 'debito' && t.valor > 0);
 
   // Build worker map from receipts
@@ -82,6 +110,26 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
             monthData.transfers.push({ date: toDisplayDate(pay.data), data: pay.data, amount: pay.amount, type: pay.type, linkId: pay.linkId });
           }
         });
+      });
+    });
+  }
+
+  // Pre-populate transfers from lotes SEPA já confirmados (sepa_batch_links)
+  if (batchLinks.length) {
+    const porTrabalhador = {};
+    batchLinks.forEach(l => {
+      if (!l.worker_id) return;
+      if (!porTrabalhador[l.worker_id]) porTrabalhador[l.worker_id] = [];
+      porTrabalhador[l.worker_id].push(l);
+    });
+    Object.values(workerMap).forEach(w => {
+      (porTrabalhador[w.employee_id] || []).forEach(l => {
+        const monthData = w._monthsMap[l.mes];
+        if (!monthData) return;
+        const alreadyAdded = monthData.transfers.some(t => t.linkId === l.id && t.type === 'Lote SEPA');
+        if (!alreadyAdded) {
+          monthData.transfers.push({ date: toDisplayDate(l.tx_data), data: l.tx_data, amount: Number(l.amount) || 0, type: 'Lote SEPA', linkId: l.id });
+        }
       });
     });
   }
@@ -132,9 +180,15 @@ export function runReconciliacaoSalarial({ recibos, transacoes, ano, aliases = [
   });
 
   // Unmatched debits — returned so the UI can let the user assign them manually
+  const jaLigadasALote = new Set(batchLinks.map(l => l.tx_key));
   const unmatched_transactions = txDebito
     .filter((_, i) => !matchedIndices.has(i))
-    .map(tx => ({ date: toDisplayDate(tx.data), data: tx.data, amount: tx.valor, descricao: tx.descricao }));
+    .map(tx => ({ date: toDisplayDate(tx.data), data: tx.data, amount: tx.valor, descricao: tx.descricao, run_id: tx.run_id ?? null }))
+    .filter(tx => !jaLigadasALote.has(txKeyDe(tx)))
+    .map(tx => {
+      const loteCandidato = encontrarLoteCandidato(tx, sepaExports);
+      return loteCandidato ? { ...tx, loteCandidato } : tx;
+    });
 
   const employees = Object.values(workerMap)
     .filter(w => w.months.length > 0)

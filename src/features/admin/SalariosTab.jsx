@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { AlertCircle, ChevronDown, Download, FileText, Landmark, Loader2, Scissors, X, Zap } from 'lucide-react';
+import { AlertCircle, CheckCircle, ChevronDown, ChevronRight, Coins, Download, FileText, Landmark, Loader2, Scissors, X, Zap } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { authFetch } from '../../utils/authFetch';
 import { runReconciliacaoSalarial } from '../../utils/reconciliacaoSalarialEngine';
@@ -20,6 +20,8 @@ export default function SalariosTab({ month }) {
   const [loadingSalarios, setLoadingSalarios] = useState(false);
   const [salarioAliases, setSalarioAliases] = useState([]);
   const [salarioAssocModal, setSalarioAssocModal] = useState(null);
+  const [loteExpandido, setLoteExpandido] = useState(new Set());
+  const [confirmandoLote, setConfirmandoLote] = useState(null);
   const [salarioAssocPattern, setSalarioAssocPattern] = useState('');
   const [salarioAssocWorker, setSalarioAssocWorker] = useState('');
   const [salarioAssocSaving, setSalarioAssocSaving] = useState(false);
@@ -119,7 +121,7 @@ export default function SalariosTab({ month }) {
       .order('created_at', { ascending: false });
 
     const runIds = (allRuns || []).map(r => r.id);
-    const allTxs = (allRuns || []).flatMap(r => r.transactions_json || []);
+    const allTxs = (allRuns || []).flatMap(r => (r.transactions_json || []).map(t => ({ ...t, run_id: r.id })));
     const txs = allTxs.filter(tx => (tx.data || '').startsWith(year));
 
     const { data: movLinks } = runIds.length
@@ -127,6 +129,16 @@ export default function SalariosTab({ month }) {
           .from('movimentacao_recibo_links')
           .select('id, tx_key, worker_id, worker_name, mes, tipo, run_id')
           .in('run_id', runIds)
+      : { data: [] };
+
+    const { data: sepaExportsRaw } = await supabase
+      .from('sepa_exports')
+      .select('id, created_at, mes_referencia, tipo, valor_total, sepa_export_items(worker_id, worker_name, iban, valor, receipt_validation_id)')
+      .order('created_at', { ascending: false });
+    const sepaExports = (sepaExportsRaw || []).map(e => ({ ...e, items: e.sepa_export_items || [] }));
+
+    const { data: batchLinks } = runIds.length
+      ? await supabase.from('sepa_batch_links').select('*').in('run_id', runIds)
       : { data: [] };
 
     const txKey = (tx) => `${tx.data}|${tx.descricao}|${tx.valor}`;
@@ -173,10 +185,41 @@ export default function SalariosTab({ month }) {
 
     const aliases = aliasesOverride ?? salarioAliases;
     const tol = tolOverride !== undefined ? tolOverride : tolerancia;
-    const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap });
+    const res = runReconciliacaoSalarial({ recibos: recibos || [], transacoes: txs, ano: year, aliases, tolerancia: tol, paymentsMap, sepaExports, batchLinks: batchLinks || [] });
     setSalarioResultado(res);
     setLoadingSalarios(false);
   }, [supabase, year, salarioAliases, tolerancia]);
+
+  // Grava a associação do lote SEPA à transação bancária — uma linha por
+  // trabalhador em sepa_batch_links (não movimentacao_recibo_links, ver
+  // migration 20260821_sepa_batch_links.sql). Só acontece com ação humana
+  // explícita (botão "Confirmar associação"), nunca automaticamente.
+  const confirmarLoteSepa = async (tx) => {
+    const lote = tx.loteCandidato;
+    if (!lote || !tx.run_id) { alert('Não foi possível identificar o extrato bancário desta transação.'); return; }
+    setConfirmandoLote(lote.id);
+    try {
+      const txKeyStr = `${tx.data}|${tx.descricao}|${tx.amount}`;
+      const rows = lote.items.map(it => ({
+        run_id: tx.run_id,
+        tx_key: txKeyStr,
+        tx_data: tx.data,
+        sepa_export_id: lote.id,
+        worker_id: it.worker_id,
+        worker_name: it.worker_name,
+        receipt_validation_id: it.receipt_validation_id,
+        mes: lote.mes_referencia,
+        amount: it.valor,
+      }));
+      const { error } = await supabase.from('sepa_batch_links').insert(rows);
+      if (error) throw error;
+      await analisarSalarios();
+    } catch (e) {
+      alert(`Erro ao confirmar associação: ${e.message}`);
+    } finally {
+      setConfirmandoLote(null);
+    }
+  };
 
   useEffect(() => {
     const init = async () => {
@@ -193,7 +236,7 @@ export default function SalariosTab({ month }) {
       await analisarSalarios(loaded);
     };
     init();
-  }, [year]);
+  }, [year, supabase]);
 
   const totaisDiferencas = employeesFiltered
     ? employeesFiltered.reduce((acc, emp) => {
@@ -641,21 +684,63 @@ export default function SalariosTab({ month }) {
               <p className="text-[10px] font-black uppercase tracking-widest text-rose-500 mb-2 flex items-center gap-1">
                 <AlertCircle size={11} /> Não Identificadas ({salarioResultado.unmatched_transactions.length})
               </p>
-              <div className="space-y-1">
-                {salarioResultado.unmatched_transactions.map((tx, i) => (
-                  <div key={i} className="flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
-                    <div className="flex-1 min-w-0 mr-3">
-                      <p className="text-[11px] text-slate-600 truncate">{tx.descricao}</p>
-                      <p className="text-[10px] text-slate-400">{tx.date} · {fmtEur(tx.amount)}</p>
+              <div className="space-y-1.5">
+                {salarioResultado.unmatched_transactions.map((tx, i) => {
+                  if (tx.loteCandidato) {
+                    const lote = tx.loteCandidato;
+                    const aberto = loteExpandido.has(i);
+                    return (
+                      <div key={i} className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
+                        <button type="button"
+                          onClick={() => setLoteExpandido(prev => { const s = new Set(prev); s.has(i) ? s.delete(i) : s.add(i); return s; })}
+                          className="w-full flex items-center gap-3 p-3 text-left hover:bg-slate-50 transition-colors">
+                          <ChevronRight size={13} className={`text-slate-400 flex-shrink-0 transition-transform ${aberto ? 'rotate-90' : ''}`} />
+                          <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 text-white" style={{ backgroundColor: '#869AAF' }}>
+                            <Coins size={13} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-black" style={{ color: '#1B3A57' }}>Lote SEPA de {tx.date} — {lote.items.length} trabalhadores</p>
+                            <p className="text-[10px] text-slate-400 truncate">{tx.descricao}</p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Total</p>
+                            <p className="font-mono text-xs font-bold" style={{ color: '#869AAF' }}>{fmtEur(tx.amount)}</p>
+                          </div>
+                        </button>
+                        {aberto && (
+                          <div className="border-t border-slate-100 p-3 space-y-1.5 bg-slate-50/60">
+                            {lote.items.map((it, j) => (
+                              <div key={j} className="flex items-center justify-between text-[10px] px-2 py-1">
+                                <span className="text-slate-600 truncate">{it.worker_name}</span>
+                                <span className="font-mono font-bold text-slate-700">{fmtEur(it.valor)}</span>
+                              </div>
+                            ))}
+                            <button onClick={() => confirmarLoteSepa(tx)} disabled={confirmandoLote === lote.id}
+                              className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 hover:opacity-90"
+                              style={{ backgroundColor: '#1B3A57' }}>
+                              {confirmandoLote === lote.id ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                              Confirmar associação
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={i} className="flex items-center justify-between bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+                      <div className="flex-1 min-w-0 mr-3">
+                        <p className="text-[11px] text-slate-600 truncate">{tx.descricao}</p>
+                        <p className="text-[10px] text-slate-400">{tx.date} · {fmtEur(tx.amount)}</p>
+                      </div>
+                      <button
+                        onClick={() => { setSalarioAssocModal(tx); setSalarioAssocPattern(''); setSalarioAssocWorker(''); }}
+                        className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 transition-colors" style={{ color: '#869AAF' }}
+                      >
+                        Associar
+                      </button>
                     </div>
-                    <button
-                      onClick={() => { setSalarioAssocModal(tx); setSalarioAssocPattern(''); setSalarioAssocWorker(''); }}
-                      className="flex-shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest bg-slate-100 hover:bg-slate-200 transition-colors" style={{ color: '#869AAF' }}
-                    >
-                      Associar
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
