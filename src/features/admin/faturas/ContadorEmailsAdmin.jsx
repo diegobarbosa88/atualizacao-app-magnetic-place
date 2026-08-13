@@ -58,6 +58,10 @@ export default function ContadorEmailsAdmin() {
   const [apagandoLote, setApagandoLote] = useState(false);
   const [loteErro, setLoteErro] = useState(null);
 
+  const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+  const [itensPorPagina, setItensPorPagina] = useState(20);
+  const [paginaAtual, setPaginaAtual] = useState(1);
+
   const [revisao, setRevisao] = useState(null); // { emailId, resposta, texto }
   const [confirmado, setConfirmado] = useState(false);
   const [processando, setProcessando] = useState(false);
@@ -239,6 +243,24 @@ export default function ContadorEmailsAdmin() {
   const itens = [...emails, ...cardsMensais]
     .sort((a, b) => new Date(b.recebido_em || 0) - new Date(a.recebido_em || 0));
 
+  const totalPaginas = Math.max(1, Math.ceil(itens.length / itensPorPagina));
+  const paginaEfetiva = Math.min(paginaAtual, totalPaginas);
+  const itensPagina = itens.slice((paginaEfetiva - 1) * itensPorPagina, paginaEfetiva * itensPorPagina);
+  const idsSelecionaveisPagina = itensPagina.filter(e => !e.isMensal).map(e => e.id);
+  const todosSelecionadosNaPagina = idsSelecionaveisPagina.length > 0 && idsSelecionaveisPagina.every(id => selecionados.has(id));
+
+  const toggleSelecionarTodosPagina = () => {
+    setSelecionados(prev => {
+      const next = new Set(prev);
+      if (todosSelecionadosNaPagina) {
+        idsSelecionaveisPagina.forEach(id => next.delete(id));
+      } else {
+        idsSelecionaveisPagina.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-6">
       <div className="flex items-center justify-between">
@@ -296,13 +318,34 @@ export default function ContadorEmailsAdmin() {
 
       {loteErro && <div className="bg-red-50 text-red-700 px-4 py-3 rounded-2xl text-sm font-semibold">{loteErro}</div>}
 
+      {!loading && itens.length > 0 && (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input type="checkbox" checked={todosSelecionadosNaPagina}
+              onChange={toggleSelecionarTodosPagina}
+              className="rounded border-slate-300 text-red-600 focus:ring-red-300 cursor-pointer" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+              Selecionar todos {totalPaginas > 1 ? 'nesta página' : ''}
+            </span>
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Por página</span>
+            <select value={itensPorPagina}
+              onChange={e => { setItensPorPagina(Number(e.target.value)); setPaginaAtual(1); }}
+              className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300">
+              {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 size={32} className="animate-spin text-slate-300" /></div>
       ) : itens.length === 0 ? (
         <div className="text-center py-16 text-slate-400 text-sm font-semibold">Nenhum email do contador importado ainda.</div>
       ) : (
         <div className="space-y-3">
-          {itens.map(email => {
+          {itensPagina.map(email => {
             const resposta = email.respostas_contador_pendentes?.find(r => r.status === 'pendente')
               || [...(email.respostas_contador_pendentes || [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
             const statusCfg = STATUS_CFG[email.status] || STATUS_CFG.importado;
@@ -468,6 +511,20 @@ export default function ContadorEmailsAdmin() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {!loading && itens.length > 0 && totalPaginas > 1 && (
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={() => setPaginaAtual(p => Math.max(1, p - 1))} disabled={paginaEfetiva <= 1}
+            className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors">
+            Anterior
+          </button>
+          <span className="text-xs font-black text-slate-500">Página {paginaEfetiva} de {totalPaginas}</span>
+          <button onClick={() => setPaginaAtual(p => Math.min(totalPaginas, p + 1))} disabled={paginaEfetiva >= totalPaginas}
+            className="px-3 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors">
+            Seguinte
+          </button>
         </div>
       )}
     </div>
