@@ -128,13 +128,11 @@ export default function ResultadosTabs({
                 ) && (
                   <input type="checkbox" checked={selMatched.has(i)}
                     onChange={e => setSelMatched(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                    className="accent-emerald-600 w-4 h-4 mt-0.5 flex-shrink-0" />
+                    className="recon-checkbox mt-0.5" />
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
                     <TipoBadge tipo={item.transacao?.tipo} />
-                    <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left', color: item.transacao?.tipo === 'credito' ? 'var(--green)' : 'var(--text)' }}>€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
-                    <span className="recon-doc-ref">{item.transacao?.data}</span>
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700">
                       {isInterno ? 'Transf. Interna' : item.rule === 'client_association' ? 'Banco' : item.fatura?.fonte === 'recibo' ? 'Recibo' : item.fatura?.tipo || 'Fatura'}
                     </span>
@@ -144,7 +142,6 @@ export default function ResultadosTabs({
                         : item.rule === 'client_association' ? item.client_name : item.fatura?.entidade}
                     </span>
                     {item.rule === 'client_association' && <span className="text-[9px] bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full uppercase tracking-widest">cliente · {item.period}</span>}
-                    {ruleTag && <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest ${ruleTag.cls}`}>{ruleTag.label}</span>}
                     {faturaIdCount[item.fatura?.id] > 1 && item.rule !== 'manual_split' && <span className="text-[9px] bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full uppercase tracking-widest">2 movimentos</span>}
                   </div>
                   <div className="flex items-center gap-1 mt-1">
@@ -178,6 +175,9 @@ export default function ResultadosTabs({
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-1.5 justify-start sm:justify-end sm:flex-shrink-0">
+                {ruleTag && <span className={`text-[9px] px-2 py-0.5 rounded-full uppercase tracking-widest ${ruleTag.cls}`}>{ruleTag.label}</span>}
+                <span className="recon-doc-ref">{item.transacao?.data}</span>
+                <span className="recon-amount-col recon-font-mono" style={{ color: item.transacao?.tipo === 'credito' ? 'var(--green)' : 'var(--text)' }}>€{Number(item.transacao?.valor ?? 0).toFixed(2)}</span>
                 {item.transacao?.tipo === 'credito' && !isInterno && (() => {
                   if (item.rule === 'client_association') {
                     return (
@@ -231,18 +231,18 @@ export default function ResultadosTabs({
                   </button>
                 )}
                 {item.rule !== 'client_association' && (
-                  <button onClick={() => desvincularMatch(item, i)} disabled={desvinculando.has(`${i}`)}
-                    title="Desvincular"
-                    className="p-1.5 rounded-xl text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
-                    {desvinculando.has(`${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
-                  </button>
-                )}
-                {item.rule !== 'client_association' && (
-                  <button onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('matched', i); }}
-                    disabled={excluindo.has(`matched_${i}`)} title="Excluir movimento"
-                    className="p-1.5 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
-                    {excluindo.has(`matched_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-                  </button>
+                  <div className="recon-row-actions">
+                    <button onClick={() => desvincularMatch(item, i)} disabled={desvinculando.has(`${i}`)}
+                      title="Desvincular"
+                      className="p-1.5 text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                      {desvinculando.has(`${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Unlink size={13} />}
+                    </button>
+                    <button onClick={() => { if (window.confirm('Excluir este movimento dos resultados?')) excluirItem('matched', i); }}
+                      disabled={excluindo.has(`matched_${i}`)} title="Excluir movimento"
+                      className="p-1.5 text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50">
+                      {excluindo.has(`matched_${i}`) ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -352,12 +352,16 @@ export default function ResultadosTabs({
                     <div className="flex items-start gap-3">
                       <CheckCircle size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <TipoBadge tipo={item.transacao.tipo} />
-                          <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left' }}>€{Number(item.transacao.valor).toFixed(2)}</span>
-                          <span className="recon-doc-ref">{item.transacao.data}</span>
-                          <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>confirmado</span>
-                          {classif && <TagBadge nome={classif.nome} cor={classif.cor} />}
+                        <div className="flex items-center gap-2 flex-wrap justify-between mb-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <TipoBadge tipo={item.transacao.tipo} />
+                            {classif && <TagBadge nome={classif.nome} cor={classif.cor} />}
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap ml-auto">
+                            <span className="recon-doc-ref">{item.transacao.data}</span>
+                            <span className="recon-amount-col recon-font-mono">€{Number(item.transacao.valor).toFixed(2)}</span>
+                            <span className="recon-status-pill paid" style={{ textTransform: 'uppercase' }}>confirmado</span>
+                          </div>
                         </div>
                         {orphanObservacoes[i] && (
                           <p className="text-xs text-slate-500 mt-1 italic">
@@ -375,15 +379,17 @@ export default function ResultadosTabs({
                   <div className="flex items-start gap-3">
                     <input type="checkbox" checked={selOrphan.has(i)}
                       onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
-                      className="accent-indigo-600 w-4 h-4 mt-1 flex-shrink-0 self-start" />
+                      className="recon-checkbox mt-1 self-start" />
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
+                      <div className="flex items-center gap-2 flex-wrap justify-between mb-2">
                         <TipoBadge tipo={item.transacao.tipo} />
-                        <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left' }}>€{Number(item.transacao.valor).toFixed(2)}</span>
-                        <span className="recon-doc-ref">{item.transacao.data}</span>
-                        <span className="recon-status-pill ambiguous" style={{ textTransform: 'uppercase' }}>
-                          {item.reason === 'ambiguous' ? 'ambíguo' : 'sem correspondência'}
-                        </span>
+                        <div className="flex items-center gap-2 flex-wrap ml-auto">
+                          <span className="recon-doc-ref">{item.transacao.data}</span>
+                          <span className="recon-amount-col recon-font-mono">€{Number(item.transacao.valor).toFixed(2)}</span>
+                          <span className="recon-status-pill ambiguous" style={{ textTransform: 'uppercase' }}>
+                            {item.reason === 'ambiguous' ? 'ambíguo' : 'sem correspondência'}
+                          </span>
+                        </div>
                       </div>
                       {item.transacao.tipoMovimento && (
                         <p className="text-[10px] text-slate-500 mb-1">
@@ -470,10 +476,12 @@ export default function ResultadosTabs({
           {(displayData.orphan_system || []).map((item, i) => (
             <div key={i} className="recon-txn-row ambiguous flex items-center gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
+                <div className="flex items-center gap-2 flex-wrap justify-between mb-1">
                   <span className="recon-status-pill ambiguous" style={{ textTransform: 'uppercase' }}>sem pagamento</span>
-                  <span className="recon-amount-col recon-font-mono" style={{ width: 'auto', textAlign: 'left' }}>€{Number(item.fatura.valor).toFixed(2)}</span>
-                  <span className="recon-doc-ref" style={{ textTransform: 'uppercase' }}>pendente</span>
+                  <div className="flex items-center gap-2 flex-wrap ml-auto">
+                    <span className="recon-doc-ref" style={{ textTransform: 'uppercase' }}>pendente</span>
+                    <span className="recon-amount-col recon-font-mono">€{Number(item.fatura.valor).toFixed(2)}</span>
+                  </div>
                 </div>
                 <p className="text-xs text-slate-600 truncate">{item.fatura.entidade} · {item.fatura.descricao}</p>
               </div>

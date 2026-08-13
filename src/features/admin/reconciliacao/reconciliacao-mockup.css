@@ -160,6 +160,12 @@
   border-top: 1px solid #F0F2F5;
 }
 .recon-mini-row:first-child { border-top: none; }
+.recon-mini-date { color: var(--text-faint); width: 70px; font-family: var(--recon-mono); font-size: 11px; }
+.recon-mini-desc { flex: 1; color: var(--text-muted); }
+.recon-mini-status { font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
+.recon-mini-status.confirmed { background: var(--green-bg); color: var(--green); }
+.recon-mini-status.presumed { background: var(--amber-bg); color: var(--amber); }
+.recon-mini-amount { font-family: var(--recon-mono); font-weight: 600; width: 90px; text-align: right; color: var(--text); }
 
 /* ===== Transaction rows ===== */
 .recon-txn-row {
@@ -173,6 +179,44 @@
   gap: 14px;
 }
 .recon-txn-row.ambiguous { border-left-color: var(--red); }
+.recon-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+  background: var(--card);
+}
+.recon-checkbox:checked {
+  background: var(--navy);
+  border-color: var(--navy);
+}
+.recon-checkbox:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(45deg);
+}
+.recon-flow-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.recon-flow-icon.out { background: var(--red-bg); color: var(--red); }
+.recon-flow-icon.in { background: var(--green-bg); color: var(--green); }
 .recon-entity { font-size: 13px; font-weight: 700; color: var(--text); }
 .recon-doc-ref { font-size: 11.5px; color: var(--text-faint); font-family: var(--recon-mono); }
 .recon-desc { font-size: 11.5px; color: var(--text-muted); }
@@ -182,6 +226,9 @@
 .recon-status-pill { font-size: 10.5px; font-weight: 700; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
 .recon-status-pill.paid { background: var(--green-bg); color: var(--green); }
 .recon-status-pill.ambiguous { background: var(--red-bg); color: var(--red); }
+.recon-row-actions { display: flex; gap: 4px; opacity: 0.4; transition: opacity 0.15s ease; }
+.recon-row-actions:hover { opacity: 1; }
+.recon-row-actions button { border-radius: 6px; }
 
 /* ===== Container ===== */
 .recon-container { max-width: 1180px; margin: 0 auto; }
