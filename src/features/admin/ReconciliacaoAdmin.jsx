@@ -257,21 +257,26 @@ export default function ReconciliacaoAdmin() {
   // ── Run hook ──────────────────────────────────────────────────────────────
   const run = useReconciliacaoRun(supabase, clients, { setHistorico });
 
-  // ── Seletor de mês/ano — um run por mês (data da primeira transação),
-  // o mais recente de cada mês quando há reimportações ─────────────────────
-  const mesesDisponiveis = useMemo(() => {
-    const porMes = new Map();
+  // ── Seletor de mês/ano + conta — um run por (mês, conta), o mais recente
+  // quando há reimportações. Cada conta importa o seu extrato num run
+  // separado (Novo Banco, Santander, ...) — agrupar só por mês escondia um
+  // dos dois atrás do outro sempre que partilhavam o mesmo mês. A conta vem
+  // de transactions_json[0].conta (só preenchido em imports via TOConline);
+  // uploads manuais de CSV sem essa coluna caem no fallback 'Ficheiro'. ────
+  const periodosDisponiveis = useMemo(() => {
+    const porPeriodo = new Map();
     historico.forEach(r => {
       const mesAno = (r.transactions_json?.[0]?.data || '').slice(0, 7);
-      if (!mesAno || porMes.has(mesAno)) return; // historico já vem ordenado created_at desc → 1º = mais recente
-      porMes.set(mesAno, r.id);
+      if (!mesAno) return;
+      const conta = r.transactions_json?.[0]?.conta || 'Ficheiro';
+      const chave = `${mesAno}|${conta}`;
+      if (porPeriodo.has(chave)) return; // historico já vem ordenado created_at desc → 1º = mais recente
+      porPeriodo.set(chave, { mesAno, conta, runId: r.id });
     });
-    return [...porMes.entries()]
-      .sort((a, b) => b[0].localeCompare(a[0]))
-      .map(([mesAno, runId]) => ({ mesAno, label: fmtMes(mesAno), runId }));
+    return [...porPeriodo.values()]
+      .sort((a, b) => b.mesAno.localeCompare(a.mesAno) || a.conta.localeCompare(b.conta))
+      .map(p => ({ ...p, label: `${fmtMes(p.mesAno)} — ${p.conta}` }));
   }, [historico]);
-
-  const mesAtivo = run.activeRun?.transactions_json?.[0]?.data?.slice(0, 7) || '';
 
   // ── Mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -280,11 +285,11 @@ export default function ReconciliacaoAdmin() {
   }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ao carregar o histórico, se ainda não há nada em ecrã, mostra logo o
-  // mês mais recente — evita ecrã vazio até o Diego abrir o histórico.
+  // período mais recente — evita ecrã vazio até o Diego abrir o histórico.
   useEffect(() => {
-    if (run.activeRun || !mesesDisponiveis.length) return;
-    run.selecionarRun(mesesDisponiveis[0].runId);
-  }, [mesesDisponiveis]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (run.activeRun || !periodosDisponiveis.length) return;
+    run.selecionarRun(periodosDisponiveis[0].runId);
+  }, [periodosDisponiveis]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const carregarHistorico = async () => {
     if (!supabase) return;
@@ -341,19 +346,16 @@ export default function ReconciliacaoAdmin() {
           <Landmark size={24} style={{ color: '#869AAF' }} /> Reconciliação Bancária
         </h2>
         <div className="flex items-center gap-2 flex-wrap">
-          {mesesDisponiveis.length > 0 && (
+          {periodosDisponiveis.length > 0 && (
             <select
-              value={mesAtivo}
-              onChange={e => {
-                const alvo = mesesDisponiveis.find(m => m.mesAno === e.target.value);
-                if (alvo) run.selecionarRun(alvo.runId);
-              }}
+              value={run.activeRun?.id || ''}
+              onChange={e => { if (e.target.value) run.selecionarRun(e.target.value); }}
               className="border border-slate-200 rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-slate-600 bg-white hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
               style={{ textTransform: 'uppercase' }}
             >
-              {!mesAtivo && <option value="">Selecionar mês…</option>}
-              {mesesDisponiveis.map(m => (
-                <option key={m.mesAno} value={m.mesAno}>{m.label}</option>
+              {!run.activeRun && <option value="">Selecionar período…</option>}
+              {periodosDisponiveis.map(p => (
+                <option key={p.runId} value={p.runId}>{p.label}</option>
               ))}
             </select>
           )}
