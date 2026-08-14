@@ -47,8 +47,10 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: `tipo_documento inválido. Aceites: ${TIPOS_VENDA.join(', ')}` });
   }
 
-  if (!cliente.nome && !cliente.id) {
-    return res.status(400).json({ error: 'Cliente deve ter nome ou id.' });
+  // customer_business_name é sempre obrigatório na API do TOConline,
+  // mesmo quando também se envia customer_id.
+  if (!cliente.nome) {
+    return res.status(400).json({ error: 'Cliente deve ter nome.' });
   }
 
   if (cliente.nif && !/^\d{9}$/.test(String(cliente.nif).trim())) {
@@ -82,8 +84,8 @@ export default async function handler(req, res) {
         item_id: l.artigo_id || undefined,
         unit: l.unidade || undefined,
       };
-      if (l.vat_tax_id != null) {
-        linha.vat_tax_id = l.vat_tax_id;
+      if (l.tax_id != null) {
+        linha.tax_id = l.tax_id;
       } else {
         linha.tax_percentage = l.taxa_iva ?? 23;
       }
@@ -95,13 +97,11 @@ export default async function handler(req, res) {
     }),
   };
 
-  // Cliente
-  if (cliente.id) {
-    attrs.customer_id = cliente.id;
-  } else {
-    attrs.customer_business_name = cliente.nome;
-    attrs.customer_tax_number = cliente.nif || undefined;
-  }
+  // Cliente — customer_id só existe no endpoint antigo (com envelope
+  // JSON:API, ver nota abaixo); aqui identifica-se sempre por nome
+  // (+ NIF opcional). cliente.id, quando vem da UI, é ignorado.
+  attrs.customer_business_name = cliente.nome;
+  if (cliente.nif) attrs.customer_tax_registration_number = cliente.nif;
 
   // Série
   if (serie) attrs.document_series_prefix = serie;
@@ -143,7 +143,13 @@ export default async function handler(req, res) {
   if (morada_cliente?.cidade) attrs.customer_city = morada_cliente.cidade;
   if (morada_cliente?.pais) attrs.customer_country = morada_cliente.pais;
 
-  const payload = { data: { type: 'commercial_sales_documents', attributes: attrs } };
+  // Sem envelope {data:{type,attributes}} — apesar do Content-Type
+  // application/vnd.api+json, o exemplo oficial da coleção Postman
+  // confirma que /api/v1/commercial_sales_documents espera os campos
+  // na raiz do corpo (o envelope JSON:API só existe no endpoint antigo,
+  // sem /v1/). Os 5 testes anteriores enviaram sempre envelope — muito
+  // provavelmente nunca chegaram a ser lidos pelo TOConline.
+  const payload = attrs;
 
   let tocData;
   try {
@@ -163,8 +169,13 @@ export default async function handler(req, res) {
     return res.status(422).json({ error: msg });
   }
 
-  const docId = String(tocData.data?.id || '');
-  const docAttrs = tocData.data?.attributes || {};
+  // Resposta confirmada (teste real, doc "FT 2026/47", id 227): plana,
+  // sem envelope — mesmo formato do pedido. document_no (não
+  // document_number), gross_total (não total_amount), tax_payable
+  // (não total_tax_amount) são os nomes reais dos campos.
+  const docRoot = tocData.data ?? tocData;
+  const docId = String(docRoot.id || '');
+  const docAttrs = docRoot.attributes || docRoot;
 
   if (docId) {
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -172,20 +183,20 @@ export default async function handler(req, res) {
       toconline_doc_id: docId,
       fonte: 'toc',
       tipo: 'cliente',
-      filename: docAttrs.document_number || `${tipo_documento}-${docId}`,
+      filename: docAttrs.document_no || `${tipo_documento}-${docId}`,
       dados: {
-        numero_fatura: docAttrs.document_number || null,
+        numero_fatura: docAttrs.document_no || null,
         data_fatura: docAttrs.date || data || null,
         nif_fornecedor: cliente.nif || null,
         fornecedor: cliente.nome || cliente.id,
-        valor_total: docAttrs.total_amount ?? null,
-        iva: docAttrs.total_tax_amount ?? null,
+        valor_total: docAttrs.gross_total ?? null,
+        iva: docAttrs.tax_payable ?? null,
       },
-      valor: docAttrs.total_amount ?? null,
+      valor: docAttrs.gross_total ?? null,
       data_documento: docAttrs.date || data || null,
       entidade: cliente.nome || null,
     });
   }
 
-  return res.status(201).json({ doc_id: docId, documento: tocData.data });
+  return res.status(201).json({ doc_id: docId, documento: docRoot });
 }
