@@ -17,70 +17,43 @@ export function getRateAtDate(logDate, history, currentRate) {
 }
 
 export const useCostReportsData = ({ logs, workers, clients, expenses, selectedMonth, faturasPago, workerRateHistory = [], clientRateHistory = [] }) => {
-  const workerCosts = useMemo(() => {
-    if (!logs || !workers) return [];
+  // Uma única passagem sobre filteredLogs alimenta, em simultâneo, os
+  // agrupamentos por trabalhador e por cliente — clientCosts deriva-se
+  // diretamente de clientMargins (mesma soma, faturation === cost do
+  // cliente); workerCosts usa outra chave de agrupamento (workerId), por
+  // isso é acumulado ao lado, na mesma iteração, em vez de duplicar a
+  // lógica de lookup de taxa noutro reduce à parte.
+  const { workerCosts, clientCosts, clientMargins } = useMemo(() => {
+    if (!logs || !workers || !clients) return { workerCosts: [], clientCosts: [], clientMargins: [] };
     const filteredLogs = logs.filter(log => log.date?.startsWith(selectedMonth));
-    const grouped = filteredLogs.reduce((acc, log) => {
-      const worker = workers.find(w => w.id === log.workerId);
-      const history = workerRateHistory.filter(h => h.worker_id === log.workerId);
-      const rate = getRateAtDate(log.date, history, worker?.valorHora);
-      const hours = Number(log.hours) || 0;
-      if (!acc[log.workerId]) acc[log.workerId] = { hours: 0, cost: 0 };
-      acc[log.workerId].hours += hours;
-      acc[log.workerId].cost += hours * rate;
-      return acc;
-    }, {});
-    return Object.entries(grouped).map(([workerId, data]) => {
-      const worker = workers.find(w => w.id === workerId);
-      return {
-        id: workerId,
-        name: worker?.name || 'Desconhecido',
-        totalHours: data.hours,
-        cost: data.cost,
-      };
-    }).sort((a, b) => b.cost - a.cost);
-  }, [logs, workers, selectedMonth, workerRateHistory]);
+    const byWorker = {};
+    const byClient = {};
 
-  const clientCosts = useMemo(() => {
-    if (!logs || !clients) return [];
-    const filteredLogs = logs.filter(log => log.date?.startsWith(selectedMonth));
-    const grouped = filteredLogs.reduce((acc, log) => {
-      const client = clients.find(c => c.id === log.clientId);
-      const history = clientRateHistory.filter(h => h.client_id === log.clientId);
-      const rate = getRateAtDate(log.date, history, client?.valorHora);
+    filteredLogs.forEach(log => {
       const hours = Number(log.hours) || 0;
-      if (!acc[log.clientId]) acc[log.clientId] = { hours: 0, cost: 0 };
-      acc[log.clientId].hours += hours;
-      acc[log.clientId].cost += hours * rate;
-      return acc;
-    }, {});
-    return Object.entries(grouped).map(([clientId, data]) => {
-      const client = clients.find(c => c.id === clientId);
-      return {
-        id: clientId,
-        name: client?.name || 'Desconhecido',
-        totalHours: data.hours,
-        cost: data.cost,
-      };
-    }).sort((a, b) => b.cost - a.cost);
-  }, [logs, clients, selectedMonth, clientRateHistory]);
-
-  const clientMargins = useMemo(() => {
-    if (!logs || !clients || !workers) return [];
-    const filteredLogs = logs.filter(log => log.date?.startsWith(selectedMonth));
-    const grouped = filteredLogs.reduce((acc, log) => {
-      if (!acc[log.clientId]) acc[log.clientId] = { totalHours: 0, faturation: 0, cost: 0 };
-      const hours = Number(log.hours) || 0;
-      const client = clients.find(c => c.id === log.clientId);
       const worker = workers.find(w => w.id === log.workerId);
-      const clientHistory = clientRateHistory.filter(h => h.client_id === log.clientId);
+      const client = clients.find(c => c.id === log.clientId);
       const workerHistory = workerRateHistory.filter(h => h.worker_id === log.workerId);
-      acc[log.clientId].totalHours += hours;
-      acc[log.clientId].faturation += hours * getRateAtDate(log.date, clientHistory, client?.valorHora);
-      acc[log.clientId].cost += hours * getRateAtDate(log.date, workerHistory, worker?.valorHora);
-      return acc;
-    }, {});
-    return Object.entries(grouped).map(([clientId, data]) => {
+      const clientHistory = clientRateHistory.filter(h => h.client_id === log.clientId);
+      const workerRate = getRateAtDate(log.date, workerHistory, worker?.valorHora);
+      const clientRate = getRateAtDate(log.date, clientHistory, client?.valorHora);
+
+      if (!byWorker[log.workerId]) byWorker[log.workerId] = { hours: 0, cost: 0 };
+      byWorker[log.workerId].hours += hours;
+      byWorker[log.workerId].cost += hours * workerRate;
+
+      if (!byClient[log.clientId]) byClient[log.clientId] = { totalHours: 0, faturation: 0, cost: 0 };
+      byClient[log.clientId].totalHours += hours;
+      byClient[log.clientId].faturation += hours * clientRate;
+      byClient[log.clientId].cost += hours * workerRate;
+    });
+
+    const workerCosts = Object.entries(byWorker).map(([workerId, data]) => {
+      const worker = workers.find(w => w.id === workerId);
+      return { id: workerId, name: worker?.name || 'Desconhecido', totalHours: data.hours, cost: data.cost };
+    }).sort((a, b) => b.cost - a.cost);
+
+    const clientMargins = Object.entries(byClient).map(([clientId, data]) => {
       const client = clients.find(c => c.id === clientId);
       return {
         id: clientId,
@@ -91,7 +64,13 @@ export const useCostReportsData = ({ logs, workers, clients, expenses, selectedM
         margin: data.faturation - data.cost,
       };
     }).sort((a, b) => b.margin - a.margin);
-  }, [logs, clients, workers, selectedMonth, workerRateHistory, clientRateHistory]);
+
+    const clientCosts = clientMargins
+      .map(({ id, name, totalHours, faturation }) => ({ id, name, totalHours, cost: faturation }))
+      .sort((a, b) => b.cost - a.cost);
+
+    return { workerCosts, clientCosts, clientMargins };
+  }, [logs, workers, clients, selectedMonth, workerRateHistory, clientRateHistory]);
 
   const filteredExpenses = useMemo(
     () => expenses.filter(e => e.date?.startsWith(selectedMonth)),
@@ -117,6 +96,7 @@ export const useCostReportsData = ({ logs, workers, clients, expenses, selectedM
       amount: parseFaturaValor(f),
       type: 'fatura',
       _isFatura: true,
+      _tipo: f.tipo || null,
     })).sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [faturasPago]);
 
