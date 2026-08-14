@@ -10,10 +10,10 @@ import FaturarClienteModal from './toconline/FaturarClienteModal';
 import { authFetch } from '../../utils/authFetch';
 
 const TABS = [
-  { id: 'documentos', label: 'Documentos', icon: FileText },
-  { id: 'clientes', label: 'Clientes', icon: Users },
-  { id: 'relatorios', label: 'Relatórios', icon: BarChart2 },
-  { id: 'contas', label: 'Contas Bancárias', icon: Landmark },
+  { id: 'documentos', label: 'Documentos', shortLabel: 'Docs', icon: FileText },
+  { id: 'clientes', label: 'Clientes', shortLabel: 'Clientes', icon: Users },
+  { id: 'relatorios', label: 'Relatórios', shortLabel: 'Relat.', icon: BarChart2 },
+  { id: 'contas', label: 'Contas Bancárias', shortLabel: 'Contas', icon: Landmark },
 ];
 
 export default function TOConlineAdmin() {
@@ -60,15 +60,15 @@ export default function TOConlineAdmin() {
   const setSubtab = (id) => navigate(`/admin/toconline?subtab=${id}`);
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-3">
+    <div className="p-6 space-y-6 w-full max-w-6xl mx-auto min-w-0">
+      <div className="flex items-center justify-between flex-wrap gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
           {verificando ? (
-            <Loader2 size={14} className="text-slate-300 animate-spin" />
+            <Loader2 size={14} className="text-slate-300 animate-spin shrink-0" />
           ) : (
-            <div className={`w-2.5 h-2.5 rounded-full ${ligado ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${ligado ? 'bg-emerald-500' : 'bg-slate-300'}`} />
           )}
-          <div>
+          <div className="min-w-0">
             <h1 className="text-lg font-black text-slate-800">TOConline</h1>
             <p className="text-xs text-slate-400">
               {verificando ? 'A verificar...' : ligado ? 'Ligado e operacional' : 'Não autenticado'}
@@ -116,19 +116,20 @@ export default function TOConlineAdmin() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-slate-100 overflow-x-auto">
-        {TABS.map(({ id, label, icon: Icon }) => (
+      <div className="flex gap-1 border-b border-slate-100 overflow-x-auto w-full min-w-0">
+        {TABS.map(({ id, label, shortLabel, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setSubtab(id)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all ${
+            className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5 text-xs font-black uppercase tracking-widest whitespace-nowrap border-b-2 transition-all shrink-0 ${
               subtab === id
                 ? 'border-[#EB8D00] text-[#1B3A57]'
                 : 'border-transparent text-slate-400 hover:text-slate-600'
             }`}
           >
-            <Icon size={13} />
-            {label}
+            <Icon size={13} className="shrink-0" />
+            <span className="sm:hidden">{shortLabel}</span>
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>

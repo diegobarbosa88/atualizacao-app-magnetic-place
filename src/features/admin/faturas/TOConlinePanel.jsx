@@ -147,34 +147,34 @@ export default function TOConlinePanel() {
       {/* ── Relatórios ── */}
       {ligado && (
         <div className="border-t border-slate-100 pt-4 space-y-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:items-end">
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl w-full sm:w-auto overflow-x-auto">
               {[
                 { key: 'vendas', label: 'Vendas' },
                 { key: 'compras', label: 'Compras' },
                 { key: 'recibos', label: 'Recibos' },
               ].map(({ key, label }) => (
                 <button key={key} onClick={() => setTipoRel(key)}
-                  className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap"
                   style={tipoRel === key ? { backgroundColor: 'rgba(235,141,0,0.15)', color: '#1B3A57' } : { color: '#94A3B8' }}>
                   {label}
                 </button>
               ))}
             </div>
-            <div className="flex gap-2 flex-1 min-w-0">
-              <div className="space-y-0.5 flex-1">
+            <div className="flex gap-2 w-full sm:w-auto sm:flex-1 sm:min-w-0">
+              <div className="space-y-0.5 flex-1 min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">De</p>
                 <input type="date" value={dataDeRel} onChange={e => setDataDeRel(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
-              <div className="space-y-0.5 flex-1">
+              <div className="space-y-0.5 flex-1 min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Até</p>
                 <input type="date" value={dataAteRel} onChange={e => setDataAteRel(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-300" />
               </div>
             </div>
             <button onClick={handleCarregarRelatorio} disabled={carregandoRel}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 self-end text-white hover:opacity-90"
+              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-60 w-full sm:w-auto sm:self-end text-white hover:opacity-90"
               style={{ backgroundColor: '#EB8D00' }}>
               {carregandoRel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
               Carregar
