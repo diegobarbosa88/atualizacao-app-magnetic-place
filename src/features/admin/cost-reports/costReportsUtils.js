@@ -25,10 +25,20 @@ export const getLogoBase64 = async () => {
   }
 };
 
+// f.valor e dados.valor_total vêm quase sempre como número puro do Supabase
+// (confirmado nos dados reais: dados.valor_total nunca é string). O parsing
+// de formato PT ("1.234,56") só se aplica se o valor vier mesmo como string
+// — nunca a um número já correto, para não apagar o ponto decimal.
+const toNumeroValor = (v) => {
+  if (v == null) return 0;
+  if (typeof v === 'number') return v;
+  return parseFloat(String(v).replace(/\./g, '').replace(',', '.')) || 0;
+};
+
 export const parseFaturaValor = (f) => {
   if (!f) return 0;
-  const v = parseFloat(String(f.valor ?? '').replace(/\./g, '').replace(',', '.')) || 0;
-  const v2 = parseFloat(f.dados?.valor_total) || 0;
+  const v = toNumeroValor(f.valor);
+  const v2 = toNumeroValor(f.dados?.valor_total);
   return (v > 0 ? v : v2) || 0;
 };
 

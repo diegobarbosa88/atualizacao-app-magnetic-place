@@ -60,13 +60,20 @@ const CostReports = () => {
     if (!supabase || !selectedMonth) return;
     supabase
       .from('faturas')
-      .select('id, entidade, descricao, valor, data_documento, dados, filename, importado_em')
+      .select('id, tipo, entidade, descricao, valor, data_documento, dados, filename, importado_em')
       .eq('status', 'PAGO')
       .then(({ data, error }) => {
         if (error) { console.error('faturasPago:', error); return; }
         const filtered = [];
         const excluidas = [];
         (data || []).forEach(f => {
+          // Exclui faturas de cliente (receita) — só entram despesas de
+          // fornecedor ou sem tipo definido (histórico de import manual,
+          // confirmado como despesas reais, não faturas de cliente).
+          // Filtrado no cliente e não com .neq('tipo','cliente') porque em
+          // SQL isso também excluiria as linhas com tipo NULL (semântica
+          // de NULL: NULL <> 'cliente' não é verdadeiro).
+          if (f.tipo === 'cliente') return;
           const data_ref = f.dados?.data_pagamento || f.dados?.data_fatura || f.data_documento || f.importado_em;
           if (data_ref?.substring(0, 7) !== selectedMonth) return;
           if (f.dados?.excluida_das_despesas) excluidas.push(f);
