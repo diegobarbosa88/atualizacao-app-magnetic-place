@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Landmark, Plus, Loader2, RefreshCw, X, ChevronRight, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import { fmtMes } from '../movimentacoes/txUtils';
 
 function fmtEur(val, currency = 'EUR') {
   return new Intl.NumberFormat('pt-PT', { style: 'currency', currency }).format(val ?? 0);
@@ -80,25 +81,29 @@ function NovaConta({ onClose, onSalva }) {
   );
 }
 
+function mesDoMovimento(m) {
+  const at = m.attributes || m;
+  return (at.transaction_date || at.posted_date || '').slice(0, 7);
+}
+
 function PainelMovimentos({ conta, onClose }) {
   const a = conta.attributes || conta;
   const [movimentos, setMovimentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState(null);
-  const [page, setPage] = useState(1);
-  const [temMais, setTemMais] = useState(false);
+  const [mesSelecionado, setMesSelecionado] = useState('');
 
-  const carregar = useCallback(async (p = 1) => {
+  // Busca TODAS as páginas de uma vez (proxy.js já faz o fetchAllPages
+  // server-side) — nada de "Ver mais" manual, que deixava a maioria dos
+  // movimentos escondida por defeito.
+  const carregar = useCallback(async () => {
     setLoading(true);
     setErro(null);
     try {
-      const res = await authFetch(`/api/toconline/bank-accounts?movimentos=1&id=${conta.id}&page=${p}`);
+      const res = await authFetch(`/api/toconline/bank-accounts?movimentos=1&id=${conta.id}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `Erro ${res.status}`);
-      const items = data.data || [];
-      setMovimentos(prev => p === 1 ? items : [...prev, ...items]);
-      setTemMais(items.length === 30);
-      setPage(p);
+      setMovimentos(data.data || []);
     } catch (e) {
       setErro(e.message);
     } finally {
@@ -106,7 +111,25 @@ function PainelMovimentos({ conta, onClose }) {
     }
   }, [conta.id]);
 
-  useEffect(() => { carregar(1); }, [carregar]);
+  useEffect(() => { carregar(); }, [carregar]);
+
+  const mesesDisponiveis = useMemo(() => {
+    const set = new Set();
+    movimentos.forEach(m => { const mes = mesDoMovimento(m); if (mes) set.add(mes); });
+    return [...set].sort((x, y) => y.localeCompare(x));
+  }, [movimentos]);
+
+  // Auto-seleciona o mês mais recente assim que os movimentos chegam.
+  useEffect(() => {
+    if (!mesSelecionado && mesesDisponiveis.length) setMesSelecionado(mesesDisponiveis[0]);
+  }, [mesesDisponiveis]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filtro em memória — os movimentos já estão todos carregados, não há
+  // nova chamada à API ao trocar de mês.
+  const movimentosFiltrados = useMemo(() => {
+    if (!mesSelecionado) return movimentos;
+    return movimentos.filter(m => mesDoMovimento(m) === mesSelecionado);
+  }, [movimentos, mesSelecionado]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-0 sm:p-4">
@@ -125,17 +148,48 @@ function PainelMovimentos({ conta, onClose }) {
           <button onClick={onClose} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"><X size={16} /></button>
         </div>
 
+        {/* Seletor de mês + contagem */}
+        {!loading && !erro && movimentos.length > 0 && (
+          <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-slate-100 shrink-0 flex-wrap">
+            <select
+              value={mesSelecionado}
+              onChange={e => setMesSelecionado(e.target.value)}
+              className="border border-slate-200 rounded-2xl px-4 py-2 text-[11px] font-black tracking-widest text-slate-600 bg-white hover:bg-slate-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30"
+              style={{ textTransform: 'uppercase' }}
+            >
+              <option value="">Todos os meses</option>
+              {mesesDisponiveis.map(mes => (
+                <option key={mes} value={mes}>{fmtMes(mes)}</option>
+              ))}
+            </select>
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-600">
+                {movimentosFiltrados.length} movimento{movimentosFiltrados.length !== 1 ? 's' : ''}
+                {mesSelecionado ? ` — ${fmtMes(mesSelecionado)}` : ''}
+              </p>
+              {mesSelecionado && (
+                <p className="text-[10px] text-slate-400" title="Total carregado para esta conta">
+                  {movimentos.length} no total
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Lista de movimentos */}
         <div className="overflow-y-auto flex-1">
-          {loading && movimentos.length === 0 ? (
-            <div className="flex justify-center py-10"><Loader2 size={20} className="animate-spin text-slate-300" /></div>
+          {loading ? (
+            <div className="flex flex-col items-center gap-2 py-10">
+              <Loader2 size={20} className="animate-spin text-slate-300" />
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">A carregar todos os movimentos…</p>
+            </div>
           ) : erro ? (
             <div className="px-5 py-4 text-xs text-red-600 font-semibold">{erro}</div>
           ) : movimentos.length === 0 ? (
             <div className="px-5 py-10 text-center text-xs text-slate-400 font-semibold">Sem movimentos registados</div>
           ) : (
             <div className="divide-y divide-slate-50">
-              {movimentos.map((m, i) => {
+              {movimentosFiltrados.map((m, i) => {
                 const at = m.attributes || m;
                 const valor = Number(at.value ?? 0);
                 const saldoApos = at.imported_balance != null ? Number(at.imported_balance) : null;
@@ -162,14 +216,6 @@ function PainelMovimentos({ conta, onClose }) {
                   </div>
                 );
               })}
-              {temMais && (
-                <div className="px-5 py-3 text-center">
-                  <button onClick={() => carregar(page + 1)} disabled={loading}
-                    className="text-xs font-black uppercase tracking-widest hover:opacity-80 disabled:opacity-50 flex items-center gap-1 mx-auto" style={{ color: '#869AAF' }}>
-                    {loading ? <Loader2 size={12} className="animate-spin" /> : null} Ver mais
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>

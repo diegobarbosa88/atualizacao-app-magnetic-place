@@ -108,16 +108,20 @@ export default async function handler(req, res) {
 
   if (action === 'bank-accounts') {
     if (req.method === 'GET') {
-      const { id, com_saldo, movimentos, page = 1 } = req.query;
+      const { id, com_saldo, movimentos } = req.query;
 
       if (movimentos === '1' && id) {
         try {
-          const data = await tocFetch(
-            `/api/bank_transactions?filter[bank_account_id]=${id}&page[number]=${page}&page[size]=30&sort=-transaction_date`,
+          // Busca TODAS as páginas — o TOConline não devolve total em meta,
+          // e paginar só a pedido (botão "Ver mais") deixava a maioria dos
+          // movimentos invisíveis por defeito (ex: 342 de 372 escondidos
+          // para a Novo Banco). fetchAllPages já é o padrão usado para a
+          // lista de contas (linha ~138) — reaproveitado aqui.
+          const items = await fetchAllPages(
+            `/api/bank_transactions?filter[bank_account_id]=${id}&sort=-transaction_date`,
             accessToken
           );
-          const items = Array.isArray(data) ? data : (data.data || []);
-          return res.status(200).json({ data: items, meta: data.meta || {} });
+          return res.status(200).json({ data: items });
         } catch (e) {
           return res.status(500).json({ error: e.message });
         }
