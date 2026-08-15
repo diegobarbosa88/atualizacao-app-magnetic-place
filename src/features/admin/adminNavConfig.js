@@ -67,6 +67,7 @@ export const ADMIN_SECTIONS = [
   { id: 'reports',       label: 'Folhas',          icon: BarChart3, badgeType: null },
   { id: 'costs',         label: 'Custos',          icon: Wallet,    badgeType: null },
   { id: 'contabilidade', label: 'Contabilidade',   icon: FileText,  badgeType: null },
+  { id: 'ajudas-custo',  label: 'Ajudas de Custo', icon: Coins,     badgeType: null },
   { id: 'recibos',       label: 'Calc. Recibos',   icon: Receipt,   badgeType: null },
   { id: 'mapa-salarios', label: 'Mapa Salários',   icon: Table2,    badgeType: null },
   {

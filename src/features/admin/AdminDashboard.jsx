@@ -56,6 +56,7 @@ import AdminSidebar from './AdminSidebar';
 import AdminClassicNav from './AdminClassicNav';
 import CompanyLogo from '../../components/common/CompanyLogo';
 import TOConlineAdmin from './TOConlineAdmin';
+import AjudasCustoAdmin from './AjudasCustoAdmin';
 import RecibosCalculadora from './RecibosCalculadora';
 import MapaSalarios from './mapa-salarios/MapaSalarios.jsx';
 import {
@@ -539,6 +540,10 @@ function AdminDashboard(props) {
 
       {!auditWorkerId && activeTab === 'toconline' && (
         <TOConlineAdmin />
+      )}
+
+      {!auditWorkerId && activeTab === 'ajudas-custo' && (
+        <AjudasCustoAdmin />
       )}
 
       {!auditWorkerId && activeTab === 'recibos' && (
