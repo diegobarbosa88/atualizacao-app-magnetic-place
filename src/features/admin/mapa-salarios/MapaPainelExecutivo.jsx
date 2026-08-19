@@ -68,9 +68,58 @@ function ReconBanner({ divWorkers, semNIS }) {
   );
 }
 
+function LinhaTrabalhador({ row }) {
+  const isFlag = row.divergencia != null;
+  const extra = row.categoriaLinha !== 'ativo';
+  const bg = extra ? (row.categoriaLinha === 'orfao' ? '#FDF2F2' : '#F5F6F8') : isFlag ? '#FFFAF1' : '#fff';
+  return (
+    <tr style={{ background: bg }}>
+      <td style={{ padding: '11px 14px', fontSize: 12, color: SLATE_A, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>{row.mecNum}</td>
+      <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600, color: isFlag ? '#8a5800' : INK, fontFamily: 'Inter, sans-serif', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {isFlag && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: ORANGE, marginRight: 8, flexShrink: 0, verticalAlign: 'middle' }} />}
+        {row.nome}
+        {row.categoriaLinha === 'inativo' && (
+          <span title="Trabalhador inativo — dados reais do recibo processado" style={{ marginLeft: 8, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#5B6660', background: '#E3E6E9', borderRadius: 4, padding: '2px 6px' }}>Inativo</span>
+        )}
+        {row.categoriaLinha === 'orfao' && (
+          <span title="Sem registo de trabalhador correspondente na app — nome tal como está no recibo TOConline" style={{ marginLeft: 8, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', color: '#9F1239', background: '#FCE4E9', borderRadius: 4, padding: '2px 6px' }}>Órfão</span>
+        )}
+      </td>
+      <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: INK, fontFamily: MONO }}>{n2(row.receber)}</td>
+      <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#1E8E5A', fontWeight: 600, fontFamily: MONO }}>{n2(row.ajudasCusto)}</td>
+      <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: INK, fontWeight: 700, fontFamily: MONO }}>{n2(row.totalRecibo)}</td>
+      <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: VAL_NEUT, fontFamily: MONO }}>{n2(row.segSocial)}</td>
+      <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: VAL_NEUT, fontFamily: MONO }}>{n2(row.irs)}</td>
+      <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: NAVY, fontFamily: MONO }}>{n2(row.liquido)}</td>
+      <td style={{ padding: '11px 14px', textAlign: 'center' }} title={
+        row.fonte === 'ambigua' ? 'Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária'
+        : row.fonte === 'recibo-nome' ? 'Dados do recibo já processado — correspondência por nome, confirmar'
+        : row.fonte === 'recibo-id' ? 'Dados do recibo já processado (sem registo de horário no mês)'
+        : row.fonte === 'sem-dados' ? 'Sem registo de horário nem recibo processado para este mês'
+        : undefined
+      }>
+        {row.fonte === 'ambigua'
+          ? <AlertTriangle size={14} color="#DC2626" />
+          : row.fonte === 'recibo-nome'
+            ? <AlertTriangle size={14} color="#D97706" />
+            : row.fonte === 'recibo-id'
+              ? <Info size={14} color="#2563EB" />
+              : row.isCompleto
+                ? <CheckCircle size={14} color="#1E8E5A" />
+                : row.divergencia != null
+                  ? <AlertTriangle size={14} color="#D3572B" />
+                  : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: BORDER }} />
+        }
+      </td>
+    </tr>
+  );
+}
+
 export default function MapaPainelExecutivo({ rows, totals }) {
-  const divWorkers   = rows.filter(r => r.divergencia != null);
-  const semNIS       = rows.filter(r => r.semNIS);
+  const linhasAtivas = rows.filter(r => r.categoriaLinha === 'ativo');
+  const linhasExtra  = rows.filter(r => r.categoriaLinha !== 'ativo');
+  const divWorkers   = linhasAtivas.filter(r => r.divergencia != null);
+  const semNIS       = linhasAtivas.filter(r => r.semNIS);
 
   if (!rows.length) {
     return (
@@ -152,45 +201,15 @@ export default function MapaPainelExecutivo({ rows, totals }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(row => {
-                const isFlag = row.divergencia != null;
-                const bg = isFlag ? '#FFFAF1' : '#fff';
-                return (
-                  <tr key={row.id} style={{ background: bg }}>
-                    <td style={{ padding: '11px 14px', fontSize: 12, color: SLATE_A, fontWeight: 600, fontFamily: 'Inter, sans-serif' }}>{row.mecNum}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600, color: isFlag ? '#8a5800' : INK, fontFamily: 'Inter, sans-serif', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {isFlag && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: ORANGE, marginRight: 8, flexShrink: 0, verticalAlign: 'middle' }} />}
-                      {row.nome}
-                    </td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: INK, fontFamily: MONO }}>{n2(row.receber)}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#1E8E5A', fontWeight: 600, fontFamily: MONO }}>{n2(row.ajudasCusto)}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: INK, fontWeight: 700, fontFamily: MONO }}>{n2(row.totalRecibo)}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: VAL_NEUT, fontFamily: MONO }}>{n2(row.segSocial)}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: VAL_NEUT, fontFamily: MONO }}>{n2(row.irs)}</td>
-                    <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: NAVY, fontFamily: MONO }}>{n2(row.liquido)}</td>
-                    <td style={{ padding: '11px 14px', textAlign: 'center' }} title={
-                      row.fonte === 'ambigua' ? 'Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária'
-                      : row.fonte === 'recibo-nome' ? 'Dados do recibo já processado — correspondência por nome, confirmar'
-                      : row.fonte === 'recibo-id' ? 'Dados do recibo já processado (sem registo de horário no mês)'
-                      : row.fonte === 'sem-dados' ? 'Sem registo de horário nem recibo processado para este mês'
-                      : undefined
-                    }>
-                      {row.fonte === 'ambigua'
-                        ? <AlertTriangle size={14} color="#DC2626" />
-                        : row.fonte === 'recibo-nome'
-                          ? <AlertTriangle size={14} color="#D97706" />
-                          : row.fonte === 'recibo-id'
-                            ? <Info size={14} color="#2563EB" />
-                            : row.isCompleto
-                              ? <CheckCircle size={14} color="#1E8E5A" />
-                              : row.divergencia != null
-                                ? <AlertTriangle size={14} color="#D3572B" />
-                                : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: BORDER }} />
-                      }
-                    </td>
-                  </tr>
-                );
-              })}
+              {linhasAtivas.map(row => <LinhaTrabalhador key={row.id} row={row} />)}
+              {linhasExtra.length > 0 && (
+                <tr>
+                  <td colSpan={9} style={{ padding: '8px 14px', background: '#EDEAE0', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', color: '#5B6660' }}>
+                    Recibos processados sem correspondência no efetivo ativo ({linhasExtra.length})
+                  </td>
+                </tr>
+              )}
+              {linhasExtra.map(row => <LinhaTrabalhador key={row.id} row={row} />)}
             </tbody>
             <tfoot>
               <tr style={{ background: NAVY }}>

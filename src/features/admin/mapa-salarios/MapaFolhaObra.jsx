@@ -146,16 +146,32 @@ export default function MapaFolhaObra({ rows, totals }) {
         <tbody>
           {rows.map((row, i) => {
             const isFlag = row.divergencia != null;
-            const bg = isFlag ? '#FFF6EC' : i % 2 === 0 ? '#fff' : '#FAFBFC';
+            const extra = row.categoriaLinha !== 'ativo';
+            const bg = extra ? (row.categoriaLinha === 'orfao' ? '#FDF2F2' : '#F5F6F8') : isFlag ? '#FFF6EC' : i % 2 === 0 ? '#fff' : '#FAFBFC';
             const nameColor = isFlag ? '#8a5800' : INK;
+            const primeiroExtra = extra && (i === 0 || rows[i - 1].categoriaLinha === 'ativo');
             return (
-              <tr key={row.id} style={{ background: bg }}>
+              <React.Fragment key={row.id}>
+                {primeiroExtra && (
+                  <tr>
+                    <td colSpan={18} style={{ padding: '8px 14px', background: '#EDEAE0', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.5px', color: '#5B6660' }}>
+                      Recibos processados sem correspondência no efetivo ativo
+                    </td>
+                  </tr>
+                )}
+                <tr style={{ background: bg }}>
                 {/* Mec — SLATE_A, 11px, Inter 600 */}
                 <td style={{ ...CELL, fontSize: 11, fontWeight: 600, textAlign: 'left', fontFamily: 'Inter, sans-serif', color: SLATE_A, position: 'sticky', left: 0, background: bg, zIndex: 1 }}>{row.mecNum}</td>
                 {/* Nome — Inter 600, INK / #8a5800 para flag */}
                 <td style={{ fontSize: 12.5, fontWeight: 600, textAlign: 'left', padding: '8px', fontFamily: 'Inter, sans-serif', color: nameColor, position: 'sticky', left: 36, background: bg, zIndex: 1, borderRight: `2px solid ${BORDER}`, maxWidth: 190, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {isFlag && <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: ORANGE, marginRight: 7, verticalAlign: 'middle', flexShrink: 0 }} />}
                   {row.nome}
+                  {row.categoriaLinha === 'inativo' && (
+                    <span title="Trabalhador inativo — dados reais do recibo processado" style={{ marginLeft: 6, fontSize: 8, fontWeight: 700, textTransform: 'uppercase', color: '#5B6660', background: '#E3E6E9', borderRadius: 4, padding: '1px 5px' }}>Inativo</span>
+                  )}
+                  {row.categoriaLinha === 'orfao' && (
+                    <span title="Sem registo de trabalhador correspondente na app" style={{ marginLeft: 6, fontSize: 8, fontWeight: 700, textTransform: 'uppercase', color: '#9F1239', background: '#FCE4E9', borderRadius: 4, padding: '1px 5px' }}>Órfão</span>
+                  )}
                 </td>
                 <td style={CELL}>{n2(row.receber)}</td>
                 <td style={CELL_ZERO}>{n2(row.acrescimos)}</td>
@@ -175,7 +191,8 @@ export default function MapaFolhaObra({ rows, totals }) {
                 <td style={{ ...CELL, textAlign: 'center', fontFamily: 'inherit' }}>
                   <StatusCell row={row} />
                 </td>
-              </tr>
+                </tr>
+              </React.Fragment>
             );
           })}
         </tbody>

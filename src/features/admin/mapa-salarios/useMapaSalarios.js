@@ -49,16 +49,17 @@ function calcularMatchesPorNome(ativos, receiptValidations) {
 // semelhantes — não atribui a ninguém automaticamente), ou null (nada).
 function resolverReciboFallback(w, receiptValidations, matchesPorNome) {
   const porId = receiptValidations.find(r => r.worker_id === w.id);
-  if (porId) return { tipo: 'id', rv: porId };
+  if (porId) return { tipo: 'id', rv: porId, rvsEnvolvidas: [porId] };
 
   const entradasComW = matchesPorNome.filter(m => m.workers.some(mw => mw.id === w.id));
-  if (entradasComW.length === 0) return { tipo: null, rv: null };
+  if (entradasComW.length === 0) return { tipo: null, rv: null, rvsEnvolvidas: [] };
   if (entradasComW.length > 1) {
     // w bate com mais de um recibo diferente — também ambíguo.
     return {
       tipo: 'ambigua',
       rv: null,
       candidatos: entradasComW.map(e => ({ nomeRecibo: e.rv.worker_name, workerIds: e.workers.map(x => x.id) })),
+      rvsEnvolvidas: entradasComW.map(e => e.rv),
     };
   }
   const [entrada] = entradasComW;
@@ -67,9 +68,10 @@ function resolverReciboFallback(w, receiptValidations, matchesPorNome) {
       tipo: 'ambigua',
       rv: null,
       candidatos: [{ nomeRecibo: entrada.rv.worker_name, workerIds: entrada.workers.map(x => x.id) }],
+      rvsEnvolvidas: [entrada.rv],
     };
   }
-  return { tipo: 'nome', rv: entrada.rv };
+  return { tipo: 'nome', rv: entrada.rv, rvsEnvolvidas: [entrada.rv] };
 }
 
 // Trabalhadores com ajudas de custo sempre ao máximo (mesma lógica do RecibosCalculadora)
@@ -183,7 +185,7 @@ export function useMapaSalarios(mes, ano) {
         .eq('status', 'approved'),
       supabase
         .from('receipt_validations')
-        .select('worker_id, worker_name, bruto_plataforma, abonos_extraidos, ss_extraido, irs_extraido, liquido_extraido, ajudas_custo_extraidas')
+        .select('id, worker_id, worker_name, bruto_plataforma, abonos_extraidos, ss_extraido, irs_extraido, liquido_extraido, ajudas_custo_extraidas')
         .eq('mes', mesStr),
     ])
       .then(([obsRes, rateRes, absRes, rvRes]) => {
@@ -206,7 +208,7 @@ export function useMapaSalarios(mes, ano) {
   );
 
   const rowsResult = useMemo(() => {
-    if (!workers.length) return { linhas: [], ambiguidades: [] };
+    if (!workers.length) return { linhas: [], ambiguidades: [], nAtivos: 0 };
     const { resumoObs, rateHistory, absencias, receiptValidations } = extra;
 
     const ativos = workers.filter(w =>
@@ -219,6 +221,7 @@ export function useMapaSalarios(mes, ano) {
     const matchesPorNome = calcularMatchesPorNome(ativos, receiptValidations);
     const ambiguidadesVistas = new Set();
     const ambiguidades = [];
+    const rvClaimedIds = new Set();
 
     const linhas = ativos.map((w, idx) => {
       const sempreIncluir = isMaxAjudas(w.name);
@@ -287,8 +290,9 @@ export function useMapaSalarios(mes, ano) {
         // (receipt_validations) do mesmo trabalhador/mês. Sem comparação
         // possível com resumo_observacoes (não há cálculo de mapa para
         // divergir), por isso divergencia fica sempre null aqui.
-        const { tipo, rv, candidatos } = resolverReciboFallback(w, receiptValidations, matchesPorNome);
+        const { tipo, rv, candidatos, rvsEnvolvidas } = resolverReciboFallback(w, receiptValidations, matchesPorNome);
         divergencia = null;
+        rvsEnvolvidas.forEach(r => rvClaimedIds.add(r.id));
 
         if (tipo === 'ambigua') {
           // Mais de um trabalhador ativo bate com o mesmo nome de recibo —
@@ -306,8 +310,16 @@ export function useMapaSalarios(mes, ano) {
 
         if (tipo === 'id' || tipo === 'nome') {
           fonte = tipo === 'id' ? 'recibo-id' : 'recibo-nome';
-          mapa = Number(rv.abonos_extraidos) || 0;
+          // abonos_extraidos ("Total Abonos" do PDF) JÁ INCLUI as ajudas de
+          // custo — confirmado com dados reais (liquido_extraido =
+          // abonos_extraidos - ss_extraido - irs_extraido, sem somar ajudas
+          // outra vez). `mapa` (equivalente a rc.somaOutrosAbonos no cálculo
+          // por log — só a parte tributável, SEM ajudas) tem de subtrair as
+          // ajudas reais extraídas, senão o total fica com as ajudas contadas
+          // a dobrar.
+          const abonosTotais = Number(rv.abonos_extraidos) || 0;
           const ajudasRecibo = Number(rv.ajudas_custo_extraidas) || 0;
+          mapa = abonosTotais - ajudasRecibo;
           ajudasCusto = sempreIncluir ? mapaLiqLiveMax() : ajudasRecibo;
           totalRecibo = mapa + ajudasCusto;
           receber = Number(rv.bruto_plataforma) > 0 ? Number(rv.bruto_plataforma) : totalRecibo;
@@ -333,6 +345,7 @@ export function useMapaSalarios(mes, ano) {
         mecNum:   String(idx + 1).padStart(2, '0'),
         nome:     w.name,
         fonte,
+        categoriaLinha: 'ativo',
 
         // Vencimentos a Pagar (colunas TOConline — acrescimos/retencao/subPrem ainda não calculados)
         receber,
@@ -362,13 +375,95 @@ export function useMapaSalarios(mes, ano) {
         divergencia,
         semNIS:      !w.nis,
       };
-    });
+    })
+      // Trabalhador sem log e sem recibo processado não tem nenhum dado real
+      // para mostrar — não aparece na lista (em vez de uma linha com "—" em
+      // todas as colunas).
+      .filter(l => l.fonte !== 'sem-dados');
 
-    return { linhas, ambiguidades };
+    // Linhas extra: receipt_validations do mês que nenhum trabalhador ativo
+    // reclamou (rvClaimedIds). Duas naturezas distintas — ver PASSO 0:
+    //  - worker existe mas está inativo/fora do filtro `ativos` → linha com
+    //    worker_id real, categoriaLinha 'inativo'.
+    //  - nome não corresponde a NENHUM worker (ativo ou inativo) → linha
+    //    "órfã", categoriaLinha 'orfao', sem worker_id, só com o nome tal
+    //    como está gravado no recibo.
+    const idsAtivos = new Set(ativos.map(w => w.id));
+    const todosWorkersById = new Map(workers.map(w => [w.id, w]));
+    const naoReclamadas = receiptValidations.filter(r => !rvClaimedIds.has(r.id));
+    const linhasExtra = [];
+
+    for (const rv of naoReclamadas) {
+      let workerAlvo = null;
+      let viaWorkerId = false;
+
+      if (rv.worker_id != null) {
+        // Um worker_id que aponta para um ATIVO chega aqui sempre que esse
+        // ativo tinha logs este mês (a passagem principal só reclama
+        // recibos no ramo sem-logs) — não é um caso "inativo" real, é um
+        // recibo antigo/redundante de alguém já mostrado normalmente pelo
+        // log. Ignora, para não duplicar a mesma pessoa na tabela.
+        if (idsAtivos.has(rv.worker_id)) continue;
+        workerAlvo = todosWorkersById.get(rv.worker_id) ?? null;
+        viaWorkerId = true;
+      } else {
+        // Sem worker_id — procura correspondência de nome contra TODOS os
+        // workers (não só ativos, já esgotados na passagem anterior).
+        const candidatosTodos = workers.filter(w => !idsAtivos.has(w.id) && nomesCorrespondem(w.name, rv.worker_name));
+        if (candidatosTodos.length === 1) {
+          workerAlvo = candidatosTodos[0];
+        } else if (candidatosTodos.length > 1) {
+          // Ambíguo também aqui (ex.: dois inativos com nomes parecidos) —
+          // mesma filosofia do caso ativo: não atribui, regista para revisão.
+          const chave = rv.worker_name + '|extra|' + candidatosTodos.map(c => c.id).sort().join(',');
+          if (!ambiguidadesVistas.has(chave)) {
+            ambiguidadesVistas.add(chave);
+            ambiguidades.push({ nomeRecibo: rv.worker_name, workerIdsCandidatos: candidatosTodos.map(c => c.id), mes: mesStr });
+          }
+          continue;
+        }
+      }
+
+      // Ver nota acima (mesmo bug corrigido): abonos_extraidos já inclui as
+      // ajudas de custo — subtrai antes de guardar em `mapa`.
+      const abonosTotais = Number(rv.abonos_extraidos) || 0;
+      const ajudasCusto = Number(rv.ajudas_custo_extraidas) || 0;
+      const mapa = abonosTotais - ajudasCusto;
+      const totalRecibo = mapa + ajudasCusto;
+      const receber = Number(rv.bruto_plataforma) > 0 ? Number(rv.bruto_plataforma) : totalRecibo;
+
+      linhasExtra.push({
+        id:       workerAlvo ? workerAlvo.id : `orfao-${rv.id}`,
+        mecNum:   '—',
+        nome:     workerAlvo ? workerAlvo.name : (rv.worker_name || '—'),
+        fonte:    viaWorkerId ? 'recibo-id' : 'recibo-nome',
+        categoriaLinha: workerAlvo ? 'inativo' : 'orfao',
+
+        receber, acrescimos: 0, retencao: 0, subPrem: 0, totalVenc: receber,
+
+        mapa, ajudasCusto, totalRecibo,
+
+        segSocial: Number(rv.ss_extraido) || 0,
+        irs:       Number(rv.irs_extraido) || 0,
+        fct: 0, penhora: 0, acDesconto: 0, retencaoFinal: 0,
+
+        liquido: Number(rv.liquido_extraido) || 0,
+
+        isCompleto: false,
+        divergencia: null,
+        // "Sem NIS" só faz sentido para um worker real (mesmo inativo);
+        // órfão sem registo de worker não tem NIS para avaliar — não
+        // aplicável, não "em falta".
+        semNIS: workerAlvo ? !workerAlvo.nis : false,
+      });
+    }
+
+    return { linhas: [...linhas, ...linhasExtra], ambiguidades, nAtivos: linhas.length };
   }, [workers, logsDoMes, extra, anoNum, mesNum, mesStr]);
 
   const rows = rowsResult.linhas;
   const ambiguidadesFallback = rowsResult.ambiguidades;
+  const nAtivos = rowsResult.nAtivos;
 
   const totals = useMemo(() => ({
     // r.field pode ser null (fonte 'ambigua'/'sem-dados') — soma como 0 sem
@@ -380,12 +475,15 @@ export function useMapaSalarios(mes, ano) {
     segSocial:     rows.reduce((s, r) => s + (r.segSocial ?? 0), 0),
     irs:           rows.reduce((s, r) => s + (r.irs ?? 0), 0),
     liquido:       rows.reduce((s, r) => s + (r.liquido ?? 0), 0),
-    nWorkers:      rows.length,
+    // nWorkers = efetivo de trabalhadores ativos (roster), não rows.length —
+    // as linhas extra (inativos/órfãos com recibo real) não são "efetivo".
+    nWorkers:      nAtivos,
     nCompletos:    rows.filter(r => r.isCompleto).length,
     nDivergencias: rows.filter(r => r.divergencia != null).length,
-    nSemNIS:       rows.filter(r => r.semNIS).length,
+    nSemNIS:       rows.filter(r => r.categoriaLinha === 'ativo' && r.semNIS).length,
     nSemDados:     rows.filter(r => r.fonte === 'sem-dados' || r.fonte === 'ambigua').length,
-  }), [rows]);
+    nExtra:        rows.length - nAtivos,
+  }), [rows, nAtivos]);
 
   return { rows, totals, loading, error, mesStr, mesLabel, ambiguidadesFallback };
 }

@@ -34,13 +34,17 @@ function StatBlock({ label, value, color }) {
 }
 
 function WorkerCard({ row }) {
-  const mecNum = String(parseInt(row.mecNum, 10)).padStart(5, '0');
+  const mecNum = row.categoriaLinha === 'ativo' ? String(parseInt(row.mecNum, 10)).padStart(5, '0') : null;
   const hasVerificar = row.divergencia != null;
   const toconlineVal = row.totalRecibo - (row.divergencia ?? 0);
   const [hovered, setHovered] = useState(false);
 
-  const cardBorder   = hasVerificar ? '1px solid #F0C077' : `1px solid ${BORDER}`;
-  const cardBg       = hasVerificar ? '#FFFCF6' : '#fff';
+  const cardBorder = row.categoriaLinha === 'orfao' ? '1px solid #F3C6D0'
+    : row.categoriaLinha === 'inativo' ? '1px solid #D7DCE2'
+    : hasVerificar ? '1px solid #F0C077' : `1px solid ${BORDER}`;
+  const cardBg = row.categoriaLinha === 'orfao' ? '#FDF2F2'
+    : row.categoriaLinha === 'inativo' ? '#F5F6F8'
+    : hasVerificar ? '#FFFCF6' : '#fff';
   const cardShadow   = hovered ? '0 6px 18px -8px rgba(21,34,50,.18)' : 'none';
 
   return (
@@ -66,9 +70,21 @@ function WorkerCard({ row }) {
             {row.nome}
           </div>
           <div className="text-natural" style={{ fontSize: 11, color: SLATE_A, marginTop: 2, fontFamily: MONO }}>
-            Mec. {mecNum}
+            {mecNum ? `Mec. ${mecNum}` : 'Sem número de mecanográfico'}
           </div>
         </div>
+        {row.categoriaLinha === 'inativo' && (
+          <span title="Trabalhador inativo — dados reais do recibo processado"
+            style={{ flexShrink: 0, background: '#5B6660', color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            Inativo
+          </span>
+        )}
+        {row.categoriaLinha === 'orfao' && (
+          <span title="Sem registo de trabalhador correspondente na app"
+            style={{ flexShrink: 0, background: '#9F1239', color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            Órfão
+          </span>
+        )}
         {hasVerificar && (
           <span style={{ flexShrink: 0, background: ORANGE, color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Verificar
@@ -238,14 +254,34 @@ export default function MapaCartoes({ rows, totals, mesLabel }) {
         ))}
       </div>
 
-      {/* Grelha de cartões */}
+      {/* Grelha de cartões — trabalhadores ativos */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
         gap: 14,
       }}>
-        {rows.map(row => <WorkerCard key={row.id} row={row} />)}
+        {rows.filter(r => r.categoriaLinha === 'ativo').map(row => <WorkerCard key={row.id} row={row} />)}
       </div>
+
+      {/* Recibos processados sem correspondência no efetivo ativo (inativos/órfãos) */}
+      {rows.some(r => r.categoriaLinha !== 'ativo') && (
+        <>
+          <div className="text-natural" style={{
+            margin: '22px 0 10px', padding: '8px 14px', background: '#EDEAE0',
+            borderRadius: 8, fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '.5px', color: '#5B6660',
+          }}>
+            Recibos processados sem correspondência no efetivo ativo
+          </div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: 14,
+          }}>
+            {rows.filter(r => r.categoriaLinha !== 'ativo').map(row => <WorkerCard key={row.id} row={row} />)}
+          </div>
+        </>
+      )}
 
     </div>
   );
