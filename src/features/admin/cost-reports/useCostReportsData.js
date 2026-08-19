@@ -1,20 +1,11 @@
 import { useMemo } from 'react';
 import { parseFaturaValor } from './costReportsUtils';
+import { getRateAtDate } from '../../../lib/faturacao/tarifaHistorica.js';
 
-export function getRateAtDate(logDate, history, currentRate) {
-  if (!history || history.length === 0) return Number(currentRate) || 0;
-  const sorted = [...history].sort(
-    (a, b) => new Date(a.data_alteracao) - new Date(b.data_alteracao)
-  );
-  const firstDate = sorted[0].data_alteracao.substring(0, 10);
-  if (logDate < firstDate) return Number(sorted[0].valor_anterior) || 0;
-  for (let i = sorted.length - 1; i >= 0; i--) {
-    if (logDate >= sorted[i].data_alteracao.substring(0, 10)) {
-      return Number(sorted[i].valor_novo) || 0;
-    }
-  }
-  return Number(currentRate) || 0;
-}
+// Re-exportada para não partir os imports existentes (RecibosCalculadora.jsx,
+// useMapaSalarios.js importam getRateAtDate diretamente deste ficheiro) — a
+// implementação real vive agora em src/lib/faturacao/tarifaHistorica.js.
+export { getRateAtDate };
 
 export const useCostReportsData = ({ logs, workers, clients, expenses, selectedMonth, faturasPago, workerRateHistory = [], clientRateHistory = [] }) => {
   // Uma única passagem sobre filteredLogs alimenta, em simultâneo, os
