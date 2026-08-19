@@ -17,6 +17,7 @@ import {
   agregarTotaisPorMes,
   adicionarCustosAoMes,
   guardarValidacoesEmLote,
+  separarPorWorker,
 } from '../../utils/validacaoHelpers';
 
 // ─── Modo Bursting ────────────────────────────────────────────────────────────
@@ -127,7 +128,18 @@ const ModoBursting = ({ workers, logs, systemSettings, saveToDb, workerRateHisto
     setGuardando(true); setErroGuardar(null);
     try {
       const sessionId = crypto.randomUUID();
-      await guardarValidacoesEmLote(resultado.resultados, sessionId, r => ({ origem: r.nif }));
+      // Mesma guarda já usada em handleGuardarNoPortal — nunca gravar
+      // receipt_validations com worker_id nulo silenciosamente. Um recibo
+      // sem trabalhador correspondente fica de fora do lote e é sinalizado
+      // aqui, sem travar a gravação dos restantes.
+      const { comWorker, semWorker } = separarPorWorker(resultado.resultados);
+      if (comWorker.length > 0) {
+        await guardarValidacoesEmLote(comWorker, sessionId, r => ({ origem: r.nif }));
+      }
+      if (semWorker.length > 0) {
+        const nomesFalhados = semWorker.map(r => r.worker?.name ?? r.nome ?? r.nif).join(', ');
+        setErroGuardar(`${semWorker.length} recibo(s) sem trabalhador correspondente NÃO foram gravados: ${nomesFalhados}. Corrige o nome no PDF ou associa o trabalhador manualmente antes de tentar de novo.`);
+      }
       setGuardados(true);
     } catch (e) { setErroGuardar(e.message); }
     finally { setGuardando(false); }

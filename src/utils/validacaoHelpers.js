@@ -224,3 +224,14 @@ export async function adicionarCustosAoMes(totaisPorMes, saveToDb, formatarMesFn
 export async function guardarValidacoesEmLote(resultados, sessionId, extrasPorResultado = () => ({})) {
   await Promise.all(resultados.map(r => guardarValidacao(r, { sessionId, ...extrasPorResultado(r) })));
 }
+
+// Guarda contra gravar receipt_validations com worker_id nulo silenciosamente
+// (encontrarWorker() devolve null quando o nome extraído do PDF não bate com
+// nenhum trabalhador). Usada por ModoBursting.jsx antes de guardarValidacoesEmLote
+// — só os resultados com `worker` resolvido seguem para gravação; os
+// restantes ficam de fora, sinalizados ao admin, sem travar o lote inteiro.
+export function separarPorWorker(resultados) {
+  const comWorker = (resultados || []).filter(r => r.worker);
+  const semWorker = (resultados || []).filter(r => !r.worker);
+  return { comWorker, semWorker };
+}
