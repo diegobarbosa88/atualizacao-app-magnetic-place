@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   X, Loader2, ChevronRight, ChevronDown, CheckCircle, AlertCircle,
-  FileText, Plus, Trash2, Save,
+  FileText, Plus, Trash2, Save, ShieldAlert,
 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
+import { calcularFaturacaoCliente } from '../../../lib/faturacao/tarifaHistorica.js';
+import { verificarEstimativaParaFatura, confirmarEEmitirFatura } from '../../../lib/ajudas/emitirFaturaComAjudas.js';
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -89,8 +92,9 @@ function Toggle({ checked, onChange }) {
   );
 }
 
-export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInicial, ajudasValorInicial, periodoInicial }) {
-  const { clients, logs, supabase } = useApp();
+export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInicial, ajudasValorInicial, periodoInicial, nomeToConlineInicial }) {
+  const { clients, logs, supabase, currentUser } = useApp();
+  const navigate = useNavigate();
 
   const hoje = new Date().toISOString().slice(0, 10);
 
@@ -135,16 +139,57 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
   const [emitindo, setEmitindo] = useState(false);
   const [resultado, setResultado] = useState(null);
 
+  // Fase 2b — fail-closed de ajudas de custo, ligado no momento da emissão.
+  // null → nada verificado ainda; 'verificando' → a chamar
+  // verificarEstimativaParaFatura; { status:'bloqueado', motivo } → nunca
+  // chega a chamar create-fatura.js; { status:'calculado', ... } → mostra
+  // cartão de confirmação, só emite após clique explícito em "Confirmar e Emitir".
+  const [gateAjudas, setGateAjudas] = useState(null);
+
   const cliente = useMemo(() => clients?.find(c => c.id === clienteId), [clients, clienteId]);
 
-  const totalHoras = useMemo(() => {
-    if (!clienteId || !periodo || !logs) return 0;
-    return (logs || [])
-      .filter(l => l.clientId === clienteId && (l.date || '').startsWith(periodo))
-      .reduce((sum, l) => sum + (Number(l.hours) || 0), 0);
-  }, [clienteId, periodo, logs]);
+  // Fase 2b, Ponto 2 — quando o modal é aberto com um clienteIdInicial que
+  // não corresponde a nenhum cliente cadastrado (tipicamente `toc:${nome}`,
+  // vindo do fallback "sem horas registadas" de AjudasCalculadora.jsx, cujo
+  // nome de fatura TOConline não bateu com nenhum `clients.name`), nunca
+  // avança automaticamente para emissão: exige resolução humana explícita
+  // — ou associar a um cliente real (aplica o gate normal a partir daí), ou
+  // confirmar que não corresponde a nenhum (emite sem ajudas, mas por
+  // decisão visível do admin, não por omissão silenciosa).
+  const [semClienteCorrespondente, setSemClienteCorrespondente] = useState(false);
+  const [resolucaoEscolhida, setResolucaoEscolhida] = useState('');
+  const precisaResolucaoManual = !!clienteIdInicial && !cliente && !semClienteCorrespondente;
 
-  const valorHora = Number(cliente?.valorHora ?? 0);
+  // Histórico de tarifas do cliente — mesma tabela/fonte usada em Custos →
+  // Clientes (useCostReportsData.js), para o valor por defeito proposto
+  // aqui nunca divergir silenciosamente do que o admin já viu naquele ecrã.
+  const [clientRateHistory, setClientRateHistory] = useState([]);
+  useEffect(() => {
+    if (!clienteId || !supabase) { setClientRateHistory([]); return; }
+    supabase.from('client_valorhora_history').select('*').eq('client_id', clienteId)
+      .then(({ data }) => setClientRateHistory(data || []));
+  }, [clienteId, supabase]);
+
+  // totalHoras/valorHora por defeito vêm de calcularFaturacaoCliente
+  // (tarifaHistorica.js) — respeita a tarifa em vigor em cada data de log,
+  // não a tarifa atual do cliente. valorHora aqui é um preço-por-hora
+  // efetivo (valorFaturado ÷ totalHoras) para caber no modelo de linha
+  // "quantidade × preço unitário" do formulário — se a tarifa não mudou
+  // dentro do período, é exatamente a tarifa vigente; se mudou a meio,
+  // é a média ponderada que reproduz o mesmo total. Continua 100%
+  // editável pelo admin a partir daqui.
+  const { totalHoras, valorFaturado } = useMemo(() => {
+    if (!clienteId || !periodo || !logs) return { totalHoras: 0, valorFaturado: 0 };
+    return calcularFaturacaoCliente({
+      logs,
+      clientId: clienteId,
+      periodo,
+      valorHoraAtual: Number(cliente?.valorHora ?? 0),
+      clientRateHistory,
+    });
+  }, [clienteId, periodo, logs, cliente, clientRateHistory]);
+
+  const valorHora = totalHoras > 0 ? valorFaturado / totalHoras : Number(cliente?.valorHora ?? 0);
 
   // Auto-calcular data de vencimento quando muda prazo ou data da fatura
   useEffect(() => {
@@ -152,27 +197,46 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
     setDataVencimento(prazo === 0 ? dataFatura : addDias(dataFatura, prazo));
   }, [prazo, dataFatura]);
 
-  // Carregar invoice_config ao selecionar cliente
+  // Carregar invoice_config ao selecionar cliente. Guarda por `clienteId`
+  // (não `cliente?.id`) para também inicializar uma linha por defeito no
+  // caso "sem correspondência confirmada" (Fase 2b, Ponto 2) — aí `cliente`
+  // nunca resolve, mas o admin ainda precisa de conseguir editar/preencher
+  // uma linha manualmente para poder emitir.
   useEffect(() => {
-    if (!cliente) { setServicosLinhas([]); setConfigGuardada(false); return; }
-    const cfg = cliente.invoice_config;
+    if (!clienteId) { setServicosLinhas([]); setConfigGuardada(false); return; }
+    const cfg = cliente?.invoice_config;
     if (cfg?.servicos?.length) {
       setServicosLinhas(cfg.servicos.map(s =>
         s.tipo === 'horas'
           ? { desconto: '', codigo_artigo: '', ...s, quantidade: s.quantidade ?? totalHoras, preco_unitario: s.preco_unitario ?? valorHora }
           : { desconto: '', codigo_artigo: '', ...s }
       ));
-    } else {
+    } else if (cliente) {
       setServicosLinhas([{
         id: novoId(), tipo: 'horas', descricao: 'Serviços de gestão de pessoal',
         taxa_iva: 0, quantidade: totalHoras, preco_unitario: valorHora, unidade: 'h',
         desconto: '', codigo_artigo: '',
       }]);
+    } else {
+      // Sem cliente resolvido (ex.: "toc:" sem correspondência confirmada,
+      // Ponto 2) — não há horas internas associadas a este id sintético
+      // (totalHoras será sempre 0), por isso a linha por defeito é do tipo
+      // "fixo": a quantidade/preço que o admin escrever nos campos abaixo
+      // são efetivamente usados na validação, ao contrário de "horas" (que
+      // ignora `s.quantidade` a favor de `totalHoras`).
+      setServicosLinhas([{
+        id: novoId(), tipo: 'fixo', descricao: '', taxa_iva: 0,
+        valor_fixo: 0, quantidade: 1, unidade: '',
+        desconto: '', codigo_artigo: '',
+      }]);
     }
     setConfigGuardada(false);
-  }, [cliente?.id]);
+  }, [clienteId, cliente]);
 
-  // Carregar ajudas
+  // Carregar ajudas — só para o resumo informativo do Passo 1 (histórico do
+  // que já foi confirmado/estimado noutros meses). Deixou de alimentar o
+  // texto das observações da fatura: essa é agora sempre e só a saída de
+  // calcularEstimativaMensal (emitirFaturaComAjudas.js) — ver Fase 2b, Ponto 1.
   useEffect(() => {
     if (ajudasValorInicial != null) { setAjudas(null); return; }
     if (!clienteId || !periodo || !supabase) { setAjudas(null); return; }
@@ -208,22 +272,16 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
       });
   }, [ajudas, clienteId, periodo, supabase]);
 
-  // Pré-preencher observação com ajudas
-  useEffect(() => {
-    if (!clienteId || !periodo) return;
-    if (ajudasValorInicial != null) {
-      if (ajudasValorInicial > 0) {
-        setObservacoes(`Nesta fatura estão incluidas as ajudas de custo dos trabalhadores no valor de ${Number(ajudasValorInicial).toFixed(2)} €`);
-      }
-      return;
-    }
-    const val = ajudas?.valor_ajudas ?? 0;
-    const valEfetivo = val > 0 ? val : (ajudasEstimado ?? 0);
-    if (valEfetivo > 0) {
-      const sufixo = val === 0 && ajudasEstimado != null ? ' (estimativa)' : '';
-      setObservacoes(`Nesta fatura estão incluidas as ajudas de custo dos trabalhadores no valor de ${Number(valEfetivo).toFixed(2)} €${sufixo}`);
-    }
-  }, [ajudas, ajudasEstimado, clienteId, periodo]);
+  // NOTA (Fase 2b, Ponto 1): já não existe aqui um useEffect a
+  // pré-preencher `observacoes` com texto de ajudas de custo. Antes disso
+  // acontecia a partir de `ajudasValorInicial`/`ajudas`/`ajudasEstimado` —
+  // três fontes de valor diferentes do cálculo novo (percentagem histórica
+  // ativa), e o texto acabava por coexistir com o texto novo anexado em
+  // `criarFaturaTOConline`, com dois valores em euros potencialmente
+  // divergentes na mesma fatura fiscal. `ajudasValorInicial`/`ajudas`/
+  // `ajudasEstimado` continuam a existir só para o resumo informativo do
+  // Passo 1 (abaixo) — nunca mais escrevem texto nem alimentam o valor
+  // realmente faturado.
 
   // Há pelo menos uma linha com quantidade e preço válidos
   const temLinhasValidas = servicosLinhas.some(s => {
@@ -264,81 +322,95 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
     }
   };
 
-  const handleEmitir = async () => {
+  // Chamada real ao TOConline — extraída de handleEmitir para ser reutilizável
+  // tanto no caminho direto (sem ajudas aplicáveis: cliente explicitamente
+  // não elegível, ou "toc:" sem correspondência confirmada) como no
+  // `criarFaturaFn` passado a confirmarEEmitirFatura (Fase 2b). O texto de
+  // ajudas de custo, quando existe, é a ÚNICA fonte de texto de ajudas nas
+  // observações (Fase 2b, Ponto 1) — anexado ao que o admin tiver escrito
+  // manualmente, nunca substituindo.
+  const criarFaturaTOConline = async ({ textoObservacaoAjudas } = {}) => {
+    const linhas = servicosLinhas
+      .filter(s => {
+        const qty = s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 0);
+        return qty > 0 && (Number(s.preco_unitario ?? s.valor_fixo) || 0) > 0;
+      })
+      .map(s => ({
+        descricao: s.tipo === 'horas' ? `${s.descricao} — ${periodoLabel(periodo)}` : s.descricao,
+        quantidade: s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 1),
+        preco_unitario: Number(s.preco_unitario ?? s.valor_fixo) || 0,
+        taxa_iva: s.taxa_iva || 0,
+        unidade: s.unidade || undefined,
+        desconto: s.desconto?.trim() || undefined,
+        codigo_artigo: s.codigo_artigo?.trim() || undefined,
+      }));
+
+    if (!linhas.length) throw new Error('Sem linhas para faturar');
+
+    const observacoesFinal = [observacoes.trim(), textoObservacaoAjudas].filter(Boolean).join('\n');
+
+    const bodyPayload = {
+      tipo_documento: tipoDocumento,
+      serie: serie.trim() || undefined,
+      data: dataFatura,
+      data_vencimento: dataVencimento || undefined,
+      cliente: { nome: cliente?.name || nomeToConlineInicial || 'Cliente', nif: cliente?.nif || undefined },
+      linhas,
+      observacoes: observacoesFinal || undefined,
+      desconto_global: descontoGlobal.trim() || undefined,
+      metodo_pagamento: metodoPagamento || undefined,
+      referencia_externa: referenciaExterna.trim() || undefined,
+      iva_incluido: ivaIncluido || undefined,
+      retencao: retencao.ativa ? {
+        percentagem: retencao.percentagem,
+        tipo: retencao.tipo,
+        ao_pagar: retencao.ao_pagar,
+      } : undefined,
+      moeda: moedaIso.toUpperCase() !== 'EUR' && moedaIso.trim() ? {
+        iso: moedaIso.trim().toUpperCase(),
+        taxa: moedaTaxa ? Number(moedaTaxa) : undefined,
+      } : undefined,
+      morada_cliente: moradaAtiva ? {
+        detalhe: moradaDetalhe.trim() || undefined,
+        codigo_postal: moradaCp.trim() || undefined,
+        cidade: moradaCidade.trim() || undefined,
+        pais: moradaPais.trim() || undefined,
+      } : undefined,
+    };
+
+    const res = await authFetch('/api/toconline/create-fatura', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyPayload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erro ao emitir fatura');
+
+    // NOTA (Fase 2b, Ponto 1): já não há aqui um upsert automático em
+    // `ajudas_faturadas_clientes` a partir do cálculo antigo. Quando o gate
+    // de ajudas corre e é confirmado, é `confirmarEEmitirFatura`
+    // (emitirFaturaComAjudas.js) que atualiza essa tabela — com o valor
+    // NOVO, não com este. Quando não há ajudas aplicáveis (cliente não
+    // elegível, ou "toc:" sem correspondência), a tabela simplesmente não é
+    // tocada — não há nenhum valor de ajudas correto para lá gravar.
+
+    const faturaId = data.documento?.attributes?.document_no || data.documento?.document_no || data.doc_id;
+    return { faturaId, doc_id: data.doc_id, documento: data.documento };
+  };
+
+  // Caminho sem gate de ajudas de custo. Só é alcançado em dois casos, ambos
+  // já decididos explicitamente antes de chegar aqui:
+  //  (a) cliente real com elegivel_ajudas_custo === false — decisão humana
+  //      já tomada no ecrã de Elegibilidade, não há nada para calcular;
+  //  (b) cliente "toc:" cuja falta de correspondência com `clients` foi
+  //      confirmada manualmente pelo admin no painel de resolução (Ponto 2)
+  //      — nunca por omissão silenciosa de um clienteId não resolvido.
+  const handleEmitirDireto = async () => {
     setEmitindo(true);
     try {
-      const linhas = servicosLinhas
-        .filter(s => {
-          const qty = s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 0);
-          return qty > 0 && (Number(s.preco_unitario ?? s.valor_fixo) || 0) > 0;
-        })
-        .map(s => ({
-          descricao: s.tipo === 'horas' ? `${s.descricao} — ${periodoLabel(periodo)}` : s.descricao,
-          quantidade: s.tipo === 'horas' ? totalHoras : (Number(s.quantidade) || 1),
-          preco_unitario: Number(s.preco_unitario ?? s.valor_fixo) || 0,
-          taxa_iva: s.taxa_iva || 0,
-          unidade: s.unidade || undefined,
-          desconto: s.desconto?.trim() || undefined,
-          codigo_artigo: s.codigo_artigo?.trim() || undefined,
-        }));
-
-      if (!linhas.length) throw new Error('Sem linhas para faturar');
-
-      const bodyPayload = {
-        tipo_documento: tipoDocumento,
-        serie: serie.trim() || undefined,
-        data: dataFatura,
-        data_vencimento: dataVencimento || undefined,
-        cliente: { nome: cliente.name, nif: cliente.nif || undefined },
-        linhas,
-        observacoes: observacoes.trim() || undefined,
-        desconto_global: descontoGlobal.trim() || undefined,
-        metodo_pagamento: metodoPagamento || undefined,
-        referencia_externa: referenciaExterna.trim() || undefined,
-        iva_incluido: ivaIncluido || undefined,
-        retencao: retencao.ativa ? {
-          percentagem: retencao.percentagem,
-          tipo: retencao.tipo,
-          ao_pagar: retencao.ao_pagar,
-        } : undefined,
-        moeda: moedaIso.toUpperCase() !== 'EUR' && moedaIso.trim() ? {
-          iso: moedaIso.trim().toUpperCase(),
-          taxa: moedaTaxa ? Number(moedaTaxa) : undefined,
-        } : undefined,
-        morada_cliente: moradaAtiva ? {
-          detalhe: moradaDetalhe.trim() || undefined,
-          codigo_postal: moradaCp.trim() || undefined,
-          cidade: moradaCidade.trim() || undefined,
-          pais: moradaPais.trim() || undefined,
-        } : undefined,
-      };
-
-      const res = await authFetch('/api/toconline/create-fatura', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyPayload),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao emitir fatura');
-
-      // Auto-confirmar ajudas após emissão
-      if (supabase && clienteId && !clienteId.startsWith('toc:') && periodo) {
-        const valAjudas = ajudasValorInicial != null
-          ? Number(ajudasValorInicial)
-          : (ajudas?.valor_ajudas ?? ajudasEstimado ?? 0);
-        const baseTotal = servicosLinhas.reduce((s, sl) => {
-          const qty = sl.tipo === 'horas' ? totalHoras : (Number(sl.quantidade) || 1);
-          const price = Number(sl.preco_unitario ?? sl.valor_fixo) || 0;
-          return s + qty * price;
-        }, 0);
-        await supabase.from('ajudas_faturadas_clientes').upsert(
-          { mes: periodo, client_id: clienteId, valor_ajudas: parseFloat(Number(valAjudas).toFixed(2)), total_fatura: parseFloat(baseTotal.toFixed(2)), confirmado: true },
-          { onConflict: 'mes,client_id' }
-        );
-      }
-
-      setResultado({ sucesso: true, doc_id: data.doc_id, documento: data.documento });
+      const r = await criarFaturaTOConline({});
+      setResultado({ sucesso: true, doc_id: r.doc_id, documento: r.documento });
       setPasso(3);
       onFaturado?.();
     } catch (e) {
@@ -346,6 +418,99 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
       setPasso(3);
     } finally {
       setEmitindo(false);
+    }
+  };
+
+  // Passo (2)/(3) do fluxo Fase 2b: antes de emitir, verifica a estimativa de
+  // ajudas para o mês de REFERÊNCIA do trabalho (`periodo` — já representa o
+  // mês M, não o mês de emissão da fatura, regra M→M-1) com o valor final já
+  // decidido no modal (`totalFatura`, pós-edição/desconto/IVA).
+  const handleIniciarEmissao = async () => {
+    // Guarda defensiva: a UI já bloqueia o acesso a este botão enquanto
+    // `precisaResolucaoManual` for true (só o painel de resolução é
+    // renderizado nesse estado), mas o fail-closed não deve depender só
+    // disso — nunca emitir com uma correspondência de cliente por resolver.
+    if (precisaResolucaoManual) return;
+
+    if (clienteId.startsWith('toc:')) {
+      // Só chega aqui depois de o admin confirmar explicitamente "não
+      // corresponde a nenhum cliente" no painel de resolução — não há
+      // `clients` row para verificar elegibilidade, logo não há gate a
+      // aplicar (mas a decisão em si já foi humana e visível).
+      return handleEmitirDireto();
+    }
+    if (!supabase || !clienteId) {
+      return handleEmitirDireto();
+    }
+    setGateAjudas({ status: 'verificando' });
+    try {
+      const r = await verificarEstimativaParaFatura({
+        mesReferencia: periodo,
+        clientId: clienteId,
+        valorFinalDoModal: totalFatura,
+        dbClient: supabase,
+      });
+      if (!r.linha) {
+        // Cliente com elegivel_ajudas_custo === false — exclusão legítima,
+        // não bloqueada: não há ajudas a aplicar, segue emissão direta.
+        return handleEmitirDireto();
+      }
+      if (r.linha.status === 'bloqueado') {
+        setGateAjudas({
+          status: 'bloqueado',
+          motivo: r.linha.motivoBloqueio || 'Não foi possível calcular a estimativa de ajudas de custo para este cliente/mês.',
+        });
+        return;
+      }
+      setGateAjudas({
+        status: 'calculado',
+        linha: r.linha,
+        percentagemUsada: r.percentagemUsada,
+        percentagemHistoricaId: r.percentagemHistoricaId,
+        residuoOrigem: r.residuoOrigem,
+      });
+    } catch (e) {
+      setGateAjudas({ status: 'bloqueado', motivo: 'Erro ao calcular estimativa de ajudas de custo: ' + e.message });
+    }
+  };
+
+  // Só corre depois do clique explícito em "Confirmar e Emitir" no cartão —
+  // grava 'confirmado' em ajudas_estimativas_fatura ANTES de chamar o
+  // TOConline (DECISIONS.md); se a API falhar, o estado fica em 'confirmado'
+  // (nunca regride) e a fatura fica disponível para retry manual no ecrã
+  // "Estimativa Mensal".
+  const handleConfirmarEEmitir = async () => {
+    if (!gateAjudas || gateAjudas.status !== 'calculado') return;
+    setEmitindo(true);
+    try {
+      const confirmadoPor = currentUser?.name || currentUser?.email || currentUser?.id || 'admin';
+      const resultado = await confirmarEEmitirFatura({
+        mesReferencia: periodo,
+        clientId: clienteId,
+        linha: gateAjudas.linha,
+        percentagemHistoricaId: gateAjudas.percentagemHistoricaId,
+        dbClient: supabase,
+        confirmadoPor,
+        valorFaturaTotal: totalFatura,
+        criarFaturaFn: ({ textoObservacaoAjudas }) => criarFaturaTOConline({ textoObservacaoAjudas }),
+      });
+      if (resultado.faturado) {
+        setResultado({ sucesso: true, doc_id: resultado.faturaId });
+        setPasso(3);
+        onFaturado?.();
+      } else {
+        setResultado({
+          sucesso: false,
+          erro: (resultado.erro || 'Falha ao emitir a fatura.') + ' A confirmação de ajudas de custo já ficou gravada — pode tentar novamente a partir do ecrã "Estimativa Mensal".',
+        });
+        setPasso(3);
+      }
+    } catch (e) {
+      setResultado({ sucesso: false, erro: e.message });
+      setPasso(3);
+    } finally {
+      setEmitindo(false);
+      setGateAjudas(null);
     }
   };
 
@@ -379,6 +544,52 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
           </button>
         </div>
 
+        {/* ─── RESOLUÇÃO MANUAL (Fase 2b, Ponto 2) ───
+            Bloqueia todo o resto do modal enquanto o cliente vindo de fora
+            (tipicamente "toc:nome", do fallback sem-horas de
+            AjudasCalculadora.jsx) não tiver sido associado a um cliente
+            real ou explicitamente confirmado como "sem correspondência". */}
+        {precisaResolucaoManual ? (
+          <div className="space-y-4">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-2">
+              <div className="flex items-start gap-2">
+                <ShieldAlert size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-black text-amber-800">Cliente não identificado automaticamente</p>
+                  <p className="text-[10px] text-amber-700 mt-0.5">
+                    A fatura do TOConline está em nome de{' '}
+                    <span className="font-bold">"{nomeToConlineInicial || clienteIdInicial?.replace(/^toc:/, '')}"</span>,
+                    que não corresponde a nenhum cliente cadastrado. Escolha o cliente correspondente para aplicar
+                    corretamente o gate de ajudas de custo, ou confirme que não corresponde a nenhum.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente correspondente</p>
+              <select value={resolucaoEscolhida} onChange={e => setResolucaoEscolhida(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30">
+                <option value="">Selecionar cliente...</option>
+                {(clients || []).filter(c => c.valorHora > 0).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button onClick={() => setSemClienteCorrespondente(true)}
+                className="flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
+                Não corresponde a nenhum cliente
+              </button>
+              <button onClick={() => { if (resolucaoEscolhida) setClienteId(resolucaoEscolhida); }} disabled={!resolucaoEscolhida}
+                className="flex-1 px-3 py-2.5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 shadow-md hover:opacity-90"
+                style={{ backgroundColor: '#1B3A57' }}>
+                Confirmar correspondência
+              </button>
+            </div>
+          </div>
+        ) : <>
         {/* ─── PASSO 1 ─── */}
         {passo === 1 && (
           <div className="space-y-4">
@@ -386,14 +597,20 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             {/* Cliente */}
             <div className="space-y-1">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente *</p>
-              <select value={clienteId} onChange={e => setClienteId(e.target.value)}
-                disabled={!!clienteIdInicial}
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 disabled:bg-slate-50 disabled:text-slate-500">
-                <option value="">Selecionar cliente...</option>
-                {(clients || []).filter(c => c.valorHora > 0).map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {clienteId.startsWith('toc:') ? (
+                <input type="text" disabled
+                  value={`${nomeToConlineInicial || clienteId.replace(/^toc:/, '')} (sem cliente cadastrado associado)`}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-500 bg-slate-50" />
+              ) : (
+                <select value={clienteId} onChange={e => setClienteId(e.target.value)}
+                  disabled={!!clienteIdInicial}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 disabled:bg-slate-50 disabled:text-slate-500">
+                  <option value="">Selecionar cliente...</option>
+                  {(clients || []).filter(c => c.valorHora > 0).map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Período */}
@@ -462,7 +679,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 {ajudasValorInicial != null ? (
                   ajudasValorInicial > 0 && (
                     <div className="flex justify-between text-slate-600">
-                      <span>Ajudas de custo</span>
+                      <span>Ajudas de custo (histórico)</span>
                       <span className="font-black text-slate-800">{Number(ajudasValorInicial).toFixed(2)} €</span>
                     </div>
                   )
@@ -470,14 +687,17 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                   <div className="flex items-center gap-2 text-slate-400"><Loader2 size={12} className="animate-spin" /> A carregar ajudas...</div>
                 ) : (ajudas?.valor_ajudas ?? 0) > 0 ? (
                   <div className="flex justify-between text-slate-600">
-                    <span>Ajudas de custo</span>
+                    <span>Ajudas de custo (histórico)</span>
                     <span className="font-black text-slate-800">{(ajudas.valor_ajudas).toFixed(2)} €</span>
                   </div>
                 ) : ajudasEstimado != null && (
                   <div className="flex justify-between text-slate-600">
-                    <span>Ajudas de custo <span className="text-amber-500 font-black">(estimativa)</span></span>
+                    <span>Ajudas de custo <span className="text-amber-500 font-black">(histórico, estimativa)</span></span>
                     <span className="font-black text-amber-700">{ajudasEstimado.toFixed(2)} €</span>
                   </div>
+                )}
+                {((ajudasValorInicial ?? ajudas?.valor_ajudas ?? ajudasEstimado) != null) && (
+                  <p className="text-[9px] text-slate-400 italic">Valor informativo de meses anteriores — o valor final de ajudas de custo é sempre recalculado no momento da confirmação de emissão.</p>
                 )}
                 {!temLinhasValidas && !carregandoAjudas && (
                   <p className="text-amber-600 flex items-center gap-1">
@@ -866,18 +1086,86 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 )}
               </div>
 
-              <div className="flex gap-2">
-                <button onClick={() => setPasso(1)}
-                  className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all">
-                  Voltar
-                </button>
-                <button onClick={handleEmitir} disabled={emitindo}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 shadow-md hover:opacity-90"
-                  style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
-                  {emitindo ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
-                  Emitir {tipoDocumento}
-                </button>
-              </div>
+              {/* Fase 2b — bloqueio fail-closed: nunca deixa avançar para a
+                  emissão sem uma estimativa de ajudas de custo válida. */}
+              {gateAjudas?.status === 'bloqueado' && (
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert size={16} className="text-rose-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-black text-rose-700">Fatura não pode ser emitida</p>
+                      <p className="text-[10px] text-rose-600 mt-0.5">{gateAjudas.motivo}</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <button onClick={() => setGateAjudas(null)}
+                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-white rounded-lg transition-all">
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => navigate(gateAjudas.motivo?.includes('percentagem') ? '/admin/ajudas-custo?subtab=historico' : '/admin/ajudas-custo?subtab=elegibilidade')}
+                      className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all hover:opacity-90"
+                      style={{ backgroundColor: '#1B3A57' }}>
+                      {gateAjudas.motivo?.includes('percentagem') ? 'Ir para Histórico' : 'Ir para Elegibilidade'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Cartão de confirmação (mesmo padrão do SEPA) — só emite após clique explícito. */}
+              {gateAjudas?.status === 'calculado' && (() => {
+                const l = gateAjudas.linha;
+                return (
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2.5">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Confirmação de ajudas de custo</p>
+                    <div className="flex justify-between text-[11px] text-slate-600">
+                      <span>Valor estimado bruto</span>
+                      <span className="font-bold text-slate-800">{l.valorEstimadoBruto.toFixed(2)} €</span>
+                    </div>
+                    {l.residuoAplicado !== 0 && (
+                      <div className="flex justify-between text-[11px] text-slate-600">
+                        <span>Resíduo do mês anterior aplicado</span>
+                        <span className="font-bold text-slate-800">{l.residuoAplicado.toFixed(2)} €</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-[11px] text-slate-600">
+                      <span>% histórica usada</span>
+                      <span className="font-bold text-slate-800">{(gateAjudas.percentagemUsada * 100).toFixed(1)}%</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-black text-slate-900 pt-1.5 border-t border-slate-200">
+                      <span>Valor final (vai para a observação)</span>
+                      <span>{l.valorFinal.toFixed(2)} €</span>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={() => setGateAjudas(null)} disabled={emitindo}
+                        className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-white rounded-lg transition-all disabled:opacity-50">
+                        Cancelar
+                      </button>
+                      <button onClick={handleConfirmarEEmitir} disabled={emitindo}
+                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
+                        style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                        {emitindo ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
+                        Confirmar e Emitir
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {(!gateAjudas || gateAjudas.status === 'verificando') && (
+                <div className="flex gap-2">
+                  <button onClick={() => setPasso(1)} disabled={gateAjudas?.status === 'verificando'}
+                    className="flex-1 px-4 py-2.5 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50">
+                    Voltar
+                  </button>
+                  <button onClick={handleIniciarEmissao} disabled={emitindo || gateAjudas?.status === 'verificando'}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-60 shadow-md hover:opacity-90"
+                    style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                    {(emitindo || gateAjudas?.status === 'verificando') ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                    {gateAjudas?.status === 'verificando' ? 'A verificar ajudas...' : `Emitir ${tipoDocumento}`}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })()}
@@ -890,10 +1178,10 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
                 <CheckCircle size={40} className="mx-auto text-emerald-500" />
                 <div>
                   <p className="text-sm font-black text-slate-800">{tipoDocumento} emitido com sucesso</p>
-                  {resultado.documento?.attributes?.document_number && (
-                    <p className="text-xs text-slate-500 mt-1">Nº {resultado.documento.attributes.document_number}</p>
+                  {(resultado.documento?.attributes?.document_number || resultado.doc_id) && (
+                    <p className="text-xs text-slate-500 mt-1">Nº {resultado.documento?.attributes?.document_number || resultado.doc_id}</p>
                   )}
-                  <p className="text-xs text-slate-400 mt-0.5">Cliente: {cliente?.name} · {periodoLabel(periodo)}</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Cliente: {cliente?.name || nomeToConlineInicial} · {periodoLabel(periodo)}</p>
                   <p className="text-sm font-black text-emerald-700 mt-2">{totalFatura.toFixed(2)} €</p>
                 </div>
               </div>
@@ -916,6 +1204,7 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
             </button>
           </div>
         )}
+        </>}
 
       </div>
     </div>

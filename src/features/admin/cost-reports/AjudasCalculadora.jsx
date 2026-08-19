@@ -28,6 +28,9 @@ function getObservacao(a) {
 }
 
 // Converte string numérica em PT/EN para float (ex: "2.308,50" → 2308.50)
+// Mantido em sincronia com _parseMonetario em lib/ajudas/percentagemHistorica.js
+// (bug de parsing corrigido em ambos ao mesmo tempo — ver Fase 1, correção
+// do separador de milhares por espaço).
 function _parseMonetario(s) {
   s = (s || '').replace(/\s/g, '');
   if (!s) return null;
@@ -39,11 +42,27 @@ function _parseMonetario(s) {
   } else if (lastComma >= 0) {
     s = s.replace(/\./g, '').replace(',', '.');
   } else if ((s.match(/\./g) || []).length > 1) {
-    s = s.replace(/\./g, '');
+    // Dois ou mais pontos e nenhuma vírgula: normalmente inteiro com
+    // milhares por ponto. Mas último grupo com 2 dígitos (ex.
+    // "13.815.05") é quase de certeza erro de digitação — ponto usado
+    // como decimal em vez de vírgula — não um valor ~100x maior.
+    const lastDotIdx = s.lastIndexOf('.');
+    const decimais = s.slice(lastDotIdx + 1);
+    if (decimais.length === 2) {
+      s = s.slice(0, lastDotIdx).replace(/\./g, '') + '.' + decimais;
+    } else {
+      s = s.replace(/\./g, '');
+    }
   }
   const v = parseFloat(s);
   return isNaN(v) || v <= 0 ? null : v;
 }
+
+// Separador de milhares pode ser espaço ou ponto; decimal é vírgula (ou
+// ponto, tratado em _parseMonetario). Espaço só entra no número quando
+// seguido de dígito (lookahead) — nunca consome o espaço a seguir ao
+// valor, antes do resto da frase.
+const NUM_RE = /\d(?:[\d.,]|\s(?=\d))*\d|\d/;
 
 // Extrai o valor monetário de um texto livre.
 // Prioriza o padrão "€X.XXX,XX" (formato das notas TOConline).
@@ -51,10 +70,10 @@ function extrairValorObs(obs) {
   if (!obs) return null;
   const str = String(obs);
   // 1.ª prioridade: número imediatamente após símbolo €
-  const mEuro = str.match(/€\s*([\d][\d.,]*)/);
+  const mEuro = str.match(new RegExp('€\\s*(' + NUM_RE.source + ')'));
   if (mEuro) return _parseMonetario(mEuro[1]);
   // Fallback: primeiro número sem atravessar espaços
-  const m = str.match(/\d[\d.,]*\d|\d/);
+  const m = str.match(NUM_RE);
   if (!m) return null;
   return _parseMonetario(m[0]);
 }
@@ -906,7 +925,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
                           const val = overrides[l.clientId] !== undefined
                             ? parseFloat(overrides[l.clientId]) || 0
                             : l.ajudasEstimadas;
-                          setFaturarCliente({ clienteId: l.dbClientId, ajudasValor: val });
+                          setFaturarCliente({ clienteId: l.dbClientId, ajudasValor: val, nomeToC: l.nome });
                         }}
                         title="Faturar este cliente"
                         className="p-1.5 rounded-lg text-slate-300 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
@@ -1261,6 +1280,7 @@ table{width:100%;border-collapse:collapse;margin-bottom:20px;}
         <FaturarClienteModal
           clienteIdInicial={faturarCliente.clienteId}
           ajudasValorInicial={faturarCliente.ajudasValor}
+          nomeToConlineInicial={faturarCliente.nomeToC}
           periodoInicial={selectedMonth}
           onClose={() => setFaturarCliente(null)}
           onFaturado={() => setFaturarCliente(null)}
