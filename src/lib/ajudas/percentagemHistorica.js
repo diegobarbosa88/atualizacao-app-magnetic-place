@@ -25,59 +25,17 @@
 // ativa.
 
 import { ratearProporcional } from './rateio.js';
-import { authFetch } from '../../utils/authFetch.js';
+import { calcularValoresPorClienteMes, mesSeguinte } from './valoresPorFatura.js';
+import { extrairValorObs } from './valorObservacao.js';
+import {
+  TOCONLINE_TIPOS_RECEITA, fetchVendasTOConline, buscarFaturasVendasPeriodo,
+} from './faturasToConline.js';
 
-// Tipos de documento de venda do TOConline que representam receita real de
-// cliente. Exclui NC/ND (notas de crédito/débito) e GT/GR/ORC/PROJ/NAFT
-// (guias, orçamentos, projetos, documentos não fiscais).
-export const TOCONLINE_TIPOS_RECEITA = ['FT', 'FR', 'FS', 'FRS', 'VD'];
-
-function normalizarNome(s) {
-  return (s || '').toLowerCase().trim();
-}
-
-function _parseMonetario(s) {
-  s = (s || '').replace(/\s/g, '');
-  if (!s) return null;
-  const lastDot = s.lastIndexOf('.');
-  const lastComma = s.lastIndexOf(',');
-  if (lastDot >= 0 && lastComma >= 0) {
-    const dec = Math.max(lastDot, lastComma);
-    s = s.slice(0, dec).replace(/[.,]/g, '') + '.' + s.slice(dec + 1);
-  } else if (lastComma >= 0) {
-    s = s.replace(/\./g, '').replace(',', '.');
-  } else if ((s.match(/\./g) || []).length > 1) {
-    s = s.replace(/\./g, '');
-  }
-  const v = parseFloat(s);
-  return isNaN(v) || v <= 0 ? null : v;
-}
-
-// Idêntico a extrairValorObs em AjudasCalculadora.jsx — prioriza o padrão
-// "€X.XXX,XX" sobre o fallback numérico genérico, para não divergir da
-// extração já usada noutro sítio do projeto.
-export function extrairValorObs(obs) {
-  if (!obs) return null;
-  const str = String(obs);
-  const mEuro = str.match(/€\s*([\d][\d.,]*)/);
-  if (mEuro) return _parseMonetario(mEuro[1]);
-  const m = str.match(/\d[\d.,]*\d|\d/);
-  if (!m) return null;
-  return _parseMonetario(m[0]);
-}
-
-function getAttrsToc(item) {
-  return item?.attributes || item || {};
-}
-
-function getObservacaoToc(attrs) {
-  return attrs.notes || attrs.observations || attrs.observation || attrs.remarks || attrs.memo || attrs.description || null;
-}
-
-function ehFaturaReceita(attrs) {
-  const tipo = attrs.document_type_name || attrs.document_type || '';
-  return TOCONLINE_TIPOS_RECEITA.includes(String(tipo).toUpperCase());
-}
+// Re-exportados por compatibilidade — estas três funções/valor viviam neste
+// ficheiro antes de serem extraídas para faturasToConline.js (evitar import
+// circular com valoresPorFatura.js, chamado por consolidarTotalReal abaixo).
+// extrairValorObs, idem, extraído para valorObservacao.js.
+export { TOCONLINE_TIPOS_RECEITA, fetchVendasTOConline, buscarFaturasVendasPeriodo, extrairValorObs };
 
 function listarMesesEntre(periodoInicio, periodoFim) {
   const [anoI, mesI] = periodoInicio.split('-').map(Number);
@@ -90,78 +48,6 @@ function listarMesesEntre(periodoInicio, periodoFim) {
     if (mes > 12) { mes = 1; ano += 1; }
   }
   return meses;
-}
-
-// Implementação real (não usada nos testes — os testes injetam fetchVendasFn).
-// Pagina o endpoint /api/toconline/relatorio?tipo=vendas até esgotar
-// meta.total_pages, devolve a lista completa e achatada de itens brutos.
-export async function fetchVendasTOConline({ dataDe, dataAte }) {
-  const itens = [];
-  let page = 1;
-  let totalPages = 1;
-  do {
-    const params = new URLSearchParams({ tipo: 'vendas', data_de: dataDe, data_ate: dataAte, page: String(page) });
-    const res = await authFetch(`/api/toconline/relatorio?${params}`);
-    if (!res.ok) throw new Error(`Erro ao consultar faturas TOConline (página ${page}): ${res.status}`);
-    const data = await res.json();
-    itens.push(...(data.data || []));
-    totalPages = data.meta?.total_pages || 1;
-    page += 1;
-  } while (page <= totalPages);
-  return itens;
-}
-
-// Busca as faturas de venda do período, filtra só tipos de receita, resolve
-// client_id por correspondência de nome (o relatório TOConline não devolve
-// client_id, só o nome do cliente), e cruza com elegivel_ajudas_custo.
-//
-// Devolve também `semClienteCorrespondente`: faturas cujo nome de cliente
-// não bateu com nenhum registo em `clients` — não entram em nenhum cálculo
-// (não há como determinar elegibilidade sem um registo correspondente),
-// mas ficam visíveis para o admin resolver a divergência de nome.
-async function buscarFaturasVendasPeriodo({ periodoInicio, periodoFim, dbClient, fetchVendasFn = fetchVendasTOConline }) {
-  const { data: clientsData, error: errClients } = await dbClient
-    .from('clients')
-    .select('id, name, elegivel_ajudas_custo');
-  if (errClients) throw errClients;
-  const clientsAll = clientsData || [];
-
-  const dataDe = `${periodoInicio}-01`;
-  const dataAte = `${periodoFim}-31`;
-  const itensBrutos = await fetchVendasFn({ dataDe, dataAte });
-
-  const faturas = [];
-  const semClienteCorrespondente = [];
-
-  for (const item of itensBrutos || []) {
-    const attrs = getAttrsToc(item);
-    if (!ehFaturaReceita(attrs)) continue;
-
-    const valor = Number(attrs.gross_total ?? attrs.total_amount ?? attrs.total_value ?? 0) || 0;
-    if (valor <= 0) continue;
-
-    const nome = attrs.customer_business_name || attrs.customer_name || '';
-    const cliente = clientsAll.find(c => normalizarNome(c.name) === normalizarNome(nome));
-    const data = attrs.date || null;
-    const mes = data ? String(data).slice(0, 7) : null;
-    const faturaId = attrs.document_number || attrs.document_no || (item?.id != null ? String(item.id) : null);
-    const observacao = getObservacaoToc(attrs);
-
-    const registo = {
-      faturaId,
-      clientId: cliente?.id ?? null,
-      clienteNome: nome,
-      valor,
-      observacao,
-      mes,
-      elegivel: cliente?.elegivel_ajudas_custo ?? null,
-    };
-
-    if (!cliente) { semClienteCorrespondente.push(registo); continue; }
-    faturas.push(registo);
-  }
-
-  return { faturas, semClienteCorrespondente, clientsAll };
 }
 
 // Gate fail-closed — tem de ser a primeira verificação, antes de qualquer
@@ -191,67 +77,156 @@ export async function extrairValoresDeObservacoesExistentes({ periodoInicio, per
   return { faturas: comValorManual, semClienteCorrespondente };
 }
 
-// Passo (b): soma o total real de ajudas de custo (receipt_validations) no
-// período, excluindo meses com dados incompletos.
+// Estados de receipt_validations reconhecidos como "recibo processado e
+// utilizável" para o numerador da Fase 1. 'pago' foi confirmado (auditoria
+// com o "Relatório de Recibos" oficial) como um recibo válido — a UI trata-o
+// como qualquer "Válido", só denota que já foi reconciliado com um
+// pagamento. 'aviso' também entra (o relatório oficial inclui-o). Fora ficam
+// só 'erro'/'invalido' — recibos que a validação automática rejeitou mesmo.
+const ESTADOS_VALIDOS = ['valido', 'pago', 'aviso'];
+
+// worker_id e logs.workerId usam dois esquemas de prefixo diferentes
+// consoante a era em que o trabalhador foi criado ('w<digitos>' vs
+// 'worker_<digitos>') — para comparar se é o mesmo trabalhador entre as
+// duas tabelas, reduz-se a um núcleo numérico comum.
+// Exportado para reutilização em reconciliacao.js (verificarMesFechavel) —
+// mesma normalização de worker_id/logs.workerId, nunca uma segunda cópia.
+export function normalizarWorkerId(id) {
+  const m = String(id || '').match(/\d+$/);
+  return m ? m[0] : String(id || '');
+}
+
+// Passo (b) — MUDANÇA DE MÉTODO: o numerador já não vem de uma atribuição
+// por horas em `logs` (distribuicaoHoras.js). Passa a vir do valor
+// declarado na observação de cada fatura (calcularValoresPorClienteMes,
+// valoresPorFatura.js), com rateio proporcional ao valor da fatura para as
+// faturas sem valor declarado. Corre mês a mês, contínuo (não só no
+// saneamento inicial) — ver DECISIONS.md.
 //
-// "Mês incompleto" = existe pelo menos um trabalhador com horas registadas
-// em `logs` nesse mês (ou seja, trabalhou) sem uma receipt_validations
-// correspondente com estado='valido'. Deliberadamente NÃO se usa
-// workers.status='ativo' (o status atual do trabalhador, não o histórico
-// de quem estava ativo naquele mês específico) — usar horas registadas
-// nesse mês é o sinal mais fiável de que se esperava uma validação.
-export async function consolidarTotalReal({ periodoInicio, periodoFim, dbClient }) {
+// Resíduo CUMULATIVO: os meses são processados em ordem cronológica,
+// mantendo um saldoAcumulado que persiste entre meses — um resíduo negativo
+// isolado num mês não é uma anomalia; transporta-se para o mês seguinte até
+// ser absorvido (ou não) por faturas sem valor declarado. Só um saldo
+// negativo no FIM do período inteiro é uma anomalia real a investigar
+// (`anomaliaSaldoFinalNegativo`).
+//
+// O mês mais recente do período, se cair no mês corrente (ou futuro) por
+// via do duplo desvio M→M-1 (a fatura que declara o seu trabalho ainda não
+// fechou), fica em `mesesComDadosInsuficientes` — não participa do fecho
+// normal (não altera saldoAcumulado, não soma para totalReal).
+//
+// totalReal(periodo) = soma de valor_atribuido, SÓ das linhas cujo
+// elegivel_na_data (snapshot do momento do cálculo) é true — mesmo
+// critério de âmbito partilhado numerador/denominador de antes, só que
+// aplicado por fatura em vez de por atribuição de horas.
+//
+// `semLogs`/`totalSemLogs`/`atribuicoesHistoricas`/`semWorkerId`/
+// `totalSemWorkerId`/`naoElegivel`/`totalNaoElegivel` deixam de ter
+// conteúdo — eram específicos do método antigo (distribuicaoHoras.js), que
+// já não corre aqui. Mantidos na forma (arrays/números vazios) só para não
+// partir chamadores que ainda desestruturem estes campos; nenhum ecrã os
+// lê atualmente.
+//
+// O gate de completude (`mesesIncluidos`/`mesesExcluidos` — aviso quando um
+// trabalhador tem horas no mês de referência `mes` sem NENHUM
+// receipt_validations que reporte esse trabalho) usa agora o MESMO duplo
+// desvio já validado no resto do módulo: um trabalhador com horas em `mes`
+// (logs.date) só conta como "com recibo" se existir receipt_validations
+// com mes = mesSeguinte(mes) — o recibo processado no mês seguinte é que
+// reporta o trabalho de `mes`, não um receipt_validations com o mesmo mes.
+export async function consolidarTotalReal({ periodoInicio, periodoFim, dbClient, fetchVendasFn }) {
+  const meses = listarMesesEntre(periodoInicio, periodoFim);
+
+  let totalReal = 0;
+  let saldoAcumulado = 0;
+  const linhasPorMes = [];
+  const historicoSaldo = [];
+  const mesesComDadosInsuficientes = [];
+
+  for (const mes of meses) {
+    const r = await calcularValoresPorClienteMes({ mes, dbClient, fetchVendasFn, saldoAcumuladoEntrada: saldoAcumulado });
+
+    if (r.dadosInsuficientes) {
+      mesesComDadosInsuficientes.push({ mes, mesFatura: r.mesFatura });
+      continue; // não participa do fecho normal — saldoAcumulado não muda
+    }
+
+    saldoAcumulado = r.saldoAcumuladoSaida;
+    historicoSaldo.push({
+      mes, mesFatura: r.mesFatura, totalRealRecibos: r.totalRealRecibos, totalDeclarado: r.totalDeclarado,
+      residuoBruto: r.residuoBruto, saldoAcumuladoSaida: r.saldoAcumuladoSaida,
+    });
+
+    const totalMesElegivel = r.linhas
+      .filter(l => l.elegivel_na_data === true)
+      .reduce((s, l) => s + l.valor_atribuido, 0);
+    totalReal += totalMesElegivel;
+    linhasPorMes.push(...r.linhas);
+  }
+
   const [{ data: validations, error: errV }, { data: logs, error: errL }] = await Promise.all([
-    dbClient.from('receipt_validations').select('worker_id, mes, ajudas_custo_extraidas, estado')
-      .gte('mes', periodoInicio).lte('mes', periodoFim),
+    dbClient.from('receipt_validations').select('worker_id, mes')
+      .gte('mes', mesSeguinte(periodoInicio)).lte('mes', mesSeguinte(periodoFim)),
     dbClient.from('logs').select('workerId, date')
       .gte('date', `${periodoInicio}-01`).lte('date', `${periodoFim}-31`),
   ]);
   if (errV) throw errV;
   if (errL) throw errL;
 
-  const workersPorMes = new Map(); // mes -> Set(workerId)
+  const workersDoMesNormalizado = new Map(); // mes (referência) -> Map(idNormalizado -> idOriginal)
   for (const l of logs || []) {
     if (!l.workerId || !l.date) continue;
     const mes = l.date.slice(0, 7);
-    if (!workersPorMes.has(mes)) workersPorMes.set(mes, new Set());
-    workersPorMes.get(mes).add(l.workerId);
+    if (!workersDoMesNormalizado.has(mes)) workersDoMesNormalizado.set(mes, new Map());
+    workersDoMesNormalizado.get(mes).set(normalizarWorkerId(l.workerId), l.workerId);
   }
 
-  const validPorChave = new Map(); // `${workerId}|${mes}` -> validation
+  const idsComValidacaoPorMes = new Map(); // v.mes (mês do recibo, = mesSeguinte da referência) -> Set(idNormalizado)
   for (const v of validations || []) {
-    validPorChave.set(`${v.worker_id}|${v.mes}`, v);
+    if (!idsComValidacaoPorMes.has(v.mes)) idsComValidacaoPorMes.set(v.mes, new Set());
+    idsComValidacaoPorMes.get(v.mes).add(normalizarWorkerId(v.worker_id));
   }
 
-  const meses = listarMesesEntre(periodoInicio, periodoFim);
   const mesesIncluidos = [];
   const mesesExcluidos = [];
-  let totalReal = 0;
 
   for (const mes of meses) {
-    const workersDoMes = workersPorMes.get(mes) || new Set();
-    const faltantes = [];
-    for (const workerId of workersDoMes) {
-      const v = validPorChave.get(`${workerId}|${mes}`);
-      if (!v || v.estado !== 'valido') faltantes.push(workerId);
-    }
+    const workersDoMes = workersDoMesNormalizado.get(mes) || new Map();
+    // O recibo que reporta o trabalho de `mes` tem mes = mesSeguinte(mes) —
+    // mesmo duplo desvio já usado em calcularValoresPorClienteMes.
+    const idsValidados = idsComValidacaoPorMes.get(mesSeguinte(mes)) || new Set();
+    const semRecibo = [...workersDoMes.entries()]
+      .filter(([idNorm]) => !idsValidados.has(idNorm))
+      .map(([, idOriginal]) => idOriginal);
 
-    if (faltantes.length > 0) {
+    if (semRecibo.length > 0) {
       mesesExcluidos.push({
         mes,
-        motivo: `${faltantes.length} trabalhador(es) com horas registadas sem receipt_validations válida: ${faltantes.join(', ')}`,
+        motivo: `${semRecibo.length} trabalhador(es) com horas registadas sem NENHUM receipt_validations processado (aviso — não remove o mês do total): ${semRecibo.join(', ')}`,
       });
-      continue;
-    }
-
-    mesesIncluidos.push(mes);
-    for (const workerId of workersDoMes) {
-      const v = validPorChave.get(`${workerId}|${mes}`);
-      totalReal += Number(v.ajudas_custo_extraidas) || 0;
+    } else {
+      mesesIncluidos.push(mes);
     }
   }
 
-  return { totalReal, mesesIncluidos, mesesExcluidos };
+  return {
+    totalReal,
+    mesesIncluidos,
+    mesesExcluidos,
+    linhasPorMes,
+    historicoSaldo,
+    mesesComDadosInsuficientes,
+    saldoAcumuladoFinal: saldoAcumulado,
+    anomaliaSaldoFinalNegativo: saldoAcumulado < 0,
+    // Campos do método antigo (distribuicaoHoras.js) — ver nota acima.
+    semLogs: [],
+    totalSemLogs: 0,
+    atribuicoesHistoricas: [],
+    semWorkerId: [],
+    totalSemWorkerId: 0,
+    naoElegivel: [],
+    totalNaoElegivel: 0,
+  };
 }
 
 // Filtra as faturas para o subconjunto de clientes elegíveis
@@ -315,7 +290,12 @@ export async function executarCalculoFase1({ periodoInicio, periodoFim, dbClient
   const faturasComObs = faturas.map(f => ({ ...f, valorObservacaoManual: extrairValorObs(f.observacao) }));
   const faturasElegiveisDoPeriodo = filtrarFaturasElegiveis(faturasComObs);
 
-  const { totalReal, mesesIncluidos, mesesExcluidos } = await consolidarTotalReal({ periodoInicio, periodoFim, dbClient });
+  const {
+    totalReal, mesesIncluidos, mesesExcluidos, linhasPorMes,
+    historicoSaldo, mesesComDadosInsuficientes, saldoAcumuladoFinal, anomaliaSaldoFinalNegativo,
+    semLogs, totalSemLogs, atribuicoesHistoricas, semWorkerId, totalSemWorkerId,
+    naoElegivel, totalNaoElegivel,
+  } = await consolidarTotalReal({ periodoInicio, periodoFim, dbClient, fetchVendasFn });
 
   const totalFaturamento = faturasElegiveisDoPeriodo.reduce((s, f) => s + f.valor, 0);
   const { percentagem, totalAjudasReal, totalBrutoReferencia } = calcularPercentagemHistorica({ totalReal, totalFaturamento });
@@ -333,5 +313,17 @@ export async function executarCalculoFase1({ periodoInicio, periodoFim, dbClient
     clientesElegiveis,
     linhasHistoricas,
     semClienteCorrespondente,
+    linhasPorMes,
+    historicoSaldo,
+    mesesComDadosInsuficientes,
+    saldoAcumuladoFinal,
+    anomaliaSaldoFinalNegativo,
+    semLogs,
+    totalSemLogs,
+    atribuicoesHistoricas,
+    semWorkerId,
+    totalSemWorkerId,
+    naoElegivel,
+    totalNaoElegivel,
   };
 }

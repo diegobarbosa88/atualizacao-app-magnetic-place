@@ -17,6 +17,12 @@
 // permitir ao admin rever/corrigir uma decisão já tomada. Esconder
 // candidatos já decididos é uma preocupação da UI (secção 4 do
 // documento), não deste módulo.
+//
+// A distribuição proporcional por horas está em distribuicaoHoras.js,
+// partilhada com percentagemHistorica.js (consolidarTotalReal) — nunca
+// duplicar esta divisão.
+
+import { distribuirAjudaPorCliente } from './distribuicaoHoras.js';
 
 /**
  * @param {object} params
@@ -62,46 +68,13 @@ export async function sugerirElegibilidade({ periodoInicio, periodoFim, dbClient
     .lte('date', `${periodoFim}-31`);
   if (errLogs) throw errLogs;
 
-  // horasPorWorkerMes: `${workerId}|${mes}` → Map(clientId → horas)
-  const horasPorWorkerMes = new Map();
-  for (const l of logs || []) {
-    if (!l.clientId || !l.date || !l.workerId) continue;
-    const mes = l.date.slice(0, 7);
-    const key = `${l.workerId}|${mes}`;
-    if (!horasPorWorkerMes.has(key)) horasPorWorkerMes.set(key, new Map());
-    const porCliente = horasPorWorkerMes.get(key);
-    porCliente.set(l.clientId, (porCliente.get(l.clientId) || 0) + (Number(l.hours) || 0));
-  }
+  const { atribuicoes } = distribuirAjudaPorCliente({ validacoes: validacoesComAjuda, logs: logs || [] });
 
   // candidatesByClient: clientId → evidencia[]
   const candidatesByClient = new Map();
-
-  for (const v of validacoesComAjuda) {
-    const workerId = v.worker_id;
-    const mes = v.mes;
-    const ajudaCustoDoMes = Number(v.ajudas_custo_extraidas) || 0;
-
-    const porCliente = horasPorWorkerMes.get(`${workerId}|${mes}`);
-    if (!porCliente || porCliente.size === 0) continue;
-
-    const horasTotalTrabalhadorNoMes = [...porCliente.values()].reduce((s, h) => s + h, 0);
-    if (horasTotalTrabalhadorNoMes <= 0) continue;
-
-    for (const [clientId, horasCliente] of porCliente) {
-      const pctHorasCliente = horasCliente / horasTotalTrabalhadorNoMes;
-      const ajudaAtribuidaProporcional = ajudaCustoDoMes * pctHorasCliente;
-      const entry = {
-        mes,
-        workerId,
-        horasCliente,
-        horasTotalTrabalhadorNoMes,
-        pctHorasCliente,
-        ajudaCustoDoMes,
-        ajudaAtribuidaProporcional,
-      };
-      if (!candidatesByClient.has(clientId)) candidatesByClient.set(clientId, []);
-      candidatesByClient.get(clientId).push(entry);
-    }
+  for (const a of atribuicoes) {
+    if (!candidatesByClient.has(a.clientId)) candidatesByClient.set(a.clientId, []);
+    candidatesByClient.get(a.clientId).push(a);
   }
 
   const candidatos = [...candidatesByClient.entries()].map(([clientId, evidencia]) => ({
