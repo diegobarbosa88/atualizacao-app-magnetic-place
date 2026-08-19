@@ -74,6 +74,30 @@ function WorkerCard({ row }) {
             Verificar
           </span>
         )}
+        {row.fonte === 'ambigua' && (
+          <span title="Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária"
+            style={{ flexShrink: 0, background: '#dc2626', color: '#fff', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            Ambíguo
+          </span>
+        )}
+        {row.fonte === 'recibo-nome' && (
+          <span title="Dados do recibo já processado — correspondência por nome, confirmar"
+            style={{ flexShrink: 0, background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            Recibo (nome)
+          </span>
+        )}
+        {row.fonte === 'recibo-id' && (
+          <span title="Dados do recibo já processado (sem registo de horário no mês)"
+            style={{ flexShrink: 0, background: '#dbeafe', color: '#2563eb', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            Recibo
+          </span>
+        )}
+        {row.fonte === 'sem-dados' && (
+          <span title="Sem registo de horário nem recibo processado para este mês"
+            style={{ flexShrink: 0, background: '#F1F3F5', color: '#869AAF', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
+            Sem dados
+          </span>
+        )}
         {row.semNIS && !hasVerificar && (
           <span style={{ flexShrink: 0, background: '#fef3c7', color: '#d97706', borderRadius: 5, padding: '3px 7px', fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.3px' }}>
             Sem NIS

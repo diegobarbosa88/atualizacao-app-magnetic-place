@@ -38,6 +38,38 @@ const TOTL = { ...CELL, background: NAVY, color: '#fff', fontWeight: 700 };
 const TOTL_L = { ...TOTL, textAlign: 'left', fontFamily: 'Inter, sans-serif' };
 
 function StatusCell({ row }) {
+  if (row.fonte === 'ambigua') {
+    return (
+      <span title="Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fee2e2', color: '#dc2626', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <AlertTriangle size={9} />Ambíguo
+      </span>
+    );
+  }
+  if (row.fonte === 'recibo-nome') {
+    return (
+      <span title="Dados do recibo já processado — correspondência por nome, confirmar"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#fef3c7', color: '#d97706', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <AlertTriangle size={9} />Recibo (nome)
+      </span>
+    );
+  }
+  if (row.fonte === 'recibo-id') {
+    return (
+      <span title="Dados do recibo já processado (sem registo de horário no mês)"
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#dbeafe', color: '#2563eb', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+        <Info size={9} />Recibo
+      </span>
+    );
+  }
+  if (row.fonte === 'sem-dados') {
+    return (
+      <span title="Sem registo de horário nem recibo processado para este mês"
+        style={{ fontSize: 8, background: '#F1F3F5', color: '#869AAF', borderRadius: 5, padding: '2px 6px', fontWeight: 700, textTransform: 'uppercase' }}>
+        Sem dados
+      </span>
+    );
+  }
   if (row.isCompleto && row.divergencia == null) {
     return (
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, background: '#dcfce7', color: '#16a34a', borderRadius: 6, padding: '2px 7px', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.04em' }}>

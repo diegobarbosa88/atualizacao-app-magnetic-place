@@ -168,12 +168,24 @@ export default function MapaPainelExecutivo({ rows, totals }) {
                     <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: VAL_NEUT, fontFamily: MONO }}>{n2(row.segSocial)}</td>
                     <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: VAL_NEUT, fontFamily: MONO }}>{n2(row.irs)}</td>
                     <td style={{ padding: '11px 14px', fontSize: 12.5, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: NAVY, fontFamily: MONO }}>{n2(row.liquido)}</td>
-                    <td style={{ padding: '11px 14px', textAlign: 'center' }}>
-                      {row.isCompleto
-                        ? <CheckCircle size={14} color="#1E8E5A" />
-                        : row.divergencia != null
-                          ? <AlertTriangle size={14} color="#D3572B" />
-                          : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: BORDER }} />
+                    <td style={{ padding: '11px 14px', textAlign: 'center' }} title={
+                      row.fonte === 'ambigua' ? 'Correspondência ambígua com o recibo (nome duplicado/semelhante) — revisão manual necessária'
+                      : row.fonte === 'recibo-nome' ? 'Dados do recibo já processado — correspondência por nome, confirmar'
+                      : row.fonte === 'recibo-id' ? 'Dados do recibo já processado (sem registo de horário no mês)'
+                      : row.fonte === 'sem-dados' ? 'Sem registo de horário nem recibo processado para este mês'
+                      : undefined
+                    }>
+                      {row.fonte === 'ambigua'
+                        ? <AlertTriangle size={14} color="#DC2626" />
+                        : row.fonte === 'recibo-nome'
+                          ? <AlertTriangle size={14} color="#D97706" />
+                          : row.fonte === 'recibo-id'
+                            ? <Info size={14} color="#2563EB" />
+                            : row.isCompleto
+                              ? <CheckCircle size={14} color="#1E8E5A" />
+                              : row.divergencia != null
+                                ? <AlertTriangle size={14} color="#D3572B" />
+                                : <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: BORDER }} />
                       }
                     </td>
                   </tr>
