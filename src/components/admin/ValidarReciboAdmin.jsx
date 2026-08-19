@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ReceiptText, Scissors, Files } from 'lucide-react';
+import { ReceiptText, Scissors, Files, FileSearch } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import ModoHistorico from './ModoHistorico';
 import ModoBursting from './ModoBursting';
 import ModoDocumentos from './ModoDocumentos';
+import ModoReextracao from './ModoReextracao';
 
 const ValidarReciboAdmin = ({ workers = [] }) => {
   const { logs = [], systemSettings, saveSystemSettings, saveToDb } = useApp();
@@ -25,6 +26,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
           { id: 'recibos',    icon: ReceiptText, label: 'Recibos'    },
           { id: 'burst',      icon: Scissors,    label: 'Burst'      },
           { id: 'documentos', icon: Files,       label: 'Documentos' },
+          { id: 'reextracao', icon: FileSearch,  label: 'Reextração' },
         ].map(({ id, icon: Icon, label }) => (
           <button key={id} onClick={() => setModo(id)}
             className={`flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[11px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px ${modo === id ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}>
@@ -36,6 +38,7 @@ const ValidarReciboAdmin = ({ workers = [] }) => {
       {modo === 'recibos'    && <ModoHistorico workers={workers} logs={logs} systemSettings={systemSettings} saveSystemSettings={saveSystemSettings} saveToDb={saveToDb} workerRateHistory={workerRateHistory} />}
       {modo === 'burst'      && <ModoBursting  workers={workers} logs={logs} systemSettings={systemSettings} saveToDb={saveToDb} workerRateHistory={workerRateHistory} />}
       {modo === 'documentos' && <ModoDocumentos workers={workers} />}
+      {modo === 'reextracao' && <ModoReextracao workers={workers} logs={logs} systemSettings={systemSettings} workerRateHistory={workerRateHistory} />}
     </div>
   );
 };
