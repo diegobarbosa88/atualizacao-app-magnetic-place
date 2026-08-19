@@ -284,7 +284,9 @@ describe('confirmarEEmitirFatura', () => {
 
     // Um único texto passado para a criação da fatura — nenhuma referência
     // ao valor do mecanismo antigo, só ao valorFinal do mecanismo novo.
-    expect(textoRecebidoPorCriarFaturaFn).toBe('Estão incluídas nesta fatura €100.00 referentes a ajudas de custo.');
+    // Formato PT (vírgula decimal), não o toFixed(2) em inglês — texto
+    // real escrito na fatura fiscal, não só o parser de releitura.
+    expect(textoRecebidoPorCriarFaturaFn).toBe('Estão incluídas nesta fatura €100,00 referentes a ajudas de custo.');
     expect(textoRecebidoPorCriarFaturaFn).not.toContain(String(valorMecanismoAntigo));
 
     // ajudas_faturadas_clientes (tabela legada) fica com o valor NOVO.
@@ -300,6 +302,48 @@ describe('confirmarEEmitirFatura', () => {
 
     expect(r.faturado).toBe(true);
     expect(r.erroLegado).toBeNull();
+  });
+
+  it('texto da observação usa vírgula decimal (formato PT), não ponto — corrigido na escrita, não só na releitura', async () => {
+    const dbClient = {
+      from(table) {
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          is: () => builder,
+          in: () => builder,
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          insert: () => builder,
+          update: () => builder,
+          upsert: () => Promise.resolve({ data: null, error: null }),
+          single: () => Promise.resolve({ data: { id: 'est1' }, error: null }),
+        };
+        return builder;
+      },
+    };
+    let texto = null;
+    const criarFaturaFn = vi.fn(async ({ textoObservacaoAjudas }) => {
+      texto = textoObservacaoAjudas;
+      return { faturaId: 'FT 2026/300' };
+    });
+
+    // Valor acima de 1000 — não só a vírgula decimal, também o
+    // comportamento (real, não assumido) do separador de milhares em
+    // pt-PT: o Intl/toLocaleString desta locale não agrupa milhares (ao
+    // contrário de pt-BR/de-DE) — mesmo formatador usado em
+    // AjudasCustoAdmin.jsx (fmtEur), por isso este teste fixa o
+    // comportamento real e evita uma regressão silenciosa se a locale
+    // mudar de comportamento numa atualização de Node/ICU.
+    const linhaGrande = { clientId: 'c1', faturaId: null, valorEstimadoBruto: 1234.5, residuoAplicado: 0.06, valorFinal: 1234.56, status: 'calculado', motivoBloqueio: null };
+
+    await confirmarEEmitirFatura({
+      mesReferencia: '2026-07', clientId: 'c1', linha: linhaGrande, percentagemHistoricaId: 'pct1',
+      dbClient, confirmadoPor: 'admin@x.pt', criarFaturaFn, valorFaturaTotal: 5000,
+    });
+
+    expect(texto).toBe('Estão incluídas nesta fatura €' + (1234.56).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' referentes a ajudas de custo.');
+    expect(texto).not.toContain('1234.56');
+    expect(texto).toContain('1234,56');
   });
 
   it('falha na API → mantém "confirmado", não regride, não perde o registo da confirmação humana', async () => {

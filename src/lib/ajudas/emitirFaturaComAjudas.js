@@ -130,7 +130,13 @@ export async function confirmarEEmitirFatura({
     estimativaId = inserido.id;
   }
 
-  const textoObservacaoAjudas = `Estão incluídas nesta fatura €${linha.valorFinal.toFixed(2)} referentes a ajudas de custo.`;
+  // Formato PT (vírgula decimal, separador de milhares) — mesmo padrão já
+  // usado em AjudasCustoAdmin.jsx (fmtEur). Escrever com ponto ("€91.86")
+  // funcionava para o parser de releitura (_parseMonetario aceita ambos),
+  // mas produzia texto incorreto na fatura fiscal em si — corrigido aqui,
+  // na origem, não só na leitura.
+  const valorFinalFormatado = linha.valorFinal.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const textoObservacaoAjudas = `Estão incluídas nesta fatura €${valorFinalFormatado} referentes a ajudas de custo.`;
 
   let resultadoCriacao;
   try {
