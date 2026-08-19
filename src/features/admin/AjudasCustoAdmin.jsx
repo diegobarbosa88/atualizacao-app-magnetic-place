@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2, XCircle, Circle, History, Calculator, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2, XCircle, Circle, History, Calculator, ArrowRight, AlertTriangle, TrendingUp, Scale } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { sugerirElegibilidade } from '../../lib/ajudas/elegibilidade';
 import { executarCalculoFase1 } from '../../lib/ajudas/percentagemHistorica';
+import { calcularEstimativaMensal } from '../../lib/ajudas/estimativaMensal';
+import { verificarFechoMes, fecharReconciliacaoMes, SALDO_ACUMULADO_INICIAL } from '../../lib/ajudas/reconciliacao';
+import { calcularFaturacaoCliente } from '../../lib/faturacao/tarifaHistorica.js';
 
-// Fase 2 (Estimativa Mensal) e Fase 3 (Reconciliação) ainda não existem —
-// só as abas "Elegibilidade de Clientes" e "Histórico" (Fase 1) estão implementadas.
 const TABS = [
   { id: 'elegibilidade', label: 'Elegibilidade de Clientes', icon: Users },
   { id: 'historico', label: 'Histórico', icon: History },
+  { id: 'estimativa', label: 'Estimativa Mensal', icon: TrendingUp },
+  { id: 'reconciliacao', label: 'Reconciliação', icon: Scale },
 ];
 
 function fmtEur(v) {
@@ -121,6 +124,48 @@ function LinhaCliente({ candidato, nomeCliente, decisao, onDecidir, salvando, ex
   );
 }
 
+// Cliente com fatura(s) no período mas ZERO evidência em
+// sugerirElegibilidade() (nenhum trabalhador com ajuda de custo extraída
+// ligado a este cliente via logs) — mesmo toggle elegível/não elegível,
+// sem tabela de evidência porque não há nenhuma para mostrar.
+function LinhaClienteSemEvidencia({ clientId, nomeCliente, decisao, onDecidir, salvando }) {
+  const elegivel = decisao?.elegivel_ajudas_custo;
+  return (
+    <tr className="hover:bg-slate-50 transition-colors">
+      <td className="px-4 py-3">
+        <span className="font-semibold text-slate-800">{nomeCliente || clientId}</span>
+      </td>
+      <td className="px-4 py-3">
+        <div className="flex items-center justify-center gap-1.5">
+          {salvando ? (
+            <Loader2 size={16} className="animate-spin text-slate-400" />
+          ) : (
+            <>
+              <button
+                onClick={() => onDecidir(true)}
+                title="Marcar como elegível"
+                className={`p-2 rounded-xl transition-all ${elegivel === true ? 'bg-emerald-100 text-emerald-700' : 'text-slate-300 hover:bg-emerald-50 hover:text-emerald-600'}`}
+              >
+                <CheckCircle2 size={16} />
+              </button>
+              <button
+                onClick={() => onDecidir(false)}
+                title="Marcar como não elegível"
+                className={`p-2 rounded-xl transition-all ${elegivel === false ? 'bg-rose-100 text-rose-700' : 'text-slate-300 hover:bg-rose-50 hover:text-rose-600'}`}
+              >
+                <XCircle size={16} />
+              </button>
+              {elegivel == null && (
+                <span title="Por decidir" className="p-2 text-amber-400"><Circle size={16} /></span>
+              )}
+            </>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 function ElegibilidadeClientesTab() {
   const { supabase, currentUser } = useApp();
   const meses = useMemo(() => ultimosMeses(12), []);
@@ -129,6 +174,7 @@ function ElegibilidadeClientesTab() {
   const [candidatos, setCandidatos] = useState([]);
   const [clientesMap, setClientesMap] = useState({});
   const [decisoes, setDecisoes] = useState({});
+  const [clientesSemEvidencia, setClientesSemEvidencia] = useState([]);
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState(null);
   const [salvandoId, setSalvandoId] = useState(null);
@@ -139,13 +185,25 @@ function ElegibilidadeClientesTab() {
     setLoading(true);
     setErro(null);
     try {
-      const [candidatosResult, { data: clientesData, error: errClientes }] = await Promise.all([
+      const [candidatosResult, { data: clientesData, error: errClientes }, { data: logsData, error: errLogs }] = await Promise.all([
         sugerirElegibilidade({ periodoInicio, periodoFim, dbClient: supabase }),
         supabase.from('clients').select(
           'id, name, elegivel_ajudas_custo, elegibilidade_confirmado_em, elegibilidade_confirmado_por'
         ),
+        // Mesma fonte que o gate da Fase 2b usa para decidir quem bloqueia:
+        // um cliente só é bloqueado quando está prestes a ser faturado, e
+        // isso acontece quando tem horas registadas no período (é isso que
+        // calcularFaturacaoCliente transforma em valor a faturar — ver
+        // FaturarClienteModal.jsx). Faturas já emitidas no TOConline NÃO
+        // servem aqui: um cliente pode ter horas este mês e ainda não ter
+        // nenhuma fatura emitida (é exatamente esse o caso da ADITEK e da
+        // Magnetic Place) — usar só faturas já emitidas deixava-os de fora.
+        supabase.from('logs').select('clientId, hours, date')
+          .gte('date', `${periodoInicio}-01`)
+          .lte('date', `${periodoFim}-31`),
       ]);
       if (errClientes) throw errClientes;
+      if (errLogs) throw errLogs;
 
       setCandidatos(candidatosResult);
 
@@ -161,6 +219,16 @@ function ElegibilidadeClientesTab() {
       });
       setClientesMap(nomeMap);
       setDecisoes(decMap);
+
+      const idsComEvidencia = new Set(candidatosResult.map(c => c.clientId));
+      const idsComHoras = new Set();
+      (logsData || []).forEach(l => {
+        if (l.clientId && (parseFloat(l.hours) || 0) > 0) idsComHoras.add(l.clientId);
+      });
+      const semEvidencia = [...idsComHoras]
+        .filter(id => !idsComEvidencia.has(id))
+        .map(id => ({ clientId: id, nome: nomeMap[id] }));
+      setClientesSemEvidencia(semEvidencia);
     } catch (e) {
       setErro(e.message || 'Erro ao carregar elegibilidade');
     } finally {
@@ -292,6 +360,43 @@ function ElegibilidadeClientesTab() {
           </div>
         )}
       </div>
+
+      {clientesSemEvidencia.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 bg-amber-50/50">
+            <h3 className="text-xs font-black text-slate-800">Sem evidência de ajudas de custo</h3>
+            <p className="text-[11px] text-amber-700 mt-1">
+              Estes clientes têm horas registadas no período (vão gerar fatura) mas nenhum trabalhador com ajuda
+              de custo detetada nos recibos está ligado a eles via registos de horas — por isso nunca aparecem
+              como candidatos acima. Sem trabalhadores com ajuda de custo detetada — provavelmente não elegível,
+              mas confirma. O gate de emissão de faturas (Fase 2b) exige uma decisão para estes clientes na
+              mesma, mesmo sem evidência.
+            </p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                  <th className="px-4 py-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">Decisão</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {clientesSemEvidencia.map(c => (
+                  <LinhaClienteSemEvidencia
+                    key={c.clientId}
+                    clientId={c.clientId}
+                    nomeCliente={clientesMap[c.clientId] || c.nome}
+                    decisao={decisoes[c.clientId]}
+                    onDecidir={elegivel => decidir(c.clientId, elegivel)}
+                    salvando={salvandoId === c.clientId}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -636,6 +741,355 @@ function HistoricoTab({ onIrParaElegibilidade }) {
   );
 }
 
+function EstimativaMensalTab({ onIrParaElegibilidade }) {
+  const { supabase, clients, logs } = useApp();
+  const meses = useMemo(() => ultimosMeses(12), []);
+  const [mes, setMes] = useState(meses[meses.length - 1]);
+
+  const [ativo, setAtivo] = useState(null);
+  const [clientesMap, setClientesMap] = useState({});
+  const [resultado, setResultado] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
+
+  const calcular = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    setErro(null);
+    try {
+      const [{ data: ativoData }, { data: clientRateHistory }] = await Promise.all([
+        supabase.from('ajudas_percentagem_historica').select('*').eq('ativo', true).maybeSingle(),
+        supabase.from('client_valorhora_history').select('*'),
+      ]);
+      setAtivo(ativoData || null);
+      setClientesMap(Object.fromEntries((clients || []).map(c => [c.id, c.name])));
+
+      // Aproximação de faturasDoMes: horas × tarifa histórica por cliente
+      // (mesma fórmula de Custos → Clientes e do FaturarClienteModal) — a
+      // fatura real ainda não existe nesta fase, por isso isto é só uma
+      // pré-visualização, nunca o valor definitivo (ver aviso na UI).
+      const clientIdsComLogs = [...new Set(
+        (logs || []).filter(l => (l.date || '').startsWith(mes) && l.clientId).map(l => l.clientId)
+      )];
+      const faturasDoMes = clientIdsComLogs.map(clientId => {
+        const cliente = (clients || []).find(c => c.id === clientId);
+        const { valorFaturado } = calcularFaturacaoCliente({
+          logs,
+          clientId,
+          periodo: mes,
+          valorHoraAtual: Number(cliente?.valorHora ?? 0),
+          clientRateHistory: clientRateHistory || [],
+        });
+        return { clientId, faturaId: null, valorFaturado };
+      });
+
+      const resultadoCalc = await calcularEstimativaMensal({ mes, faturasDoMes, dbClient: supabase });
+      setResultado(resultadoCalc);
+    } catch (e) {
+      setErro(e.message || 'Erro ao calcular estimativa mensal');
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase, clients, logs, mes]);
+
+  useEffect(() => { calcular(); }, [calcular]);
+
+  const totalFinal = (resultado?.linhas || []).filter(l => l.status === 'calculado').reduce((s, l) => s + l.valorFinal, 0);
+  const bloqueadas = (resultado?.linhas || []).filter(l => l.status === 'bloqueado');
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800 font-semibold space-y-1">
+        <p>Modo simulação — nada aqui é gravado nem enviado para faturação real. Só pré-visualização (Fase 2a).</p>
+        <p>Estimativa baseada em horas lançadas — pode divergir do valor final se o admin editar manualmente no momento de faturar.</p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-sm font-black text-slate-800">Estimativa Mensal — Fase 2</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Aplica a % histórica ativa ao faturamento elegível do mês, rateado por cliente.</p>
+          </div>
+          <select value={mes} onChange={e => setMes(e.target.value)}
+            className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+            {meses.map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
+        </div>
+
+        {ativo ? (
+          <div className="flex items-center gap-3 flex-wrap text-xs">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black uppercase tracking-widest bg-emerald-50 text-emerald-700">
+              % ativa: {fmtPct(ativo.percentagem)}
+            </span>
+            <span className="text-slate-400">período de origem: {ativo.periodo_inicio} a {ativo.periodo_fim}</span>
+          </div>
+        ) : (
+          <p className="text-xs text-amber-600 font-semibold">Nenhuma % histórica ativa — todas as linhas deste mês vão ficar bloqueadas.</p>
+        )}
+      </div>
+
+      {erro && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-300"><Loader2 size={24} className="animate-spin" /></div>
+        ) : !resultado || resultado.linhas.length === 0 ? (
+          <div className="px-5 py-16 text-center text-slate-400 text-xs font-semibold">Nenhuma fatura de receita neste mês.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Fatura</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Estimado Bruto</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Resíduo Aplicado</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Final</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {resultado.linhas.map((l, i) => (
+                  <tr key={`${l.clientId}-${l.faturaId ?? i}`} className={l.status === 'bloqueado' ? 'bg-amber-50' : 'hover:bg-slate-50'}>
+                    <td className="px-4 py-3 font-semibold text-slate-800">{clientesMap[l.clientId] || l.clientId}</td>
+                    <td className="px-4 py-3 text-slate-500 font-mono">{l.faturaId || '—'}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{fmtEur(l.valorEstimadoBruto)}</td>
+                    <td className="px-4 py-3 text-right text-slate-500">{fmtEur(l.residuoAplicado)}</td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: l.status === 'bloqueado' ? '#B45309' : '#1B3A57' }}>{fmtEur(l.valorFinal)}</td>
+                    <td className="px-4 py-3">
+                      {l.status === 'calculado' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">Calculado</span>
+                      ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">
+                            <AlertTriangle size={11} /> Bloqueado
+                          </span>
+                          <span className="text-slate-500">{l.motivoBloqueio}</span>
+                          {l.motivoBloqueio === 'cliente sem decisao de elegibilidade' && (
+                            <button onClick={onIrParaElegibilidade} className="text-[10px] font-black uppercase tracking-widest hover:opacity-80" style={{ color: '#EB8D00' }}>
+                              Ir para Elegibilidade →
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="border-t border-slate-200 bg-slate-50">
+                  <td colSpan={4} className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Total (linhas calculadas)</td>
+                  <td className="px-4 py-3 text-right font-black" style={{ color: '#1B3A57' }}>{fmtEur(totalFinal)}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {bloqueadas.length > 0 && (
+        <p className="text-xs text-amber-700 font-semibold px-1">
+          {bloqueadas.length} linha{bloqueadas.length !== 1 ? 's' : ''} bloqueada{bloqueadas.length !== 1 ? 's' : ''} — resolve antes de considerar avançar para emissão real (Fase 2b, sessão futura).
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ReconciliacaoTab() {
+  const { supabase } = useApp();
+  const meses = useMemo(() => ultimosMeses(12), []);
+  const [mes, setMes] = useState(meses[meses.length - 2] || meses[0]);
+
+  const [historico, setHistorico] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [verificando, setVerificando] = useState(false);
+  const [fechando, setFechando] = useState(false);
+
+  const carregarHistorico = useCallback(async () => {
+    if (!supabase) return;
+    setLoading(true);
+    setErro(null);
+    try {
+      const { data, error } = await supabase.from('ajudas_reconciliacao_mensal').select('*').order('mes', { ascending: false });
+      if (error) throw error;
+      setHistorico(data || []);
+    } catch (e) {
+      setErro(e.message || 'Erro ao carregar reconciliação');
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  useEffect(() => { carregarHistorico(); }, [carregarHistorico]);
+
+  // O saldo do mês mais recentemente fechado (histórico já vem ordenado por
+  // mes desc) — ou a semente da Fase 1 se ainda não houve nenhum fecho.
+  // Mesma lógica de reconciliacao.js/estimativaMensal.js, nunca duplicada
+  // em números diferentes — só a leitura do valor já gravado.
+  const saldoAtual = historico.length > 0 ? Number(historico[0].saldo_acumulado) : SALDO_ACUMULADO_INICIAL;
+
+  const handleVerificar = async () => {
+    if (!supabase) return;
+    setVerificando(true);
+    setErro(null);
+    setPreview(null);
+    try {
+      const r = await verificarFechoMes({ mes, dbClient: supabase });
+      setPreview(r);
+    } catch (e) {
+      setErro(e.message || 'Erro ao verificar fecho do mês');
+    } finally {
+      setVerificando(false);
+    }
+  };
+
+  const handleConfirmarFecho = async () => {
+    if (!supabase || !preview?.fechavel) return;
+    setFechando(true);
+    setErro(null);
+    try {
+      const r = await fecharReconciliacaoMes({ mes, dbClient: supabase });
+      if (!r.fechavel) { setErro(r.motivo); return; }
+      setPreview(null);
+      await carregarHistorico();
+    } catch (e) {
+      setErro(e.message || 'Erro ao fechar mês');
+    } finally {
+      setFechando(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className={`rounded-2xl border p-5 ${saldoAtual < 0 ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'}`}>
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Saldo acumulado atual</p>
+        <p className={`text-3xl font-black mt-1 ${saldoAtual < 0 ? 'text-rose-700' : 'text-emerald-700'}`}>{fmtEur(saldoAtual)}</p>
+        <p className="text-xs mt-1 font-semibold" style={{ color: saldoAtual < 0 ? '#9F1239' : '#047857' }}>
+          {saldoAtual < 0
+            ? 'Em dívida — já foi escrito mais em faturas do que o real confirmado nos recibos. As próximas estimativas mensais ficam reduzidas até este saldo ser absorvido (nunca ficam negativas).'
+            : 'A favor — real confirmado nos recibos ainda por reconhecer nas próximas faturas.'}
+        </p>
+        {historico.length === 0 && (
+          <p className="text-[10px] text-slate-400 mt-2">Nenhum mês fechado ainda — valor de semente (saldo deixado pela Fase 1 no fim do saneamento, 2025-12 a 2026-07).</p>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div>
+            <h2 className="text-sm font-black text-slate-800">Reconciliação Mensal — Fase 3</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Fecho manual, nunca automático — confirma o resíduo real vs. escrito de um mês já fechado (recibos completos).</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select value={mes} onChange={e => { setMes(e.target.value); setPreview(null); }}
+              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+              {meses.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <button onClick={handleVerificar} disabled={verificando}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-50 shadow-md hover:opacity-90"
+              style={{ backgroundColor: '#1B3A57' }}>
+              {verificando && <Loader2 size={13} className="animate-spin" />}
+              Fechar mês {mes}
+            </button>
+          </div>
+        </div>
+
+        {erro && (
+          <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
+        )}
+
+        {preview && !preview.fechavel && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-800 font-semibold flex items-start gap-2">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+            <span>Mês não fechável: {preview.motivo}</span>
+          </div>
+        )}
+
+        {preview && preview.fechavel && (
+          <div className="bg-slate-50 rounded-2xl border border-slate-200 p-4 space-y-2.5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Confirmação de fecho — {mes}</p>
+            <div className="flex justify-between text-xs text-slate-600">
+              <span>Total real (recibos, mês seguinte)</span>
+              <span className="font-bold text-slate-800">{fmtEur(preview.totalReal)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-slate-600">
+              <span>Total já escrito em faturas</span>
+              <span className="font-bold text-slate-800">{fmtEur(preview.totalEscrito)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-slate-600">
+              <span>Resíduo do mês</span>
+              <span className="font-bold" style={{ color: preview.residuoDoMes < 0 ? '#B91C1C' : '#047857' }}>{fmtEur(preview.residuoDoMes)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-slate-600">
+              <span>Saldo acumulado anterior{preview.saldoAcumuladoAnteriorEraSemente ? ' (semente Fase 1)' : ''}</span>
+              <span className="font-bold text-slate-800">{fmtEur(preview.saldoAcumuladoAnterior)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-black pt-1.5 border-t border-slate-200">
+              <span>Novo saldo acumulado</span>
+              <span style={{ color: preview.novoSaldoAcumulado < 0 ? '#B91C1C' : '#047857' }}>{fmtEur(preview.novoSaldoAcumulado)}</span>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setPreview(null)} disabled={fechando}
+                className="flex-1 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-white rounded-lg transition-all disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={handleConfirmarFecho} disabled={fechando}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all disabled:opacity-60 hover:opacity-90"
+                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                {fechando ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                Confirmar Fecho
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-300"><Loader2 size={24} className="animate-spin" /></div>
+        ) : historico.length === 0 ? (
+          <div className="px-5 py-16 text-center text-slate-400 text-xs font-semibold">Nenhum mês fechado ainda.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Total Real</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Total Estimado</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Resíduo</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Saldo Acumulado</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {historico.map(r => (
+                  <tr key={r.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-mono font-semibold text-slate-800">{r.mes}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{fmtEur(r.total_real)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{fmtEur(r.total_estimado)}</td>
+                    <td className="px-4 py-3 text-right font-bold" style={{ color: r.residuo < 0 ? '#B91C1C' : '#047857' }}>{fmtEur(r.residuo)}</td>
+                    <td className="px-4 py-3 text-right font-black" style={{ color: r.saldo_acumulado < 0 ? '#B91C1C' : '#047857' }}>{fmtEur(r.saldo_acumulado)}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-600">{r.status}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AjudasCustoAdmin() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -662,6 +1116,8 @@ export default function AjudasCustoAdmin() {
 
       {subtab === 'elegibilidade' && <ElegibilidadeClientesTab />}
       {subtab === 'historico' && <HistoricoTab onIrParaElegibilidade={() => setSubtab('elegibilidade')} />}
+      {subtab === 'estimativa' && <EstimativaMensalTab onIrParaElegibilidade={() => setSubtab('elegibilidade')} />}
+      {subtab === 'reconciliacao' && <ReconciliacaoTab />}
     </div>
   );
 }
