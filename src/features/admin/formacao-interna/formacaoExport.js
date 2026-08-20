@@ -86,28 +86,29 @@ async function getCarimboBase64() {
 // terem o mesmo nível de credibilidade.
 function desenharBlocoEmpresa(doc, x, y, { carimboBase64, assinaturaBase64, nomeResponsavel, cargoResponsavel, codigo, largura = 76 }) {
   if (carimboBase64) {
-    try { doc.addImage(carimboBase64, 'PNG', x, y, 32, 18, undefined, 'FAST'); } catch { /* segue sem carimbo */ }
+    try { doc.addImage(carimboBase64, 'PNG', x, y + 2, 30, 17, undefined, 'FAST'); } catch { /* segue sem carimbo */ }
   }
-  // Assinatura pessoal do responsável por cima do carimbo, ligeiramente
-  // desviada — como uma rubrica feita mesmo em cima do carimbo em papel.
+  // Assinatura pessoal do responsável por cima do carimbo — do mesmo porte
+  // visual do carimbo (não uma rubrica pequena a um canto), como uma
+  // assinatura real feita em cima de um carimbo em papel.
   if (assinaturaBase64) {
-    try { doc.addImage(assinaturaBase64, 'PNG', x + 6, y + 5, 30, 13, undefined, 'FAST'); } catch { /* segue sem assinatura */ }
+    try { doc.addImage(assinaturaBase64, 'PNG', x - 4, y - 4, 46, 24, undefined, 'FAST'); } catch { /* segue sem assinatura */ }
   }
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY_DEEP);
-  doc.text(nomeResponsavel || 'Magnetic Place Unipessoal, Lda', x, y + 22);
+  doc.text(nomeResponsavel || 'Magnetic Place Unipessoal, Lda', x, y + 25);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(...SLATE);
   if (nomeResponsavel && cargoResponsavel) {
-    doc.text(cargoResponsavel, x, y + 25.5);
+    doc.text(cargoResponsavel, x, y + 28.5);
+    doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 32);
+    doc.text(`Código de verificação: ${codigo}`, x, y + 35, { maxWidth: largura });
+  } else {
     doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 29);
     doc.text(`Código de verificação: ${codigo}`, x, y + 32, { maxWidth: largura });
-  } else {
-    doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 26);
-    doc.text(`Código de verificação: ${codigo}`, x, y + 29, { maxWidth: largura });
   }
   doc.setTextColor(0, 0, 0);
 }
@@ -412,7 +413,8 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
   doc.setTextColor(0, 0, 0);
   y += 8;
 
-  if (y > 250) { doc.addPage(); y = 20; }
+  if (y > 240) { doc.addPage(); y = 20; }
+  y += 6;
   desenharBlocoEmpresa(doc, 120, y, {
     carimboBase64,
     // já vem como data URL de Definições → Assinatura da Empresa, não uma
@@ -580,7 +582,7 @@ export async function exportCertificadoPDF(formacao, participante, companySignat
   // não ficar só com a frente decorativa: dá para conferir o que foi mesmo
   // dado, sessão a sessão, sem precisar de consultar o sistema.
   doc.addPage('a4', 'landscape');
-  desenharVersoCronograma(doc, formacao, logoBase64);
+  desenharVersoCronograma(doc, formacao);
 
   const nomeArquivo = `certificado-${(participante.workers?.name || 'trabalhador').replace(/\s+/g, '_')}-${(formacao.tipo_formacao || formacao.titulo || 'formacao').replace(/\s+/g, '_')}.pdf`;
   doc.save(nomeArquivo);
@@ -590,44 +592,34 @@ export async function exportCertificadoPDF(formacao, participante, companySignat
 // Presencial usa o texto livre de conteudo_programatico; e-learning usa as
 // secções estruturadas (conteudo_estruturado.seccoes), com o objetivo geral
 // no topo, exatamente o que o trabalhador percorreu no módulo.
-function desenharVersoCronograma(doc, formacao, logoBase64) {
+function desenharVersoCronograma(doc, formacao) {
   const W = 297, H = 210;
 
-  // Cabeçalho e rodapé próprios (paisagem) — cabecalho()/rodape() partilhados
-  // assumem sempre A4 retrato (210×297), não servem para esta página.
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, W, 26, 'F');
-  doc.setFillColor(...ORANGE);
-  doc.rect(0, 26, W, 1.3, 'F');
-  if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 3, 19, 19);
-  const textX = logoBase64 ? 38 : 14;
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(13);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MAGNETIC PLACE', textX, 12);
-  doc.setFontSize(8.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('CRONOGRAMA DA FORMAÇÃO — Verso do Certificado', textX, 18);
-  doc.setTextColor(0, 0, 0);
-
-  let y = 35;
-  doc.setFontSize(13);
+  // Sem faixa de cabeçalho — só um título discreto, para sobrar o máximo de
+  // espaço possível e o cronograma caber inteiro numa só página.
+  let y = 14;
+  doc.setFontSize(15);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY_DEEP);
   doc.text(formacao.tipo_formacao || formacao.titulo, 14, y);
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...SLATE);
+  doc.text('CRONOGRAMA DA FORMAÇÃO', W - 14, y, { align: 'right' });
   doc.setTextColor(0, 0, 0);
   y += 3;
   doc.setDrawColor(...ORANGE);
   doc.setLineWidth(0.6);
   doc.line(14, y, W - 14, y);
-  y += 6;
+  y += 5;
 
   const isElearning = formacao.formato === 'e-learning';
   autoTable(doc, {
     startY: y,
     theme: 'plain',
-    styles: { fontSize: 9, cellPadding: 1.6 },
-    columnStyles: { 0: { fontStyle: 'bold', textColor: NAVY, cellWidth: 40 } },
+    styles: { fontSize: 8.5, cellPadding: 1.1 },
+    columnStyles: { 0: { fontStyle: 'bold', textColor: NAVY, cellWidth: 32 } },
     alternateRowStyles: { fillColor: ROW_TINT },
     tableWidth: W - 28,
     body: [
@@ -641,74 +633,67 @@ function desenharVersoCronograma(doc, formacao, logoBase64) {
       ...(formacao.metodo_avaliacao ? [['Método de Avaliação', formacao.metodo_avaliacao]] : []),
     ],
   });
-  y = doc.lastAutoTable.finalY + 8;
+  y = doc.lastAutoTable.finalY + 5;
 
   const objetivo = formacao.objetivos || formacao.conteudo_estruturado?.objetivo;
   if (objetivo) {
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...NAVY_DEEP);
     doc.text('OBJETIVO', 14, y);
     doc.setTextColor(0, 0, 0);
-    y += 5;
-    doc.setFontSize(9);
+    y += 4.2;
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     const linhasObjetivo = doc.splitTextToSize(objetivo, W - 28);
     doc.text(linhasObjetivo, 14, y);
-    y += linhasObjetivo.length * 4.2 + 6;
+    y += linhasObjetivo.length * 3.8 + 4;
   }
 
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY_DEEP);
   doc.text('CRONOGRAMA / CONTEÚDO PROGRAMÁTICO', 14, y);
   doc.setTextColor(0, 0, 0);
-  y += 6;
+  y += 4.5;
 
   const seccoes = formacao.conteudo_estruturado?.seccoes;
   if (Array.isArray(seccoes) && seccoes.length > 0) {
     for (const sec of seccoes) {
-      if (y > 185) { doc.addPage('a4', 'landscape'); y = 20; }
-      doc.setFontSize(9.5);
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...ORANGE_DEEP);
       doc.text(`• ${sec.titulo}`, 14, y);
       doc.setTextColor(0, 0, 0);
-      y += 4.5;
+      y += 3.8;
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
+      doc.setFontSize(8);
       const texto = [...(sec.paragrafos || []), ...(sec.lista || []).map(li => `– ${li}`)].join('  ');
       if (texto) {
         const linhas = doc.splitTextToSize(texto, W - 32);
         doc.text(linhas, 18, y);
-        y += linhas.length * 4 + 4;
+        y += linhas.length * 3.5 + 2.5;
       } else {
-        y += 2;
+        y += 1.5;
       }
     }
   } else if (formacao.conteudo_programatico) {
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     const linhas = doc.splitTextToSize(formacao.conteudo_programatico, W - 28);
     doc.text(linhas, 14, y);
-    y += linhas.length * 4.2;
+    y += linhas.length * 3.8;
   } else {
-    doc.setFontSize(9);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...SLATE);
     doc.text('Sem conteúdo programático registado.', 14, y);
     doc.setTextColor(0, 0, 0);
   }
 
-  // Rodapé próprio (paisagem) em todas as páginas do verso — rodape()
-  // partilhado assume A4 retrato, não serve aqui.
-  const totalPaginas = doc.internal.getNumberOfPages();
-  for (let i = 2; i <= totalPaginas; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(...SLATE);
-    doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', 14, H - 8);
-    doc.text(`Página ${i}/${totalPaginas}`, W - 14, H - 8, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
-  }
+  // Rodapé simples (paisagem) — rodape() partilhado assume A4 retrato.
+  doc.setFontSize(8);
+  doc.setTextColor(...SLATE);
+  doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', 14, H - 8);
+  doc.setTextColor(0, 0, 0);
 }
