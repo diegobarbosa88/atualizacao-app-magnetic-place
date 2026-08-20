@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Calendar, Coffee, Save, X, Plus, Loader2, Sparkles } from 'lucide-react';
 import { callGemini } from '../../utils/aiUtils';
 import { useApp } from '../../context/AppContext';
+import { FT, FONT_MONO } from '../../styles/designTokens';
 
 const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCancel, showDate = false, isEditing = false, title = "Registar Horário", isInline = false, systemSettings: propSystemSettings }) => {
   const { systemSettings: contextSystemSettings } = useApp();
@@ -43,10 +44,13 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
   };
 
   return (
-    <div className={`bg-white ${isInline ? 'rounded-2xl p-4 shadow-lg border-2 border-indigo-100' : 'rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-8 shadow-md sm:shadow-2xl border border-slate-100 sm:border-indigo-50/50'} animate-in fade-in zoom-in-95 duration-300 w-full text-slate-900 my-2`}>
+    <div
+      className={`bg-white ${isInline ? 'rounded-2xl p-4 shadow-lg border-2' : 'rounded-2xl sm:rounded-[2.5rem] p-3 sm:p-8 shadow-md sm:shadow-2xl border border-slate-100'} animate-in fade-in zoom-in-95 duration-300 w-full text-slate-900 my-2`}
+      style={isInline ? { borderColor: `${FT.orange}33` } : undefined}
+    >
       {!isInline && (
         <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6 border-b border-slate-100 pb-2.5 sm:pb-4">
-          <div className="p-1.5 sm:p-2 bg-indigo-50 rounded-lg sm:rounded-xl text-indigo-600"><Calendar size={16} className="sm:w-5 sm:h-5" /></div>
+          <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl" style={{ background: FT.navyDeep, color: FT.orange }}><Calendar size={16} className="sm:w-5 sm:h-5" /></div>
           <h3 className="font-black text-sm sm:text-lg uppercase tracking-tight text-slate-700 sm:text-slate-800">{title}</h3>
         </div>
       )}
@@ -55,7 +59,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
         <div className="grid grid-cols-1 md:grid-cols-4 gap-2 sm:gap-4">
           <div className={`${showDate ? 'md:col-span-3' : 'md:col-span-4'} space-y-0.5 sm:space-y-1`}>
             <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Cliente / Unidade</label>
-            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none appearance-none shadow-sm text-slate-900" value={data.clientId || ''} onChange={(e) => onChange({ ...data, clientId: e.target.value })}>
+            <select className="w-full bg-slate-50 border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[#EB8D00] outline-none appearance-none shadow-sm text-slate-900" value={data.clientId || ''} onChange={(e) => onChange({ ...data, clientId: e.target.value })}>
               <option value="">Selecione o Cliente...</option>
               {filteredClients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -63,7 +67,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           {showDate && (
             <div className="space-y-0.5 sm:space-y-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Data</label>
-              <input type="date" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm text-slate-900" value={data.date || ''} onChange={(e) => onChange({ ...data, date: e.target.value })} />
+              <input type="date" className="w-full bg-white border border-slate-200 rounded-lg sm:rounded-xl p-2 sm:p-3 text-sm focus:ring-2 focus:ring-[#EB8D00]/40 focus:border-[#EB8D00] outline-none shadow-sm text-slate-900" value={data.date || ''} onChange={(e) => onChange({ ...data, date: e.target.value })} />
             </div>
           )}
         </div>
@@ -91,7 +95,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           <div className="space-y-0.5 sm:space-y-1 animate-in fade-in slide-in-from-top-2">
             <div className="flex justify-between items-center mb-1">
               <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Comentários</label>
-              <button onClick={handleAiPolish} disabled={isImproving || !data.description} className="text-[9px] flex items-center gap-1 font-bold text-indigo-500 hover:text-indigo-700 disabled:opacity-50">
+              <button onClick={handleAiPolish} disabled={isImproving || !data.description} className="text-[9px] flex items-center gap-1 font-bold disabled:opacity-50" style={{ color: FT.navy }}>
                 {isImproving ? <Loader2 className="animate-spin" size={10} /> : <Sparkles size={10} />} Sugestão IA ✨
               </button>
             </div>
@@ -99,7 +103,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           </div>
         ) : (
           <div>
-            <button onClick={(e) => { e.preventDefault(); setShowComments(true); }} className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors flex items-center gap-1 bg-slate-50 hover:bg-indigo-50 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
+            <button onClick={(e) => { e.preventDefault(); setShowComments(true); }} className="text-[10px] font-bold text-slate-400 hover:text-[#1B3A57] transition-colors flex items-center gap-1 bg-slate-50 hover:bg-[#1B3A57]/5 px-3 py-1.5 rounded-lg border border-slate-200 border-dashed w-max">
               <Plus size={12} /> Adicionar Comentários
             </button>
           </div>
@@ -109,7 +113,7 @@ const EntryForm = ({ data = {}, clients, assignedClients, onChange, onSave, onCa
           <p className="text-xs font-bold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{saveError}</p>
         )}
         <div className="flex gap-2 sm:gap-3 pt-0.5 sm:pt-2">
-          <button onClick={handleSave} className="flex-1 bg-emerald-600 text-white py-2 sm:py-3 rounded-xl shadow-md sm:shadow-lg hover:bg-emerald-700 transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95"><Save size={14} className="sm:w-4 sm:h-4" /> {isEditing ? 'ATUALIZAR' : 'GRAVAR'}</button>
+          <button onClick={handleSave} className="flex-1 text-white py-2 sm:py-3 rounded-xl shadow-md sm:shadow-lg transition-all font-black text-xs uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95" style={{ background: FT.orange, fontFamily: FONT_MONO }} onMouseEnter={e => e.currentTarget.style.background = FT.orangeDeep} onMouseLeave={e => e.currentTarget.style.background = FT.orange}><Save size={14} className="sm:w-4 sm:h-4" /> {isEditing ? 'ATUALIZAR' : 'GRAVAR'}</button>
           <button onClick={onCancel} className="bg-slate-100 border border-slate-200 text-slate-400 p-2 sm:p-3 rounded-xl hover:text-red-500 transition-all shadow-sm"><X size={16} className="sm:w-[18px] sm:h-[18px]" /></button>
         </div>
       </div>

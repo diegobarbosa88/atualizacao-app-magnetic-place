@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bell, Clock, CheckCircle, FileText, GraduationCap, AlertTriangle, Edit2, ChevronRight } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
+import { FT, FONT_MONO } from './formacaoDesignTokens';
 
 export default function PendingAlertsModal({
   isOpen, onClose,
@@ -23,7 +24,7 @@ export default function PendingAlertsModal({
       title="Avisos Pendentes"
       subtitle={subtitle}
       icon={<Bell size={16} />}
-      accent="indigo"
+      accent="navyOrange"
     >
       <div className="px-4 py-4 space-y-3">
 
@@ -32,10 +33,10 @@ export default function PendingAlertsModal({
           const isCurrentMonth = pending.monthStr === currentMonthStr;
           const monthLabel = pending.date.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
           return (
-            <div key={pending.monthStr} className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-4">
+            <div key={pending.monthStr} className="rounded-2xl px-4 py-4" style={{ background: `${FT.navy}0D`, border: `1px solid ${FT.border}` }}>
               <div className="flex items-center gap-3 mb-3">
-                <div className="bg-indigo-100 p-2 rounded-xl shrink-0">
-                  <Clock size={15} className="text-indigo-600 animate-pulse" />
+                <div className="p-2 rounded-xl shrink-0" style={{ background: FT.navyDeep }}>
+                  <Clock size={15} className="animate-pulse" style={{ color: FT.orange }} />
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-black text-slate-700 capitalize leading-snug">
@@ -51,14 +52,16 @@ export default function PendingAlertsModal({
               {isCurrentMonth ? (
                 <button
                   onClick={() => { onApproveMonth(); onClose(); }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                  style={{ fontFamily: FONT_MONO, background: FT.orange }}
                 >
                   <CheckCircle size={13} /> Confirmar e Enviar
                 </button>
               ) : (
                 <button
                   onClick={() => { onReviewMonth(pending); onClose(); }}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-orange-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+                  style={{ fontFamily: FONT_MONO, background: FT.orange }}
                 >
                   <ChevronRight size={13} /> Rever e Validar
                 </button>
@@ -69,10 +72,10 @@ export default function PendingAlertsModal({
 
         {/* Pending signatures */}
         {pendingSignaturesCount > 0 && (
-          <div className="bg-amber-50 border border-amber-100 rounded-2xl px-4 py-4">
+          <div className="rounded-2xl px-4 py-4" style={{ background: FT.warnBg, border: `1px solid ${FT.warn}33` }}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="bg-amber-100 p-2 rounded-xl shrink-0">
-                <FileText size={15} className="text-amber-600" />
+              <div className="p-2 rounded-xl shrink-0" style={{ background: `${FT.warn}26` }}>
+                <FileText size={15} style={{ color: FT.warn }} />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-slate-700 leading-snug">Assinaturas Pendentes</p>
@@ -83,7 +86,8 @@ export default function PendingAlertsModal({
             </div>
             <button
               onClick={() => { onSignDocuments(); onClose(); }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+              style={{ fontFamily: FONT_MONO, background: FT.warn }}
             >
               <Edit2 size={13} /> Assinar Agora
             </button>
@@ -92,10 +96,10 @@ export default function PendingAlertsModal({
 
         {/* Pending formação signatures */}
         {pendingFormacaoCount > 0 && (
-          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-4">
+          <div className="rounded-2xl px-4 py-4" style={{ background: `${FT.navy}0D`, border: `1px solid ${FT.border}` }}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="bg-indigo-100 p-2 rounded-xl shrink-0">
-                <GraduationCap size={15} className="text-indigo-600" />
+              <div className="p-2 rounded-xl shrink-0" style={{ background: FT.navyDeep }}>
+                <GraduationCap size={15} style={{ color: FT.orange }} />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-slate-700 leading-snug">Formações por Assinar</p>
@@ -106,7 +110,8 @@ export default function PendingAlertsModal({
             </div>
             <button
               onClick={() => { onSignFormacao(); onClose(); }}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+              className="w-full flex items-center justify-center gap-2 py-2.5 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-sm active:scale-95"
+              style={{ fontFamily: FONT_MONO, background: FT.orange }}
             >
               <Edit2 size={13} /> Assinar Agora
             </button>
@@ -128,7 +133,7 @@ export default function PendingAlertsModal({
                   <p className="text-xs font-black text-slate-700 capitalize leading-snug">{dateLabel}</p>
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
                     <span className="text-[10px] font-bold text-slate-500">{clientName}</span>
-                    <span className="text-[10px] font-bold text-indigo-600">Entrada {log.startTime}</span>
+                    <span className="text-[10px] font-bold" style={{ color: FT.navy }}>Entrada {log.startTime}</span>
                     <span className="text-[10px] font-bold text-rose-500">Saída em falta</span>
                   </div>
                 </div>
