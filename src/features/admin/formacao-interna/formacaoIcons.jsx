@@ -35,10 +35,13 @@ export const ICON_NAMES = Object.keys(ICON_MAP);
 // coerente com a ação descrita (a trabalhar, a alertar, a inspecionar, a
 // comunicar) sem precisar de um desenho totalmente novo por tema.
 const POSE_BY_ICON = {
+  // soldar / trabalho com metal e chama — o ofício central da Magnetic Place
+  Flame: 'soldar', Zap: 'soldar', Cylinder: 'soldar', Wrench: 'soldar', Gauge: 'soldar',
+  Cog: 'soldar', Settings2: 'soldar', ThermometerSun: 'soldar',
   // alerta / risco / emergência a acionar
   AlertTriangle: 'alerta', AlertOctagon: 'alerta', Skull: 'alerta', ShieldAlert: 'alerta',
-  FileWarning: 'alerta', CircleX: 'alerta', Siren: 'alerta', Zap: 'alerta', Flame: 'alerta',
-  FireExtinguisher: 'alerta', SprayCan: 'alerta', Flag: 'alerta',
+  FileWarning: 'alerta', CircleX: 'alerta', Siren: 'alerta',
+  FireExtinguisher: 'alerta', SprayCan: 'alerta', Flag: 'alerta', Radiation: 'alerta',
   // comunicar / reportar / socorrer
   PhoneCall: 'comunicar', MessageSquare: 'comunicar', HeartPulse: 'comunicar', LifeBuoy: 'comunicar',
   Cross: 'comunicar', Bandage: 'comunicar', UserCheck: 'comunicar',
@@ -48,6 +51,9 @@ const POSE_BY_ICON = {
   FileCheck: 'inspecionar', FileSignature: 'inspecionar', Tag: 'inspecionar', Tags: 'inspecionar',
   CircleCheck: 'inspecionar', CheckCircle2: 'inspecionar', ListChecks: 'inspecionar', BookMarked: 'inspecionar',
   GaugeCircle: 'inspecionar', Clock: 'inspecionar', TimerReset: 'inspecionar',
+  // transportar / manusear carga
+  Weight: 'transportar', Move: 'transportar', ArrowUpDown: 'transportar', MoveHorizontal: 'transportar',
+  Boxes: 'transportar', PackageCheck: 'transportar', Warehouse: 'transportar', Container: 'transportar',
 };
 
 function poseFor(nome) {
@@ -74,24 +80,49 @@ function Braco({ ombroX, ombroY, angulo, cor, comprimento = 30 }) {
   );
 }
 
-// Cenário de oficina/estaleiro em traço simples, atrás do boneco — bancada
-// de trabalho, prateleira de ferramentas na parede e linha de chão, para o
-// boneco parecer "no ambiente de trabalho" e não a flutuar num fundo vazio.
-function Ambiente() {
+// Cenário de oficina/estaleiro em traço simples, atrás do boneco — varia
+// consoante a pose, para o boneco parecer "no ambiente de trabalho" certo
+// (bancada de solda, zona de carga, posto de trabalho) e não flutuar num
+// fundo genérico sempre igual.
+function Ambiente({ pose = 'trabalhar' }) {
   const linha = FT.slate;
   return (
     <g opacity="0.55">
-      {/* linha de chão */}
+      {/* linha de chão, comum a todos os cenários */}
       <line x1="2" y1="109" x2="98" y2="109" stroke={linha} strokeWidth="1.6" />
-      {/* bancada de trabalho, à esquerda (canto oposto ao emblema) */}
-      <line x1="3" y1="94" x2="28" y2="94" stroke={linha} strokeWidth="2.2" strokeLinecap="round" />
-      <line x1="6" y1="94" x2="6" y2="109" stroke={linha} strokeWidth="1.6" />
-      <line x1="25" y1="94" x2="25" y2="109" stroke={linha} strokeWidth="1.6" />
-      {/* caixa de ferramentas em cima da bancada */}
-      <rect x="10" y="86" width="11" height="7" rx="1.2" fill="none" stroke={linha} strokeWidth="1.4" />
-      <line x1="13.5" y1="86" x2="13.5" y2="83.5" stroke={linha} strokeWidth="1.4" />
-      <line x1="17.5" y1="86" x2="17.5" y2="83.5" stroke={linha} strokeWidth="1.4" />
-      {/* prateleira de ferramentas na parede, no topo */}
+
+      {pose === 'soldar' ? (
+        <>
+          {/* bancada de solda com peça metálica presa em torno */}
+          <line x1="3" y1="97" x2="28" y2="97" stroke={linha} strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="6" y1="97" x2="6" y2="109" stroke={linha} strokeWidth="1.6" />
+          <line x1="25" y1="97" x2="25" y2="109" stroke={linha} strokeWidth="1.6" />
+          <rect x="9" y="88" width="14" height="9" rx="1" fill="none" stroke={linha} strokeWidth="1.4" />
+          <line x1="12" y1="88" x2="10" y2="84" stroke={linha} strokeWidth="1.3" />
+          <line x1="20" y1="88" x2="22" y2="84" stroke={linha} strokeWidth="1.3" />
+        </>
+      ) : pose === 'transportar' ? (
+        <>
+          {/* pallet com caixas empilhadas */}
+          <line x1="4" y1="105" x2="26" y2="105" stroke={linha} strokeWidth="2" />
+          <line x1="6" y1="105" x2="6" y2="109" stroke={linha} strokeWidth="1.3" />
+          <line x1="24" y1="105" x2="24" y2="109" stroke={linha} strokeWidth="1.3" />
+          <rect x="8" y="93" width="9" height="12" rx="1" fill="none" stroke={linha} strokeWidth="1.4" />
+          <rect x="17.5" y="97" width="8" height="8" rx="1" fill="none" stroke={linha} strokeWidth="1.4" />
+        </>
+      ) : (
+        <>
+          {/* bancada de trabalho genérica, com caixa de ferramentas */}
+          <line x1="3" y1="94" x2="28" y2="94" stroke={linha} strokeWidth="2.2" strokeLinecap="round" />
+          <line x1="6" y1="94" x2="6" y2="109" stroke={linha} strokeWidth="1.6" />
+          <line x1="25" y1="94" x2="25" y2="109" stroke={linha} strokeWidth="1.6" />
+          <rect x="10" y="86" width="11" height="7" rx="1.2" fill="none" stroke={linha} strokeWidth="1.4" />
+          <line x1="13.5" y1="86" x2="13.5" y2="83.5" stroke={linha} strokeWidth="1.4" />
+          <line x1="17.5" y1="86" x2="17.5" y2="83.5" stroke={linha} strokeWidth="1.4" />
+        </>
+      )}
+
+      {/* prateleira de ferramentas na parede, no topo — comum a todos os cenários */}
       <line x1="70" y1="14" x2="96" y2="14" stroke={linha} strokeWidth="1.8" strokeLinecap="round" />
       <line x1="76" y1="14" x2="76" y2="24" stroke={linha} strokeWidth="1.3" />
       <circle cx="76" cy="26.5" r="2.4" fill="none" stroke={linha} strokeWidth="1.3" />
@@ -144,6 +175,39 @@ function Cabeca({ variante }) {
   );
 }
 
+// Máscara de solda (viseira escura rebatida sobre o rosto) — substitui a
+// cabeça normal sempre que a pose é "soldar", já que a máscara domina a
+// silhueta e é mais reconhecível do que variar por tema.
+function MascaraSolda() {
+  const navy = FT.navy;
+  const orange = FT.orange;
+  return (
+    <>
+      <circle cx="50" cy="26" r="13" fill={navy} />
+      <path d="M36 20 A14 14 0 0 1 64 20 L64 33 A14 14 0 0 1 36 33 Z" fill={FT.navyDeep} />
+      <rect x="39" y="24" width="22" height="6" rx="1.5" fill={orange} opacity="0.85" />
+      <rect x="35" y="16" width="30" height="4" rx="2" fill={orange} />
+    </>
+  );
+}
+
+// Tocha de solda + faíscas — desenhada perto da mão de trabalho do boneco
+// (posição aproximada, estilo pictograma) apenas quando a pose é "soldar".
+function TochaSolda() {
+  const orange = FT.orange;
+  return (
+    <g transform="translate(86 58) rotate(-20)">
+      <rect x="-2.5" y="0" width="5" height="16" rx="2" fill={FT.navyDeep} />
+      <line x1="0" y1="0" x2="0" y2="-7" stroke={orange} strokeWidth="3" strokeLinecap="round" />
+      {/* faíscas */}
+      <circle cx="4" cy="-10" r="1.4" fill={orange} />
+      <circle cx="-3.5" cy="-8" r="1.1" fill={orange} />
+      <circle cx="1" cy="-14" r="1" fill={FT.orangeDeep} />
+      <circle cx="6" cy="-4" r="1" fill={FT.orangeDeep} />
+    </g>
+  );
+}
+
 // Figura humana em traço simples (estilo pictograma), com poses e silhuetas
 // de cabeça distintas — usada em todos os "tiles" de ilustração do e-learning.
 function Boneco({ pose = 'trabalhar', variante = 0 }) {
@@ -166,6 +230,14 @@ function Boneco({ pose = 'trabalhar', variante = 0 }) {
     leftArm = { angulo: 95 };
     rightArm = { angulo: -95 };
     inclinacao = 10;
+  } else if (pose === 'soldar') {
+    leftArm = { angulo: 70 };
+    rightArm = { angulo: -55 };
+    inclinacao = 8;
+  } else if (pose === 'transportar') {
+    leftArm = { angulo: 130 };
+    rightArm = { angulo: -130 };
+    inclinacao = -6;
   }
 
   return (
@@ -179,11 +251,12 @@ function Boneco({ pose = 'trabalhar', variante = 0 }) {
       {/* braços (atrás do tronco) */}
       <Braco ombroX={34} ombroY={50} angulo={leftArm.angulo} cor={navy} />
       <Braco ombroX={66} ombroY={50} angulo={rightArm.angulo} cor={navy} />
+      {pose === 'soldar' && <TochaSolda />}
       {/* tronco */}
       <rect x="34" y="44" width="32" height="34" rx="12" fill={navy} />
       <rect x="34" y="66" width="32" height="6" fill={orange} />
-      {/* cabeça + proteção (varia por tema) */}
-      <Cabeca variante={variante} />
+      {/* cabeça + proteção — máscara fixa ao soldar, senão varia por tema */}
+      {pose === 'soldar' ? <MascaraSolda /> : <Cabeca variante={variante} />}
     </g>
   );
 }
@@ -199,7 +272,7 @@ export function IlustracaoTile({ nome, height = 150, className = '' }) {
       style={{ height, background: `linear-gradient(135deg, ${FT.bg} 0%, #E5E1D6 100%)`, border: `1px solid ${FT.border}` }}
     >
       <svg viewBox="0 0 100 120" width={Math.round(height * 0.62)} height={height} style={{ overflow: 'visible' }}>
-        <Ambiente />
+        <Ambiente pose={poseFor(nome)} />
         <Boneco pose={poseFor(nome)} variante={varianteFor(nome)} />
       </svg>
       <div
