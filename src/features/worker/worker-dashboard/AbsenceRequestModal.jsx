@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarX, Send, CheckCircle, Clock, Eye } from 'lucide-react';
+import { CalendarX, Send, CheckCircle, Clock, Eye, Trash2 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 import { FT, FONT_MONO } from './formacaoDesignTokens';
 
@@ -12,17 +12,34 @@ const STATUS_MAP = {
   pending:  { label: 'Aguarda',    bg: FT.warnBg, fg: FT.warn, icon: Clock },
 };
 
-function AbsenceHistoryRow({ r }) {
+function AbsenceHistoryRow({ r, onDelete }) {
   const s = STATUS_MAP[r.status] || STATUS_MAP.pending;
   const Icon = s.icon;
   const sortedDates = (r.dates || []).slice().sort();
+  const canDelete = r.status === 'pending' && onDelete;
+  const handleDeleteClick = () => {
+    if (window.confirm('Apagar este aviso de falta? Esta ação não pode ser desfeita.')) {
+      onDelete(r);
+    }
+  };
   return (
     <div className="px-4 py-3 space-y-2 border-b border-slate-50 last:border-b-0">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-bold text-slate-700">{r.reason}</p>
-        <span className="shrink-0 flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.fg, fontFamily: FONT_MONO }}>
-          <Icon size={9} /> {s.label}
-        </span>
+        <div className="shrink-0 flex items-center gap-2">
+          <span className="flex items-center gap-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.fg, fontFamily: FONT_MONO }}>
+            <Icon size={9} /> {s.label}
+          </span>
+          {canDelete && (
+            <button
+              onClick={handleDeleteClick}
+              aria-label="Apagar aviso de falta"
+              className="p-1 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
+        </div>
       </div>
       {sortedDates.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
@@ -49,6 +66,7 @@ export default function AbsenceRequestModal({
   currentUser, systemSettings,
   absenceRequests,
   onSubmit,
+  onDelete,
 }) {
   const [selectedDates, setSelectedDates] = useState([]);
   const [reason, setReason] = useState('');
@@ -197,7 +215,7 @@ export default function AbsenceRequestModal({
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Os meus avisos</p>
             <div className="bg-white border border-slate-100 rounded-2xl overflow-hidden">
-              {myAbsences.map(r => <AbsenceHistoryRow key={r.id} r={r} />)}
+              {myAbsences.map(r => <AbsenceHistoryRow key={r.id} r={r} onDelete={onDelete} />)}
             </div>
           </div>
         )}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { CalendarX, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp, RotateCcw, Archive } from 'lucide-react';
+import { CalendarX, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp, RotateCcw, Archive, Trash2 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { newId, deleteAbsenceRequest } from '../../../utils/absenceRequestsApi';
 
 export default function AbsenceRequestsPanel({ requests, systemSettings, clients }) {
   const { supabase, setAbsenceRequests, currentUser } = useApp();
@@ -23,10 +24,9 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
       setAbsenceRequests(prev => prev.map(r =>
         r.id === req.id ? { ...r, status: 'approved' } : r
       ));
-      const nId = `notif_absence_${req.id}`;
       const dateStr = (req.dates || []).slice(0, 3).join(', ') + ((req.dates || []).length > 3 ? '…' : '');
       supabase.from('app_notifications').insert({
-        id: nId,
+        id: newId('notif_absence'),
         title: `✅ Ausência aprovada`,
         message: `A tua ausência${dateStr ? ` de ${dateStr}` : ''} foi aprovada.`,
         type: 'success',
@@ -59,7 +59,7 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
       if (req.worker_id) {
         const dateStr = (req.dates || []).slice(0, 3).join(', ') + ((req.dates || []).length > 3 ? '…' : '');
         supabase.from('app_notifications').insert({
-          id: `notif_absence_arch_${req.id}_${Date.now()}`,
+          id: newId('notif_absence_arch'),
           title: `🗄️ Pedido de ausência arquivado`,
           message: `O teu pedido de ausência${dateStr ? ` de ${dateStr}` : ''} foi arquivado.`,
           type: 'info',
@@ -70,6 +70,21 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
           created_at: new Date().toISOString(),
         });
       }
+    }
+  };
+
+  const handleDelete = async (req) => {
+    if (!supabase) return;
+    if (!window.confirm('Apagar este pedido de falta? O registo fica guardado no log de auditoria, mas esta ação não pode ser desfeita.')) return;
+    try {
+      await deleteAbsenceRequest(supabase, req, {
+        actorId: currentUser?.id || 'admin_system',
+        actorName: currentUser?.name || 'Admin',
+        actorRole: 'admin',
+      });
+      setAbsenceRequests(prev => prev.filter(r => r.id !== req.id));
+    } catch (e) {
+      console.error('Falha ao apagar pedido de falta:', e);
     }
   };
 
@@ -209,6 +224,12 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all"
             >
               <Archive size={11} /> Arquivar
+            </button>
+            <button
+              onClick={() => handleDelete(req)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-100 hover:text-red-600 transition-all"
+            >
+              <Trash2 size={11} /> Apagar
             </button>
           </div>
         </div>}

@@ -9,6 +9,7 @@ import {
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
+import { newId as newAbsenceId, notifyClientOfAbsence, deleteAbsenceRequest } from '../../utils/absenceRequestsApi';
 
 import WorkerProfile from './WorkerProfile';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
@@ -54,7 +55,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     saveToDb, handleDelete, handleApproveMonth, myNotifications,
   } = useWorker();
 
-  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase, absenceRequests } = useApp();
+  const { setCurrentUser, workerChangeRequests, correctionItems, setCorrectionItems, corrections, supabase, absenceRequests, setAbsenceRequests } = useApp();
 
   const [pendingTemplateDocsCount, setPendingTemplateDocsCount] = useState(0);
   const loadPendingTemplateDocs = useCallback(async () => {
@@ -181,7 +182,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   };
 
   const handleAbsenceSubmit = async (dates, reason, notes) => {
-    const id = `abs_${Date.now()}`;
+    const id = newAbsenceId('abs');
     await saveToDb('absence_requests', id, {
       id,
       worker_id: currentUser.id,
@@ -193,11 +194,12 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       status: 'pending',
       created_at: new Date().toISOString(),
     });
-    const notifId = `notif_abs_${Date.now()}`;
+    const notifId = newAbsenceId('notif_abs');
+    const dateLabel = `${dates.length} dia${dates.length !== 1 ? 's' : ''}`;
     await saveToDb('app_notifications', notifId, {
       id: notifId,
       title: 'Aviso de Falta',
-      message: `${currentUser.name} avisou falta (${dates.length} dia${dates.length !== 1 ? 's' : ''}): ${reason}`,
+      message: `${currentUser.name} avisou falta (${dateLabel}): ${reason}`,
       type: 'warning',
       target_type: 'admin',
       payload: { absenceId: id, kind: 'absence' },
@@ -208,8 +210,30 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       read_by_admin_ids: [],
       created_at: new Date().toISOString(),
     });
+
+    const client = clients?.find(c => c.id === currentUser.defaultClientId);
+    if (client && !DISABLE_CLIENT_NOTIFICATIONS) {
+      notifyClientOfAbsence(supabase, {
+        client,
+        workerName: currentUser.name,
+        dates,
+        reason,
+        absenceId: id,
+      }).catch((e) => console.warn('falha ao notificar cliente sobre falta', e));
+    }
+
     setSuccessMsg('Aviso de falta enviado com sucesso!');
     setTimeout(() => setSuccessMsg(''), 6000);
+  };
+
+  const handleDeleteAbsence = async (req) => {
+    if (!supabase || req.worker_id !== currentUser.id || req.status !== 'pending') return;
+    await deleteAbsenceRequest(supabase, req, {
+      actorId: currentUser.id,
+      actorName: currentUser.name,
+      actorRole: 'worker',
+    });
+    setAbsenceRequests?.(prev => prev.filter(r => r.id !== req.id));
   };
 
   const workerStartDate = currentUser?.dataInicio ? new Date(currentUser.dataInicio + 'T00:00:00') : null;
@@ -442,6 +466,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             systemSettings={systemSettings}
             absenceRequests={absenceRequests}
             onSubmit={handleAbsenceSubmit}
+            onDelete={handleDeleteAbsence}
           />
         </>)}
       </main>
