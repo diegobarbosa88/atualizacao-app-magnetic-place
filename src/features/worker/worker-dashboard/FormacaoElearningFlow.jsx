@@ -17,6 +17,9 @@ function detectarMedia(url) {
 }
 
 export default function FormacaoElearningFlow({ participacao, onConcluido, onError }) {
+  const temConteudoEstruturado = Array.isArray(participacao.conteudo_estruturado?.seccoes) && participacao.conteudo_estruturado.seccoes.length > 0;
+  const precisaMedia = !temConteudoEstruturado && !!participacao.conteudo_url;
+
   const [step, setStep] = useState(participacao.estado_conclusao === 'reprovado' ? 'resultado' : 'conteudo');
   const [respostas, setRespostas] = useState(() => Array(participacao.questionario?.length || 0).fill(null));
   const [resultado, setResultado] = useState(
@@ -26,15 +29,16 @@ export default function FormacaoElearningFlow({ participacao, onConcluido, onErr
   );
   const [busy, setBusy] = useState(false);
   const [conteudoSrc, setConteudoSrc] = useState(isExterno(participacao.conteudo_url) ? participacao.conteudo_url : null);
-  const [conteudoLoading, setConteudoLoading] = useState(!isExterno(participacao.conteudo_url));
+  const [conteudoLoading, setConteudoLoading] = useState(precisaMedia && !isExterno(participacao.conteudo_url));
 
   useEffect(() => {
     if (participacao.estado_conclusao === 'nao_iniciado') {
       iniciarFormacao(participacao.participante_id).catch(e => onError?.(e.message));
     }
     // Paths internos do bucket privado precisam de uma signed URL — links
-    // externos (YouTube/Vimeo/URL pública) usam-se diretamente.
-    if (!isExterno(participacao.conteudo_url)) {
+    // externos (YouTube/Vimeo/URL pública) usam-se diretamente. Conteúdo
+    // estruturado não precisa de nenhum dos dois, é renderizado direto.
+    if (precisaMedia && !isExterno(participacao.conteudo_url)) {
       getConteudoUrl(participacao.participante_id)
         .then(({ url }) => setConteudoSrc(url))
         .catch(e => onError?.(e.message))
@@ -43,7 +47,7 @@ export default function FormacaoElearningFlow({ participacao, onConcluido, onErr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const media = conteudoSrc ? detectarMedia(conteudoSrc) : null;
+  const media = precisaMedia && conteudoSrc ? detectarMedia(conteudoSrc) : null;
   const todasRespondidas = respostas.length > 0 && respostas.every(r => r !== null);
 
   const submeter = async () => {
@@ -67,21 +71,52 @@ export default function FormacaoElearningFlow({ participacao, onConcluido, onErr
   if (step === 'conteudo') {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-video flex items-center justify-center">
-          {conteudoLoading ? (
-            <Loader2 className="animate-spin text-white" size={28} />
-          ) : media?.tipo === 'video' ? (
-            <video src={media.src} controls className="w-full h-full" />
-          ) : media?.tipo === 'embed' ? (
-            <iframe src={media.src} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title="Conteúdo da formação" />
-          ) : media?.tipo === 'pdf' ? (
-            <iframe src={`${media.src}#toolbar=0`} className="w-full h-full bg-white" title="Conteúdo da formação" />
-          ) : null}
-        </div>
-        <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {media?.tipo === 'pdf' ? <FileText size={12} /> : <PlayCircle size={12} />}
-          {media?.tipo === 'pdf' ? 'Documento' : 'Vídeo'}
-        </div>
+        {temConteudoEstruturado ? (
+          <div className="space-y-5">
+            {participacao.conteudo_estruturado.objetivo && (
+              <div className="p-3 rounded-2xl bg-indigo-50 border border-indigo-100">
+                <p className="text-[9px] font-black uppercase tracking-widest text-indigo-500 mb-1">Objetivo</p>
+                <p className="text-xs text-indigo-900 leading-relaxed">{participacao.conteudo_estruturado.objetivo}</p>
+              </div>
+            )}
+            {participacao.conteudo_estruturado.seccoes.map((sec, idx) => (
+              <div key={idx}>
+                <h3 className="text-sm font-black text-slate-800 mb-2">{sec.titulo}</h3>
+                {sec.paragrafos?.map((p, pIdx) => (
+                  <p key={pIdx} className="text-xs text-slate-600 leading-relaxed mb-2">{p}</p>
+                ))}
+                {sec.lista && (
+                  <ul className="space-y-1.5 mt-1">
+                    {sec.lista.map((item, lIdx) => (
+                      <li key={lIdx} className="flex items-start gap-2 text-xs text-slate-600 leading-relaxed">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-video flex items-center justify-center">
+              {conteudoLoading ? (
+                <Loader2 className="animate-spin text-white" size={28} />
+              ) : media?.tipo === 'video' ? (
+                <video src={media.src} controls className="w-full h-full" />
+              ) : media?.tipo === 'embed' ? (
+                <iframe src={media.src} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title="Conteúdo da formação" />
+              ) : media?.tipo === 'pdf' ? (
+                <iframe src={`${media.src}#toolbar=0`} className="w-full h-full bg-white" title="Conteúdo da formação" />
+              ) : null}
+            </div>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              {media?.tipo === 'pdf' ? <FileText size={12} /> : <PlayCircle size={12} />}
+              {media?.tipo === 'pdf' ? 'Documento' : 'Vídeo'}
+            </div>
+          </>
+        )}
         <button
           onClick={() => setStep('questionario')}
           disabled={conteudoLoading}

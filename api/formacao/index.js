@@ -94,7 +94,7 @@ async function handleCreate(req, res) {
     formador_id, entidade_externa,
     objetivos, conteudo_programatico, justificativa_afinidade,
     metodo_avaliacao, resultado_avaliacao, evidencias_url,
-    formato = 'presencial', conteudo_url, questionario, nota_minima_aprovacao,
+    formato = 'presencial', conteudo_url, conteudo_estruturado, questionario, nota_minima_aprovacao,
     participantes = [],
   } = body;
 
@@ -114,8 +114,9 @@ async function handleCreate(req, res) {
     const perguntasValidas = Array.isArray(questionario) && questionario.length > 0 &&
       questionario.every(q => q.pergunta?.trim() && Array.isArray(q.opcoes) && q.opcoes.length >= 2 &&
         Number.isInteger(q.resposta_correta) && q.resposta_correta >= 0 && q.resposta_correta < q.opcoes.length);
-    if (!conteudo_url?.trim()) {
-      return res.status(400).json({ error: 'Formação e-learning exige conteudo_url.' });
+    const temConteudoEstruturado = conteudo_estruturado && Array.isArray(conteudo_estruturado.seccoes) && conteudo_estruturado.seccoes.length > 0;
+    if (!conteudo_url?.trim() && !temConteudoEstruturado) {
+      return res.status(400).json({ error: 'Formação e-learning exige conteudo_url ou conteudo_estruturado.' });
     }
     if (!perguntasValidas) {
       return res.status(400).json({ error: 'Formação e-learning exige um questionário válido (pergunta, opções, resposta correta).' });
@@ -170,7 +171,8 @@ async function handleCreate(req, res) {
       resultado_avaliacao: resultado_avaliacao?.trim() || null,
       evidencias_url: evidencias_url?.trim() || null,
       formato,
-      conteudo_url: formato === 'e-learning' ? conteudo_url.trim() : null,
+      conteudo_url: formato === 'e-learning' && conteudo_url?.trim() ? conteudo_url.trim() : null,
+      conteudo_estruturado: formato === 'e-learning' ? conteudo_estruturado || null : null,
       questionario: formato === 'e-learning' ? questionario : null,
       nota_minima_aprovacao: formato === 'e-learning' ? Number(nota_minima_aprovacao) : null,
     })
@@ -267,7 +269,7 @@ async function handleMinhas(req, res) {
       iniciado_em, concluido_em, nota_obtida, estado_conclusao,
       formacoes_internas(
         categoria, tipo_formacao, titulo, data_inicio, data_fim, duracao_horas,
-        local, entidade_externa, formato, conteudo_url, questionario, nota_minima_aprovacao,
+        local, entidade_externa, formato, conteudo_url, conteudo_estruturado, questionario, nota_minima_aprovacao,
         formador:formador_id(name)
       )
     `)
@@ -292,6 +294,7 @@ async function handleMinhas(req, res) {
     // e-learning — resposta_correta é sempre removida antes de sair do servidor.
     formato: p.formacoes_internas?.formato || 'presencial',
     conteudo_url: p.formacoes_internas?.conteudo_url || null,
+    conteudo_estruturado: p.formacoes_internas?.conteudo_estruturado || null,
     nota_minima_aprovacao: p.formacoes_internas?.nota_minima_aprovacao ?? null,
     questionario: Array.isArray(p.formacoes_internas?.questionario)
       ? p.formacoes_internas.questionario.map(q => ({ pergunta: q.pergunta, opcoes: q.opcoes }))

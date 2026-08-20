@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, Save, Check, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Save, Check, Plus, Trash2, FileText } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { createFormacao } from './formacaoApi';
 import {
@@ -27,6 +27,7 @@ export default function NovaAcaoForm({ onCriada }) {
   const [form, setForm] = useState(INICIAL);
   const [participantes, setParticipantes] = useState({}); // { [workerId]: { selecionado, data_validade } }
   const [questionario, setQuestionario] = useState([PERGUNTA_INICIAL()]);
+  const [conteudoEstruturado, setConteudoEstruturado] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,6 +52,7 @@ export default function NovaAcaoForm({ onCriada }) {
       formador_id: categoria === 'gwo' ? '' : f.formador_id,
       entidade_externa: CATEGORIAS_ENTIDADE_EXTERNA.includes(categoria) ? f.entidade_externa : '',
     }));
+    setConteudoEstruturado(null);
   };
 
   // Quando o tipo escolhido corresponde exatamente a um dos predefinidos,
@@ -70,6 +72,7 @@ export default function NovaAcaoForm({ onCriada }) {
         metodo_avaliacao: template.metodo_avaliacao,
       } : {}),
     }));
+    setConteudoEstruturado(template?.conteudo_estruturado || null);
   };
 
   const toggleParticipante = (id) => {
@@ -121,8 +124,8 @@ export default function NovaAcaoForm({ onCriada }) {
       return;
     }
     if (isElearning) {
-      if (!form.conteudo_url.trim()) {
-        setError('Formação e-learning exige o link do conteúdo (vídeo ou PDF).');
+      if (!form.conteudo_url.trim() && !conteudoEstruturado) {
+        setError('Formação e-learning exige o link do conteúdo (vídeo ou PDF) ou um conteúdo estruturado pré-definido.');
         return;
       }
       const perguntasValidas = questionario.every(q => q.pergunta.trim() && q.opcoes.every(o => o.trim()) && q.opcoes.length >= 2);
@@ -141,11 +144,13 @@ export default function NovaAcaoForm({ onCriada }) {
       await createFormacao({
         ...form,
         questionario: isElearning ? questionario : undefined,
+        conteudo_estruturado: isElearning ? conteudoEstruturado : undefined,
         participantes: selecionadosIds.map(id => ({ worker_id: id, data_validade: participantes[id].data_validade || null })),
       });
       setForm(INICIAL);
       setParticipantes({});
       setQuestionario([PERGUNTA_INICIAL()]);
+      setConteudoEstruturado(null);
       onCriada?.();
     } catch (e) {
       setError(e.message);
@@ -275,8 +280,13 @@ export default function NovaAcaoForm({ onCriada }) {
         <div className="space-y-4 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className={LABEL}>Link do Conteúdo (vídeo ou PDF)</label>
-              <input required={isElearning} className={CAMPO} value={form.conteudo_url} onChange={setField('conteudo_url')} placeholder="https://..." />
+              <label className={LABEL}>Link do Conteúdo (vídeo ou PDF, opcional)</label>
+              <input className={CAMPO} value={form.conteudo_url} onChange={setField('conteudo_url')} placeholder="https://... (opcional se já houver conteúdo estruturado)" />
+              {conteudoEstruturado && (
+                <p className="text-[10px] font-bold text-indigo-500 mt-1.5 flex items-center gap-1">
+                  <FileText size={11} /> Conteúdo estruturado pré-preenchido a partir do modelo — o trabalhador vê-o diretamente na app.
+                </p>
+              )}
             </div>
             <div>
               <label className={LABEL}>Nota Mínima de Aprovação (%)</label>

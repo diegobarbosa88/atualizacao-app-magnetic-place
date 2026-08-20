@@ -203,6 +203,71 @@ export const CAMPOS_POR_TIPO = {
     conteudo_programatico: '1. Introdução — importância da segurança em soldadura. 2. Riscos principais — radiação (UV/IV), fumos e gases de soldadura, choque elétrico, queimaduras térmicas e projeções de faísca, ruído. 3. EPI — máscara de soldar com filtro adequado ao processo (MIG/MAG/TIG/elétrodo), luvas de proteção térmica, roupa ignífuga/avental de couro, proteção respiratória (espaços confinados/materiais especiais) e auditiva quando aplicável. 4. Ventilação e extração de fumos — ventilação geral vs. extração localizada, sinais de exposição excessiva, boas práticas de posicionamento face ao fluxo de ar. 5. Prevenção de incêndio — distância de segurança a inflamáveis, procedimento de trabalho a quente, localização e uso de extintores. 6. Procedimento de emergência — atuação em queimadura, choque elétrico ou início de incêndio, e a quem reportar incidentes/quase-acidentes. 7. Resumo e pontos-chave.',
     justificativa_afinidade: 'Diretamente relacionada com os riscos específicos da função de soldador — radiação, fumos, choque elétrico e risco de incêndio inerentes à atividade de soldadura.',
     metodo_avaliacao: 'Questionário de verificação de conhecimentos (8-10 perguntas — EPI por processo, atuação em exposição a fumos, distância de segurança a inflamáveis, a quem reportar quase-acidentes)',
+    conteudo_estruturado: {
+      objetivo: 'Identificar os principais riscos da soldadura e aplicar as medidas de proteção corretas no posto de trabalho.',
+      seccoes: [
+        {
+          titulo: 'Introdução',
+          paragrafos: [
+            'A soldadura está entre as atividades com maior exposição a riscos combinados no setor metalomecânico e naval: radiação, fumos, eletricidade, calor e fogo coexistem no mesmo posto de trabalho.',
+            'Este módulo cobre os riscos principais, o equipamento de proteção correto e os procedimentos de emergência.',
+          ],
+        },
+        {
+          titulo: 'Riscos Principais',
+          lista: [
+            'Radiação (UV/IV): queimaduras oculares ("vista de arco") e cutâneas, mesmo sem contacto direto com o arco.',
+            'Fumos e gases de soldadura: inalação de partículas metálicas e gases, com efeitos respiratórios a curto e longo prazo.',
+            'Choque elétrico: equipamento de soldadura opera com correntes elevadas — cabos e ligações danificadas são risco direto.',
+            'Queimaduras térmicas e projeções de faísca: contacto direto e risco de incêndio em materiais próximos.',
+            'Ruído: exposição contínua em ambientes fechados ou com múltiplos postos de soldadura.',
+          ],
+        },
+        {
+          titulo: 'Equipamento de Proteção Individual (EPI)',
+          lista: [
+            'Máscara de soldar com filtro adequado ao processo utilizado (MIG/MAG, TIG, elétrodo revestido).',
+            'Luvas de proteção térmica, resistentes a calor e projeções.',
+            'Roupa ignífuga ou avental de couro.',
+            'Proteção respiratória adicional em espaços confinados ou ao soldar materiais especiais (galvanizados, inox).',
+            'Proteção auditiva quando o nível de ruído do posto o justificar.',
+          ],
+        },
+        {
+          titulo: 'Ventilação e Extração de Fumos',
+          paragrafos: [
+            'A ventilação geral do espaço não substitui a extração localizada junto do ponto de soldadura. Sinais de exposição excessiva incluem tonturas, irritação nas vias respiratórias e dores de cabeça — qualquer um destes sintomas deve ser reportado de imediato.',
+          ],
+          lista: [
+            'Posicionar-se de forma a que o fluxo de ar afaste o fumo da zona respiratória, não o contrário.',
+            'Confirmar que o sistema de extração está ligado e a funcionar antes de iniciar o trabalho.',
+          ],
+        },
+        {
+          titulo: 'Prevenção de Incêndio',
+          lista: [
+            'Manter distância de segurança de materiais inflamáveis (mínimo recomendado: 10 metros, ou conforme procedimento do cliente).',
+            'Seguir o procedimento de trabalho a quente (permit-to-work) sempre que aplicável no local do cliente.',
+            'Confirmar a localização e validade dos extintores mais próximos antes de iniciar o trabalho.',
+          ],
+        },
+        {
+          titulo: 'Procedimento de Emergência',
+          lista: [
+            'Queimadura: arrefecer imediatamente com água corrente e procurar assistência médica.',
+            'Choque elétrico: desligar a fonte de energia antes de tocar na vítima; nunca tocar diretamente enquanto o circuito estiver ativo.',
+            'Início de incêndio: usar o extintor adequado ao tipo de fogo e acionar o alarme/evacuação se não for controlável de imediato.',
+            'Reportar sempre ao responsável direto, mesmo em caso de quase-acidente sem ferimentos.',
+          ],
+        },
+        {
+          titulo: 'Resumo',
+          paragrafos: [
+            'A segurança em soldadura assenta em três pilares: EPI adequado ao processo, ventilação/extração eficaz, e prevenção ativa de incêndio. Reportar sempre incidentes e quase-acidentes.',
+          ],
+        },
+      ],
+    },
   },
   'Segurança em Trabalhos de Caldeiraria': {
     duracao_horas: 0.5,
@@ -210,6 +275,68 @@ export const CAMPOS_POR_TIPO = {
     conteudo_programatico: '1. Introdução — riscos específicos da caldeiraria (e sobreposição parcial com os da soldadura). 2. Riscos principais — manuseamento manual de cargas pesadas (chapa, perfis), corte de chapa (guilhotina, oxicorte, plasma), quinagem e calandragem, arestas cortantes e rebarbas, ruído de máquinas (prensas, guilhotinas). 3. EPI — luvas anticorte, calçado de proteção com biqueira de aço, óculos/viseira contra projeções, proteção auditiva junto de equipamento pesado. 4. Segurança em máquinas e equipamentos — resguardos e dispositivos de segurança (nunca remover/desativar), distância de segurança durante operação de guilhotina/prensa, verificação pré-utilização, bloqueio/etiquetagem (LOTO) durante manutenção. 5. Movimentação de cargas — técnicas corretas de levantamento manual, uso de ajuda mecânica (ponte rolante, empilhador), sinalização e comunicação durante movimentação de peças pesadas. 6. Procedimento de emergência — atuação em corte grave, esmagamento ou lesão músculo-esquelética aguda, e a quem reportar. 7. Resumo e pontos-chave.',
     justificativa_afinidade: 'Diretamente relacionada com os riscos específicos da função de caldeireiro — corte, conformação, montagem e movimentação de estruturas metálicas.',
     metodo_avaliacao: 'Questionário de verificação de conhecimentos (8-10 perguntas — EPI ao operar guilhotina, uso de resguardos, bloqueio/etiquetagem LOTO, procedimento em lesão músculo-esquelética)',
+    conteudo_estruturado: {
+      objetivo: 'Identificar os riscos específicos do trabalho de corte, conformação e montagem de estruturas metálicas, e aplicar as medidas de proteção corretas.',
+      seccoes: [
+        {
+          titulo: 'Introdução',
+          paragrafos: [
+            'A caldeiraria envolve manuseamento de cargas pesadas, máquinas de corte e conformação, e arestas cortantes — riscos distintos dos da soldadura, ainda que os dois trabalhos muitas vezes se sobreponham no mesmo posto.',
+          ],
+        },
+        {
+          titulo: 'Riscos Principais',
+          lista: [
+            'Manuseamento manual de cargas pesadas: chapa e perfis metálicos, risco de lesões músculo-esqueléticas.',
+            'Corte de chapa (guilhotina, oxicorte, plasma): risco de amputação e projeção de material.',
+            'Quinagem e calandragem: risco de esmagamento e entalamento de membros.',
+            'Arestas cortantes e rebarbas: cortes durante manuseamento e montagem.',
+            'Ruído de máquinas (prensas, guilhotinas): exposição contínua em ambiente fabril.',
+          ],
+        },
+        {
+          titulo: 'Equipamento de Proteção Individual (EPI)',
+          lista: [
+            'Luvas anticorte, adequadas ao tipo de manuseamento.',
+            'Calçado de proteção com biqueira de aço.',
+            'Óculos ou viseira de proteção contra projeções.',
+            'Proteção auditiva junto de equipamento pesado (prensas, guilhotinas).',
+          ],
+        },
+        {
+          titulo: 'Segurança em Máquinas e Equipamentos',
+          lista: [
+            'Nunca remover ou desativar resguardos e dispositivos de segurança das máquinas.',
+            'Manter distância de segurança durante a operação de guilhotina ou prensa.',
+            'Verificar o equipamento antes de cada utilização (estado dos resguardos, sistemas de paragem de emergência).',
+            'Aplicar bloqueio/etiquetagem (LOTO) sempre que houver intervenção de manutenção, mesmo breve.',
+          ],
+        },
+        {
+          titulo: 'Movimentação de Cargas',
+          lista: [
+            'Usar técnica correta de levantamento manual: dobrar os joelhos, manter as costas direitas, carga próxima do corpo.',
+            'Recorrer a ajuda mecânica (ponte rolante, empilhador) sempre que o peso ou dimensão da peça o justifique — não confiar apenas na força manual.',
+            'Sinalizar claramente durante a movimentação de peças pesadas, garantindo que todos os presentes estão avisados.',
+          ],
+        },
+        {
+          titulo: 'Procedimento de Emergência',
+          lista: [
+            'Corte grave: aplicar pressão direta para controlar hemorragia e procurar assistência médica imediata.',
+            'Esmagamento/entalamento: não tentar libertar a pessoa sozinho se envolver máquina em funcionamento — desligar primeiro.',
+            'Lesão músculo-esquelética aguda: não forçar movimento, imobilizar e procurar assistência médica.',
+            'Reportar sempre ao responsável direto, mesmo em caso de quase-acidente sem ferimentos.',
+          ],
+        },
+        {
+          titulo: 'Resumo',
+          paragrafos: [
+            'A segurança em caldeiraria assenta em três pilares: nunca contornar dispositivos de segurança das máquinas, usar sempre ajuda mecânica para cargas pesadas, e EPI adequado ao risco de corte e projeção. Reportar sempre incidentes e quase-acidentes.',
+          ],
+        },
+      ],
+    },
   },
   'EPI para Soldadura': {
     duracao_horas: 1,
