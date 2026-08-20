@@ -155,114 +155,139 @@ export default function ElearningAcoesTab({ refreshKey }) {
       ) : formacoes.length === 0 ? (
         <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhuma ação e-learning registada.</p>
       ) : (
-        <div className="space-y-3">
-          {formacoes.map(f => {
-            const isOpen = expandedId === f.id;
-            const participantes = f.formacao_participantes || [];
-            const totalConcluidos = participantes.filter(p => p.assinado_em).length;
-            return (
-              <div key={f.id} className="rounded-3xl border border-indigo-100 bg-white shadow-sm overflow-hidden">
-                <button
-                  onClick={() => setExpandedId(isOpen ? null : f.id)}
-                  className="w-full flex items-start gap-3 p-4 text-left hover:bg-slate-50 transition-all"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 mb-1">
-                      {CATEGORIA_LABEL[f.categoria] || f.categoria}
-                    </span>
-                    <p className="text-sm font-black text-slate-800">{f.tipo_formacao || f.titulo}</p>
-                    <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                      <span className="inline-flex items-center gap-1"><Clock size={11} /> {f.duracao_horas}h</span>
-                      <span className="inline-flex items-center gap-1"><Users size={11} /> {totalConcluidos}/{participantes.length} concluídos</span>
-                      <span>Nota mínima {f.nota_minima_aprovacao}%</span>
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); abrirAtribuir(f); }}
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                    title="Atribuir Trabalhadores"
-                  >
-                    <UserPlus size={16} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); exportFormacaoPDF(f); }}
-                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
-                    title="Exportar PDF"
-                  >
-                    <FileDown size={16} />
-                  </button>
-                  {isOpen ? <ChevronUp size={16} className="text-slate-400 mt-1" /> : <ChevronDown size={16} className="text-slate-400 mt-1" />}
-                </button>
-
-                {isOpen && (
-                  <div className="px-4 pb-4 border-t border-slate-50 pt-3 space-y-4">
-                    {f.conteudo_estruturado?.objetivo && (
-                      <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Objetivo:</span> {f.conteudo_estruturado.objetivo}</p>
-                    )}
-
-                    <div className="space-y-2">
-                      {participantes.map(p => {
-                        const conclusaoCfg = ESTADO_CONCLUSAO_CFG[p.estado_conclusao];
-                        const duracao = formatDuracao(p.iniciado_em, p.concluido_em);
-                        return (
-                          <div key={p.id} className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
-                            <div className="flex items-center justify-between">
-                              <p className="text-xs font-bold text-slate-700 truncate">{p.workers?.name || p.worker_id}</p>
-                              {p.assinado_em ? (
-                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg shrink-0">
-                                  Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">
-                                  Por assinar (worker)
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100">
-                              {conclusaoCfg && (
-                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${conclusaoCfg.bg} ${conclusaoCfg.text}`}>
-                                  {conclusaoCfg.label}
-                                </span>
-                              )}
-                              {p.nota_obtida != null && (
-                                <span className="text-[9px] font-bold text-slate-500">Nota: {p.nota_obtida}%</span>
-                              )}
-                              {duracao && (
-                                <span className="text-[9px] font-bold text-slate-400">Tempo de conclusão: {duracao}</span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {Array.isArray(f.questionario) && f.questionario.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Questionário</p>
-                        <div className="space-y-2">
-                          {f.questionario.map((q, qi) => (
-                            <div key={qi} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
-                              {q.imagem_url ? (
-                                <img src={q.imagem_url} alt="" className="w-14 h-14 object-cover rounded-xl border border-slate-100 shrink-0" />
-                              ) : (
-                                <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300">
-                                  <ImageIcon size={18} />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pergunta {qi + 1}</p>
-                                <p className="text-xs font-bold text-slate-700">{q.pergunta}</p>
-                              </div>
-                            </div>
-                          ))}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
+                <th className="py-2 pr-4">Formação</th>
+                <th className="py-2 pr-4">Duração</th>
+                <th className="py-2 pr-4">Participantes</th>
+                <th className="py-2 pr-4">Nota Mínima</th>
+                <th className="py-2 pr-4">Ações</th>
+                <th className="py-2 w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {formacoes.map(f => {
+                const isOpen = expandedId === f.id;
+                const participantes = f.formacao_participantes || [];
+                const totalConcluidos = participantes.filter(p => p.assinado_em).length;
+                return (
+                  <React.Fragment key={f.id}>
+                    <tr
+                      onClick={() => setExpandedId(isOpen ? null : f.id)}
+                      className="border-b border-slate-50 cursor-pointer hover:bg-slate-50/70 transition-all"
+                    >
+                      <td className="py-3 pr-4">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 mb-1">
+                          {CATEGORIA_LABEL[f.categoria] || f.categoria}
+                        </span>
+                        <p className="font-black text-slate-800">{f.tipo_formacao || f.titulo}</p>
+                      </td>
+                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1"><Clock size={12} /> {f.duracao_horas}h</span>
+                      </td>
+                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1"><Users size={12} /> {totalConcluidos}/{participantes.length} concluídos</span>
+                      </td>
+                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{f.nota_minima_aprovacao}%</td>
+                      <td className="py-3 pr-4">
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); abrirAtribuir(f); }}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                            title="Atribuir Trabalhadores"
+                          >
+                            <UserPlus size={16} />
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); exportFormacaoPDF(f); }}
+                            className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                            title="Exportar PDF"
+                          >
+                            <FileDown size={16} />
+                          </button>
                         </div>
-                      </div>
+                      </td>
+                      <td className="py-3">
+                        {isOpen ? <ChevronUp size={16} className="text-slate-400" /> : <ChevronDown size={16} className="text-slate-400" />}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="border-b border-slate-50">
+                        <td colSpan={6} className="bg-slate-50/50 px-2 pb-4 pt-1">
+                          <div className="space-y-4">
+                            {f.conteudo_estruturado?.objetivo && (
+                              <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Objetivo:</span> {f.conteudo_estruturado.objetivo}</p>
+                            )}
+
+                            <div className="space-y-2">
+                              {participantes.map(p => {
+                                const conclusaoCfg = ESTADO_CONCLUSAO_CFG[p.estado_conclusao];
+                                const duracao = formatDuracao(p.iniciado_em, p.concluido_em);
+                                return (
+                                  <div key={p.id} className="p-3 rounded-2xl bg-white border border-slate-100">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-bold text-slate-700 truncate">{p.workers?.name || p.worker_id}</p>
+                                      {p.assinado_em ? (
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg shrink-0">
+                                          Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">
+                                          Por assinar (worker)
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100">
+                                      {conclusaoCfg && (
+                                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${conclusaoCfg.bg} ${conclusaoCfg.text}`}>
+                                          {conclusaoCfg.label}
+                                        </span>
+                                      )}
+                                      {p.nota_obtida != null && (
+                                        <span className="text-[9px] font-bold text-slate-500">Nota: {p.nota_obtida}%</span>
+                                      )}
+                                      {duracao && (
+                                        <span className="text-[9px] font-bold text-slate-400">Tempo de conclusão: {duracao}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {Array.isArray(f.questionario) && f.questionario.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Questionário</p>
+                                <div className="space-y-2">
+                                  {f.questionario.map((q, qi) => (
+                                    <div key={qi} className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-100">
+                                      {q.imagem_url ? (
+                                        <img src={q.imagem_url} alt="" className="w-14 h-14 object-cover rounded-xl border border-slate-100 shrink-0" />
+                                      ) : (
+                                        <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300">
+                                          <ImageIcon size={18} />
+                                        </div>
+                                      )}
+                                      <div className="min-w-0">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pergunta {qi + 1}</p>
+                                        <p className="text-xs font-bold text-slate-700">{q.pergunta}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
