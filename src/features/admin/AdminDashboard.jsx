@@ -208,7 +208,7 @@ function AdminDashboard(props) {
   const [optimisticReadIds, setOptimisticReadIds] = useState(new Set());
   const [optimisticViewedCorrIds, setOptimisticViewedCorrIds] = useState(new Set());
 
-  const isRead = (n) => (n.read_by_admin_ids || []).includes(currentUser?.id) || optimisticReadIds.has(n.id);
+  const isRead = (n) => (n.read_by_admin_ids || []).includes(currentUser?.id) || (n.read_by_ids || []).includes(currentUser?.id) || optimisticReadIds.has(n.id);
   const isViewed = (n) => (n.viewed_by_admin_ids || []).includes(currentUser?.id) || optimisticViewedCorrIds.has(n.id);
 
   const [dismissedAdminNotifs, setDismissedAdminNotifs] = useState([]);
@@ -281,9 +281,13 @@ function AdminDashboard(props) {
       const notif = appNotifications.find(n => n.id === id);
       if (!notif) return;
       const current = notif.read_by_admin_ids || [];
-      if (current.includes(currentUser.id)) return;
+      const currentGeneric = notif.read_by_ids || [];
+      if (current.includes(currentUser.id) && currentGeneric.includes(currentUser.id)) return;
       await supabase.from('app_notifications')
-        .update({ read_by_admin_ids: [...current, currentUser.id] })
+        .update({
+          read_by_admin_ids: current.includes(currentUser.id) ? current : [...current, currentUser.id],
+          read_by_ids: currentGeneric.includes(currentUser.id) ? currentGeneric : [...currentGeneric, currentUser.id],
+        })
         .eq('id', id);
     } catch (err) {
       setOptimisticReadIds(previousState);
@@ -314,8 +318,12 @@ function AdminDashboard(props) {
     setOptimisticReadIds(prev => new Set([...prev, ...unread.map(n => n.id)]));
     Promise.all(unread.map(n => {
       const current = n.read_by_admin_ids || [];
+      const currentGeneric = n.read_by_ids || [];
       return supabase.from('app_notifications')
-        .update({ read_by_admin_ids: [...current, currentUser.id] })
+        .update({
+          read_by_admin_ids: [...current, currentUser.id],
+          read_by_ids: currentGeneric.includes(currentUser.id) ? currentGeneric : [...currentGeneric, currentUser.id],
+        })
         .eq('id', n.id);
     }));
   }, [activeTab, currentUser?.id, appNotifications, supabase]);
