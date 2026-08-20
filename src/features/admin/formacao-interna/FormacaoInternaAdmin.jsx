@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { GraduationCap, ListChecks, Plus, BarChart3, ShieldCheck, BookOpen } from 'lucide-react';
+import { GraduationCap, ListChecks, Plus, BarChart3, ShieldCheck, BookOpen, FileText } from 'lucide-react';
 import ListaAcoesTab from './ListaAcoesTab';
 import ElearningAcoesTab from './ElearningAcoesTab';
 import NovaAcaoForm from './NovaAcaoForm';
 import HorasPorTrabalhadorTab from './HorasPorTrabalhadorTab';
 import CertificacoesValidadeTab from './CertificacoesValidadeTab';
+import RegistoIndividualTab from './RegistoIndividualTab';
 
 const TABS = [
   { id: 'lista', label: 'Ações Presenciais', icon: ListChecks },
@@ -12,6 +13,7 @@ const TABS = [
   { id: 'nova', label: 'Nova Ação', icon: Plus },
   { id: 'certificacoes', label: 'Certificações e Validades', icon: ShieldCheck },
   { id: 'horas', label: 'Horas por Trabalhador', icon: BarChart3 },
+  { id: 'registo-individual', label: 'Registo Individual', icon: FileText },
 ];
 
 export default function FormacaoInternaAdmin() {
@@ -58,6 +60,7 @@ export default function FormacaoInternaAdmin() {
       {tab === 'nova' && <NovaAcaoForm onCriada={handleCriada} />}
       {tab === 'certificacoes' && <CertificacoesValidadeTab key={refreshKey} />}
       {tab === 'horas' && <HorasPorTrabalhadorTab />}
+      {tab === 'registo-individual' && <RegistoIndividualTab />}
     </div>
   );
 }
