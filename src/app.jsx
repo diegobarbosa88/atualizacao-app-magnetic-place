@@ -352,7 +352,7 @@ export default function App() {
       title: `Reporte de Divergência Rejeitado: ${monthLabel || rawTargetMonth || ''}`,
       message: `O seu reporte de divergência referente ao período de ${monthLabel || rawTargetMonth || ''} foi rejeitado pelo administrador.\n\nMotivo: ${rejeitarMotivo.trim()}\n\nPor favor, aceda ao portal para rever e submeter um novo reporte caso necessário.`,
       type: 'error', target_type: 'client', target_client_id: String(rejeitarNotif.target_client_id),
-      created_at: new Date().toISOString(), is_active: true,
+      created_at: new Date().toISOString(), is_active: true, read_by_ids: [],
       payload: { type: 'correcao_rejeitada', motivo: rejeitarMotivo.trim() }
     };
     const monthFromMsg = rejeitarNotif.message.match(/Período: (.+)\n/)?.[1] || '';

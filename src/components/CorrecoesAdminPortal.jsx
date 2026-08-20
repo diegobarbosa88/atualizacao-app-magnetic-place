@@ -122,6 +122,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           target_client_id: String(clientId),
           created_at: new Date().toISOString(),
           is_active: true,
+          read_by_ids: [],
           payload: { type: 'correcao_aplicada', correcao_id: correcaoId }
         };
         await saveToDb('app_notifications', appliedNotifId, appliedNotifData);
@@ -175,6 +176,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           target_client_id: String(clientId),
           created_at: new Date().toISOString(),
           is_active: true,
+          read_by_ids: [],
           payload: { type: 'correcao_rejeitada', correcao_id: correcaoId }
         };
         await saveToDb('app_notifications', rejectNotifId, rejectNotifData);
@@ -289,6 +291,7 @@ const CorrecoesAdminPortal = ({ workers, appNotifications, saveToDb, handleDelet
           target_client_id: String(clientId),
           created_at: new Date().toISOString(),
           is_active: true,
+          read_by_ids: [],
           payload: { type: 'correcao_aplicada', correcao_id: correcaoId }
         };
         await saveToDb('app_notifications', appliedNotifId, appliedNotifData);

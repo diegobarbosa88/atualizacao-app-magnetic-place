@@ -189,6 +189,7 @@ export default function ValidarView({ clientObj, clientData, clientSession, t, o
                                                 target_type: 'admin',
                                                 is_dismissible: true,
                                                 is_active: true,
+                                                read_by_ids: [],
                                                 created_at: new Date().toISOString()
                                             };
                                             return saveToDb('app_notifications', notifId, newNotif);

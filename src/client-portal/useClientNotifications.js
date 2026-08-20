@@ -131,6 +131,7 @@ export function useClientNotifications({
         target_type: 'admin',
         created_at: new Date().toISOString(),
         is_active: true,
+        read_by_ids: [],
       });
 
       handleDismissNotif(notif.id);
@@ -181,6 +182,7 @@ export function useClientNotifications({
         target_type: 'admin',
         created_at: new Date().toISOString(),
         is_active: true,
+        read_by_ids: [],
       });
 
       for (const item of items) {
@@ -194,6 +196,7 @@ export function useClientNotifications({
             target_worker_ids: [String(item.worker_id)],
             created_at: new Date().toISOString(),
             is_active: true,
+            read_by_ids: [],
           });
         }
       }
@@ -243,6 +246,7 @@ export function useClientNotifications({
         target_type: 'admin',
         created_at: new Date().toISOString(),
         is_active: true,
+        read_by_ids: [],
       });
 
       const rejectionMsg = reason ? ` Motivo: ${reason}` : '';
@@ -257,6 +261,7 @@ export function useClientNotifications({
             target_worker_ids: [String(item.worker_id)],
             created_at: new Date().toISOString(),
             is_active: true,
+            read_by_ids: [],
           });
         }
       }

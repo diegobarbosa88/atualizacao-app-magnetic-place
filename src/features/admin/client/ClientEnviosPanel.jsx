@@ -43,6 +43,7 @@ export default function ClientEnviosPanel({
           target_client_id: String(c.id),
           is_dismissible: true,
           is_active: true,
+          read_by_ids: [],
           created_at: new Date().toISOString(),
         });
       }

@@ -64,6 +64,7 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
       target_worker_ids: targetType === 'specific' ? selectedWorkers : [],
       is_dismissible: isDismissible,
       is_active: true,
+      read_by_ids: [],
       created_at: new Date().toISOString()
     };
     await saveToDb('app_notifications', id, newNotif);

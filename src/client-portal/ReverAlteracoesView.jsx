@@ -137,6 +137,7 @@ export default function ReverAlteracoesView({ correctionMode, draftData, draftTo
                         payload: { changes: fullMonthSnapshot, isFullMonth: true, month: initialMonth, reportType: 'quick' },
                         is_dismissible: true,
                         is_active: true,
+                        read_by_ids: [],
                         created_at: new Date().toISOString()
                     };
                     const correcaoId = "correcao_" + Date.now();

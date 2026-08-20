@@ -611,6 +611,7 @@ export const AppProvider = ({ children }) => {
       target_worker_ids: [workerId],
       is_dismissible: true,
       is_active: true,
+      read_by_ids: [],
       created_at: new Date().toISOString(),
     });
     if (notifyAdmin) {
@@ -624,6 +625,7 @@ export const AppProvider = ({ children }) => {
         target_type: 'admin',
         is_dismissible: true,
         is_active: true,
+        read_by_ids: [],
         created_at: new Date().toISOString(),
       });
     }

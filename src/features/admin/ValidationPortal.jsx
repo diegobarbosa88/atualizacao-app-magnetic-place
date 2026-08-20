@@ -324,6 +324,7 @@ const ValidationPortal = ({
                           target_worker_ids: [String(w.id)],
                           is_dismissible: true,
                           is_active: true,
+                          read_by_ids: [],
                           created_at: new Date().toISOString(),
                         });
                       } catch (err) { alert('Erro ao anular: ' + (err?.message || err)); }
