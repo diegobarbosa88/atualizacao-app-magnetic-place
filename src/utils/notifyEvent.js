@@ -32,7 +32,8 @@ export const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toStri
  * @param notifType chave de notification_preferences — se omitido, o email (quando pedido) é sempre enviado
  * @param preferences objeto de notification_preferences, só relevante com notifType
  * @param email { to, name, link } — opcional; só envia se `to` estiver presente
- * @param push { url } — opcional; envia push real (só suportado para TARGET.ADMIN por agora)
+ * @param push { url, image, tag } — opcional; envia push real (só suportado para TARGET.ADMIN por agora)
+ * @param banner default true — quando false, não grava em app_notifications (o evento passa a existir só como push/email, sem o banner in-app)
  */
 export async function notifyEvent(supabase, {
   idPrefix = 'notif',
@@ -47,36 +48,42 @@ export async function notifyEvent(supabase, {
   preferences,
   email,
   push,
+  banner = true,
 }) {
   if (!supabase) return { error: new Error('Supabase indisponível') };
 
   const id = newId(idPrefix);
-  const row = {
-    id,
-    title,
-    message,
-    type,
-    target_type: target,
-    payload,
-    is_dismissible: true,
-    is_active: true,
-    // estado padronizado (P0) — válido para qualquer perfil
-    read_by_ids: [],
-    dismissed_by_ids: [],
-    // campos legados, preenchidos em paralelo enquanto os consumidores
-    // (AdminDashboard, useClientNotifications) não migram para read_by_ids
-    viewed_by_ids: [],
-    read_by_admin_ids: [],
-    created_at: new Date().toISOString(),
-  };
-  // target_client_id é sempre gravado quando fornecido, mesmo fora de TARGET.CLIENT —
-  // alguns eventos (ex: pedido de correção submetido) são dirigidos ao admin mas
-  // carregam o cliente de origem como metadado, para o admin saber a quem responder.
-  if (targetClientId) row.target_client_id = String(targetClientId);
-  if (target === TARGET.WORKER && targetWorkerIds?.length) row.target_worker_ids = targetWorkerIds.map(String);
+  let error;
 
-  const { error } = await supabase.from('app_notifications').insert(row);
-  if (error) console.error(`[notifyEvent] falha ao criar notificação (${idPrefix}):`, error);
+  if (banner) {
+    const row = {
+      id,
+      title,
+      message,
+      type,
+      target_type: target,
+      payload,
+      is_dismissible: true,
+      is_active: true,
+      // estado padronizado (P0) — válido para qualquer perfil
+      read_by_ids: [],
+      dismissed_by_ids: [],
+      // campos legados, preenchidos em paralelo enquanto os consumidores
+      // (AdminDashboard, useClientNotifications) não migram para read_by_ids
+      viewed_by_ids: [],
+      read_by_admin_ids: [],
+      created_at: new Date().toISOString(),
+    };
+    // target_client_id é sempre gravado quando fornecido, mesmo fora de TARGET.CLIENT —
+    // alguns eventos (ex: pedido de correção submetido) são dirigidos ao admin mas
+    // carregam o cliente de origem como metadado, para o admin saber a quem responder.
+    if (targetClientId) row.target_client_id = String(targetClientId);
+    if (target === TARGET.WORKER && targetWorkerIds?.length) row.target_worker_ids = targetWorkerIds.map(String);
+
+    const result = await supabase.from('app_notifications').insert(row);
+    error = result.error;
+    if (error) console.error(`[notifyEvent] falha ao criar notificação (${idPrefix}):`, error);
+  }
 
   if (email?.to) {
     const shouldSend = notifType ? shouldSendNotification(notifType, 'email', preferences) : true;
@@ -90,7 +97,7 @@ export async function notifyEvent(supabase, {
     fetch('/api/push/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: 'admin', title, body: message, url: push.url }),
+      body: JSON.stringify({ role: 'admin', title, body: message, url: push.url, image: push.image, tag: push.tag }),
     }).catch((e) => console.warn(`[notifyEvent] falha no push (${idPrefix}):`, e));
   }
 

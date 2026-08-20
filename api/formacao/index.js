@@ -596,7 +596,7 @@ async function handlePushSend(req, res) {
   const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
   if (!vapidPublic || !vapidPrivate) return res.status(500).json({ error: 'VAPID não configurado' });
 
-  const { role, userId, title, body, url } = req.body || {};
+  const { role, userId, title, body, url, image, tag } = req.body || {};
   if (!role || !title) return res.status(400).json({ error: 'Campos obrigatórios: role, title.' });
 
   webpush.setVapidDetails('mailto:geral@magneticplace.pt', vapidPublic, vapidPrivate);
@@ -608,7 +608,7 @@ async function handlePushSend(req, res) {
   if (error) return res.status(500).json({ error: error.message });
   if (!subs?.length) return res.status(200).json({ sent: 0, failed: 0, reason: 'sem subscrições' });
 
-  const payload = JSON.stringify({ title, body: body || '', url: url || '/' });
+  const payload = JSON.stringify({ title, body: body || '', url: url || '/', image, tag });
   const results = await Promise.allSettled(
     subs.map((s) =>
       webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)

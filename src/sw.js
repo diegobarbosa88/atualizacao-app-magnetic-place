@@ -41,6 +41,11 @@ self.addEventListener('activate', (event) => {
 });
 
 // --- Push notifications ---
+// icon-192x192.png (a cores) fica só para o Chrome desktop / ícone grande;
+// icon-badge-mono.png é a silhueta monocromática exigida pelo Android para
+// a barra de estado (um ícone a cores aí é ignorado e mostra um círculo em
+// branco). push-banner.png é a imagem de marca mostrada quando a
+// notificação é expandida.
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let data;
@@ -53,7 +58,15 @@ self.addEventListener('push', (event) => {
   const options = {
     body: data.body || '',
     icon: '/icon-192x192.png',
-    badge: '/icon-192x192.png',
+    badge: '/icon-badge-mono.png',
+    image: data.image || '/push-banner.png',
+    tag: data.tag || 'default',
+    renotify: true,
+    vibrate: [120, 60, 120],
+    actions: [
+      { action: 'view', title: 'Ver Portal' },
+      { action: 'dismiss', title: 'Dispensar' },
+    ],
     data: { url: data.url || '/' },
   };
   event.waitUntil(self.registration.showNotification(title, options));
@@ -61,6 +74,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  if (event.action === 'dismiss') return;
   const targetUrl = event.notification.data?.url || '/';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
