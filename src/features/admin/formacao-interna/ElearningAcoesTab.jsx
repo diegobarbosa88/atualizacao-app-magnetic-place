@@ -4,6 +4,7 @@ import { useApp } from '../../../context/AppContext';
 import { listFormacoes, atribuirParticipantes } from './formacaoApi';
 import { exportFormacaoPDF } from './formacaoExport';
 import { CATEGORIAS, CATEGORIAS_EXIGEM_VALIDADE, VALIDADE_PADRAO_MESES } from './formacaoTemplates';
+import { IlustracaoTile } from './formacaoIcons';
 import ModalShell from '../../../components/common/ModalShell';
 
 const ANO_ATUAL = new Date().getFullYear();
@@ -248,13 +249,15 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                 <div className="space-y-2">
                                   {f.conteudo_estruturado.seccoes.map((sec, si) => (
                                     <div key={si} className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100">
-                                      {sec.imagem_url ? (
-                                        <img src={sec.imagem_url} alt="" className="w-14 h-14 object-cover rounded-xl border border-slate-100 shrink-0" />
-                                      ) : (
-                                        <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300">
-                                          <ImageIcon size={18} />
-                                        </div>
-                                      )}
+                                      <div className="w-14 h-14 shrink-0">
+                                        {sec.icone ? (
+                                          <IlustracaoTile nome={sec.icone} height={56} />
+                                        ) : (
+                                          <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+                                            <ImageIcon size={18} />
+                                          </div>
+                                        )}
+                                      </div>
                                       <p className="text-xs font-bold text-slate-700">{sec.titulo}</p>
                                     </div>
                                   ))}
@@ -304,13 +307,15 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                 <div className="space-y-2">
                                   {f.questionario.map((q, qi) => (
                                     <div key={qi} className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-100">
-                                      {q.imagem_url ? (
-                                        <img src={q.imagem_url} alt="" className="w-14 h-14 object-cover rounded-xl border border-slate-100 shrink-0" />
-                                      ) : (
-                                        <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300">
-                                          <ImageIcon size={18} />
-                                        </div>
-                                      )}
+                                      <div className="w-14 h-14 shrink-0">
+                                        {q.icone ? (
+                                          <IlustracaoTile nome={q.icone} height={56} />
+                                        ) : (
+                                          <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+                                            <ImageIcon size={18} />
+                                          </div>
+                                        )}
+                                      </div>
                                       <div className="min-w-0">
                                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pergunta {qi + 1}</p>
                                         <p className="text-xs font-bold text-slate-700">{q.pergunta}</p>

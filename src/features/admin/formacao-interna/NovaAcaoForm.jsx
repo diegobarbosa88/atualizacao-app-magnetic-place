@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, Save, Check, Plus, Trash2, FileText, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Save, Check, Plus, Trash2, FileText } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { createFormacao } from './formacaoApi';
 import {
   CATEGORIAS, TIPOS_POR_CATEGORIA, CAMPOS_POR_TIPO,
   CATEGORIAS_ENTIDADE_EXTERNA, CATEGORIAS_EXIGEM_VALIDADE, VALIDADE_PADRAO_MESES,
 } from './formacaoTemplates';
+import { ICON_NAMES, IlustracaoTile } from './formacaoIcons';
 
 const CAMPO = 'w-full px-3 py-2.5 rounded-xl border border-slate-200 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300';
 const CAMPO_DISABLED = 'w-full px-3 py-2.5 rounded-xl border border-slate-100 bg-slate-50 text-sm text-slate-400';
@@ -19,7 +20,7 @@ const INICIAL = {
   formato: 'presencial', conteudo_url: '', nota_minima_aprovacao: '70',
 };
 
-const PERGUNTA_INICIAL = () => ({ pergunta: '', opcoes: ['', ''], resposta_correta: 0, imagem_url: '' });
+const PERGUNTA_INICIAL = () => ({ pergunta: '', opcoes: ['', ''], resposta_correta: 0, icone: '' });
 
 export default function NovaAcaoForm({ onCriada }) {
   const { supabase } = useApp();
@@ -79,7 +80,7 @@ export default function NovaAcaoForm({ onCriada }) {
     }));
     setConteudoEstruturado(template?.conteudo_estruturado || null);
     if (Array.isArray(template?.questionario) && template.questionario.length > 0) {
-      setQuestionario(template.questionario.map(q => ({ pergunta: q.pergunta, opcoes: [...q.opcoes], resposta_correta: q.resposta_correta, imagem_url: q.imagem_url || '' })));
+      setQuestionario(template.questionario.map(q => ({ pergunta: q.pergunta, opcoes: [...q.opcoes], resposta_correta: q.resposta_correta, icone: q.icone || '' })));
     } else {
       setQuestionario([PERGUNTA_INICIAL()]);
     }
@@ -116,10 +117,10 @@ export default function NovaAcaoForm({ onCriada }) {
     i === idx ? { ...q, opcoes: q.opcoes.map((o, j) => j === oIdx ? valor : o) } : q
   )));
   const setRespostaCorreta = (idx, oIdx) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, resposta_correta: oIdx } : q));
-  const setImagemUrl = (idx, imagem_url) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, imagem_url } : q));
-  const setSecaoImagem = (idx, imagem_url) => setConteudoEstruturado(prev => prev ? {
+  const setPerguntaIcone = (idx, icone) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, icone } : q));
+  const setSecaoIcone = (idx, icone) => setConteudoEstruturado(prev => prev ? {
     ...prev,
-    seccoes: prev.seccoes.map((s, i) => i === idx ? { ...s, imagem_url } : s),
+    seccoes: prev.seccoes.map((s, i) => i === idx ? { ...s, icone } : s),
   } : prev);
 
   const submit = async (e) => {
@@ -325,21 +326,19 @@ export default function NovaAcaoForm({ onCriada }) {
               <div className="space-y-2">
                 {conteudoEstruturado.seccoes.map((sec, idx) => (
                   <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-100">
-                    {sec.imagem_url ? (
-                      <img src={sec.imagem_url} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 text-slate-300">
-                        <ImageIcon size={14} />
-                      </div>
-                    )}
+                    <div className="w-9 h-9 shrink-0">
+                      {sec.icone && <IlustracaoTile nome={sec.icone} height={36} />}
+                    </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">{sec.titulo}</p>
-                      <input
-                        className="w-full text-sm text-slate-700 focus:outline-none placeholder:text-slate-300"
-                        value={sec.imagem_url || ''}
-                        onChange={e => setSecaoImagem(idx, e.target.value)}
-                        placeholder="Link da ilustração desta secção"
-                      />
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate mb-1">{sec.titulo}</p>
+                      <select
+                        className="w-full text-sm text-slate-700 bg-transparent focus:outline-none"
+                        value={sec.icone || ''}
+                        onChange={e => setSecaoIcone(idx, e.target.value)}
+                      >
+                        <option value="">— Sem ilustração —</option>
+                        {ICON_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+                      </select>
                     </div>
                   </div>
                 ))}
@@ -371,19 +370,17 @@ export default function NovaAcaoForm({ onCriada }) {
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    {q.imagem_url ? (
-                      <img src={q.imagem_url} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 text-slate-300">
-                        <ImageIcon size={14} />
-                      </div>
-                    )}
-                    <input
+                    <div className="w-9 h-9 shrink-0">
+                      {q.icone && <IlustracaoTile nome={q.icone} height={36} />}
+                    </div>
+                    <select
                       className={`${CAMPO} flex-1 py-1.5`}
-                      value={q.imagem_url}
-                      onChange={e => setImagemUrl(idx, e.target.value)}
-                      placeholder="Link da ilustração desta pergunta (opcional)"
-                    />
+                      value={q.icone || ''}
+                      onChange={e => setPerguntaIcone(idx, e.target.value)}
+                    >
+                      <option value="">— Sem ilustração —</option>
+                      {ICON_NAMES.map(n => <option key={n} value={n}>{n}</option>)}
+                    </select>
                   </div>
                   <div className="space-y-1.5 pl-2">
                     {q.opcoes.map((op, oIdx) => (

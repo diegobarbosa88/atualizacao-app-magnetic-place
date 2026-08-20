@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { PlayCircle, FileText, CheckCircle2, Loader2, ChevronLeft } from 'lucide-react';
 import { iniciarFormacao, responderQuestionario, getConteudoUrl, assinarMinhaFormacao } from './formacaoWorkerApi';
 import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
+import { IlustracaoTile } from '../../admin/formacao-interna/formacaoIcons';
 
 const STEPS = [
   { id: 'conteudo', label: 'Conteúdo' },
@@ -256,8 +257,8 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
               participacao.conteudo_estruturado.seccoes.map((sec, idx) => (
                 <div key={idx} className={idx > 0 ? 'mt-5' : ''}>
                   <h3 className="text-[19px] font-bold mb-2" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>{sec.titulo}</h3>
-                  {sec.imagem_url && (
-                    <img src={sec.imagem_url} alt="" className="w-full max-h-[220px] object-cover rounded-[10px] mb-2.5" style={{ border: `1px solid ${FT.border}` }} />
+                  {sec.icone && (
+                    <IlustracaoTile nome={sec.icone} height={150} className="mb-2.5" />
                   )}
                   {sec.paragrafos?.map((p, pIdx) => (
                     <p key={pIdx} className="text-[14px] leading-relaxed mb-2" style={{ color: FT.ink }}>{p}</p>
@@ -318,8 +319,8 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
                 PERGUNTA {qi + 1} / {participacao.questionario.length}
               </p>
               <p className="text-[15px] font-semibold my-1 leading-snug" style={{ color: FT.navyDeep }}>{q.pergunta}</p>
-              {q.imagem_url && (
-                <img src={q.imagem_url} alt="" className="w-full max-h-[180px] object-cover rounded-[10px] mb-2.5" style={{ border: `1px solid ${FT.border}` }} />
+              {q.icone && (
+                <IlustracaoTile nome={q.icone} height={120} className="mb-2.5" />
               )}
               {q.opcoes.map((op, oi) => {
                 const selecionada = respostas[qi] === oi;
