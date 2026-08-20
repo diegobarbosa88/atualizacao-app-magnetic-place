@@ -10,6 +10,7 @@ import DashboardView from './client-portal/DashboardView';
 import ValidarView from './client-portal/ValidarView';
 import SimpleReportView from './client-portal/SimpleReportView';
 import CounterProposalCard from './client-portal/CounterProposalCard';
+import GenericNotificationCard from './client-portal/GenericNotificationCard';
 import WorkerSubmissionsPanel from './client-portal/WorkerSubmissionsPanel';
 import WorkerRequestsView from './client-portal/WorkerRequestsView';
 import LogManagementModal from './client-portal/LogManagementModal';
@@ -408,6 +409,14 @@ export default function ClientPortal({ clients, workers, logs: initialLogs, save
                         <div className="mb-8 space-y-4">
                             {myNotifications.filter(n => n.payload?.type === 'counter_proposal').map(notif => (
                                 <CounterProposalCard key={notif.id} notif={notif} handleAcceptContestation={handleAcceptContestation} handleDismissNotif={handleDismissNotif} handleApproveCreationRequest={handleApproveCreationRequest} handleRejectCreationRequest={handleRejectCreationRequest} t={t} goToView={goToView} />
+                            ))}
+                        </div>
+                    )}
+
+                    {myNotifications.filter(n => n.payload?.type !== 'counter_proposal' && n.payload?.kind !== 'submitted').length > 0 && (
+                        <div className="mb-8 space-y-3">
+                            {myNotifications.filter(n => n.payload?.type !== 'counter_proposal' && n.payload?.kind !== 'submitted').map(notif => (
+                                <GenericNotificationCard key={notif.id} notif={notif} handleDismissNotif={handleDismissNotif} />
                             ))}
                         </div>
                     )}
