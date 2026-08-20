@@ -27,7 +27,7 @@ const MENU_GROUPS = [
   { id: 'principal',   label: 'PRINCIPAL',   itemIds: ['overview', 'team'] },
   { id: 'operacional', label: 'OPERACIONAL', itemIds: ['clients', 'fornecedores', 'schedules', 'documentos'] },
   { id: 'financeiro',  label: 'FINANCEIRO',  itemIds: ['faturacao', 'reconciliacao', 'pagamentos', 'reports', 'costs', 'recibos', 'mapa-salarios', 'toconline', 'ajudas-custo'] },
-  { id: 'sistema',     label: 'SISTEMA',     itemIds: ['alertas', 'settings'] },
+  { id: 'sistema',     label: 'SISTEMA',     itemIds: ['formacao', 'alertas', 'settings'] },
 ];
 
 // Verifica se um path de subtab corresponde à URL atual

@@ -1,17 +1,19 @@
 import React from 'react';
-import { Bell, Clock, CheckCircle, FileText, AlertTriangle, Edit2, ChevronRight } from 'lucide-react';
+import { Bell, Clock, CheckCircle, FileText, GraduationCap, AlertTriangle, Edit2, ChevronRight } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 
 export default function PendingAlertsModal({
   isOpen, onClose,
   pendingApprovals, currentMonthStr,
   pendingSignaturesCount,
+  pendingFormacaoCount,
   previousOpenLogs, clients,
   onApproveMonth, onReviewMonth,
   onSignDocuments,
+  onSignFormacao,
   onCompleteLog,
 }) {
-  const totalCount = (pendingApprovals?.length || 0) + (pendingSignaturesCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
+  const totalCount = (pendingApprovals?.length || 0) + (pendingSignaturesCount > 0 ? 1 : 0) + (pendingFormacaoCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
   const subtitle = `${totalCount} ${totalCount === 1 ? 'item requer atenção' : 'itens requerem atenção'}`;
 
   return (
@@ -82,6 +84,29 @@ export default function PendingAlertsModal({
             <button
               onClick={() => { onSignDocuments(); onClose(); }}
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-amber-500 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+            >
+              <Edit2 size={13} /> Assinar Agora
+            </button>
+          </div>
+        )}
+
+        {/* Pending formação signatures */}
+        {pendingFormacaoCount > 0 && (
+          <div className="bg-indigo-50 border border-indigo-100 rounded-2xl px-4 py-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="bg-indigo-100 p-2 rounded-xl shrink-0">
+                <GraduationCap size={15} className="text-indigo-600" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-black text-slate-700 leading-snug">Formações por Assinar</p>
+                <p className="text-[10px] font-bold text-slate-400 mt-0.5 leading-snug">
+                  {pendingFormacaoCount} {pendingFormacaoCount === 1 ? 'formação requer' : 'formações requerem'} a tua assinatura digital.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => { onSignFormacao(); onClose(); }}
+              className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
             >
               <Edit2 size={13} /> Assinar Agora
             </button>

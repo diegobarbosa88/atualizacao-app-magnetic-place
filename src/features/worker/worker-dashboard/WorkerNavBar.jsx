@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText } from 'lucide-react';
+import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap } from 'lucide-react';
 import CompanyLogo from '../../../components/common/CompanyLogo';
 
 const formatShortName = (fullName) => {
@@ -32,7 +32,7 @@ const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
   </button>
 );
 
-export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, isCurrentMonth, absencePendingCount, documentsPendingCount, notifCount, onOpenNotifs }) {
+export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, activeWorkerSchedule, workerChangeRequests, onLogin, onLogout, alertCount, onOpenAlerts, onOpenAbsenceModal, onOpenScheduleModal, onOpenProfileModal, onOpenDocumentsModal, onOpenFormacaoModal, isCurrentMonth, absencePendingCount, documentsPendingCount, formacaoPendingCount, notifCount, onOpenNotifs }) {
   const pendingRequests = (workerChangeRequests || []).filter(r => r.worker_id === currentUser?.id && r.status === 'pending').length;
   const totalBellCount = (alertCount || 0) + (notifCount || 0);
   const handleBellClick = () => { if (alertCount > 0) onOpenAlerts(); else if (notifCount > 0) onOpenNotifs?.(); };
@@ -130,6 +130,20 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </button>
 
             <button
+              onClick={onOpenFormacaoModal}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all bg-slate-50 text-slate-600 hover:bg-slate-100 relative"
+              title="Formação"
+            >
+              <GraduationCap size={15} className="shrink-0" />
+              <span>Formação</span>
+              {formacaoPendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-rose-500 rounded-full text-[8px] font-black text-white flex items-center justify-center">
+                  {formacaoPendingCount}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
               title="Meu Perfil"
@@ -200,6 +214,19 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </span>
           }
           label="Documentos"
+        />
+        <TabButton
+          active={false}
+          onClick={onOpenFormacaoModal}
+          icon={
+            <span className="relative inline-flex">
+              <GraduationCap size={20} />
+              {formacaoPendingCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500" />
+              )}
+            </span>
+          }
+          label="Formação"
         />
         <TabButton
           active={false}

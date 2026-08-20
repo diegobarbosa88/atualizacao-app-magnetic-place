@@ -3,7 +3,7 @@ import {
   Wallet, Settings, Users, CalendarX, ShieldCheck,
   AlertTriangle, Send, FolderOpen, Mail, ReceiptText, Coins, Receipt,
   FileSignature, BarChart2, BookOpen, ArrowRightLeft, Landmark, ListChecks,
-  Truck, Shield, Table2, ShieldAlert, MessageSquareText,
+  Truck, Shield, Table2, ShieldAlert, MessageSquareText, GraduationCap,
 } from 'lucide-react';
 
 export const ADMIN_SECTIONS = [
@@ -79,6 +79,7 @@ export const ADMIN_SECTIONS = [
       { id: 'toc-relatorios', label: 'Relatórios', icon: BarChart2,  path: '/admin/toconline?subtab=relatorios' },
     ],
   },
+  { id: 'formacao', label: 'Formação Interna', icon: GraduationCap, badgeType: null },
   { id: 'alertas', label: 'Gestão de Alertas', icon: ShieldAlert, badgeType: null },
   { id: 'settings', label: 'Configurações', icon: Settings, badgeType: null },
 ];

@@ -30,6 +30,8 @@ import ManualTimeEntryCard from './worker-dashboard/ManualTimeEntryCard';
 import ScheduleModal from './worker-dashboard/ScheduleModal';
 import ProfileModal from './worker-dashboard/ProfileModal';
 import DocumentsModal from './worker-dashboard/DocumentsModal';
+import FormacaoModal from './worker-dashboard/FormacaoModal';
+import { listMinhasFormacoes } from './worker-dashboard/formacaoWorkerApi';
 
 const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const {
@@ -80,6 +82,22 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
     if (!documentsModalOpen) loadPendingTemplateDocs();
   }, [documentsModalOpen, loadPendingTemplateDocs]);
   const [notifModalOpen, setNotifModalOpen] = useState(false);
+
+  const [formacaoModalOpen, setFormacaoModalOpen] = useState(false);
+  const [pendingFormacaoCount, setPendingFormacaoCount] = useState(0);
+  const loadPendingFormacao = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const { participacoes } = await listMinhasFormacoes();
+      setPendingFormacaoCount((participacoes || []).filter(p => !p.assinado_em).length);
+    } catch {
+      // silencioso — não bloqueia o resto do dashboard se a chamada falhar
+    }
+  }, [currentUser?.id]);
+  useEffect(() => { loadPendingFormacao(); }, [loadPendingFormacao]);
+  useEffect(() => {
+    if (!formacaoModalOpen) loadPendingFormacao();
+  }, [formacaoModalOpen, loadPendingFormacao]);
 
   const isLimitedWorker = useMemo(() => {
     if (!currentUser) return false;
@@ -209,7 +227,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
   const pendingSignaturesCount =
     (documents || []).filter(d => isPending(d.status) && d.workerId === currentUser?.id && d.visivel_worker === true).length +
     pendingTemplateDocsCount;
-  const alertCount = filteredPendingApprovals.length + (pendingSignaturesCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
+  const alertCount = filteredPendingApprovals.length + (pendingSignaturesCount > 0 ? 1 : 0) + (pendingFormacaoCount > 0 ? 1 : 0) + (previousOpenLogs?.length || 0);
 
   useEffect(() => {
     if (alertCount > 0 && !alertsModalDismissed) setAlertsModalOpen(true);
@@ -231,9 +249,11 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         onOpenScheduleModal={() => setScheduleModalOpen(true)}
         onOpenProfileModal={() => setProfileModalOpen(true)}
         onOpenDocumentsModal={() => setDocumentsModalOpen(true)}
+        onOpenFormacaoModal={() => setFormacaoModalOpen(true)}
         isCurrentMonth={currentMonth.getFullYear() === new Date().getFullYear() && currentMonth.getMonth() === new Date().getMonth()}
         absencePendingCount={(absenceRequests || []).filter(r => r.worker_id === currentUser?.id && (r.status === 'pending' || r.status === 'seen')).length}
         documentsPendingCount={pendingSignaturesCount}
+        formacaoPendingCount={pendingFormacaoCount}
         notifCount={myNotifications.length}
         onOpenNotifs={() => setNotifModalOpen(true)}
       />
@@ -361,11 +381,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
             pendingApprovals={filteredPendingApprovals}
             currentMonthStr={currentMonthStr}
             pendingSignaturesCount={pendingSignaturesCount}
+            pendingFormacaoCount={pendingFormacaoCount}
             previousOpenLogs={previousOpenLogs}
             clients={clients}
             onApproveMonth={() => handleApproveMonth(currentUser?.id, { notifyAdmin: true })}
             onReviewMonth={(pending) => setCurrentMonth(new Date(pending.date.getFullYear(), pending.date.getMonth(), 1))}
             onSignDocuments={() => setDocumentsModalOpen(true)}
+            onSignFormacao={() => setFormacaoModalOpen(true)}
             onCompleteLog={openIncompleteLogModal}
           />
 
@@ -458,6 +480,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         currentUser={currentUser}
         documents={documents}
         saveToDb={saveToDb}
+      />
+
+      <FormacaoModal
+        isOpen={formacaoModalOpen}
+        onClose={() => setFormacaoModalOpen(false)}
+        currentUser={currentUser}
+        onChanged={loadPendingFormacao}
       />
 
       {notifModalOpen && (
