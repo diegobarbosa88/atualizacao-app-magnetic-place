@@ -20,6 +20,7 @@ vi.mock('../../src/utils/authFetch.js', () => ({
             data_fim: '2026-01-10',
             duracao_horas: 8,
             local: 'Sede',
+            formato: 'presencial',
             data_validade: null,
             assinado_em: null,
           }],
@@ -33,7 +34,9 @@ vi.mock('../../src/utils/authFetch.js', () => ({
 import FormacaoModal from '../../src/features/worker/worker-dashboard/FormacaoModal.jsx';
 
 describe('FormacaoModal (worker) — smoke', () => {
-  it('monta e mostra a formação pendente com botão de assinatura', async () => {
+  it('monta e mostra o cartão da formação pendente com o estado correto', async () => {
+    // Não clica no cartão: abriria o SignDrawModal, cujo canvas.getContext('2d')
+    // não é suportado em jsdom sem o pacote `canvas` — fora do âmbito deste teste.
     render(
       <FormacaoModal
         isOpen={true}
@@ -44,6 +47,6 @@ describe('FormacaoModal (worker) — smoke', () => {
     );
 
     expect(await screen.findByText('TIG (141)')).toBeInTheDocument();
-    expect(screen.getByText('Assinar Agora')).toBeInTheDocument();
+    expect(screen.getByText('Por assinar')).toBeInTheDocument();
   });
 });

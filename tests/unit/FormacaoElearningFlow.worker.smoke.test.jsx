@@ -4,7 +4,9 @@ import '@testing-library/jest-dom';
 
 // Smoke test do fluxo e-learning: conteúdo -> questionário -> resultado.
 // Confirma que a correção nunca acontece no cliente (resposta_correta não
-// vem na participação) e que o fluxo aprovado chama onConcluido.
+// vem na participação) e que o resultado aprovado avança para a assinatura.
+// Não avança até ao passo de assinatura (canvas) — jsdom não implementa
+// getContext('2d') sem um mock dedicado, fora do âmbito deste smoke test.
 
 vi.mock('../../src/utils/authFetch.js', () => ({
   authFetch: vi.fn((url) => {
@@ -36,8 +38,8 @@ const participacao = {
 
 describe('FormacaoElearningFlow — smoke', () => {
   it('avança conteúdo -> questionário -> resultado aprovado sem expor resposta_correta', async () => {
-    const onConcluido = vi.fn();
-    render(<FormacaoElearningFlow participacao={participacao} onConcluido={onConcluido} onError={() => {}} />);
+    const onFinalizado = vi.fn();
+    render(<FormacaoElearningFlow participacao={participacao} onFinalizado={onFinalizado} onError={() => {}} />);
 
     // Nunca deve haver "resposta_correta" na participação passada ao componente.
     expect(participacao.questionario[0].resposta_correta).toBeUndefined();
@@ -48,7 +50,7 @@ describe('FormacaoElearningFlow — smoke', () => {
     fireEvent.click(screen.getByLabelText('Máscara de soldar'));
     fireEvent.click(screen.getByText('Submeter Respostas'));
 
-    expect(await screen.findByText('100%')).toBeInTheDocument();
-    expect(onConcluido).toHaveBeenCalled();
+    expect(await screen.findByText('Aprovado')).toBeInTheDocument();
+    expect(screen.getByText('Avançar para Assinatura')).toBeInTheDocument();
   });
 });

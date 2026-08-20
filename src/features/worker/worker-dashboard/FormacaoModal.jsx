@@ -1,16 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { GraduationCap, X, PenLine, Loader2, Clock, MapPin, ChevronLeft, BookOpen } from 'lucide-react';
+import { X, ChevronLeft, Flame, Box, Award, ShieldCheck, Wrench, Wind, UserPlus, GraduationCap } from 'lucide-react';
 import SignDrawModal from '../../../components/worker/SignDrawModal';
 import FormacaoElearningFlow from './FormacaoElearningFlow';
 import { listMinhasFormacoes, assinarMinhaFormacao } from './formacaoWorkerApi';
 import { CATEGORIAS } from '../../admin/formacao-interna/formacaoTemplates';
+import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
 
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]));
 
-const ELEARNING_BOTAO_LABEL = {
-  nao_iniciado: 'Iniciar Formação',
-  em_progresso: 'Continuar Formação',
-  reprovado: 'Tentar Novamente',
+const CATEGORIA_ICON = {
+  soldadura: Flame,
+  caldeiraria: Box,
+  certificacao_formal: Award,
+  hst: ShieldCheck,
+  equipamentos: Wrench,
+  gwo: Wind,
+  onboarding: UserPlus,
+};
+
+const STATUS_LABEL = {
+  nao_iniciado: 'Por iniciar',
+  em_progresso: 'Em progresso',
+  reprovado: 'Reprovado',
 };
 
 export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged }) {
@@ -35,13 +46,12 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
 
   useEffect(() => { if (isOpen) fetchParticipacoes(); }, [isOpen]);
 
-  const handleAssinar = async (assinaturaBase64) => {
+  const handleAssinarPresencial = async (assinaturaBase64) => {
     if (!signAlvo) return;
     setSignBusy(true);
     try {
       await assinarMinhaFormacao(signAlvo.participante_id, assinaturaBase64);
       setSignAlvo(null);
-      setElearningAlvo(null);
       await fetchParticipacoes();
       onChanged?.();
     } catch (e) {
@@ -50,9 +60,15 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
     setSignBusy(false);
   };
 
+  const handleElearningFinalizado = async () => {
+    setElearningAlvo(null);
+    await fetchParticipacoes();
+    onChanged?.();
+  };
+
   const abrirParticipacao = (p) => {
     setError('');
-    if (p.formato === 'e-learning' && p.estado_conclusao !== 'concluido') {
+    if (p.formato === 'e-learning') {
       setElearningAlvo(p);
     } else {
       setSignAlvo(p);
@@ -64,88 +80,86 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col sm:items-center sm:justify-center">
       <button className="flex-shrink-0 h-16 sm:hidden" onClick={onClose} aria-label="Fechar" />
-      <div className="flex-1 sm:flex-none bg-white rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:w-full sm:max-w-2xl sm:max-h-[85vh]">
-        <div className="flex items-center gap-3 bg-slate-50 border-b border-slate-100 px-5 py-4 shrink-0">
+      <div className="flex-1 sm:flex-none rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col sm:w-full sm:max-w-2xl sm:max-h-[85vh]" style={{ background: FT.bg }}>
+        <div className="flex items-center gap-3 px-5 py-4 shrink-0 text-white" style={{ background: FT.navyDeep }}>
           {elearningAlvo ? (
-            <button onClick={() => setElearningAlvo(null)} className="p-2 -ml-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0">
+            <button onClick={() => setElearningAlvo(null)} className="p-2 -ml-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0">
               <ChevronLeft size={18} />
             </button>
           ) : (
-            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center shrink-0">
-              <GraduationCap size={16} className="text-slate-600" />
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: FT.orange }}>
+              <GraduationCap size={16} className="text-white" />
             </div>
           )}
-          <h2 className="flex-1 font-black text-slate-800 uppercase tracking-tight text-sm truncate">
-            {elearningAlvo ? elearningAlvo.tipo_formacao : 'Minhas Formações'}
+          <h2 className="flex-1 font-bold uppercase tracking-wide text-sm truncate" style={{ fontFamily: FONT_TITLE }}>
+            {elearningAlvo ? elearningAlvo.tipo_formacao : 'As tuas formações'}
           </h2>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
+          <button onClick={onClose} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all">
             <X size={18} />
           </button>
         </div>
 
         <div className="overflow-y-auto flex-1 px-4 py-4">
-          {error && <div className="mb-4 p-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-xl">{error}</div>}
+          {error && <div className="mb-4 p-3 rounded-xl text-xs font-bold" style={{ background: FT.badBg, color: FT.bad }}>{error}</div>}
 
           {elearningAlvo ? (
-            <FormacaoElearningFlow
-              participacao={elearningAlvo}
-              onConcluido={() => setSignAlvo(elearningAlvo)}
-              onError={setError}
-            />
+            <div className="rounded-[14px] p-5" style={{ background: FT.panel, border: `1px solid ${FT.border}` }}>
+              <FormacaoElearningFlow
+                participacao={elearningAlvo}
+                currentUser={currentUser}
+                onFinalizado={handleElearningFinalizado}
+                onError={setError}
+              />
+            </div>
           ) : loading ? (
-            <div className="flex items-center justify-center py-16 text-slate-400">
-              <Loader2 className="animate-spin" size={24} />
+            <div className="flex items-center justify-center py-16" style={{ color: FT.slate }}>
+              <span className="animate-pulse text-xs font-bold" style={{ fontFamily: FONT_MONO }}>A CARREGAR...</span>
             </div>
           ) : participacoes.length === 0 ? (
-            <p className="text-center py-10 text-slate-400 text-xs font-bold">Ainda não tens formações registadas.</p>
+            <p className="text-center py-10 text-xs font-bold" style={{ color: FT.slate }}>Ainda não tens formações registadas.</p>
           ) : (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {participacoes.map(p => {
-                const isElearningPendente = p.formato === 'e-learning' && p.estado_conclusao !== 'concluido';
+                const concluidoTotal = !!p.assinado_em;
+                const Icone = CATEGORIA_ICON[p.categoria] || GraduationCap;
+                const statusLabel = concluidoTotal
+                  ? 'Concluído'
+                  : p.formato === 'e-learning'
+                    ? (STATUS_LABEL[p.estado_conclusao] || 'Por iniciar')
+                    : 'Por assinar';
                 return (
-                  <div key={p.participante_id} className="rounded-2xl border border-slate-100 bg-white shadow-sm p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">
-                            {CATEGORIA_LABEL[p.categoria] || p.categoria}
-                          </span>
-                          {p.formato === 'e-learning' && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
-                              <BookOpen size={10} /> E-learning
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm font-black text-slate-800">{p.tipo_formacao}</p>
-                        <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                          <span className="inline-flex items-center gap-1"><Clock size={11} /> {p.duracao_horas}h</span>
-                          {p.local && <span className="inline-flex items-center gap-1"><MapPin size={11} /> {p.local}</span>}
-                          <span>{new Date(p.data_inicio).toLocaleDateString('pt-PT')} a {new Date(p.data_fim).toLocaleDateString('pt-PT')}</span>
-                        </div>
-                        {p.data_validade && (
-                          <p className="text-[10px] font-bold text-slate-400 mt-1">Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
-                        )}
-                        {p.estado_conclusao === 'reprovado' && (
-                          <p className="text-[10px] font-bold text-rose-500 mt-1">Última tentativa: {p.nota_obtida}% (mínimo {p.nota_minima_aprovacao}%)</p>
-                        )}
-                      </div>
+                  <div
+                    key={p.participante_id}
+                    onClick={() => !concluidoTotal && abrirParticipacao(p)}
+                    className="relative overflow-hidden rounded-[14px] flex gap-3.5 items-start p-4 transition-transform"
+                    style={{
+                      background: FT.panel,
+                      border: `1px solid ${FT.border}`,
+                      cursor: concluidoTotal ? 'default' : 'pointer',
+                    }}
+                  >
+                    <div className="absolute left-0 top-0 bottom-0 w-[5px]" style={{ background: concluidoTotal ? FT.ok : FT.navy }} />
+                    <div className="w-[42px] h-[42px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: FT.navy }}>
+                      <Icone size={20} className="text-white" />
                     </div>
-                    <div className="mt-3">
-                      {p.assinado_em ? (
-                        <span className="inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg">
-                          Assinado em {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => abrirParticipacao(p)}
-                          className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
-                        >
-                          {isElearningPendente
-                            ? (<><BookOpen size={13} /> {ELEARNING_BOTAO_LABEL[p.estado_conclusao] || 'Iniciar Formação'}</>)
-                            : (<><PenLine size={13} /> Assinar Agora</>)}
-                        </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[16px] leading-tight mb-0.5" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>{p.tipo_formacao}</p>
+                      <p className="text-[11px] uppercase tracking-wide" style={{ fontFamily: FONT_MONO, color: FT.slate }}>
+                        {CATEGORIA_LABEL[p.categoria] || p.categoria} · {p.duracao_horas}h · {p.formato === 'e-learning' ? 'e-learning' : 'presencial'}
+                      </p>
+                      {p.estado_conclusao === 'reprovado' && !concluidoTotal && (
+                        <p className="text-[10px] font-bold mt-1" style={{ color: FT.bad }}>Última tentativa: {p.nota_obtida}% (mínimo {p.nota_minima_aprovacao}%)</p>
+                      )}
+                      {p.data_validade && (
+                        <p className="text-[10px] font-bold mt-1" style={{ color: FT.slate }}>Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
                       )}
                     </div>
+                    <span
+                      className="text-[11px] font-semibold px-2.5 py-1 rounded-full shrink-0 whitespace-nowrap"
+                      style={concluidoTotal ? { background: FT.okBg, color: FT.ok } : { background: '#F0EEE7', color: FT.inkSoft }}
+                    >
+                      {statusLabel}
+                    </span>
                   </div>
                 );
               })}
@@ -159,7 +173,7 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
           workerName={currentUser?.name}
           working={signBusy}
           onClose={() => !signBusy && setSignAlvo(null)}
-          onSign={handleAssinar}
+          onSign={handleAssinarPresencial}
         />
       )}
     </div>
