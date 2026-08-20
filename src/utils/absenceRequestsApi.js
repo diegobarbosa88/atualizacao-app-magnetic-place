@@ -2,11 +2,9 @@
 // Mesmo espírito de correctionsApi.js: funções puras que recebem `supabase` + payload,
 // reutilizáveis entre o dashboard do worker e o painel do admin.
 
-import { sendValidationEmail } from './emailUtils';
+import { notifyEvent, TARGET, newId } from './notifyEvent';
 
-export const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-const safeEmail = (args) => sendValidationEmail(args).catch((e) => console.warn('[absenceRequestsApi] email error', e));
+export { newId };
 
 /**
  * Formata a lista de dias em falta em texto curto (ex: "21 ago, 22 ago"),
@@ -33,33 +31,22 @@ export async function notifyClientOfAbsence(supabase, { client, workerName, date
   if (!supabase || !client) return;
 
   const message = buildAbsenceNotificationMessage({ workerName, dates, reason, notes });
+  const origin = portalBase || (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '');
 
-  const { error } = await supabase.from('app_notifications').insert({
-    id: newId('notif_abs_client'),
+  await notifyEvent(supabase, {
+    idPrefix: 'notif_abs_client',
     title: 'Aviso de Falta',
     message,
     type: 'warning',
-    target_type: 'client',
-    target_client_id: String(client.id),
+    target: TARGET.CLIENT,
+    targetClientId: client.id,
     payload: { absenceId, kind: 'absence' },
-    is_dismissible: true,
-    is_active: true,
-    viewed_by_ids: [],
-    dismissed_by_ids: [],
-    created_at: new Date().toISOString(),
-  });
-  if (error) console.error('[absenceRequestsApi] falha ao notificar cliente:', error);
-
-  if (client.email) {
-    const origin = portalBase || (typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : '');
-    safeEmail({
+    email: client.email ? {
       to: client.email,
       name: client.name,
-      title: 'Aviso de Falta',
-      message,
       link: `${origin}?view=client_portal&client=${encodeURIComponent(client.id)}`,
-    });
-  }
+    } : undefined,
+  });
 }
 
 /**

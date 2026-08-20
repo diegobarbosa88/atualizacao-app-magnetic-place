@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CalendarX, Copy, CheckCircle, Clock, ChevronDown, ChevronUp, ThumbsUp, RotateCcw, Archive, Trash2 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-import { newId, deleteAbsenceRequest } from '../../../utils/absenceRequestsApi';
+import { deleteAbsenceRequest } from '../../../utils/absenceRequestsApi';
+import { notifyEvent, TARGET } from '../../../utils/notifyEvent';
 
 export default function AbsenceRequestsPanel({ requests, systemSettings, clients }) {
   const { supabase, setAbsenceRequests, currentUser } = useApp();
@@ -25,16 +26,14 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
         r.id === req.id ? { ...r, status: 'approved' } : r
       ));
       const dateStr = (req.dates || []).slice(0, 3).join(', ') + ((req.dates || []).length > 3 ? '…' : '');
-      supabase.from('app_notifications').insert({
-        id: newId('notif_absence'),
+      notifyEvent(supabase, {
+        idPrefix: 'notif_absence',
         title: `✅ Ausência aprovada`,
         message: `A tua ausência${dateStr ? ` de ${dateStr}` : ''} foi aprovada.`,
         type: 'success',
-        target_type: 'specific',
-        target_worker_ids: [req.worker_id],
-        is_dismissible: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
+        target: TARGET.WORKER,
+        targetWorkerIds: [req.worker_id],
+        payload: { absenceId: req.id, kind: 'absence' },
       });
     }
   };
@@ -58,16 +57,14 @@ export default function AbsenceRequestsPanel({ requests, systemSettings, clients
       ));
       if (req.worker_id) {
         const dateStr = (req.dates || []).slice(0, 3).join(', ') + ((req.dates || []).length > 3 ? '…' : '');
-        supabase.from('app_notifications').insert({
-          id: newId('notif_absence_arch'),
+        notifyEvent(supabase, {
+          idPrefix: 'notif_absence_arch',
           title: `🗄️ Pedido de ausência arquivado`,
           message: `O teu pedido de ausência${dateStr ? ` de ${dateStr}` : ''} foi arquivado.`,
           type: 'info',
-          target_type: 'specific',
-          target_worker_ids: [req.worker_id],
-          is_dismissible: true,
-          is_active: true,
-          created_at: new Date().toISOString(),
+          target: TARGET.WORKER,
+          targetWorkerIds: [req.worker_id],
+          payload: { absenceId: req.id, kind: 'absence' },
         });
       }
     }

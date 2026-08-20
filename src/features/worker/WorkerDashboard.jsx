@@ -10,6 +10,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
 import { newId as newAbsenceId, notifyClientOfAbsence, deleteAbsenceRequest, buildAbsenceNotificationMessage } from '../../utils/absenceRequestsApi';
+import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 
 import WorkerProfile from './WorkerProfile';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
@@ -194,20 +195,13 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       status: 'pending',
       created_at: new Date().toISOString(),
     });
-    const notifId = newAbsenceId('notif_abs');
-    await saveToDb('app_notifications', notifId, {
-      id: notifId,
+    await notifyEvent(supabase, {
+      idPrefix: 'notif_abs',
       title: 'Aviso de Falta',
       message: buildAbsenceNotificationMessage({ workerName: currentUser.name, dates, reason, notes }),
       type: 'warning',
-      target_type: 'admin',
+      target: TARGET.ADMIN,
       payload: { absenceId: id, kind: 'absence' },
-      is_dismissible: true,
-      is_active: true,
-      viewed_by_ids: [],
-      dismissed_by_ids: [],
-      read_by_admin_ids: [],
-      created_at: new Date().toISOString(),
     });
 
     const client = clients?.find(c => c.id === currentUser.defaultClientId);
