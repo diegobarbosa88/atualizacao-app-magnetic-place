@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { PenLine, CheckCircle, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import EntryForm from '../../../components/common/EntryForm';
 import { toISODateLocal } from '../../../utils/dateUtils';
+import { FT, FONT_MONO } from './formacaoDesignTokens';
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -72,12 +73,12 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
             onClick={handleToggle}
             className="flex items-center gap-3 flex-1 min-w-0 text-left hover:opacity-80 transition-opacity"
           >
-            <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600 shrink-0">
+            <div className="p-2 rounded-xl shrink-0" style={{ background: `${FT.navy}12`, color: FT.navy }}>
               <PenLine size={16} />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registar Horário de Hoje</p>
-              <p className="text-sm font-bold text-slate-800">{dateLabel}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: FONT_MONO }}>Registar Horário de Hoje</p>
+              <p className="text-sm font-bold" style={{ color: FT.navyDeep }}>{dateLabel}</p>
             </div>
             {todayLogs.length > 0 && (
               <span className="text-[10px] bg-emerald-50 text-emerald-700 font-black px-2 py-0.5 rounded-full border border-emerald-100 uppercase tracking-wide shrink-0">
@@ -96,7 +97,8 @@ export default function ManualTimeEntryCard({ clients, currentUser, onSave, onQu
               <button
                 onClick={handleQuickRegister}
                 title="Registo rápido com horário padrão"
-                className="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-xl border border-amber-100 transition-colors text-[10px] font-black uppercase tracking-wide"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl transition-colors text-[10px] font-black uppercase tracking-wide"
+                style={{ background: FT.warnBg, color: FT.warn, border: `1px solid ${FT.warn}33`, fontFamily: FONT_MONO }}
               >
                 <Zap size={13} />
                 <span className="hidden sm:inline">Rápido</span>

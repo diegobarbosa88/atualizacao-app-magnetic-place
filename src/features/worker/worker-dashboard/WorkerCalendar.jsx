@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Zap, Trash2, Edit2, Moon } from 'lucide-react';
 import { formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
+import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
 
 const WEEKDAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -54,12 +55,17 @@ export default function WorkerCalendar({
 
       {/* Calendar grid */}
       <div className="p-4 sm:p-6">
-        <p className="text-xs font-black uppercase tracking-widest text-slate-500 mb-3 capitalize">
+        <p className="text-base font-bold uppercase tracking-widest mb-2.5 capitalize" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>
           {new Date(daysList[0] + 'T00:00:00').toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}
         </p>
+        {/* Divisor "cordão de solda" — mesmo estilo do módulo de Formação Interna */}
+        <div
+          className="h-[2px] mb-3"
+          style={{ backgroundImage: `repeating-linear-gradient(90deg, ${FT.slate} 0 6px, transparent 6px 10px)`, opacity: 0.5 }}
+        />
         <div className="grid grid-cols-7 gap-1 mb-2">
           {WEEKDAYS.map(d => (
-            <div key={d} className="text-center text-[9px] font-black uppercase tracking-widest text-slate-400 py-1">{d}</div>
+            <div key={d} className="text-center text-[9px] font-black uppercase tracking-widest text-slate-400 py-1" style={{ fontFamily: FONT_MONO }}>{d}</div>
           ))}
         </div>
 
@@ -82,6 +88,7 @@ export default function WorkerCalendar({
               r => r.worker_id === String(currentUserId) && r.status === 'approved' && (r.dates || []).includes(ds)
             );
 
+            const todayNaoSelecionado = isToday && !isSelected;
             return (
               <button
                 key={ds}
@@ -90,30 +97,44 @@ export default function WorkerCalendar({
                 className={`
                   relative aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all active:scale-95
                   ${isDayBeforeStart ? 'opacity-20 cursor-not-allowed' : 'cursor-pointer'}
-                  ${isToday && !isSelected ? 'ring-2 ring-indigo-500 ring-offset-1' : ''}
                   ${isSelected ? 'ring-2 ring-slate-400 ring-offset-1' : ''}
-                  ${hasLog
-                    ? 'bg-indigo-50 border border-indigo-200 hover:bg-indigo-100'
+                  ${todayNaoSelecionado
+                    ? ''
+                    : hasLog
+                    ? 'border'
                     : hasApprovedAbsence
                     ? 'bg-orange-50 border border-orange-200 hover:bg-orange-100'
                     : isWeekend
                     ? 'bg-slate-50'
-                    : 'bg-white border border-slate-100 hover:bg-indigo-50/50'
+                    : 'bg-white border border-slate-100 hover:bg-[#1B3A57]/5'
                   }
                 `}
+                style={
+                  todayNaoSelecionado
+                    ? { background: FT.orange, boxShadow: '0 3px 10px rgba(235,141,0,0.35)' }
+                    : hasLog
+                    ? { background: `${FT.navy}0F`, borderColor: `${FT.navy}33` }
+                    : undefined
+                }
               >
-                <span className={`text-[11px] font-black leading-none ${
-                  hasLog ? 'text-indigo-700' : hasApprovedAbsence ? 'text-orange-600' : isWeekend ? 'text-slate-300' : 'text-slate-500'
-                }`}>
+                <span
+                  className={`text-[11px] font-black leading-none ${
+                    todayNaoSelecionado ? 'text-white' : hasApprovedAbsence && !hasLog ? 'text-orange-600' : isWeekend && !hasLog ? 'text-slate-300' : !hasLog ? 'text-slate-500' : ''
+                  }`}
+                  style={hasLog && !todayNaoSelecionado ? { color: FT.navy } : undefined}
+                >
                   {dObj.getDate()}
                 </span>
                 {hasLog && (
-                  <span className="text-[9px] font-black text-indigo-500 leading-none mt-px">
+                  <span
+                    className="text-[9px] font-black leading-none mt-px"
+                    style={{ color: todayNaoSelecionado ? 'rgba(255,255,255,0.85)' : FT.orangeDeep }}
+                  >
                     {formatHours(dayTotal)}
                   </span>
                 )}
                 {hasApprovedAbsence && !hasLog && (
-                  <Moon size={8} className="text-orange-400 mt-px" />
+                  <Moon size={8} className={todayNaoSelecionado ? 'text-white/85 mt-px' : 'text-orange-400 mt-px'} />
                 )}
                 {hasApprovedAbsence && hasLog && (
                   <span className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-orange-400" />
@@ -136,7 +157,7 @@ export default function WorkerCalendar({
                 {new Date(selectedDay + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}
               </p>
               {selectedDayTotal > 0 && (
-                <p className="text-[10px] font-bold text-indigo-600 mt-0.5">{formatHours(selectedDayTotal)} registadas</p>
+                <p className="text-[10px] font-bold text-[#1B3A57] mt-0.5">{formatHours(selectedDayTotal)} registadas</p>
               )}
             </div>
             {!myApproval && !selectedDayBeforeStart && (
@@ -152,7 +173,7 @@ export default function WorkerCalendar({
                 )}
                 <button
                   onClick={() => onAddEntry(selectedDay)}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-indigo-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-indigo-700 transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-2 bg-[#EB8D00] text-white rounded-xl text-[11px] font-black uppercase tracking-wide hover:bg-[#C97600] transition-all active:scale-95"
                 >
                   <Plus size={13} /> Adicionar
                 </button>
@@ -166,10 +187,10 @@ export default function WorkerCalendar({
                 <div
                   key={log.id}
                   onClick={() => isLimitedWorker ? onEditLimitedLog(selectedDay, log.id) : onEditLog(log)}
-                  className="bg-white px-3 py-2.5 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm cursor-pointer hover:bg-indigo-50/40 transition-all"
+                  className="bg-white px-3 py-2.5 rounded-2xl border border-slate-100 flex items-center justify-between gap-2 shadow-sm cursor-pointer hover:bg-[#1B3A57]/5 transition-all"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="text-[9px] font-black bg-indigo-50 text-indigo-600 px-2 py-1 rounded-lg border border-indigo-100 uppercase shrink-0 max-w-[90px] truncate">
+                    <span className="text-[9px] font-black bg-[#1B3A57]/10 text-[#1B3A57] px-2 py-1 rounded-lg border border-[#1B3A57]/15 uppercase shrink-0 max-w-[90px] truncate">
                       {clients.find(c => c.id === log.clientId)?.name || 'Cliente'}
                     </span>
                     <div className="text-xs font-bold font-mono text-slate-600 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 shrink-0">
@@ -182,7 +203,7 @@ export default function WorkerCalendar({
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0 border-l border-slate-100 pl-3">
-                    <span className="text-sm font-black text-indigo-700">{formatHours(log.hours || 0)}</span>
+                    <span className="text-sm font-black text-[#1B3A57]">{formatHours(log.hours || 0)}</span>
                     {!myApproval && !isLimitedWorker && (
                       <button
                         onClick={(e) => { e.stopPropagation(); onDeleteLog(log); }}

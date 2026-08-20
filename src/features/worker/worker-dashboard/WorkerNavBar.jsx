@@ -1,6 +1,6 @@
 import React from 'react';
 import { LogOut, Timer, Users, UserCircle, Bell, Home, CalendarX, FileText, GraduationCap } from 'lucide-react';
-import CompanyLogo from '../../../components/common/CompanyLogo';
+import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
 
 const formatShortName = (fullName) => {
   if (!fullName) return '';
@@ -10,6 +10,14 @@ const formatShortName = (fullName) => {
   return `${parts[0]} ${middle} ${parts[parts.length - 1]}`;
 };
 
+const getInitials = (fullName) => {
+  if (!fullName) return '?';
+  const parts = fullName.trim().split(/\s+/);
+  return parts.length === 1
+    ? parts[0][0].toUpperCase()
+    : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const formatTimeCompact = (timeStr) => {
   if (!timeStr) return '--h';
   const [h, m] = timeStr.split(':').map(Number);
@@ -17,13 +25,14 @@ const formatTimeCompact = (timeStr) => {
   return `${h}h${m === 0 ? '' : m.toString().padStart(2, '0')}`;
 };
 
-const TabButton = ({ active, onClick, icon, label, badge, accent }) => (
+const TabButton = ({ active, onClick, icon, label, badge }) => (
   <button
     onClick={onClick}
-    className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative transition-colors ${active ? (accent ? 'text-orange-500' : 'text-indigo-600') : accent ? 'text-orange-400 hover:text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
+    className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 relative transition-colors"
+    style={{ color: active ? FT.orange : FT.slateDim }}
   >
     {icon}
-    <span className="text-[9px] font-black uppercase tracking-wide">{label}</span>
+    <span className="text-[9px] font-black uppercase tracking-wide" style={{ fontFamily: FONT_MONO }}>{label}</span>
     {badge > 0 && (
       <span className="absolute top-1.5 right-[calc(50%-16px)] w-3.5 h-3.5 bg-amber-400 rounded-full text-[8px] font-black text-white flex items-center justify-center">
         {badge}
@@ -40,11 +49,11 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
   return (
     <>
       {currentUser?.isAdminImpersonating && (
-        <div className="bg-indigo-600 text-white p-2 text-center text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100]">
+        <div className="bg-[#1B3A57] text-white p-2 text-center text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-4 shadow-lg sticky top-0 z-[100]">
           <span>Modo Visualização Admin (Impersonando: {currentUser.name})</span>
           <button
             onClick={() => onLogin('admin')}
-            className="bg-white text-indigo-600 px-3 py-1 rounded-full hover:bg-indigo-50 transition-all shadow-sm"
+            className="bg-white text-[#1B3A57] px-3 py-1 rounded-full hover:bg-[#EFEDE7] transition-all shadow-sm"
           >
             Voltar ao Painel Admin
           </button>
@@ -57,10 +66,15 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           onClick={() => { setWorkerTab('home'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
           className="flex items-center gap-3 hover:opacity-75 transition-opacity"
         >
-          <CompanyLogo className="h-10 w-10 object-contain" />
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: FT.navyDeep, color: FT.orange, border: `2px solid ${FT.orange}`, fontFamily: FONT_TITLE, fontWeight: 800, fontSize: 14 }}
+          >
+            {getInitials(currentUser?.name)}
+          </div>
           <div className="flex flex-col">
-            <p className="text-sm sm:text-base font-black leading-none text-slate-800 uppercase tracking-tight">{formatShortName(currentUser?.name)}</p>
-            <p className="text-[9px] sm:text-[10px] text-indigo-500 uppercase font-black tracking-widest mt-1">{currentUser?.profissao || 'Colaborador'}</p>
+            <p className="text-sm sm:text-base leading-none tracking-tight" style={{ fontFamily: FONT_TITLE, fontWeight: 800, color: FT.navyDeep }}>{formatShortName(currentUser?.name)}</p>
+            <p className="text-[9px] sm:text-[10px] uppercase tracking-widest mt-1" style={{ fontFamily: FONT_MONO, fontWeight: 700, color: FT.orangeDeep }}>{currentUser?.profissao || 'Colaborador'}</p>
           </div>
         </button>
 
@@ -69,7 +83,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           {totalBellCount > 0 && (
             <button
               onClick={handleBellClick}
-              className="relative p-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-xl transition-all shadow-sm"
+              className="relative p-2 bg-[#1B3A57]/10 text-[#1B3A57] hover:bg-[#1B3A57] hover:text-white rounded-xl transition-all shadow-sm"
               title={alertCount > 0 ? 'Avisos pendentes' : 'Notificações'}
             >
               <Bell size={18} />
@@ -83,13 +97,13 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
           <div className="hidden sm:flex items-center gap-2">
             <button
               onClick={() => setWorkerTab(t => t === 'horarios' ? 'home' : 'horarios')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all ${workerTab === 'horarios' ? 'bg-[#1B3A57] text-white' : 'bg-[#1B3A57]/10 text-[#1B3A57] hover:bg-[#1B3A57]/20'}`}
             >
               {activeWorkerSchedule && (
-                <span className="text-[9px] opacity-70 border-r border-indigo-200 pr-2 mr-1 leading-tight text-right uppercase">
+                <span className="text-[9px] opacity-70 border-r border-current/20 pr-2 mr-1 leading-tight text-right uppercase">
                   <span className="block">{formatTimeCompact(activeWorkerSchedule.startTime)} - {formatTimeCompact(activeWorkerSchedule.endTime)}</span>
                   {activeWorkerSchedule.breakStart && (
-                    <span className="block text-[8px] font-bold text-indigo-400/80">
+                    <span className="block text-[8px] font-bold opacity-70">
                       P: {formatTimeCompact(activeWorkerSchedule.breakStart)}-{formatTimeCompact(activeWorkerSchedule.breakEnd)}
                     </span>
                   )}
@@ -145,7 +159,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
 
             <button
               onClick={() => setWorkerTab(t => t === 'perfil' ? 'home' : 'perfil')}
-              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-indigo-600 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all relative ${workerTab === 'perfil' ? 'bg-[#1B3A57] text-white' : 'bg-[#1B3A57]/10 text-[#1B3A57] hover:bg-[#1B3A57]/20'}`}
               title="Meu Perfil"
             >
               <UserCircle size={15} />
@@ -158,7 +172,7 @@ export default function WorkerNavBar({ currentUser, workerTab, setWorkerTab, act
             </button>
 
             {currentUser?.isAdmin && !currentUser?.isAdminImpersonating && (
-              <button onClick={() => onLogin('admin', currentUser)} className="flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-xl shadow-sm hover:bg-indigo-700 transition-all text-xs font-black">
+              <button onClick={() => onLogin('admin', currentUser)} className="flex items-center gap-2 px-3 py-2 bg-[#1B3A57] text-white rounded-xl shadow-sm hover:bg-[#122741] transition-all text-xs font-black">
                 <Users size={15} />
                 <span>Admin</span>
               </button>
