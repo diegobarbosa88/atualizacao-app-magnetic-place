@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { assinarSessao } from './_authUtils.js';
+import { assinarSessao, requireAuth } from './_authUtils.js';
 
 const SETE_DIAS_MS = 7 * 24 * 60 * 60 * 1000;
 const TRINTA_DIAS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -141,6 +141,30 @@ async function handleWorker(supabase, req, res) {
   return res.status(200).json({ user: mapWorkerRow(full), token });
 }
 
+// "Ver Portal" no admin — abre o dashboard de um trabalhador específico para
+// consulta. Emite um token de sessão próprio desse trabalhador (nunca reutiliza
+// o token do admin), caso contrário todas as chamadas autenticadas por token
+// (ex: /api/formacao/minhas) continuavam a resolver para a conta do admin — o
+// que fazia qualquer trabalhador visto pelo "Ver Portal" mostrar sempre os
+// mesmos dados (os do admin), em vez dos do trabalhador selecionado.
+async function handleImpersonate(supabase, req, res) {
+  const sessao = requireAuth(req, res, ['admin']);
+  if (!sessao) return;
+
+  const { worker_id } = req.body || {};
+  if (!worker_id) return res.status(400).json({ error: 'Campo obrigatório: worker_id.' });
+
+  const { data: full, error: fullErr } = await supabase
+    .from('workers')
+    .select('*')
+    .eq('id', worker_id)
+    .single();
+  if (fullErr || !full) return res.status(404).json({ error: 'Trabalhador não encontrado.' });
+
+  const token = assinarSessao({ role: 'worker', id: full.id, isAdmin: !!full.isAdmin, exp: Date.now() + SETE_DIAS_MS });
+  return res.status(200).json({ user: mapWorkerRow(full), token });
+}
+
 async function handleClient(supabase, req, res) {
   const { nif, email } = req.body || {};
   const nifNorm = normDoc(nif);
@@ -187,10 +211,11 @@ export default async function handler(req, res) {
     const supabase = supabaseAdmin();
 
     switch (role) {
-      case 'admin':  return await handleAdmin(supabase, req, res);
-      case 'worker': return await handleWorker(supabase, req, res);
-      case 'client': return await handleClient(supabase, req, res);
-      default:       return res.status(400).json({ error: `role desconhecido: ${role || '(não definido)'}` });
+      case 'admin':       return await handleAdmin(supabase, req, res);
+      case 'worker':      return await handleWorker(supabase, req, res);
+      case 'client':      return await handleClient(supabase, req, res);
+      case 'impersonate': return await handleImpersonate(supabase, req, res);
+      default:            return res.status(400).json({ error: `role desconhecido: ${role || '(não definido)'}` });
     }
   } catch (e) {
     return res.status(500).json({ error: e.message, stack: e.stack });

@@ -7,6 +7,7 @@ import {
 import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
+import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
 
 const SOURCE_CFG = {
   gps_auto:     { label: 'GPS',        bg: 'bg-emerald-100', text: 'text-emerald-700' },
@@ -178,6 +179,15 @@ export default function WorkerValidationPanel({ onLogin }) {
   const monthStr = toISODateLocal(month).substring(0, 7);
   const fmtH = (h) => `${Number.isInteger(h) ? h : h.toFixed(1)}H`;
 
+  const verPortal = async (w) => {
+    try {
+      const { user, token } = await impersonarTrabalhador(w);
+      onLogin('worker', { ...user, isAdminImpersonating: true }, token);
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   const sortedWorkers = useMemo(() => {
     return [...workers].map(w => {
       const totalHours = logs
@@ -231,7 +241,7 @@ export default function WorkerValidationPanel({ onLogin }) {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => setLogsModalWorker(w)} className="p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-lg transition-all" title="Ver Registos"><ClipboardList size={13} /></button>
-                      <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal"><Search size={13} /></button>
+                      <button onClick={() => verPortal(w)} className="p-1.5 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal"><Search size={13} /></button>
                       {!w.isApproved ? (
                         <button onClick={async () => { const id = "appr_" + w.id + "_" + monthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: monthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro: ' + err?.message); } }} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Aprovar"><UserCheck size={13} /></button>
                       ) : (
@@ -262,7 +272,7 @@ export default function WorkerValidationPanel({ onLogin }) {
                 <button onClick={() => setLogsModalWorker(w)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl text-[10px] font-black uppercase transition-all border border-slate-200" title="Ver Registos">
                   <ClipboardList size={12} /> Registos
                 </button>
-                <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100" title="Ver Portal">
+                <button onClick={() => verPortal(w)} className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100" title="Ver Portal">
                   <Search size={12} /> Portal
                 </button>
                 {!w.isApproved ? (

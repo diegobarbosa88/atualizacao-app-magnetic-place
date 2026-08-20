@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
+import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
 import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 
@@ -47,6 +48,15 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
   const [openMenuId, setOpenMenuId] = useState(null);
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
   const [ssAmbiente, setSsAmbiente] = useState('teste');
+
+  const verPortal = async (w) => {
+    try {
+      const { user, token } = await impersonarTrabalhador(w);
+      onLogin('worker', { ...user, isAdminImpersonating: true }, token);
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   useEffect(() => {
     authFetch('/api/seguranca-social?action=status')
@@ -170,7 +180,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className="text-xs font-semibold text-slate-700 group-hover:text-amber-700">Editar</span>
                             </button>
                             <button
-                              onClick={() => { onLogin('worker', { ...w, isAdminImpersonating: true }); setOpenMenuId(null); }}
+                              onClick={() => { verPortal(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
                             >
                               <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0" style={{ color: '#869AAF' }}><Search size={13} /></span>
@@ -284,7 +294,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 {w.status === 'inativo' ? 'Inativo' : 'Ativo'}
               </div>
               <div className="flex items-center gap-1">
-                <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={12} /></button>
+                <button onClick={() => verPortal(w)} className="p-1.5 hover:bg-slate-50 rounded-lg transition-all border border-slate-100" style={{ color: '#869AAF' }} title="Ver Portal"><Search size={12} /></button>
                 <button onClick={() => onEdit(w)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-100" title="Editar"><Edit2 size={12} /></button>
                 <button onClick={() => onVerPasta?.(w.id)} className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all border border-emerald-100" title="Ver Pasta de Documentos"><FolderOpen size={12} /></button>
                 <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>

@@ -8,6 +8,7 @@ import { useApp } from '../../context/AppContext';
 import { useValidationPortal } from './contexts/ValidationPortalContext';
 import { formatHours, calculateDuration } from '../../utils/formatUtils';
 import { sendValidationEmail } from '../../utils/emailUtils';
+import { impersonarTrabalhador } from '../../utils/impersonateWorker';
 import CorrectionsInbox from './corrections/CorrectionsInbox';
 import NotificationPreferences from '../../components/admin/NotificationPreferences';
 import { DISABLE_CLIENT_NOTIFICATIONS, shouldSendNotification } from '../../config';
@@ -48,6 +49,15 @@ const ValidationPortal = ({
     notificationPreferences,
     updateNotificationPreferences
   } = useApp();
+
+  const verPortal = async (w) => {
+    try {
+      const { user, token } = await impersonarTrabalhador(w);
+      onLogin('worker', { ...user, isAdminImpersonating: true }, token);
+    } catch (e) {
+      alert(e.message);
+    }
+  };
 
   const pendingWorkerSubmissionsCount = (workerChangeRequests || []).filter(r => r.status === 'pending').length;
   const workerSubmissionsPending = (correcoesCorrections || []).filter(c => (c.type === 'creation_request' || c.type === 'deletion_request') && (c.status === 'submitted' || c.status === 'under_review')).length;
@@ -255,7 +265,7 @@ const ValidationPortal = ({
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })} className="p-1.5 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal"><Search size={13} /></button>
+                      <button onClick={() => verPortal(w)} className="p-1.5 text-indigo-400 hover:bg-indigo-50 rounded-lg transition-all" title="Ver Portal"><Search size={13} /></button>
                       {!w.isApproved ? (
                         <button onClick={async () => { const id = "appr_" + w.id + "_" + portalMonthStr; try { await saveToDb('approvals', id, { id, workerId: w.id, month: portalMonthStr, timestamp: new Date().toISOString() }); } catch (err) { alert('Erro: ' + err?.message); } }} className="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded-lg transition-all" title="Aprovar"><UserCheck size={13} /></button>
                       ) : (
@@ -286,7 +296,7 @@ const ValidationPortal = ({
               {/* Actions */}
               <div className="flex gap-2">
                 <button
-                  onClick={() => onLogin('worker', { ...w, isAdminImpersonating: true })}
+                  onClick={() => verPortal(w)}
                   className="flex-1 flex items-center justify-center gap-1.5 py-2 text-indigo-600 hover:bg-indigo-50 rounded-xl text-[10px] font-black uppercase transition-all border border-indigo-100"
                   title="Ver Portal"
                 >
