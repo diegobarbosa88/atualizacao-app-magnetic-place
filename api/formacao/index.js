@@ -154,6 +154,23 @@ async function handleCreate(req, res) {
 
   const supabase = getSupabase();
 
+  // Evita duplicados: se já existe uma ação e-learning com este mesmo tipo,
+  // usar "Atribuir Trabalhadores" nessa em vez de criar outra igual.
+  if (formato === 'e-learning') {
+    const { data: existentes } = await supabase
+      .from('formacoes_internas')
+      .select('id')
+      .eq('categoria', categoria)
+      .eq('tipo_formacao', tipo_formacao.trim())
+      .eq('formato', 'e-learning')
+      .limit(1);
+    if (existentes && existentes.length > 0) {
+      return res.status(409).json({
+        error: `Já existe uma ação e-learning "${tipo_formacao.trim()}". Usa "Atribuir Trabalhadores" nessa ação em vez de criar outra igual.`,
+      });
+    }
+  }
+
   const { data: formacao, error } = await supabase
     .from('formacoes_internas')
     .insert({

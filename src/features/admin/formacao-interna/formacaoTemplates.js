@@ -362,6 +362,41 @@ export const CAMPOS_POR_TIPO = {
     conteudo_programatico: 'Máscara e viseira de soldadura; luvas e avental de proteção; proteção respiratória; regras de uso e manutenção.',
     justificativa_afinidade: 'Diretamente relacionada com os riscos específicos da função de soldador.',
     metodo_avaliacao: 'Avaliação prática de colocação e uso do equipamento',
+    formato: 'e-learning',
+    nota_minima_aprovacao: 70,
+    conteudo_estruturado: {
+      objetivo: 'Garantir que os soldadores conhecem e utilizam corretamente o EPI específico da função.',
+      seccoes: [
+        { titulo: 'Introdução', paragrafos: ['O EPI é a última linha de defesa contra os riscos da soldadura — radiação, calor, projeções e fumos. Tem de ser adequado ao processo utilizado e usado sempre, sem exceções.'] },
+        { titulo: 'Máscara e Viseira', lista: [
+          'Filtro adequado ao processo utilizado (MIG/MAG, TIG, elétrodo revestido).',
+          'Verificar o estado do vidro de proteção antes de cada utilização.',
+          'Substituir sempre que estiver riscado, fissurado ou danificado.',
+        ]},
+        { titulo: 'Luvas e Vestuário', lista: [
+          'Luvas de proteção térmica, resistentes a calor e projeções.',
+          'Avental de couro ou roupa ignífuga.',
+          'Roupa de manga comprida, sem partes soltas ou inflamáveis.',
+        ]},
+        { titulo: 'Proteção Respiratória e Auditiva', lista: [
+          'Proteção respiratória adicional em espaços confinados ou ao soldar materiais especiais (galvanizados, inox).',
+          'Proteção auditiva quando o nível de ruído do posto o justificar.',
+        ]},
+        { titulo: 'Regras de Uso e Manutenção', lista: [
+          'Inspecionar todo o EPI antes de cada utilização.',
+          'Substituir de imediato qualquer peça danificada.',
+          'Guardar o EPI em local limpo e seco quando não está a ser usado.',
+        ]},
+        { titulo: 'Resumo', paragrafos: ['O EPI só protege se estiver em bom estado, for o adequado ao processo, e for usado sempre. Reporta qualquer dano ou desgaste ao responsável.'] },
+      ],
+    },
+    questionario: [
+      { pergunta: 'Quando deve ser substituído o vidro de proteção da máscara de soldar?', opcoes: ['Nunca precisa de substituição', 'Quando estiver riscado ou danificado', 'Só uma vez por ano, independentemente do estado', 'Só se partir completamente'], resposta_correta: 1 },
+      { pergunta: 'Que tipo de luvas é obrigatório usar na soldadura?', opcoes: ['Luvas de látex finas', 'Luvas de proteção térmica', 'Luvas de jardinagem', 'Não é obrigatório usar luvas'], resposta_correta: 1 },
+      { pergunta: 'Quando é necessária proteção respiratória adicional?', opcoes: ['Nunca é necessária', 'Em espaços confinados ou ao soldar materiais especiais (galvanizados/inox)', 'Só se o soldador quiser', 'Só em dias de chuva'], resposta_correta: 1 },
+      { pergunta: 'O EPI deve ser inspecionado antes de cada utilização?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
+      { pergunta: 'Onde deve ser guardado o EPI quando não está a ser usado?', opcoes: ['Em qualquer lugar', 'Em local limpo e seco', 'No chão da oficina', 'Não importa'], resposta_correta: 1 },
+    ],
   },
   'Ventilação e Extração de Fumos': {
     duracao_horas: 1,
@@ -369,6 +404,38 @@ export const CAMPOS_POR_TIPO = {
     conteudo_programatico: 'Riscos para a saúde respiratória; sistemas de extração localizada; boas práticas em espaços confinados.',
     justificativa_afinidade: 'Diretamente relacionada com os riscos específicos da função de soldador/caldeireiro.',
     metodo_avaliacao: 'Questionário de verificação de conhecimentos',
+    formato: 'e-learning',
+    nota_minima_aprovacao: 70,
+    conteudo_estruturado: {
+      objetivo: 'Sensibilizar para os riscos de exposição a fumos de soldadura e o uso correto dos sistemas de extração.',
+      seccoes: [
+        { titulo: 'Introdução', paragrafos: ['Os fumos de soldadura contêm partículas metálicas e gases nocivos. A exposição prolongada tem efeitos respiratórios a curto e longo prazo, mesmo quando não há sintomas imediatos.'] },
+        { titulo: 'Ventilação Geral vs. Extração Localizada', lista: [
+          'A ventilação geral do espaço não substitui a extração localizada junto do ponto de soldadura.',
+          'A extração localizada capta o fumo diretamente na fonte, antes de se espalhar.',
+          'Posicionar-se sempre de forma a que o fluxo de ar afaste o fumo da zona respiratória, nunca o contrário.',
+        ]},
+        { titulo: 'Sinais de Exposição Excessiva', lista: [
+          'Tonturas.',
+          'Irritação nas vias respiratórias.',
+          'Dores de cabeça.',
+          'Tosse persistente.',
+        ]},
+        { titulo: 'Boas Práticas', lista: [
+          'Confirmar que o sistema de extração está ligado e a funcionar antes de iniciar o trabalho.',
+          'Reportar avarias no sistema de extração de imediato ao responsável.',
+          'Usar proteção respiratória adicional em espaços confinados.',
+        ]},
+        { titulo: 'Resumo', paragrafos: ['Extração eficaz + boa postura face ao fluxo de ar + reporte imediato de avarias — os três pilares para reduzir a exposição a fumos de soldadura.'] },
+      ],
+    },
+    questionario: [
+      { pergunta: 'A ventilação geral do espaço é suficiente sozinha para proteger contra fumos de soldadura?', opcoes: ['Verdadeiro', 'Falso — precisa de extração localizada'], resposta_correta: 1 },
+      { pergunta: 'Qual destes é um sinal de exposição excessiva a fumos de soldadura?', opcoes: ['Sensação de fome', 'Tonturas e dores de cabeça', 'Sono profundo à noite', 'Nenhum sintoma existe'], resposta_correta: 1 },
+      { pergunta: 'Como te deves posicionar em relação ao fluxo de ar de extração?', opcoes: ['De forma a que o fumo vá para a tua zona respiratória', 'De forma a que o fluxo afaste o fumo da tua zona respiratória', 'Não importa a posição', 'De costas para a peça, sempre'], resposta_correta: 1 },
+      { pergunta: 'Deve confirmar-se que o sistema de extração está ligado antes de iniciar o trabalho?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
+      { pergunta: 'O que fazer se detetares uma avaria no sistema de extração?', opcoes: ['Ignorar e continuar a trabalhar', 'Reportar de imediato ao responsável', 'Desligar tudo e não dizer a ninguém', 'Tentar reparar sozinho sem formação'], resposta_correta: 1 },
+    ],
   },
   'Trabalhos a Quente': {
     duracao_horas: 2,
@@ -376,6 +443,40 @@ export const CAMPOS_POR_TIPO = {
     conteudo_programatico: 'Permissão de trabalho a quente; controlo de fontes de ignição; meios de extinção; vigilância pós-trabalho.',
     justificativa_afinidade: 'Formação obrigatória para colaboradores que executam trabalhos a quente.',
     metodo_avaliacao: 'Questionário de verificação de conhecimentos',
+    formato: 'e-learning',
+    nota_minima_aprovacao: 70,
+    conteudo_estruturado: {
+      objetivo: 'Capacitar os colaboradores para a execução segura de trabalhos a quente (soldadura, corte, esmerilagem).',
+      seccoes: [
+        { titulo: 'Introdução', paragrafos: ['Trabalhos a quente — soldadura, corte, esmerilagem — geram faíscas e calor que podem iniciar um incêndio, especialmente em locais com materiais inflamáveis próximos ou fora da vista imediata.'] },
+        { titulo: 'Permissão de Trabalho (Permit-to-Work)', lista: [
+          'Obter autorização antes de iniciar, sempre que aplicável no local do cliente/estaleiro.',
+          'Identificar os riscos específicos do local antes de começar.',
+          'Comunicar ao responsável do cliente/estaleiro antes de iniciar o trabalho.',
+        ]},
+        { titulo: 'Controlo de Fontes de Ignição', lista: [
+          'Afastar materiais inflamáveis para uma distância de segurança (mínimo 10 metros, ou conforme procedimento do cliente).',
+          'Cobrir ou proteger superfícies e materiais próximos que não possam ser removidos.',
+          'Confirmar a ausência de vapores ou gases inflamáveis na zona de trabalho.',
+        ]},
+        { titulo: 'Meios de Extinção', lista: [
+          'Confirmar a localização e validade do extintor mais próximo antes de iniciar.',
+          'Conhecer o tipo de extintor adequado ao risco específico do local.',
+        ]},
+        { titulo: 'Vigilância Pós-Trabalho', lista: [
+          'Manter vigilância do local depois de concluído o trabalho, durante um período mínimo (ex: 30 minutos).',
+          'Um foco de incêndio pode surgir com atraso — nunca abandonar o local de imediato.',
+        ]},
+        { titulo: 'Resumo', paragrafos: ['Autorização prévia, controlo de fontes de ignição, extintor à mão, e vigilância depois de terminar — os quatro passos que evitam que um trabalho a quente se transforme num incêndio.'] },
+      ],
+    },
+    questionario: [
+      { pergunta: 'O que é obrigatório obter antes de iniciar um trabalho a quente num estaleiro?', opcoes: ['Nada, é só começar', 'Uma permissão de trabalho (permit-to-work)', 'Só avisar um colega informalmente', 'Nada em particular'], resposta_correta: 1 },
+      { pergunta: 'Depois de terminar o trabalho a quente, deve-se:', opcoes: ['Ir embora imediatamente', 'Manter vigilância do local durante um período mínimo (ex: 30 min)', 'Deixar tudo ligado e sair', 'Ignorar o local'], resposta_correta: 1 },
+      { pergunta: 'O que fazer antes de iniciar, em relação a materiais inflamáveis próximos?', opcoes: ['Nada, não é preciso', 'Afastá-los ou protegê-los a uma distância de segurança', 'Aproximá-los para facilitar o trabalho', 'Cobri-los com papel'], resposta_correta: 1 },
+      { pergunta: 'É necessário confirmar a localização do extintor antes de iniciar um trabalho a quente?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
+      { pergunta: 'Um foco de incêndio pode surgir com atraso depois do trabalho terminar?', opcoes: ['Verdadeiro — por isso se mantém vigilância pós-trabalho', 'Falso — o risco desaparece assim que se para de soldar'], resposta_correta: 0 },
+    ],
   },
   'Manuseamento de Gases Industriais': {
     duracao_horas: 2,
@@ -383,6 +484,42 @@ export const CAMPOS_POR_TIPO = {
     conteudo_programatico: 'Identificação de garrafas; transporte e armazenamento; deteção de fugas; procedimento em emergência.',
     justificativa_afinidade: 'Diretamente relacionada com os riscos específicos da função de soldador.',
     metodo_avaliacao: 'Questionário de verificação de conhecimentos',
+    formato: 'e-learning',
+    nota_minima_aprovacao: 70,
+    conteudo_estruturado: {
+      objetivo: 'Capacitar os colaboradores no manuseamento seguro de garrafas e gases industriais utilizados na soldadura.',
+      seccoes: [
+        { titulo: 'Introdução', paragrafos: ['Gases como oxigénio, acetileno e árgon são essenciais ao trabalho de soldadura, mas perigosos se mal manuseados — risco de explosão, asfixia e queimaduras.'] },
+        { titulo: 'Identificação de Garrafas', lista: [
+          'Cada gás tem uma cor/código de identificação próprio.',
+          'Nunca remover ou trocar etiquetas de identificação.',
+          'Confirmar sempre o gás antes de ligar ao equipamento.',
+        ]},
+        { titulo: 'Transporte e Armazenamento', lista: [
+          'Transportar sempre na vertical e presas/fixas — nunca arrastar ou fazer rolar.',
+          'Armazenar em local ventilado, afastado de fontes de calor.',
+          'Separar gases incompatíveis (ex: oxigénio afastado de gases combustíveis).',
+        ]},
+        { titulo: 'Deteção de Fugas', lista: [
+          'Usar água com sabão para detetar fugas — nunca uma chama.',
+          'Sinais de fuga: cheiro característico, som sibilante, formação de gelo na válvula.',
+          'Fechar a válvula principal de imediato se detetar uma fuga.',
+        ]},
+        { titulo: 'Procedimento em Emergência', lista: [
+          'Afastar-te e isolar a área.',
+          'Nunca tentar reparar uma fuga sozinho.',
+          'Acionar o responsável/emergência de imediato.',
+        ]},
+        { titulo: 'Resumo', paragrafos: ['Identificar corretamente, transportar na vertical, armazenar separado por incompatibilidade, e nunca usar chama para detetar fugas — regras que previnem os acidentes mais graves com gases industriais.'] },
+      ],
+    },
+    questionario: [
+      { pergunta: 'Como se deve transportar uma garrafa de gás?', opcoes: ['Rolando pelo chão', 'Na vertical e presa/fixa', 'Deitada e solta no camião', 'Não importa como'], resposta_correta: 1 },
+      { pergunta: 'Como se deteta uma fuga de gás numa garrafa?', opcoes: ['Aproximando uma chama', 'Com água e sabão, procurando bolhas', 'Cheirando muito perto e com força', 'Não é possível detetar'], resposta_correta: 1 },
+      { pergunta: 'Onde devem ser armazenadas as garrafas de oxigénio?', opcoes: ['Junto de garrafas de gases combustíveis', 'Em local ventilado, afastadas de fontes de calor e de gases incompatíveis', 'Dentro do escritório', 'Não importa onde'], resposta_correta: 1 },
+      { pergunta: 'Nunca se deve remover ou trocar as etiquetas de identificação das garrafas?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
+      { pergunta: 'Se detetares uma fuga, o que deves fazer primeiro?', opcoes: ['Tentar reparar sozinho', 'Afastar-te, isolar a área e acionar o responsável', 'Continuar a trabalhar normalmente', 'Ignorar se for pequena'], resposta_correta: 1 },
+    ],
   },
 
   // Equipamentos

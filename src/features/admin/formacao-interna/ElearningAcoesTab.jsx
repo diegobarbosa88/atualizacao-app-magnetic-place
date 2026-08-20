@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon, UserPlus, Check } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { listFormacoes, atribuirParticipantes } from './formacaoApi';
@@ -69,6 +69,27 @@ export default function ElearningAcoesTab({ refreshKey }) {
   };
 
   useEffect(() => { fetchFormacoes(); }, [workerFilter, anoFilter, categoriaFilter, refreshKey]);
+
+  // Defesa extra: se por alguma razão existir mais do que um registo para o
+  // mesmo tipo de formação (ex: criado duas vezes por engano), mostra-se
+  // como uma única linha — participantes de todos os registos combinados,
+  // usando o mais recente como base para as ações (Atribuir/Exportar).
+  const formacoesAgrupadas = useMemo(() => {
+    const porTipo = new Map();
+    for (const f of formacoes) {
+      const chave = `${f.categoria}::${f.tipo_formacao || f.titulo}`;
+      const atual = porTipo.get(chave);
+      if (!atual) {
+        porTipo.set(chave, { ...f, formacao_participantes: [...(f.formacao_participantes || [])] });
+        continue;
+      }
+      const idsExistentes = new Set(atual.formacao_participantes.map(p => p.worker_id));
+      for (const p of f.formacao_participantes || []) {
+        if (!idsExistentes.has(p.worker_id)) atual.formacao_participantes.push(p);
+      }
+    }
+    return [...porTipo.values()];
+  }, [formacoes]);
 
   const abrirAtribuir = (f) => {
     setAtribuirErro('');
@@ -152,7 +173,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
         <div className="flex items-center justify-center py-16 text-slate-400">
           <Loader2 className="animate-spin" size={24} />
         </div>
-      ) : formacoes.length === 0 ? (
+      ) : formacoesAgrupadas.length === 0 ? (
         <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhuma ação e-learning registada.</p>
       ) : (
         <div className="overflow-x-auto">
@@ -168,7 +189,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
               </tr>
             </thead>
             <tbody>
-              {formacoes.map(f => {
+              {formacoesAgrupadas.map(f => {
                 const isOpen = expandedId === f.id;
                 const participantes = f.formacao_participantes || [];
                 const totalConcluidos = participantes.filter(p => p.assinado_em).length;
