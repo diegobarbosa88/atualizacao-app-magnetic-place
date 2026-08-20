@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon, UserPlus, Check } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon, UserPlus, Check, Search, GraduationCap, PenLine, AlertTriangle } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { listFormacoes, atribuirParticipantes } from './formacaoApi';
 import { exportFormacaoPDF } from './formacaoExport';
@@ -17,7 +17,17 @@ const ESTADO_CONCLUSAO_CFG = {
   reprovado:    { label: 'Reprovado',    bg: 'bg-rose-50',    text: 'text-rose-600' },
 };
 
+// Ordem de urgência para listar participantes dentro de uma ação — quem
+// precisa de atenção do admin aparece primeiro.
+const ORDEM_URGENCIA = { reprovado: 0, em_progresso: 1, nao_iniciado: 2, concluido: 3 };
+
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]));
+
+const SUB_TABS = [
+  { id: 'participantes', label: 'Participantes' },
+  { id: 'conteudo', label: 'Conteúdo' },
+  { id: 'questionario', label: 'Questionário' },
+];
 
 function formatDuracao(iniciadoEm, concluidoEm) {
   if (!iniciadoEm || !concluidoEm) return null;
@@ -25,6 +35,35 @@ function formatDuracao(iniciadoEm, concluidoEm) {
   if (minutos < 1) return '<1 min';
   if (minutos < 60) return `${minutos} min`;
   return `${Math.floor(minutos / 60)}h ${minutos % 60}min`;
+}
+
+function ResumoCard({ icon, label, value, accent }) {
+  return (
+    <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-white border border-slate-100">
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${accent || 'bg-indigo-50 text-indigo-600'}`}>
+        {icon}
+      </div>
+      <div className="min-w-0">
+        <p className="text-lg font-black text-slate-800 leading-tight">{value}</p>
+        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 truncate">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function BarraProgresso({ concluidos, total }) {
+  const pct = total > 0 ? Math.round((concluidos / total) * 100) : 0;
+  return (
+    <div className="flex items-center gap-2 min-w-[120px]">
+      <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all ${pct === 100 ? 'bg-emerald-500' : 'bg-indigo-500'}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="text-[10px] font-bold text-slate-500 shrink-0 tabular-nums">{concluidos}/{total}</span>
+    </div>
+  );
 }
 
 // Ações e-learning, separadas das presenciais (ver ListaAcoesTab.jsx) —
@@ -40,7 +79,10 @@ export default function ElearningAcoesTab({ refreshKey }) {
   const [workerFilter, setWorkerFilter] = useState('');
   const [anoFilter, setAnoFilter] = useState(String(ANO_ATUAL));
   const [categoriaFilter, setCategoriaFilter] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState('');
+  const [busca, setBusca] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [expandedTab, setExpandedTab] = useState('participantes');
 
   const [atribuirAlvo, setAtribuirAlvo] = useState(null);
   const [selecionados, setSelecionados] = useState({});
@@ -92,6 +134,30 @@ export default function ElearningAcoesTab({ refreshKey }) {
     return [...porTipo.values()];
   }, [formacoes]);
 
+  const formacoesFiltradas = useMemo(() => {
+    const buscaNorm = busca.trim().toLowerCase();
+    return formacoesAgrupadas.filter(f => {
+      if (buscaNorm && !(f.tipo_formacao || f.titulo || '').toLowerCase().includes(buscaNorm)) return false;
+      if (estadoFilter && !(f.formacao_participantes || []).some(p => p.estado_conclusao === estadoFilter)) return false;
+      return true;
+    });
+  }, [formacoesAgrupadas, busca, estadoFilter]);
+
+  // Resumo global — visão rápida sem precisar de expandir cada linha.
+  const resumo = useMemo(() => {
+    let totalParticipantes = 0, totalConcluidos = 0, pendentesAssinatura = 0;
+    for (const f of formacoesAgrupadas) {
+      const participantes = f.formacao_participantes || [];
+      totalParticipantes += participantes.length;
+      for (const p of participantes) {
+        if (p.assinado_em) totalConcluidos++;
+        else if (p.estado_conclusao === 'concluido') pendentesAssinatura++;
+      }
+    }
+    const taxaMedia = totalParticipantes > 0 ? Math.round((totalConcluidos / totalParticipantes) * 100) : 0;
+    return { totalAcoes: formacoesAgrupadas.length, totalParticipantes, taxaMedia, pendentesAssinatura };
+  }, [formacoesAgrupadas]);
+
   const abrirAtribuir = (f) => {
     setAtribuirErro('');
     setSelecionados({});
@@ -140,9 +206,34 @@ export default function ElearningAcoesTab({ refreshKey }) {
     ? workers.filter(w => !(atribuirAlvo.formacao_participantes || []).some(p => p.worker_id === w.id))
     : [];
 
+  const toggleExpandida = (id) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      setExpandedTab('participantes');
+    }
+  };
+
   return (
     <div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
+        <ResumoCard icon={<GraduationCap size={16} />} label="Ações e-learning" value={resumo.totalAcoes} />
+        <ResumoCard icon={<Users size={16} />} label="Participantes" value={resumo.totalParticipantes} accent="bg-slate-100 text-slate-600" />
+        <ResumoCard icon={<Check size={16} />} label="Taxa de conclusão" value={`${resumo.taxaMedia}%`} accent="bg-emerald-50 text-emerald-600" />
+        <ResumoCard icon={<PenLine size={16} />} label="Por assinar" value={resumo.pendentesAssinatura} accent="bg-amber-50 text-amber-600" />
+      </div>
+
       <div className="flex flex-wrap gap-3 mb-5">
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" />
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Pesquisar formação..."
+            className="pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 placeholder:text-slate-300 placeholder:font-semibold w-52"
+          />
+        </div>
         <select
           value={workerFilter}
           onChange={e => setWorkerFilter(e.target.value)}
@@ -160,6 +251,14 @@ export default function ElearningAcoesTab({ refreshKey }) {
           {CATEGORIAS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
         <select
+          value={estadoFilter}
+          onChange={e => setEstadoFilter(e.target.value)}
+          className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
+        >
+          <option value="">Todos os estados</option>
+          {Object.entries(ESTADO_CONCLUSAO_CFG).map(([id, cfg]) => <option key={id} value={id}>{cfg.label}</option>)}
+        </select>
+        <select
           value={anoFilter}
           onChange={e => setAnoFilter(e.target.value)}
           className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold text-slate-600"
@@ -174,8 +273,10 @@ export default function ElearningAcoesTab({ refreshKey }) {
         <div className="flex items-center justify-center py-16 text-slate-400">
           <Loader2 className="animate-spin" size={24} />
         </div>
-      ) : formacoesAgrupadas.length === 0 ? (
-        <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhuma ação e-learning registada.</p>
+      ) : formacoesFiltradas.length === 0 ? (
+        <p className="text-center py-10 text-slate-400 text-xs font-bold">
+          {formacoesAgrupadas.length === 0 ? 'Nenhuma ação e-learning registada.' : 'Nenhuma ação corresponde aos filtros.'}
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -183,34 +284,45 @@ export default function ElearningAcoesTab({ refreshKey }) {
               <tr className="text-left text-[9px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100">
                 <th className="py-2 pr-4">Formação</th>
                 <th className="py-2 pr-4">Duração</th>
-                <th className="py-2 pr-4">Participantes</th>
+                <th className="py-2 pr-4">Progresso</th>
                 <th className="py-2 pr-4">Nota Mínima</th>
                 <th className="py-2 pr-4">Ações</th>
                 <th className="py-2 w-8" />
               </tr>
             </thead>
             <tbody>
-              {formacoesAgrupadas.map(f => {
+              {formacoesFiltradas.map(f => {
                 const isOpen = expandedId === f.id;
                 const participantes = f.formacao_participantes || [];
                 const totalConcluidos = participantes.filter(p => p.assinado_em).length;
+                const temReprovado = participantes.some(p => p.estado_conclusao === 'reprovado');
+                const participantesOrdenados = [...participantes].sort((a, b) =>
+                  (ORDEM_URGENCIA[a.estado_conclusao] ?? 9) - (ORDEM_URGENCIA[b.estado_conclusao] ?? 9)
+                );
                 return (
                   <React.Fragment key={f.id}>
                     <tr
-                      onClick={() => setExpandedId(isOpen ? null : f.id)}
+                      onClick={() => toggleExpandida(f.id)}
                       className="border-b border-slate-50 cursor-pointer hover:bg-slate-50/70 transition-all"
                     >
                       <td className="py-3 pr-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600 mb-1">
-                          {CATEGORIA_LABEL[f.categoria] || f.categoria}
-                        </span>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
+                            {CATEGORIA_LABEL[f.categoria] || f.categoria}
+                          </span>
+                          {temReprovado && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-rose-50 text-rose-600">
+                              <AlertTriangle size={10} /> Reprovado
+                            </span>
+                          )}
+                        </div>
                         <p className="font-black text-slate-800">{f.tipo_formacao || f.titulo}</p>
                       </td>
                       <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1"><Clock size={12} /> {f.duracao_horas}h</span>
                       </td>
-                      <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1"><Users size={12} /> {totalConcluidos}/{participantes.length} concluídos</span>
+                      <td className="py-3 pr-4">
+                        <BarraProgresso concluidos={totalConcluidos} total={participantes.length} />
                       </td>
                       <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{f.nota_minima_aprovacao}%</td>
                       <td className="py-3 pr-4">
@@ -238,35 +350,33 @@ export default function ElearningAcoesTab({ refreshKey }) {
                     {isOpen && (
                       <tr className="border-b border-slate-50">
                         <td colSpan={6} className="bg-slate-50/50 px-2 pb-4 pt-1">
-                          <div className="space-y-4">
-                            {f.conteudo_estruturado?.objetivo && (
-                              <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Objetivo:</span> {f.conteudo_estruturado.objetivo}</p>
-                            )}
+                          {f.conteudo_estruturado?.objetivo && (
+                            <p className="text-xs text-slate-500 px-1 pt-2 pb-3">
+                              <span className="font-bold text-slate-700">Objetivo:</span> {f.conteudo_estruturado.objetivo}
+                            </p>
+                          )}
 
-                            {Array.isArray(f.conteudo_estruturado?.seccoes) && f.conteudo_estruturado.seccoes.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Conteúdo</p>
-                                <div className="space-y-2">
-                                  {f.conteudo_estruturado.seccoes.map((sec, si) => (
-                                    <div key={si} className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100">
-                                      <div className="w-14 h-14 shrink-0">
-                                        {sec.icone ? (
-                                          <IlustracaoTile nome={sec.icone} height={56} />
-                                        ) : (
-                                          <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-                                            <ImageIcon size={18} />
-                                          </div>
-                                        )}
-                                      </div>
-                                      <p className="text-xs font-bold text-slate-700">{sec.titulo}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+                          <div className="flex items-center gap-1 mb-3 border-b border-slate-200 px-1">
+                            {SUB_TABS.map(tab => (
+                              <button
+                                key={tab.id}
+                                onClick={() => setExpandedTab(tab.id)}
+                                className={`px-3 py-2 text-[10px] font-black uppercase tracking-widest border-b-2 -mb-px transition-all ${
+                                  expandedTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'
+                                }`}
+                              >
+                                {tab.label}
+                                {tab.id === 'participantes' && participantes.length > 0 && ` (${participantes.length})`}
+                                {tab.id === 'questionario' && Array.isArray(f.questionario) && f.questionario.length > 0 && ` (${f.questionario.length})`}
+                              </button>
+                            ))}
+                          </div>
 
-                            <div className="space-y-2">
-                              {participantes.map(p => {
+                          {expandedTab === 'participantes' && (
+                            <div className="space-y-2 px-1">
+                              {participantesOrdenados.length === 0 ? (
+                                <p className="text-center py-6 text-slate-400 text-xs font-bold">Sem participantes atribuídos.</p>
+                              ) : participantesOrdenados.map(p => {
                                 const conclusaoCfg = ESTADO_CONCLUSAO_CFG[p.estado_conclusao];
                                 const duracao = formatDuracao(p.iniciado_em, p.concluido_em);
                                 return (
@@ -300,32 +410,52 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                 );
                               })}
                             </div>
+                          )}
 
-                            {Array.isArray(f.questionario) && f.questionario.length > 0 && (
-                              <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Questionário</p>
-                                <div className="space-y-2">
-                                  {f.questionario.map((q, qi) => (
-                                    <div key={qi} className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-100">
-                                      <div className="w-14 h-14 shrink-0">
-                                        {q.icone ? (
-                                          <IlustracaoTile nome={q.icone} height={56} />
-                                        ) : (
-                                          <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-                                            <ImageIcon size={18} />
-                                          </div>
-                                        )}
+                          {expandedTab === 'conteudo' && (
+                            <div className="space-y-2 px-1">
+                              {!Array.isArray(f.conteudo_estruturado?.seccoes) || f.conteudo_estruturado.seccoes.length === 0 ? (
+                                <p className="text-center py-6 text-slate-400 text-xs font-bold">Sem conteúdo estruturado.</p>
+                              ) : f.conteudo_estruturado.seccoes.map((sec, si) => (
+                                <div key={si} className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100">
+                                  <div className="w-14 h-14 shrink-0">
+                                    {sec.icone ? (
+                                      <IlustracaoTile nome={sec.icone} height={56} />
+                                    ) : (
+                                      <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+                                        <ImageIcon size={18} />
                                       </div>
-                                      <div className="min-w-0">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pergunta {qi + 1}</p>
-                                        <p className="text-xs font-bold text-slate-700">{q.pergunta}</p>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    )}
+                                  </div>
+                                  <p className="text-xs font-bold text-slate-700">{sec.titulo}</p>
                                 </div>
-                              </div>
-                            )}
-                          </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {expandedTab === 'questionario' && (
+                            <div className="space-y-2 px-1">
+                              {!Array.isArray(f.questionario) || f.questionario.length === 0 ? (
+                                <p className="text-center py-6 text-slate-400 text-xs font-bold">Sem questionário.</p>
+                              ) : f.questionario.map((q, qi) => (
+                                <div key={qi} className="flex items-start gap-3 p-3 rounded-2xl bg-white border border-slate-100">
+                                  <div className="w-14 h-14 shrink-0">
+                                    {q.icone ? (
+                                      <IlustracaoTile nome={q.icone} height={56} />
+                                    ) : (
+                                      <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
+                                        <ImageIcon size={18} />
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="min-w-0">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Pergunta {qi + 1}</p>
+                                    <p className="text-xs font-bold text-slate-700">{q.pergunta}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     )}
