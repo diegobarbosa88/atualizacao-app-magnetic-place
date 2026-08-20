@@ -76,6 +76,7 @@
     { "source": "/api/formacao/conteudo", "destination": "/api/formacao?action=conteudo" },
     { "source": "/api/formacao/certificacoes", "destination": "/api/formacao?action=certificacoes" },
     { "source": "/api/formacao/horas-por-trabalhador", "destination": "/api/formacao?action=horas-por-trabalhador" },
+    { "source": "/api/push/send", "destination": "/api/formacao?action=push-send" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import webpush from 'web-push';
 import { requireAuth } from '../_authUtils.js';
 
 // Todos os endpoints de Formação Interna vivem numa única função serverless
@@ -581,6 +582,53 @@ async function handleHorasPorTrabalhador(req, res) {
   return res.status(200).json({ ano, meta: META_HORAS_ANO, trabalhadores: resultado });
 }
 
+// push-send não é de Formação Interna — vive aqui só para não estourar o
+// limite de 12 funções serverless do plano Hobby (ver nota no topo do
+// ficheiro). Envia push notifications reais para todas as subscrições de
+// um `role` ('admin' | 'worker' | 'client'), chamado a partir de
+// notifyEvent() no browser. Mesmo nível de confiança que qualquer outro
+// insert feito com a chave anon (sem auth extra) — consistente com o resto
+// da app de notificações.
+async function handlePushSend(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const vapidPublic = process.env.VAPID_PUBLIC_KEY;
+  const vapidPrivate = process.env.VAPID_PRIVATE_KEY;
+  if (!vapidPublic || !vapidPrivate) return res.status(500).json({ error: 'VAPID não configurado' });
+
+  const { role, userId, title, body, url } = req.body || {};
+  if (!role || !title) return res.status(400).json({ error: 'Campos obrigatórios: role, title.' });
+
+  webpush.setVapidDetails('mailto:geral@magneticplace.pt', vapidPublic, vapidPrivate);
+
+  const supabase = getSupabase();
+  let query = supabase.from('push_subscriptions').select('*').eq('role', role);
+  if (userId) query = query.eq('user_id', String(userId));
+  const { data: subs, error } = await query;
+  if (error) return res.status(500).json({ error: error.message });
+  if (!subs?.length) return res.status(200).json({ sent: 0, failed: 0, reason: 'sem subscrições' });
+
+  const payload = JSON.stringify({ title, body: body || '', url: url || '/' });
+  const results = await Promise.allSettled(
+    subs.map((s) =>
+      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+    )
+  );
+
+  const deadIds = results
+    .map((r, i) => ({ r, sub: subs[i] }))
+    .filter(({ r }) => r.status === 'rejected' && [404, 410].includes(r.reason?.statusCode))
+    .map(({ sub }) => sub.id);
+  if (deadIds.length) {
+    await supabase.from('push_subscriptions').delete().in('id', deadIds);
+  }
+
+  return res.status(200).json({
+    sent: results.filter((r) => r.status === 'fulfilled').length,
+    failed: results.filter((r) => r.status === 'rejected').length,
+  });
+}
+
 const ACTIONS = {
   'list': handleList,
   'create': handleCreate,
@@ -592,6 +640,7 @@ const ACTIONS = {
   'conteudo': handleConteudo,
   'certificacoes': handleCertificacoes,
   'horas-por-trabalhador': handleHorasPorTrabalhador,
+  'push-send': handlePushSend,
 };
 
 export default async function handler(req, res) {
