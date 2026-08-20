@@ -53,6 +53,7 @@ export default function NovaAcaoForm({ onCriada }) {
       entidade_externa: CATEGORIAS_ENTIDADE_EXTERNA.includes(categoria) ? f.entidade_externa : '',
     }));
     setConteudoEstruturado(null);
+    setQuestionario([PERGUNTA_INICIAL()]);
   };
 
   // Quando o tipo escolhido corresponde exatamente a um dos predefinidos,
@@ -70,9 +71,18 @@ export default function NovaAcaoForm({ onCriada }) {
         conteudo_programatico: template.conteudo_programatico,
         justificativa_afinidade: template.justificativa_afinidade,
         metodo_avaliacao: template.metodo_avaliacao,
+        // A formação completa (e-learning já com questionário pronto) vem
+        // com o próprio formato + nota mínima — não é preciso mudar à mão.
+        ...(template.formato ? { formato: template.formato } : {}),
+        ...(template.nota_minima_aprovacao != null ? { nota_minima_aprovacao: String(template.nota_minima_aprovacao) } : {}),
       } : {}),
     }));
     setConteudoEstruturado(template?.conteudo_estruturado || null);
+    if (Array.isArray(template?.questionario) && template.questionario.length > 0) {
+      setQuestionario(template.questionario.map(q => ({ pergunta: q.pergunta, opcoes: [...q.opcoes], resposta_correta: q.resposta_correta })));
+    } else {
+      setQuestionario([PERGUNTA_INICIAL()]);
+    }
   };
 
   const toggleParticipante = (id) => {
@@ -306,6 +316,11 @@ export default function NovaAcaoForm({ onCriada }) {
 
           <div>
             <label className={LABEL}>Questionário</label>
+            {questionario.some(q => q.pergunta.trim()) && (
+              <p className="text-[10px] font-bold text-indigo-500 mb-2 flex items-center gap-1">
+                <FileText size={11} /> {questionario.length} pergunta{questionario.length !== 1 ? 's' : ''} pré-preenchida{questionario.length !== 1 ? 's' : ''} a partir do modelo — revê/edita à vontade.
+              </p>
+            )}
             <div className="space-y-3">
               {questionario.map((q, idx) => (
                 <div key={idx} className="p-3 rounded-xl bg-white border border-slate-100 space-y-2">

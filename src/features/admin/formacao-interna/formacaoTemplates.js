@@ -268,6 +268,15 @@ export const CAMPOS_POR_TIPO = {
         },
       ],
     },
+    formato: 'e-learning',
+    nota_minima_aprovacao: 70,
+    questionario: [
+      { pergunta: 'Qual o EPI obrigatório para soldadura TIG em espaço fechado?', opcoes: ['Apenas luvas de proteção térmica', 'Máscara de soldar, luvas térmicas e proteção respiratória adicional', 'Apenas óculos de sol', 'Nenhum EPI adicional é necessário'], resposta_correta: 1 },
+      { pergunta: 'O que fazer em caso de exposição prolongada a fumos de soldadura?', opcoes: ['Continuar o trabalho normalmente', 'Reportar sintomas e afastar-se para zona ventilada', 'Ignorar, é normal', 'Aumentar o ritmo de trabalho para terminar mais depressa'], resposta_correta: 1 },
+      { pergunta: 'Qual a distância mínima recomendada de materiais inflamáveis durante trabalho a quente?', opcoes: ['1 metro', '3 metros', '10 metros (ou conforme procedimento do cliente)', 'Não há distância mínima'], resposta_correta: 2 },
+      { pergunta: 'A máscara de soldar protege também contra a inalação de fumos?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 1 },
+      { pergunta: 'A quem se deve reportar um quase-acidente?', opcoes: ['A ninguém, não houve ferimentos', 'Ao responsável direto, sempre', 'Só se houver testemunhas', 'Apenas em reunião mensal'], resposta_correta: 1 },
+    ],
   },
   'Segurança em Trabalhos de Caldeiraria': {
     duracao_horas: 0.5,
@@ -337,6 +346,15 @@ export const CAMPOS_POR_TIPO = {
         },
       ],
     },
+    formato: 'e-learning',
+    nota_minima_aprovacao: 70,
+    questionario: [
+      { pergunta: 'Qual o EPI obrigatório ao operar uma guilhotina?', opcoes: ['Apenas luvas', 'Luvas anticorte, calçado de proteção e óculos/viseira', 'Nenhum, a máquina já é segura', 'Apenas proteção auditiva'], resposta_correta: 1 },
+      { pergunta: 'Porque é que nunca se deve remover um resguardo de segurança de uma máquina?', opcoes: ['Porque é proibido por regulamento interno apenas', 'Porque expõe diretamente o trabalhador ao risco de esmagamento/entalamento', 'Não há problema em removê-lo temporariamente', 'Só é relevante em máquinas antigas'], resposta_correta: 1 },
+      { pergunta: 'Quando se deve usar ajuda mecânica em vez de levantamento manual?', opcoes: ['Nunca, é sempre mais rápido à mão', 'Sempre que o peso ou dimensão da peça o justificar', 'Só se houver ponte rolante disponível na hora', 'Apenas para peças acima de 100 kg, nunca abaixo'], resposta_correta: 1 },
+      { pergunta: 'O bloqueio/etiquetagem (LOTO) só é necessário para reparações grandes?', opcoes: ['Verdadeiro', 'Falso — aplica-se a qualquer intervenção, mesmo breve'], resposta_correta: 1 },
+      { pergunta: 'Qual o procedimento em caso de lesão músculo-esquelética aguda no posto de trabalho?', opcoes: ['Forçar o movimento para "desentortar"', 'Não forçar, imobilizar e procurar assistência médica', 'Continuar a trabalhar até ao fim do turno', 'Aplicar apenas gelo e ignorar'], resposta_correta: 1 },
+    ],
   },
   'EPI para Soldadura': {
     duracao_horas: 1,
