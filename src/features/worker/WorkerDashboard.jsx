@@ -9,7 +9,7 @@ import {
 import SignatureCanvas from 'react-signature-canvas';
 import { toISODateLocal, isSameMonth } from '../../utils/dateUtils';
 import { formatHours } from '../../utils/formatUtils';
-import { newId as newAbsenceId, notifyClientOfAbsence, deleteAbsenceRequest } from '../../utils/absenceRequestsApi';
+import { newId as newAbsenceId, notifyClientOfAbsence, deleteAbsenceRequest, buildAbsenceNotificationMessage } from '../../utils/absenceRequestsApi';
 
 import WorkerProfile from './WorkerProfile';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
@@ -195,11 +195,10 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       created_at: new Date().toISOString(),
     });
     const notifId = newAbsenceId('notif_abs');
-    const dateLabel = `${dates.length} dia${dates.length !== 1 ? 's' : ''}`;
     await saveToDb('app_notifications', notifId, {
       id: notifId,
       title: 'Aviso de Falta',
-      message: `${currentUser.name} avisou falta (${dateLabel}): ${reason}`,
+      message: buildAbsenceNotificationMessage({ workerName: currentUser.name, dates, reason, notes }),
       type: 'warning',
       target_type: 'admin',
       payload: { absenceId: id, kind: 'absence' },
@@ -218,6 +217,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
         workerName: currentUser.name,
         dates,
         reason,
+        notes,
         absenceId: id,
       }).catch((e) => console.warn('falha ao notificar cliente sobre falta', e));
     }

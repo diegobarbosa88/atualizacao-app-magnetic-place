@@ -9,14 +9,30 @@ export const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toStri
 const safeEmail = (args) => sendValidationEmail(args).catch((e) => console.warn('[absenceRequestsApi] email error', e));
 
 /**
+ * Formata a lista de dias em falta em texto curto (ex: "21 ago, 22 ago"),
+ * para uso nas mensagens de notificação em vez de apenas a contagem de dias.
+ */
+export function formatAbsenceDatesLabel(dates) {
+  return (dates || [])
+    .slice()
+    .sort()
+    .map(ds => new Date(`${ds}T00:00:00`).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' }))
+    .join(', ');
+}
+
+export function buildAbsenceNotificationMessage({ workerName, dates, reason, notes }) {
+  const base = `${workerName} avisou falta (${formatAbsenceDatesLabel(dates)}): ${reason}`;
+  return notes ? `${base} — ${notes}` : base;
+}
+
+/**
  * Notifica o cliente padrão do worker (dashboard + email) quando uma falta é registada.
  * Sempre automático — não depende de nenhum toggle de configuração.
  */
-export async function notifyClientOfAbsence(supabase, { client, workerName, dates, reason, absenceId, portalBase }) {
+export async function notifyClientOfAbsence(supabase, { client, workerName, dates, reason, notes, absenceId, portalBase }) {
   if (!supabase || !client) return;
 
-  const dateLabel = `${dates.length} dia${dates.length !== 1 ? 's' : ''}`;
-  const message = `${workerName} avisou falta (${dateLabel}): ${reason}`;
+  const message = buildAbsenceNotificationMessage({ workerName, dates, reason, notes });
 
   const { error } = await supabase.from('app_notifications').insert({
     id: newId('notif_abs_client'),
