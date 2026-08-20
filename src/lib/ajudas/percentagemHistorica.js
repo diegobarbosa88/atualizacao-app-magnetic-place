@@ -27,6 +27,7 @@
 import { ratearProporcional } from './rateio.js';
 import { calcularValoresPorClienteMes, mesSeguinte } from './valoresPorFatura.js';
 import { extrairValorObs } from './valorObservacao.js';
+import { fetchTudoPaginado } from './paginacao.js';
 import {
   TOCONLINE_TIPOS_RECEITA, fetchVendasTOConline, buscarFaturasVendasPeriodo,
 } from './faturasToConline.js';
@@ -164,14 +165,19 @@ export async function consolidarTotalReal({ periodoInicio, periodoFim, dbClient,
     linhasPorMes.push(...r.linhas);
   }
 
-  const [{ data: validations, error: errV }, { data: logs, error: errL }] = await Promise.all([
-    dbClient.from('receipt_validations').select('worker_id, mes')
-      .gte('mes', mesSeguinte(periodoInicio)).lte('mes', mesSeguinte(periodoFim)),
-    dbClient.from('logs').select('workerId, date')
-      .gte('date', `${periodoInicio}-01`).lte('date', `${periodoFim}-31`),
+  // Paginado (fetchTudoPaginado) — sem filtro de worker e sobre um período
+  // potencialmente largo (até 12 meses), estas duas queries ultrapassam
+  // facilmente o limite de 1000 linhas do PostgREST e truncavam
+  // silenciosamente (mesmo bug confirmado em elegibilidade.js — ver
+  // paginacao.js). Só afeta o gate de completude abaixo
+  // (mesesIncluidos/mesesExcluidos, um aviso), nunca totalReal (calculado
+  // acima, mês a mês, com queries já filtradas por mês).
+  const [validations, logs] = await Promise.all([
+    fetchTudoPaginado(() => dbClient.from('receipt_validations').select('worker_id, mes')
+      .gte('mes', mesSeguinte(periodoInicio)).lte('mes', mesSeguinte(periodoFim))),
+    fetchTudoPaginado(() => dbClient.from('logs').select('workerId, date')
+      .gte('date', `${periodoInicio}-01`).lte('date', `${periodoFim}-31`)),
   ]);
-  if (errV) throw errV;
-  if (errL) throw errL;
 
   const workersDoMesNormalizado = new Map(); // mes (referência) -> Map(idNormalizado -> idOriginal)
   for (const l of logs || []) {
@@ -203,6 +209,11 @@ export async function consolidarTotalReal({ periodoInicio, periodoFim, dbClient,
       mesesExcluidos.push({
         mes,
         motivo: `${semRecibo.length} trabalhador(es) com horas registadas sem NENHUM receipt_validations processado (aviso — não remove o mês do total): ${semRecibo.join(', ')}`,
+        // workerIds estruturado (ids originais, ver normalizarWorkerId) para a
+        // UI poder resolver nomes e oferecer um "marcar como revisto" sem
+        // fazer parsing da string `motivo`. Registos antigos gravados antes
+        // desta mudança não têm este campo — a UI faz fallback.
+        workerIds: semRecibo,
       });
     } else {
       mesesIncluidos.push(mes);
@@ -236,22 +247,87 @@ export function filtrarFaturasElegiveis(faturas) {
   return (faturas || []).filter(f => f.elegivel === true);
 }
 
-// Passo (d): rateia o total REAL (não o faturamento) por todas as faturas
-// elegíveis do período, proporcionalmente ao valor de cada fatura — tenham
-// ou não valor manual prévio na observação. Devolve linhas prontas para
-// gravar em ajudas_estimativas_fatura (origem:'historico'); não grava.
-export function ratearHistorico({ totalReal, faturasElegiveisDoPeriodo }) {
-  const rateadas = ratearProporcional(totalReal, faturasElegiveisDoPeriodo);
-  return rateadas.map(f => ({
+// Investigação de 2026-08-20 (ver conversa): estas 8 faturas de junho/julho
+// 2026 têm valor_observacao_manual preenchido, mas confirmado como
+// placeholder aleatório (sem base em recibo real) — não são declarações
+// genuínas como as outras 17 do período (março-maio, dispersão orgânica
+// 45%-79%; estas 8 convergiam de forma suspeita para ~50-52%, coincidindo
+// com a % que esteve ativa em produção nesses meses). Lista explícita e
+// temporária (decisão consciente, não um mecanismo geral de deteção de
+// placeholders — se isto se repetir no futuro, vale a pena reconsiderar
+// um campo próprio na BD em vez de continuar a acumular listas destas).
+// O valor_observacao_manual da fatura NÃO é apagado (mantém-se como
+// registo histórico do que lá estava escrito) — só deixa de contar como
+// declaração válida no cálculo da % e no rateio.
+const FATURAS_VALOR_MANUAL_PLACEHOLDER = new Set([
+  'c1775487604163|2026-06|FT 2026/36', // Caldereria Gurelan
+  'c1775487604163|2026-07|FT 2026/40', // Caldereria Gurelan
+  'c1775331179425|2026-06|FT 2026/34', // Caldereria Kortaberri
+  'c1775331179425|2026-07|FT 2026/38', // Caldereria Kortaberri
+  'c1775216152375|2026-06|FT 2026/32', // Ferrocal Steel
+  'c1775216152375|2026-07|FT 2026/41', // Ferrocal Steel
+  'c1775487391067|2026-06|FT 2026/33', // Grandes Mecanizados
+  'c1775487391067|2026-07|FT 2026/37', // Grandes Mecanizados
+]);
+
+function ehValorManualPlaceholder(f) {
+  return FATURAS_VALOR_MANUAL_PLACEHOLDER.has(`${f.clientId}|${f.mes}|${f.faturaId}`);
+}
+
+// Uma fatura com valor de ajuda de custo já escrito manualmente na sua
+// observação está "resolvida" — o valor já está declarado no documento
+// fiscal, não há nada para a % histórica calcular ou ratear para ela.
+// Contá-la de novo no numerador/denominador seria dupla contagem: o valor
+// já existe como declarado E entraria outra vez no total a distribuir.
+// Exceção: faturas em FATURAS_VALOR_MANUAL_PLACEHOLDER têm o valor
+// preenchido mas confirmado como não-genuíno — tratadas como SEM valor
+// manual para efeitos de cálculo (entram no rateio normalmente).
+// Usado tanto no cálculo da % (passo c/e) como no rateio retroativo
+// (passo d) — nunca duas cópias do mesmo predicado.
+function temValorManual(f) {
+  if (ehValorManualPlaceholder(f)) return false;
+  return (f.valorObservacaoManual || 0) > 0;
+}
+
+// Passo (d): rateia SÓ o resíduo ainda por resolver — totalAjudasRealAjustado
+// (já sem o que está declarado manualmente) — pelas faturas elegíveis SEM
+// valor manual na observação. As faturas COM valor manual ficam de fora do
+// rateio (o valor delas não é recalculado, é o próprio valor declarado),
+// mas continuam no relatório (origem:'historico', status:'historico') para
+// a auditoria do período ficar completa. Devolve linhas prontas para
+// gravar em ajudas_estimativas_fatura; não grava.
+export function ratearHistorico({ totalAjudasRealAjustado, faturasElegiveisDoPeriodo }) {
+  const comValorManual = (faturasElegiveisDoPeriodo || []).filter(temValorManual);
+  const semValorManual = (faturasElegiveisDoPeriodo || []).filter(f => !temValorManual(f));
+
+  const rateadas = ratearProporcional(totalAjudasRealAjustado, semValorManual);
+  const linhasRateadas = rateadas.map(f => ({
     mes: f.mes,
     client_id: f.clientId,
     fatura_id: f.faturaId,
+    valor_fatura: f.valor,
     valor_estimado_bruto: f.valorRateado,
     valor_final: f.valorRateado,
     valor_observacao_manual: f.valorObservacaoManual ?? null,
     origem: 'historico',
     status: 'historico',
   }));
+
+  // Nunca recalculado — o valor_final é o próprio valor já declarado na
+  // observação da fatura, tal como está.
+  const linhasComValorManual = comValorManual.map(f => ({
+    mes: f.mes,
+    client_id: f.clientId,
+    fatura_id: f.faturaId,
+    valor_fatura: f.valor,
+    valor_estimado_bruto: f.valorObservacaoManual,
+    valor_final: f.valorObservacaoManual,
+    valor_observacao_manual: f.valorObservacaoManual,
+    origem: 'historico',
+    status: 'historico',
+  }));
+
+  return [...linhasRateadas, ...linhasComValorManual];
 }
 
 // Passo (e): calcula a percentagem. totalFaturamento TEM de já vir filtrado
@@ -297,10 +373,39 @@ export async function executarCalculoFase1({ periodoInicio, periodoFim, dbClient
     naoElegivel, totalNaoElegivel,
   } = await consolidarTotalReal({ periodoInicio, periodoFim, dbClient, fetchVendasFn });
 
-  const totalFaturamento = faturasElegiveisDoPeriodo.reduce((s, f) => s + f.valor, 0);
-  const { percentagem, totalAjudasReal, totalBrutoReferencia } = calcularPercentagemHistorica({ totalReal, totalFaturamento });
+  // Passo (c) — correção metodológica: faturas elegíveis que já têm valor
+  // de ajuda de custo declarado manualmente na observação já estão
+  // "resolvidas" — não entram no numerador nem no denominador da %, e não
+  // participam do rateio (passo d). Sem isto, esse valor seria contado
+  // duas vezes: uma vez como já declarado na fatura, outra vez implícito
+  // no total real distribuído pela % a todas as faturas elegíveis.
+  const faturasComValorManual = faturasElegiveisDoPeriodo.filter(temValorManual);
+  const faturasSemValorManual = faturasElegiveisDoPeriodo.filter(f => !temValorManual(f));
+  const valorManualTotal = faturasComValorManual.reduce((s, f) => s + f.valorObservacaoManual, 0);
 
-  const linhasHistoricas = ratearHistorico({ totalReal, faturasElegiveisDoPeriodo });
+  // Caso limite fail-closed: mais valor já declarado manualmente do que o
+  // total real confirmado pelos recibos não é calculável sem decisão
+  // humana — totalAjudasRealAjustado ficaria negativo. Nunca se assume
+  // silenciosamente qual dos dois números está errado (recibo em falta,
+  // valor manual incorreto, etc.) — bloqueia e devolve os números para o
+  // admin decidir, no mesmo padrão de `clientesPorDecidir` acima.
+  if (valorManualTotal > totalReal) {
+    return {
+      bloqueado: true,
+      motivoBloqueio: 'valor_manual_excede_total_real',
+      valorManualTotal,
+      totalAjudasRealComRecibos: totalReal,
+      faturasComValorManualCount: faturasComValorManual.length,
+    };
+  }
+
+  const totalAjudasRealAjustado = totalReal - valorManualTotal;
+  const totalFaturamentoAjustado = faturasSemValorManual.reduce((s, f) => s + f.valor, 0);
+  const { percentagem, totalAjudasReal, totalBrutoReferencia } = calcularPercentagemHistorica({
+    totalReal: totalAjudasRealAjustado, totalFaturamento: totalFaturamentoAjustado,
+  });
+
+  const linhasHistoricas = ratearHistorico({ totalAjudasRealAjustado, faturasElegiveisDoPeriodo });
   const clientesElegiveis = [...new Set(faturasElegiveisDoPeriodo.map(f => f.clientId))];
 
   return {
@@ -308,6 +413,9 @@ export async function executarCalculoFase1({ periodoInicio, periodoFim, dbClient
     percentagem,
     totalAjudasReal,
     totalBrutoReferencia,
+    valorManualTotal,
+    totalAjudasRealComRecibos: totalReal,
+    faturasComValorManualCount: faturasComValorManual.length,
     mesesIncluidos,
     mesesExcluidos,
     clientesElegiveis,

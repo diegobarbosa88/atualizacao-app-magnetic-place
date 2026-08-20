@@ -23,6 +23,7 @@
 // duplicar esta divisão.
 
 import { distribuirAjudaPorCliente } from './distribuicaoHoras.js';
+import { fetchTudoPaginado } from './paginacao.js';
 
 /**
  * @param {object} params
@@ -60,15 +61,19 @@ export async function sugerirElegibilidade({ periodoInicio, periodoFim, dbClient
 
   const workerIds = [...new Set(validacoesComAjuda.map(v => v.worker_id))];
 
-  const { data: logs, error: errLogs } = await dbClient
+  // Paginado (fetchTudoPaginado) — sem isto, períodos largos (>1000 linhas
+  // de logs entre todos os workerIds) truncavam silenciosamente, perdendo
+  // evidência de elegibilidade sem nenhum erro visível (bug real,
+  // confirmado com dados de produção: 31% dos logs em falta num período de
+  // 8 meses). Ver paginacao.js.
+  const logs = await fetchTudoPaginado(() => dbClient
     .from('logs')
     .select('workerId, clientId, date, hours')
     .in('workerId', workerIds)
     .gte('date', `${periodoInicio}-01`)
-    .lte('date', `${periodoFim}-31`);
-  if (errLogs) throw errLogs;
+    .lte('date', `${periodoFim}-31`));
 
-  const { atribuicoes } = distribuirAjudaPorCliente({ validacoes: validacoesComAjuda, logs: logs || [] });
+  const { atribuicoes } = distribuirAjudaPorCliente({ validacoes: validacoesComAjuda, logs });
 
   // candidatesByClient: clientId → evidencia[]
   const candidatesByClient = new Map();

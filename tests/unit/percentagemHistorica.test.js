@@ -22,6 +22,7 @@ function makeFilteringBuilder(fullData) {
     gte: (campo, valor) => { filtros.push(row => row[campo] >= valor); return builder; },
     lte: (campo, valor) => { filtros.push(row => row[campo] <= valor); return builder; },
     in: (campo, valores) => { filtros.push(row => valores.includes(row[campo])); return builder; },
+    range: () => builder,
     then: (resolve, reject) => {
       const data = (fullData || []).filter(row => filtros.every(f => f(row)));
       return Promise.resolve({ data, error: null }).then(resolve, reject);
@@ -320,26 +321,163 @@ describe('filtrarFaturasElegiveis / totalFaturamento', () => {
   });
 });
 
-describe('ratearHistorico', () => {
-  it('fatura sem valor manual prévio na observação ainda assim entra no rateio (valor_observacao_manual fica null)', () => {
+describe('ratearHistorico (correção de dupla contagem: faturas com valor manual saem do rateio)', () => {
+  it('faturas sem valor manual entram no rateio, proporcionalmente só entre si', () => {
     const faturasElegiveisDoPeriodo = [
       { clientId: 'c1', faturaId: 'FT1', mes: '2026-05', valor: 600, valorObservacaoManual: null },
-      { clientId: 'c2', faturaId: 'FT2', mes: '2026-05', valor: 400, valorObservacaoManual: 45.5 },
+      { clientId: 'c3', faturaId: 'FT3', mes: '2026-05', valor: 400, valorObservacaoManual: null },
     ];
 
-    const linhas = ratearHistorico({ totalReal: 100, faturasElegiveisDoPeriodo });
+    const linhas = ratearHistorico({ totalAjudasRealAjustado: 100, faturasElegiveisDoPeriodo });
 
     expect(linhas).toHaveLength(2);
     const l1 = linhas.find(l => l.client_id === 'c1');
-    const l2 = linhas.find(l => l.client_id === 'c2');
+    const l3 = linhas.find(l => l.client_id === 'c3');
 
     expect(l1.valor_observacao_manual).toBeNull();
     expect(l1.valor_estimado_bruto).toBeCloseTo(60, 6); // 600/1000 × 100
     expect(l1.origem).toBe('historico');
     expect(l1.status).toBe('historico');
+    expect(l1.valor_fatura).toBe(600); // valor total da fatura, não só a ajuda de custo
 
+    expect(l3.valor_estimado_bruto).toBeCloseTo(40, 6); // 400/1000 × 100
+    expect(l3.valor_fatura).toBe(400);
+  });
+
+  it('fatura COM valor manual fica de fora do rateio, mas aparece no relatório com o próprio valor declarado (nunca recalculado)', () => {
+    const faturasElegiveisDoPeriodo = [
+      { clientId: 'c1', faturaId: 'FT1', mes: '2026-05', valor: 600, valorObservacaoManual: null },
+      { clientId: 'c2', faturaId: 'FT2', mes: '2026-05', valor: 400, valorObservacaoManual: 45.5 },
+    ];
+
+    // totalAjudasRealAjustado já vem sem o que está declarado (45.5) — o
+    // rateio distribui só pela fatura SEM valor manual (FT1), que aqui é a
+    // única, por isso recebe o ajustado inteiro (60).
+    const linhas = ratearHistorico({ totalAjudasRealAjustado: 60, faturasElegiveisDoPeriodo });
+
+    expect(linhas).toHaveLength(2);
+    const l1 = linhas.find(l => l.client_id === 'c1');
+    const l2 = linhas.find(l => l.client_id === 'c2');
+
+    expect(l1.valor_estimado_bruto).toBeCloseTo(60, 6);
+    expect(l1.valor_final).toBeCloseTo(60, 6);
+    expect(l1.origem).toBe('historico');
+    expect(l1.status).toBe('historico');
+
+    // Fatura com valor manual: fora do rateio proporcional — valor_final é
+    // o próprio valor já declarado na observação, não um valor calculado.
     expect(l2.valor_observacao_manual).toBeCloseTo(45.5, 6);
-    expect(l2.valor_estimado_bruto).toBeCloseTo(40, 6); // 400/1000 × 100
+    expect(l2.valor_estimado_bruto).toBeCloseTo(45.5, 6);
+    expect(l2.valor_final).toBeCloseTo(45.5, 6);
+    expect(l2.origem).toBe('historico');
+    expect(l2.status).toBe('historico');
+
+    // valor_fatura (total da fatura) presente nos dois casos, mesmo na
+    // fatura com valor manual — nunca confundir com valor_final (só a
+    // ajuda de custo).
+    expect(l1.valor_fatura).toBe(600);
+    expect(l2.valor_fatura).toBe(400);
+  });
+});
+
+describe('executarCalculoFase1 — faturas com valor manual já declarado (correção de dupla contagem)', () => {
+  it('exclui faturas com valor manual do numerador E do denominador; % calculada só sobre as faturas sem valor manual', async () => {
+    const dbClient = makeDbClient({
+      clients: [{ id: 'c1', name: 'Cliente A', elegivel_ajudas_custo: true }],
+      logs: [{ workerId: 'w1', clientId: 'c1', date: '2026-05-05', hours: 8 }],
+      validations: [{ worker_id: 'w1', mes: '2026-06', ajudas_custo_extraidas: 300, estado: 'valido' }],
+    });
+    const fetchVendasFn = async ({ dataDe }) => {
+      if (dataDe.startsWith('2026-05')) {
+        return [
+          fatura({ cliente: 'Cliente A', valor: 1000, data: '2026-05-10', docNum: 'FT1', notes: null }), // sem valor manual
+          fatura({ cliente: 'Cliente A', valor: 500, data: '2026-05-11', docNum: 'FT2', notes: '€50,00' }), // já declarado
+        ];
+      }
+      // Fatura de junho (mesFatura de maio) sem declaração — recebe o resíduo (300), alimenta o numerador (totalReal).
+      return [fatura({ cliente: 'Cliente A', valor: 1200, data: '2026-06-10', docNum: 'FT3', notes: null })];
+    };
+
+    const r = await executarCalculoFase1({ periodoInicio: '2026-05', periodoFim: '2026-05', dbClient, fetchVendasFn });
+
+    expect(r.bloqueado).toBe(false);
+    expect(r.valorManualTotal).toBeCloseTo(50, 6);
+    expect(r.faturasComValorManualCount).toBe(1);
+    expect(r.totalAjudasRealComRecibos).toBeCloseTo(300, 6); // total real ANTES do ajuste
+    expect(r.totalAjudasReal).toBeCloseTo(250, 6); // 300 − 50 (ajustado)
+    expect(r.totalBrutoReferencia).toBe(1000); // só FT1 — FT2 (com valor manual) sai do denominador
+    expect(r.percentagem).toBeCloseTo(0.25, 6); // 250 / 1000
+
+    const linhaFT1 = r.linhasHistoricas.find(l => l.fatura_id === 'FT1');
+    const linhaFT2 = r.linhasHistoricas.find(l => l.fatura_id === 'FT2');
+    expect(linhaFT1.valor_final).toBeCloseTo(250, 6); // recebe TODO o ajustado — é a única sem valor manual
+    expect(linhaFT2.valor_final).toBeCloseTo(50, 6); // o próprio valor declarado, nunca recalculado
+    expect(linhaFT2.origem).toBe('historico');
+    expect(linhaFT2.status).toBe('historico');
+  });
+
+  it('caso limite: valorManualTotal > totalReal → bloqueado com os números para decisão humana, não decide sozinho', async () => {
+    const dbClient = makeDbClient({
+      clients: [{ id: 'c1', name: 'Cliente A', elegivel_ajudas_custo: true }],
+      logs: [{ workerId: 'w1', clientId: 'c1', date: '2026-05-05', hours: 8 }],
+      validations: [{ worker_id: 'w1', mes: '2026-06', ajudas_custo_extraidas: 30, estado: 'valido' }],
+    });
+    const fetchVendasFn = async ({ dataDe }) => {
+      if (dataDe.startsWith('2026-05')) {
+        // valor manual (999) > total real que o numerador vai ter (30)
+        return [fatura({ cliente: 'Cliente A', valor: 500, data: '2026-05-11', docNum: 'FT2', notes: '€999,00' })];
+      }
+      return [fatura({ cliente: 'Cliente A', valor: 1000, data: '2026-06-05', docNum: 'FT3', notes: null })];
+    };
+
+    const r = await executarCalculoFase1({ periodoInicio: '2026-05', periodoFim: '2026-05', dbClient, fetchVendasFn });
+
+    expect(r.bloqueado).toBe(true);
+    expect(r.motivoBloqueio).toBe('valor_manual_excede_total_real');
+    expect(r.valorManualTotal).toBeCloseTo(999, 6);
+    expect(r.totalAjudasRealComRecibos).toBeCloseTo(30, 6);
+    expect(r.percentagem).toBeUndefined();
+    expect(r.linhasHistoricas).toBeUndefined();
+  });
+
+  // Correção de 2026-08-20: 8 faturas específicas (Caldereria Gurelan,
+  // Caldereria Kortaberri, Ferrocal Steel, Grandes Mecanizados — 2026-06 e
+  // 2026-07) têm valor_observacao_manual preenchido mas confirmado como
+  // placeholder aleatório (sem base em recibo real), ao contrário dos
+  // outros 17 valores manuais genuínos do período. Tratadas como SEM valor
+  // manual no cálculo — entram no rateio normalmente — mas o valor escrito
+  // na observação não é apagado, fica como referência histórica.
+  it('fatura na lista FATURAS_VALOR_MANUAL_PLACEHOLDER é tratada como SEM valor manual (entra no rateio), mas mantém valor_observacao_manual como referência', async () => {
+    const dbClient = makeDbClient({
+      clients: [{ id: 'c1775487604163', name: 'Caldereria Gurelan Teste', elegivel_ajudas_custo: true }],
+      logs: [{ workerId: 'w1', clientId: 'c1775487604163', date: '2026-06-05', hours: 8 }],
+      validations: [{ worker_id: 'w1', mes: '2026-07', ajudas_custo_extraidas: 200, estado: 'valido' }],
+    });
+    const fetchVendasFn = async ({ dataDe }) => {
+      if (dataDe.startsWith('2026-06')) {
+        // Mesma chave (client_id, mes, fatura_id) de uma das 8 faturas
+        // confirmadas como placeholder.
+        return [fatura({ cliente: 'Caldereria Gurelan Teste', valor: 12000, data: '2026-06-15', docNum: 'FT 2026/36', notes: '€6.040,00' })];
+      }
+      return [fatura({ cliente: 'Caldereria Gurelan Teste', valor: 1000, data: '2026-07-05', docNum: 'FT-JUL', notes: null })];
+    };
+
+    const r = await executarCalculoFase1({ periodoInicio: '2026-06', periodoFim: '2026-06', dbClient, fetchVendasFn });
+
+    expect(r.bloqueado).toBe(false);
+    // Placeholder não conta para valorManualTotal — só entraria se fosse genuína.
+    expect(r.valorManualTotal).toBe(0);
+    expect(r.faturasComValorManualCount).toBe(0);
+    // O valor da fatura volta para o universo do rateio (denominador).
+    expect(r.totalBrutoReferencia).toBe(12000);
+
+    const linha = r.linhasHistoricas.find(l => l.fatura_id === 'FT 2026/36');
+    expect(linha).toBeTruthy();
+    expect(linha.status).toBe('historico');
+    // Recebeu o rateio (é a única fatura do mês), não o seu próprio valor manual (6040).
+    expect(linha.valor_final).toBeCloseTo(200, 6);
+    // Mas o valor que lá estava escrito continua guardado como referência.
+    expect(linha.valor_observacao_manual).toBeCloseTo(6040, 6);
   });
 });
 

@@ -347,7 +347,16 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
 
     if (!linhas.length) throw new Error('Sem linhas para faturar');
 
-    const observacoesFinal = [observacoes.trim(), textoObservacaoAjudas].filter(Boolean).join('\n');
+    // Se "Observações" já contém exatamente o texto de ajudas pré-preenchido
+    // (o caso comum — o admin não tocou nele), não anexa outra vez: o
+    // gate recalcula sempre no momento da confirmação (confirmarEEmitirFatura),
+    // por isso `textoObservacaoAjudas` chega aqui como o valor definitivo —
+    // normalmente igual ao que já está pré-preenchido, mas nunca assumido
+    // como igual sem verificar (ex.: o total mudou entre o pré-preenchimento
+    // e a confirmação).
+    const observacoesFinal = observacoes.trim() === (textoObservacaoAjudas || '').trim()
+      ? observacoes.trim()
+      : [observacoes.trim(), textoObservacaoAjudas].filter(Boolean).join('\n');
 
     const bodyPayload = {
       tipo_documento: tipoDocumento,
@@ -525,6 +534,36 @@ export default function FaturarClienteModal({ onClose, onFaturado, clienteIdInic
       return sum + baseGlobal * (1 + (s.taxa_iva || 0) / 100);
     }, 0);
   }, [servicosLinhas, totalHoras, descontoGlobal]);
+
+  // Pré-preenche "Observações" com o texto de ajudas de custo ANTES da
+  // confirmação — pedido explícito, mas com cuidado: calculado sempre a
+  // partir do MESMO gate real (verificarEstimativaParaFatura) que vai
+  // decidir o texto definitivo na emissão, nunca de ajudasValorInicial (só
+  // informativo, pode estar desatualizado) — evita as duas fontes
+  // divergirem, que foi exatamente o bug que uma decisão anterior aqui já
+  // corrigiu (ver nota acima). Só atualiza o campo enquanto continuar
+  // exatamente igual ao último texto auto-preenchido — assim que o admin
+  // editar (ou apagar), deixa de mexer, tal como sempre aconteceu com
+  // "Observações" para o resto do texto livre. Debounced (400ms) para não
+  // disparar uma chamada ao Supabase a cada tecla enquanto o total muda.
+  const [ajudasAutoTexto, setAjudasAutoTexto] = useState('');
+  useEffect(() => {
+    if (!supabase || !clienteId || clienteId.startsWith('toc:') || precisaResolucaoManual) return;
+    if (!periodo || !(totalFatura > 0)) return;
+    const timer = setTimeout(() => {
+      verificarEstimativaParaFatura({
+        mesReferencia: periodo, clientId: clienteId, valorFinalDoModal: totalFatura, dbClient: supabase,
+      }).then(r => {
+        if (r.linha?.status !== 'calculado') return;
+        const valorFinalFormatado = r.linha.valorFinal.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const texto = `Estão incluídas nesta fatura €${valorFinalFormatado} referentes a ajudas de custo.`;
+        setObservacoes(prev => (prev === ajudasAutoTexto ? texto : prev));
+        setAjudasAutoTexto(texto);
+      }).catch(() => {});
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, clienteId, periodo, totalFatura, precisaResolucaoManual]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">

@@ -1,18 +1,23 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2, XCircle, Circle, History, Calculator, ArrowRight, AlertTriangle, TrendingUp, Scale } from 'lucide-react';
+import { Users, Loader2, ChevronDown, ChevronRight, CheckCircle2, XCircle, Circle, History, Calculator, ArrowRight, AlertTriangle, TrendingUp, Scale, Receipt } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { sugerirElegibilidade } from '../../lib/ajudas/elegibilidade';
-import { executarCalculoFase1 } from '../../lib/ajudas/percentagemHistorica';
+import { executarCalculoFase1, normalizarWorkerId } from '../../lib/ajudas/percentagemHistorica';
 import { calcularEstimativaMensal } from '../../lib/ajudas/estimativaMensal';
 import { verificarFechoMes, fecharReconciliacaoMes, SALDO_ACUMULADO_INICIAL } from '../../lib/ajudas/reconciliacao';
+import { buscarFaturasVendasPeriodo } from '../../lib/ajudas/faturasToConline.js';
+import { mesSeguinte } from '../../lib/ajudas/valoresPorFatura.js';
+import { fetchTudoPaginado } from '../../lib/ajudas/paginacao.js';
 import { calcularFaturacaoCliente } from '../../lib/faturacao/tarifaHistorica.js';
+import FaturarClienteModal from './toconline/FaturarClienteModal';
 
 const TABS = [
   { id: 'elegibilidade', label: 'Elegibilidade de Clientes', icon: Users },
   { id: 'historico', label: 'Histórico', icon: History },
   { id: 'estimativa', label: 'Estimativa Mensal', icon: TrendingUp },
   { id: 'reconciliacao', label: 'Reconciliação', icon: Scale },
+  { id: 'faturas', label: 'Faturas com Observações', icon: Receipt },
 ];
 
 function fmtEur(v) {
@@ -185,7 +190,7 @@ function ElegibilidadeClientesTab() {
     setLoading(true);
     setErro(null);
     try {
-      const [candidatosResult, { data: clientesData, error: errClientes }, { data: logsData, error: errLogs }] = await Promise.all([
+      const [candidatosResult, { data: clientesData, error: errClientes }, logsData] = await Promise.all([
         sugerirElegibilidade({ periodoInicio, periodoFim, dbClient: supabase }),
         supabase.from('clients').select(
           'id, name, elegivel_ajudas_custo, elegibilidade_confirmado_em, elegibilidade_confirmado_por'
@@ -198,12 +203,16 @@ function ElegibilidadeClientesTab() {
         // servem aqui: um cliente pode ter horas este mês e ainda não ter
         // nenhuma fatura emitida (é exatamente esse o caso da ADITEK e da
         // Magnetic Place) — usar só faturas já emitidas deixava-os de fora.
-        supabase.from('logs').select('clientId, hours, date')
+        // Paginado (fetchTudoPaginado) — sem filtro de worker, sobre até 12
+        // meses, esta query ultrapassa facilmente o limite de 1000 linhas
+        // do PostgREST e truncava silenciosamente (bug real confirmado em
+        // produção — ver paginacao.js), fazendo clientes com horas reais
+        // desaparecerem da lista "Sem evidência".
+        fetchTudoPaginado(() => supabase.from('logs').select('clientId, hours, date')
           .gte('date', `${periodoInicio}-01`)
-          .lte('date', `${periodoFim}-31`),
+          .lte('date', `${periodoFim}-31`)),
       ]);
       if (errClientes) throw errClientes;
-      if (errLogs) throw errLogs;
 
       setCandidatos(candidatosResult);
 
@@ -428,7 +437,15 @@ function CardClientesPorDecidir({ clientes, onIrParaElegibilidade }) {
   );
 }
 
-function CardPercentagem({ titulo, registo, destaque }) {
+// IDs embutidos no `motivo` de registos antigos (gravados antes do campo
+// estruturado `workerIds` existir) — fallback só para não perder a
+// informação nesses registos históricos.
+function extrairWorkerIdsDoMotivo(motivo) {
+  const m = /:\s*(.+)$/.exec(motivo || '');
+  return m ? m[1].split(',').map(s => s.trim()).filter(Boolean) : [];
+}
+
+function CardPercentagem({ titulo, registo, destaque, workersMap, interativo, revisados, onToggleRevisado }) {
   if (!registo) return null;
   return (
     <div className={`rounded-2xl border p-5 space-y-3 ${destaque ? 'bg-white border-emerald-200 shadow-sm' : 'bg-slate-50 border-slate-200'}`}>
@@ -469,12 +486,41 @@ function CardPercentagem({ titulo, registo, destaque }) {
       </div>
       {(registo.meses_excluidos || []).length > 0 && (
         <div className="pt-2 border-t border-slate-100">
-          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Meses excluídos</p>
-          <ul className="space-y-0.5">
-            {registo.meses_excluidos.map((m, i) => (
-              <li key={i} className="text-[11px] text-slate-500"><span className="font-mono font-bold">{m.mes}</span> — {m.motivo}</li>
-            ))}
-          </ul>
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Avisos de completude (não removem nada do total)</p>
+          <div className="space-y-2">
+            {registo.meses_excluidos.map((m, i) => {
+              const ids = m.workerIds || extrairWorkerIdsDoMotivo(m.motivo);
+              return (
+                <div key={i} className="text-[11px] text-slate-500">
+                  <span className="font-mono font-bold">{m.mes}</span> — {ids.length} trabalhador(es) com horas sem recibo processado:
+                  <ul className="mt-1 space-y-0.5 pl-3">
+                    {ids.map(id => {
+                      const nome = workersMap?.get(normalizarWorkerId(id)) || id;
+                      const chave = `${m.mes}:${id}`;
+                      const revisto = revisados?.has(chave);
+                      return (
+                        <li key={id} className="flex items-center gap-1.5">
+                          {interativo ? (
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={!!revisto}
+                                onChange={() => onToggleRevisado?.(chave)}
+                                className="rounded border-slate-300"
+                              />
+                              <span className={revisto ? 'line-through text-slate-400' : 'text-slate-600 font-semibold'}>{nome}</span>
+                            </label>
+                          ) : (
+                            <span className="text-slate-600 font-semibold">{nome}</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
@@ -499,6 +545,27 @@ function HistoricoTab({ onIrParaElegibilidade }) {
   const [ativando, setAtivando] = useState(false);
   const [gravandoLinhas, setGravandoLinhas] = useState(false);
   const [linhasGravadas, setLinhasGravadas] = useState(false);
+
+  const [workersMap, setWorkersMap] = useState(new Map());
+  // Marcação "revisto/aceite" dos avisos de completude — só para
+  // acompanhamento nesta pré-visualização, não persiste em BD e não afeta o
+  // cálculo (os avisos já não removiam nada do total). Reinicia a cada novo
+  // recálculo, porque a lista de avisos pode mudar.
+  const [revisados, setRevisados] = useState(new Set());
+  const toggleRevisado = useCallback((chave) => {
+    setRevisados(prev => {
+      const next = new Set(prev);
+      if (next.has(chave)) next.delete(chave); else next.add(chave);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('workers').select('id, name').then(({ data }) => {
+      setWorkersMap(new Map((data || []).map(w => [normalizarWorkerId(w.id), w.name])));
+    });
+  }, [supabase]);
 
   const carregarLista = useCallback(async () => {
     if (!supabase) return;
@@ -528,6 +595,7 @@ function HistoricoTab({ onIrParaElegibilidade }) {
     setResultado(null);
     setNovoRegistoId(null);
     setLinhasGravadas(false);
+    setRevisados(new Set());
     try {
       const r = await executarCalculoFase1({ periodoInicio, periodoFim, dbClient: supabase });
       setResultado(r);
@@ -639,8 +707,24 @@ function HistoricoTab({ onIrParaElegibilidade }) {
         <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
       )}
 
-      {resultado?.bloqueado && (
+      {resultado?.bloqueado && resultado.clientesPorDecidir && (
         <CardClientesPorDecidir clientes={resultado.clientesPorDecidir} onIrParaElegibilidade={onIrParaElegibilidade} />
+      )}
+
+      {resultado?.bloqueado && resultado.motivoBloqueio === 'valor_manual_excede_total_real' && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 space-y-2">
+          <div className="flex items-center gap-2 text-red-800">
+            <AlertTriangle size={16} />
+            <h3 className="text-sm font-black">Cálculo bloqueado — valor manual excede o total real</h3>
+          </div>
+          <p className="text-xs text-red-700">
+            O total já declarado manualmente nas observações das faturas ({fmtEur(resultado.valorManualTotal)},
+            em {resultado.faturasComValorManualCount} fatura{resultado.faturasComValorManualCount !== 1 ? 's' : ''})
+            excede o total real confirmado pelos recibos ({fmtEur(resultado.totalAjudasRealComRecibos)}).
+            O ajuste ficaria negativo — precisa de decisão manual antes de continuar (rever se falta algum
+            recibo por processar, ou se algum valor declarado manualmente está incorreto).
+          </p>
+        </div>
       )}
 
       {resultado && !resultado.bloqueado && (
@@ -658,6 +742,10 @@ function HistoricoTab({ onIrParaElegibilidade }) {
               meses_excluidos: resultado.mesesExcluidos,
               criado_por: currentUser?.name || currentUser?.email,
             }}
+            workersMap={workersMap}
+            interativo
+            revisados={revisados}
+            onToggleRevisado={toggleRevisado}
           />
           <p className="text-xs text-slate-500">
             {resultado.linhasHistoricas.length} linha{resultado.linhasHistoricas.length !== 1 ? 's' : ''} de auditoria retroativa
@@ -702,7 +790,7 @@ function HistoricoTab({ onIrParaElegibilidade }) {
         {loadingLista ? (
           <div className="flex items-center justify-center py-8 text-slate-300"><Loader2 size={20} className="animate-spin" /></div>
         ) : ativo ? (
-          <CardPercentagem titulo="Percentagem Ativa" registo={ativo} destaque />
+          <CardPercentagem titulo="Percentagem Ativa" registo={ativo} destaque workersMap={workersMap} />
         ) : (
           <p className="text-xs text-slate-400">Nenhuma % histórica ativa ainda.</p>
         )}
@@ -741,6 +829,45 @@ function HistoricoTab({ onIrParaElegibilidade }) {
   );
 }
 
+// Resolução manual de uma fatura TOConline cujo nome de cliente não bateu
+// com nenhum registo em `clients` — mesmo padrão/linguagem do painel
+// "Cliente não identificado automaticamente" em FaturarClienteModal.jsx.
+function LinhaResolucaoSemCliente({ fatura, clients, desabilitado, onConfirmar, onSemCorrespondencia }) {
+  const [escolha, setEscolha] = useState('');
+  const clientesOrdenados = useMemo(
+    () => [...(clients || [])].sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    [clients]
+  );
+  return (
+    <div className="px-5 py-3 space-y-2">
+      <p className="text-xs text-slate-700">
+        <span className="font-bold">"{fatura.clienteNome}"</span>
+        <span className="text-slate-400"> — fatura {fatura.faturaId}, {fmtEur(fatura.valor)}</span>
+      </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <select value={escolha} onChange={e => setEscolha(e.target.value)} disabled={desabilitado}
+          className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 disabled:opacity-50">
+          <option value="">Selecionar cliente...</option>
+          {clientesOrdenados.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <button
+          onClick={() => escolha && onConfirmar(escolha)}
+          disabled={!escolha || desabilitado}
+          className="px-3 py-1.5 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all disabled:opacity-50 hover:opacity-90"
+          style={{ backgroundColor: '#1B3A57' }}>
+          Confirmar correspondência
+        </button>
+        <button
+          onClick={onSemCorrespondencia}
+          disabled={desabilitado}
+          className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-xl transition-all disabled:opacity-50">
+          Não corresponde a nenhum cliente
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function EstimativaMensalTab({ onIrParaElegibilidade }) {
   const { supabase, clients, logs } = useApp();
   const meses = useMemo(() => ultimosMeses(12), []);
@@ -749,50 +876,193 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
   const [ativo, setAtivo] = useState(null);
   const [clientesMap, setClientesMap] = useState({});
   const [resultado, setResultado] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [semClienteCorrespondente, setSemClienteCorrespondente] = useState([]);
   const [erro, setErro] = useState(null);
 
-  const calcular = useCallback(async () => {
-    if (!supabase) return;
-    setLoading(true);
-    setErro(null);
-    try {
-      const [{ data: ativoData }, { data: clientRateHistory }] = await Promise.all([
-        supabase.from('ajudas_percentagem_historica').select('*').eq('ativo', true).maybeSingle(),
-        supabase.from('client_valorhora_history').select('*'),
-      ]);
-      setAtivo(ativoData || null);
-      setClientesMap(Object.fromEntries((clients || []).map(c => [c.id, c.name])));
+  const [simulando, setSimulando] = useState(false);
+  const [linhasGravadas, setLinhasGravadas] = useState(null);
+  const [jaSimulado, setJaSimulado] = useState(false);
 
-      // Aproximação de faturasDoMes: horas × tarifa histórica por cliente
-      // (mesma fórmula de Custos → Clientes e do FaturarClienteModal) — a
-      // fatura real ainda não existe nesta fase, por isso isto é só uma
-      // pré-visualização, nunca o valor definitivo (ver aviso na UI).
-      const clientIdsComLogs = [...new Set(
-        (logs || []).filter(l => (l.date || '').startsWith(mes) && l.clientId).map(l => l.clientId)
-      )];
-      const faturasDoMes = clientIdsComLogs.map(clientId => {
+  // Fase 2b a partir daqui: cliente com horas lançadas no mês mas sem
+  // fatura real ainda (`l.faturaId == null` no resultado) ganha um botão
+  // "Criar Fatura" que abre o FaturarClienteModal já com o cliente e o
+  // período preenchidos — mesmo padrão (mesmas props) já usado em
+  // AjudasCalculadora.jsx. `ajudasValorInicial` é só informativo no modal
+  // (Passo 1) — a Fase 2b recalcula sempre o valor real no momento da
+  // confirmação, nunca confia neste valor para a emissão em si.
+  const [dadosFaturar, setDadosFaturar] = useState(null); // { clienteId, ajudasValor }
+
+  // Faturas cruas do último fetch ao TOConline (buscarFaturasVendasPeriodo)
+  // — guardadas para poder reprocessar depois de uma resolução manual
+  // (ver `resolverSemCliente` abaixo) sem chamar o TOConline outra vez.
+  const [ultimasFaturasBrutas, setUltimasFaturasBrutas] = useState([]);
+  const [ultimasSemCliente, setUltimasSemCliente] = useState([]);
+  // faturaId -> clientId escolhido, ou 'nenhum' (confirmado sem correspondência).
+  // Só em memória, por sessão deste ecrã — nunca persistido, tal como a
+  // resolução equivalente no FaturarClienteModal.jsx.
+  const [resolucoesSemCliente, setResolucoesSemCliente] = useState({});
+
+  // Só a % ativa e o nome dos clientes (leitura local, sem chamar o
+  // TOConline) — mostrados de imediato ao trocar de mês, para orientar o
+  // admin antes de decidir simular. A leitura de faturas reais só acontece
+  // dentro de `simular`, nunca automaticamente (ver nota abaixo).
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('ajudas_percentagem_historica').select('*').eq('ativo', true).maybeSingle()
+      .then(({ data }) => setAtivo(data || null));
+    setClientesMap(Object.fromEntries((clients || []).map(c => [c.id, c.name])));
+  }, [supabase, clients, mes]);
+
+  // Trocar de mês não recalcula nem grava nada sozinho — evita chamadas
+  // silenciosas ao TOConline só por navegar no seletor. O resultado
+  // anterior fica limpo para não parecer pertencer ao mês novo.
+  useEffect(() => {
+    setResultado(null);
+    setSemClienteCorrespondente([]);
+    setLinhasGravadas(null);
+    setJaSimulado(false);
+    setErro(null);
+    setUltimasFaturasBrutas([]);
+    setUltimasSemCliente([]);
+    setResolucoesSemCliente({});
+  }, [mes]);
+
+  // Aplica as resoluções manuais já escolhidas (ver `resolverSemCliente`) às
+  // faturas sem cliente correspondente: as resolvidas com um cliente real
+  // entram no cálculo como qualquer outra fatura; as confirmadas como "não
+  // corresponde a nenhum" ficam de fora, mas já não aparecem como
+  // pendentes; o resto continua pendente de decisão.
+  const separarResolucoes = (semCliente, resolucoes) => {
+    const resolvidas = [];
+    const pendentes = [];
+    for (const f of semCliente) {
+      const resolucao = resolucoes[f.faturaId];
+      if (resolucao && resolucao !== 'nenhum') resolvidas.push({ ...f, clientId: resolucao });
+      else if (!resolucao) pendentes.push(f);
+    }
+    return { resolvidas, pendentes };
+  };
+
+  // Calcula e grava — partilhado entre `simular` (primeira leitura) e
+  // `resolverSemCliente` (reprocessa com uma resolução nova, sem chamar o
+  // TOConline outra vez, já com as faturas cruas em memória).
+  const calcularEGravar = async (faturasBrutas, semCliente, resolucoes) => {
+    const { resolvidas, pendentes } = separarResolucoes(semCliente, resolucoes);
+    setSemClienteCorrespondente(pendentes);
+
+    const faturasReaisDoMes = [...faturasBrutas, ...resolvidas].map(f => ({
+      clientId: f.clientId, faturaId: f.faturaId, valorFaturado: f.valor,
+    }));
+
+    // Clientes com horas lançadas no mês de referência mas SEM fatura real
+    // encontrada — ainda por faturar. Estimativa por horas × tarifa
+    // histórica (mesma fórmula de Custos → Clientes e do próprio
+    // FaturarClienteModal.jsx, nunca uma segunda cópia). Entram no mesmo
+    // cálculo com faturaId=null — calcularEstimativaMensal já trata isso
+    // (é exactamente o mesmo formato que a Fase 2b usa na pré-visualização
+    // de uma fatura ainda não emitida). Nunca gravadas em
+    // ajudas_estimativas_fatura (só faturas reais entram nessa tabela) —
+    // são só visibilidade + atalho para criar a fatura.
+    const clientIdsComFaturaReal = new Set(faturasReaisDoMes.map(f => f.clientId));
+    const clientIdsComHoras = [...new Set(
+      (logs || []).filter(l => (l.date || '').startsWith(mes) && l.clientId).map(l => l.clientId)
+    )];
+    const clientIdsPorFaturar = clientIdsComHoras.filter(id => !clientIdsComFaturaReal.has(id));
+
+    let faturasPorFaturarDoMes = [];
+    if (clientIdsPorFaturar.length > 0) {
+      const { data: clientRateHistory } = await supabase.from('client_valorhora_history').select('*');
+      faturasPorFaturarDoMes = clientIdsPorFaturar.map(clientId => {
         const cliente = (clients || []).find(c => c.id === clientId);
         const { valorFaturado } = calcularFaturacaoCliente({
-          logs,
-          clientId,
-          periodo: mes,
-          valorHoraAtual: Number(cliente?.valorHora ?? 0),
+          logs, clientId, periodo: mes, valorHoraAtual: Number(cliente?.valorHora ?? 0),
           clientRateHistory: clientRateHistory || [],
         });
         return { clientId, faturaId: null, valorFaturado };
       });
-
-      const resultadoCalc = await calcularEstimativaMensal({ mes, faturasDoMes, dbClient: supabase });
-      setResultado(resultadoCalc);
-    } catch (e) {
-      setErro(e.message || 'Erro ao calcular estimativa mensal');
-    } finally {
-      setLoading(false);
     }
-  }, [supabase, clients, logs, mes]);
 
-  useEffect(() => { calcular(); }, [calcular]);
+    const faturasDoMes = [...faturasReaisDoMes, ...faturasPorFaturarDoMes];
+
+    const resultadoCalc = await calcularEstimativaMensal({ mes, faturasDoMes, dbClient: supabase });
+    setResultado(resultadoCalc);
+    setJaSimulado(true);
+
+    const linhasComFaturaReal = resultadoCalc.linhas.filter(l => l.faturaId != null);
+    if (linhasComFaturaReal.length > 0) {
+      const linhas = linhasComFaturaReal.map(l => ({
+        mes,
+        client_id: l.clientId,
+        fatura_id: l.faturaId,
+        percentagem_historica_id: resultadoCalc.percentagemHistoricaId,
+        residuo_mes_anterior_aplicado: l.residuoAplicado,
+        valor_fatura: l.valorFaturado,
+        valor_estimado_bruto: l.valorEstimadoBruto,
+        valor_final: l.valorFinal,
+        status: l.status,
+        origem: 'estimativa',
+        motivo_bloqueio: l.motivoBloqueio,
+      }));
+      const { error } = await supabase
+        .from('ajudas_estimativas_fatura')
+        .upsert(linhas, { onConflict: 'mes,client_id,fatura_id' });
+      if (error) throw error;
+      setLinhasGravadas(linhas.length);
+    }
+  };
+
+  // Ação única e explícita: lê faturas JÁ EMITIDAS no TOConline (nunca uma
+  // aproximação por horas), calcula, e grava (upsert) as linhas resultantes
+  // em ajudas_estimativas_fatura — tudo no mesmo clique, sem passo
+  // intermédio de pré-visualização automática. `mes` aqui é sempre o mês de
+  // REFERÊNCIA (do trabalho), mesma convenção usada em toda a calculadora
+  // (Fase 1/3, valoresPorFatura.js): a fatura que reporta o trabalho de
+  // `mes` é emitida em mesSeguinte(mes). status vem tal como calculado
+  // ('calculado'/'bloqueado') — nunca 'faturado', essa transição só
+  // acontece na Fase 2b (FaturarClienteModal.jsx/emitirFaturaComAjudas.js),
+  // fora do âmbito desta tela. onConflict (mes, client_id, fatura_id)
+  // garante que correr "Simular" outra vez para o mesmo mês substitui a
+  // linha anterior de cada fatura em vez de duplicar ou falhar — todas as
+  // linhas aqui têm fatura_id real (vêm de faturas já emitidas), por isso
+  // o índice único nunca vê fatura_id NULL nesta tela.
+  const simular = async () => {
+    if (!supabase) return;
+    setSimulando(true);
+    setErro(null);
+    setLinhasGravadas(null);
+    try {
+      const mesFatura = mesSeguinte(mes);
+      const { faturas, semClienteCorrespondente: semCliente } = await buscarFaturasVendasPeriodo({
+        periodoInicio: mesFatura, periodoFim: mesFatura, dbClient: supabase,
+      });
+      setUltimasFaturasBrutas(faturas);
+      setUltimasSemCliente(semCliente);
+      await calcularEGravar(faturas, semCliente, resolucoesSemCliente);
+    } catch (e) {
+      setErro(e.message || 'Erro ao simular');
+    } finally {
+      setSimulando(false);
+    }
+  };
+
+  // Resolução manual de uma fatura sem cliente correspondente (mesmo
+  // padrão do painel "Cliente não identificado automaticamente" em
+  // FaturarClienteModal.jsx): associa a um cliente real, ou confirma
+  // explicitamente que não corresponde a nenhum. Reprocessa de imediato com
+  // os dados já em memória — não volta a chamar o TOConline.
+  const resolverSemCliente = async (faturaId, clientIdOuNenhum) => {
+    const novasResolucoes = { ...resolucoesSemCliente, [faturaId]: clientIdOuNenhum };
+    setResolucoesSemCliente(novasResolucoes);
+    setSimulando(true);
+    setErro(null);
+    try {
+      await calcularEGravar(ultimasFaturasBrutas, ultimasSemCliente, novasResolucoes);
+    } catch (e) {
+      setErro(e.message || 'Erro ao reprocessar após resolução');
+    } finally {
+      setSimulando(false);
+    }
+  };
 
   const totalFinal = (resultado?.linhas || []).filter(l => l.status === 'calculado').reduce((s, l) => s + l.valorFinal, 0);
   const bloqueadas = (resultado?.linhas || []).filter(l => l.status === 'bloqueado');
@@ -800,8 +1070,8 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
   return (
     <div className="space-y-4">
       <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-xs text-amber-800 font-semibold space-y-1">
-        <p>Modo simulação — nada aqui é gravado nem enviado para faturação real. Só pré-visualização (Fase 2a).</p>
-        <p>Estimativa baseada em horas lançadas — pode divergir do valor final se o admin editar manualmente no momento de faturar.</p>
+        <p>Simula contra faturas já emitidas no TOConline para o mês seguinte a {mes} (mesSeguinte, mesma convenção do resto da calculadora), e mostra também clientes com horas lançadas em {mes} que ainda não têm fatura nenhuma. A pré-visualização abaixo é só cálculo — nada é gravado até clicares "Simular".</p>
+        <p>"Simular" grava (ou substitui) as linhas com fatura real deste mês em <code>ajudas_estimativas_fatura</code> com status <code>calculado</code>/<code>bloqueado</code> — nunca <code>faturado</code>. Clientes ainda por faturar (sem fatura real) não são gravados — só aparecem para dares o próximo passo com "Criar Fatura".</p>
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
@@ -810,10 +1080,21 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
             <h2 className="text-sm font-black text-slate-800">Estimativa Mensal — Fase 2</h2>
             <p className="text-xs text-slate-400 mt-0.5">Aplica a % histórica ativa ao faturamento elegível do mês, rateado por cliente.</p>
           </div>
-          <select value={mes} onChange={e => setMes(e.target.value)}
-            className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
-            {meses.map(m => <option key={m} value={m}>{m}</option>)}
-          </select>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select value={mes} onChange={e => setMes(e.target.value)}
+              className="px-3 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600">
+              {meses.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+            <button
+              onClick={simular}
+              disabled={simulando}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest text-white transition-all hover:opacity-90 disabled:opacity-60"
+              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            >
+              {simulando ? <Loader2 size={13} className="animate-spin" /> : <Calculator size={13} />}
+              Simular
+            </button>
+          </div>
         </div>
 
         {ativo ? (
@@ -826,15 +1107,49 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
         ) : (
           <p className="text-xs text-amber-600 font-semibold">Nenhuma % histórica ativa — todas as linhas deste mês vão ficar bloqueadas.</p>
         )}
+
+        {linhasGravadas != null && (
+          <p className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+            <CheckCircle2 size={14} /> {linhasGravadas} linha{linhasGravadas !== 1 ? 's' : ''} gravada{linhasGravadas !== 1 ? 's' : ''} em ajudas_estimativas_fatura.
+          </p>
+        )}
       </div>
 
       {erro && (
         <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
       )}
 
+      {semClienteCorrespondente.length > 0 && (
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-3 border-b border-amber-100 bg-amber-50/50">
+            <h3 className="text-xs font-black text-amber-800">
+              Faturas sem cliente correspondente ({semClienteCorrespondente.length})
+            </h3>
+            <p className="text-[11px] text-amber-700 mt-1">
+              Nome do cliente no TOConline não bate com nenhum registo em `clients`. Associa a um cliente real para
+              entrar na simulação, ou confirma que não corresponde a nenhum.
+            </p>
+          </div>
+          <div className="divide-y divide-amber-50">
+            {semClienteCorrespondente.map(f => (
+              <LinhaResolucaoSemCliente
+                key={f.faturaId}
+                fatura={f}
+                clients={clients}
+                desabilitado={simulando}
+                onConfirmar={clientId => resolverSemCliente(f.faturaId, clientId)}
+                onSemCorrespondencia={() => resolverSemCliente(f.faturaId, 'nenhum')}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {loading ? (
+        {simulando ? (
           <div className="flex items-center justify-center py-16 text-slate-300"><Loader2 size={24} className="animate-spin" /></div>
+        ) : !jaSimulado ? (
+          <div className="px-5 py-16 text-center text-slate-400 text-xs font-semibold">Clica em "Simular" para ler as faturas já emitidas no TOConline e calcular a estimativa deste mês.</div>
         ) : !resultado || resultado.linhas.length === 0 ? (
           <div className="px-5 py-16 text-center text-slate-400 text-xs font-semibold">Nenhuma fatura de receita neste mês.</div>
         ) : (
@@ -848,13 +1163,18 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                   <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Resíduo Aplicado</th>
                   <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Final</th>
                   <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Ação</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {resultado.linhas.map((l, i) => (
                   <tr key={`${l.clientId}-${l.faturaId ?? i}`} className={l.status === 'bloqueado' ? 'bg-amber-50' : 'hover:bg-slate-50'}>
                     <td className="px-4 py-3 font-semibold text-slate-800">{clientesMap[l.clientId] || l.clientId}</td>
-                    <td className="px-4 py-3 text-slate-500 font-mono">{l.faturaId || '—'}</td>
+                    <td className="px-4 py-3 text-slate-500 font-mono">
+                      {l.faturaId || (
+                        <span className="text-amber-600 font-sans font-semibold not-italic">ainda por faturar</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-right text-slate-600">{fmtEur(l.valorEstimadoBruto)}</td>
                     <td className="px-4 py-3 text-right text-slate-500">{fmtEur(l.residuoAplicado)}</td>
                     <td className="px-4 py-3 text-right font-bold" style={{ color: l.status === 'bloqueado' ? '#B45309' : '#1B3A57' }}>{fmtEur(l.valorFinal)}</td>
@@ -875,6 +1195,16 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                         </div>
                       )}
                     </td>
+                    <td className="px-4 py-3">
+                      {!l.faturaId && l.status === 'calculado' && (
+                        <button
+                          onClick={() => setDadosFaturar({ clienteId: l.clientId, ajudasValor: l.valorFinal })}
+                          className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-black uppercase tracking-widest text-white rounded-lg transition-all hover:opacity-90"
+                          style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
+                          Criar Fatura
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -882,7 +1212,7 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
                 <tr className="border-t border-slate-200 bg-slate-50">
                   <td colSpan={4} className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-500">Total (linhas calculadas)</td>
                   <td className="px-4 py-3 text-right font-black" style={{ color: '#1B3A57' }}>{fmtEur(totalFinal)}</td>
-                  <td></td>
+                  <td colSpan={2}></td>
                 </tr>
               </tfoot>
             </table>
@@ -892,8 +1222,18 @@ function EstimativaMensalTab({ onIrParaElegibilidade }) {
 
       {bloqueadas.length > 0 && (
         <p className="text-xs text-amber-700 font-semibold px-1">
-          {bloqueadas.length} linha{bloqueadas.length !== 1 ? 's' : ''} bloqueada{bloqueadas.length !== 1 ? 's' : ''} — resolve antes de considerar avançar para emissão real (Fase 2b, sessão futura).
+          {bloqueadas.length} linha{bloqueadas.length !== 1 ? 's' : ''} bloqueada{bloqueadas.length !== 1 ? 's' : ''} — resolve antes de criar a fatura correspondente.
         </p>
+      )}
+
+      {dadosFaturar && (
+        <FaturarClienteModal
+          clienteIdInicial={dadosFaturar.clienteId}
+          ajudasValorInicial={dadosFaturar.ajudasValor}
+          periodoInicial={mes}
+          onClose={() => setDadosFaturar(null)}
+          onFaturado={() => { setDadosFaturar(null); simular(); }}
+        />
       )}
     </div>
   );
@@ -1090,6 +1430,246 @@ function ReconciliacaoTab() {
   );
 }
 
+// Parte 3 (2026-08-20): ecrã de auditoria a nível de FATURA, novo separador
+// próprio — não vive em "Histórico" (esse é sobre a governança da %
+// histórica em si, ativar/recalcular, não sobre listar faturas
+// individuais) nem em "Reconciliação" (essa é sobre o fecho mensal
+// agregado real-vs-escrito, não sobre cada fatura). É o único ecrã que
+// junta as duas fontes de verdade que já coexistem em
+// ajudas_estimativas_fatura: status='faturado' (Fase 2b, faturas reais já
+// emitidas através deste sistema) e origem='historico' (Fase 1, rateio
+// retroativo do saneamento) — o "quadro completo" pedido, retroativo +
+// prospetivo, num único sítio.
+function FaturasComObservacoesTab() {
+  const { supabase, clients } = useApp();
+  const [faturadas, setFaturadas] = useState([]);
+  const [simuladas, setSimuladas] = useState([]);
+  const [historicas, setHistoricas] = useState([]);
+  const [percentagensMap, setPercentagensMap] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [erro, setErro] = useState(null);
+  const [secao, setSecao] = useState('faturadas'); // 'faturadas' | 'simuladas' | 'historicas'
+
+  const clientesMap = useMemo(() => Object.fromEntries((clients || []).map(c => [c.id, c.name])), [clients]);
+
+  useEffect(() => {
+    if (!supabase) return;
+    setLoading(true);
+    setErro(null);
+    Promise.all([
+      supabase.from('ajudas_estimativas_fatura').select('*').eq('status', 'faturado').order('mes', { ascending: false }),
+      // origem='estimativa' cobre 'calculado' e 'bloqueado' (Fase 2a,
+      // botão "Simular") e 'confirmado' (Fase 2b, gravado antes da chamada
+      // ao TOConline mas ainda sem resposta de sucesso) — tudo o que já
+      // passou pela calculadora mas ainda não é uma fatura real emitida.
+      supabase.from('ajudas_estimativas_fatura').select('*').eq('origem', 'estimativa').order('mes', { ascending: false }),
+      supabase.from('ajudas_estimativas_fatura').select('*').eq('origem', 'historico').order('mes', { ascending: false }),
+      supabase.from('ajudas_percentagem_historica').select('id, percentagem'),
+    ]).then(([rFaturadas, rSimuladas, rHistoricas, rPct]) => {
+      if (rFaturadas.error) throw rFaturadas.error;
+      if (rSimuladas.error) throw rSimuladas.error;
+      if (rHistoricas.error) throw rHistoricas.error;
+      if (rPct.error) throw rPct.error;
+      setFaturadas(rFaturadas.data || []);
+      // origem='estimativa' inclui as que já transitaram para 'faturado'
+      // (essas já aparecem na secção "Faturas Emitidas") — exclui aqui
+      // para não duplicar entre secções.
+      setSimuladas((rSimuladas.data || []).filter(l => l.status !== 'faturado'));
+      setHistoricas(rHistoricas.data || []);
+      setPercentagensMap(Object.fromEntries((rPct.data || []).map(p => [p.id, p.percentagem])));
+    }).catch(e => {
+      setErro(e.message || 'Erro ao carregar faturas com observações');
+    }).finally(() => setLoading(false));
+  }, [supabase]);
+
+  const linhas = secao === 'faturadas' ? faturadas : secao === 'simuladas' ? simuladas : historicas;
+
+  // Retroativo, agrupado por mês (a query já vem ordenada por mes desc) —
+  // cada grupo mostra quantas linhas têm valor_observacao_manual preenchido
+  // (já estava escrito na fatura, "declarado") vs calculadas por rateio.
+  const historicasPorMes = useMemo(() => {
+    const grupos = new Map();
+    for (const l of historicas) {
+      if (!grupos.has(l.mes)) grupos.set(l.mes, []);
+      grupos.get(l.mes).push(l);
+    }
+    return [...grupos.entries()]; // já em ordem (historicas veio ordenado por mes desc)
+  }, [historicas]);
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-3">
+        <div>
+          <h2 className="text-sm font-black text-slate-800">Faturas com Observações de Ajudas de Custo</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Auditoria do que já passou pela calculadora de ajudas de custo — faturas reais emitidas através deste
+            sistema (Fase 2b), simulações ainda não confirmadas (Fase 2a) e linhas retroativas do saneamento
+            histórico (Fase 1), lado a lado.
+          </p>
+          <p className="text-[11px] text-amber-600 mt-1.5">
+            ⚠ O "Mês" tem significados diferentes consoante a secção: em "Emitidas" e "Simuladas" é o mês de
+            referência do trabalho (a fatura real está no mês seguinte); em "Retroativo" é o mês da própria
+            fatura (sem desvio). Duas linhas com o mesmo "Mês" em secções diferentes podem não corresponder ao
+            mesmo período — compara sempre pelo número da fatura, não só pelo mês.
+          </p>
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setSecao('faturadas')}
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              secao === 'faturadas' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+            style={secao === 'faturadas' ? { backgroundColor: '#1B3A57' } : undefined}>
+            Faturas Emitidas ({faturadas.length})
+          </button>
+          <button onClick={() => setSecao('simuladas')}
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              secao === 'simuladas' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+            style={secao === 'simuladas' ? { backgroundColor: '#1B3A57' } : undefined}>
+            Simuladas — Ainda Não Emitidas ({simuladas.length})
+          </button>
+          <button onClick={() => setSecao('historicas')}
+            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              secao === 'historicas' ? 'text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+            }`}
+            style={secao === 'historicas' ? { backgroundColor: '#1B3A57' } : undefined}>
+            Retroativo — Histórico ({historicas.length})
+          </button>
+        </div>
+      </div>
+
+      {erro && (
+        <div className="bg-red-50 border border-red-100 rounded-2xl px-4 py-3 text-xs text-red-600 font-semibold">{erro}</div>
+      )}
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-300"><Loader2 size={24} className="animate-spin" /></div>
+        ) : linhas.length === 0 ? (
+          <div className="px-5 py-16 text-center text-slate-400 text-xs font-semibold">
+            {secao === 'faturadas' && 'Nenhuma fatura real emitida através deste sistema ainda.'}
+            {secao === 'simuladas' && 'Nenhuma simulação por confirmar — corre "Simular" no ecrã Estimativa Mensal.'}
+            {secao === 'historicas' && 'Nenhuma linha retroativa gravada ainda.'}
+          </div>
+        ) : secao === 'faturadas' || secao === 'simuladas' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-100">
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Mês</th>
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Fatura</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Total da Fatura</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor na Observação</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">% Histórica Usada</th>
+                  <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Resíduo Aplicado</th>
+                  {secao === 'simuladas' && (
+                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Estado</th>
+                  )}
+                  <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Criado em</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {linhas.map(l => (
+                  <tr key={l.id} className={l.status === 'bloqueado' ? 'bg-amber-50' : 'hover:bg-slate-50'}>
+                    <td className="px-4 py-3 font-semibold text-slate-800">{clientesMap[l.client_id] || l.client_id}</td>
+                    <td className="px-4 py-3 font-mono text-slate-600">{l.mes}</td>
+                    <td className="px-4 py-3 font-mono text-slate-500">{l.fatura_id || '—'}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">{l.valor_fatura != null ? fmtEur(l.valor_fatura) : '—'}</td>
+                    <td className="px-4 py-3 text-right font-bold text-slate-800">{fmtEur(l.valor_final)}</td>
+                    <td className="px-4 py-3 text-right text-slate-600">
+                      {l.percentagem_historica_id && percentagensMap[l.percentagem_historica_id] != null
+                        ? fmtPct(percentagensMap[l.percentagem_historica_id])
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right text-slate-500">
+                      {Number(l.residuo_mes_anterior_aplicado) > 0 ? fmtEur(l.residuo_mes_anterior_aplicado) : '—'}
+                    </td>
+                    {secao === 'simuladas' && (
+                      <td className="px-4 py-3">
+                        {l.status === 'bloqueado' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-700">Bloqueado</span>
+                        ) : l.status === 'confirmado' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-orange-100 text-orange-700">Confirmado, a aguardar TOConline</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-600">Calculado</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-4 py-3 text-slate-500">{l.criado_em ? new Date(l.criado_em).toLocaleString('pt-PT') : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {historicasPorMes.map(([mes, linhasDoMes]) => {
+              const nDeclaradas = linhasDoMes.filter(l => l.valor_observacao_manual != null).length;
+              return (
+                <div key={mes}>
+                  <div className="px-4 py-2.5 bg-slate-50 flex items-center gap-3 flex-wrap">
+                    <span className="font-mono font-black text-slate-700 text-xs">{mes}</span>
+                    <span className="text-[10px] text-slate-400 font-semibold">
+                      {linhasDoMes.length} fatura{linhasDoMes.length !== 1 ? 's' : ''}
+                      {nDeclaradas > 0 && ` · ${nDeclaradas} com valor explícito na observação`}
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Cliente</th>
+                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Fatura</th>
+                          <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor Total da Fatura</th>
+                          <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">Valor na Observação</th>
+                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Origem do valor</th>
+                          <th className="px-4 py-2 text-right text-[10px] font-black uppercase tracking-widest text-slate-400">% Histórica Usada</th>
+                          <th className="px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-slate-400">Criado em</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {linhasDoMes.map(l => {
+                          const declarado = l.valor_observacao_manual != null;
+                          return (
+                            <tr key={l.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-2.5 font-semibold text-slate-800">{clientesMap[l.client_id] || l.client_id}</td>
+                              <td className="px-4 py-2.5 font-mono text-slate-500">{l.fatura_id || '—'}</td>
+                              <td className="px-4 py-2.5 text-right text-slate-600">{l.valor_fatura != null ? fmtEur(l.valor_fatura) : '—'}</td>
+                              <td className="px-4 py-2.5 text-right font-bold text-slate-800">{fmtEur(l.valor_final)}</td>
+                              <td className="px-4 py-2.5">
+                                {declarado ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-emerald-100 text-emerald-700">
+                                    Declarado na fatura
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500">
+                                    Rateio
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-2.5 text-right text-slate-600">
+                                {l.percentagem_historica_id && percentagensMap[l.percentagem_historica_id] != null
+                                  ? fmtPct(percentagensMap[l.percentagem_historica_id])
+                                  : '—'}
+                              </td>
+                              <td className="px-4 py-2.5 text-slate-500">{l.criado_em ? new Date(l.criado_em).toLocaleString('pt-PT') : '—'}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function AjudasCustoAdmin() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -1118,6 +1698,7 @@ export default function AjudasCustoAdmin() {
       {subtab === 'historico' && <HistoricoTab onIrParaElegibilidade={() => setSubtab('elegibilidade')} />}
       {subtab === 'estimativa' && <EstimativaMensalTab onIrParaElegibilidade={() => setSubtab('elegibilidade')} />}
       {subtab === 'reconciliacao' && <ReconciliacaoTab />}
+      {subtab === 'faturas' && <FaturasComObservacoesTab />}
     </div>
   );
 }

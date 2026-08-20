@@ -12,6 +12,23 @@
 // emissão (FaturarClienteModal.jsx, ver correção de tarifa histórica em
 // src/lib/faturacao/tarifaHistorica.js). Reutiliza ratearProporcional
 // (rateio.js) — nunca duplica a divisão proporcional.
+//
+// LIMITAÇÃO CONHECIDA (auditoria 2026-08-20, documentada — não corrigida):
+// `saldoAcumuladoDisponivel` é lido do último fecho de ajudas_reconciliacao_mensal
+// e aplicado POR INTEIRO em cada chamada a esta função. Na Fase 2a (Simular),
+// todas as faturas do mês entram numa única chamada, por isso o resíduo é
+// rateado uma vez só. Na Fase 2b (emitirFaturaComAjudas.js), cada fatura é
+// emitida com a sua própria chamada isolada (uma por cliente) — se duas
+// faturas do MESMO mês de referência forem emitidas antes desse mês ser
+// fechado na Fase 3, cada uma reclama o resíduo inteiro, não uma fração
+// dele. A Fase 3 corrige isto no fecho do mês (subtrai o que foi realmente
+// escrito do total real e transporta a diferença, mesmo negativa, para o
+// mês seguinte) — mas só DEPOIS das faturas já emitidas, nunca antes: o
+// valor escrito na observação fiscal pode ficar temporariamente inflacionado
+// até esse fecho acontecer. Sem impacto enquanto a Fase 3 nunca tiver sido
+// usada com múltiplas faturas do mesmo mês em aberto (situação atual) — mas
+// a considerar antes de emitir várias faturas reais do mesmo mês em
+// sequência sem fechar o mês entretanto.
 
 import { ratearProporcional } from './rateio.js';
 import { SALDO_ACUMULADO_INICIAL } from './reconciliacao.js';
@@ -29,7 +46,7 @@ import { SALDO_ACUMULADO_INICIAL } from './reconciliacao.js';
  *   faturado (regra M→M-1: fatura criada em M+1 refere-se às horas de M).
  * @returns {Promise<{
  *   linhas: Array<{
- *     clientId: string, faturaId: string|null,
+ *     clientId: string, faturaId: string|null, valorFaturado: number,
  *     valorEstimadoBruto: number, residuoAplicado: number, valorFinal: number,
  *     status: 'calculado' | 'bloqueado', motivoBloqueio: string | null,
  *   }>,
@@ -74,6 +91,7 @@ export async function calcularEstimativaMensal({ mes, faturasDoMes, dbClient }) 
   const linhaBloqueada = (f, motivoBloqueio) => ({
     clientId: f.clientId,
     faturaId: f.faturaId,
+    valorFaturado: f.valorFaturado,
     valorEstimadoBruto: 0,
     residuoAplicado: 0,
     valorFinal: 0,
@@ -132,6 +150,7 @@ export async function calcularEstimativaMensal({ mes, faturasDoMes, dbClient }) 
     return {
       clientId: f.clientId,
       faturaId: f.faturaId,
+      valorFaturado: f.valorFaturado,
       valorEstimadoBruto,
       residuoAplicado,
       valorFinal: Math.max(0, valorEstimadoBruto + residuoAplicado),

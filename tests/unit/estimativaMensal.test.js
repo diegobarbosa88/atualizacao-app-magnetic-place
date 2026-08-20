@@ -93,6 +93,27 @@ describe('calcularEstimativaMensal', () => {
     expect(r.linhas[0].motivoBloqueio).toBe('cliente sem decisao de elegibilidade');
   });
 
+  it('valorFaturado (valor total da fatura, não só a ajuda de custo) é devolvido em cada linha, calculada ou bloqueada', async () => {
+    const dbClient = makeDbClient({
+      clients: [
+        { id: 'c1', elegivel_ajudas_custo: true },
+        { id: 'c2', elegivel_ajudas_custo: null },
+      ],
+      percentagemAtiva: { id: 'pct1', percentagem: 0.1 },
+    });
+    const faturasDoMes = [
+      { clientId: 'c1', faturaId: 'FT1', valorFaturado: 1000 },
+      { clientId: 'c2', faturaId: 'FT2', valorFaturado: 500 },
+    ];
+
+    const r = await calcularEstimativaMensal({ mes: '2026-07', faturasDoMes, dbClient });
+
+    const calculada = r.linhas.find(l => l.clientId === 'c1');
+    const bloqueada = r.linhas.find(l => l.clientId === 'c2');
+    expect(calculada.valorFaturado).toBe(1000);
+    expect(bloqueada.valorFaturado).toBe(500);
+  });
+
   it('faturasDoMes vazio → sem linhas, sem erro', async () => {
     const dbClient = makeDbClient({ percentagemAtiva: { id: 'pct1', percentagem: 0.1 } });
     const r = await calcularEstimativaMensal({ mes: '2026-07', faturasDoMes: [], dbClient });

@@ -26,6 +26,7 @@ export default function TOConlineAdmin() {
   const [verificando, setVerificando] = useState(true);
   const [mostrarCriar, setMostrarCriar] = useState(false);
   const [mostrarFaturar, setMostrarFaturar] = useState(false);
+  const [clienteParaFaturar, setClienteParaFaturar] = useState(null);
   const [saldoContas, setSaldoContas] = useState(null);
   const [saldoLoading, setSaldoLoading] = useState(false);
 
@@ -166,13 +167,22 @@ export default function TOConlineAdmin() {
         <CriarDocumentoModal
           onClose={() => setMostrarCriar(false)}
           onCriado={() => {}}
+          onClienteElegivel={(clientId) => {
+            // Cliente elegível para ajudas de custo + documento de receita
+            // nova — fecha este modal (sem gate de ajudas) e abre o
+            // FaturarClienteModal (gated), já com o cliente selecionado.
+            setMostrarCriar(false);
+            setClienteParaFaturar(clientId);
+            setMostrarFaturar(true);
+          }}
         />
       )}
 
       {mostrarFaturar && (
         <FaturarClienteModal
-          onClose={() => setMostrarFaturar(false)}
-          onFaturado={() => setMostrarFaturar(false)}
+          clienteIdInicial={clienteParaFaturar || undefined}
+          onClose={() => { setMostrarFaturar(false); setClienteParaFaturar(null); }}
+          onFaturado={() => { setMostrarFaturar(false); setClienteParaFaturar(null); }}
         />
       )}
 

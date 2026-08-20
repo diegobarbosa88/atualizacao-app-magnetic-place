@@ -84,7 +84,7 @@ export async function verificarEstimativaParaFatura({ mesReferencia, clientId, v
  * @param {object} params.dbClient
  * @param {string} params.confirmadoPor
  * @param {function} params.criarFaturaFn
- * @param {number} [params.valorFaturaTotal]  valor final da fatura (pós-desconto/IVA), só para a coluna total_fatura da tabela legada
+ * @param {number} [params.valorFaturaTotal]  valor final da fatura (pós-desconto/IVA) — gravado em ajudas_estimativas_fatura.valor_fatura, na coluna total_fatura da tabela legada, e em ajudas_valores_por_cliente_mes.valor_fatura
  */
 export async function confirmarEEmitirFatura({
   mesReferencia, clientId, linha, percentagemHistoricaId, dbClient, confirmadoPor, criarFaturaFn, valorFaturaTotal,
@@ -108,6 +108,7 @@ export async function confirmarEEmitirFatura({
   const camposConfirmado = {
     percentagem_historica_id: percentagemHistoricaId,
     residuo_mes_anterior_aplicado: linha.residuoAplicado,
+    valor_fatura: valorFaturaTotal ?? null,
     valor_estimado_bruto: linha.valorEstimadoBruto,
     valor_final: linha.valorFinal,
     status: 'confirmado',

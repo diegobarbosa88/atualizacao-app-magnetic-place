@@ -127,6 +127,35 @@ describe('confirmarEEmitirFatura', () => {
     expect(updateFinal.payload).toEqual({ status: 'faturado', fatura_id: 'FT 2026/99' });
   });
 
+  it('valorFaturaTotal é gravado em ajudas_estimativas_fatura.valor_fatura (não só na tabela legada)', async () => {
+    const chamadas = [];
+    const dbClient = {
+      from(table) {
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          is: () => builder,
+          in: () => builder,
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          insert: (payload) => { chamadas.push({ tipo: 'insert', table, payload }); return builder; },
+          update: (payload) => { chamadas.push({ tipo: 'update', table, payload }); return builder; },
+          upsert: (payload, opts) => { chamadas.push({ tipo: 'upsert', table, payload, opts }); return Promise.resolve({ data: null, error: null }); },
+          single: () => Promise.resolve({ data: { id: 'est1' }, error: null }),
+        };
+        return builder;
+      },
+    };
+    const criarFaturaFn = vi.fn(async () => ({ faturaId: 'FT 2026/102' }));
+
+    await confirmarEEmitirFatura({
+      mesReferencia: '2026-07', clientId: 'c1', linha: linhaCalculada, percentagemHistoricaId: 'pct1',
+      dbClient, confirmadoPor: 'admin@x.pt', criarFaturaFn, valorFaturaTotal: 3500,
+    });
+
+    const insertEstimativa = chamadas.find(c => c.tipo === 'insert' && c.table === 'ajudas_estimativas_fatura');
+    expect(insertEstimativa.payload.valor_fatura).toBe(3500);
+  });
+
   it('sucesso na API → transita "confirmado" para "faturado" e grava fatura_id', async () => {
     const chamadas = [];
     const dbClient = {

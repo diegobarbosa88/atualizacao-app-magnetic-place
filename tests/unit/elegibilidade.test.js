@@ -12,6 +12,7 @@ function makeQueryBuilder(result) {
     gt: () => builder,
     in: () => builder,
     eq: () => builder,
+    range: () => builder,
     then: (resolve, reject) => Promise.resolve(result).then(resolve, reject),
   };
   return builder;

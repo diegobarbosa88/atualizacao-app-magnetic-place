@@ -1,6 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Plus, Trash2, Loader2, Search } from 'lucide-react';
 import { authFetch } from '../../../utils/authFetch';
+import { useApp } from '../../../context/AppContext';
+import { TOCONLINE_TIPOS_RECEITA } from '../../../lib/ajudas/faturasToConline.js';
+
+// Mesma normalização usada no gate de faturasToConline.js (buscarFaturasVendasPeriodo)
+// — lowercase+trim simples, não fuzzy. Consistência deliberada: se o nome não
+// bate aqui, também não bateria no cálculo da % histórica, e o admin já tem
+// esse problema sinalizado noutro sítio (nomes sem correspondência).
+function normalizarNome(s) {
+  return (s || '').toLowerCase().trim();
+}
+
+// Fail-closed: cliente elegível para ajudas de custo + tipo de documento que
+// representa receita nova (mesma lista TOCONLINE_TIPOS_RECEITA já usada no
+// cálculo da % histórica) não pode ser emitido por aqui — este modal não sabe
+// nada de ajudas de custo. Deve redirecionar para FaturarClienteModal.jsx (o
+// caminho gated) em vez de deixar passar. Match por NIF primeiro (mais
+// fiável), nome normalizado como fallback — mesma normalização usada em
+// faturasToConline.js, para nunca divergir do que o gate da % histórica já
+// considera "o mesmo cliente". Devolve o id do cliente elegível, ou null.
+export function encontrarClienteElegivelParaRedirecionar(cliente, tipo, clients) {
+  if (!cliente) return null;
+  if (!TOCONLINE_TIPOS_RECEITA.includes(tipo)) return null;
+
+  const nifCliente = (cliente.nif || '').trim();
+  const nomeCliente = normalizarNome(cliente.nome);
+  const match = nifCliente
+    ? (clients || []).find(c => (c.nif || '').trim() === nifCliente)
+    : null;
+  const matchFinal = match ?? (clients || []).find(c => normalizarNome(c.name) === nomeCliente);
+
+  return matchFinal?.elegivel_ajudas_custo === true ? matchFinal.id : null;
+}
 
 const TIPOS_DOC = [
   { value: 'FT', label: 'FT — Fatura' },
@@ -146,7 +178,8 @@ function AutocompleteArtigo({ value, onChange }) {
   );
 }
 
-export default function CriarDocumentoModal({ onClose, onCriado }) {
+export default function CriarDocumentoModal({ onClose, onCriado, onClienteElegivel }) {
+  const { clients } = useApp();
   const [tipo, setTipo] = useState('FT');
   const [data, setData] = useState(new Date().toISOString().slice(0, 10));
   const [cliente, setCliente] = useState(null);
@@ -155,6 +188,12 @@ export default function CriarDocumentoModal({ onClose, onCriado }) {
   const [observacoes, setObservacoes] = useState('');
   const [criando, setCriando] = useState(false);
   const [erro, setErro] = useState(null);
+
+  useEffect(() => {
+    if (!onClienteElegivel) return;
+    const idElegivel = encontrarClienteElegivelParaRedirecionar(cliente, tipo, clients);
+    if (idElegivel) onClienteElegivel(idElegivel);
+  }, [cliente, tipo, clients, onClienteElegivel]);
 
   const setLinha = (i, k, v) => setLinhas(prev => prev.map((l, idx) => idx === i ? { ...l, [k]: v } : l));
   const addLinha = () => setLinhas(prev => [...prev, { ...LINHA_VAZIA }]);
