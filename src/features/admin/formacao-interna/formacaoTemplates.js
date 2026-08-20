@@ -75,6 +75,24 @@ export const TIPOS_POR_CATEGORIA = {
   ],
 };
 
+// Imagens ilustrativas de stock (Wikimedia Commons, uso livre) para os
+// módulos de e-learning. Reutilizadas por tema entre secções/perguntas
+// de diferentes formações — não são fotos reais da oficina Magnetic.
+const WC = 'https://commons.wikimedia.org/wiki/Special:FilePath/';
+const IMG = {
+  solda: `${WC}Manual_Metal_Arc_welding_(MMAW)_(4791859149).jpg`,
+  mascara: `${WC}Welding_helmet.jpg`,
+  epi: `${WC}Occupational_Safety_Equipment.jpg`,
+  extintor: `${WC}Fire_extinguisher.jpg`,
+  gasCilindros: `${WC}Compressed_gas_cylinders.mapp_and_oxygen.triddle.jpg`,
+  gasArmazenamento: `${WC}Compressed_gas_storage.jpg`,
+  primeirosSocorros: `${WC}A-first-aid-kit.jpg`,
+  guilhotina: `${WC}Gasparini_sheet_metal_hydraulic_guillotine_power_shear.jpg`,
+  ponteRolante: `${WC}Common_Overhead_Crane.jpg`,
+  oculos: `${WC}Safety_Goggles.jpg`,
+  oficina: `${WC}Mechanical_Workshop_Practice.jpg`,
+};
+
 // Preenchimento automático por tipo_formacao — tudo exceto datas
 // (data_inicio, data_fim e data_validade continuam sempre manuais).
 export const CAMPOS_POR_TIPO = {
@@ -208,6 +226,7 @@ export const CAMPOS_POR_TIPO = {
       seccoes: [
         {
           titulo: 'Introdução',
+          imagem_url: IMG.solda,
           paragrafos: [
             'A soldadura está entre as atividades com maior exposição a riscos combinados no setor metalomecânico e naval: radiação, fumos, eletricidade, calor e fogo coexistem no mesmo posto de trabalho.',
             'Este módulo cobre os riscos principais, o equipamento de proteção correto e os procedimentos de emergência.',
@@ -215,6 +234,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Riscos Principais',
+          imagem_url: IMG.mascara,
           lista: [
             'Radiação (UV/IV): queimaduras oculares ("vista de arco") e cutâneas, mesmo sem contacto direto com o arco.',
             'Fumos e gases de soldadura: inalação de partículas metálicas e gases, com efeitos respiratórios a curto e longo prazo.',
@@ -225,6 +245,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Equipamento de Proteção Individual (EPI)',
+          imagem_url: IMG.epi,
           lista: [
             'Máscara de soldar com filtro adequado ao processo utilizado (MIG/MAG, TIG, elétrodo revestido).',
             'Luvas de proteção térmica, resistentes a calor e projeções.',
@@ -235,6 +256,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Ventilação e Extração de Fumos',
+          imagem_url: IMG.oficina,
           paragrafos: [
             'A ventilação geral do espaço não substitui a extração localizada junto do ponto de soldadura. Sinais de exposição excessiva incluem tonturas, irritação nas vias respiratórias e dores de cabeça — qualquer um destes sintomas deve ser reportado de imediato.',
           ],
@@ -245,6 +267,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Prevenção de Incêndio',
+          imagem_url: IMG.extintor,
           lista: [
             'Manter distância de segurança de materiais inflamáveis (mínimo recomendado: 10 metros, ou conforme procedimento do cliente).',
             'Seguir o procedimento de trabalho a quente (permit-to-work) sempre que aplicável no local do cliente.',
@@ -253,6 +276,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Procedimento de Emergência',
+          imagem_url: IMG.primeirosSocorros,
           lista: [
             'Queimadura: arrefecer imediatamente com água corrente e procurar assistência médica.',
             'Choque elétrico: desligar a fonte de energia antes de tocar na vítima; nunca tocar diretamente enquanto o circuito estiver ativo.',
@@ -271,11 +295,11 @@ export const CAMPOS_POR_TIPO = {
     formato: 'e-learning',
     nota_minima_aprovacao: 70,
     questionario: [
-      { pergunta: 'Qual o EPI obrigatório para soldadura TIG em espaço fechado?', opcoes: ['Apenas luvas de proteção térmica', 'Máscara de soldar, luvas térmicas e proteção respiratória adicional', 'Apenas óculos de sol', 'Nenhum EPI adicional é necessário'], resposta_correta: 1 },
-      { pergunta: 'O que fazer em caso de exposição prolongada a fumos de soldadura?', opcoes: ['Continuar o trabalho normalmente', 'Reportar sintomas e afastar-se para zona ventilada', 'Ignorar, é normal', 'Aumentar o ritmo de trabalho para terminar mais depressa'], resposta_correta: 1 },
-      { pergunta: 'Qual a distância mínima recomendada de materiais inflamáveis durante trabalho a quente?', opcoes: ['1 metro', '3 metros', '10 metros (ou conforme procedimento do cliente)', 'Não há distância mínima'], resposta_correta: 2 },
-      { pergunta: 'A máscara de soldar protege também contra a inalação de fumos?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 1 },
-      { pergunta: 'A quem se deve reportar um quase-acidente?', opcoes: ['A ninguém, não houve ferimentos', 'Ao responsável direto, sempre', 'Só se houver testemunhas', 'Apenas em reunião mensal'], resposta_correta: 1 },
+      { pergunta: 'Qual o EPI obrigatório para soldadura TIG em espaço fechado?', opcoes: ['Apenas luvas de proteção térmica', 'Máscara de soldar, luvas térmicas e proteção respiratória adicional', 'Apenas óculos de sol', 'Nenhum EPI adicional é necessário'], resposta_correta: 1, imagem_url: IMG.mascara },
+      { pergunta: 'O que fazer em caso de exposição prolongada a fumos de soldadura?', opcoes: ['Continuar o trabalho normalmente', 'Reportar sintomas e afastar-se para zona ventilada', 'Ignorar, é normal', 'Aumentar o ritmo de trabalho para terminar mais depressa'], resposta_correta: 1, imagem_url: IMG.oficina },
+      { pergunta: 'Qual a distância mínima recomendada de materiais inflamáveis durante trabalho a quente?', opcoes: ['1 metro', '3 metros', '10 metros (ou conforme procedimento do cliente)', 'Não há distância mínima'], resposta_correta: 2, imagem_url: IMG.extintor },
+      { pergunta: 'A máscara de soldar protege também contra a inalação de fumos?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 1, imagem_url: IMG.mascara },
+      { pergunta: 'A quem se deve reportar um quase-acidente?', opcoes: ['A ninguém, não houve ferimentos', 'Ao responsável direto, sempre', 'Só se houver testemunhas', 'Apenas em reunião mensal'], resposta_correta: 1, imagem_url: IMG.primeirosSocorros },
     ],
   },
   'Segurança em Trabalhos de Caldeiraria': {
@@ -289,12 +313,14 @@ export const CAMPOS_POR_TIPO = {
       seccoes: [
         {
           titulo: 'Introdução',
+          imagem_url: IMG.oficina,
           paragrafos: [
             'A caldeiraria envolve manuseamento de cargas pesadas, máquinas de corte e conformação, e arestas cortantes — riscos distintos dos da soldadura, ainda que os dois trabalhos muitas vezes se sobreponham no mesmo posto.',
           ],
         },
         {
           titulo: 'Riscos Principais',
+          imagem_url: IMG.guilhotina,
           lista: [
             'Manuseamento manual de cargas pesadas: chapa e perfis metálicos, risco de lesões músculo-esqueléticas.',
             'Corte de chapa (guilhotina, oxicorte, plasma): risco de amputação e projeção de material.',
@@ -305,6 +331,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Equipamento de Proteção Individual (EPI)',
+          imagem_url: IMG.epi,
           lista: [
             'Luvas anticorte, adequadas ao tipo de manuseamento.',
             'Calçado de proteção com biqueira de aço.',
@@ -314,6 +341,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Segurança em Máquinas e Equipamentos',
+          imagem_url: IMG.guilhotina,
           lista: [
             'Nunca remover ou desativar resguardos e dispositivos de segurança das máquinas.',
             'Manter distância de segurança durante a operação de guilhotina ou prensa.',
@@ -323,6 +351,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Movimentação de Cargas',
+          imagem_url: IMG.ponteRolante,
           lista: [
             'Usar técnica correta de levantamento manual: dobrar os joelhos, manter as costas direitas, carga próxima do corpo.',
             'Recorrer a ajuda mecânica (ponte rolante, empilhador) sempre que o peso ou dimensão da peça o justifique — não confiar apenas na força manual.',
@@ -331,6 +360,7 @@ export const CAMPOS_POR_TIPO = {
         },
         {
           titulo: 'Procedimento de Emergência',
+          imagem_url: IMG.primeirosSocorros,
           lista: [
             'Corte grave: aplicar pressão direta para controlar hemorragia e procurar assistência médica imediata.',
             'Esmagamento/entalamento: não tentar libertar a pessoa sozinho se envolver máquina em funcionamento — desligar primeiro.',
@@ -349,11 +379,11 @@ export const CAMPOS_POR_TIPO = {
     formato: 'e-learning',
     nota_minima_aprovacao: 70,
     questionario: [
-      { pergunta: 'Qual o EPI obrigatório ao operar uma guilhotina?', opcoes: ['Apenas luvas', 'Luvas anticorte, calçado de proteção e óculos/viseira', 'Nenhum, a máquina já é segura', 'Apenas proteção auditiva'], resposta_correta: 1 },
-      { pergunta: 'Porque é que nunca se deve remover um resguardo de segurança de uma máquina?', opcoes: ['Porque é proibido por regulamento interno apenas', 'Porque expõe diretamente o trabalhador ao risco de esmagamento/entalamento', 'Não há problema em removê-lo temporariamente', 'Só é relevante em máquinas antigas'], resposta_correta: 1 },
-      { pergunta: 'Quando se deve usar ajuda mecânica em vez de levantamento manual?', opcoes: ['Nunca, é sempre mais rápido à mão', 'Sempre que o peso ou dimensão da peça o justificar', 'Só se houver ponte rolante disponível na hora', 'Apenas para peças acima de 100 kg, nunca abaixo'], resposta_correta: 1 },
-      { pergunta: 'O bloqueio/etiquetagem (LOTO) só é necessário para reparações grandes?', opcoes: ['Verdadeiro', 'Falso — aplica-se a qualquer intervenção, mesmo breve'], resposta_correta: 1 },
-      { pergunta: 'Qual o procedimento em caso de lesão músculo-esquelética aguda no posto de trabalho?', opcoes: ['Forçar o movimento para "desentortar"', 'Não forçar, imobilizar e procurar assistência médica', 'Continuar a trabalhar até ao fim do turno', 'Aplicar apenas gelo e ignorar'], resposta_correta: 1 },
+      { pergunta: 'Qual o EPI obrigatório ao operar uma guilhotina?', opcoes: ['Apenas luvas', 'Luvas anticorte, calçado de proteção e óculos/viseira', 'Nenhum, a máquina já é segura', 'Apenas proteção auditiva'], resposta_correta: 1, imagem_url: IMG.guilhotina },
+      { pergunta: 'Porque é que nunca se deve remover um resguardo de segurança de uma máquina?', opcoes: ['Porque é proibido por regulamento interno apenas', 'Porque expõe diretamente o trabalhador ao risco de esmagamento/entalamento', 'Não há problema em removê-lo temporariamente', 'Só é relevante em máquinas antigas'], resposta_correta: 1, imagem_url: IMG.guilhotina },
+      { pergunta: 'Quando se deve usar ajuda mecânica em vez de levantamento manual?', opcoes: ['Nunca, é sempre mais rápido à mão', 'Sempre que o peso ou dimensão da peça o justificar', 'Só se houver ponte rolante disponível na hora', 'Apenas para peças acima de 100 kg, nunca abaixo'], resposta_correta: 1, imagem_url: IMG.ponteRolante },
+      { pergunta: 'O bloqueio/etiquetagem (LOTO) só é necessário para reparações grandes?', opcoes: ['Verdadeiro', 'Falso — aplica-se a qualquer intervenção, mesmo breve'], resposta_correta: 1, imagem_url: IMG.epi },
+      { pergunta: 'Qual o procedimento em caso de lesão músculo-esquelética aguda no posto de trabalho?', opcoes: ['Forçar o movimento para "desentortar"', 'Não forçar, imobilizar e procurar assistência médica', 'Continuar a trabalhar até ao fim do turno', 'Aplicar apenas gelo e ignorar'], resposta_correta: 1, imagem_url: IMG.primeirosSocorros },
     ],
   },
   'EPI para Soldadura': {
@@ -367,22 +397,22 @@ export const CAMPOS_POR_TIPO = {
     conteudo_estruturado: {
       objetivo: 'Garantir que os soldadores conhecem e utilizam corretamente o EPI específico da função.',
       seccoes: [
-        { titulo: 'Introdução', paragrafos: ['O EPI é a última linha de defesa contra os riscos da soldadura — radiação, calor, projeções e fumos. Tem de ser adequado ao processo utilizado e usado sempre, sem exceções.'] },
-        { titulo: 'Máscara e Viseira', lista: [
+        { titulo: 'Introdução', imagem_url: IMG.epi, paragrafos: ['O EPI é a última linha de defesa contra os riscos da soldadura — radiação, calor, projeções e fumos. Tem de ser adequado ao processo utilizado e usado sempre, sem exceções.'] },
+        { titulo: 'Máscara e Viseira', imagem_url: IMG.mascara, lista: [
           'Filtro adequado ao processo utilizado (MIG/MAG, TIG, elétrodo revestido).',
           'Verificar o estado do vidro de proteção antes de cada utilização.',
           'Substituir sempre que estiver riscado, fissurado ou danificado.',
         ]},
-        { titulo: 'Luvas e Vestuário', lista: [
+        { titulo: 'Luvas e Vestuário', imagem_url: IMG.epi, lista: [
           'Luvas de proteção térmica, resistentes a calor e projeções.',
           'Avental de couro ou roupa ignífuga.',
           'Roupa de manga comprida, sem partes soltas ou inflamáveis.',
         ]},
-        { titulo: 'Proteção Respiratória e Auditiva', lista: [
+        { titulo: 'Proteção Respiratória e Auditiva', imagem_url: IMG.oculos, lista: [
           'Proteção respiratória adicional em espaços confinados ou ao soldar materiais especiais (galvanizados, inox).',
           'Proteção auditiva quando o nível de ruído do posto o justificar.',
         ]},
-        { titulo: 'Regras de Uso e Manutenção', lista: [
+        { titulo: 'Regras de Uso e Manutenção', imagem_url: IMG.epi, lista: [
           'Inspecionar todo o EPI antes de cada utilização.',
           'Substituir de imediato qualquer peça danificada.',
           'Guardar o EPI em local limpo e seco quando não está a ser usado.',
@@ -391,11 +421,11 @@ export const CAMPOS_POR_TIPO = {
       ],
     },
     questionario: [
-      { pergunta: 'Quando deve ser substituído o vidro de proteção da máscara de soldar?', opcoes: ['Nunca precisa de substituição', 'Quando estiver riscado ou danificado', 'Só uma vez por ano, independentemente do estado', 'Só se partir completamente'], resposta_correta: 1 },
-      { pergunta: 'Que tipo de luvas é obrigatório usar na soldadura?', opcoes: ['Luvas de látex finas', 'Luvas de proteção térmica', 'Luvas de jardinagem', 'Não é obrigatório usar luvas'], resposta_correta: 1 },
-      { pergunta: 'Quando é necessária proteção respiratória adicional?', opcoes: ['Nunca é necessária', 'Em espaços confinados ou ao soldar materiais especiais (galvanizados/inox)', 'Só se o soldador quiser', 'Só em dias de chuva'], resposta_correta: 1 },
-      { pergunta: 'O EPI deve ser inspecionado antes de cada utilização?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
-      { pergunta: 'Onde deve ser guardado o EPI quando não está a ser usado?', opcoes: ['Em qualquer lugar', 'Em local limpo e seco', 'No chão da oficina', 'Não importa'], resposta_correta: 1 },
+      { pergunta: 'Quando deve ser substituído o vidro de proteção da máscara de soldar?', opcoes: ['Nunca precisa de substituição', 'Quando estiver riscado ou danificado', 'Só uma vez por ano, independentemente do estado', 'Só se partir completamente'], resposta_correta: 1, imagem_url: IMG.mascara },
+      { pergunta: 'Que tipo de luvas é obrigatório usar na soldadura?', opcoes: ['Luvas de látex finas', 'Luvas de proteção térmica', 'Luvas de jardinagem', 'Não é obrigatório usar luvas'], resposta_correta: 1, imagem_url: IMG.epi },
+      { pergunta: 'Quando é necessária proteção respiratória adicional?', opcoes: ['Nunca é necessária', 'Em espaços confinados ou ao soldar materiais especiais (galvanizados/inox)', 'Só se o soldador quiser', 'Só em dias de chuva'], resposta_correta: 1, imagem_url: IMG.oculos },
+      { pergunta: 'O EPI deve ser inspecionado antes de cada utilização?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0, imagem_url: IMG.epi },
+      { pergunta: 'Onde deve ser guardado o EPI quando não está a ser usado?', opcoes: ['Em qualquer lugar', 'Em local limpo e seco', 'No chão da oficina', 'Não importa'], resposta_correta: 1, imagem_url: IMG.oficina },
     ],
   },
   'Ventilação e Extração de Fumos': {
@@ -409,19 +439,19 @@ export const CAMPOS_POR_TIPO = {
     conteudo_estruturado: {
       objetivo: 'Sensibilizar para os riscos de exposição a fumos de soldadura e o uso correto dos sistemas de extração.',
       seccoes: [
-        { titulo: 'Introdução', paragrafos: ['Os fumos de soldadura contêm partículas metálicas e gases nocivos. A exposição prolongada tem efeitos respiratórios a curto e longo prazo, mesmo quando não há sintomas imediatos.'] },
-        { titulo: 'Ventilação Geral vs. Extração Localizada', lista: [
+        { titulo: 'Introdução', imagem_url: IMG.oficina, paragrafos: ['Os fumos de soldadura contêm partículas metálicas e gases nocivos. A exposição prolongada tem efeitos respiratórios a curto e longo prazo, mesmo quando não há sintomas imediatos.'] },
+        { titulo: 'Ventilação Geral vs. Extração Localizada', imagem_url: IMG.oficina, lista: [
           'A ventilação geral do espaço não substitui a extração localizada junto do ponto de soldadura.',
           'A extração localizada capta o fumo diretamente na fonte, antes de se espalhar.',
           'Posicionar-se sempre de forma a que o fluxo de ar afaste o fumo da zona respiratória, nunca o contrário.',
         ]},
-        { titulo: 'Sinais de Exposição Excessiva', lista: [
+        { titulo: 'Sinais de Exposição Excessiva', imagem_url: IMG.primeirosSocorros, lista: [
           'Tonturas.',
           'Irritação nas vias respiratórias.',
           'Dores de cabeça.',
           'Tosse persistente.',
         ]},
-        { titulo: 'Boas Práticas', lista: [
+        { titulo: 'Boas Práticas', imagem_url: IMG.solda, lista: [
           'Confirmar que o sistema de extração está ligado e a funcionar antes de iniciar o trabalho.',
           'Reportar avarias no sistema de extração de imediato ao responsável.',
           'Usar proteção respiratória adicional em espaços confinados.',
@@ -430,11 +460,11 @@ export const CAMPOS_POR_TIPO = {
       ],
     },
     questionario: [
-      { pergunta: 'A ventilação geral do espaço é suficiente sozinha para proteger contra fumos de soldadura?', opcoes: ['Verdadeiro', 'Falso — precisa de extração localizada'], resposta_correta: 1 },
-      { pergunta: 'Qual destes é um sinal de exposição excessiva a fumos de soldadura?', opcoes: ['Sensação de fome', 'Tonturas e dores de cabeça', 'Sono profundo à noite', 'Nenhum sintoma existe'], resposta_correta: 1 },
-      { pergunta: 'Como te deves posicionar em relação ao fluxo de ar de extração?', opcoes: ['De forma a que o fumo vá para a tua zona respiratória', 'De forma a que o fluxo afaste o fumo da tua zona respiratória', 'Não importa a posição', 'De costas para a peça, sempre'], resposta_correta: 1 },
-      { pergunta: 'Deve confirmar-se que o sistema de extração está ligado antes de iniciar o trabalho?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
-      { pergunta: 'O que fazer se detetares uma avaria no sistema de extração?', opcoes: ['Ignorar e continuar a trabalhar', 'Reportar de imediato ao responsável', 'Desligar tudo e não dizer a ninguém', 'Tentar reparar sozinho sem formação'], resposta_correta: 1 },
+      { pergunta: 'A ventilação geral do espaço é suficiente sozinha para proteger contra fumos de soldadura?', opcoes: ['Verdadeiro', 'Falso — precisa de extração localizada'], resposta_correta: 1, imagem_url: IMG.oficina },
+      { pergunta: 'Qual destes é um sinal de exposição excessiva a fumos de soldadura?', opcoes: ['Sensação de fome', 'Tonturas e dores de cabeça', 'Sono profundo à noite', 'Nenhum sintoma existe'], resposta_correta: 1, imagem_url: IMG.primeirosSocorros },
+      { pergunta: 'Como te deves posicionar em relação ao fluxo de ar de extração?', opcoes: ['De forma a que o fumo vá para a tua zona respiratória', 'De forma a que o fluxo afaste o fumo da tua zona respiratória', 'Não importa a posição', 'De costas para a peça, sempre'], resposta_correta: 1, imagem_url: IMG.solda },
+      { pergunta: 'Deve confirmar-se que o sistema de extração está ligado antes de iniciar o trabalho?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0, imagem_url: IMG.oficina },
+      { pergunta: 'O que fazer se detetares uma avaria no sistema de extração?', opcoes: ['Ignorar e continuar a trabalhar', 'Reportar de imediato ao responsável', 'Desligar tudo e não dizer a ninguém', 'Tentar reparar sozinho sem formação'], resposta_correta: 1, imagem_url: IMG.epi },
     ],
   },
   'Trabalhos a Quente': {
@@ -448,22 +478,22 @@ export const CAMPOS_POR_TIPO = {
     conteudo_estruturado: {
       objetivo: 'Capacitar os colaboradores para a execução segura de trabalhos a quente (soldadura, corte, esmerilagem).',
       seccoes: [
-        { titulo: 'Introdução', paragrafos: ['Trabalhos a quente — soldadura, corte, esmerilagem — geram faíscas e calor que podem iniciar um incêndio, especialmente em locais com materiais inflamáveis próximos ou fora da vista imediata.'] },
-        { titulo: 'Permissão de Trabalho (Permit-to-Work)', lista: [
+        { titulo: 'Introdução', imagem_url: IMG.solda, paragrafos: ['Trabalhos a quente — soldadura, corte, esmerilagem — geram faíscas e calor que podem iniciar um incêndio, especialmente em locais com materiais inflamáveis próximos ou fora da vista imediata.'] },
+        { titulo: 'Permissão de Trabalho (Permit-to-Work)', imagem_url: IMG.oficina, lista: [
           'Obter autorização antes de iniciar, sempre que aplicável no local do cliente/estaleiro.',
           'Identificar os riscos específicos do local antes de começar.',
           'Comunicar ao responsável do cliente/estaleiro antes de iniciar o trabalho.',
         ]},
-        { titulo: 'Controlo de Fontes de Ignição', lista: [
+        { titulo: 'Controlo de Fontes de Ignição', imagem_url: IMG.extintor, lista: [
           'Afastar materiais inflamáveis para uma distância de segurança (mínimo 10 metros, ou conforme procedimento do cliente).',
           'Cobrir ou proteger superfícies e materiais próximos que não possam ser removidos.',
           'Confirmar a ausência de vapores ou gases inflamáveis na zona de trabalho.',
         ]},
-        { titulo: 'Meios de Extinção', lista: [
+        { titulo: 'Meios de Extinção', imagem_url: IMG.extintor, lista: [
           'Confirmar a localização e validade do extintor mais próximo antes de iniciar.',
           'Conhecer o tipo de extintor adequado ao risco específico do local.',
         ]},
-        { titulo: 'Vigilância Pós-Trabalho', lista: [
+        { titulo: 'Vigilância Pós-Trabalho', imagem_url: IMG.primeirosSocorros, lista: [
           'Manter vigilância do local depois de concluído o trabalho, durante um período mínimo (ex: 30 minutos).',
           'Um foco de incêndio pode surgir com atraso — nunca abandonar o local de imediato.',
         ]},
@@ -471,11 +501,11 @@ export const CAMPOS_POR_TIPO = {
       ],
     },
     questionario: [
-      { pergunta: 'O que é obrigatório obter antes de iniciar um trabalho a quente num estaleiro?', opcoes: ['Nada, é só começar', 'Uma permissão de trabalho (permit-to-work)', 'Só avisar um colega informalmente', 'Nada em particular'], resposta_correta: 1 },
-      { pergunta: 'Depois de terminar o trabalho a quente, deve-se:', opcoes: ['Ir embora imediatamente', 'Manter vigilância do local durante um período mínimo (ex: 30 min)', 'Deixar tudo ligado e sair', 'Ignorar o local'], resposta_correta: 1 },
-      { pergunta: 'O que fazer antes de iniciar, em relação a materiais inflamáveis próximos?', opcoes: ['Nada, não é preciso', 'Afastá-los ou protegê-los a uma distância de segurança', 'Aproximá-los para facilitar o trabalho', 'Cobri-los com papel'], resposta_correta: 1 },
-      { pergunta: 'É necessário confirmar a localização do extintor antes de iniciar um trabalho a quente?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
-      { pergunta: 'Um foco de incêndio pode surgir com atraso depois do trabalho terminar?', opcoes: ['Verdadeiro — por isso se mantém vigilância pós-trabalho', 'Falso — o risco desaparece assim que se para de soldar'], resposta_correta: 0 },
+      { pergunta: 'O que é obrigatório obter antes de iniciar um trabalho a quente num estaleiro?', opcoes: ['Nada, é só começar', 'Uma permissão de trabalho (permit-to-work)', 'Só avisar um colega informalmente', 'Nada em particular'], resposta_correta: 1, imagem_url: IMG.oficina },
+      { pergunta: 'Depois de terminar o trabalho a quente, deve-se:', opcoes: ['Ir embora imediatamente', 'Manter vigilância do local durante um período mínimo (ex: 30 min)', 'Deixar tudo ligado e sair', 'Ignorar o local'], resposta_correta: 1, imagem_url: IMG.extintor },
+      { pergunta: 'O que fazer antes de iniciar, em relação a materiais inflamáveis próximos?', opcoes: ['Nada, não é preciso', 'Afastá-los ou protegê-los a uma distância de segurança', 'Aproximá-los para facilitar o trabalho', 'Cobri-los com papel'], resposta_correta: 1, imagem_url: IMG.extintor },
+      { pergunta: 'É necessário confirmar a localização do extintor antes de iniciar um trabalho a quente?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0, imagem_url: IMG.extintor },
+      { pergunta: 'Um foco de incêndio pode surgir com atraso depois do trabalho terminar?', opcoes: ['Verdadeiro — por isso se mantém vigilância pós-trabalho', 'Falso — o risco desaparece assim que se para de soldar'], resposta_correta: 0, imagem_url: IMG.solda },
     ],
   },
   'Manuseamento de Gases Industriais': {
@@ -489,23 +519,23 @@ export const CAMPOS_POR_TIPO = {
     conteudo_estruturado: {
       objetivo: 'Capacitar os colaboradores no manuseamento seguro de garrafas e gases industriais utilizados na soldadura.',
       seccoes: [
-        { titulo: 'Introdução', paragrafos: ['Gases como oxigénio, acetileno e árgon são essenciais ao trabalho de soldadura, mas perigosos se mal manuseados — risco de explosão, asfixia e queimaduras.'] },
-        { titulo: 'Identificação de Garrafas', lista: [
+        { titulo: 'Introdução', imagem_url: IMG.gasCilindros, paragrafos: ['Gases como oxigénio, acetileno e árgon são essenciais ao trabalho de soldadura, mas perigosos se mal manuseados — risco de explosão, asfixia e queimaduras.'] },
+        { titulo: 'Identificação de Garrafas', imagem_url: IMG.gasCilindros, lista: [
           'Cada gás tem uma cor/código de identificação próprio.',
           'Nunca remover ou trocar etiquetas de identificação.',
           'Confirmar sempre o gás antes de ligar ao equipamento.',
         ]},
-        { titulo: 'Transporte e Armazenamento', lista: [
+        { titulo: 'Transporte e Armazenamento', imagem_url: IMG.gasArmazenamento, lista: [
           'Transportar sempre na vertical e presas/fixas — nunca arrastar ou fazer rolar.',
           'Armazenar em local ventilado, afastado de fontes de calor.',
           'Separar gases incompatíveis (ex: oxigénio afastado de gases combustíveis).',
         ]},
-        { titulo: 'Deteção de Fugas', lista: [
+        { titulo: 'Deteção de Fugas', imagem_url: IMG.gasCilindros, lista: [
           'Usar água com sabão para detetar fugas — nunca uma chama.',
           'Sinais de fuga: cheiro característico, som sibilante, formação de gelo na válvula.',
           'Fechar a válvula principal de imediato se detetar uma fuga.',
         ]},
-        { titulo: 'Procedimento em Emergência', lista: [
+        { titulo: 'Procedimento em Emergência', imagem_url: IMG.primeirosSocorros, lista: [
           'Afastar-te e isolar a área.',
           'Nunca tentar reparar uma fuga sozinho.',
           'Acionar o responsável/emergência de imediato.',
@@ -514,11 +544,11 @@ export const CAMPOS_POR_TIPO = {
       ],
     },
     questionario: [
-      { pergunta: 'Como se deve transportar uma garrafa de gás?', opcoes: ['Rolando pelo chão', 'Na vertical e presa/fixa', 'Deitada e solta no camião', 'Não importa como'], resposta_correta: 1 },
-      { pergunta: 'Como se deteta uma fuga de gás numa garrafa?', opcoes: ['Aproximando uma chama', 'Com água e sabão, procurando bolhas', 'Cheirando muito perto e com força', 'Não é possível detetar'], resposta_correta: 1 },
-      { pergunta: 'Onde devem ser armazenadas as garrafas de oxigénio?', opcoes: ['Junto de garrafas de gases combustíveis', 'Em local ventilado, afastadas de fontes de calor e de gases incompatíveis', 'Dentro do escritório', 'Não importa onde'], resposta_correta: 1 },
-      { pergunta: 'Nunca se deve remover ou trocar as etiquetas de identificação das garrafas?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0 },
-      { pergunta: 'Se detetares uma fuga, o que deves fazer primeiro?', opcoes: ['Tentar reparar sozinho', 'Afastar-te, isolar a área e acionar o responsável', 'Continuar a trabalhar normalmente', 'Ignorar se for pequena'], resposta_correta: 1 },
+      { pergunta: 'Como se deve transportar uma garrafa de gás?', opcoes: ['Rolando pelo chão', 'Na vertical e presa/fixa', 'Deitada e solta no camião', 'Não importa como'], resposta_correta: 1, imagem_url: IMG.gasArmazenamento },
+      { pergunta: 'Como se deteta uma fuga de gás numa garrafa?', opcoes: ['Aproximando uma chama', 'Com água e sabão, procurando bolhas', 'Cheirando muito perto e com força', 'Não é possível detetar'], resposta_correta: 1, imagem_url: IMG.gasCilindros },
+      { pergunta: 'Onde devem ser armazenadas as garrafas de oxigénio?', opcoes: ['Junto de garrafas de gases combustíveis', 'Em local ventilado, afastadas de fontes de calor e de gases incompatíveis', 'Dentro do escritório', 'Não importa onde'], resposta_correta: 1, imagem_url: IMG.gasArmazenamento },
+      { pergunta: 'Nunca se deve remover ou trocar as etiquetas de identificação das garrafas?', opcoes: ['Verdadeiro', 'Falso'], resposta_correta: 0, imagem_url: IMG.gasCilindros },
+      { pergunta: 'Se detetares uma fuga, o que deves fazer primeiro?', opcoes: ['Tentar reparar sozinho', 'Afastar-te, isolar a área e acionar o responsável', 'Continuar a trabalhar normalmente', 'Ignorar se for pequena'], resposta_correta: 1, imagem_url: IMG.primeirosSocorros },
     ],
   },
 
