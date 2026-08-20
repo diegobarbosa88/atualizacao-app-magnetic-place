@@ -290,6 +290,9 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
                 PERGUNTA {qi + 1} / {participacao.questionario.length}
               </p>
               <p className="text-[15px] font-semibold my-1 leading-snug" style={{ color: FT.navyDeep }}>{q.pergunta}</p>
+              {q.imagem_url && (
+                <img src={q.imagem_url} alt="" className="w-full max-h-[180px] object-cover rounded-[10px] mb-2.5" style={{ border: `1px solid ${FT.border}` }} />
+              )}
               {q.opcoes.map((op, oi) => {
                 const selecionada = respostas[qi] === oi;
                 return (

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, Save, Check, Plus, Trash2, FileText } from 'lucide-react';
+import { Loader2, Save, Check, Plus, Trash2, FileText, Image as ImageIcon } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { createFormacao } from './formacaoApi';
 import {
@@ -19,7 +19,7 @@ const INICIAL = {
   formato: 'presencial', conteudo_url: '', nota_minima_aprovacao: '70',
 };
 
-const PERGUNTA_INICIAL = () => ({ pergunta: '', opcoes: ['', ''], resposta_correta: 0 });
+const PERGUNTA_INICIAL = () => ({ pergunta: '', opcoes: ['', ''], resposta_correta: 0, imagem_url: '' });
 
 export default function NovaAcaoForm({ onCriada }) {
   const { supabase } = useApp();
@@ -79,7 +79,7 @@ export default function NovaAcaoForm({ onCriada }) {
     }));
     setConteudoEstruturado(template?.conteudo_estruturado || null);
     if (Array.isArray(template?.questionario) && template.questionario.length > 0) {
-      setQuestionario(template.questionario.map(q => ({ pergunta: q.pergunta, opcoes: [...q.opcoes], resposta_correta: q.resposta_correta })));
+      setQuestionario(template.questionario.map(q => ({ pergunta: q.pergunta, opcoes: [...q.opcoes], resposta_correta: q.resposta_correta, imagem_url: q.imagem_url || '' })));
     } else {
       setQuestionario([PERGUNTA_INICIAL()]);
     }
@@ -116,6 +116,7 @@ export default function NovaAcaoForm({ onCriada }) {
     i === idx ? { ...q, opcoes: q.opcoes.map((o, j) => j === oIdx ? valor : o) } : q
   )));
   const setRespostaCorreta = (idx, oIdx) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, resposta_correta: oIdx } : q));
+  const setImagemUrl = (idx, imagem_url) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, imagem_url } : q));
 
   const submit = async (e) => {
     e.preventDefault();
@@ -336,6 +337,21 @@ export default function NovaAcaoForm({ onCriada }) {
                         <Trash2 size={14} />
                       </button>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {q.imagem_url ? (
+                      <img src={q.imagem_url} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 text-slate-300">
+                        <ImageIcon size={14} />
+                      </div>
+                    )}
+                    <input
+                      className={`${CAMPO} flex-1 py-1.5`}
+                      value={q.imagem_url}
+                      onChange={e => setImagemUrl(idx, e.target.value)}
+                      placeholder="Link da ilustração desta pergunta (opcional)"
+                    />
                   </div>
                   <div className="space-y-1.5 pl-2">
                     {q.opcoes.map((op, oIdx) => (

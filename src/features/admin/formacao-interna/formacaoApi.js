@@ -13,12 +13,13 @@ async function json(res) {
   return body;
 }
 
-export function listFormacoes({ workerId, ano, categoria, estado } = {}) {
+export function listFormacoes({ workerId, ano, categoria, estado, formato } = {}) {
   const params = new URLSearchParams();
   if (workerId) params.set('worker_id', workerId);
   if (ano) params.set('ano', ano);
   if (categoria) params.set('categoria', categoria);
   if (estado) params.set('estado', estado);
+  if (formato) params.set('formato', formato);
   const qs = params.toString();
   return authFetch(`/api/formacao/list${qs ? `?${qs}` : ''}`).then(json);
 }

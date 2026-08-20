@@ -3,8 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
 // Smoke test pós-reescrita de NovaAcaoForm/ListaAcoesTab e criação de
-// CertificacoesValidadeTab — confirma que as 4 tabs montam sem exceções
-// (imports partidos, componentes em falta), sem precisar de login real.
+// CertificacoesValidadeTab/ElearningAcoesTab — confirma que as 5 tabs
+// montam sem exceções (imports partidos, componentes em falta), sem
+// precisar de login real.
 
 vi.mock('../../src/context/AppContext.jsx', () => {
   const workersChain = {
@@ -42,11 +43,14 @@ vi.mock('../../src/utils/authFetch.js', () => ({
 import FormacaoInternaAdmin from '../../src/features/admin/formacao-interna/FormacaoInternaAdmin.jsx';
 
 describe('FormacaoInternaAdmin — smoke', () => {
-  it('monta as 4 tabs sem lançar exceções', async () => {
+  it('monta as 5 tabs sem lançar exceções', async () => {
     render(<FormacaoInternaAdmin />);
 
-    // Tab inicial: Ações Registadas
-    await screen.findByText('Nenhuma ação de formação registada.');
+    // Tab inicial: Ações Presenciais
+    await screen.findByText('Nenhuma ação presencial registada.');
+
+    fireEvent.click(screen.getByText('E-learning'));
+    await screen.findByText('Nenhuma ação e-learning registada.');
 
     fireEvent.click(screen.getByText('Nova Ação'));
     expect(await screen.findByText('Tipo de Formação')).toBeInTheDocument();

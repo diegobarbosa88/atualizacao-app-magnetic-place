@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, MapPin, Building2, BookOpen } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, MapPin, Building2 } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { listFormacoes } from './formacaoApi';
 import { exportFormacaoPDF } from './formacaoExport';
@@ -14,23 +14,10 @@ const ESTADO_CFG = {
   expirado:   { label: 'Expirado',  bg: 'bg-rose-50',    text: 'text-rose-600' },
 };
 
-const ESTADO_CONCLUSAO_CFG = {
-  nao_iniciado: { label: 'Não Iniciado', bg: 'bg-slate-100',  text: 'text-slate-400' },
-  em_progresso: { label: 'Em Progresso', bg: 'bg-amber-50',   text: 'text-amber-600' },
-  concluido:    { label: 'Concluído',    bg: 'bg-emerald-50', text: 'text-emerald-600' },
-  reprovado:    { label: 'Reprovado',    bg: 'bg-rose-50',    text: 'text-rose-600' },
-};
-
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]));
 
-function formatDuracao(iniciadoEm, concluidoEm) {
-  if (!iniciadoEm || !concluidoEm) return null;
-  const minutos = Math.round((new Date(concluidoEm) - new Date(iniciadoEm)) / 60000);
-  if (minutos < 1) return '<1 min';
-  if (minutos < 60) return `${minutos} min`;
-  return `${Math.floor(minutos / 60)}h ${minutos % 60}min`;
-}
-
+// Só ações presenciais — o e-learning tem a sua própria tab (ver
+// ElearningAcoesTab.jsx), com os campos e filtros próprios do formato.
 export default function ListaAcoesTab({ refreshKey }) {
   const { supabase } = useApp();
   const [formacoes, setFormacoes] = useState([]);
@@ -57,6 +44,7 @@ export default function ListaAcoesTab({ refreshKey }) {
         ano: anoFilter || undefined,
         categoria: categoriaFilter || undefined,
         estado: estadoFilter || undefined,
+        formato: 'presencial',
       });
       setFormacoes(formacoes || []);
     } catch (e) {
@@ -112,7 +100,7 @@ export default function ListaAcoesTab({ refreshKey }) {
           <Loader2 className="animate-spin" size={24} />
         </div>
       ) : formacoes.length === 0 ? (
-        <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhuma ação de formação registada.</p>
+        <p className="text-center py-10 text-slate-400 text-xs font-bold">Nenhuma ação presencial registada.</p>
       ) : (
         <div className="space-y-3">
           {formacoes.map(f => {
@@ -133,11 +121,6 @@ export default function ListaAcoesTab({ refreshKey }) {
                       {f.exige_entidade_externa && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
                           <Building2 size={10} /> {f.entidade_externa || 'Entidade Externa'}
-                        </span>
-                      )}
-                      {f.formato === 'e-learning' && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-indigo-50 text-indigo-600">
-                          <BookOpen size={10} /> E-learning
                         </span>
                       )}
                     </div>
@@ -174,54 +157,35 @@ export default function ListaAcoesTab({ refreshKey }) {
                     <div className="space-y-2">
                       {participantes.map(p => {
                         const estCfg = ESTADO_CFG[p.estado];
-                        const conclusaoCfg = ESTADO_CONCLUSAO_CFG[p.estado_conclusao];
-                        const duracao = formatDuracao(p.iniciado_em, p.concluido_em);
                         return (
-                          <div key={p.id} className="p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 min-w-0">
-                                {p.assinatura_signed_url ? (
-                                  <img src={p.assinatura_signed_url} alt="Assinatura" className="h-8 w-16 object-contain bg-white rounded-lg border border-slate-100" />
-                                ) : null}
-                                <div className="min-w-0">
-                                  <p className="text-xs font-bold text-slate-700 truncate">{p.workers?.name || p.worker_id}</p>
-                                  {p.data_validade && (
-                                    <p className="text-[9px] font-bold text-slate-400">Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
-                                  )}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {estCfg && (
-                                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${estCfg.bg} ${estCfg.text}`}>
-                                    {estCfg.label}
-                                  </span>
-                                )}
-                                {p.assinado_em ? (
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                                    Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
-                                  </span>
-                                ) : (
-                                  <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
-                                    Por assinar (worker)
-                                  </span>
+                          <div key={p.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 border border-slate-100">
+                            <div className="flex items-center gap-2 min-w-0">
+                              {p.assinatura_signed_url ? (
+                                <img src={p.assinatura_signed_url} alt="Assinatura" className="h-8 w-16 object-contain bg-white rounded-lg border border-slate-100" />
+                              ) : null}
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-slate-700 truncate">{p.workers?.name || p.worker_id}</p>
+                                {p.data_validade && (
+                                  <p className="text-[9px] font-bold text-slate-400">Válido até {new Date(p.data_validade).toLocaleDateString('pt-PT')}</p>
                                 )}
                               </div>
                             </div>
-                            {f.formato === 'e-learning' && (
-                              <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100">
-                                {conclusaoCfg && (
-                                  <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${conclusaoCfg.bg} ${conclusaoCfg.text}`}>
-                                    {conclusaoCfg.label}
-                                  </span>
-                                )}
-                                {p.nota_obtida != null && (
-                                  <span className="text-[9px] font-bold text-slate-500">Nota: {p.nota_obtida}%</span>
-                                )}
-                                {duracao && (
-                                  <span className="text-[9px] font-bold text-slate-400">Tempo de conclusão: {duracao}</span>
-                                )}
-                              </div>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                              {estCfg && (
+                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${estCfg.bg} ${estCfg.text}`}>
+                                  {estCfg.label}
+                                </span>
+                              )}
+                              {p.assinado_em ? (
+                                <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                  Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                                  Por assinar (worker)
+                                </span>
+                              )}
+                            </div>
                           </div>
                         );
                       })}

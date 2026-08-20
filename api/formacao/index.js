@@ -42,7 +42,7 @@ async function handleList(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   if (!requireAuth(req, res, ['admin'])) return;
 
-  const { worker_id, ano, categoria, estado } = req.query;
+  const { worker_id, ano, categoria, estado, formato } = req.query;
   const supabase = getSupabase();
 
   let query = supabase
@@ -55,6 +55,9 @@ async function handleList(req, res) {
   }
   if (categoria) {
     query = query.eq('categoria', categoria);
+  }
+  if (formato) {
+    query = query.eq('formato', formato);
   }
 
   const { data, error } = await query;
@@ -297,7 +300,7 @@ async function handleMinhas(req, res) {
     conteudo_estruturado: p.formacoes_internas?.conteudo_estruturado || null,
     nota_minima_aprovacao: p.formacoes_internas?.nota_minima_aprovacao ?? null,
     questionario: Array.isArray(p.formacoes_internas?.questionario)
-      ? p.formacoes_internas.questionario.map(q => ({ pergunta: q.pergunta, opcoes: q.opcoes }))
+      ? p.formacoes_internas.questionario.map(q => ({ pergunta: q.pergunta, opcoes: q.opcoes, imagem_url: q.imagem_url || null }))
       : null,
     iniciado_em: p.iniciado_em,
     concluido_em: p.concluido_em,
