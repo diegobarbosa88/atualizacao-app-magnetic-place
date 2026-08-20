@@ -43,7 +43,7 @@ function calcularHorasMinimas(worker, ano) {
 }
 
 export default function RegistoIndividualTab() {
-  const { supabase } = useApp();
+  const { supabase, companySignature } = useApp();
   const [workers, setWorkers] = useState([]);
   const [workerId, setWorkerId] = useState('');
   const [ano, setAno] = useState(String(ANO_ATUAL));
@@ -102,7 +102,7 @@ export default function RegistoIndividualTab() {
     if (!worker || !resumo) return;
     setExportando(true);
     try {
-      await exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo);
+      await exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo, companySignature);
     } catch (e) {
       setError(e.message);
     }
@@ -113,7 +113,7 @@ export default function RegistoIndividualTab() {
     setEmitindoCertId(participacao.id);
     setError('');
     try {
-      await exportCertificadoPDF(formacao, participacao);
+      await exportCertificadoPDF(formacao, participacao, companySignature);
     } catch (e) {
       setError(e.message);
     }

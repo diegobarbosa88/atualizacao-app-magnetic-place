@@ -24,7 +24,7 @@ const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]))
 // Só ações presenciais — o e-learning tem a sua própria tab (ver
 // ElearningAcoesTab.jsx), com os campos e filtros próprios do formato.
 export default function ListaAcoesTab({ refreshKey }) {
-  const { supabase } = useApp();
+  const { supabase, companySignature } = useApp();
   const [formacoes, setFormacoes] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,7 +41,7 @@ export default function ListaAcoesTab({ refreshKey }) {
     setEmitindoCertId(participante.id);
     setError('');
     try {
-      await exportCertificadoPDF(formacao, participante);
+      await exportCertificadoPDF(formacao, participante, companySignature);
     } catch (e) {
       setError(e.message);
     }

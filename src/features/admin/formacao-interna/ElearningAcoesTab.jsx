@@ -43,7 +43,7 @@ function formatDuracao(iniciadoEm, concluidoEm) {
 // ilustrações de cada pergunta, e permite atribuir a ação a mais
 // trabalhadores depois de já criada (não só no momento da criação).
 export default function ElearningAcoesTab({ refreshKey }) {
-  const { supabase } = useApp();
+  const { supabase, companySignature } = useApp();
   const [formacoes, setFormacoes] = useState([]);
   const [workers, setWorkers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ export default function ElearningAcoesTab({ refreshKey }) {
     setEmitindoCertId(participante.id);
     setError('');
     try {
-      await exportCertificadoPDF(formacao, participante);
+      await exportCertificadoPDF(formacao, participante, companySignature);
     } catch (e) {
       setError(e.message);
     }

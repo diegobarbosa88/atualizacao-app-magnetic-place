@@ -78,23 +78,37 @@ async function getCarimboBase64() {
   return imagemParaBase64('/carimbo-magnetic-place.png');
 }
 
-// Desenha o lado "institucional" da assinatura — carimbo (se existir),
-// nome da empresa, data/hora de emissão e um código de verificação do
-// próprio documento — no mesmo formato usado para a assinatura do
-// trabalhador, para as duas partes terem o mesmo nível de credibilidade.
-function desenharBlocoEmpresa(doc, x, y, { carimboBase64, codigo, largura = 76 }) {
+// Desenha o lado "institucional" da assinatura — carimbo da empresa com a
+// assinatura pessoal do responsável (a mesma configurada em
+// Definições → Assinatura da Empresa) por cima, nome/cargo, data/hora de
+// emissão e um código de verificação do próprio documento — no mesmo
+// formato usado para a assinatura do trabalhador, para as duas partes
+// terem o mesmo nível de credibilidade.
+function desenharBlocoEmpresa(doc, x, y, { carimboBase64, assinaturaBase64, nomeResponsavel, cargoResponsavel, codigo, largura = 76 }) {
   if (carimboBase64) {
     try { doc.addImage(carimboBase64, 'PNG', x, y, 32, 18, undefined, 'FAST'); } catch { /* segue sem carimbo */ }
   }
+  // Assinatura pessoal do responsável por cima do carimbo, ligeiramente
+  // desviada — como uma rubrica feita mesmo em cima do carimbo em papel.
+  if (assinaturaBase64) {
+    try { doc.addImage(assinaturaBase64, 'PNG', x + 6, y + 5, 30, 13, undefined, 'FAST'); } catch { /* segue sem assinatura */ }
+  }
+
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...NAVY_DEEP);
-  doc.text('Magnetic Place Unipessoal, Lda', x, y + 22);
+  doc.text(nomeResponsavel || 'Magnetic Place Unipessoal, Lda', x, y + 22);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.5);
   doc.setTextColor(...SLATE);
-  doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 26);
-  doc.text(`Código de verificação: ${codigo}`, x, y + 29, { maxWidth: largura });
+  if (nomeResponsavel && cargoResponsavel) {
+    doc.text(cargoResponsavel, x, y + 25.5);
+    doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 29);
+    doc.text(`Código de verificação: ${codigo}`, x, y + 32, { maxWidth: largura });
+  } else {
+    doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 26);
+    doc.text(`Código de verificação: ${codigo}`, x, y + 29, { maxWidth: largura });
+  }
   doc.setTextColor(0, 0, 0);
 }
 
@@ -274,7 +288,9 @@ export async function exportFormacaoPDF(formacao) {
 
 // Registo individual — um trabalhador, todas as formações internas de um
 // ano, para comprovar o cumprimento do art. 131.º CT perante clientes.
-export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo) {
+// `companySignature` (opcional) vem de Definições → Assinatura da Empresa
+// ({ responsibleName, responsibleRole, signatureDataUrl }).
+export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo, companySignature) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const logoBase64 = await getLogoBase64();
   const carimboBase64 = await getCarimboBase64();
@@ -396,9 +412,14 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
   doc.setTextColor(0, 0, 0);
   y += 8;
 
-  if (y > 255) { doc.addPage(); y = 20; }
+  if (y > 250) { doc.addPage(); y = 20; }
   desenharBlocoEmpresa(doc, 120, y, {
     carimboBase64,
+    // já vem como data URL de Definições → Assinatura da Empresa, não uma
+    // URL remota — nada a ir buscar, é embutir diretamente.
+    assinaturaBase64: companySignature?.signatureDataUrl || null,
+    nomeResponsavel: companySignature?.responsibleName,
+    cargoResponsavel: companySignature?.responsibleRole,
     codigo: hashCurto(`${worker.id}-${ano}-registo`),
   });
 
@@ -409,7 +430,9 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
 // Certificado individual de conclusão — um por formação já assinada pelo
 // trabalhador, em formato de diploma (paisagem, moldura decorativa), pronto
 // a entregar ao trabalhador ou a um cliente como comprovativo autónomo.
-export async function exportCertificadoPDF(formacao, participante) {
+// `companySignature` (opcional) vem de Definições → Assinatura da Empresa
+// ({ responsibleName, responsibleRole, signatureDataUrl }).
+export async function exportCertificadoPDF(formacao, participante, companySignature) {
   if (!participante?.assinado_em) {
     throw new Error('Só é possível emitir certificado para uma formação já assinada pelo trabalhador.');
   }
@@ -538,16 +561,14 @@ export async function exportCertificadoPDF(formacao, participante) {
 
   doc.setDrawColor(...SLATE);
   doc.line(W / 2 + 20, yAss + 16, W / 2 + 85, yAss + 16);
-  if (carimboBase64) {
-    try { doc.addImage(carimboBase64, 'PNG', W / 2 + 22, yAss - 2, 32, 18, undefined, 'FAST'); } catch { /* segue sem carimbo */ }
-  }
-  doc.setFontSize(8.5);
-  doc.setTextColor(...NAVY_DEEP);
-  doc.text('Magnetic Place Unipessoal, Lda', W / 2 + 20, yAss + 20);
-  doc.setFontSize(6.5);
-  doc.setTextColor(...SLATE);
-  doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, W / 2 + 20, yAss + 24);
-  doc.text(`Código de verificação: ${numeroCertificado}`, W / 2 + 20, yAss + 27.5);
+  desenharBlocoEmpresa(doc, W / 2 + 22, yAss - 2, {
+    carimboBase64,
+    assinaturaBase64: companySignature?.signatureDataUrl || null,
+    nomeResponsavel: companySignature?.responsibleName,
+    cargoResponsavel: companySignature?.responsibleRole,
+    codigo: numeroCertificado,
+    largura: 63,
+  });
 
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(7.5);
@@ -555,6 +576,139 @@ export async function exportCertificadoPDF(formacao, participante) {
   doc.text('Documento gerado automaticamente pelo sistema de gestão de formação interna da Magnetic Place.', W / 2, H - 15, { align: 'center' });
   doc.setTextColor(0, 0, 0);
 
+  // Verso — cronograma/conteúdo programático da formação, para o certificado
+  // não ficar só com a frente decorativa: dá para conferir o que foi mesmo
+  // dado, sessão a sessão, sem precisar de consultar o sistema.
+  doc.addPage('a4', 'landscape');
+  desenharVersoCronograma(doc, formacao, logoBase64);
+
   const nomeArquivo = `certificado-${(participante.workers?.name || 'trabalhador').replace(/\s+/g, '_')}-${(formacao.tipo_formacao || formacao.titulo || 'formacao').replace(/\s+/g, '_')}.pdf`;
   doc.save(nomeArquivo);
+}
+
+// Verso do certificado — cronograma/conteúdo programático da formação.
+// Presencial usa o texto livre de conteudo_programatico; e-learning usa as
+// secções estruturadas (conteudo_estruturado.seccoes), com o objetivo geral
+// no topo, exatamente o que o trabalhador percorreu no módulo.
+function desenharVersoCronograma(doc, formacao, logoBase64) {
+  const W = 297, H = 210;
+
+  // Cabeçalho e rodapé próprios (paisagem) — cabecalho()/rodape() partilhados
+  // assumem sempre A4 retrato (210×297), não servem para esta página.
+  doc.setFillColor(...NAVY);
+  doc.rect(0, 0, W, 26, 'F');
+  doc.setFillColor(...ORANGE);
+  doc.rect(0, 26, W, 1.3, 'F');
+  if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 3, 19, 19);
+  const textX = logoBase64 ? 38 : 14;
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.text('MAGNETIC PLACE', textX, 12);
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'normal');
+  doc.text('CRONOGRAMA DA FORMAÇÃO — Verso do Certificado', textX, 18);
+  doc.setTextColor(0, 0, 0);
+
+  let y = 35;
+  doc.setFontSize(13);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text(formacao.tipo_formacao || formacao.titulo, 14, y);
+  doc.setTextColor(0, 0, 0);
+  y += 3;
+  doc.setDrawColor(...ORANGE);
+  doc.setLineWidth(0.6);
+  doc.line(14, y, W - 14, y);
+  y += 6;
+
+  const isElearning = formacao.formato === 'e-learning';
+  autoTable(doc, {
+    startY: y,
+    theme: 'plain',
+    styles: { fontSize: 9, cellPadding: 1.6 },
+    columnStyles: { 0: { fontStyle: 'bold', textColor: NAVY, cellWidth: 40 } },
+    alternateRowStyles: { fillColor: ROW_TINT },
+    tableWidth: W - 28,
+    body: [
+      ['Categoria', CATEGORIA_LABEL[formacao.categoria] || formacao.categoria || '—'],
+      ['Formato', isElearning ? 'E-learning' : 'Presencial'],
+      ['Duração', `${formacao.duracao_horas}h`],
+      ['Data', `${fmtData(formacao.data_inicio)}${formacao.data_fim && formacao.data_fim !== formacao.data_inicio ? ` a ${fmtData(formacao.data_fim)}` : ''}`],
+      ...(formacao.local ? [['Local', formacao.local]] : []),
+      ...(formacao.formador?.name ? [['Formador', formacao.formador.name]] : []),
+      ...(formacao.entidade_externa ? [['Entidade Externa', formacao.entidade_externa]] : []),
+      ...(formacao.metodo_avaliacao ? [['Método de Avaliação', formacao.metodo_avaliacao]] : []),
+    ],
+  });
+  y = doc.lastAutoTable.finalY + 8;
+
+  const objetivo = formacao.objetivos || formacao.conteudo_estruturado?.objetivo;
+  if (objetivo) {
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...NAVY_DEEP);
+    doc.text('OBJETIVO', 14, y);
+    doc.setTextColor(0, 0, 0);
+    y += 5;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const linhasObjetivo = doc.splitTextToSize(objetivo, W - 28);
+    doc.text(linhasObjetivo, 14, y);
+    y += linhasObjetivo.length * 4.2 + 6;
+  }
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text('CRONOGRAMA / CONTEÚDO PROGRAMÁTICO', 14, y);
+  doc.setTextColor(0, 0, 0);
+  y += 6;
+
+  const seccoes = formacao.conteudo_estruturado?.seccoes;
+  if (Array.isArray(seccoes) && seccoes.length > 0) {
+    for (const sec of seccoes) {
+      if (y > 185) { doc.addPage('a4', 'landscape'); y = 20; }
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...ORANGE_DEEP);
+      doc.text(`• ${sec.titulo}`, 14, y);
+      doc.setTextColor(0, 0, 0);
+      y += 4.5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8.5);
+      const texto = [...(sec.paragrafos || []), ...(sec.lista || []).map(li => `– ${li}`)].join('  ');
+      if (texto) {
+        const linhas = doc.splitTextToSize(texto, W - 32);
+        doc.text(linhas, 18, y);
+        y += linhas.length * 4 + 4;
+      } else {
+        y += 2;
+      }
+    }
+  } else if (formacao.conteudo_programatico) {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const linhas = doc.splitTextToSize(formacao.conteudo_programatico, W - 28);
+    doc.text(linhas, 14, y);
+    y += linhas.length * 4.2;
+  } else {
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...SLATE);
+    doc.text('Sem conteúdo programático registado.', 14, y);
+    doc.setTextColor(0, 0, 0);
+  }
+
+  // Rodapé próprio (paisagem) em todas as páginas do verso — rodape()
+  // partilhado assume A4 retrato, não serve aqui.
+  const totalPaginas = doc.internal.getNumberOfPages();
+  for (let i = 2; i <= totalPaginas; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(...SLATE);
+    doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', 14, H - 8);
+    doc.text(`Página ${i}/${totalPaginas}`, W - 14, H - 8, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
 }
