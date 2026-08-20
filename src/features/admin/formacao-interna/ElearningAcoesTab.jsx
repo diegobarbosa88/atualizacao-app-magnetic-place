@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon, UserPlus, Check } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
-import { listFormacoes } from './formacaoApi';
+import { listFormacoes, atribuirParticipantes } from './formacaoApi';
 import { exportFormacaoPDF } from './formacaoExport';
-import { CATEGORIAS } from './formacaoTemplates';
+import { CATEGORIAS, CATEGORIAS_EXIGEM_VALIDADE, VALIDADE_PADRAO_MESES } from './formacaoTemplates';
+import ModalShell from '../../../components/common/ModalShell';
 
 const ANO_ATUAL = new Date().getFullYear();
 const ANOS = Array.from({ length: 5 }, (_, i) => ANO_ATUAL - i);
@@ -26,8 +27,9 @@ function formatDuracao(iniciadoEm, concluidoEm) {
 }
 
 // Ações e-learning, separadas das presenciais (ver ListaAcoesTab.jsx) —
-// mostra progresso/nota por participante e uma pré-visualização do
-// questionário com as ilustrações associadas a cada pergunta.
+// mostra progresso/nota por participante, preview do questionário com as
+// ilustrações de cada pergunta, e permite atribuir a ação a mais
+// trabalhadores depois de já criada (não só no momento da criação).
 export default function ElearningAcoesTab({ refreshKey }) {
   const { supabase } = useApp();
   const [formacoes, setFormacoes] = useState([]);
@@ -38,6 +40,11 @@ export default function ElearningAcoesTab({ refreshKey }) {
   const [anoFilter, setAnoFilter] = useState(String(ANO_ATUAL));
   const [categoriaFilter, setCategoriaFilter] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+
+  const [atribuirAlvo, setAtribuirAlvo] = useState(null);
+  const [selecionados, setSelecionados] = useState({});
+  const [atribuirBusy, setAtribuirBusy] = useState(false);
+  const [atribuirErro, setAtribuirErro] = useState('');
 
   useEffect(() => {
     if (!supabase) return;
@@ -62,6 +69,54 @@ export default function ElearningAcoesTab({ refreshKey }) {
   };
 
   useEffect(() => { fetchFormacoes(); }, [workerFilter, anoFilter, categoriaFilter, refreshKey]);
+
+  const abrirAtribuir = (f) => {
+    setAtribuirErro('');
+    setSelecionados({});
+    setAtribuirAlvo(f);
+  };
+
+  const toggleSelecionado = (id) => {
+    setSelecionados(prev => {
+      if (prev[id]) {
+        const { [id]: _omit, ...resto } = prev;
+        return resto;
+      }
+      return { ...prev, [id]: { data_validade: '' } };
+    });
+  };
+
+  const setValidadeSelecionado = (id, data_validade) => {
+    setSelecionados(prev => ({ ...prev, [id]: { ...prev[id], data_validade } }));
+  };
+
+  const exigeValidadeAlvo = atribuirAlvo && CATEGORIAS_EXIGEM_VALIDADE.includes(atribuirAlvo.categoria);
+  const validadeMesesAlvo = atribuirAlvo && VALIDADE_PADRAO_MESES[atribuirAlvo.categoria];
+  const idsSelecionados = Object.keys(selecionados);
+
+  const submeterAtribuicao = async () => {
+    setAtribuirErro('');
+    if (idsSelecionados.length === 0) {
+      setAtribuirErro('Seleciona pelo menos um trabalhador.');
+      return;
+    }
+    setAtribuirBusy(true);
+    try {
+      await atribuirParticipantes(
+        atribuirAlvo.id,
+        idsSelecionados.map(id => ({ worker_id: id, data_validade: selecionados[id].data_validade || null }))
+      );
+      setAtribuirAlvo(null);
+      await fetchFormacoes();
+    } catch (e) {
+      setAtribuirErro(e.message);
+    }
+    setAtribuirBusy(false);
+  };
+
+  const workersDisponiveis = atribuirAlvo
+    ? workers.filter(w => !(atribuirAlvo.formacao_participantes || []).some(p => p.worker_id === w.id))
+    : [];
 
   return (
     <div>
@@ -122,6 +177,13 @@ export default function ElearningAcoesTab({ refreshKey }) {
                       <span>Nota mínima {f.nota_minima_aprovacao}%</span>
                     </div>
                   </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); abrirAtribuir(f); }}
+                    className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
+                    title="Atribuir Trabalhadores"
+                  >
+                    <UserPlus size={16} />
+                  </button>
                   <button
                     onClick={(e) => { e.stopPropagation(); exportFormacaoPDF(f); }}
                     className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all"
@@ -203,6 +265,67 @@ export default function ElearningAcoesTab({ refreshKey }) {
           })}
         </div>
       )}
+
+      <ModalShell
+        isOpen={!!atribuirAlvo}
+        onClose={() => !atribuirBusy && setAtribuirAlvo(null)}
+        title="Atribuir Trabalhadores"
+        subtitle={atribuirAlvo?.tipo_formacao}
+        icon={<UserPlus size={16} />}
+        accent="indigo"
+        size="md"
+        footer={
+          <div className="p-4 border-t border-slate-100">
+            {atribuirErro && <p className="mb-3 text-xs font-bold text-rose-600">{atribuirErro}</p>}
+            <button
+              onClick={submeterAtribuicao}
+              disabled={atribuirBusy || idsSelecionados.length === 0}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50"
+            >
+              {atribuirBusy ? <Loader2 size={14} className="animate-spin" /> : <UserPlus size={14} />}
+              Atribuir {idsSelecionados.length > 0 ? `(${idsSelecionados.length})` : ''}
+            </button>
+          </div>
+        }
+      >
+        <div className="p-4">
+          {workersDisponiveis.length === 0 ? (
+            <p className="text-center py-6 text-slate-400 text-xs font-bold">Todos os trabalhadores já são participantes desta ação.</p>
+          ) : (
+            <div className="border border-slate-100 rounded-2xl divide-y divide-slate-50">
+              {workersDisponiveis.map(w => {
+                const sel = selecionados[w.id];
+                return (
+                  <div key={w.id} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-slate-50 transition-all">
+                    <button
+                      type="button"
+                      onClick={() => toggleSelecionado(w.id)}
+                      className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                    >
+                      <span className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ${sel ? 'bg-indigo-600 text-white' : 'bg-slate-100'}`}>
+                        {sel && <Check size={12} />}
+                      </span>
+                      <span className="text-xs font-bold text-slate-700 truncate">{w.name}</span>
+                    </button>
+                    {sel && exigeValidadeAlvo && (
+                      <input
+                        type="date"
+                        className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-600 shrink-0"
+                        value={sel.data_validade}
+                        onChange={e => setValidadeSelecionado(w.id, e.target.value)}
+                        placeholder={validadeMesesAlvo ? `Auto (+${validadeMesesAlvo}m)` : 'Data de validade'}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {exigeValidadeAlvo && validadeMesesAlvo && (
+            <p className="text-[10px] font-bold text-slate-400 mt-2">Data de validade em branco assume automaticamente +{validadeMesesAlvo} meses.</p>
+          )}
+        </div>
+      </ModalShell>
     </div>
   );
 }

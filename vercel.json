@@ -68,6 +68,7 @@
     { "source": "/api/toconline/token-exchange", "destination": "/api/toconline/proxy?action=token-exchange" },
     { "source": "/api/formacao/list", "destination": "/api/formacao?action=list" },
     { "source": "/api/formacao/create", "destination": "/api/formacao?action=create" },
+    { "source": "/api/formacao/atribuir", "destination": "/api/formacao?action=atribuir" },
     { "source": "/api/formacao/sign", "destination": "/api/formacao?action=sign" },
     { "source": "/api/formacao/minhas", "destination": "/api/formacao?action=minhas" },
     { "source": "/api/formacao/iniciar", "destination": "/api/formacao?action=iniciar" },

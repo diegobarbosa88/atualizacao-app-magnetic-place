@@ -32,6 +32,14 @@ export function createFormacao(payload) {
   }).then(json);
 }
 
+export function atribuirParticipantes(formacaoId, participantes) {
+  return authFetch('/api/formacao/atribuir', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ formacao_id: formacaoId, participantes }),
+  }).then(json);
+}
+
 export function horasPorTrabalhador(ano) {
   const params = new URLSearchParams();
   if (ano) params.set('ano', ano);

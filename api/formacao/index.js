@@ -200,6 +200,54 @@ async function handleCreate(req, res) {
   return res.status(201).json({ formacao });
 }
 
+async function handleAtribuir(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!requireAuth(req, res, ['admin'])) return;
+
+  const { formacao_id, participantes } = req.body || {};
+  if (!formacao_id || !Array.isArray(participantes) || participantes.length === 0) {
+    return res.status(400).json({ error: 'Campos obrigatórios: formacao_id, participantes.' });
+  }
+
+  const supabase = getSupabase();
+
+  const { data: formacao, error: fetchError } = await supabase
+    .from('formacoes_internas')
+    .select('id, categoria, data_fim')
+    .eq('id', formacao_id)
+    .single();
+
+  if (fetchError || !formacao) {
+    return res.status(404).json({ error: 'Ação não encontrada.' });
+  }
+
+  const exigeValidade = CATEGORIAS_EXIGEM_VALIDADE.includes(formacao.categoria);
+  const validadeDefaultMeses = VALIDADE_PADRAO_MESES[formacao.categoria];
+
+  const linhas = participantes.map(p => {
+    const workerId = typeof p === 'string' ? p : p.worker_id;
+    let dataValidade = typeof p === 'string' ? null : (p.data_validade || null);
+    if (exigeValidade && !dataValidade && validadeDefaultMeses) {
+      dataValidade = addMeses(formacao.data_fim, validadeDefaultMeses);
+    }
+    return { formacao_id, worker_id: workerId, data_validade: dataValidade };
+  });
+
+  if (exigeValidade && linhas.some(l => !l.data_validade)) {
+    return res.status(400).json({ error: 'Esta categoria exige data de validade para todos os novos participantes.' });
+  }
+
+  const { error } = await supabase.from('formacao_participantes').insert(linhas);
+  if (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ error: 'Um ou mais trabalhadores selecionados já são participantes desta ação.' });
+    }
+    return res.status(500).json({ error: error.message });
+  }
+
+  return res.status(201).json({ ok: true, adicionados: linhas.length });
+}
+
 async function handleSign(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const sessao = requireAuth(req, res, ['admin', 'worker']);
@@ -519,6 +567,7 @@ async function handleHorasPorTrabalhador(req, res) {
 const ACTIONS = {
   'list': handleList,
   'create': handleCreate,
+  'atribuir': handleAtribuir,
   'sign': handleSign,
   'minhas': handleMinhas,
   'iniciar': handleIniciar,
