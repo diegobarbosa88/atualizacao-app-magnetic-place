@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download } from 'lucide-react';
 import { isSigned } from '../../constants/documentStatus';
+import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
 
 const FIELDS = [
   { key: 'tel',     label: 'Telefone',           icon: Phone,      type: 'tel' },
@@ -93,13 +94,13 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
 
       {/* Avatar + nome */}
       <div className="flex flex-col items-center py-4 gap-2">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center shadow-lg">
-          <span className="text-2xl font-black text-white">{getInitials(worker?.name)}</span>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg" style={{ background: FT.navyDeep, border: `2px solid ${FT.orange}` }}>
+          <span className="text-2xl font-bold" style={{ fontFamily: FONT_TITLE, color: FT.orange }}>{getInitials(worker?.name)}</span>
         </div>
         <div className="text-center">
           <p className="text-base font-black text-slate-800">{worker?.name || '—'}</p>
           {worker?.profissao && (
-            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mt-0.5">{worker.profissao}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest mt-0.5" style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>{worker.profissao}</p>
           )}
         </div>
       </div>
@@ -128,8 +129,8 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                         <div className="mt-0.5 space-y-0.5">
                           <p className="text-xs text-slate-300 line-through leading-snug">{value || '—'}</p>
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-black text-indigo-600">{pending.proposed}</span>
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 border border-amber-200 text-amber-600 text-[8px] font-black uppercase rounded-full">
+                            <span className="text-xs font-black" style={{ color: FT.orangeDeep }}>{pending.proposed}</span>
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[8px] font-black uppercase rounded-full" style={{ fontFamily: FONT_MONO, background: FT.warnBg, color: FT.warn, border: `1px solid ${FT.warn}55` }}>
                               <Clock size={7} /> Aguarda
                             </span>
                           </div>
@@ -147,7 +148,10 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                             value={draft}
                             onChange={e => setDraft(e.target.value)}
                             placeholder={`Novo ${f.label.toLowerCase()}...`}
-                            className="flex-1 text-sm border border-indigo-200 rounded-xl px-3 py-2 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 font-medium"
+                            className="flex-1 text-sm rounded-xl px-3 py-2 outline-none font-medium"
+                            style={{ border: `1px solid ${FT.orange}55` }}
+                            onFocus={e => { e.target.style.border = `1px solid ${FT.orange}`; e.target.style.boxShadow = `0 0 0 3px ${FT.orange}1A`; }}
+                            onBlur={e => { e.target.style.border = `1px solid ${FT.orange}55`; e.target.style.boxShadow = 'none'; }}
                             autoFocus
                             onKeyDown={e => {
                               if (e.key === 'Enter') handleSubmit(f.key);
@@ -157,7 +161,8 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                           <button
                             onClick={() => handleSubmit(f.key)}
                             disabled={loading || !draft.trim()}
-                            className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-40 shrink-0"
+                            className="p-2 text-white rounded-xl transition-all disabled:opacity-40 shrink-0"
+                            style={{ background: FT.orange }}
                           >
                             <Send size={13} />
                           </button>
@@ -184,7 +189,10 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                     ) : !isEditingThis ? (
                       <button
                         onClick={() => { setEditing(f.key); setDraft(value); }}
-                        className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        className="p-1.5 text-slate-300 rounded-lg transition-all"
+                        style={{ '--hover-color': FT.navy }}
+                        onMouseEnter={e => { e.currentTarget.style.color = FT.orangeDeep; e.currentTarget.style.background = FT.warnBg; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = ''; e.currentTarget.style.background = ''; }}
                         title="Solicitar alteração"
                       >
                         <Edit2 size={12} />
@@ -205,8 +213,8 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50">
             {signedDocs.map(doc => (
               <div key={doc.id} className="px-4 py-3 flex items-center gap-3">
-                <div className="w-7 h-7 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                  <FileCheck size={13} className="text-emerald-500" />
+                <div className="w-7 h-7 rounded-xl flex items-center justify-center shrink-0" style={{ background: FT.okBg }}>
+                  <FileCheck size={13} style={{ color: FT.ok }} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-slate-700 truncate">{doc.tipo || doc.title || doc.nome || doc.name}</p>
@@ -221,7 +229,7 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
                     href={doc.signed_pdf_url || doc.pdfAssinadoUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="p-1.5 text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all shrink-0"
+                    className="p-1.5 text-slate-300 hover:bg-[#1B3A57]/10 hover:text-[#1B3A57] rounded-lg transition-all shrink-0"
                   >
                     <Download size={13} />
                   </a>
@@ -239,23 +247,23 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden divide-y divide-slate-50">
             {resolvedRequests.slice(0, 10).map(r => (
               <div key={r.id} className="px-4 py-3 flex items-start gap-3">
-                <div className={`mt-0.5 w-7 h-7 rounded-xl flex items-center justify-center shrink-0 ${r.status === 'approved' ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                <div className="mt-0.5 w-7 h-7 rounded-xl flex items-center justify-center shrink-0" style={{ background: r.status === 'approved' ? FT.okBg : FT.badBg }}>
                   {r.status === 'approved'
-                    ? <CheckCircle size={13} className="text-emerald-500" />
-                    : <XCircle size={13} className="text-rose-400" />}
+                    ? <CheckCircle size={13} style={{ color: FT.ok }} />
+                    : <XCircle size={13} style={{ color: FT.bad }} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">{r.field_label}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: FONT_MONO }}>{r.field_label}</p>
                   <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                     <span className="text-xs text-slate-300 line-through">{r.before || '—'}</span>
                     <span className="text-slate-300">→</span>
-                    <span className={`text-xs font-bold ${r.status === 'approved' ? 'text-emerald-600' : 'text-slate-400 line-through'}`}>{r.proposed}</span>
+                    <span className="text-xs font-bold" style={{ color: r.status === 'approved' ? FT.ok : FT.inkSoft, textDecoration: r.status === 'approved' ? 'none' : 'line-through' }}>{r.proposed}</span>
                   </div>
                   {r.admin_note && (
                     <p className="text-[10px] text-slate-400 mt-0.5 italic">"{r.admin_note}"</p>
                   )}
                 </div>
-                <span className={`shrink-0 text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${r.status === 'approved' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-500'}`}>
+                <span className="shrink-0 text-[8px] font-black uppercase px-2 py-0.5 rounded-full" style={{ fontFamily: FONT_MONO, background: r.status === 'approved' ? FT.okBg : FT.badBg, color: r.status === 'approved' ? FT.ok : FT.bad }}>
                   {r.status === 'approved' ? 'Aprovado' : 'Rejeitado'}
                 </span>
               </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Coffee, Star, Timer, Clock } from 'lucide-react';
+import { FT, FONT_MONO } from './formacaoDesignTokens';
 
 const ALL_DAYS = [{ v: 1, l: '2ª' }, { v: 2, l: '3ª' }, { v: 3, l: '4ª' }, { v: 4, l: '5ª' }, { v: 5, l: '6ª' }, { v: 6, l: 'Sáb' }, { v: 0, l: 'Dom' }];
 
@@ -18,23 +19,23 @@ function groupDaysByTime(dailyConfigs) {
 function TimeRow({ startTime, endTime, breakStart, breakEnd }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2 text-center">
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Entrada</p>
-        <p className="text-base font-black tabular-nums text-slate-800 leading-none">{startTime || '--:--'}</p>
+      <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: '#F4F2EC' }}>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Entrada</p>
+        <p className="text-base font-bold tabular-nums leading-none" style={{ fontFamily: FONT_MONO, color: FT.navyDeep }}>{startTime || '--:--'}</p>
       </div>
-      <span className="text-slate-300 font-black">→</span>
-      <div className="flex-1 bg-slate-50 rounded-xl px-3 py-2 text-center">
-        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Saída</p>
-        <p className="text-base font-black tabular-nums text-slate-800 leading-none">{endTime || '--:--'}</p>
+      <span className="font-black" style={{ color: FT.slate }}>→</span>
+      <div className="flex-1 rounded-xl px-3 py-2 text-center" style={{ background: '#F4F2EC' }}>
+        <p className="text-[9px] font-black uppercase tracking-widest mb-0.5" style={{ fontFamily: FONT_MONO, color: FT.slateDim }}>Saída</p>
+        <p className="text-base font-bold tabular-nums leading-none" style={{ fontFamily: FONT_MONO, color: FT.navyDeep }}>{endTime || '--:--'}</p>
       </div>
       {breakStart && (
         <>
           <span className="text-slate-200">·</span>
-          <div className="bg-orange-50 rounded-xl px-3 py-2 text-center">
-            <p className="text-[9px] font-black uppercase tracking-widest text-orange-400 mb-0.5 flex items-center justify-center gap-0.5">
+          <div className="rounded-xl px-3 py-2 text-center" style={{ background: FT.warnBg }}>
+            <p className="text-[9px] font-black uppercase tracking-widest mb-0.5 flex items-center justify-center gap-0.5" style={{ fontFamily: FONT_MONO, color: FT.warn }}>
               <Coffee size={8} /> Pausa
             </p>
-            <p className="text-xs font-black tabular-nums text-orange-500 leading-none whitespace-nowrap">
+            <p className="text-xs font-bold tabular-nums leading-none whitespace-nowrap" style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>
               {breakStart} – {breakEnd || '--:--'}
             </p>
           </div>
@@ -54,7 +55,12 @@ function DayChips({ days, allDays = false, activeDayValues }) {
         return (
           <span
             key={d.v}
-            className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${isActive ? 'bg-indigo-100 text-indigo-600' : 'bg-slate-50 text-slate-300'}`}
+            className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+            style={{
+              fontFamily: FONT_MONO,
+              background: isActive ? `${FT.navy}1A` : '#F4F2EC',
+              color: isActive ? FT.navy : '#C7C2B6',
+            }}
           >
             {d.l}
           </span>
@@ -76,25 +82,26 @@ function ScheduleCard({ s, isDefault, setDefaultSchedule }) {
 
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
-        <div className={`p-2 rounded-xl shrink-0 ${isDefault ? 'bg-indigo-100' : 'bg-slate-100'}`}>
-          <Timer size={15} className={isDefault ? 'text-indigo-600' : 'text-slate-400'} />
+        <div className="p-2 rounded-xl shrink-0" style={{ background: isDefault ? FT.orange : '#F4F2EC' }}>
+          <Timer size={15} style={{ color: isDefault ? '#fff' : FT.slate }} />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-black text-slate-800 leading-tight truncate">{s.name}</p>
+          <p className="text-sm font-bold leading-tight truncate" style={{ color: FT.ink }}>{s.name}</p>
           {headerSubtitle && (
-            <p className="text-[10px] font-bold text-slate-400 mt-0.5">{headerSubtitle}</p>
+            <p className="text-[10px] font-bold mt-0.5" style={{ fontFamily: FONT_MONO, color: FT.inkSoft }}>{headerSubtitle}</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {isDefault && (
-            <span className="text-[9px] font-black uppercase tracking-widest bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">
+            <span className="text-[9px] font-black uppercase tracking-widest text-white px-2.5 py-0.5 rounded-full" style={{ fontFamily: FONT_MONO, background: FT.orange }}>
               Padrão
             </span>
           )}
           <button
             onClick={() => setDefaultSchedule(s.id)}
             title="Definir como Padrão"
-            className={`p-1.5 rounded-xl transition-all ${isDefault ? 'text-indigo-500 bg-indigo-50' : 'text-slate-300 hover:text-amber-500 hover:bg-slate-100'}`}
+            className="p-1.5 rounded-xl transition-all"
+            style={isDefault ? { color: FT.warn, background: FT.warnBg } : { color: FT.slate }}
           >
             <Star fill={isDefault ? 'currentColor' : 'none'} size={14} />
           </button>
