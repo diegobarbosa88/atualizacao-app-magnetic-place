@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, FileDown, User, Clock, CheckCircle2, AlertTriangle, Hourglass } from 'lucide-react';
+import { Loader2, FileDown, User, Clock, CheckCircle2, AlertTriangle, Hourglass, Award } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { listFormacoes } from './formacaoApi';
-import { exportRegistoIndividualPDF } from './formacaoExport';
+import { exportRegistoIndividualPDF, exportCertificadoPDF } from './formacaoExport';
 import { CATEGORIAS } from './formacaoTemplates';
 
 const ANO_ATUAL = new Date().getFullYear();
@@ -52,6 +52,7 @@ export default function RegistoIndividualTab() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [exportando, setExportando] = useState(false);
+  const [emitindoCertId, setEmitindoCertId] = useState(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -106,6 +107,17 @@ export default function RegistoIndividualTab() {
       setError(e.message);
     }
     setExportando(false);
+  };
+
+  const emitirCertificado = async (formacao, participacao) => {
+    setEmitindoCertId(participacao.id);
+    setError('');
+    try {
+      await exportCertificadoPDF(formacao, participacao);
+    } catch (e) {
+      setError(e.message);
+    }
+    setEmitindoCertId(null);
   };
 
   return (
@@ -206,9 +218,19 @@ export default function RegistoIndividualTab() {
                       <td className="py-3 pr-4 text-slate-500 whitespace-nowrap">{f.duracao_horas}h</td>
                       <td className="py-3 pr-4 whitespace-nowrap">
                         {p.assinado_em ? (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                            {fmtData(p.assinado_em)}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                              {fmtData(p.assinado_em)}
+                            </span>
+                            <button
+                              onClick={() => emitirCertificado(f, p)}
+                              disabled={emitindoCertId === p.id}
+                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
+                              title="Emitir Certificado"
+                            >
+                              {emitindoCertId === p.id ? <Loader2 size={13} className="animate-spin" /> : <Award size={13} />}
+                            </button>
+                          </div>
                         ) : (
                           <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
                             Por assinar

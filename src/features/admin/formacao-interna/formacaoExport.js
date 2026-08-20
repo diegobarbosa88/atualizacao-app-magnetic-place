@@ -8,6 +8,7 @@ const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]))
 const NAVY = [27, 58, 87];
 const NAVY_DEEP = [18, 39, 65];
 const ORANGE = [235, 141, 0];
+const ORANGE_DEEP = [201, 118, 0];
 const SLATE = [134, 154, 175];
 const ROW_TINT = [245, 243, 238];
 
@@ -23,11 +24,40 @@ function fmtData(d) {
   return new Date(d).toLocaleDateString('pt-PT');
 }
 
-export async function exportFormacaoPDF(formacao) {
-  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-  const logoBase64 = await getLogoBase64();
+function fmtDataHora(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + 'h';
+}
 
-  // Cabeçalho — faixa navy com filete laranja, paleta de marca Magnetic Place.
+// Código de referência derivado do próprio id do registo de participação na
+// base de dados — não é criptográfico, mas dá um número de série concreto e
+// consultável (o admin pode confirmar contra o registo real), em vez de uma
+// assinatura que é só uma linha em branco por preencher à mão.
+function codigoVerificacao(id) {
+  if (!id) return '—';
+  const limpo = String(id).replace(/-/g, '').toUpperCase();
+  const fim = limpo.slice(-8).padStart(8, '0');
+  return `${fim.slice(0, 4)}-${fim.slice(4)}`;
+}
+
+async function imagemParaBase64(url) {
+  if (!url) return null;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+function cabecalho(doc, logoBase64, subtitulo) {
   doc.setFillColor(...NAVY);
   doc.rect(0, 0, 210, 30, 'F');
   doc.setFillColor(...ORANGE);
@@ -42,8 +72,59 @@ export async function exportFormacaoPDF(formacao) {
   doc.text('MAGNETIC PLACE', textX, 13);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('REGISTO DE FORMAÇÃO INTERNA — Art. 131.º CT', textX, 20);
+  doc.text(subtitulo, textX, 20);
   doc.setTextColor(0, 0, 0);
+}
+
+function rodape(doc) {
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(8);
+    doc.setTextColor(...SLATE);
+    doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', 14, 290);
+    doc.text(`Página ${i}/${pageCount}`, 196, 290, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
+}
+
+// Desenha um bloco de assinatura eletrónica credível: a imagem real
+// recolhida no dispositivo do trabalhador (não uma linha em branco), a
+// data/hora exata da recolha, e um código de referência do registo — em vez
+// de "Assinado em DD/MM" como texto solto, que qualquer um podia escrever.
+async function desenharBlocoAssinatura(doc, x, y, { nome, assinaturaBase64, assinadoEm, participanteId, largura = 85 }) {
+  doc.setDrawColor(...SLATE);
+  doc.setLineWidth(0.2);
+  doc.roundedRect(x, y, largura, 26, 1.5, 1.5);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text(nome, x + 3, y + 5, { maxWidth: largura - 6 });
+  doc.setTextColor(0, 0, 0);
+
+  if (assinaturaBase64) {
+    try {
+      doc.addImage(assinaturaBase64, 'PNG', x + 3, y + 6.5, largura - 6, 12, undefined, 'FAST');
+    } catch {
+      // imagem inválida/corrompida — segue sem embutir, o texto abaixo continua fiável
+    }
+  }
+
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...SLATE);
+  doc.text(`Assinado eletronicamente em ${fmtDataHora(assinadoEm)}`, x + 3, y + 21.5);
+  doc.text(`Código de verificação: ${codigoVerificacao(participanteId)}`, x + 3, y + 24.5);
+  doc.setTextColor(0, 0, 0);
+
+  return y + 26;
+}
+
+export async function exportFormacaoPDF(formacao) {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const logoBase64 = await getLogoBase64();
+  cabecalho(doc, logoBase64, 'REGISTO DE FORMAÇÃO INTERNA — Art. 131.º CT');
 
   let y = 40;
   doc.setFontSize(13);
@@ -90,12 +171,14 @@ export async function exportFormacaoPDF(formacao) {
   doc.setTextColor(0, 0, 0);
   y += 2;
 
+  const participantes = formacao.formacao_participantes || [];
+
   autoTable(doc, {
     startY: y,
     head: isElearning
       ? [['Trabalhador', 'Estado', 'Nota', 'Assinado em']]
       : [['Trabalhador', 'Validade', 'Assinado em']],
-    body: (formacao.formacao_participantes || []).map(p => isElearning
+    body: participantes.map(p => isElearning
       ? [
         p.workers?.name || p.worker_id,
         ESTADO_CONCLUSAO_LABEL[p.estado_conclusao] || '—',
@@ -111,17 +194,40 @@ export async function exportFormacaoPDF(formacao) {
     headStyles: { fillColor: NAVY, textColor: 255 },
     alternateRowStyles: { fillColor: ROW_TINT },
   });
+  y = doc.lastAutoTable.finalY + 8;
 
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(...SLATE);
-    doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', 14, 290);
-    doc.text(`Página ${i}/${pageCount}`, 196, 290, { align: 'right' });
+  // Assinaturas eletrónicas reais (imagem + timestamp + código) — só para
+  // quem já assinou. Substitui a antiga linha "Assinado em DD/MM" solta.
+  const assinados = participantes.filter(p => p.assinado_em);
+  if (assinados.length > 0) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...NAVY_DEEP);
+    doc.text('ASSINATURAS ELETRÓNICAS', 14, y);
     doc.setTextColor(0, 0, 0);
+    y += 4;
+
+    let coluna = 0;
+    const largura = 88;
+    const ALTURA_BLOCO = 26;
+    for (const p of assinados) {
+      if (y > 260) { doc.addPage(); y = 20; coluna = 0; }
+      const assinaturaBase64 = await imagemParaBase64(p.assinatura_signed_url);
+      const x = 14 + coluna * (largura + 6);
+      await desenharBlocoAssinatura(doc, x, y, {
+        nome: p.workers?.name || p.worker_id,
+        assinaturaBase64,
+        assinadoEm: p.assinado_em,
+        participanteId: p.id,
+        largura,
+      });
+      if (coluna === 1) { y += ALTURA_BLOCO + 4; coluna = 0; } else { coluna = 1; }
+    }
+    if (coluna === 1) y += ALTURA_BLOCO + 4;
   }
 
+  rodape(doc);
   doc.save(`formacao-${formacao.id}.pdf`);
 }
 
@@ -130,23 +236,7 @@ export async function exportFormacaoPDF(formacao) {
 export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const logoBase64 = await getLogoBase64();
-
-  doc.setFillColor(...NAVY);
-  doc.rect(0, 0, 210, 30, 'F');
-  doc.setFillColor(...ORANGE);
-  doc.rect(0, 30, 210, 1.5, 'F');
-
-  if (logoBase64) doc.addImage(logoBase64, 'PNG', 14, 4, 22, 22);
-  const textX = logoBase64 ? 42 : 14;
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MAGNETIC PLACE', textX, 13);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('REGISTO DE FORMAÇÃO INTERNA — Art. 131.º CT — Registo Individual', textX, 20);
-  doc.setTextColor(0, 0, 0);
+  cabecalho(doc, logoBase64, 'REGISTO DE FORMAÇÃO INTERNA — Art. 131.º CT — Registo Individual');
 
   let y = 40;
   doc.setFontSize(13);
@@ -220,13 +310,45 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
     headStyles: { fillColor: NAVY, textColor: 255 },
     alternateRowStyles: { fillColor: ROW_TINT },
   });
-  y = doc.lastAutoTable.finalY + 16;
+  y = doc.lastAutoTable.finalY + 8;
+
+  // Assinaturas eletrónicas reais de cada formação já assinada — a prova de
+  // que cada linha da tabela acima foi mesmo confirmada pelo trabalhador,
+  // não só uma data escrita na tabela.
+  const assinadas = formacoesDoTrabalhador.filter(x => x.participacao.assinado_em);
+  if (assinadas.length > 0) {
+    if (y > 250) { doc.addPage(); y = 20; }
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...NAVY_DEEP);
+    doc.text('ASSINATURAS ELETRÓNICAS', 14, y);
+    doc.setTextColor(0, 0, 0);
+    y += 4;
+
+    let coluna = 0;
+    const largura = 88;
+    const ALTURA_BLOCO = 26;
+    for (const { formacao: f, participacao: p } of assinadas) {
+      if (y > 260) { doc.addPage(); y = 20; coluna = 0; }
+      const assinaturaBase64 = await imagemParaBase64(p.assinatura_signed_url);
+      const x = 14 + coluna * (largura + 6);
+      await desenharBlocoAssinatura(doc, x, y, {
+        nome: f.tipo_formacao || f.titulo,
+        assinaturaBase64,
+        assinadoEm: p.assinado_em,
+        participanteId: p.id,
+        largura,
+      });
+      if (coluna === 1) { y += ALTURA_BLOCO + 4; coluna = 0; } else { coluna = 1; }
+    }
+    if (coluna === 1) y += ALTURA_BLOCO + 4;
+  }
 
   if (y > 250) { doc.addPage(); y = 20; }
   doc.setFontSize(8.5);
   doc.setTextColor(...SLATE);
   doc.text(
-    'Nos termos do art. 131.º do Código do Trabalho, o trabalhador tem direito a um mínimo de 40 horas de formação\ncontínua por ano, proporcional ao tempo de vínculo no ano e ao regime de trabalho. Este documento serve de\ncomprovativo de cumprimento da obrigação formativa, gerado em ' + fmtData(new Date()) + '.',
+    'Nos termos do art. 131.º do Código do Trabalho, o trabalhador tem direito a um mínimo de 40 horas de formação\ncontínua por ano, proporcional ao tempo de vínculo no ano e ao regime de trabalho. Cada formação assinada acima\nfoi confirmada eletronicamente pelo próprio trabalhador, autenticado na sua sessão pessoal. Documento gerado em ' + fmtDataHora(new Date()) + '.',
     14, y
   );
   doc.setTextColor(0, 0, 0);
@@ -234,23 +356,121 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
 
   doc.setDrawColor(...SLATE);
   doc.setLineWidth(0.3);
-  doc.line(14, y, 90, y);
   doc.line(120, y, 196, y);
   doc.setFontSize(8);
   doc.setTextColor(...NAVY_DEEP);
-  doc.text('Assinatura do Trabalhador', 14, y + 5);
   doc.text('Assinatura do Responsável — Magnetic Place', 120, y + 5);
   doc.setTextColor(0, 0, 0);
 
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(...SLATE);
-    doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', 14, 290);
-    doc.text(`Página ${i}/${pageCount}`, 196, 290, { align: 'right' });
-    doc.setTextColor(0, 0, 0);
+  rodape(doc);
+  doc.save(`registo-formacao-${worker.name.replace(/\s+/g, '_')}-${ano}.pdf`);
+}
+
+// Certificado individual de conclusão — um por formação já assinada pelo
+// trabalhador, em formato de diploma (paisagem, moldura decorativa), pronto
+// a entregar ao trabalhador ou a um cliente como comprovativo autónomo.
+export async function exportCertificadoPDF(formacao, participante) {
+  if (!participante?.assinado_em) {
+    throw new Error('Só é possível emitir certificado para uma formação já assinada pelo trabalhador.');
   }
 
-  doc.save(`registo-formacao-${worker.name.replace(/\s+/g, '_')}-${ano}.pdf`);
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const logoBase64 = await getLogoBase64();
+  const assinaturaBase64 = await imagemParaBase64(participante.assinatura_signed_url);
+  const W = 297, H = 210;
+
+  // Fundo e moldura decorativa dupla, cores da marca.
+  doc.setFillColor(255, 255, 255);
+  doc.rect(0, 0, W, H, 'F');
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(1.4);
+  doc.rect(8, 8, W - 16, H - 16);
+  doc.setDrawColor(...ORANGE);
+  doc.setLineWidth(0.5);
+  doc.rect(11.5, 11.5, W - 23, H - 23);
+
+  if (logoBase64) doc.addImage(logoBase64, 'PNG', W / 2 - 12, 18, 24, 24);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text('MAGNETIC PLACE UNIPESSOAL, LDA', W / 2, 49, { align: 'center' });
+
+  doc.setFontSize(28);
+  doc.setTextColor(...NAVY);
+  doc.text('CERTIFICADO DE FORMAÇÃO', W / 2, 66, { align: 'center' });
+
+  doc.setDrawColor(...ORANGE);
+  doc.setLineWidth(0.8);
+  doc.line(W / 2 - 40, 71, W / 2 + 40, 71);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Certifica-se que', W / 2, 85, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text(participante.workers?.name || participante.worker_id, W / 2, 98, { align: 'center' });
+
+  const isElearning = formacao.formato === 'e-learning';
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(0, 0, 0);
+  doc.text('concluiu com aproveitamento a formação', W / 2, 109, { align: 'center' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(...ORANGE_DEEP);
+  doc.text(formacao.tipo_formacao || formacao.titulo, W / 2, 119, { align: 'center' });
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10.5);
+  doc.setTextColor(0, 0, 0);
+  const detalhes = [
+    `Categoria: ${CATEGORIA_LABEL[formacao.categoria] || formacao.categoria || '—'}`,
+    `Duração: ${formacao.duracao_horas}h`,
+    `Formato: ${isElearning ? 'E-learning' : 'Presencial'}`,
+    ...(isElearning && participante.nota_obtida != null ? [`Nota: ${participante.nota_obtida}%`] : []),
+    `Data: ${fmtData(formacao.data_inicio)}`,
+  ];
+  doc.text(detalhes.join('   ·   '), W / 2, 128, { align: 'center' });
+
+  // Assinatura eletrónica real + código de verificação, lado a lado com a
+  // "assinatura" institucional — o que torna o certificado credível é a
+  // imagem real recolhida no momento da conclusão, não um nome impresso.
+  const yAss = 152;
+  doc.setDrawColor(...SLATE);
+  doc.setLineWidth(0.2);
+
+  doc.line(W / 2 - 85, yAss + 16, W / 2 - 20, yAss + 16);
+  if (assinaturaBase64) {
+    try { doc.addImage(assinaturaBase64, 'PNG', W / 2 - 80, yAss, 55, 15, undefined, 'FAST'); } catch { /* segue sem imagem */ }
+  }
+  doc.setFontSize(8.5);
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text('Assinatura do Trabalhador', W / 2 - 85, yAss + 20);
+  doc.setFontSize(6.5);
+  doc.setTextColor(...SLATE);
+  doc.text(`Assinado eletronicamente em ${fmtDataHora(participante.assinado_em)}`, W / 2 - 85, yAss + 24);
+  doc.text(`Código de verificação: ${codigoVerificacao(participante.id)}`, W / 2 - 85, yAss + 27.5);
+
+  doc.setDrawColor(...SLATE);
+  doc.line(W / 2 + 20, yAss + 16, W / 2 + 85, yAss + 16);
+  doc.setFontSize(8.5);
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text('Magnetic Place Unipessoal, Lda', W / 2 + 20, yAss + 20);
+  doc.setFontSize(6.5);
+  doc.setTextColor(...SLATE);
+  doc.text(`Certificado emitido em ${fmtData(new Date())}`, W / 2 + 20, yAss + 24);
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(7.5);
+  doc.setTextColor(...SLATE);
+  doc.text('Documento gerado automaticamente pelo sistema de gestão de formação interna da Magnetic Place.', W / 2, H - 15, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
+
+  const nomeArquivo = `certificado-${(participante.workers?.name || 'trabalhador').replace(/\s+/g, '_')}-${(formacao.tipo_formacao || formacao.titulo || 'formacao').replace(/\s+/g, '_')}.pdf`;
+  doc.save(nomeArquivo);
 }

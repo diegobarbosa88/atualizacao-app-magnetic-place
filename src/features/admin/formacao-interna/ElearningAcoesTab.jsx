@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon, UserPlus, Check, Search, GraduationCap, PenLine, AlertTriangle } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, Image as ImageIcon, UserPlus, Check, Search, GraduationCap, PenLine, AlertTriangle, Award } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { listFormacoes, atribuirParticipantes } from './formacaoApi';
-import { exportFormacaoPDF } from './formacaoExport';
+import { exportFormacaoPDF, exportCertificadoPDF } from './formacaoExport';
 import { CATEGORIAS, CATEGORIAS_EXIGEM_VALIDADE, VALIDADE_PADRAO_MESES } from './formacaoTemplates';
 import { IlustracaoTile } from './formacaoIcons';
 import { ResumoCard, BarraProgresso } from './formacaoAdminUiKit';
@@ -60,6 +60,18 @@ export default function ElearningAcoesTab({ refreshKey }) {
   const [selecionados, setSelecionados] = useState({});
   const [atribuirBusy, setAtribuirBusy] = useState(false);
   const [atribuirErro, setAtribuirErro] = useState('');
+  const [emitindoCertId, setEmitindoCertId] = useState(null);
+
+  const emitirCertificado = async (formacao, participante) => {
+    setEmitindoCertId(participante.id);
+    setError('');
+    try {
+      await exportCertificadoPDF(formacao, participante);
+    } catch (e) {
+      setError(e.message);
+    }
+    setEmitindoCertId(null);
+  };
 
   useEffect(() => {
     if (!supabase) return;
@@ -353,17 +365,29 @@ export default function ElearningAcoesTab({ refreshKey }) {
                                 const duracao = formatDuracao(p.iniciado_em, p.concluido_em);
                                 return (
                                   <div key={p.id} className="p-3 rounded-2xl bg-white border border-slate-100">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between gap-2">
                                       <p className="text-xs font-bold text-slate-700 truncate">{p.workers?.name || p.worker_id}</p>
-                                      {p.assinado_em ? (
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg shrink-0">
-                                          Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
-                                        </span>
-                                      ) : (
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg shrink-0">
-                                          Por assinar (worker)
-                                        </span>
-                                      )}
+                                      <div className="flex items-center gap-1.5 shrink-0">
+                                        {p.assinado_em ? (
+                                          <>
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                              Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
+                                            </span>
+                                            <button
+                                              onClick={() => emitirCertificado(f, p)}
+                                              disabled={emitindoCertId === p.id}
+                                              className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
+                                              title="Emitir Certificado"
+                                            >
+                                              {emitindoCertId === p.id ? <Loader2 size={13} className="animate-spin" /> : <Award size={13} />}
+                                            </button>
+                                          </>
+                                        ) : (
+                                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
+                                            Por assinar (worker)
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-slate-100">
                                       {conclusaoCfg && (

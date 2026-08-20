@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, MapPin, Building2, Search, ListChecks, PenLine, AlertTriangle } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronUp, FileDown, Users, Clock, MapPin, Building2, Search, ListChecks, PenLine, AlertTriangle, Award } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
 import { listFormacoes } from './formacaoApi';
-import { exportFormacaoPDF } from './formacaoExport';
+import { exportFormacaoPDF, exportCertificadoPDF } from './formacaoExport';
 import { CATEGORIAS } from './formacaoTemplates';
 import { ResumoCard, BarraProgresso } from './formacaoAdminUiKit';
 
@@ -35,6 +35,18 @@ export default function ListaAcoesTab({ refreshKey }) {
   const [estadoFilter, setEstadoFilter] = useState('');
   const [busca, setBusca] = useState('');
   const [expandedId, setExpandedId] = useState(null);
+  const [emitindoCertId, setEmitindoCertId] = useState(null);
+
+  const emitirCertificado = async (formacao, participante) => {
+    setEmitindoCertId(participante.id);
+    setError('');
+    try {
+      await exportCertificadoPDF(formacao, participante);
+    } catch (e) {
+      setError(e.message);
+    }
+    setEmitindoCertId(null);
+  };
 
   useEffect(() => {
     if (!supabase) return;
@@ -256,9 +268,19 @@ export default function ListaAcoesTab({ refreshKey }) {
                                       </span>
                                     )}
                                     {p.assinado_em ? (
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                                        Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
-                                      </span>
+                                      <>
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
+                                          Assinado {new Date(p.assinado_em).toLocaleDateString('pt-PT')}
+                                        </span>
+                                        <button
+                                          onClick={() => emitirCertificado(f, p)}
+                                          disabled={emitindoCertId === p.id}
+                                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all disabled:opacity-50"
+                                          title="Emitir Certificado"
+                                        >
+                                          {emitindoCertId === p.id ? <Loader2 size={13} className="animate-spin" /> : <Award size={13} />}
+                                        </button>
+                                      </>
                                     ) : (
                                       <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 px-2 py-1 rounded-lg">
                                         Por assinar (worker)
