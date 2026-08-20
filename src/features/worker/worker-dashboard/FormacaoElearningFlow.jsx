@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { PlayCircle, FileText, CheckCircle2, Loader2 } from 'lucide-react';
+import { PlayCircle, FileText, CheckCircle2, Loader2, ChevronLeft } from 'lucide-react';
 import { iniciarFormacao, responderQuestionario, getConteudoUrl, assinarMinhaFormacao } from './formacaoWorkerApi';
 import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
 
@@ -172,6 +172,7 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
 
   const [step, setStep] = useState(stepInicial);
   const [respostas, setRespostas] = useState(() => Array(participacao.questionario?.length || 0).fill(null));
+  const [perguntaIdx, setPerguntaIdx] = useState(0);
   const [resultado, setResultado] = useState(
     participacao.estado_conclusao === 'reprovado' || participacao.estado_conclusao === 'concluido'
       ? { nota_obtida: participacao.nota_obtida, aprovado: participacao.estado_conclusao === 'concluido' }
@@ -198,6 +199,9 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
   const media = precisaMedia && conteudoSrc ? detectarMedia(conteudoSrc) : null;
   const todasRespondidas = respostas.length > 0 && respostas.every(r => r !== null);
   const activeIndex = STEPS.findIndex(s => s.id === step);
+  const totalPerguntas = participacao.questionario?.length || 0;
+  const naUltimaPergunta = perguntaIdx === totalPerguntas - 1;
+  const perguntaAtualRespondida = respostas[perguntaIdx] !== null;
 
   const submeterQuestionario = async () => {
     setBusy(true);
@@ -213,6 +217,7 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
 
   const tentarNovamente = () => {
     setRespostas(Array(participacao.questionario?.length || 0).fill(null));
+    setPerguntaIdx(0);
     setStep('questionario');
   };
 
@@ -285,10 +290,21 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
         </div>
       )}
 
-      {step === 'questionario' && (
-        <div>
-          {(participacao.questionario || []).map((q, qi) => (
-            <div key={qi} className="mb-[22px]">
+      {step === 'questionario' && (() => {
+        const q = participacao.questionario[perguntaIdx];
+        const qi = perguntaIdx;
+        return (
+          <div>
+            <div className="flex items-center gap-1 mb-3.5">
+              {participacao.questionario.map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-[4px] rounded-full transition-colors"
+                  style={{ background: i < perguntaIdx ? FT.ok : i === perguntaIdx ? FT.orange : FT.border }}
+                />
+              ))}
+            </div>
+            <div className="mb-[22px]">
               <p className="text-[11px] font-semibold" style={{ fontFamily: FONT_MONO, color: FT.orangeDeep }}>
                 PERGUNTA {qi + 1} / {participacao.questionario.length}
               </p>
@@ -318,12 +334,41 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
                 );
               })}
             </div>
-          ))}
-          <button onClick={submeterQuestionario} disabled={!todasRespondidas || busy} className={BTN_PRIMARY_CLS} style={btnPrimaryStyle(!todasRespondidas || busy)}>
-            {busy ? 'A submeter...' : 'Submeter Respostas'}
-          </button>
-        </div>
-      )}
+            <div className="flex gap-2.5">
+              {perguntaIdx > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPerguntaIdx(i => i - 1)}
+                  disabled={busy}
+                  className="py-3 px-4 rounded-[9px] font-semibold text-[14.5px] border-[1.5px] transition-all disabled:opacity-50 flex items-center gap-1"
+                  style={{ borderColor: FT.navy, color: FT.navy }}
+                >
+                  <ChevronLeft size={16} /> Anterior
+                </button>
+              )}
+              {naUltimaPergunta ? (
+                <button
+                  onClick={submeterQuestionario}
+                  disabled={!todasRespondidas || busy}
+                  className={`${BTN_PRIMARY_CLS} flex-1`}
+                  style={btnPrimaryStyle(!todasRespondidas || busy)}
+                >
+                  {busy ? 'A submeter...' : 'Submeter Respostas'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => setPerguntaIdx(i => i + 1)}
+                  disabled={!perguntaAtualRespondida}
+                  className={`${BTN_PRIMARY_CLS} flex-1`}
+                  style={btnPrimaryStyle(!perguntaAtualRespondida)}
+                >
+                  Seguinte
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {step === 'resultado' && (() => {
         const aprovado = resultado?.aprovado;
