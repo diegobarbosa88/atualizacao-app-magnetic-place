@@ -2,9 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 import { requireAuth } from '../_authUtils.js';
 
 // Todos os endpoints de Formação Interna vivem numa única função serverless
-// (rota dinâmica [action].js) — o plano Hobby da Vercel limita a 12 funções
-// por deployment; ter um ficheiro por endpoint (8 aqui) estourava o limite.
-// /api/formacao/<action> continua a funcionar como antes do lado do cliente.
+// — o plano Hobby da Vercel limita a 12 funções por deployment; ter um
+// ficheiro por endpoint (8+ aqui) estourava o limite. Dispatch por
+// req.query.action, alimentado pelos rewrites /api/formacao/<action> ->
+// /api/formacao?action=<action> em vercel.json (mesmo padrão já usado em
+// api/toconline/proxy.js e api/reconciliacao/index.js). Nota: uma rota
+// dinâmica [action].js foi tentada primeiro mas o `vercel dev` local não a
+// reconhecia (nenhum sub-path respondia) — o padrão de rewrite é o que já
+// está validado a funcionar no resto do projeto.
 
 const CATEGORIAS_VALIDAS = ['soldadura', 'caldeiraria', 'certificacao_formal', 'hst', 'equipamentos', 'gwo', 'onboarding'];
 const CATEGORIAS_ENTIDADE_EXTERNA = ['certificacao_formal', 'gwo'];

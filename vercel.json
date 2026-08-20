@@ -66,6 +66,15 @@
     { "source": "/api/toconline/status", "destination": "/api/toconline/proxy?action=status" },
     { "source": "/api/toconline/auth-init", "destination": "/api/toconline/proxy?action=auth-init" },
     { "source": "/api/toconline/token-exchange", "destination": "/api/toconline/proxy?action=token-exchange" },
+    { "source": "/api/formacao/list", "destination": "/api/formacao?action=list" },
+    { "source": "/api/formacao/create", "destination": "/api/formacao?action=create" },
+    { "source": "/api/formacao/sign", "destination": "/api/formacao?action=sign" },
+    { "source": "/api/formacao/minhas", "destination": "/api/formacao?action=minhas" },
+    { "source": "/api/formacao/iniciar", "destination": "/api/formacao?action=iniciar" },
+    { "source": "/api/formacao/responder-questionario", "destination": "/api/formacao?action=responder-questionario" },
+    { "source": "/api/formacao/conteudo", "destination": "/api/formacao?action=conteudo" },
+    { "source": "/api/formacao/certificacoes", "destination": "/api/formacao?action=certificacoes" },
+    { "source": "/api/formacao/horas-por-trabalhador", "destination": "/api/formacao?action=horas-por-trabalhador" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
