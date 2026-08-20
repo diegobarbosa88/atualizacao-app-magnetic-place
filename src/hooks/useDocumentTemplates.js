@@ -14,6 +14,7 @@ import { sendWorkerDocumentEmail } from '../utils/emailUtils';
 import { applyAdminStampToPage } from '../utils/pdfSigningService';
 import { DOC_STATUS } from '../constants/documentStatus';
 import { inferirCategoria } from '../constants/rhCategories';
+import { notifyEvent, TARGET } from '../utils/notifyEvent';
 
 export function useDocumentTemplates(supabase, { onError } = {}) {
   const [templates, setTemplates] = useState([]);
@@ -296,17 +297,14 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
           succeeded++;
 
           // N1: notificar o trabalhador que tem um documento para assinar
-          const nId = `notif_${Date.now()}_${workerId}`;
-          await supabase.from('app_notifications').insert({
-            id: nId,
+          await notifyEvent(supabase, {
+            idPrefix: 'notif',
             title: `📄 Novo documento para assinar`,
             message: `Tens um novo documento "${selectedTemplate.name}" para rever e assinar.`,
             type: 'info',
-            target_type: 'specific',
-            target_worker_ids: [workerId],
-            is_dismissible: true,
-            is_active: true,
-            created_at: new Date().toISOString(),
+            target: TARGET.WORKER,
+            targetWorkerIds: [workerId],
+            payload: { kind: 'document_pending' },
           });
 
           if (sendEmail && worker?.email) {
@@ -455,17 +453,14 @@ export function useDocumentTemplates(supabase, { onError } = {}) {
       if (dbErr) throw dbErr;
 
       // N3: notificar o trabalhador que o documento foi aprovado
-      const nIdN3 = `notif_approved_${doc.id}_${Date.now()}`;
-      await supabase.from('app_notifications').insert({
-        id: nIdN3,
+      await notifyEvent(supabase, {
+        idPrefix: 'notif_approved',
         title: `✅ Documento aprovado`,
         message: `O teu documento "${doc.title || doc.nome_ficheiro || 'documento'}" foi aprovado e assinado pela empresa.`,
         type: 'success',
-        target_type: 'specific',
-        target_worker_ids: [doc.worker_id],
-        is_dismissible: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
+        target: TARGET.WORKER,
+        targetWorkerIds: [doc.worker_id],
+        payload: { document_id: doc.id, kind: 'document_approved' },
       });
 
       await loadGeneratedDocs();

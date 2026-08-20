@@ -3,6 +3,7 @@
 
 import { calculateDuration } from './formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from './timeUtils';
+import { notifyEvent, TARGET } from './notifyEvent';
 
 // Data de corte: pedidos de trabalhadores submetidos antes desta data não aparecem no portal do cliente
 // (foram tratados pelo admin antes da implementação desta funcionalidade).
@@ -211,17 +212,13 @@ export async function approveWorkerRequest(supabase, { clientId, clientName, cor
   });
 
   // Notificar o trabalhador (mesmo padrão que o admin)
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
+  await notifyEvent(supabase, {
     title: 'Pedido de Registo Aprovado',
     message: 'O seu pedido de registo foi aprovado.',
     type: 'success',
-    target_type: 'specific',
-    target_worker_ids: workerId ? [String(workerId)] : [],
+    target: TARGET.WORKER,
+    targetWorkerIds: workerId ? [workerId] : [],
     payload: { correction_id: correction.id, kind: 'applied' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: new Date().toISOString(),
   });
 }
 
@@ -259,16 +256,12 @@ export async function rejectWorkerRequest(supabase, { clientId, clientName, corr
   });
 
   // Notificar o trabalhador (mesmo padrão que o admin)
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
+  await notifyEvent(supabase, {
     title: 'Pedido de Registo Rejeitado',
     message: reason ? `Motivo: ${reason}` : 'O seu pedido de registo foi rejeitado.',
     type: 'error',
-    target_type: 'specific',
-    target_worker_ids: workerId ? [String(workerId)] : [],
+    target: TARGET.WORKER,
+    targetWorkerIds: workerId ? [workerId] : [],
     payload: { correction_id: correction.id, kind: 'rejected' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: new Date().toISOString(),
   });
 }

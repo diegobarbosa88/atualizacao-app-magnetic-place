@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { sendValidationEmail } from '../../../utils/emailUtils';
+import { notifyEvent, TARGET } from '../../../utils/notifyEvent';
 import { getStampHTML } from '../../../hooks/useSignatureStamp';
 import { cropSignatureCanvas } from '../../../utils/signatureCanvas';
 import workerDocumentsCSS from '../WorkerDocuments.css?inline';
@@ -275,27 +275,16 @@ export function useSignDocument({ currentUser, saveToDb, signerOpenedAt, workerI
       // N2: notificar admin que o trabalhador assinou
       const workerName = currentUser?.name || currentUser?.nome || 'Trabalhador';
       const docTitle = selectedDoc?.title || selectedDoc?.nome_ficheiro || 'documento';
-      const nId = `notif_signed_${selectedDoc.id}_${Date.now()}`;
-      const { error: notifErr } = await supabase.from('app_notifications').insert({
-        id: nId,
+      const adminEmail = companySignature?.responsibleEmail;
+      await notifyEvent(supabase, {
+        idPrefix: 'notif_signed',
         title: `✍️ Documento assinado: ${workerName}`,
         message: `${workerName} assinou o documento "${docTitle}" e aguarda a tua assinatura.`,
         type: 'info',
-        target_type: 'admin',
-        is_dismissible: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
+        target: TARGET.ADMIN,
+        payload: { document_id: selectedDoc.id, kind: 'document_signed' },
+        email: adminEmail ? { to: adminEmail, name: companySignature?.responsibleName || 'Admin' } : undefined,
       });
-      if (notifErr) console.error('[useSignDocument] Erro ao inserir notificação:', notifErr);
-      const adminEmail = companySignature?.responsibleEmail;
-      if (adminEmail) {
-        sendValidationEmail({
-          to: adminEmail,
-          name: companySignature?.responsibleName || 'Admin',
-          title: `✍️ Documento assinado: ${workerName}`,
-          message: `${workerName} assinou o documento "${docTitle}" e aguarda a tua assinatura.`,
-        }).catch(() => {});
-      }
 
       return result;
     } catch (err) {

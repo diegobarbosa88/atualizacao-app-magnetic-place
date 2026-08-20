@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, ArrowRight, CheckCircle, XCircle } from 'lucide-react';
 import { useApp } from '../../../context/AppContext';
+import { notifyEvent, TARGET } from '../../../utils/notifyEvent';
 
 const ChangeRequestsPanel = ({ requests, onUpdate }) => {
   const { supabase, workers, workerChangeRequests, setWorkerChangeRequests, saveToDb } = useApp();
@@ -14,18 +15,14 @@ const ChangeRequestsPanel = ({ requests, onUpdate }) => {
     await saveToDb('workers', worker.id, { ...worker, [req.field]: req.proposed });
     await supabase.from('worker_change_requests').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: 'admin' }).eq('id', req.id);
     setWorkerChangeRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'approved' } : r));
-    await supabase.from('app_notifications').insert({
-      id: `chreq_appr_${Date.now()}`,
+    await notifyEvent(supabase, {
+      idPrefix: 'chreq_appr',
       title: 'Alteração de Dados Aprovada',
       message: `A sua solicitação de alteração de ${req.field_label} foi aprovada.`,
       type: 'success',
-      target_type: 'specific',
-      target_worker_ids: [req.worker_id],
-      is_dismissible: true,
-      is_active: true,
-      created_at: new Date().toISOString(),
-      viewed_by_ids: [],
-      dismissed_by_ids: [],
+      target: TARGET.WORKER,
+      targetWorkerIds: [req.worker_id],
+      payload: { change_request_id: req.id, kind: 'change_request_approved' },
     });
     onUpdate?.();
   };
@@ -34,18 +31,14 @@ const ChangeRequestsPanel = ({ requests, onUpdate }) => {
     if (!supabase) return;
     await supabase.from('worker_change_requests').update({ status: 'rejected', admin_note: rejectNote, reviewed_at: new Date().toISOString(), reviewed_by: 'admin' }).eq('id', req.id);
     setWorkerChangeRequests(prev => prev.map(r => r.id === req.id ? { ...r, status: 'rejected', admin_note: rejectNote } : r));
-    await supabase.from('app_notifications').insert({
-      id: `chreq_rej_${Date.now()}`,
+    await notifyEvent(supabase, {
+      idPrefix: 'chreq_rej',
       title: 'Alteração de Dados Rejeitada',
       message: `A sua solicitação de alteração de ${req.field_label} foi rejeitada.${rejectNote ? ' Nota: ' + rejectNote : ''}`,
       type: 'warning',
-      target_type: 'specific',
-      target_worker_ids: [req.worker_id],
-      is_dismissible: true,
-      is_active: true,
-      created_at: new Date().toISOString(),
-      viewed_by_ids: [],
-      dismissed_by_ids: [],
+      target: TARGET.WORKER,
+      targetWorkerIds: [req.worker_id],
+      payload: { change_request_id: req.id, kind: 'change_request_rejected' },
     });
     setRejectingId(null);
     setRejectNote('');

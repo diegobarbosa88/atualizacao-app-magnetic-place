@@ -6,6 +6,7 @@ import {
   Building2, Shield, Lock, Calendar, PenLine,
 } from 'lucide-react';
 import { sendOnboardingNotifAdmin } from '../../utils/emailUtils';
+import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 import SelectProfissaoEmpresa from '../../components/SelectProfissaoEmpresa';
 import OnboardingCommitmentStep from './OnboardingCommitmentStep';
 
@@ -351,12 +352,13 @@ export default function OnboardingForm({ token }) {
         .eq('id', invite.id);
 
       // 5. Notificação para o admin
-      await supabase.from('app_notifications').insert({
-        id: 'notif_onb_' + Date.now(),
+      await notifyEvent(supabase, {
+        idPrefix: 'notif_onb',
         title: 'Novo formulário de onboarding',
         message: `${form.nome} submeteu os dados e assinou o compromisso. Reveja em Equipa → Pendentes.`,
-        type: 'info', target_type: 'admin', is_dismissible: true, is_active: true,
-        created_at: new Date().toISOString(), dismissed_by_ids: [], viewed_by_ids: [],
+        type: 'info',
+        target: TARGET.ADMIN,
+        payload: { kind: 'onboarding' },
       });
 
       sendOnboardingNotifAdmin({ nome: form.nome, profissao: form.profissao })

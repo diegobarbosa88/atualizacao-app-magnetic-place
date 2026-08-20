@@ -3,6 +3,7 @@ import { Calendar, Clock, Coffee, FileText, CheckCircle, Send, Loader2, ChevronD
 import { useApp } from '../../context/AppContext';
 import { toISODateLocal } from '../../utils/dateUtils';
 import { DISABLE_CLIENT_NOTIFICATIONS } from '../../config';
+import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 
 const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, initialDate, initialLogId, isInline = false, openInDeleteMode = false }) => {
   const { supabase, saveToDb, minuteInterval, systemSettings, correctionItems, corrections } = useApp();
@@ -161,17 +162,14 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       });
 
       if (!DISABLE_CLIENT_NOTIFICATIONS) {
-        await supabase.from('app_notifications').insert({
-          id: `notif_${Date.now()}_client`,
+        await notifyEvent(supabase, {
+          idPrefix: 'notif_client',
           title: `Pedido de Eliminação · ${currentUser?.name}`,
           message: `O Trabalhador ${currentUser?.name} solicitou eliminação do registo de ${selectedDate}.`,
           type: 'info',
-          target_type: 'client',
-          target_client_id: String(existingLog.clientId),
+          target: TARGET.CLIENT,
+          targetClientId: existingLog.clientId,
           payload: { correction_id: correctionId, kind: 'submitted' },
-          is_active: true,
-          is_dismissible: true,
-          created_at: now,
         });
       }
 
@@ -279,17 +277,14 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       });
 
       if (!DISABLE_CLIENT_NOTIFICATIONS) {
-        await supabase.from('app_notifications').insert({
-          id: `notif_${Date.now()}_client`,
+        await notifyEvent(supabase, {
+          idPrefix: 'notif_client',
           title: `Pedido de Registo · ${currentUser?.name}`,
           message: `O Trabalhador ${currentUser?.name} solicitou ${existingLog ? 'correção' : 'criação'} de registo para ${selectedDate}.`,
           type: 'info',
-          target_type: 'client',
-          target_client_id: String(formData.clientId),
+          target: TARGET.CLIENT,
+          targetClientId: formData.clientId,
           payload: { correction_id: correctionId, kind: 'submitted' },
-          is_active: true,
-          is_dismissible: true,
-          created_at: now,
         });
       }
 

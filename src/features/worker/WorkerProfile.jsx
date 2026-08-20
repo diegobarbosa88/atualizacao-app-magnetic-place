@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext';
 import { User, Phone, Mail, MapPin, CreditCard, Shield, Landmark, Edit2, X, Send, Clock, CheckCircle, XCircle, FileCheck, Download } from 'lucide-react';
 import { isSigned } from '../../constants/documentStatus';
 import { FT, FONT_TITLE, FONT_MONO } from '../../styles/designTokens';
+import { notifyEvent, TARGET } from '../../utils/notifyEvent';
 
 const FIELDS = [
   { key: 'tel',     label: 'Telefone',           icon: Phone,      type: 'tel' },
@@ -55,17 +56,13 @@ const WorkerProfile = ({ worker, changeRequests, documents = [] }) => {
         created_at: new Date().toISOString(),
       };
       await supabase.from('worker_change_requests').insert(req);
-      await supabase.from('app_notifications').insert({
-        id: `change_notif_${Date.now()}`,
+      await notifyEvent(supabase, {
+        idPrefix: 'change_notif',
         title: 'Solicitação de Alteração de Dados',
         message: `${worker.name} solicitou alteração de ${fieldMeta?.label || field}`,
         type: 'info',
-        target_type: 'admin',
-        is_dismissible: true,
-        is_active: true,
-        created_at: new Date().toISOString(),
-        viewed_by_ids: [],
-        dismissed_by_ids: [],
+        target: TARGET.ADMIN,
+        payload: { change_request_id: req.id, kind: 'change_request' },
       });
     } finally {
       setLoading(false);
