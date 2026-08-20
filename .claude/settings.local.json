@@ -76,7 +76,8 @@
       "Bash(node -e \"console.log\\(Object.keys\\(require\\('pdf-parse'\\)\\)\\)\")",
       "Bash(cp \"C:/Users/diego/AppData/Local/Temp/claude/c--Users-diego-APP-MAGNETIC-PRODUCAO/fb13f3a3-4147-49d8-97ba-784c8ac76733/scratchpad/pdfcheck.mjs\" ./_tmp_pdfcheck.mjs)",
       "Bash(node ./_tmp_pdfcheck.mjs \"C:/Users/diego/AppData/Local/Temp/claude/c--Users-diego-APP-MAGNETIC-PRODUCAO/fb13f3a3-4147-49d8-97ba-784c8ac76733/scratchpad/doc_check.pdf\")",
-      "Bash(node ./_tmp_pdfimg.mjs \"C:/Users/diego/AppData/Local/Temp/claude/c--Users-diego-APP-MAGNETIC-PRODUCAO/fb13f3a3-4147-49d8-97ba-784c8ac76733/scratchpad/doc_check.pdf\" \"C:/Users/diego/AppData/Local/Temp/claude/c--Users-diego-APP-MAGNETIC-PRODUCAO/fb13f3a3-4147-49d8-97ba-784c8ac76733/scratchpad/doc_check.png\")"
+      "Bash(node ./_tmp_pdfimg.mjs \"C:/Users/diego/AppData/Local/Temp/claude/c--Users-diego-APP-MAGNETIC-PRODUCAO/fb13f3a3-4147-49d8-97ba-784c8ac76733/scratchpad/doc_check.pdf\" \"C:/Users/diego/AppData/Local/Temp/claude/c--Users-diego-APP-MAGNETIC-PRODUCAO/fb13f3a3-4147-49d8-97ba-784c8ac76733/scratchpad/doc_check.png\")",
+      "Bash(git commit *)"
     ]
   }
 }
