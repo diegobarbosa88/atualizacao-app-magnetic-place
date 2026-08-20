@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { X, ChevronLeft, Flame, Box, Award, ShieldCheck, Wrench, Wind, UserPlus, GraduationCap } from 'lucide-react';
+import {
+  X, ChevronLeft, Flame, Box, Award, ShieldCheck, Wrench, Wind, UserPlus, GraduationCap,
+  Zap, CircleDot, Layers, PenTool, Ruler, Eye, Scissors, Compass, Building2, Cylinder, Database,
+  FileCheck, ClipboardCheck, Shield, HardHat, Container, ArrowUpDown, ChevronsUp,
+  TowerControl, HeartPulse, Siren, Move, Anchor, ClipboardList, FileText, MapPin,
+} from 'lucide-react';
 import SignDrawModal from '../../../components/worker/SignDrawModal';
 import FormacaoElearningFlow from './FormacaoElearningFlow';
 import { listMinhasFormacoes, assinarMinhaFormacao } from './formacaoWorkerApi';
@@ -8,6 +13,8 @@ import { FT, FONT_TITLE, FONT_MONO } from './formacaoDesignTokens';
 
 const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.id, c.label]));
 
+// Ícone por categoria — usado como recurso de reserva quando o tipo_formacao
+// não tem ícone dedicado (ex: tipo escrito livremente pelo admin).
 const CATEGORIA_ICON = {
   soldadura: Flame,
   caldeiraria: Box,
@@ -16,6 +23,50 @@ const CATEGORIA_ICON = {
   equipamentos: Wrench,
   gwo: Wind,
   onboarding: UserPlus,
+};
+
+// Ícone específico por tipo_formacao, para diferenciar visualmente cada
+// formação na lista do trabalhador, mesmo dentro da mesma categoria.
+const TIPO_ICON = {
+  // Soldadura
+  'MIG/MAG (135/136)': Zap,
+  'TIG (141)': Flame,
+  'Elétrodo Revestido (111)': CircleDot,
+  'Arco Submerso (121)': Layers,
+  'Leitura de Desenho Técnico': PenTool,
+  'Preparação de Bordos': Ruler,
+  'Inspeção Visual de Soldadura': Eye,
+  // Caldeiraria
+  'Corte e Conformação de Chapa': Scissors,
+  'Quinagem/Calandragem': Box,
+  'Traçagem': Compass,
+  'Montagem de Estruturas': Building2,
+  'Tubagem Industrial': Cylinder,
+  'Reservatórios': Database,
+  // Certificação formal
+  'ISO 9606-1': Award,
+  'WPS (Welding Procedure Specification)': FileCheck,
+  'WPQR (Welding Procedure Qualification Record)': ClipboardCheck,
+  // HST
+  'Segurança em Trabalhos de Soldadura': ShieldCheck,
+  'Segurança em Trabalhos de Caldeiraria': Shield,
+  'EPI para Soldadura': HardHat,
+  'Ventilação e Extração de Fumos': Wind,
+  'Trabalhos a Quente': Flame,
+  'Manuseamento de Gases Industriais': Container,
+  // Equipamentos
+  'Ponte Rolante': ArrowUpDown,
+  'Plataforma Elevatória': ChevronsUp,
+  // GWO
+  'BST Trabalhos em Altura': TowerControl,
+  'BST Primeiros Socorros': HeartPulse,
+  'BST Combate a Incêndio': Siren,
+  'BST Movimentação Manual': Move,
+  'BST Sobrevivência no Mar': Anchor,
+  // Onboarding
+  'Compromisso de Início de Atividade': ClipboardList,
+  'Procedimentos Internos': FileText,
+  'Regras do Cliente/Estaleiro': MapPin,
 };
 
 const STATUS_LABEL = {
@@ -91,7 +142,7 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
               <GraduationCap size={16} className="text-white" />
             </div>
           )}
-          <h2 className="flex-1 font-bold uppercase tracking-wide text-sm truncate" style={{ fontFamily: FONT_TITLE }}>
+          <h2 className="flex-1 font-bold uppercase tracking-wide text-sm truncate" style={{ fontFamily: FONT_TITLE, color: '#fff' }}>
             {elearningAlvo ? elearningAlvo.tipo_formacao : 'As tuas formações'}
           </h2>
           <button onClick={onClose} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-all">
@@ -121,7 +172,7 @@ export default function FormacaoModal({ isOpen, onClose, currentUser, onChanged 
             <div className="flex flex-col gap-3">
               {participacoes.map(p => {
                 const concluidoTotal = !!p.assinado_em;
-                const Icone = CATEGORIA_ICON[p.categoria] || GraduationCap;
+                const Icone = TIPO_ICON[p.tipo_formacao] || CATEGORIA_ICON[p.categoria] || GraduationCap;
                 const statusLabel = concluidoTotal
                   ? 'Concluído'
                   : p.formato === 'e-learning'

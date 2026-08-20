@@ -67,6 +67,13 @@ function btnPrimaryStyle(disabled) {
   };
 }
 const BTN_PRIMARY_CLS = 'w-full py-3 rounded-[9px] font-semibold text-[14.5px] transition-all active:scale-[0.98] disabled:cursor-not-allowed';
+// Barra de ações fixa ao fundo do ecrã (dentro do scroll da modal) — em
+// telemóvel o conteúdo pode ser mais alto que o ecrã e o botão de avançar
+// tem de continuar acessível sem obrigar a fazer scroll até ao fim.
+const STICKY_FOOTER_CLS = 'sticky bottom-0 -mx-5 px-5 pt-3 pb-4';
+function stickyFooterStyle() {
+  return { background: FT.panel, borderTop: `1px solid ${FT.border}`, boxShadow: '0 -6px 12px -6px rgba(20,30,45,0.08)' };
+}
 
 function SignatureCanvas({ onConfirm, busy }) {
   const canvasRef = useRef(null);
@@ -239,7 +246,7 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
 
       {step === 'conteudo' && (
         <div>
-          <div className="max-h-[400px] overflow-y-auto pr-1.5 mb-4" style={{ borderBottom: `1px dashed ${FT.border}`, paddingBottom: 16 }}>
+          <div className="mb-4" style={{ borderBottom: `1px dashed ${FT.border}`, paddingBottom: 16 }}>
             {participacao.conteudo_estruturado?.objetivo && (
               <div className="rounded-r-lg px-3.5 py-3 text-[13.5px] mb-3" style={{ background: '#F5F3EE', borderLeft: `3px solid ${FT.orange}` }}>
                 <span className="font-bold">Objetivo: </span>{participacao.conteudo_estruturado.objetivo}
@@ -284,9 +291,11 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
               </div>
             )}
           </div>
-          <button onClick={() => setStep('questionario')} disabled={conteudoLoading} className={BTN_PRIMARY_CLS} style={btnPrimaryStyle(conteudoLoading)}>
-            Concluí a leitura, avançar para o questionário
-          </button>
+          <div className={STICKY_FOOTER_CLS} style={stickyFooterStyle()}>
+            <button onClick={() => setStep('questionario')} disabled={conteudoLoading} className={BTN_PRIMARY_CLS} style={btnPrimaryStyle(conteudoLoading)}>
+              Concluí a leitura, avançar para o questionário
+            </button>
+          </div>
         </div>
       )}
 
@@ -334,13 +343,13 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
                 );
               })}
             </div>
-            <div className="flex gap-2.5">
+            <div className={`${STICKY_FOOTER_CLS} flex gap-2.5`} style={stickyFooterStyle()}>
               {perguntaIdx > 0 && (
                 <button
                   type="button"
                   onClick={() => setPerguntaIdx(i => i - 1)}
                   disabled={busy}
-                  className="py-3 px-4 rounded-[9px] font-semibold text-[14.5px] border-[1.5px] transition-all disabled:opacity-50 flex items-center gap-1"
+                  className="py-3 px-4 rounded-[9px] font-semibold text-[14.5px] border-[1.5px] transition-all disabled:opacity-50 flex items-center gap-1 shrink-0"
                   style={{ borderColor: FT.navy, color: FT.navy }}
                 >
                   <ChevronLeft size={16} /> Anterior
