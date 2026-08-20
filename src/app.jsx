@@ -200,12 +200,39 @@ export default function App() {
   };
 
   const handleLogin = (role, user = null, token = null) => {
-    const userData = user || { id: 'admin_system', name: 'Admin', role: 'admin' };
+    // Ao entrar em modo "Ver Portal" a partir do admin, guarda a sessão
+    // admin atual (token incluído) para "Voltar ao Painel Admin" a poder
+    // restaurar sem pedir a password outra vez — ver nota abaixo.
+    if (role === 'worker' && user?.isAdminImpersonating && !currentUser?.isAdminImpersonating) {
+      const tokenAtual = localStorage.getItem('magnetic_session_token');
+      const userAtual = localStorage.getItem('magnetic_user');
+      if (tokenAtual && userAtual) {
+        sessionStorage.setItem('magnetic_admin_snapshot_token', tokenAtual);
+        sessionStorage.setItem('magnetic_admin_snapshot_user', userAtual);
+      }
+    }
+
+    let userData = user || { id: 'admin_system', name: 'Admin', role: 'admin' };
+    let finalToken = token;
+
+    // "Voltar ao Painel Admin" (WorkerNavBar) chama onLogin('admin') sem
+    // user/token — restaura a sessão admin guardada acima em vez de perder
+    // o token (senão as chamadas de admin ficavam a usar o token do
+    // trabalhador impersonado e todas as rotas admin-only passavam a 403).
+    if (role === 'admin' && !user && !token) {
+      const snapToken = sessionStorage.getItem('magnetic_admin_snapshot_token');
+      const snapUser = sessionStorage.getItem('magnetic_admin_snapshot_user');
+      if (snapToken && snapUser) {
+        try { userData = JSON.parse(snapUser); } catch { /* mantém o fallback genérico */ }
+        finalToken = snapToken;
+      }
+    }
+
     setCurrentUser(userData);
     setView(role);
     localStorage.setItem('magnetic_view', role);
     localStorage.setItem('magnetic_user', JSON.stringify(userData));
-    if (token) localStorage.setItem('magnetic_session_token', token);
+    if (finalToken) localStorage.setItem('magnetic_session_token', finalToken);
     if (role === 'admin') navigate('/admin/overview');
     else if (role === 'worker') navigate('/worker');
   };
@@ -213,6 +240,8 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setView('login');
+    sessionStorage.removeItem('magnetic_admin_snapshot_token');
+    sessionStorage.removeItem('magnetic_admin_snapshot_user');
     localStorage.removeItem('magnetic_view');
     localStorage.removeItem('magnetic_user');
     localStorage.removeItem('magnetic_session_token');
