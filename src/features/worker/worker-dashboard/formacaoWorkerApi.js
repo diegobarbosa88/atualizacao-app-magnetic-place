@@ -33,3 +33,7 @@ export function responderQuestionario(participanteId, respostas) {
     body: JSON.stringify({ participante_id: participanteId, respostas }),
   }).then(json);
 }
+
+export function getConteudoUrl(participanteId) {
+  return authFetch(`/api/formacao/conteudo?participante_id=${encodeURIComponent(participanteId)}`).then(json);
+}

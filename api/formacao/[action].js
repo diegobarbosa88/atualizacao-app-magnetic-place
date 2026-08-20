@@ -402,6 +402,57 @@ async function handleResponderQuestionario(req, res) {
   return res.status(200).json({ nota_obtida: notaObtida, aprovado, estado_conclusao: update.estado_conclusao });
 }
 
+function isPathInterno(url) {
+  return !!url && !/^https?:\/\//i.test(url);
+}
+
+async function handleConteudo(req, res) {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+  const sessao = requireAuth(req, res, ['admin', 'worker']);
+  if (!sessao) return;
+
+  const { participante_id } = req.query;
+  if (!participante_id) return res.status(400).json({ error: 'Campo obrigatório: participante_id.' });
+
+  const supabase = getSupabase();
+
+  const { data: participante, error: fetchError } = await supabase
+    .from('formacao_participantes')
+    .select('id, worker_id, formacoes_internas(formato, conteudo_url)')
+    .eq('id', participante_id)
+    .single();
+
+  if (fetchError || !participante) {
+    return res.status(404).json({ error: 'Participante não encontrado.' });
+  }
+
+  const isAdmin = sessao.role === 'admin' || sessao.isAdmin;
+  if (!isAdmin && String(participante.worker_id) !== String(sessao.id)) {
+    return res.status(403).json({ error: 'Só podes aceder ao conteúdo das tuas próprias formações.' });
+  }
+
+  const conteudoUrl = participante.formacoes_internas?.conteudo_url;
+  if (participante.formacoes_internas?.formato !== 'e-learning' || !conteudoUrl) {
+    return res.status(400).json({ error: 'Esta formação não tem conteúdo e-learning.' });
+  }
+
+  // Links externos (YouTube/Vimeo/URL pública) não precisam de assinatura —
+  // só paths internos do bucket privado formacao-interna passam por aqui.
+  if (!isPathInterno(conteudoUrl)) {
+    return res.status(200).json({ url: conteudoUrl });
+  }
+
+  const { data: signed, error: signError } = await supabase.storage
+    .from('formacao-interna')
+    .createSignedUrl(conteudoUrl, 3600);
+
+  if (signError || !signed?.signedUrl) {
+    return res.status(500).json({ error: signError?.message || 'Não foi possível gerar o link de acesso ao conteúdo.' });
+  }
+
+  return res.status(200).json({ url: signed.signedUrl });
+}
+
 async function handleCertificacoes(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
   if (!requireAuth(req, res, ['admin'])) return;
@@ -461,6 +512,7 @@ const ACTIONS = {
   'minhas': handleMinhas,
   'iniciar': handleIniciar,
   'responder-questionario': handleResponderQuestionario,
+  'conteudo': handleConteudo,
   'certificacoes': handleCertificacoes,
   'horas-por-trabalhador': handleHorasPorTrabalhador,
 };

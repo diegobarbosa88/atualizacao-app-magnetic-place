@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PlayCircle, FileText, CheckCircle2, XCircle, Loader2, ArrowRight, RotateCcw } from 'lucide-react';
-import { iniciarFormacao, responderQuestionario } from './formacaoWorkerApi';
+import { iniciarFormacao, responderQuestionario, getConteudoUrl } from './formacaoWorkerApi';
+
+function isExterno(url) {
+  return /^https?:\/\//i.test(url || '');
+}
 
 function detectarMedia(url) {
   if (!url) return { tipo: 'pdf', src: url };
@@ -21,15 +25,25 @@ export default function FormacaoElearningFlow({ participacao, onConcluido, onErr
       : null
   );
   const [busy, setBusy] = useState(false);
+  const [conteudoSrc, setConteudoSrc] = useState(isExterno(participacao.conteudo_url) ? participacao.conteudo_url : null);
+  const [conteudoLoading, setConteudoLoading] = useState(!isExterno(participacao.conteudo_url));
 
   useEffect(() => {
     if (participacao.estado_conclusao === 'nao_iniciado') {
       iniciarFormacao(participacao.participante_id).catch(e => onError?.(e.message));
     }
+    // Paths internos do bucket privado precisam de uma signed URL — links
+    // externos (YouTube/Vimeo/URL pública) usam-se diretamente.
+    if (!isExterno(participacao.conteudo_url)) {
+      getConteudoUrl(participacao.participante_id)
+        .then(({ url }) => setConteudoSrc(url))
+        .catch(e => onError?.(e.message))
+        .finally(() => setConteudoLoading(false));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const media = detectarMedia(participacao.conteudo_url);
+  const media = conteudoSrc ? detectarMedia(conteudoSrc) : null;
   const todasRespondidas = respostas.length > 0 && respostas.every(r => r !== null);
 
   const submeter = async () => {
@@ -53,24 +67,25 @@ export default function FormacaoElearningFlow({ participacao, onConcluido, onErr
   if (step === 'conteudo') {
     return (
       <div className="space-y-4">
-        <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-video">
-          {media.tipo === 'video' && (
+        <div className="rounded-2xl overflow-hidden bg-slate-900 aspect-video flex items-center justify-center">
+          {conteudoLoading ? (
+            <Loader2 className="animate-spin text-white" size={28} />
+          ) : media?.tipo === 'video' ? (
             <video src={media.src} controls className="w-full h-full" />
-          )}
-          {media.tipo === 'embed' && (
+          ) : media?.tipo === 'embed' ? (
             <iframe src={media.src} className="w-full h-full" allow="autoplay; encrypted-media" allowFullScreen title="Conteúdo da formação" />
-          )}
-          {media.tipo === 'pdf' && (
+          ) : media?.tipo === 'pdf' ? (
             <iframe src={`${media.src}#toolbar=0`} className="w-full h-full bg-white" title="Conteúdo da formação" />
-          )}
+          ) : null}
         </div>
         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {media.tipo === 'pdf' ? <FileText size={12} /> : <PlayCircle size={12} />}
-          {media.tipo === 'pdf' ? 'Documento' : 'Vídeo'}
+          {media?.tipo === 'pdf' ? <FileText size={12} /> : <PlayCircle size={12} />}
+          {media?.tipo === 'pdf' ? 'Documento' : 'Vídeo'}
         </div>
         <button
           onClick={() => setStep('questionario')}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95"
+          disabled={conteudoLoading}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-900 transition-all shadow-sm active:scale-95 disabled:opacity-50"
         >
           Concluí a visualização, avançar para o questionário <ArrowRight size={13} />
         </button>
