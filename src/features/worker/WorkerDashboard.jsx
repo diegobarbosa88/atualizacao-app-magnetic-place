@@ -201,6 +201,7 @@ const WorkerDashboardContent = ({ onLogout, onLogin }) => {
       message: buildAbsenceNotificationMessage({ workerName: currentUser.name, dates, reason, notes }),
       type: 'warning',
       target: TARGET.ADMIN,
+      push: { url: '/?view=admin' },
       payload: { absenceId: id, kind: 'absence' },
     });
 

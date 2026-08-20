@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone, Bell, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Megaphone, Bell, BellRing, BellOff, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { usePushSubscription } from '../../hooks/usePushSubscription';
 
 const SYSTEM_PATTERNS = [
   'Pedido de Correção',
@@ -15,6 +16,7 @@ const SYSTEM_PATTERNS = [
 
 const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete, supabase }) => {
   const { currentUser } = useApp();
+  const { permission, isSubscribed, subscribing, subscribe, supported } = usePushSubscription({ supabase, role: 'admin' });
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [type, setType] = useState('info');
@@ -89,7 +91,19 @@ const NotificationsAdmin = ({ workers, appNotifications, saveToDb, handleDelete,
         <div className="bg-amber-50 p-2 rounded-xl text-amber-600">
           <Megaphone size={20} />
         </div>
-        <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight">Gestão de Banners de Aviso</h3>
+        <h3 className="font-black text-base sm:text-xl text-slate-800 uppercase tracking-tight flex-1">Gestão de Banners de Aviso</h3>
+        {supported && (
+          <button
+            onClick={subscribe}
+            disabled={subscribing || isSubscribed}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+              isSubscribed ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
+          >
+            {subscribing ? <Loader2 size={13} className="animate-spin" /> : isSubscribed ? <BellRing size={13} /> : permission === 'denied' ? <BellOff size={13} /> : <Bell size={13} />}
+            {isSubscribed ? 'Push ativo' : permission === 'denied' ? 'Push bloqueado' : 'Ativar push'}
+          </button>
+        )}
       </div>
 
       <div className="bg-slate-50/50 rounded-2xl sm:rounded-[2rem] p-4 sm:p-6 mb-5 border border-slate-100">

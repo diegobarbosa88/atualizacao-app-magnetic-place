@@ -49,6 +49,12 @@
     "react-signature-canvas": "^1.1.0-alpha.2",
     "recharts": "^2.15.4",
     "tailwindcss": "^4.3.0",
+    "web-push": "^3.6.7",
+    "workbox-cacheable-response": "^7.4.1",
+    "workbox-expiration": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-strategies": "^7.4.1",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xmlbuilder2": "^4.0.3"
   },

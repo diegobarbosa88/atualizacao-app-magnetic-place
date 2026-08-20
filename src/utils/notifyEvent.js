@@ -32,6 +32,7 @@ export const newId = (prefix) => `${prefix}_${Date.now()}_${Math.random().toStri
  * @param notifType chave de notification_preferences — se omitido, o email (quando pedido) é sempre enviado
  * @param preferences objeto de notification_preferences, só relevante com notifType
  * @param email { to, name, link } — opcional; só envia se `to` estiver presente
+ * @param push { url } — opcional; envia push real (só suportado para TARGET.ADMIN por agora)
  */
 export async function notifyEvent(supabase, {
   idPrefix = 'notif',
@@ -45,6 +46,7 @@ export async function notifyEvent(supabase, {
   notifType,
   preferences,
   email,
+  push,
 }) {
   if (!supabase) return { error: new Error('Supabase indisponível') };
 
@@ -82,6 +84,14 @@ export async function notifyEvent(supabase, {
       sendValidationEmail({ to: email.to, name: email.name, title, message, link: email.link })
         .catch((e) => console.warn(`[notifyEvent] falha no email (${idPrefix}):`, e));
     }
+  }
+
+  if (push && target === TARGET.ADMIN) {
+    fetch('/api/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role: 'admin', title, body: message, url: push.url }),
+    }).catch((e) => console.warn(`[notifyEvent] falha no push (${idPrefix}):`, e));
   }
 
   return { error, id };
