@@ -6,6 +6,9 @@
 
 ALTER TABLE formacoes_internas ADD COLUMN IF NOT EXISTS conteudo_estruturado JSONB;
 
+-- Nomes antigos possíveis da constraint (variaram entre ambientes onde a
+-- migration 20260820c foi aplicada por colagem manual no SQL editor).
+ALTER TABLE formacoes_internas DROP CONSTRAINT IF EXISTS formacoes_internas_elearning_check;
 ALTER TABLE formacoes_internas DROP CONSTRAINT IF EXISTS formacoes_internas_elearning_completo_check;
 ALTER TABLE formacoes_internas ADD CONSTRAINT formacoes_internas_elearning_completo_check
   CHECK (formato != 'e-learning' OR (
