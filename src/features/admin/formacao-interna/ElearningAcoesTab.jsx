@@ -242,6 +242,26 @@ export default function ElearningAcoesTab({ refreshKey }) {
                               <p className="text-xs text-slate-500"><span className="font-bold text-slate-700">Objetivo:</span> {f.conteudo_estruturado.objetivo}</p>
                             )}
 
+                            {Array.isArray(f.conteudo_estruturado?.seccoes) && f.conteudo_estruturado.seccoes.length > 0 && (
+                              <div>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Conteúdo</p>
+                                <div className="space-y-2">
+                                  {f.conteudo_estruturado.seccoes.map((sec, si) => (
+                                    <div key={si} className="flex items-center gap-3 p-3 rounded-2xl bg-white border border-slate-100">
+                                      {sec.imagem_url ? (
+                                        <img src={sec.imagem_url} alt="" className="w-14 h-14 object-cover rounded-xl border border-slate-100 shrink-0" />
+                                      ) : (
+                                        <div className="w-14 h-14 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 text-slate-300">
+                                          <ImageIcon size={18} />
+                                        </div>
+                                      )}
+                                      <p className="text-xs font-bold text-slate-700">{sec.titulo}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             <div className="space-y-2">
                               {participantes.map(p => {
                                 const conclusaoCfg = ESTADO_CONCLUSAO_CFG[p.estado_conclusao];

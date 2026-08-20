@@ -244,6 +244,9 @@ export default function FormacaoElearningFlow({ participacao, currentUser, onFin
               participacao.conteudo_estruturado.seccoes.map((sec, idx) => (
                 <div key={idx} className={idx > 0 ? 'mt-5' : ''}>
                   <h3 className="text-[19px] font-bold mb-2" style={{ fontFamily: FONT_TITLE, color: FT.navyDeep }}>{sec.titulo}</h3>
+                  {sec.imagem_url && (
+                    <img src={sec.imagem_url} alt="" className="w-full max-h-[220px] object-cover rounded-[10px] mb-2.5" style={{ border: `1px solid ${FT.border}` }} />
+                  )}
                   {sec.paragrafos?.map((p, pIdx) => (
                     <p key={pIdx} className="text-[14px] leading-relaxed mb-2" style={{ color: FT.ink }}>{p}</p>
                   ))}

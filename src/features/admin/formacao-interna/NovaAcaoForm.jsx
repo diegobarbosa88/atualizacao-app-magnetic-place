@@ -117,6 +117,10 @@ export default function NovaAcaoForm({ onCriada }) {
   )));
   const setRespostaCorreta = (idx, oIdx) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, resposta_correta: oIdx } : q));
   const setImagemUrl = (idx, imagem_url) => setQuestionario(qs => qs.map((q, i) => i === idx ? { ...q, imagem_url } : q));
+  const setSecaoImagem = (idx, imagem_url) => setConteudoEstruturado(prev => prev ? {
+    ...prev,
+    seccoes: prev.seccoes.map((s, i) => i === idx ? { ...s, imagem_url } : s),
+  } : prev);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -314,6 +318,34 @@ export default function NovaAcaoForm({ onCriada }) {
               <input required={isElearning} type="number" min="1" max="100" className={CAMPO} value={form.nota_minima_aprovacao} onChange={setField('nota_minima_aprovacao')} />
             </div>
           </div>
+
+          {conteudoEstruturado && (
+            <div>
+              <label className={LABEL}>Ilustrações do Conteúdo (uma por secção, opcional)</label>
+              <div className="space-y-2">
+                {conteudoEstruturado.seccoes.map((sec, idx) => (
+                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-100">
+                    {sec.imagem_url ? (
+                      <img src={sec.imagem_url} alt="" className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center shrink-0 text-slate-300">
+                        <ImageIcon size={14} />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 truncate">{sec.titulo}</p>
+                      <input
+                        className="w-full text-sm text-slate-700 focus:outline-none placeholder:text-slate-300"
+                        value={sec.imagem_url || ''}
+                        onChange={e => setSecaoImagem(idx, e.target.value)}
+                        placeholder="Link da ilustração desta secção"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className={LABEL}>Questionário</label>
