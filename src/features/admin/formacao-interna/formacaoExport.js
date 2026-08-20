@@ -40,6 +40,18 @@ function codigoVerificacao(id) {
   return `${fim.slice(0, 4)}-${fim.slice(4)}`;
 }
 
+// Para códigos do lado institucional (não vêm de um id de BD já com aspeto
+// de código) — hash curto e determinístico, para nunca parecer texto solto
+// meio-legível (ex: fragmentos de "registo"/"cert").
+function hashCurto(str) {
+  let h = 0;
+  for (let i = 0; i < String(str).length; i++) {
+    h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+  }
+  const hex = (h >>> 0).toString(16).toUpperCase().padStart(8, '0');
+  return `${hex.slice(0, 4)}-${hex.slice(4)}`;
+}
+
 async function imagemParaBase64(url) {
   if (!url) return null;
   try {
@@ -55,6 +67,35 @@ async function imagemParaBase64(url) {
   } catch {
     return null;
   }
+}
+
+// Carimbo oficial da empresa — ficheiro estático em public/, usado ao lado
+// da assinatura do responsável para dar ao lado institucional a mesma
+// credibilidade visual da assinatura eletrónica do trabalhador. Se o
+// ficheiro ainda não existir, os documentos continuam a gerar-se na mesma
+// (sem o carimbo).
+async function getCarimboBase64() {
+  return imagemParaBase64('/carimbo-magnetic-place.png');
+}
+
+// Desenha o lado "institucional" da assinatura — carimbo (se existir),
+// nome da empresa, data/hora de emissão e um código de verificação do
+// próprio documento — no mesmo formato usado para a assinatura do
+// trabalhador, para as duas partes terem o mesmo nível de credibilidade.
+function desenharBlocoEmpresa(doc, x, y, { carimboBase64, codigo, largura = 76 }) {
+  if (carimboBase64) {
+    try { doc.addImage(carimboBase64, 'PNG', x, y, 32, 18, undefined, 'FAST'); } catch { /* segue sem carimbo */ }
+  }
+  doc.setFontSize(8.5);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...NAVY_DEEP);
+  doc.text('Magnetic Place Unipessoal, Lda', x, y + 22);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(...SLATE);
+  doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, x, y + 26);
+  doc.text(`Código de verificação: ${codigo}`, x, y + 29, { maxWidth: largura });
+  doc.setTextColor(0, 0, 0);
 }
 
 function cabecalho(doc, logoBase64, subtitulo) {
@@ -236,6 +277,7 @@ export async function exportFormacaoPDF(formacao) {
 export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalhador, resumo) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const logoBase64 = await getLogoBase64();
+  const carimboBase64 = await getCarimboBase64();
   cabecalho(doc, logoBase64, 'REGISTO DE FORMAÇÃO INTERNA — Art. 131.º CT — Registo Individual');
 
   let y = 40;
@@ -352,15 +394,13 @@ export async function exportRegistoIndividualPDF(worker, ano, formacoesDoTrabalh
     14, y
   );
   doc.setTextColor(0, 0, 0);
-  y += 18;
+  y += 8;
 
-  doc.setDrawColor(...SLATE);
-  doc.setLineWidth(0.3);
-  doc.line(120, y, 196, y);
-  doc.setFontSize(8);
-  doc.setTextColor(...NAVY_DEEP);
-  doc.text('Assinatura do Responsável — Magnetic Place', 120, y + 5);
-  doc.setTextColor(0, 0, 0);
+  if (y > 255) { doc.addPage(); y = 20; }
+  desenharBlocoEmpresa(doc, 120, y, {
+    carimboBase64,
+    codigo: hashCurto(`${worker.id}-${ano}-registo`),
+  });
 
   rodape(doc);
   doc.save(`registo-formacao-${worker.name.replace(/\s+/g, '_')}-${ano}.pdf`);
@@ -376,18 +416,43 @@ export async function exportCertificadoPDF(formacao, participante) {
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const logoBase64 = await getLogoBase64();
+  const carimboBase64 = await getCarimboBase64();
   const assinaturaBase64 = await imagemParaBase64(participante.assinatura_signed_url);
   const W = 297, H = 210;
+  const numeroCertificado = hashCurto(`${formacao.id}-${participante.id}-cert`);
 
-  // Fundo e moldura decorativa dupla, cores da marca.
+  // Fundo branco.
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, H, 'F');
+
+  // Marca de água — logótipo gigante e muito translúcido, centrado, atrás
+  // de tudo o resto — dá o aspeto de um documento oficial impresso em papel
+  // timbrado, não uma folha em branco com texto.
+  if (logoBase64) {
+    doc.saveGraphicsState();
+    doc.setGState(new doc.GState({ opacity: 0.05 }));
+    const wmSize = 150;
+    doc.addImage(logoBase64, 'PNG', W / 2 - wmSize / 2, H / 2 - wmSize / 2, wmSize, wmSize);
+    doc.restoreGraphicsState();
+  }
+
+  // Moldura decorativa dupla, cores da marca, com pequenos remates nos
+  // cantos (estilo "canto de documento oficial").
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(1.4);
   doc.rect(8, 8, W - 16, H - 16);
   doc.setDrawColor(...ORANGE);
   doc.setLineWidth(0.5);
   doc.rect(11.5, 11.5, W - 23, H - 23);
+
+  doc.setDrawColor(...ORANGE);
+  doc.setLineWidth(0.9);
+  const rc = 6; // comprimento do remate de canto
+  const cantos = [[15, 15, 1, 1], [W - 15, 15, -1, 1], [15, H - 15, 1, -1], [W - 15, H - 15, -1, -1]];
+  for (const [cx, cy, sx, sy] of cantos) {
+    doc.line(cx, cy, cx + rc * sx, cy);
+    doc.line(cx, cy, cx, cy + rc * sy);
+  }
 
   if (logoBase64) doc.addImage(logoBase64, 'PNG', W / 2 - 12, 18, 24, 24);
 
@@ -400,9 +465,24 @@ export async function exportCertificadoPDF(formacao, participante) {
   doc.setTextColor(...NAVY);
   doc.text('CERTIFICADO DE FORMAÇÃO', W / 2, 66, { align: 'center' });
 
+  // Divisor decorativo — traço sólido laranja ladeado por traço navy
+  // tracejado, no mesmo espírito do "cordão de solda" usado no resto do
+  // módulo de Formação Interna.
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.25);
+  doc.setLineDashPattern([1, 1.2], 0);
+  doc.line(W / 2 - 55, 71, W / 2 - 42, 71);
+  doc.line(W / 2 + 42, 71, W / 2 + 55, 71);
+  doc.setLineDashPattern([], 0);
   doc.setDrawColor(...ORANGE);
   doc.setLineWidth(0.8);
   doc.line(W / 2 - 40, 71, W / 2 + 40, 71);
+
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...SLATE);
+  doc.text(`Nº ${numeroCertificado}`, W / 2, 76, { align: 'center' });
+  doc.setTextColor(0, 0, 0);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
@@ -458,12 +538,16 @@ export async function exportCertificadoPDF(formacao, participante) {
 
   doc.setDrawColor(...SLATE);
   doc.line(W / 2 + 20, yAss + 16, W / 2 + 85, yAss + 16);
+  if (carimboBase64) {
+    try { doc.addImage(carimboBase64, 'PNG', W / 2 + 22, yAss - 2, 32, 18, undefined, 'FAST'); } catch { /* segue sem carimbo */ }
+  }
   doc.setFontSize(8.5);
   doc.setTextColor(...NAVY_DEEP);
   doc.text('Magnetic Place Unipessoal, Lda', W / 2 + 20, yAss + 20);
   doc.setFontSize(6.5);
   doc.setTextColor(...SLATE);
-  doc.text(`Certificado emitido em ${fmtData(new Date())}`, W / 2 + 20, yAss + 24);
+  doc.text(`Assinado eletronicamente em ${fmtDataHora(new Date())}`, W / 2 + 20, yAss + 24);
+  doc.text(`Código de verificação: ${numeroCertificado}`, W / 2 + 20, yAss + 27.5);
 
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(7.5);
