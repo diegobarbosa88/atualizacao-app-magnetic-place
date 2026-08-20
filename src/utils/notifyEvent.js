@@ -67,7 +67,10 @@ export async function notifyEvent(supabase, {
     read_by_admin_ids: [],
     created_at: new Date().toISOString(),
   };
-  if (target === TARGET.CLIENT && targetClientId) row.target_client_id = String(targetClientId);
+  // target_client_id é sempre gravado quando fornecido, mesmo fora de TARGET.CLIENT —
+  // alguns eventos (ex: pedido de correção submetido) são dirigidos ao admin mas
+  // carregam o cliente de origem como metadado, para o admin saber a quem responder.
+  if (targetClientId) row.target_client_id = String(targetClientId);
   if (target === TARGET.WORKER && targetWorkerIds?.length) row.target_worker_ids = targetWorkerIds.map(String);
 
   const { error } = await supabase.from('app_notifications').insert(row);

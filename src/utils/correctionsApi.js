@@ -86,17 +86,13 @@ export async function submitCorrection(supabase, payload) {
     : (payload.justification || 'Nova correção submetida.');
   const msg = msgRaw.length > 220 ? msgRaw.slice(0, 220) + '…' : msgRaw;
   const notifTitle = payload.type === 'creation_request' ? 'Pedido de Registo' : 'Pedido de Correção';
-  await supabase.from('app_notifications').insert({
-    id: newId('notif'),
+  await notifyEvent(supabase, {
     title: `${notifTitle} · ${payload.month} · ${typeLabel}`,
     message: msg,
     type: 'warning',
-    target_type: 'admin',
-    target_client_id: String(payload.clientId),
+    target: TARGET.ADMIN,
+    targetClientId: payload.clientId,
     payload: { correction_id: correctionId, kind: 'submitted' },
-    is_active: true,
-    is_dismissible: true,
-    created_at: now,
   });
 
   if (payload.adminEmail) {

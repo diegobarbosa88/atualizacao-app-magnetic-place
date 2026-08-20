@@ -148,17 +148,13 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
       const { error: e2 } = await supabase.from('correction_items').insert(item);
       if (e2) throw e2;
 
-      await supabase.from('app_notifications').insert({
-        id: `notif_${Date.now()}`,
+      await notifyEvent(supabase, {
         title: `Pedido de Eliminação · ${currentUser?.name}`,
         message: `${currentUser?.name} solicitou eliminação do registo de ${selectedDate}`,
         type: 'danger',
-        target_type: 'admin',
-        target_client_id: String(existingLog.clientId),
+        target: TARGET.ADMIN,
+        targetClientId: existingLog.clientId,
         payload: { correction_id: correctionId, kind: 'submitted' },
-        is_active: true,
-        is_dismissible: true,
-        created_at: now,
       });
 
       if (!DISABLE_CLIENT_NOTIFICATIONS) {
@@ -263,17 +259,13 @@ const RequestEntryCard = ({ currentUser, logs, clients, monthLogs, onSuccess, in
         });
       }
 
-      await supabase.from('app_notifications').insert({
-        id: `notif_${Date.now()}`,
+      await notifyEvent(supabase, {
         title: `Pedido de Registo · ${currentUser?.name}`,
         message: `${currentUser?.name} solicitou ${existingLog ? 'correção' : 'criação'} de registo para ${selectedDate}`,
         type: 'warning',
-        target_type: 'admin',
-        target_client_id: String(formData.clientId),
+        target: TARGET.ADMIN,
+        targetClientId: formData.clientId,
         payload: { correction_id: correctionId, kind: 'submitted' },
-        is_active: true,
-        is_dismissible: true,
-        created_at: now,
       });
 
       if (!DISABLE_CLIENT_NOTIFICATIONS) {
