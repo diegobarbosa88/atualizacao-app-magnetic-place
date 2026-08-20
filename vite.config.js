@@ -76,5 +76,12 @@ export default defineConfig({
     host: true,
     port: 4179,
     strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'https://trabalhador.magneticplace.pt',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
 })
