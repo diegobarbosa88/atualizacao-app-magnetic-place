@@ -140,8 +140,7 @@ function Boneco({ pose = 'trabalhar' }) {
 // Tile de ilustração — usado tanto no fluxo do trabalhador como na pré-
 // visualização do admin. `height` em px controla o tamanho do tile.
 export function IlustracaoTile({ nome, height = 150, className = '' }) {
-  const Cmp = ICON_MAP[nome];
-  if (!Cmp) return null;
+  const Cmp = ICON_MAP[nome] || Info;
   const badge = Math.round(height * 0.34);
   return (
     <div
