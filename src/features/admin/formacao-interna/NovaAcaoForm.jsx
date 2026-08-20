@@ -128,9 +128,19 @@ export default function NovaAcaoForm({ onCriada }) {
         setError('Formação e-learning exige o link do conteúdo (vídeo ou PDF) ou um conteúdo estruturado pré-definido.');
         return;
       }
-      const perguntasValidas = questionario.every(q => q.pergunta.trim() && q.opcoes.every(o => o.trim()) && q.opcoes.length >= 2);
-      if (questionario.length === 0 || !perguntasValidas) {
-        setError('Preenche todas as perguntas e opções do questionário.');
+      if (questionario.length === 0) {
+        setError('Adiciona pelo menos uma pergunta ao questionário.');
+        return;
+      }
+      const idxInvalida = questionario.findIndex(q => !q.pergunta.trim() || q.opcoes.length < 2 || q.opcoes.some(o => !o.trim()));
+      if (idxInvalida !== -1) {
+        const q = questionario[idxInvalida];
+        const motivo = !q.pergunta.trim()
+          ? 'o texto da pergunta está vazio'
+          : q.opcoes.length < 2
+            ? 'tem menos de 2 opções'
+            : 'tem uma ou mais opções vazias';
+        setError(`Pergunta ${idxInvalida + 1} do questionário está incompleta — ${motivo}.`);
         return;
       }
       if (!(Number(form.nota_minima_aprovacao) > 0) || Number(form.nota_minima_aprovacao) > 100) {
