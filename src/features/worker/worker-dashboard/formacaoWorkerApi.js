@@ -1,7 +1,14 @@
 import { authFetch } from '../../../utils/authFetch';
 
 async function json(res) {
-  const body = await res.json().catch(() => ({}));
+  let body;
+  try {
+    body = await res.json();
+  } catch {
+    // Resposta não é JSON — sintoma típico de as rotas /api/formacao/* não
+    // estarem servidas (ex: só o Vite dev a correr, sem `vercel dev`).
+    throw new Error(res.ok ? 'Resposta inválida do servidor — API indisponível.' : `Erro ${res.status}`);
+  }
   if (!res.ok) throw new Error(body.error || `Erro ${res.status}`);
   return body;
 }

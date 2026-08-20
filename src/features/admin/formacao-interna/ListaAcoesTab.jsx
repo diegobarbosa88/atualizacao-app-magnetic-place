@@ -58,7 +58,7 @@ export default function ListaAcoesTab({ refreshKey }) {
         categoria: categoriaFilter || undefined,
         estado: estadoFilter || undefined,
       });
-      setFormacoes(formacoes);
+      setFormacoes(formacoes || []);
     } catch (e) {
       setError(e.message);
     }
@@ -117,7 +117,8 @@ export default function ListaAcoesTab({ refreshKey }) {
         <div className="space-y-3">
           {formacoes.map(f => {
             const isOpen = expandedId === f.id;
-            const totalAssinados = f.formacao_participantes.filter(p => p.assinado_em).length;
+            const participantes = f.formacao_participantes || [];
+            const totalAssinados = participantes.filter(p => p.assinado_em).length;
             return (
               <div key={f.id} className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
                 <button
@@ -144,7 +145,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                     <div className="flex flex-wrap items-center gap-3 mt-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <span className="inline-flex items-center gap-1"><Clock size={11} /> {f.duracao_horas}h</span>
                       {f.local && <span className="inline-flex items-center gap-1"><MapPin size={11} /> {f.local}</span>}
-                      <span className="inline-flex items-center gap-1"><Users size={11} /> {totalAssinados}/{f.formacao_participantes.length} assinados</span>
+                      <span className="inline-flex items-center gap-1"><Users size={11} /> {totalAssinados}/{participantes.length} assinados</span>
                       <span>{new Date(f.data_inicio).toLocaleDateString('pt-PT')} a {new Date(f.data_fim).toLocaleDateString('pt-PT')}</span>
                     </div>
                   </div>
@@ -171,7 +172,7 @@ export default function ListaAcoesTab({ refreshKey }) {
                     )}
 
                     <div className="space-y-2">
-                      {f.formacao_participantes.map(p => {
+                      {participantes.map(p => {
                         const estCfg = ESTADO_CFG[p.estado];
                         const conclusaoCfg = ESTADO_CONCLUSAO_CFG[p.estado_conclusao];
                         const duracao = formatDuracao(p.iniciado_em, p.concluido_em);
