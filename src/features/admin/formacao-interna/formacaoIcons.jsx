@@ -54,6 +54,16 @@ function poseFor(nome) {
   return POSE_BY_ICON[nome] || 'trabalhar';
 }
 
+// Escolhe uma de 3 silhuetas de boneco a partir do nome do tema — determinístico
+// (o mesmo tema mostra sempre o mesmo boneco), mas varia entre temas diferentes
+// para o e-learning não parecer sempre a mesma figura repetida.
+function varianteFor(nome) {
+  if (!nome) return 0;
+  let soma = 0;
+  for (let i = 0; i < nome.length; i++) soma += nome.charCodeAt(i);
+  return soma % 3;
+}
+
 // Braço em forma de cápsula, rodado a partir do ombro.
 function Braco({ ombroX, ombroY, angulo, cor, comprimento = 30 }) {
   return (
@@ -91,9 +101,52 @@ function Ambiente() {
   );
 }
 
-// Figura humana em traço simples (estilo pictograma), com 5 poses
-// distintas — usada em todos os "tiles" de ilustração do e-learning.
-function Boneco({ pose = 'trabalhar' }) {
+// Cabeça + proteção — 3 silhuetas distintas para dar variedade aos bonecos
+// sem depender de fotografias: capacete de obra, óculos de proteção com
+// cabelo preso, e gorro/proteção auricular.
+function Cabeca({ variante }) {
+  const navy = FT.navy;
+  const orange = FT.orange;
+
+  if (variante === 1) {
+    // Óculos de proteção + cabelo preso num carrapito, sem capacete.
+    return (
+      <>
+        <circle cx="50" cy="26" r="13" fill={navy} />
+        <circle cx="50" cy="14.5" r="4.5" fill={navy} />
+        <rect x="39" y="23" width="9" height="6" rx="2.5" fill="none" stroke={orange} strokeWidth="2" />
+        <rect x="52" y="23" width="9" height="6" rx="2.5" fill="none" stroke={orange} strokeWidth="2" />
+        <line x1="48" y1="26" x2="52" y2="26" stroke={orange} strokeWidth="2" />
+      </>
+    );
+  }
+
+  if (variante === 2) {
+    // Gorro/touca justa + proteção auricular (earmuffs).
+    return (
+      <>
+        <circle cx="50" cy="26" r="13" fill={navy} />
+        <path d="M36.5 22 A13.5 13.5 0 0 1 63.5 22 L63.5 24 L36.5 24 Z" fill={FT.orangeDeep} />
+        <circle cx="37" cy="27" r="5" fill={orange} />
+        <circle cx="63" cy="27" r="5" fill={orange} />
+        <line x1="41" y1="15" x2="59" y2="15" stroke={FT.orangeDeep} strokeWidth="2.4" strokeLinecap="round" />
+      </>
+    );
+  }
+
+  // Variante 0 — capacete de obra (silhueta original).
+  return (
+    <>
+      <circle cx="50" cy="26" r="13" fill={navy} />
+      <path d="M37 24 A13 13 0 0 1 63 24 L63 27 L37 27 Z" fill={orange} />
+      <rect x="35" y="25" width="30" height="4" rx="2" fill={FT.orangeDeep} />
+    </>
+  );
+}
+
+// Figura humana em traço simples (estilo pictograma), com poses e silhuetas
+// de cabeça distintas — usada em todos os "tiles" de ilustração do e-learning.
+function Boneco({ pose = 'trabalhar', variante = 0 }) {
   const navy = FT.navy;
   const orange = FT.orange;
   let leftArm = { angulo: 12 };
@@ -129,10 +182,8 @@ function Boneco({ pose = 'trabalhar' }) {
       {/* tronco */}
       <rect x="34" y="44" width="32" height="34" rx="12" fill={navy} />
       <rect x="34" y="66" width="32" height="6" fill={orange} />
-      {/* cabeça + capacete */}
-      <circle cx="50" cy="26" r="13" fill={navy} />
-      <path d="M37 24 A13 13 0 0 1 63 24 L63 27 L37 27 Z" fill={orange} />
-      <rect x="35" y="25" width="30" height="4" rx="2" fill={FT.orangeDeep} />
+      {/* cabeça + proteção (varia por tema) */}
+      <Cabeca variante={variante} />
     </g>
   );
 }
@@ -149,7 +200,7 @@ export function IlustracaoTile({ nome, height = 150, className = '' }) {
     >
       <svg viewBox="0 0 100 120" width={Math.round(height * 0.62)} height={height} style={{ overflow: 'visible' }}>
         <Ambiente />
-        <Boneco pose={poseFor(nome)} />
+        <Boneco pose={poseFor(nome)} variante={varianteFor(nome)} />
       </svg>
       <div
         className="absolute flex items-center justify-center rounded-full"
