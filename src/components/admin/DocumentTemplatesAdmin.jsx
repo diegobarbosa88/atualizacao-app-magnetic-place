@@ -41,6 +41,7 @@ export default function DocumentTemplatesAdmin({
   const openTemplatePreview = async (template) => {
     setPreview({ title: template.name, loading: true, blob: null, error: '' });
     try {
+      if (!template.template_docx_path) throw new Error('Este modelo não tem ficheiro .docx associado.');
       const buffer = await downloadTemplateBytes(supabase, template.template_docx_path);
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
       setPreview({ title: template.name, loading: false, blob, error: '' });
