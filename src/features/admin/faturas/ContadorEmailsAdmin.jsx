@@ -6,6 +6,7 @@ import {
 import { useApp } from '../../../context/AppContext';
 import { DEFAULT_GMAIL_CONFIG_CONTADOR, configParaQuery } from './faturasUtils';
 import GmailConfigPanel from './GmailConfigPanel';
+import ApoliceSegurosImportPanel from './ApoliceSegurosImportPanel';
 import { authFetch } from '../../../utils/authFetch';
 
 const STATUS_CFG = {
@@ -276,6 +277,8 @@ export default function ContadorEmailsAdmin() {
           <span className="hidden sm:inline">Atualizar</span>
         </button>
       </div>
+
+      <ApoliceSegurosImportPanel />
 
       {fornecedorErro && (
         <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-2xl text-sm font-semibold flex items-start gap-2">

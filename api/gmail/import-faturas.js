@@ -13,6 +13,7 @@ async function getParser() {
 const ALLOWED_MIME_TYPES = ['application/pdf', 'application/xml', 'text/xml'];
 const ZIP_MIME_TYPES = ['application/zip', 'application/x-zip-compressed'];
 const FATURAS_QUERY = 'is:unread has:attachment {subject:fatura subject:invoice subject:FT}';
+const APOLICE_QUERY = 'from:noreply@allianz.pt';
 const MAX_RESULTS = 50;
 
 // Deteção por mimetype OU extensão do filename — muitos remetentes (ex:
@@ -93,7 +94,7 @@ export default async function handler(req, res) {
     let body = {};
     try { body = req.body || {}; } catch (_) { /* ok */ }
 
-    // mode: 'faturas' (default) | 'comprovativos' | 'contador' | 'all'
+    // mode: 'faturas' (default) | 'comprovativos' | 'contador' | 'apolice_seguros' | 'all'
     const mode = body.mode || 'faturas';
     const userId = 'me';
 
@@ -103,6 +104,12 @@ export default async function handler(req, res) {
       }
       const parser = await getParser();
       const result = await importarContador(gmail, supabase, userId, body.query, body.fornecedorId, parser);
+      return res.status(200).json(result);
+    }
+
+    if (mode === 'apolice_seguros') {
+      const parser = await getParser();
+      const result = await importarApoliceSeguros(gmail, supabase, userId, body.query, parser);
       return res.status(200).json(result);
     }
 
@@ -546,4 +553,131 @@ async function importarContador(gmail, supabase, userId, queryOverride, forneced
       aviso: `Limite de tempo atingido — ${restantes} email(s) por processar. Clica em "Importar do Gmail" outra vez para continuar (os já processados não são repetidos).`,
     } : {}),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Modo "apolice_seguros": email da Allianz com o "Quadro de Pessoal Seguro"
+// → tabela apolice_seguro_importacoes, comparado automaticamente contra
+// worker_apolice_seguro via RPC comparar_apolice_seguros (só comparação,
+// não escreve nada em workers/worker_apolice_seguro — revisão humana
+// continua a ser feita pelo Diego a partir da pendência discrepancias_apolice).
+// ---------------------------------------------------------------------------
+function buildApoliceSegurosPrompt(texto) {
+  return `Este é o texto extraído de uma apólice de seguros de Acidentes de Trabalho (Allianz
+Portugal). Extrai APENAS a lista de trabalhadores segurados da secção "Quadro de
+Pessoal Seguro". Cada trabalhador aparece como um bloco que começa com "Nome:" e
+continua com outros campos (Profissão, Retribuição, etc.) até ao próximo "Nome:" ou
+ao fim da secção (que termina antes de "Coberturas").
+
+Devolve APENAS um array JSON, sem texto adicional, no formato:
+[{"nome": "NOME COMPLETO EM MAIÚSCULAS"}, ...]
+
+Não incluas o Tomador do Seguro (a empresa) na lista — só os trabalhadores
+individuais listados no Quadro de Pessoal Seguro. Não inventes NIFs; este
+documento não os contém, por isso omite esse campo.
+
+Texto do documento:
+${texto.slice(0, 20000)}`;
+}
+
+async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, parser) {
+  const { findPdfParts, extractPdfText } = parser;
+  const query = queryOverride?.trim() || APOLICE_QUERY;
+  let listRes;
+  try {
+    listRes = await gmail.users.messages.list({ userId, q: query, maxResults: MAX_RESULTS });
+  } catch (e) {
+    return { error: `Gmail list failed: ${e.message}` };
+  }
+
+  const { data: existingRows } = await supabase
+    .from('apolice_seguro_importacoes')
+    .select('gmail_message_id');
+  const importedIds = new Set((existingRows || []).map(r => r.gmail_message_id));
+
+  let processados = 0, skipped = 0;
+  const erros = [];
+
+  for (const msg of listRes.data.messages || []) {
+    if (importedIds.has(msg.id)) {
+      try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch { /* best-effort */ }
+      skipped++;
+      continue;
+    }
+
+    try {
+      const full = await gmail.users.messages.get({ userId, id: msg.id, format: 'full' });
+      const payload = full.data.payload;
+      const headers = payload?.headers || [];
+      const from = headers.find(h => h.name === 'From')?.value || '';
+      const internalDate = full.data.internalDate ? new Date(Number(full.data.internalDate)).toISOString() : null;
+
+      const pdfParts = findPdfParts(payload?.parts || []);
+      if (pdfParts.length === 0) {
+        erros.push({ messageId: msg.id, error: 'Sem anexo PDF nesta mensagem.' });
+        await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } });
+        continue;
+      }
+
+      const part = pdfParts[0];
+      const attRes = await gmail.users.messages.attachments.get({
+        userId, messageId: msg.id, id: part.body.attachmentId,
+      });
+      const buffer = Buffer.from(attRes.data.data, 'base64url');
+      const filename = (part.filename || `apolice_${Date.now()}.pdf`).replace(/[^a-zA-Z0-9.\-_()]/g, '_');
+      const storagePath = `apolice-seguros/${msg.id}/${filename}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('faturas')
+        .upload(storagePath, buffer, { contentType: 'application/pdf', upsert: true });
+      if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
+
+      const textoExtraido = await extractPdfText(buffer);
+      const { data: dadosExtraidos } = await callGeminiJSON(buildApoliceSegurosPrompt(textoExtraido));
+
+      const { data: inserted, error: dbError } = await supabase
+        .from('apolice_seguro_importacoes')
+        .insert({
+          gmail_message_id: msg.id,
+          remetente: from,
+          recebido_em: internalDate,
+          anexo_path: storagePath,
+          dados_extraidos: dadosExtraidos,
+          status: 'importado',
+        })
+        .select('id')
+        .single();
+
+      if (dbError) {
+        if (!dbError.message.includes('duplicate')) throw new Error(`DB insert: ${dbError.message}`);
+      } else {
+        // Só comparação, não escreve em workers/worker_apolice_seguro — pode
+        // correr automaticamente, sem espera por revisão humana.
+        const { data: discrepancias, error: cmpError } = await supabase
+          .rpc('comparar_apolice_seguros', { p_dados_extraidos: dadosExtraidos });
+
+        const patch = { processado_em: new Date().toISOString() };
+        if (!cmpError) {
+          patch.discrepancias = discrepancias;
+          patch.status = 'processado';
+        } else {
+          erros.push({ messageId: msg.id, error: `comparar_apolice_seguros: ${cmpError.message}` });
+        }
+
+        await supabase.from('apolice_seguro_importacoes').update(patch).eq('id', inserted.id);
+      }
+
+      processados++;
+    } catch (e) {
+      erros.push({ messageId: msg.id, error: e.message });
+    }
+
+    try {
+      await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } });
+    } catch (e) {
+      erros.push({ messageId: msg.id, error: `mark-as-read failed: ${e.message}` });
+    }
+  }
+
+  return { processados, skipped, erros };
 }
