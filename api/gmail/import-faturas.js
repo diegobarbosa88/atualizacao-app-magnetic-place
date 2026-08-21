@@ -598,6 +598,8 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
   let processados = 0, skipped = 0;
   const erros = [];
 
+  console.log(`[apolice] ${listRes.data.messages?.length || 0} mensagem(ns) encontradas, ${importedIds.size} já importadas.`);
+
   for (const msg of listRes.data.messages || []) {
     if (importedIds.has(msg.id)) {
       try { await gmail.users.messages.modify({ userId, id: msg.id, requestBody: { removeLabelIds: ['UNREAD'] } }); } catch { /* best-effort */ }
@@ -605,8 +607,11 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
       continue;
     }
 
+    const t0 = Date.now();
+    console.log(`[apolice] a processar ${msg.id}...`);
     try {
       const full = await gmail.users.messages.get({ userId, id: msg.id, format: 'full' });
+      console.log(`[apolice] ${msg.id} gmail.get: ${Date.now() - t0}ms`);
       const payload = full.data.payload;
       const headers = payload?.headers || [];
       const from = headers.find(h => h.name === 'From')?.value || '';
@@ -624,6 +629,7 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
         userId, messageId: msg.id, id: part.body.attachmentId,
       });
       const buffer = Buffer.from(attRes.data.data, 'base64url');
+      console.log(`[apolice] ${msg.id} attachment (${(buffer.length / 1024).toFixed(0)}KB): ${Date.now() - t0}ms`);
       const filename = (part.filename || `apolice_${Date.now()}.pdf`).replace(/[^a-zA-Z0-9.\-_()]/g, '_');
       const storagePath = `apolice-seguros/${msg.id}/${filename}`;
 
@@ -631,9 +637,12 @@ async function importarApoliceSeguros(gmail, supabase, userId, queryOverride, pa
         .from('faturas')
         .upload(storagePath, buffer, { contentType: 'application/pdf', upsert: true });
       if (uploadError) throw new Error(`Storage upload: ${uploadError.message}`);
+      console.log(`[apolice] ${msg.id} storage upload: ${Date.now() - t0}ms`);
 
       const textoExtraido = await extractPdfText(buffer);
+      console.log(`[apolice] ${msg.id} extractPdfText (${textoExtraido.length} chars): ${Date.now() - t0}ms`);
       const { data: dadosExtraidos } = await callGeminiJSON(buildApoliceSegurosPrompt(textoExtraido));
+      console.log(`[apolice] ${msg.id} callGeminiJSON: ${Date.now() - t0}ms`);
 
       const { data: inserted, error: dbError } = await supabase
         .from('apolice_seguro_importacoes')
