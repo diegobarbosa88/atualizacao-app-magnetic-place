@@ -39,6 +39,10 @@ export default function DocumentTemplatesAdmin({
   const closeEditorModal = () => { setShowEditorModal(false); setEditingTemplate(null); };
 
   const openTemplatePreview = async (template) => {
+    if (!template.template_docx_path && !template.template_pdf_path && template.html_content) {
+      setPreview({ title: template.name, loading: false, blob: null, html: template.html_content, error: '' });
+      return;
+    }
     setPreview({ title: template.name, loading: true, blob: null, error: '' });
     try {
       if (!template.template_docx_path) throw new Error('Este modelo não tem ficheiro .docx associado.');
@@ -184,6 +188,7 @@ export default function DocumentTemplatesAdmin({
         <DocxPreviewModal
           title={preview.title}
           blob={preview.blob}
+          html={preview.html}
           loading={preview.loading}
           error={preview.error}
           onClose={() => setPreview(null)}

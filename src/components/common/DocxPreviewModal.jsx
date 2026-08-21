@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { X, Loader2, AlertCircle } from 'lucide-react';
 import { renderAsync } from 'docx-preview';
 
-export default function DocxPreviewModal({ title, blob, loading, error, onClose }) {
+export default function DocxPreviewModal({ title, blob, html, loading, error, onClose }) {
   const previewContainerRef = useRef(null);
 
   useEffect(() => {
@@ -11,7 +11,7 @@ export default function DocxPreviewModal({ title, blob, loading, error, onClose 
   }, []);
 
   useEffect(() => {
-    if (loading || error || !blob) return;
+    if (loading || error || !blob || html) return;
     const container = previewContainerRef.current;
     if (!container) return;
 
@@ -111,6 +111,13 @@ export default function DocxPreviewModal({ title, blob, loading, error, onClose 
                 <span>{error}</span>
               </div>
             </div>
+          ) : html ? (
+            <iframe
+              title={title || 'Pré-visualização'}
+              srcDoc={html}
+              sandbox=""
+              className="absolute inset-0 w-full h-full bg-white border-0"
+            />
           ) : loading || !blob ? (
             <div className="h-full flex items-center justify-center text-slate-400">
               <Loader2 className="w-8 h-8 animate-spin" />
