@@ -66,9 +66,16 @@ Deno.serve(async (req: Request) => {
 
     const totalHoras = logs.reduce((acc, l) => acc + (l.hours || 0), 0);
 
+    let logoBytes: Uint8Array | null = null;
+    try {
+      const logoRes = await fetch("https://app-magnetic.vercel.app/MAGNETIC%20(3).png");
+      if (logoRes.ok) logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+    } catch (_) { /* segue sem logo */ }
+
     const pdfBytes = await generateFolhaPontoPDF({
       workerName: worker.name,
       mes,
+      logoBytes,
       logs: logs.map((l) => ({
         date: l.date,
         startTime: l.startTime,
@@ -77,6 +84,7 @@ Deno.serve(async (req: Request) => {
         endTime: l.endTime,
         description: l.description,
         hours: l.hours,
+        clientId: l.clientId,
         clientName: l.clientId ? (clientNameById.get(l.clientId) || "") : "",
       })),
     });

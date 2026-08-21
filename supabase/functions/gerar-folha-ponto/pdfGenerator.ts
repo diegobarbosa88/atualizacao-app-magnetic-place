@@ -1,26 +1,29 @@
 import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 
-// Mesma paleta de marca usada em submit-onboarding-commitment/pdfGenerator.ts
-const ORANGE     = rgb(235 / 255, 141 / 255,   0 / 255); // #EB8D00
-const NAVY       = rgb( 27 / 255,  58 / 255,  87 / 255); // #1B3A57
-const SLATE_BLUE = rgb(134 / 255, 154 / 255, 175 / 255); // #869AAF
-const WHITE      = rgb(1, 1, 1);
-const DARK_TEXT  = rgb(0.10, 0.15, 0.22);
-const LIGHT_TEXT = rgb(0.42, 0.48, 0.56);
-const BORDER     = rgb(0.88, 0.90, 0.93);
-const ROW_ALT    = rgb(0.97, 0.98, 0.99);
+// Réplica (server-side, pdf-lib) do layout de
+// src/components/common/ClientTimesheetReport.jsx — mesma estrutura visual
+// que o relatório de horas já usado na app (cabeçalho, barra do colaborador,
+// tabelas semanais, resumo mensal, carimbo de assinatura). O app aplica uma
+// regra global de CSS (`text-transform: uppercase`) a tudo — por isso todo o
+// texto aqui é gerado já em maiúsculas, para bater certo visualmente com o
+// PDF exportado pela app.
+const INDIGO     = rgb(79 / 255, 70 / 255, 229 / 255);   // indigo-600, cor dos totais
+const INK        = rgb(0.06, 0.09, 0.14);                // texto principal quase-preto
+const SLATE      = rgb(0.55, 0.58, 0.64);                // labels em cinza
+const SLATE_LIGHT= rgb(0.78, 0.80, 0.84);                // dias sem registo
+const BAND_BG    = rgb(0.95, 0.96, 0.98);                // faixa clara (colaborador / semana)
+const BORDER     = rgb(0.85, 0.87, 0.90);
 
-const PAGE_W  = 841.89; // A4 paisagem (mais colunas cabem sem cortar)
-const PAGE_H  = 595.28;
-const MARGIN  = 40;
+const PAGE_W  = 595.28; // A4 retrato, igual ao relatório original
+const PAGE_H  = 841.89;
+const MARGIN  = 34;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
 const MESES_PT = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
+  "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
+  "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO",
 ];
-
-const DIAS_PT = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const DIAS_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 
 export interface LogEntry {
   date: string;
@@ -30,6 +33,7 @@ export interface LogEntry {
   endTime: string | null;
   description: string | null;
   hours: number | null;
+  clientId: string | null;
   clientName: string;
 }
 
@@ -37,6 +41,7 @@ export interface GenerateFolhaPontoOptions {
   workerName: string;
   mes: string; // YYYY-MM
   logs: LogEntry[];
+  logoBytes: Uint8Array | null;
 }
 
 function isoWeek(dateStr: string): number {
@@ -47,6 +52,11 @@ function isoWeek(dateStr: string): number {
   const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
   const diff = target.valueOf() - firstThursday.valueOf();
   return 1 + Math.round(diff / (7 * 24 * 60 * 60 * 1000));
+}
+
+function daysInWeek(dateStr: string, allDatesInMonth: string[]): string[] {
+  const w = isoWeek(dateStr);
+  return allDatesInMonth.filter((d) => isoWeek(d) === w);
 }
 
 function calcDuration(start: string | null, end: string | null, bStart: string | null, bEnd: string | null): number {
@@ -65,141 +75,215 @@ function calcDuration(start: string | null, end: string | null, bStart: string |
 function formatHours(h: number): string {
   const hours = Math.floor(h);
   const minutes = Math.round((h - hours) * 60);
-  return `${hours}h${minutes === 0 ? "00" : String(minutes).padStart(2, "0")}`;
+  return `${hours}H${minutes === 0 ? "00" : String(minutes).padStart(2, "0")}`;
+}
+
+function daysInMonth(mes: string): string[] {
+  const [y, m] = mes.split("-").map(Number);
+  const last = new Date(y, m, 0).getDate();
+  return Array.from({ length: last }, (_, i) => `${mes}-${String(i + 1).padStart(2, "0")}`);
 }
 
 export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Promise<Uint8Array> {
-  const { workerName, mes, logs } = opts;
+  const { workerName, mes, logs, logoBytes } = opts;
 
   const doc = await PDFDocument.create();
   const fontReg  = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const fontMono = await doc.embedFont(StandardFonts.Courier);
+  const fontMonoBold = await doc.embedFont(StandardFonts.CourierBold);
+
+  let logoImg = null;
+  if (logoBytes) {
+    try { logoImg = await doc.embedPng(logoBytes); } catch { /* segue sem logo */ }
+  }
+
+  const [yy, mm] = mes.split("-").map(Number);
+  const mesLabel = `${MESES_PT[(mm || 1) - 1]} DE ${yy}`;
+
+  const clientIds = [...new Set(logs.map((l) => l.clientId).filter(Boolean))];
+  const isVariosClientes = clientIds.length !== 1;
+  const subtitleClient = isVariosClientes ? "VÁRIOS CLIENTES" : (logs[0]?.clientName || "").toUpperCase();
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
 
-  const drawHeader = (continuation: boolean) => {
-    const headerH = continuation ? 30 : 60;
-    page.drawRectangle({ x: 0, y: PAGE_H - headerH, width: PAGE_W, height: headerH, color: NAVY });
-    if (continuation) {
-      page.drawText("MAGNETIC PLACE · Folha de Ponto (continuação)", {
-        x: MARGIN, y: PAGE_H - 19, size: 8, font: fontReg, color: SLATE_BLUE,
-      });
-    } else {
-      page.drawText("MAGNETIC PLACE", { x: MARGIN, y: PAGE_H - 28, size: 17, font: fontBold, color: WHITE });
-      page.drawText("Unipessoal, Lda", { x: MARGIN, y: PAGE_H - 44, size: 8, font: fontReg, color: SLATE_BLUE });
-      const [yy, mm] = mes.split("-").map(Number);
-      const mesLabel = `${MESES_PT[(mm || 1) - 1]} de ${yy}`;
-      const title = `Folha de Ponto · ${mesLabel}`;
-      const titleW = fontBold.widthOfTextAtSize(title, 12);
-      page.drawText(title, { x: PAGE_W - MARGIN - titleW, y: PAGE_H - 24, size: 12, font: fontBold, color: WHITE });
-      const sub = workerName.toUpperCase();
-      const subW = fontReg.widthOfTextAtSize(sub, 9);
-      page.drawText(sub, { x: PAGE_W - MARGIN - subW, y: PAGE_H - 40, size: 9, font: fontReg, color: SLATE_BLUE });
-    }
-    page.drawRectangle({ x: 0, y: PAGE_H - headerH - 3, width: PAGE_W, height: 3, color: ORANGE });
-    y = PAGE_H - headerH - 20;
+  const rightAlign = (text: string, font: typeof fontReg, size: number, rightX: number) => {
+    return rightX - font.widthOfTextAtSize(text, size);
   };
 
-  drawHeader(false);
+  // ── Cabeçalho ───────────────────────────────────────────────────
+  y -= 26;
+  if (logoImg) {
+    const logoSize = 40;
+    page.drawImage(logoImg, { x: MARGIN, y: y - logoSize + 8, width: logoSize, height: logoSize });
+  }
+  const textX = MARGIN + (logoImg ? 52 : 0);
+  page.drawText("MAGNETIC PLACE", { x: textX, y, size: 17, font: fontBold, color: INK });
+  page.drawText("UNIPESSOAL LDA", { x: textX, y: y - 15, size: 8, font: fontReg, color: SLATE });
 
-  // ── Colunas da tabela ─────────────────────────────────────────
+  const mesW = fontBold.widthOfTextAtSize(mesLabel, 13);
+  page.drawText(mesLabel, { x: PAGE_W - MARGIN - mesW, y, size: 13, font: fontBold, color: INK });
+  const subLabel = `FOLHA DE HORAS MENSAL · ${subtitleClient}`;
+  const subW = fontReg.widthOfTextAtSize(subLabel, 8);
+  page.drawText(subLabel, { x: PAGE_W - MARGIN - subW, y: y - 14, size: 8, font: fontReg, color: SLATE });
+
+  y -= 30;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 1.4, color: INK });
+  y -= 18;
+
+  // ── Barra do colaborador ─────────────────────────────────────────
+  const BAR_H = 30;
+  page.drawRectangle({ x: MARGIN, y: y - BAR_H, width: CONTENT_W, height: BAR_H, color: BAND_BG });
+  page.drawText("COLABORADOR", { x: MARGIN + 12, y: y - 13, size: 6.5, font: fontBold, color: SLATE });
+  page.drawText(workerName.toUpperCase(), { x: MARGIN + 12, y: y - 27, size: 12, font: fontBold, color: INK });
+
+  const totalMes = logs.reduce((acc, l) => acc + (l.hours ?? calcDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0);
+  const totalLabel = "TOTAL REGISTADO";
+  const totalLabelW = fontBold.widthOfTextAtSize(totalLabel, 6.5);
+  page.drawText(totalLabel, { x: PAGE_W - MARGIN - 12 - totalLabelW, y: y - 13, size: 6.5, font: fontBold, color: SLATE });
+  const totalValue = formatHours(totalMes);
+  const totalValueW = fontMonoBold.widthOfTextAtSize(totalValue, 14);
+  page.drawText(totalValue, { x: PAGE_W - MARGIN - 12 - totalValueW, y: y - 29, size: 14, font: fontMonoBold, color: INDIGO });
+  y -= BAR_H + 10;
+
+  // ── Colunas da tabela (sem Comentário, igual ao default da app) ──
   const cols = [
-    { key: "dia",      label: "Dia",      w: 70 },
-    { key: "entrada",  label: "Entrada",  w: 55 },
-    { key: "iDesc",    label: "I. Desc",  w: 55 },
-    { key: "fDesc",    label: "F. Desc",  w: 55 },
-    { key: "saida",    label: "Saída",    w: 55 },
-    { key: "total",    label: "Total",    w: 55 },
-    { key: "cliente",  label: "Cliente",  w: 180 },
-    { key: "coment",   label: "Comentário", w: CONTENT_W - (70 + 55 * 4 + 180) },
+    { label: "DIA",     w: 55 },
+    { label: "ENTRADA", w: 60 },
+    { label: "I. DESC", w: 55 },
+    { label: "F. DESC", w: 55 },
+    { label: "SAÍDA",   w: 55 },
+    { label: "TOTAL",   w: 55 },
+    { label: "PROJETO", w: CONTENT_W - (55 + 60 + 55 * 4) },
   ];
   const colX: number[] = [];
-  let acc = MARGIN;
-  for (const c of cols) { colX.push(acc); acc += c.w; }
+  { let acc = MARGIN; for (const c of cols) { colX.push(acc); acc += c.w; } }
+  const colCenter = (i: number) => colX[i] + cols[i].w / 2;
 
-  const ROW_H = 15;
+  const ROW_H = 11.5;
+  const WEEK_HEADER_H = 13;
+  const COL_HEADER_H = 11;
 
   const ensureSpace = (needed: number) => {
-    if (y - needed < MARGIN + 20) {
+    if (y - needed < MARGIN + 30) {
       page = doc.addPage([PAGE_W, PAGE_H]);
-      drawHeader(true);
+      y = PAGE_H - 30;
+      page.drawText("MAGNETIC PLACE · FOLHA DE PONTO (CONTINUAÇÃO)", { x: MARGIN, y, size: 7.5, font: fontReg, color: SLATE });
+      y -= 20;
     }
   };
 
-  const drawTableHeader = () => {
-    ensureSpace(ROW_H + 4);
-    page.drawRectangle({ x: MARGIN, y: y - ROW_H, width: CONTENT_W, height: ROW_H, color: rgb(0.94, 0.95, 0.97) });
-    cols.forEach((c, i) => {
-      page.drawText(c.label, { x: colX[i] + 4, y: y - ROW_H + 4, size: 7.5, font: fontBold, color: LIGHT_TEXT });
-    });
-    y -= ROW_H;
-  };
-
-  // ── Agrupar logs por semana ISO ─────────────────────────────────
-  const byWeek = new Map<number, LogEntry[]>();
-  const sorted = [...logs].sort((a, b) => a.date.localeCompare(b.date));
-  for (const log of sorted) {
-    const w = isoWeek(log.date);
-    if (!byWeek.has(w)) byWeek.set(w, []);
-    byWeek.get(w)!.push(log);
+  const allDates = daysInMonth(mes);
+  const weeks = new Map<number, string[]>();
+  for (const d of allDates) {
+    const w = isoWeek(d);
+    if (!weeks.has(w)) weeks.set(w, []);
+    weeks.get(w)!.push(d);
   }
 
-  let totalMes = 0;
-  let rowIdx = 0;
+  const logsByDate = new Map<string, LogEntry[]>();
+  for (const l of logs) {
+    if (!logsByDate.has(l.date)) logsByDate.set(l.date, []);
+    logsByDate.get(l.date)!.push(l);
+  }
 
-  for (const [weekNum, weekLogs] of [...byWeek.entries()].sort((a, b) => a[0] - b[0])) {
-    ensureSpace(ROW_H + 4);
-    page.drawRectangle({ x: MARGIN, y: y - ROW_H, width: CONTENT_W, height: ROW_H, color: rgb(0.90, 0.92, 0.95) });
-    page.drawText(`SEMANA ${weekNum}`, { x: MARGIN + 4, y: y - ROW_H + 4, size: 7.5, font: fontBold, color: NAVY });
+  for (const [weekNum, dates] of [...weeks.entries()].sort((a, b) => a[0] - b[0])) {
+    ensureSpace(WEEK_HEADER_H + COL_HEADER_H + ROW_H);
+
+    // Linha "SEMANA N   TOTAL SEMANAL: XhXX"
+    page.drawRectangle({ x: MARGIN, y: y - WEEK_HEADER_H, width: CONTENT_W, height: WEEK_HEADER_H, color: BAND_BG });
+    page.drawText(`SEMANA ${weekNum}`, { x: MARGIN + 8, y: y - WEEK_HEADER_H + 5, size: 8, font: fontBold, color: INK });
     let totalSemana = 0;
-    for (const log of weekLogs) totalSemana += log.hours ?? calcDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
-    const semanaLabel = `Total semanal: ${formatHours(totalSemana)}`;
-    const semanaW = fontBold.widthOfTextAtSize(semanaLabel, 7.5);
-    page.drawText(semanaLabel, { x: MARGIN + CONTENT_W - semanaW - 4, y: y - ROW_H + 4, size: 7.5, font: fontBold, color: NAVY });
-    y -= ROW_H;
-
-    drawTableHeader();
-
-    for (const log of weekLogs) {
-      ensureSpace(ROW_H + 2);
-      const hours = log.hours ?? calcDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
-      totalMes += hours;
-      const dateObj = new Date(log.date + "T00:00:00Z");
-      const dayLabel = `${dateObj.getUTCDate()} ${DIAS_PT[dateObj.getUTCDay()]}`;
-
-      if (rowIdx % 2 === 1) {
-        page.drawRectangle({ x: MARGIN, y: y - ROW_H, width: CONTENT_W, height: ROW_H, color: ROW_ALT });
+    for (const d of dates) {
+      for (const l of (logsByDate.get(d) || [])) {
+        totalSemana += l.hours ?? calcDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd);
       }
-      rowIdx++;
-
-      const values = [
-        dayLabel,
-        log.startTime || "—",
-        log.breakStart || "—",
-        log.breakEnd || "—",
-        log.endTime || "—",
-        formatHours(hours),
-        log.clientName || "—",
-        (log.description || "").slice(0, 60),
-      ];
-      values.forEach((v, i) => {
-        page.drawText(v, { x: colX[i] + 4, y: y - ROW_H + 4, size: 7.5, font: fontReg, color: DARK_TEXT });
-      });
-      y -= ROW_H;
     }
-    y -= 6;
+    const semanaTxt = `TOTAL SEMANAL:  ${formatHours(totalSemana)}`;
+    const semanaW = fontBold.widthOfTextAtSize(semanaTxt, 8);
+    page.drawText(semanaTxt, { x: PAGE_W - MARGIN - 8 - semanaW, y: y - WEEK_HEADER_H + 5, size: 8, font: fontBold, color: INK });
+    y -= WEEK_HEADER_H;
+
+    // Cabeçalho das colunas
+    cols.forEach((c, i) => {
+      const w = fontBold.widthOfTextAtSize(c.label, 6.5);
+      page.drawText(c.label, { x: i === cols.length - 1 ? colX[i] + 6 : colCenter(i) - w / 2, y: y - COL_HEADER_H + 4, size: 6.5, font: fontBold, color: SLATE });
+    });
+    y -= COL_HEADER_H;
+    page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 0.5, color: BORDER });
+
+    for (const dateStr of dates) {
+      const dateObj = new Date(dateStr + "T00:00:00Z");
+      const dayLabel = `${dateObj.getUTCDate()} ${DIAS_PT[dateObj.getUTCDay()]}`;
+      const dayLogs = logsByDate.get(dateStr) || [];
+
+      if (dayLogs.length === 0) {
+        ensureSpace(ROW_H);
+        page.drawText(dayLabel, { x: colCenter(0) - fontBold.widthOfTextAtSize(dayLabel, 7) / 2, y: y - ROW_H + 4, size: 7, font: fontBold, color: SLATE_LIGHT });
+        y -= ROW_H;
+        continue;
+      }
+
+      for (const log of dayLogs) {
+        ensureSpace(ROW_H);
+        const hours = log.hours ?? calcDuration(log.startTime, log.endTime, log.breakStart, log.breakEnd);
+        const vals = [dayLabel, log.startTime || "", log.breakStart || "", log.breakEnd || "", log.endTime || "", formatHours(hours)];
+        vals.forEach((v, i) => {
+          if (!v) return;
+          const font = i === 0 ? fontBold : fontMono;
+          const color = i === 0 ? INK : (i === 5 ? INK : SLATE);
+          const size = i === 0 ? 7 : 7.5;
+          const w = font.widthOfTextAtSize(v, size);
+          page.drawText(v, { x: colCenter(i) - w / 2, y: y - ROW_H + 4, size, font, color });
+        });
+        const projeto = (log.clientName || "").toUpperCase();
+        page.drawText(projeto.slice(0, 42), { x: colX[6] + 6, y: y - ROW_H + 4, size: 6.5, font: fontReg, color: INK });
+        y -= ROW_H;
+      }
+    }
+    y -= 5;
   }
 
-  // ── Resumo mensal ─────────────────────────────────────────────
-  ensureSpace(40);
-  y -= 6;
-  page.drawLine({ start: { x: MARGIN, y }, end: { x: MARGIN + CONTENT_W, y }, thickness: 1, color: NAVY });
-  y -= 18;
-  page.drawText("TOTAL REGISTADO NO MÊS", { x: MARGIN, y, size: 9, font: fontBold, color: LIGHT_TEXT });
-  const totalLabel = formatHours(totalMes);
-  const totalW = fontBold.widthOfTextAtSize(totalLabel, 14);
-  page.drawText(totalLabel, { x: MARGIN + CONTENT_W - totalW, y: y - 3, size: 14, font: fontBold, color: NAVY });
+  // ── Resumo mensal ────────────────────────────────────────────────
+  ensureSpace(60);
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 1.2, color: INK });
+  y -= 13;
+  page.drawText("RESUMO MENSAL", { x: MARGIN, y, size: 7, font: fontBold, color: SLATE });
+
+  const totalLabel2 = "TOTAL REGISTADO";
+  const totalLabel2W = fontBold.widthOfTextAtSize(totalLabel2, 6.5);
+  page.drawText(totalLabel2, { x: PAGE_W - MARGIN - totalLabel2W, y: y + 2, size: 6.5, font: fontBold, color: SLATE });
+  const totalValue2W = fontMonoBold.widthOfTextAtSize(totalValue, 15);
+  page.drawText(totalValue, { x: PAGE_W - MARGIN - totalValue2W, y: y - 15, size: 15, font: fontMonoBold, color: INDIGO });
+
+  y -= 12;
+  const byClient = new Map<string, number>();
+  for (const l of logs) {
+    const name = (l.clientName || "SEM CLIENTE").toUpperCase();
+    const hours = l.hours ?? calcDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd);
+    byClient.set(name, (byClient.get(name) || 0) + hours);
+  }
+  for (const [clientName, hrs] of [...byClient.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    ensureSpace(11);
+    page.drawText(clientName.slice(0, 40), { x: MARGIN, y, size: 7.5, font: fontBold, color: SLATE });
+    page.drawText(formatHours(hrs), { x: MARGIN + 210, y, size: 7.5, font: fontMonoBold, color: INDIGO });
+    y -= 11;
+  }
+
+  // ── Carimbo "Aguardando assinatura" ───────────────────────────────
+  ensureSpace(70);
+  y -= 12;
+  const stampW = 190, stampH = 50;
+  const stampX = PAGE_W - MARGIN - stampW;
+  page.drawRectangle({
+    x: stampX, y: y - stampH, width: stampW, height: stampH,
+    borderColor: BORDER, borderWidth: 1, color: rgb(1, 1, 1),
+    ...( { borderDashArray: [4, 3] } as Record<string, unknown> ),
+  });
+  const waitLabel = "AGUARDANDO ASSINATURA";
+  const waitW = fontBold.widthOfTextAtSize(waitLabel, 7);
+  page.drawText(waitLabel, { x: stampX + stampW / 2 - waitW / 2, y: y - stampH / 2 - 3, size: 7, font: fontBold, color: SLATE_LIGHT });
 
   return doc.save();
 }
