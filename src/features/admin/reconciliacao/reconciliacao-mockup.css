@@ -148,7 +148,12 @@
 }
 .recon-group-title { font-size: 13.5px; font-weight: 700; color: var(--navy); }
 .recon-group-subtitle { font-size: 11.5px; color: var(--text-muted); margin-top: 1px; }
-.recon-group-total { font-family: var(--recon-mono); font-size: 15px; font-weight: 700; color: var(--slate); text-align: right; }
+.recon-group-total { font-family: var(--recon-mono); font-size: 15px; font-weight: 700; color: var(--slate); text-align: right; flex-shrink: 0; }
+@media (max-width: 639px) {
+  /* Título + subtítulo ficariam espremidos numa coluna estreita ao lado do
+     saldo à direita — corta numa linha em vez de quebrar em 4+ linhas. */
+  .recon-group-title, .recon-group-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
 .recon-group-total-label { display: block; font-size: 10px; font-weight: 600; color: var(--text-faint); text-transform: uppercase !important; }
 .recon-group-body { border-top: 1px solid var(--border); }
 .recon-mini-row {
@@ -179,6 +184,15 @@
   gap: 14px;
 }
 .recon-txn-row.ambiguous { border-left-color: var(--red); }
+/* Linhas que empilham em coluna no mobile (renderMatchedItem) precisam esticar
+   os filhos à largura total — align-items:center acima faz o conteúdo encolher
+   ao tamanho do texto e transbordar centrado (metade de cada lado). As classes
+   Tailwind items-stretch/sm:items-start no JSX perdem esta guerra de cascade
+   porque este ficheiro carrega depois do Tailwind com a mesma especificidade. */
+.recon-txn-row.recon-txn-stack { align-items: stretch; }
+@media (min-width: 640px) {
+  .recon-txn-row.recon-txn-stack { align-items: flex-start; }
+}
 .recon-checkbox {
   appearance: none;
   -webkit-appearance: none;

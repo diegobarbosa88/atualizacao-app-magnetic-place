@@ -119,7 +119,7 @@ export default function ResultadosTabs({
           const isPago = item.fatura?.status === 'PAGO' || item.rule === 'confirmed_manual' || isInterno || (item.rule === 'client_association' && item.confirmed_entrada);
           const ruleTag = getRuleTag(item);
           return (
-            <div key={i} className="recon-txn-row flex-col sm:flex-row sm:items-start gap-2 sm:gap-3"
+            <div key={i} className="recon-txn-row recon-txn-stack flex-col sm:flex-row gap-2 sm:gap-3"
               style={{ borderLeftColor: isPago ? 'var(--green)' : 'var(--amber)' }}>
               <div className="flex items-start gap-3 min-w-0 flex-1">
                 {(item.rule === 'client_association'
@@ -147,7 +147,7 @@ export default function ResultadosTabs({
                   <div className="flex items-center gap-1 mt-1">
                     {editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? (
                       <input autoFocus
-                        className="flex-1 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                        className="flex-1 min-w-0 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
                         value={editingResultDesc.value}
                         onChange={e => setEditingResultDesc(prev => ({ ...prev, value: e.target.value }))}
                         onBlur={() => saveResultDescricao('matched', i, editingResultDesc.value)}
@@ -157,7 +157,7 @@ export default function ResultadosTabs({
                         }}
                       />
                     ) : (
-                      <p className="flex-1 text-xs text-slate-600 truncate font-medium">{item.transacao?.descricao}</p>
+                      <p className="flex-1 min-w-0 text-xs text-slate-600 truncate font-medium">{item.transacao?.descricao}</p>
                     )}
                     <button onClick={() => setEditingResultDesc({ section: 'matched', index: i, value: item.transacao?.descricao || '' })}
                       className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'matched' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}
@@ -349,7 +349,7 @@ export default function ResultadosTabs({
                 const classif = orphanClassificacoes[i];
                 return (
                   <div key={i} className="recon-txn-row" style={{ borderLeftColor: 'var(--green)', opacity: 0.8 }}>
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       <CheckCircle size={16} className="text-emerald-500 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap justify-between mb-1">
@@ -376,7 +376,7 @@ export default function ResultadosTabs({
               }
               return (
                 <div key={i} className="recon-txn-row ambiguous">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 min-w-0 flex-1">
                     <input type="checkbox" checked={selOrphan.has(i)}
                       onChange={e => setSelOrphan(prev => { const s = new Set(prev); e.target.checked ? s.add(i) : s.delete(i); return s; })}
                       className="recon-checkbox mt-1 self-start" />
@@ -407,7 +407,7 @@ export default function ResultadosTabs({
                         <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex-shrink-0">Descrição: </span>
                         {editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? (
                           <input autoFocus
-                            className="flex-1 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
+                            className="flex-1 min-w-0 text-xs text-slate-700 font-medium border-b border-indigo-400 bg-transparent outline-none pb-0.5"
                             value={editingResultDesc.value}
                             onChange={e => setEditingResultDesc(prev => ({ ...prev, value: e.target.value }))}
                             onBlur={() => saveResultDescricao('orphan_bank', i, editingResultDesc.value)}
@@ -417,7 +417,7 @@ export default function ResultadosTabs({
                             }}
                           />
                         ) : (
-                          <span className="text-xs text-slate-700 font-medium truncate">{item.transacao.descricao || '—'}</span>
+                          <span className="flex-1 min-w-0 text-xs text-slate-700 font-medium truncate">{item.transacao.descricao || '—'}</span>
                         )}
                         <button onClick={() => setEditingResultDesc({ section: 'orphan_bank', index: i, value: item.transacao.descricao || '' })}
                           className={`flex-shrink-0 transition-all ${editingResultDesc?.section === 'orphan_bank' && editingResultDesc?.index === i ? 'text-indigo-500' : 'text-slate-300 hover:text-indigo-400'}`}

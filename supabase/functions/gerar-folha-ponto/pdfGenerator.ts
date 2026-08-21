@@ -6,7 +6,9 @@ import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 // tabelas semanais, resumo mensal, carimbo de assinatura). O app aplica uma
 // regra global de CSS (`text-transform: uppercase`) a tudo — por isso todo o
 // texto aqui é gerado já em maiúsculas, para bater certo visualmente com o
-// PDF exportado pela app.
+// PDF exportado pela app. Suporta um único trabalhador (enviar_folha_ponto)
+// ou vários (enviar_folhas_ponto_cliente) — cada trabalhador começa numa
+// página nova, como no export em lote (ZIP) da própria app.
 const INDIGO     = rgb(79 / 255, 70 / 255, 229 / 255);   // indigo-600, cor dos totais
 const INK        = rgb(0.06, 0.09, 0.14);                // texto principal quase-preto
 const SLATE      = rgb(0.55, 0.58, 0.64);                // labels em cinza
@@ -37,10 +39,14 @@ export interface LogEntry {
   clientName: string;
 }
 
-export interface GenerateFolhaPontoOptions {
+export interface WorkerReportInput {
   workerName: string;
-  mes: string; // YYYY-MM
   logs: LogEntry[];
+}
+
+export interface GenerateFolhaPontoOptions {
+  mes: string; // YYYY-MM
+  workers: WorkerReportInput[];
   logoBytes: Uint8Array | null;
 }
 
@@ -52,11 +58,6 @@ function isoWeek(dateStr: string): number {
   const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
   const diff = target.valueOf() - firstThursday.valueOf();
   return 1 + Math.round(diff / (7 * 24 * 60 * 60 * 1000));
-}
-
-function daysInWeek(dateStr: string, allDatesInMonth: string[]): string[] {
-  const w = isoWeek(dateStr);
-  return allDatesInMonth.filter((d) => isoWeek(d) === w);
 }
 
 function calcDuration(start: string | null, end: string | null, bStart: string | null, bEnd: string | null): number {
@@ -84,19 +85,22 @@ function daysInMonth(mes: string): string[] {
   return Array.from({ length: last }, (_, i) => `${mes}-${String(i + 1).padStart(2, "0")}`);
 }
 
-export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Promise<Uint8Array> {
-  const { workerName, mes, logs, logoBytes } = opts;
+type Fonts = {
+  reg: Awaited<ReturnType<PDFDocument["embedFont"]>>;
+  bold: Awaited<ReturnType<PDFDocument["embedFont"]>>;
+  mono: Awaited<ReturnType<PDFDocument["embedFont"]>>;
+  monoBold: Awaited<ReturnType<PDFDocument["embedFont"]>>;
+};
 
-  const doc = await PDFDocument.create();
-  const fontReg  = await doc.embedFont(StandardFonts.Helvetica);
-  const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const fontMono = await doc.embedFont(StandardFonts.Courier);
-  const fontMonoBold = await doc.embedFont(StandardFonts.CourierBold);
-
-  let logoImg = null;
-  if (logoBytes) {
-    try { logoImg = await doc.embedPng(logoBytes); } catch { /* segue sem logo */ }
-  }
+function drawWorkerSection(
+  doc: PDFDocument,
+  fonts: Fonts,
+  logoImg: Awaited<ReturnType<PDFDocument["embedPng"]>> | null,
+  mes: string,
+  workerName: string,
+  logs: LogEntry[],
+) {
+  const { reg: fontReg, bold: fontBold, mono: fontMono, monoBold: fontMonoBold } = fonts;
 
   const [yy, mm] = mes.split("-").map(Number);
   const mesLabel = `${MESES_PT[(mm || 1) - 1]} DE ${yy}`;
@@ -107,10 +111,6 @@ export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Pr
 
   let page = doc.addPage([PAGE_W, PAGE_H]);
   let y = PAGE_H;
-
-  const rightAlign = (text: string, font: typeof fontReg, size: number, rightX: number) => {
-    return rightX - font.widthOfTextAtSize(text, size);
-  };
 
   // ── Cabeçalho ───────────────────────────────────────────────────
   y -= 26;
@@ -169,7 +169,7 @@ export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Pr
     if (y - needed < MARGIN + 30) {
       page = doc.addPage([PAGE_W, PAGE_H]);
       y = PAGE_H - 30;
-      page.drawText("MAGNETIC PLACE · FOLHA DE PONTO (CONTINUAÇÃO)", { x: MARGIN, y, size: 7.5, font: fontReg, color: SLATE });
+      page.drawText(`MAGNETIC PLACE · FOLHA DE PONTO · ${workerName.toUpperCase()} (CONTINUAÇÃO)`, { x: MARGIN, y, size: 7.5, font: fontReg, color: SLATE });
       y -= 20;
     }
   };
@@ -191,7 +191,6 @@ export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Pr
   for (const [weekNum, dates] of [...weeks.entries()].sort((a, b) => a[0] - b[0])) {
     ensureSpace(WEEK_HEADER_H + COL_HEADER_H + ROW_H);
 
-    // Linha "SEMANA N   TOTAL SEMANAL: XhXX"
     page.drawRectangle({ x: MARGIN, y: y - WEEK_HEADER_H, width: CONTENT_W, height: WEEK_HEADER_H, color: BAND_BG });
     page.drawText(`SEMANA ${weekNum}`, { x: MARGIN + 8, y: y - WEEK_HEADER_H + 5, size: 8, font: fontBold, color: INK });
     let totalSemana = 0;
@@ -205,7 +204,6 @@ export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Pr
     page.drawText(semanaTxt, { x: PAGE_W - MARGIN - 8 - semanaW, y: y - WEEK_HEADER_H + 5, size: 8, font: fontBold, color: INK });
     y -= WEEK_HEADER_H;
 
-    // Cabeçalho das colunas
     cols.forEach((c, i) => {
       const w = fontBold.widthOfTextAtSize(c.label, 6.5);
       page.drawText(c.label, { x: i === cols.length - 1 ? colX[i] + 6 : colCenter(i) - w / 2, y: y - COL_HEADER_H + 4, size: 6.5, font: fontBold, color: SLATE });
@@ -285,5 +283,30 @@ export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Pr
   const waitW = fontBold.widthOfTextAtSize(waitLabel, 7);
   page.drawText(waitLabel, { x: stampX + stampW / 2 - waitW / 2, y: y - stampH / 2 - 3, size: 7, font: fontBold, color: SLATE_LIGHT });
 
-  return doc.save();
+  return totalMes;
+}
+
+export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Promise<{ bytes: Uint8Array; totalPorTrabalhador: Record<string, number> }> {
+  const { mes, workers, logoBytes } = opts;
+
+  const doc = await PDFDocument.create();
+  const fonts: Fonts = {
+    reg: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
+    mono: await doc.embedFont(StandardFonts.Courier),
+    monoBold: await doc.embedFont(StandardFonts.CourierBold),
+  };
+
+  let logoImg = null;
+  if (logoBytes) {
+    try { logoImg = await doc.embedPng(logoBytes); } catch { /* segue sem logo */ }
+  }
+
+  const totalPorTrabalhador: Record<string, number> = {};
+  for (const w of workers) {
+    const total = drawWorkerSection(doc, fonts, logoImg, mes, w.workerName, w.logs);
+    totalPorTrabalhador[w.workerName] = total;
+  }
+
+  return { bytes: await doc.save(), totalPorTrabalhador };
 }
