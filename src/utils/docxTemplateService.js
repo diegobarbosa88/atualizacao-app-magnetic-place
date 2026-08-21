@@ -31,6 +31,67 @@ export async function readFileAsArrayBuffer(file) {
   });
 }
 
+// O Word divide texto em vários <w:r> (runs) por motivos invisíveis ao
+// utilizador (verificação ortográfica, autocorreção, colar com formatação
+// diferente) — quando isso parte um "{{tag}}" a meio, o Docxtemplater falha
+// com "duplicate open/close tags". Funde runs adjacentes com a mesma
+// formatação (mesmo w:rPr, ou nenhum dos dois) antes do parse, recompondo
+// o texto de forma segura sem tocar em formatação real distinta.
+function mergeSplitRunsInXml(xmlText) {
+  const xmlDoc = new DOMParser().parseFromString(xmlText, 'application/xml');
+  if (xmlDoc.getElementsByTagName('parsererror').length > 0) return xmlText;
+
+  ['w:proofErr', 'w:bookmarkStart', 'w:bookmarkEnd'].forEach(tag => {
+    Array.from(xmlDoc.getElementsByTagName(tag)).forEach(el => el.parentNode?.removeChild(el));
+  });
+
+  const serializer = new XMLSerializer();
+  const isMergeableRun = (run) => {
+    const children = Array.from(run.children).map(c => c.tagName);
+    const tCount = children.filter(t => t === 'w:t').length;
+    return tCount === 1 && children.every(t => t === 'w:rPr' || t === 'w:t');
+  };
+  const rprSignature = (run) => {
+    const rPr = run.getElementsByTagName('w:rPr')[0];
+    return rPr ? serializer.serializeToString(rPr) : '';
+  };
+
+  Array.from(xmlDoc.getElementsByTagName('w:p')).forEach((p) => {
+    const runs = Array.from(p.children).filter(c => c.tagName === 'w:r');
+    let i = 0;
+    while (i < runs.length - 1) {
+      const a = runs[i];
+      const b = runs[i + 1];
+      if (isMergeableRun(a) && isMergeableRun(b) && rprSignature(a) === rprSignature(b)) {
+        const tA = a.getElementsByTagName('w:t')[0];
+        const tB = b.getElementsByTagName('w:t')[0];
+        tA.textContent = (tA.textContent || '') + (tB.textContent || '');
+        tA.setAttribute('xml:space', 'preserve');
+        b.parentNode.removeChild(b);
+        runs.splice(i + 1, 1);
+      } else {
+        i++;
+      }
+    }
+  });
+
+  return serializer.serializeToString(xmlDoc);
+}
+
+function repairSplitTagsInZip(zip) {
+  const filePattern = /^word\/(document|header\d*|footer\d*)\.xml$/;
+  Object.keys(zip.files)
+    .filter(p => filePattern.test(p))
+    .forEach(p => {
+      try {
+        const merged = mergeSplitRunsInXml(zip.files[p].asText());
+        zip.file(p, merged);
+      } catch (err) {
+        console.warn(`Fusão de runs falhou em ${p} (a continuar):`, err);
+      }
+    });
+}
+
 function loadDocFromBuffer(arrayBuffer) {
   let zip;
   try {
@@ -38,6 +99,7 @@ function loadDocFromBuffer(arrayBuffer) {
   } catch (err) {
     throw new Error('Ficheiro .docx inválido ou corrompido (zip ilegível).');
   }
+  repairSplitTagsInZip(zip);
   try {
     return new Docxtemplater(zip, {
       paragraphLoop: true,
@@ -156,6 +218,8 @@ export function renderDocx(arrayBuffer, renderData, { imageMap = null } = {}) {
   } catch (err) {
     throw new Error('Ficheiro .docx inválido ou corrompido (zip ilegível).');
   }
+
+  repairSplitTagsInZip(zip);
 
   // Retrocompatibilidade: converte {{name}} em {name} para todos os campos
   // conhecidos (templates antigos onde foram usados duplos-chavetas).
