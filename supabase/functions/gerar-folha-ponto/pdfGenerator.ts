@@ -21,10 +21,6 @@ const PAGE_H  = 841.89;
 const MARGIN  = 34;
 const CONTENT_W = PAGE_W - MARGIN * 2;
 
-const MESES_PT = [
-  "JANEIRO", "FEVEREIRO", "MARÇO", "ABRIL", "MAIO", "JUNHO",
-  "JULHO", "AGOSTO", "SETEMBRO", "OUTUBRO", "NOVEMBRO", "DEZEMBRO",
-];
 const DIAS_PT = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"];
 
 export interface LogEntry {
@@ -45,7 +41,10 @@ export interface WorkerReportInput {
 }
 
 export interface GenerateFolhaPontoOptions {
-  mes: string; // YYYY-MM
+  dataInicio: string; // YYYY-MM-DD
+  dataFim: string;    // YYYY-MM-DD (inclusive)
+  periodoLabel: string; // título grande no cabeçalho, ex: "JULHO DE 2026" ou "01/07/2026 A 15/07/2026"
+  isPeriodoMensal: boolean; // controla "FOLHA DE HORAS MENSAL" vs "FOLHA DE HORAS"
   workers: WorkerReportInput[];
   logoBytes: Uint8Array | null;
 }
@@ -79,10 +78,15 @@ function formatHours(h: number): string {
   return `${hours}H${minutes === 0 ? "00" : String(minutes).padStart(2, "0")}`;
 }
 
-function daysInMonth(mes: string): string[] {
-  const [y, m] = mes.split("-").map(Number);
-  const last = new Date(y, m, 0).getDate();
-  return Array.from({ length: last }, (_, i) => `${mes}-${String(i + 1).padStart(2, "0")}`);
+function datesInRange(dataInicio: string, dataFim: string): string[] {
+  const out: string[] = [];
+  let cur = new Date(dataInicio + "T00:00:00Z");
+  const end = new Date(dataFim + "T00:00:00Z");
+  while (cur.valueOf() <= end.valueOf()) {
+    out.push(cur.toISOString().slice(0, 10));
+    cur = new Date(cur.valueOf() + 24 * 60 * 60 * 1000);
+  }
+  return out;
 }
 
 type Fonts = {
@@ -96,14 +100,16 @@ function drawWorkerSection(
   doc: PDFDocument,
   fonts: Fonts,
   logoImg: Awaited<ReturnType<PDFDocument["embedPng"]>> | null,
-  mes: string,
+  dataInicio: string,
+  dataFim: string,
+  periodoLabel: string,
+  isPeriodoMensal: boolean,
   workerName: string,
   logs: LogEntry[],
 ) {
   const { reg: fontReg, bold: fontBold, mono: fontMono, monoBold: fontMonoBold } = fonts;
 
-  const [yy, mm] = mes.split("-").map(Number);
-  const mesLabel = `${MESES_PT[(mm || 1) - 1]} DE ${yy}`;
+  const mesLabel = periodoLabel;
 
   const clientIds = [...new Set(logs.map((l) => l.clientId).filter(Boolean))];
   const isVariosClientes = clientIds.length !== 1;
@@ -124,7 +130,7 @@ function drawWorkerSection(
 
   const mesW = fontBold.widthOfTextAtSize(mesLabel, 13);
   page.drawText(mesLabel, { x: PAGE_W - MARGIN - mesW, y, size: 13, font: fontBold, color: INK });
-  const subLabel = `FOLHA DE HORAS MENSAL · ${subtitleClient}`;
+  const subLabel = `FOLHA DE HORAS${isPeriodoMensal ? " MENSAL" : ""} · ${subtitleClient}`;
   const subW = fontReg.widthOfTextAtSize(subLabel, 8);
   page.drawText(subLabel, { x: PAGE_W - MARGIN - subW, y: y - 14, size: 8, font: fontReg, color: SLATE });
 
@@ -174,7 +180,7 @@ function drawWorkerSection(
     }
   };
 
-  const allDates = daysInMonth(mes);
+  const allDates = datesInRange(dataInicio, dataFim);
   const weeks = new Map<number, string[]>();
   for (const d of allDates) {
     const w = isoWeek(d);
@@ -247,7 +253,7 @@ function drawWorkerSection(
   ensureSpace(60);
   page.drawLine({ start: { x: MARGIN, y }, end: { x: PAGE_W - MARGIN, y }, thickness: 1.2, color: INK });
   y -= 13;
-  page.drawText("RESUMO MENSAL", { x: MARGIN, y, size: 7, font: fontBold, color: SLATE });
+  page.drawText(isPeriodoMensal ? "RESUMO MENSAL" : "RESUMO DO PERÍODO", { x: MARGIN, y, size: 7, font: fontBold, color: SLATE });
 
   const totalLabel2 = "TOTAL REGISTADO";
   const totalLabel2W = fontBold.widthOfTextAtSize(totalLabel2, 6.5);
@@ -287,7 +293,7 @@ function drawWorkerSection(
 }
 
 export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Promise<{ bytes: Uint8Array; totalPorTrabalhador: Record<string, number> }> {
-  const { mes, workers, logoBytes } = opts;
+  const { dataInicio, dataFim, periodoLabel, isPeriodoMensal, workers, logoBytes } = opts;
 
   const doc = await PDFDocument.create();
   const fonts: Fonts = {
@@ -304,7 +310,7 @@ export async function generateFolhaPontoPDF(opts: GenerateFolhaPontoOptions): Pr
 
   const totalPorTrabalhador: Record<string, number> = {};
   for (const w of workers) {
-    const total = drawWorkerSection(doc, fonts, logoImg, mes, w.workerName, w.logs);
+    const total = drawWorkerSection(doc, fonts, logoImg, dataInicio, dataFim, periodoLabel, isPeriodoMensal, w.workerName, w.logs);
     totalPorTrabalhador[w.workerName] = total;
   }
 
