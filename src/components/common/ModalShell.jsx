@@ -21,29 +21,59 @@ const SIZE_MAP = {
 
 export default function ModalShell({ isOpen, onClose, title, subtitle, icon, accent = 'indigo', size = 'lg', footer, children }) {
   if (!isOpen) return null;
-  const a = ACCENT[accent] || ACCENT.indigo;
   const sizeClass = SIZE_MAP[size] || SIZE_MAP.lg;
+  const isNavyGradient = accent === 'navyGradient';
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4">
       <div
         className={`bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl w-full ${sizeClass} flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300`}
         style={{ maxHeight: 'min(92dvh, 92vh)' }}
       >
-        <div className={`flex items-center gap-3 ${a.header} border-b px-4 py-3 shrink-0`}>
-          <div className={`w-8 h-8 rounded-xl ${a.iconBg} flex items-center justify-center shrink-0`}>
-            <span className={a.iconColor}>{icon}</span>
+        {isNavyGradient ? (
+          <div className="shrink-0">
+            <div
+              className="flex items-center gap-3 px-4 py-3.5"
+              style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}
+            >
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                <span className="text-white">{icon}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-black text-white uppercase tracking-tight text-sm leading-none">{title}</h2>
+                {subtitle && <p className="text-[11px] font-semibold text-[#b7c8d8] mt-0.5 truncate normal-case">{subtitle}</p>}
+              </div>
+              <button
+                onClick={onClose}
+                className="p-2 text-[#cfe0ee] hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #EB8D00, #ffb444)' }} />
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm leading-none">{title}</h2>
-            {subtitle && <p className="text-[10px] font-bold text-slate-400 mt-0.5">{subtitle}</p>}
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
-          >
-            <X size={18} />
-          </button>
-        </div>
+        ) : (
+          (() => {
+            const a = ACCENT[accent] || ACCENT.indigo;
+            return (
+              <div className={`flex items-center gap-3 ${a.header} border-b px-4 py-3 shrink-0`}>
+                <div className={`w-8 h-8 rounded-xl ${a.iconBg} flex items-center justify-center shrink-0`}>
+                  <span className={a.iconColor}>{icon}</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-black text-slate-800 uppercase tracking-tight text-sm leading-none">{title}</h2>
+                  {subtitle && <p className="text-[10px] font-bold text-slate-400 mt-0.5">{subtitle}</p>}
+                </div>
+                <button
+                  onClick={onClose}
+                  className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            );
+          })()
+        )}
         <div className="flex-1 overflow-y-auto overscroll-contain min-h-0">
           {children}
         </div>

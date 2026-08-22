@@ -280,8 +280,9 @@ const TeamManagerContent = ({ onLogin }) => {
         isOpen={isAddingInTab}
         onClose={() => setIsAddingInTab(false)}
         title={workerForm.id ? 'Editar Colaborador' : 'Novo Colaborador'}
+        subtitle={workerForm.id ? [workerForm.name, workerForm.profissao].filter(Boolean).join(' · ') : undefined}
         icon={<Users size={16} />}
-        accent="slate"
+        accent="navyGradient"
         size="3xl"
       >
         <WorkerForm />
