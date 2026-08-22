@@ -1,25 +1,29 @@
 import React from 'react';
 
-// Tailwind precisa de classes estáticas e detetáveis no código-fonte — não
-// pode interpolar `sm:grid-cols-${n}` diretamente, por isso mapeia aqui.
-const STATS_COLS_CLASS = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-4', 5: 'sm:grid-cols-5' };
+// Cabeçalho de secção do admin — faixa branca de uma linha (ícone, título,
+// sub-abas) com uma linha de resumo opcional por baixo.
+//
+// Substituiu um bloco navy em gradiente de ~115px que aparecia em todas as
+// 19 secções, logo a seguir aos 104px de navy da BrandBar: eram duas
+// superfícies escuras coladas. Esta versão gasta ~90px até à primeira linha
+// de dados, contra 238px da anterior.
+//
+// O breadcrumb saiu por ser redundante: dizia "Equipa › Colaboradores" com o
+// título e a aba ativa a dizerem o mesmo, logo por cima.
 
-// Regra geral de design para cabeçalhos de secção do admin: cabeçalho navy
-// em gradiente com barra de acento laranja, seletor de sub-abas embutido
-// (substitui as antigas barras de tabs com sublinhado por secção) e, opcionalmente,
-// uma "stat strip" de resumo clicável por baixo. Nasceu no redesign de
-// Documentos/Clientes — qualquer secção nova do admin deve usar isto em vez
-// de recriar cabeçalho + tabs à mão.
-export function StatCard({ label, value, colorText, dotColor, active, onClick }) {
-  const Tag = onClick ? 'button' : 'div';
+export function StatChip({ label, value, dotColor, active, onClick }) {
+  const Tag = onClick ? 'button' : 'span';
   return (
     <Tag
       onClick={onClick}
-      className={`text-left bg-white border rounded-2xl px-4 py-3 transition-all ${onClick ? '' : ''} ${active ? 'border-[#EB8D00] ring-2 ring-[#EB8D00]/25' : 'border-slate-100 hover:border-slate-200'}`}
+      className={`relative flex items-center gap-1.5 text-[11.5px] font-semibold whitespace-nowrap transition-colors ${
+        active ? 'text-[#EB8D00]' : 'text-slate-500 hover:text-slate-700'
+      }`}
     >
-      <span className="inline-block w-2 h-2 rounded-full mb-1.5" style={{ backgroundColor: dotColor }} />
-      <p className="text-xl font-black tabular-nums leading-none" style={{ color: colorText }}>{value}</p>
-      <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mt-1">{label}</p>
+      <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: dotColor }} />
+      <b className={`font-extrabold tabular-nums ${active ? 'text-[#EB8D00]' : 'text-slate-800'}`}>{value}</b>
+      {label}
+      {active && <span className="absolute left-0 right-0 -bottom-2 h-0.5 bg-[#EB8D00]" />}
     </Tag>
   );
 }
@@ -27,75 +31,64 @@ export function StatCard({ label, value, colorText, dotColor, active, onClick })
 export default function SectionHeaderShell({
   icon,
   title,
+  // Mantido na assinatura por ser informação útil, mas já não ocupa uma linha:
+  // passa a tooltip do título.
   subtitle,
   tabs,
   activeTab,
   onTabChange,
-  breadcrumbLabel,
   stats,
-  statsCols = 4,
   rightSlot,
 }) {
   return (
-    <div className="rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 mb-5">
-      <div className="px-5 sm:px-7 py-[1.4rem]" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-[42px] h-[42px] rounded-[14px] bg-white/10 flex items-center justify-center shrink-0 text-white">
-              {icon}
-            </div>
-            <div className="min-w-0">
-              {/* Barlow Condensed 700 em caixa normal, como no mockup aprovado —
-                  antes era text-base/font-black/uppercase, que pesava mais que
-                  o conteúdo da própria página. */}
-              <h2 className="text-[1.4rem] font-bold leading-[1.05] tracking-[0.01em] text-white truncate">{title}</h2>
-              {subtitle && <p className="text-[11px] font-semibold mt-0.5 truncate text-[#b7c8d8]">{subtitle}</p>}
-            </div>
-          </div>
+    <div className="bg-white border border-slate-200/70 rounded-2xl overflow-hidden mb-5">
+      <div className="flex items-center gap-3 flex-wrap px-4 py-3">
+        {icon && (
+          <span className="w-[26px] h-[26px] rounded-lg flex items-center justify-center shrink-0 bg-[#1B3A57]/[0.08] text-[#1B3A57] [&>svg]:w-[14px] [&>svg]:h-[14px]">
+            {icon}
+          </span>
+        )}
+        <h2
+          className="text-[1.3rem] font-bold leading-none text-[#1B3A57] truncate"
+          title={subtitle || undefined}
+        >
+          {title}
+        </h2>
 
-          {tabs && tabs.length > 0 && (
-            <div className="flex flex-wrap bg-white/10 rounded-xl p-1 gap-1">
-              {tabs.map(({ id, label, icon: Icon, badge, badgeColor = 'rose' }) => {
-                const isActive = activeTab === id;
-                return (
-                  <button
-                    key={id}
-                    onClick={() => onTabChange(id)}
-                    className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-all whitespace-nowrap ${
-                      isActive ? 'bg-white text-[#1B3A57]' : 'text-[#b7c8d8] hover:text-white'
-                    }`}
-                  >
-                    {Icon && <Icon size={12} />} {label}
-                    {!!badge && (
-                      <span
-                        className="text-white text-[9px] font-black px-1.5 py-0.5 rounded-full leading-none"
-                        style={{ backgroundColor: badgeColor === 'amber' ? '#e8a317' : '#e0455a' }}
-                      >
-                        {badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {rightSlot}
-        </div>
-
-        {breadcrumbLabel && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs font-bold">
-            <span className="text-[#8ea6bc]">{title}</span>
-            <span className="text-[#5c7590]">›</span>
-            <span className="text-white">{breadcrumbLabel}</span>
+        {tabs && tabs.length > 0 && (
+          <div className="flex flex-wrap gap-0.5 ml-auto bg-slate-100 rounded-[10px] p-[3px]">
+            {tabs.map(({ id, label, icon: Icon, badge, badgeColor = 'rose' }) => {
+              const isActive = activeTab === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => onTabChange(id)}
+                  style={{ fontFamily: 'var(--mono)' }}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[7px] text-[9.5px] font-bold uppercase tracking-[0.04em] whitespace-nowrap transition-all ${
+                    isActive ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {Icon && <Icon size={11} />} {label}
+                  {!!badge && (
+                    <span
+                      className="text-white text-[8.5px] font-extrabold px-1.5 py-px rounded-full leading-none"
+                      style={{ backgroundColor: badgeColor === 'amber' ? '#e8a317' : '#e0455a' }}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
+
+        {rightSlot && <div className={tabs && tabs.length > 0 ? '' : 'ml-auto'}>{rightSlot}</div>}
       </div>
-      <div className="h-[3px]" style={{ background: 'linear-gradient(90deg, #EB8D00, #ffb444)' }} />
 
       {stats && stats.length > 0 && (
-        <div className={`grid grid-cols-2 ${STATS_COLS_CLASS[statsCols] || STATS_COLS_CLASS[4]} gap-2.5 p-4 sm:p-5 bg-slate-50`}>
-          {stats.map((s, i) => <StatCard key={i} {...s} />)}
+        <div className="flex items-center gap-4 flex-wrap px-4 py-2 border-t border-slate-100 bg-slate-50/50">
+          {stats.map((s, i) => <StatChip key={i} {...s} />)}
         </div>
       )}
     </div>

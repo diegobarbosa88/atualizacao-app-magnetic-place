@@ -62,7 +62,6 @@ export default function TOConlineAdmin() {
   const setSubtab = (id) => navigate(`/admin/toconline?subtab=${id}`);
 
   const statusLabel = verificando ? 'A verificar...' : ligado ? 'Ligado e operacional' : 'Não autenticado';
-  const activeTabLabel = TABS.find(t => t.id === subtab)?.label;
 
   return (
     <div className="p-6 space-y-5 w-full max-w-6xl mx-auto min-w-0">
@@ -70,29 +69,28 @@ export default function TOConlineAdmin() {
         icon={verificando ? <Loader2 size={16} className="animate-spin" /> : <BookOpen size={18} />}
         title="TOConline"
         subtitle={statusLabel}
-        breadcrumbLabel={activeTabLabel}
         tabs={TABS}
         activeTab={subtab}
         onTabChange={setSubtab}
         rightSlot={
           <div className="flex items-center gap-2.5 flex-wrap">
             {ligado && (
-              <div className="flex items-center gap-2.5 bg-white/10 rounded-2xl px-4 py-2">
+              <div className="flex items-center gap-2.5 bg-slate-100 rounded-xl px-3 py-1.5">
                 {saldoLoading ? (
-                  <Loader2 size={13} className="text-white/70 animate-spin" />
+                  <Loader2 size={13} className="text-slate-400 animate-spin" />
                 ) : (
-                  <TrendingUp size={14} className="text-white/70 shrink-0" />
+                  <TrendingUp size={14} className="text-slate-400 shrink-0" />
                 )}
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-[#8ea6bc]">Saldo Contas</p>
-                  <p className="text-sm font-black text-white">
+                  <p className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Saldo Contas</p>
+                  <p className="text-xs font-black text-[#1B3A57]">
                     {saldoContas != null
                       ? new Intl.NumberFormat('pt-PT', { style: 'currency', currency: 'EUR' }).format(saldoContas.total)
                       : '—'}
                   </p>
                 </div>
                 {saldoContas && (
-                  <span className="text-[9px] text-[#8ea6bc] font-semibold self-end pb-0.5">
+                  <span className="text-[9px] text-slate-400 font-semibold self-end pb-0.5">
                     {saldoContas.n} conta{saldoContas.n !== 1 ? 's' : ''}
                   </span>
                 )}
@@ -101,13 +99,13 @@ export default function TOConlineAdmin() {
             {!verificando && ligado && (
               <div className="flex gap-2">
                 <button onClick={() => setMostrarFaturar(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all shadow-md hover:opacity-90"
+                  className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase tracking-wide rounded-lg transition-all shadow-sm hover:opacity-90"
                   style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>
-                  <Zap size={13} /> Faturar
+                  <Zap size={12} /> Faturar
                 </button>
                 <button onClick={() => setMostrarCriar(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-white/10 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all hover:bg-white/20">
-                  <Plus size={13} /> Criar
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-[#1B3A57] text-[10px] font-black uppercase tracking-wide rounded-lg transition-all hover:bg-slate-200">
+                  <Plus size={12} /> Criar
                 </button>
               </div>
             )}

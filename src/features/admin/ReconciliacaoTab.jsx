@@ -12,7 +12,6 @@ const SECTIONS = [
   { id: 'salarios', label: 'Salários', icon: Coins },
   { id: 'bancaria', label: 'Bancária', icon: Landmark },
 ];
-const LABELS = { recibos: 'Reconciliação de recibos', salarios: 'Reconciliação de salários', bancaria: 'Reconciliação bancária' };
 
 const CARD_CLS = "bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100";
 
@@ -34,7 +33,6 @@ export default function ReconciliacaoTab() {
         icon={<BarChart2 size={18} />}
         title="Reconciliação"
         subtitle="Recibos, salários e extratos bancários"
-        breadcrumbLabel={LABELS[activeSection]}
         tabs={SECTIONS}
         activeTab={activeSection}
         onTabChange={navigateTo}

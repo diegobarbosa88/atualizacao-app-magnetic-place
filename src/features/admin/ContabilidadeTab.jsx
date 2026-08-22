@@ -229,15 +229,15 @@ export default function ContabilidadeTab({ workers, supabase, systemSettings }) 
         rightSlot={(
           <div className="flex flex-wrap items-center gap-3">
             {/* Navegação mês */}
-            <div className="flex items-center gap-1 bg-white/10 rounded-xl p-1">
-              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                <ChevronLeft size={16} className="text-white" />
+            <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+              <button onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
+                <ChevronLeft size={15} className="text-slate-400" />
               </button>
-              <span className="px-3 py-1 text-sm font-black text-white capitalize min-w-[140px] text-center">
+              <span className="px-3 py-1 text-xs font-black text-[#1B3A57] capitalize min-w-[130px] text-center">
                 {nomeMes} {selectedYear}
               </span>
-              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                <ChevronRight size={16} className="text-white" />
+              <button onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-white transition-colors">
+                <ChevronRight size={15} className="text-slate-400" />
               </button>
             </div>
 

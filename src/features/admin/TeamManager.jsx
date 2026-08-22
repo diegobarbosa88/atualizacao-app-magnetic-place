@@ -153,7 +153,6 @@ const TeamManagerContent = ({ onLogin }) => {
     }
   };
 
-  const TEAM_TAB_LABELS = { workers: 'Colaboradores', absences: 'Faltas', validacao: 'Validação', correcoes: 'Correções', onboarding: 'Pendentes de onboarding' };
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -161,7 +160,6 @@ const TeamManagerContent = ({ onLogin }) => {
         icon={<Users size={18} />}
         title="Equipa"
         subtitle="Colaboradores, faltas e validações"
-        breadcrumbLabel={TEAM_TAB_LABELS[teamSubTab]}
         tabs={[
           { id: 'workers',    label: 'Colaboradores', icon: Users,        badge: pendingChangeRequests.length || null, badgeColor: 'amber' },
           { id: 'absences',   label: 'Faltas',        icon: CalendarX,    badge: pendingAbsences || null },

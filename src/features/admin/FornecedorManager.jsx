@@ -23,16 +23,17 @@ function FornecedorManagerContent() {
             <button
               onClick={carregar}
               disabled={loading}
-              className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-xl transition-colors"
+              className="p-2 text-slate-400 hover:text-[#1B3A57] hover:bg-slate-100 rounded-lg transition-colors"
               title="Actualizar"
             >
               <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
             </button>
             <button
               onClick={novoFornecedor}
-              className="flex items-center gap-2 px-4 py-2.5 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors" style={{ backgroundColor: '#EB8D00' }}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-wide transition-colors shadow-sm"
+              style={{ backgroundColor: '#EB8D00', color: '#12293e' }}
             >
-              <Plus size={14} />
+              <Plus size={13} />
               Novo Fornecedor
             </button>
           </div>

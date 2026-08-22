@@ -29,11 +29,11 @@ const ScheduleManagerContent = () => {
         subtitle={`${schedules.length} horário${schedules.length !== 1 ? 's' : ''}`}
         rightSlot={
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-white/10 rounded-xl p-1">
-              <button onClick={() => setSchedulesView('grid')} className={`p-2 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-white text-[#1B3A57]' : 'text-white/70 hover:text-white'}`} title="Vista em Grade"><LayoutGrid size={18} /></button>
-              <button onClick={() => setSchedulesView('list')} className={`p-2 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-white text-[#1B3A57]' : 'text-white/70 hover:text-white'}`} title="Vista em Lista"><List size={18} /></button>
+            <div className="flex items-center bg-slate-100 rounded-xl p-1">
+              <button onClick={() => setSchedulesView('grid')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'grid' ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Vista em Grade"><LayoutGrid size={16} /></button>
+              <button onClick={() => setSchedulesView('list')} className={`p-1.5 rounded-lg transition-all ${schedulesView === 'list' ? 'bg-white text-[#1B3A57] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`} title="Vista em Lista"><List size={16} /></button>
             </div>
-            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-4 py-2.5 rounded-xl font-black text-xs uppercase shadow-lg transition-all" style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>Novo Horário</button>
+            <button onClick={() => { setScheduleForm({ id: null, name: '', startTime: '', endTime: '', breakStart: '', breakEnd: '', hasBreak: false, assignedWorkers: [], weekdays: [1, 2, 3, 4, 5], isAdvanced: false, dailyConfigs: {} }); setIsAddingInTab(true); }} className="px-3.5 py-2 rounded-lg font-black text-[10px] uppercase tracking-wide shadow-sm transition-all" style={{ backgroundColor: '#EB8D00', color: '#12293e' }}>Novo Horário</button>
           </div>
         }
       />

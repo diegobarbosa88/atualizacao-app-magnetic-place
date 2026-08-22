@@ -9,7 +9,6 @@ const SECTIONS = [
   { id: 'fornecedores', label: 'Fornecedores', icon: ArrowRightLeft },
   { id: 'fila',         label: 'Fila de Pag.', icon: ListChecks },
 ];
-const LABELS = { fornecedores: 'Pagamentos a fornecedores', fila: 'Fila de aprovação' };
 
 const CARD_CLS = "bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-6 lg:p-8 shadow-sm border border-slate-100";
 
@@ -30,7 +29,6 @@ export default function PagamentosAdmin() {
         icon={<ArrowRightLeft size={18} />}
         title="Pagamentos"
         subtitle="Pagamentos a fornecedores e fila de aprovação"
-        breadcrumbLabel={LABELS[activeSection]}
         tabs={SECTIONS}
         activeTab={activeSection}
         onTabChange={navigateTo}

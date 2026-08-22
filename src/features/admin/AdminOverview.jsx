@@ -172,12 +172,12 @@ export default function AdminOverview({ currentMonth, setCurrentMonth }) {
         icon={<LayoutGrid size={18} />}
         title="Dashboard Geral"
         rightSlot={
-          <div className="flex items-center gap-1 bg-white/10 rounded-2xl p-1">
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-2 hover:bg-white/10 rounded-xl text-white/80"><ChevronLeft size={16} /></button>
-            <span className="font-bold text-sm min-w-[120px] text-center text-white">
+          <div className="flex items-center gap-1 bg-slate-100 rounded-xl p-1">
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[#1B3A57] transition-colors"><ChevronLeft size={15} /></button>
+            <span className="font-bold text-xs min-w-[110px] text-center text-[#1B3A57]">
               {currentMonth.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' })}
             </span>
-            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-2 hover:bg-white/10 rounded-xl text-white/80"><ChevronRight size={16} /></button>
+            <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-400 hover:text-[#1B3A57] transition-colors"><ChevronRight size={15} /></button>
           </div>
         }
       />

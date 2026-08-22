@@ -2358,15 +2358,15 @@ ${hdrRow}${bodyRows}${totRow}
             subtitle="Estimativas salariais"
             rightSlot={(
               <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-1 rounded-xl border border-white/20 bg-white/10 px-1 py-0.5">
-                  <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                    <ChevronLeft size={15} className="text-white" />
+                <div className="flex items-center gap-1 rounded-xl bg-slate-100 px-1 py-0.5">
+                  <button onClick={() => navMes(-1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
+                    <ChevronLeft size={15} className="text-slate-400" />
                   </button>
-                  <span className="px-3 py-1 text-sm font-black min-w-[140px] text-center text-white">
+                  <span className="px-3 py-1 text-xs font-black min-w-[130px] text-center text-[#1B3A57]">
                     {MESES_PT[parseInt(inputs.mes, 10)] || ''} {inputs.ano}
                   </span>
-                  <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
-                    <ChevronRight size={15} className="text-white" />
+                  <button onClick={() => navMes(1)} className="p-1.5 rounded-lg hover:bg-white transition-colors">
+                    <ChevronRight size={15} className="text-slate-400" />
                   </button>
                 </div>
 

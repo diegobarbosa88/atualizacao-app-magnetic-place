@@ -1678,14 +1678,12 @@ export default function AjudasCustoAdmin() {
   const subtab = params.get('subtab') || 'elegibilidade';
   const setSubtab = (id) => navigate(`/admin/ajudas-custo?subtab=${id}`);
 
-  const activeLabel = TABS.find(t => t.id === subtab)?.label;
 
   return (
     <div className="space-y-4">
       <SectionHeaderShell
         icon={<Coins size={18} />}
         title="Ajudas de Custo"
-        breadcrumbLabel={activeLabel}
         tabs={TABS}
         activeTab={subtab}
         onTabChange={setSubtab}

@@ -11,7 +11,6 @@ const SECTIONS = [
   { id: 'fornecedores', label: 'Fornecedores', icon: Building2 },
   { id: 'contador',     label: 'Contador',     icon: MessageSquareText },
 ];
-const LABELS = { importar: 'Importar faturas', fornecedores: 'Fornecedores', contador: 'Contador' };
 
 export default function FaturacaoAdmin() {
   const navigate = useNavigate();
@@ -30,7 +29,6 @@ export default function FaturacaoAdmin() {
         icon={<Receipt size={18} />}
         title="Faturação"
         subtitle="Importação e gestão de faturas de fornecedores"
-        breadcrumbLabel={LABELS[activeSection]}
         tabs={SECTIONS}
         activeTab={activeSection}
         onTabChange={navigateTo}

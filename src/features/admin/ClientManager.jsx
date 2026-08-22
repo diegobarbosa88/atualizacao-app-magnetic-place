@@ -106,7 +106,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
     return clientsSort.direction === 'asc' ? res : -res;
   });
 
-  const CLIENT_TAB_LABELS = { list: 'Gestão comercial', envios: 'Envios de relatórios', correcoes: 'Inbox de correções', auditoria: 'Auditoria do portal' };
   const clientesComValor = clients.filter(c => Number(c.valorHora) > 0);
   const valorMedio = clientesComValor.length
     ? clientesComValor.reduce((sum, c) => sum + Number(c.valorHora), 0) / clientesComValor.length
@@ -120,7 +119,6 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         icon={<Building2 size={18} />}
         title="Clientes"
         subtitle="Gestão comercial, envios e auditoria"
-        breadcrumbLabel={CLIENT_TAB_LABELS[clientSubTab]}
         tabs={[
           { id: 'list',      label: 'Clientes',        icon: Building2 },
           { id: 'envios',    label: 'Envios',          icon: Send },

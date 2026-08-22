@@ -34,7 +34,6 @@ export default function DocumentsAdmin() {
   };
 
   const expiringCount = a.unifiedDocs.filter(d => ['expirado', 'urgente'].includes(getValidadeStatus(d.data_validade))).length;
-  const breadcrumbLabel = activeSection === 'templates' ? 'Templates' : (a.docMode === 'worker' ? 'Por colaborador' : 'Por categoria');
   const activeTabId = activeSection === 'templates' ? 'templates' : a.docMode;
 
   return (
@@ -43,7 +42,6 @@ export default function DocumentsAdmin() {
         icon={<FileText size={18} />}
         title="Documentos"
         subtitle="Gestão documental da equipa"
-        breadcrumbLabel={breadcrumbLabel}
         tabs={[
           { id: 'worker',    label: 'Por colaborador', icon: Users },
           { id: 'category',  label: 'Por categoria',   icon: FileText },
