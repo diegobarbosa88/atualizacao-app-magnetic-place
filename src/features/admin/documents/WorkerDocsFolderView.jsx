@@ -86,6 +86,27 @@ function ThumbImg({ url, alt, imgClassName, wrapperClassName }) {
 
 const COLOR_MAP = CATEGORIA_COLOR_MAP;
 
+// Anel colorido à volta do avatar — proporção de documentos em dia
+// (verde/âmbar/vermelho consoante haja algo urgente/expirado), para ver de
+// longe quem tem pendências sem abrir a pasta.
+function AvatarRing({ name, total, expirados, urgentes }) {
+  const r = 19, c = 2 * Math.PI * r;
+  const validPct = total > 0 ? Math.max(0, (total - expirados - urgentes) / total) : 1;
+  const color = expirados > 0 ? '#e2384f' : urgentes > 0 ? '#e8a317' : '#1cb476';
+  return (
+    <div className="relative w-11 h-11 shrink-0">
+      <svg width="44" height="44" viewBox="0 0 44 44" className="absolute inset-0 -rotate-90">
+        <circle cx="22" cy="22" r={r} fill="none" stroke="#e3e7ec" strokeWidth="3" />
+        <circle cx="22" cy="22" r={r} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round"
+          strokeDasharray={`${c * validPct} ${c}`} />
+      </svg>
+      <div className="absolute inset-[3px] rounded-full flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>
+        {getInitials(name)}
+      </div>
+    </div>
+  );
+}
+
 function ValidadeChip({ dataValidade }) {
   const status = getValidadeStatus(dataValidade);
   if (!status) return null;
@@ -489,7 +510,13 @@ function SubPastaCard({ categoria, docs, onOpenDoc, onDelete }) {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-black text-slate-700 truncate">{toSentenceCase(categoria)}</p>
-          <div className="flex flex-wrap gap-1 mt-1">
+          <div className="h-1 rounded-full bg-slate-100 overflow-hidden mt-1.5">
+            <div
+              className="h-full rounded-full transition-all"
+              style={{ width: `${docs.length ? (validosCount / docs.length) * 100 : 0}%`, backgroundColor: aExpirarCount > 0 ? '#e8a317' : '#1cb476' }}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1 mt-1.5">
             <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700">
               {validosCount} válido{validosCount !== 1 ? 's' : ''}
             </span>
@@ -794,7 +821,7 @@ export default function WorkerDocsFolderView({ docs, onPreview, onDeleteManual, 
                 className={`text-left border-2 rounded-2xl p-4 hover:shadow-md transition-all duration-200 bg-white ${alertBorder}`}
               >
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-black" style={{ backgroundColor: '#1B3A57', color: '#EB8D00' }}>{getInitials(w.workerName)}</div>
+                  <AvatarRing name={w.workerName} total={w.docs.length} expirados={expirados} urgentes={urgentes} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-slate-800 truncate">{toSentenceCase(w.workerName)}</p>
                     <p className="text-[10px] text-slate-400 font-bold mt-0.5">

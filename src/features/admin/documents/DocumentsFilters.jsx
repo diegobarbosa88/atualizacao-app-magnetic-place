@@ -1,7 +1,10 @@
 import React from 'react';
-import { LayoutList, Clock, FileSignature, CheckCircle, Search, Plus, AlertTriangle } from 'lucide-react';
+import { Search, Plus, X } from 'lucide-react';
 import { CATEGORIAS_RH_ACT } from '../../../constants/rhCategories';
 
+// Tabs de estado com contador e o botão "A Expirar" foram substituídos pelo
+// stat strip clicável no cabeçalho de DocumentsAdmin.jsx — evita repetir o
+// mesmo sinal (contagens por estado) em dois sítios da mesma página.
 export default function DocumentsFilters({
   stateFilter, setStateFilter,
   counts,
@@ -13,43 +16,28 @@ export default function DocumentsFilters({
   validadeFilter, setValidadeFilter,
   onShowUpload,
 }) {
+  const hasActiveFilter = stateFilter !== 'all' || (validadeFilter === 'expiring');
   return (
     <>
-      {/* Tabs de estado — sublinhado laranja */}
-      <div className="flex overflow-x-auto gap-0 mb-4 border-b border-slate-100">
-        {[
-          { key: 'all', label: 'Todos', icon: LayoutList },
-          { key: 'pending', label: 'Pendentes', icon: Clock },
-          { key: 'awaiting_admin', label: 'Aprovação', icon: FileSignature },
-          { key: 'signed', label: 'Assinados', icon: CheckCircle },
-        ].map(({ key, label, icon: Icon }) => {
-          const active = stateFilter === key;
-          return (
-            <button
-              key={key}
-              onClick={() => setStateFilter(key)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 pb-2.5 pt-1 text-[10px] font-black uppercase tracking-wider transition-all border-b-2 -mb-px whitespace-nowrap ${active ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'}`}
-            >
-              <Icon size={12} /> {label}
-              {counts[key] > 0 && <span className="tabular-nums">({counts[key]})</span>}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Filtro rápido "A Expirar" */}
-      <div className="mb-3">
-        <button
-          onClick={() => setValidadeFilter && setValidadeFilter(validadeFilter === 'expiring' ? '' : 'expiring')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all border ${
-            validadeFilter === 'expiring'
-              ? 'bg-red-600 text-white border-red-600 shadow-sm shadow-red-200'
-              : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-          }`}
-        >
-          <AlertTriangle size={11} /> A Expirar / Expirados
-        </button>
-      </div>
+      {hasActiveFilter && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">A filtrar por:</span>
+          {stateFilter !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-[#1B3A57]/5 text-[#1B3A57]">
+              {{ pending: 'Pendentes', awaiting_admin: 'Aguarda aprovação', signed: 'Assinados' }[stateFilter] || stateFilter}
+            </span>
+          )}
+          {validadeFilter === 'expiring' && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-red-50 text-red-600">A expirar/expirados</span>
+          )}
+          <button
+            onClick={() => { setStateFilter('all'); setValidadeFilter && setValidadeFilter(''); }}
+            className="flex items-center gap-1 text-[10px] font-black text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <X size={11} /> Limpar
+          </button>
+        </div>
+      )}
 
       {/* Filtro por categoria — dropdown */}
       <div className="mb-4">

@@ -101,7 +101,7 @@ export default function DocumentTemplatesAdmin({
         </button>
       </div>
 
-      <div className="overflow-x-auto -mx-2">
+      <div>
         {loading ? (
           <div className="py-16 text-center text-slate-300">
             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
@@ -114,38 +114,25 @@ export default function DocumentTemplatesAdmin({
             </div>
           </div>
         ) : (
-          <table className="w-full text-left border-separate border-spacing-y-2">
-            <thead>
-              <tr className="text-slate-400">
-                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Nome</th>
-                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest">Descrição</th>
-                <th className="px-4 py-2 text-[10px] font-black uppercase tracking-widest text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {templates.map(t => (
-                <tr key={t.id} className="bg-slate-50/30 hover:bg-white hover:shadow-md transition-all duration-300">
-                  <td className="px-4 py-3 rounded-l-2xl border-y border-l border-slate-100">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 shrink-0" style={{ color: '#869AAF' }} />
-                      <span className="text-sm font-black text-slate-800 truncate">{t.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 border-y border-slate-100 text-xs text-slate-500 max-w-[200px] truncate">
-                    {t.description || <span className="text-slate-300">—</span>}
-                  </td>
-                  <td className="px-4 py-3 rounded-r-2xl border-y border-r border-slate-100 text-right">
-                    <div className="flex justify-end items-center gap-1">
-                      <button onClick={() => openTemplatePreview(t)} className="p-2 bg-white text-slate-500 rounded-xl border border-slate-100 hover:bg-slate-600 hover:text-white transition-all shadow-sm" title="Pré-visualizar"><Eye className="w-3 h-3" /></button>
-                      <button onClick={() => openEditModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[#869AAF] hover:bg-[#869AAF] hover:text-white transition-all shadow-sm" title="Editar"><Edit3 className="w-3 h-3" /></button>
-                      <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[#869AAF] hover:bg-[#869AAF] hover:text-white transition-all shadow-sm" title="Gerar"><Send className="w-3 h-3" /></button>
-                      <button onClick={() => onDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Apagar"><Trash2 className="w-3 h-3" /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {templates.map(t => (
+              <div key={t.id} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-200">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3" style={{ backgroundColor: '#f4f0fd', color: '#6743c2' }}>
+                  <FileText size={18} />
+                </div>
+                <p className="text-sm font-black text-slate-800 truncate">{t.name}</p>
+                <p className="text-xs text-slate-400 mt-1 mb-3 line-clamp-2 min-h-[2rem]">
+                  {t.description || <span className="italic text-slate-300">Sem descrição</span>}
+                </p>
+                <div className="flex items-center gap-1.5 pt-3 border-t border-slate-50">
+                  <button onClick={() => openTemplatePreview(t)} className="p-1.5 bg-white text-slate-500 rounded-lg border border-slate-200 hover:bg-slate-600 hover:text-white transition-all" title="Pré-visualizar"><Eye className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openEditModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[#869AAF] hover:bg-[#869AAF] hover:text-white transition-all" title="Editar"><Edit3 className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => openGenerateModal(t)} className="p-1.5 bg-white rounded-lg border border-slate-200 text-[#869AAF] hover:bg-[#869AAF] hover:text-white transition-all" title="Gerar"><Send className="w-3.5 h-3.5" /></button>
+                  <button onClick={() => onDeleteTemplate(t)} className="p-1.5 bg-white text-rose-500 rounded-lg border border-rose-100 hover:bg-rose-500 hover:text-white transition-all ml-auto" title="Apagar"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
