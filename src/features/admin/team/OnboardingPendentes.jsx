@@ -1,12 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useApp } from '../../../context/AppContext';
-import { Users, Eye, CheckCircle, XCircle, Loader2, RefreshCw, Clock, AlertCircle } from 'lucide-react';
+import { Users, Eye, CheckCircle, XCircle, Loader2, RefreshCw, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
+import SelectProfissaoEmpresa from '../../../components/SelectProfissaoEmpresa';
 
 const TABELA_IRS_LABELS = {
   tabelaI:   'Tabela I',
   tabelaII:  'Tabela II',
   tabelaIII: 'Tabela III',
+};
+
+const ADMIN_FIELDS_VAZIO = {
+  data_inicio: '', vencimento_base: '', valorHora: '',
+  tipo_contrato: 'sem_termo', regime: 'tempo_inteiro', horas_semanais: 40,
+  modo_trabalho: 'presencial', enquadramento: 'REGE',
+  subsidio_alimentacao_dia: '', subsidio_alimentacao_tipo: 'cartao',
+  local_trabalho: '', defaultClientId: '', defaultScheduleId: '',
+  comunicar_ss: false, solicitar_seguro: false,
 };
 
 const labelCls = 'block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1';
@@ -23,11 +33,11 @@ function Row({ label, value }) {
 }
 
 export default function OnboardingPendentes() {
-  const { supabase, saveToDb } = useApp();
+  const { supabase, clients, schedules } = useApp();
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [adminFields, setAdminFields] = useState({ data_inicio: '', vencimento_base: '', valorHora: '' });
+  const [adminFields, setAdminFields] = useState(ADMIN_FIELDS_VAZIO);
   const [rejectionReason, setRejectionReason] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -47,50 +57,80 @@ export default function OnboardingPendentes() {
 
   useEffect(() => { loadSubmissions(); }, [loadSubmissions]);
 
-  const openModal = (sub) => {
+  const openModal = async (sub) => {
     setSelected({ ...sub });
-    setAdminFields({ data_inicio: '', vencimento_base: '', valorHora: '' });
+    setAdminFields(ADMIN_FIELDS_VAZIO);
     setRejectionReason('');
     setShowRejectInput(false);
     setModalTab('dados');
+
+    // Pré-preenche com o que o admin já definiu ao gerar o convite —
+    // vencimento_base/data_inicio_prevista/local_trabalho_texto (ver
+    // TeamManager.jsx e o Trabalhador Virtual, que também os podem definir).
+    if (sub.invite_id && supabase) {
+      const { data: invite } = await supabase
+        .from('worker_onboarding_invites')
+        .select('vencimento_base, data_inicio_prevista')
+        .eq('id', sub.invite_id)
+        .maybeSingle();
+      if (invite) {
+        setAdminFields(prev => ({
+          ...prev,
+          data_inicio: invite.data_inicio_prevista || prev.data_inicio,
+          vencimento_base: invite.vencimento_base != null ? String(invite.vencimento_base) : prev.vencimento_base,
+        }));
+      }
+    }
   };
 
   const setField = (key, val) => setSelected(prev => ({ ...prev, [key]: val }));
 
   const handleAprovar = async () => {
-    if (!selected || saving) return;
+    if (!selected || saving || !supabase) return;
     setSaving(true);
     try {
-      const newId = 'worker_' + Date.now();
-      await saveToDb('workers', newId, {
-        id: newId,
-        name: selected.nome,
-        profissao: selected.profissao || '',
-        tel: selected.tel || '',
-        email: selected.email || '',
-        dni: selected.dni || '',
-        address: selected.address || '',
-        tabela_irs: selected.tabela_irs || 'tabelaI',
-        n_dependentes: Number(selected.n_dependentes) || 0,
-        nis: selected.nis || '',
-        nif: selected.nif || '',
-        iban: selected.iban || '',
-        status: 'ativo',
-        is_active: true,
-        dataInicio: adminFields.data_inicio || null,
-        vencimento_base: adminFields.vencimento_base ? Number(adminFields.vencimento_base) : null,
-        valorHora: adminFields.valorHora ? Number(adminFields.valorHora) : null,
-        assignedClients: [],
-        assignedSchedules: [],
-        defaultClientId: '',
-        defaultScheduleId: '',
-        limited_entry_mode: false,
+      // A RPC preenche nome/contacto/fiscais a partir da própria submissão —
+      // aqui só se sobrepõem os campos editados/completados pelo admin
+      // (Dados submetidos + Completar registo).
+      const { data: newWorkerId, error } = await supabase.rpc('aprovar_onboarding_submissao', {
+        p_submission_id: selected.id,
+        p_overrides: {
+          nome: selected.nome, profissao: selected.profissao, profissao_cnp: selected.profissao_cnp,
+          tel: selected.tel, email: selected.email, dni: selected.dni, address: selected.address,
+          tabela_irs: selected.tabela_irs, n_dependentes: selected.n_dependentes,
+          nis: selected.nis, nif: selected.nif, iban: selected.iban,
+          data_inicio: adminFields.data_inicio || null,
+          vencimento_base: adminFields.vencimento_base || null,
+          valor_hora: adminFields.valorHora || null,
+          tipo_contrato: adminFields.tipo_contrato,
+          regime: adminFields.regime,
+          horas_semanais: adminFields.horas_semanais,
+          modo_trabalho: adminFields.modo_trabalho,
+          enquadramento: adminFields.enquadramento,
+          subsidio_alimentacao_dia: adminFields.subsidio_alimentacao_dia || null,
+          subsidio_alimentacao_tipo: adminFields.subsidio_alimentacao_tipo,
+          local_trabalho: adminFields.local_trabalho || null,
+          default_client_id: adminFields.defaultClientId || null,
+          default_schedule_id: adminFields.defaultScheduleId || null,
+        },
       });
+      if (error) throw error;
 
-      await supabase
-        .from('worker_onboarding_submissions')
-        .update({ status: 'approved', reviewed_at: new Date().toISOString() })
-        .eq('id', selected.id);
+      // Se pediram para comunicar SS e/ou solicitar seguro, agenda para o
+      // dia anterior à data de início — o Trabalhador Virtual pede
+      // autorização nesse dia em vez de executar já.
+      if ((adminFields.comunicar_ss || adminFields.solicitar_seguro) && adminFields.data_inicio) {
+        const dataExecucao = new Date(adminFields.data_inicio + 'T00:00:00');
+        dataExecucao.setDate(dataExecucao.getDate() - 1);
+        await supabase.from('worker_ativacao_agendada').insert({
+          id: 'ativ_' + Date.now(),
+          worker_id: newWorkerId,
+          worker_nome: selected.nome,
+          data_execucao: dataExecucao.toISOString().split('T')[0],
+          comunicar_ss: !!adminFields.comunicar_ss,
+          solicitar_seguro: !!adminFields.solicitar_seguro,
+        });
+      }
 
       setSubmissions(prev => prev.filter(s => s.id !== selected.id));
       setSelected(null);
@@ -102,17 +142,14 @@ export default function OnboardingPendentes() {
   };
 
   const handleRejeitar = async () => {
-    if (!selected || saving) return;
+    if (!selected || saving || !supabase) return;
     setSaving(true);
     try {
-      await supabase
-        .from('worker_onboarding_submissions')
-        .update({
-          status: 'rejected',
-          rejection_reason: rejectionReason || null,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq('id', selected.id);
+      const { error } = await supabase.rpc('rejeitar_onboarding_submissao', {
+        p_submission_id: selected.id,
+        p_motivo: rejectionReason || null,
+      });
+      if (error) throw error;
 
       setSubmissions(prev => prev.filter(s => s.id !== selected.id));
       setSelected(null);
@@ -329,10 +366,10 @@ export default function OnboardingPendentes() {
                 <div className="bg-amber-50 rounded-xl p-4 flex gap-3">
                   <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={16} />
                   <p className="text-[11px] text-amber-700 font-bold leading-relaxed">
-                    Estes campos são preenchidos exclusivamente pelo admin. Só são obrigatórios se pretender ativar o colaborador imediatamente.
+                    Estes campos definem o contrato do colaborador. Data de início e vencimento base vêm pré-preenchidos do convite, quando definidos ao gerá-lo — reveja antes de aprovar.
                   </p>
                 </div>
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={labelCls}>Data de Início do Contrato</label>
                     <input className={inputCls} type="date" value={adminFields.data_inicio}
@@ -351,6 +388,138 @@ export default function OnboardingPendentes() {
                       value={adminFields.valorHora}
                       onChange={e => setAdminFields(p => ({ ...p, valorHora: e.target.value }))}
                       placeholder="0.00" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Subsídio Alimentação/Dia (€)</label>
+                    <input className={inputCls} type="number" step="0.01" min="0"
+                      value={adminFields.subsidio_alimentacao_dia}
+                      onChange={e => setAdminFields(p => ({ ...p, subsidio_alimentacao_dia: e.target.value }))}
+                      placeholder="9.60" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Tipo de Subsídio</label>
+                    <select className={inputCls} value={adminFields.subsidio_alimentacao_tipo}
+                      onChange={e => setAdminFields(p => ({ ...p, subsidio_alimentacao_tipo: e.target.value }))}>
+                      <option value="cartao">Cartão</option>
+                      <option value="dinheiro">Dinheiro</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Contrato e Segurança Social</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Tipo de Contrato</label>
+                      <select className={inputCls} value={adminFields.tipo_contrato}
+                        onChange={e => setAdminFields(p => ({ ...p, tipo_contrato: e.target.value }))}>
+                        <option value="sem_termo">Sem Termo</option>
+                        <option value="termo_certo">A Termo Certo</option>
+                        <option value="termo_incerto">A Termo Incerto</option>
+                        <option value="muito_curta_duracao">Muito Curta Duração</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Regime</label>
+                      <select className={inputCls} value={adminFields.regime}
+                        onChange={e => setAdminFields(p => ({ ...p, regime: e.target.value }))}>
+                        <option value="tempo_inteiro">Tempo Inteiro</option>
+                        <option value="tempo_parcial">Tempo Parcial</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Horas / Semana</label>
+                      <input className={inputCls} type="number" min="1" max="48" step="0.5"
+                        value={adminFields.horas_semanais}
+                        onChange={e => setAdminFields(p => ({ ...p, horas_semanais: parseFloat(e.target.value) || 40 }))} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Modo de Trabalho</label>
+                      <select className={inputCls} value={adminFields.modo_trabalho}
+                        onChange={e => setAdminFields(p => ({ ...p, modo_trabalho: e.target.value }))}>
+                        <option value="presencial">Presencial</option>
+                        <option value="remoto">Remoto (Teletrabalho)</option>
+                        <option value="hibrido">Híbrido (Teletrabalho parcial)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Enquadramento PSI</label>
+                      <select className={inputCls} value={adminFields.enquadramento}
+                        onChange={e => setAdminFields(p => ({ ...p, enquadramento: e.target.value }))}>
+                        <option value="REGE">REGE — Regime Geral</option>
+                        <option value="TRCD">TRCD — Contrato muito curta duração</option>
+                        <option value="TCCD">TCCD — Cultura muito curta duração</option>
+                        <option value="TRAG">TRAG — Trabalhadores agrícolas</option>
+                        <option value="RGTC">RGTC — Carris — Regime Geral</option>
+                        <option value="RGTL">RGTL — Lanifícios — Regime Geral</option>
+                        <option value="RGTS">RGTS — Seguros — Regime Geral</option>
+                        <option value="PEIN">PEIN — Pensionistas por invalidez</option>
+                        <option value="PEVE">PEVE — Pensionistas de velhice</option>
+                        <option value="PFPI">PFPI — Funções públicas — invalidez</option>
+                        <option value="PFPV">PFPV — Funções públicas — velhice</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Cód. Local de Trabalho (SS)</label>
+                      <input className={inputCls} type="number" min="1"
+                        value={adminFields.local_trabalho}
+                        onChange={e => setAdminFields(p => ({ ...p, local_trabalho: e.target.value }))}
+                        placeholder="ex: 1" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className={labelCls}>Profissão CPP (código para a SS)</label>
+                      <SelectProfissaoEmpresa
+                        value={selected.profissao_cnp || ''}
+                        className={inputCls}
+                        onChange={(codigo, rotulo) => setSelected(prev => ({ ...prev, profissao_cnp: codigo, profissao: rotulo || prev.profissao }))}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-1">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Afetação</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>Cliente Padrão</label>
+                      <select className={inputCls} value={adminFields.defaultClientId}
+                        onChange={e => setAdminFields(p => ({ ...p, defaultClientId: e.target.value }))}>
+                        <option value="">— Sem cliente —</option>
+                        {(clients || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>Horário Padrão</label>
+                      <select className={inputCls} value={adminFields.defaultScheduleId}
+                        onChange={e => setAdminFields(p => ({ ...p, defaultScheduleId: e.target.value }))}>
+                        <option value="">— Sem horário —</option>
+                        {(schedules || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <ShieldCheck size={11} /> Ao aprovar, agendar para o dia anterior ao início
+                  </p>
+                  <div className="bg-slate-50 rounded-xl p-3 space-y-2">
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" checked={adminFields.comunicar_ss}
+                        onChange={e => setAdminFields(p => ({ ...p, comunicar_ss: e.target.checked }))}
+                        className="w-4 h-4 rounded border-slate-300" />
+                      <span className="text-xs font-semibold text-slate-600">Comunicar admissão à Segurança Social</span>
+                    </label>
+                    <label className="flex items-center gap-2.5 cursor-pointer">
+                      <input type="checkbox" checked={adminFields.solicitar_seguro}
+                        onChange={e => setAdminFields(p => ({ ...p, solicitar_seguro: e.target.checked }))}
+                        className="w-4 h-4 rounded border-slate-300" />
+                      <span className="text-xs font-semibold text-slate-600">Solicitar inclusão no seguro de acidentes de trabalho</span>
+                    </label>
+                    <p className="text-[10px] text-slate-400 leading-relaxed pt-1">
+                      Nada é comunicado agora. O Trabalhador Virtual pede-te autorização por WhatsApp no dia
+                      anterior à data de início e só executa depois de confirmares — precisa de uma data de início preenchida acima.
+                    </p>
                   </div>
                 </div>
               </div>
