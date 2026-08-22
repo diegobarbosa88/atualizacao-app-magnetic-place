@@ -1,6 +1,7 @@
 import React from 'react';
-import { X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { fmtEur } from './salarioUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function AssocTransacaoModal({
   tx,
@@ -24,12 +25,29 @@ export default function AssocTransacaoModal({
   })();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <h3 className="text-sm font-black text-slate-800">Associar Transferência</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Associar Transferência"
+      size="md"
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            disabled={!pattern.trim() || !worker || saving}
+            onClick={onSave}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Guardar
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-4">
         <div className="bg-slate-50 rounded-2xl px-4 py-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Descrição do movimento</p>
           <p className="text-[12px] text-slate-700 break-all">{tx.descricao}</p>
@@ -59,21 +77,7 @@ export default function AssocTransacaoModal({
             </select>
           </div>
         </div>
-        <div className="flex gap-2 pt-2">
-          <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button
-            disabled={!pattern.trim() || !worker || saving}
-            onClick={onSave}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
-          >
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Guardar
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Landmark, Upload, X, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
+import { Landmark, Upload, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 function normalizar(str = '') {
   return str
@@ -135,22 +136,42 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col max-h-[90vh]">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Landmark size={18} className="text-emerald-500" />
-            <p className="text-sm font-black uppercase tracking-widest text-slate-700">Importar IBANs</p>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Importar IBANs"
+      icon={<Landmark size={20} />}
+      size="lg"
+      footer={
+        passo === 'preview' ? (
+          <div className="px-5 py-4 flex items-center justify-between">
+            <button
+              onClick={() => { setPasso('upload'); setEntradas([]); setOverrides({}); }}
+              className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              Voltar
+            </button>
+            <button
+              onClick={handleGuardar}
+              disabled={salvando || seleccionados.length === 0}
+              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+            >
+              {salvando ? 'A guardar…' : `Guardar ${seleccionados.length} IBAN${seleccionados.length !== 1 ? 's' : ''}`}
+            </button>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-600 transition-colors">
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Corpo */}
-        <div className="flex-1 overflow-y-auto">
+        ) : passo === 'done' ? (
+          <div className="px-5 py-4">
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+            >
+              Fechar
+            </button>
+          </div>
+        ) : null
+      }
+    >
+      <>
 
           {passo === 'upload' && (
             <div className="px-6 py-10 flex flex-col items-center gap-5">
@@ -249,39 +270,7 @@ export default function ImportarIBANsModal({ workers, supabase, onClose, onImpor
             </div>
           )}
 
-        </div>
-
-        {/* Footer */}
-        {passo === 'preview' && (
-          <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between flex-shrink-0">
-            <button
-              onClick={() => { setPasso('upload'); setEntradas([]); setOverrides({}); }}
-              className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              Voltar
-            </button>
-            <button
-              onClick={handleGuardar}
-              disabled={salvando || seleccionados.length === 0}
-              className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
-            >
-              {salvando ? 'A guardar…' : `Guardar ${seleccionados.length} IBAN${seleccionados.length !== 1 ? 's' : ''}`}
-            </button>
-          </div>
-        )}
-
-        {passo === 'done' && (
-          <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
-            >
-              Fechar
-            </button>
-          </div>
-        )}
-
-      </div>
-    </div>
+      </>
+    </ModalShell>
   );
 }

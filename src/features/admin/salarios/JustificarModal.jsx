@@ -1,15 +1,33 @@
 import React from 'react';
-import { X, CheckCircle, Loader2 } from 'lucide-react';
+import { CheckCircle, Loader2 } from 'lucide-react';
 import { fmtEur, fmtMes } from './salarioUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function JustificarModal({ entry, text, onTextChange, saving, onSave, onClose }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <h3 className="text-sm font-black text-slate-800">Justificar Diferença</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Justificar Diferença"
+      size="md"
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button
+            disabled={!text.trim() || saving}
+            onClick={onSave}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
+            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+          >
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-4">
         <div className="bg-amber-50 rounded-2xl px-4 py-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-1">Mês pendente</p>
           <p className="text-sm font-bold text-slate-800">{entry.employee_name}</p>
@@ -27,21 +45,7 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
             className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A57]/30 resize-none"
           />
         </div>
-        <div className="flex gap-2 pt-1">
-          <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button
-            disabled={!text.trim() || saving}
-            onClick={onSave}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 hover:opacity-90"
-            style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
-          >
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle size={13} />} Marcar Ok
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

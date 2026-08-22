@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Receipt, Link, Loader2 } from 'lucide-react';
+import { Receipt, Link, Loader2 } from 'lucide-react';
 import { fmtEur, extractBankName } from './txUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function NcModal({ tx, clients, onClose, onSave }) {
   const [clientId, setClientId] = useState('');
@@ -20,14 +21,26 @@ export default function NcModal({ tx, clients, onClose, onSave }) {
   const sortedClients = (clients || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <h3 className="text-sm font-black text-slate-800">
-            {tx.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a NC'}
-          </h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={tx.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a NC'}
+      size="md"
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button disabled={!clientId || !period || saving} onClick={handleConfirm}
+            className={`flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 ${tx.tipo === 'debito' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+            {saving ? <Loader2 size={13} className="animate-spin" /> : tx.tipo === 'debito' ? <Receipt size={13} /> : <Link size={13} />}
+            {tx.tipo === 'debito' ? 'Ligar Fatura' : 'Ligar'}
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-4">
         <div className={`rounded-2xl px-4 py-3 ${tx.tipo === 'debito' ? 'bg-rose-50' : 'bg-blue-50'}`}>
           <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${tx.tipo === 'debito' ? 'text-rose-600' : 'text-blue-600'}`}>Transacção</p>
           <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(tx.valor) || 0))}</p>
@@ -75,18 +88,7 @@ export default function NcModal({ tx, clients, onClose, onSave }) {
             </div>
           )}
         </div>
-        <div className="flex gap-2 pt-1">
-          <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button disabled={!clientId || !period || saving} onClick={handleConfirm}
-            className={`flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest text-white transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5 ${tx.tipo === 'debito' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
-            {saving ? <Loader2 size={13} className="animate-spin" /> : tx.tipo === 'debito' ? <Receipt size={13} /> : <Link size={13} />}
-            {tx.tipo === 'debito' ? 'Ligar Fatura' : 'Ligar'}
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

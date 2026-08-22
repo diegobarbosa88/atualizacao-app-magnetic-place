@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import { STATUS_CFG } from './txUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function AddAliasModal({ clients, onClose, onSave }) {
   const [aliasName, setAliasName] = useState('');
@@ -19,12 +20,25 @@ export default function AddAliasModal({ clients, onClose, onSave }) {
   const disabled = !aliasName.trim() || (resolucao === 'nota_credito' && !clientId) || saving;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <h3 className="text-sm font-black text-slate-800">Novo Alias</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Novo Alias"
+      size="sm"
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button disabled={disabled} onClick={handleConfirm}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Guardar
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-4">
         <div className="space-y-3">
           <div>
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-1">Nome do banco/remetente</label>
@@ -59,17 +73,7 @@ export default function AddAliasModal({ clients, onClose, onSave }) {
             </div>
           )}
         </div>
-        <div className="flex gap-2 pt-1">
-          <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button disabled={disabled} onClick={handleConfirm}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-            {saving ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Guardar
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

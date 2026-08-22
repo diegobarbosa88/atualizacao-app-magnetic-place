@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Loader2, Plus, Link2 } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 const LinkFaturaModal = ({
   fatura,
@@ -22,18 +23,14 @@ const LinkFaturaModal = ({
   const numero = dados.numero_fatura || '—';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Ligar Pagamento</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{numero} · {cliente} · {formatCurrency(valor)}</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all">
-            <X size={16} />
-          </button>
-        </div>
-
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Ligar Pagamento"
+      meta={`${numero} · ${cliente} · ${formatCurrency(valor)}`}
+      size="lg"
+    >
+      <div className="p-6 sm:p-8 space-y-5">
         {fatLink && (
           <div className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Movimento Associado</p>
@@ -121,7 +118,7 @@ const LinkFaturaModal = ({
           </p>
         )}
       </div>
-    </div>
+    </ModalShell>
   );
 };
 

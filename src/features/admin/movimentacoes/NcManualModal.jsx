@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { fmtEur } from './txUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function NcManualModal({ tx, faturas, loading, onClose, onSave }) {
   const [selectedId, setSelectedId] = useState('');
@@ -14,12 +15,25 @@ export default function NcManualModal({ tx, faturas, loading, onClose, onSave })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-4">
-        <div className="flex items-start justify-between">
-          <h3 className="text-sm font-black text-slate-800">Ligar a Nota de Crédito</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={16} /></button>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Ligar a Nota de Crédito"
+      size="md"
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button onClick={onClose}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancelar
+          </button>
+          <button disabled={!selectedId || saving} onClick={handleConfirm}
+            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
+            {saving ? <Loader2 size={13} className="animate-spin" /> : null} Ligar NC
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-4">
         <div className="rounded-2xl px-4 py-3 bg-indigo-50">
           <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-1">Transacção</p>
           <p className="text-sm font-bold text-slate-800">{fmtEur(Math.abs(parseFloat(tx.valor) || 0))}</p>
@@ -44,17 +58,7 @@ export default function NcManualModal({ tx, faturas, loading, onClose, onSave })
             </div>
           )}
         </div>
-        <div className="flex gap-2 pt-1">
-          <button onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
-            Cancelar
-          </button>
-          <button disabled={!selectedId || saving} onClick={handleConfirm}
-            className="flex-1 px-4 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-widest bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-1.5">
-            {saving ? <Loader2 size={13} className="animate-spin" /> : null} Ligar NC
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

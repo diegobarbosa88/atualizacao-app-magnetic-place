@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Loader2, Plus } from 'lucide-react';
 import { formatCurrency } from './costReportsUtils';
+import ModalShell from '../../../components/common/ModalShell';
 
 const LinkPagamentoModal = ({
   linkModal,
@@ -20,16 +21,14 @@ const LinkPagamentoModal = ({
   const pagamentosDoCliente = pagamentos.filter(p => p.client_id === linkModal.clientId);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg p-6 sm:p-8 space-y-5 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">Pagamentos Bancários</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{linkModal.clientName} · {selectedMonth}</p>
-          </div>
-          <button onClick={() => setLinkModal(null)} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all"><X size={16} /></button>
-        </div>
-
+    <ModalShell
+      isOpen
+      onClose={() => setLinkModal(null)}
+      title="Pagamentos Bancários"
+      meta={`${linkModal.clientName} · ${selectedMonth}`}
+      size="lg"
+    >
+      <div className="p-6 sm:p-8 space-y-5">
         {pagamentosDoCliente.length > 0 && (
           <div className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Associados</p>
@@ -93,7 +92,7 @@ const LinkPagamentoModal = ({
           </div>
         )}
       </div>
-    </div>
+    </ModalShell>
   );
 };
 

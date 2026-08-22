@@ -59,7 +59,13 @@ export default function ModalShell({
   isOpen,
   onClose,
   title,
+  // Sobrescrito por cima do título, em maiúsculas — serve para CATEGORIA
+  // ("Cliente · Ficha"), não para dados do registo.
   subtitle,
+  // Por baixo do título, em caixa normal — para o contexto do registo
+  // ("FT 2026/114 · Ferrocal · 1.240,50 €"). Pôr isto no `subtitle` deixava
+  // um número de fatura e um valor em maiúsculas com tracking largo.
+  meta,
   icon,
   accent = 'default',
   size = 'lg',
@@ -115,6 +121,7 @@ export default function ModalShell({
                 </p>
               )}
               <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-[#1B3A57] truncate">{title}</h2>
+              {meta && <p className="text-[12px] font-semibold text-slate-500 truncate mt-0.5">{meta}</p>}
             </div>
             <button
               onClick={onClose}
