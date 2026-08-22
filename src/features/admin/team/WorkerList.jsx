@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { authFetch } from '../../../utils/authFetch';
 import { impersonarTrabalhador } from '../../../utils/impersonateWorker';
-import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle } from 'lucide-react';
+import { Search, Edit2, Trash2, CheckCircle, ShieldCheck, ShieldOff, MoreVertical, FolderOpen, SendHorizonal, AlertTriangle, Shield } from 'lucide-react';
 import SSComunicacaoModal from './SSComunicacaoModal';
 
 function getInitials(name) {
@@ -42,12 +42,51 @@ function ssBadge(w) {
   );
 }
 
+function apoliceBadge(w, apoliceMap) {
+  const status = apoliceMap[w.id]?.status;
+  if (status === 'ativo') {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 border border-emerald-200 text-emerald-600">
+        <Shield size={8} /> Apólice Ativa
+      </span>
+    );
+  }
+  if (status === 'solicitado' || status === 'pendente') {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-50 border border-amber-200 text-amber-600">
+        <AlertTriangle size={8} /> Apólice Solicitada
+      </span>
+    );
+  }
+  if (status === 'excluido') {
+    return (
+      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 border border-slate-200 text-slate-500">
+        <ShieldOff size={8} /> Apólice Excluída
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-50 border border-amber-200 text-amber-600">
+      <AlertTriangle size={8} /> Apólice por confirmar
+    </span>
+  );
+}
+
 const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, setWorkersSort, onLogin, onEdit, onOpenVHHistory, onOpenEmpHistory, onVerPasta }) => {
   const { approvals, currentMonthStr, schedules, clients, saveToDb, setWorkers } = useApp();
   const [confirmDeleteWorkerId, setConfirmDeleteWorkerId] = useState(null);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [ssModal, setSsModal] = useState(null); // { worker, tipo: 'admissao'|'cessacao' }
   const [ssAmbiente, setSsAmbiente] = useState('teste');
+  const [apoliceMap, setApoliceMap] = useState({});
+  const supabase = window.supabaseInstance;
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.from('worker_apolice_seguro').select('worker_id, status').then(({ data }) => {
+      setApoliceMap(Object.fromEntries((data || []).map(r => [r.worker_id, r])));
+    });
+  }, []);
 
   const verPortal = async (w) => {
     try {
@@ -126,7 +165,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       <div className="min-w-0">
                         <p className="font-black text-slate-800 text-sm truncate">{w.name}</p>
                         <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
-                        <div className="mt-1">{ssBadge(w)}</div>
+                        <div className="mt-1 flex flex-wrap gap-1">{ssBadge(w)}{apoliceBadge(w, apoliceMap)}</div>
                         {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
                       </div>
                     </div>
@@ -322,7 +361,7 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <p className="text-[10px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
               </div>
             </div>
-            <div className="mb-3">{ssBadge(w)}</div>
+            <div className="mb-3 flex flex-wrap gap-1">{ssBadge(w)}{apoliceBadge(w, apoliceMap)}</div>
             <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
               <div className="flex items-center gap-1.5">
                 <span>⏱</span> {schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}
