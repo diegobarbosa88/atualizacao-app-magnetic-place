@@ -38,15 +38,18 @@ export default function SectionHeaderShell({
 }) {
   return (
     <div className="rounded-2xl sm:rounded-[2.5rem] overflow-hidden shadow-sm border border-slate-100 mb-5">
-      <div className="px-5 sm:px-8 py-5" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}>
+      <div className="px-5 sm:px-7 py-[1.4rem]" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}>
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-              <span style={{ color: '#ffffff' }}>{icon}</span>
+            <div className="w-[42px] h-[42px] rounded-[14px] bg-white/10 flex items-center justify-center shrink-0 text-white">
+              {icon}
             </div>
             <div className="min-w-0">
-              <h2 className="font-black text-base uppercase tracking-tight leading-none truncate" style={{ color: '#ffffff' }}>{title}</h2>
-              {subtitle && <p className="text-[11px] font-semibold mt-0.5 truncate" style={{ color: '#b7c8d8' }}>{subtitle}</p>}
+              {/* Barlow Condensed 700 em caixa normal, como no mockup aprovado —
+                  antes era text-base/font-black/uppercase, que pesava mais que
+                  o conteúdo da própria página. */}
+              <h2 className="text-[1.4rem] font-bold leading-[1.05] tracking-[0.01em] text-white truncate">{title}</h2>
+              {subtitle && <p className="text-[11px] font-semibold mt-0.5 truncate text-[#b7c8d8]">{subtitle}</p>}
             </div>
           </div>
 

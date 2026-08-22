@@ -36,21 +36,28 @@ export default function ModalShell({ isOpen, onClose, title, subtitle, icon, acc
       >
         {isNavyGradient ? (
           <div className="shrink-0">
+            {/* Proporções do mockup aprovado: o subtítulo passa a sobrescrito
+                (eyebrow) por cima do título, e o título ganha corpo em Barlow
+                Condensed 700 em caixa normal — antes era text-sm/font-black/
+                uppercase, que competia com o próprio nome do registo. */}
             <div
-              className="flex items-center gap-3 px-4 py-3.5"
+              className="flex items-center gap-3.5 px-6 py-5"
               style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}
             >
-              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                <span style={{ color: '#ffffff' }}>{icon}</span>
+              <div className="w-11 h-11 rounded-[14px] bg-white/10 flex items-center justify-center shrink-0 text-white">
+                {icon}
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-black uppercase tracking-tight text-sm leading-none" style={{ color: '#ffffff' }}>{title}</h2>
-                {subtitle && <p className="text-[11px] font-semibold mt-0.5 truncate normal-case" style={{ color: '#b7c8d8' }}>{subtitle}</p>}
+                {subtitle && (
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8ea6bc] truncate mb-0.5">
+                    {subtitle}
+                  </p>
+                )}
+                <h2 className="text-2xl font-bold leading-[1.05] tracking-[0.01em] text-white truncate">{title}</h2>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-white/10 rounded-xl transition-all shrink-0"
-                style={{ color: '#cfe0ee' }}
+                className="p-2 text-[#cfe0ee] hover:bg-white/10 rounded-xl transition-all shrink-0"
               >
                 <X size={18} />
               </button>
