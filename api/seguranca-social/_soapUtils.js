@@ -11,6 +11,8 @@
 //   Qualidade SOAP:  extservices.seg-social.pt
 //   Produção (ambos): app.seg-social.pt
 
+import { MODALIDADES_COM_MOTIVO_OBRIGATORIO } from '../../src/data/motivosContratoSS.js';
+
 const isProd = () => process.env.SS_AMBIENTE === 'producao';
 
 // Serviços de comunicação (escrita) — admissão REST e cessação SOAP
@@ -222,7 +224,18 @@ export function buildAdmissaoRest(dados) {
     if (diasTrabalho)        body['dias-trabalho']        = parseFloat(diasTrabalho);
   }
 
-  if (motivoContrato)            body['motivo-contrato']            = motivoContrato;
+  // motivo-contrato obrigatório para as modalidades a termo (certo e
+  // incerto) — exceto "I" (muito curta duração), que não consta da lista
+  // da PSI que exige este campo.
+  if (MODALIDADES_COM_MOTIVO_OBRIGATORIO.has(modalidade)) {
+    if (!motivoContrato) {
+      throw new Error(`Contrato modalidade "${modalidade}" exige um motivo de contrato — nenhum foi indicado.`);
+    }
+    body['motivo-contrato'] = motivoContrato;
+  } else if (motivoContrato) {
+    body['motivo-contrato'] = motivoContrato;
+  }
+
   if (nissTrabalhadorSubstituir) body['niss-trabalhador-substituir'] = Number(nissTrabalhadorSubstituir);
 
   return body;

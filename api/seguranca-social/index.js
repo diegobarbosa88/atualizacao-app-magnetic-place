@@ -244,6 +244,8 @@ export default async function handler(req, res) {
         localTrabalho:     dadosExtra.localTrabalho     || worker.local_trabalho  || 1,
         dataFimContrato:   worker.dataFim || undefined,
         horasTrabalho:     dadosExtra.horasSemanais     || worker.horas_semanais  || undefined,
+        motivoContrato:    dadosExtra.motivoContrato    || undefined,
+        nissTrabalhadorSubstituir: dadosExtra.nissTrabalhadorSubstituir || undefined,
       });
     } catch (e) {
       return res.status(400).json({ sucesso: false, erro: e.message });

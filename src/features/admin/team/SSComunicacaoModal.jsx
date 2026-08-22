@@ -4,6 +4,7 @@ import {
 } from 'lucide-react';
 import { findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { authFetch } from '../../../utils/authFetch';
+import { MOTIVOS_CONTRATO_CERTO, MOTIVOS_CONTRATO_INCERTO, MODALIDADES_TERMO_INCERTO, MODALIDADES_COM_MOTIVO_OBRIGATORIO, MOTIVOS_EXIGEM_SUBSTITUIDO } from '../../../data/motivosContratoSS.js';
 
 // Motivos de cessação — códigos oficiais PSI (cessarVinculoTrabalhador WSDL, Agosto 2026)
 const MOTIVOS_CESSACAO = [
@@ -165,6 +166,8 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
     profissaoCnp:       worker.profissao_cnp || '',
     enquadramento:      worker.enquadramento || 'REGE',
     localTrabalho:      worker.local_trabalho || '',
+    motivoContrato:            '',
+    nissTrabalhadorSubstituir: '',
     dataCessacao:          worker.dataFim || '',
     motivoCessacao:        '',
     comunicacaoDesemprego: false,
@@ -184,10 +187,17 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
 
   const profissaoDefinida = findProfissaoByCodigo(worker.profissao_cnp);
 
+  const precisaMotivoContrato = MODALIDADES_COM_MOTIVO_OBRIGATORIO.has(form.modalidadeContrato);
+  const isTermoIncerto = MODALIDADES_TERMO_INCERTO.has(form.modalidadeContrato);
+  const motivosDisponiveis = isTermoIncerto ? MOTIVOS_CONTRATO_INCERTO : MOTIVOS_CONTRATO_CERTO;
+  const precisaSubstituido = MOTIVOS_EXIGEM_SUBSTITUIDO.has(form.motivoContrato);
+
   const camposFaltando = isAdmissao ? [
     !form.dataNascimento  && 'Data de nascimento',
     !profissaoDefinida    && 'Profissão (definir no perfil do trabalhador)',
     !form.localTrabalho   && 'Código do local de trabalho',
+    (precisaMotivoContrato && !form.motivoContrato) && 'Motivo do contrato',
+    (precisaSubstituido && !form.nissTrabalhadorSubstituir) && 'NISS do trabalhador substituído',
   ].filter(Boolean) : [];
 
   const podaEnviar = !bloqueado
@@ -217,6 +227,8 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
               profissaoCnp:       form.profissaoCnp,
               enquadramento:      form.enquadramento,
               localTrabalho:      form.localTrabalho,
+              motivoContrato:            form.motivoContrato || undefined,
+              nissTrabalhadorSubstituir: form.nissTrabalhadorSubstituir || undefined,
             }
           : {
               dataCessacao:          form.dataCessacao,
@@ -372,7 +384,7 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
 
                     <div className="col-span-2">
                       <label className={lbl}>Modalidade de Contrato PSI <span className="text-red-500">*</span></label>
-                      <select value={form.modalidadeContrato} onChange={e => setForm(p => ({ ...p, modalidadeContrato: e.target.value }))} className={inp}>
+                      <select value={form.modalidadeContrato} onChange={e => setForm(p => ({ ...p, modalidadeContrato: e.target.value, motivoContrato: '' }))} className={inp}>
                         {MODALIDADE_CONTRATO.map(m => (
                           <option key={m.value} value={m.value}>{m.label}</option>
                         ))}
@@ -429,6 +441,38 @@ export default function SSComunicacaoModal({ worker, tipo, ambiente, onClose, on
                       />
                       <p className="text-[10px] text-slate-400 mt-0.5">Código PSI do estabelecimento de trabalho (obtido na Segurança Social Direta)</p>
                     </div>
+
+                    {precisaMotivoContrato && (
+                      <div className="col-span-2">
+                        <label className={lbl}>Motivo do Contrato <span className="text-red-500">*</span></label>
+                        <select
+                          value={form.motivoContrato}
+                          onChange={e => setForm(p => ({ ...p, motivoContrato: e.target.value }))}
+                          className={inp + (!form.motivoContrato ? ' border-amber-400' : '')}
+                        >
+                          <option value="">— Selecionar motivo —</option>
+                          {motivosDisponiveis.map(m => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                          Obrigatório para contratos a termo — lista de motivos {isTermoIncerto ? 'a termo incerto' : 'a termo certo'} da PSI.
+                        </p>
+                      </div>
+                    )}
+                    {precisaSubstituido && (
+                      <div className="col-span-2">
+                        <label className={lbl}>NISS do Trabalhador Substituído <span className="text-red-500">*</span></label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={form.nissTrabalhadorSubstituir}
+                          onChange={e => setForm(p => ({ ...p, nissTrabalhadorSubstituir: e.target.value.replace(/\D/g, '') }))}
+                          placeholder="11 dígitos"
+                          className={inp + (!form.nissTrabalhadorSubstituir ? ' border-amber-400' : '')}
+                        />
+                      </div>
+                    )}
                   </div>
                 </>
               )}
