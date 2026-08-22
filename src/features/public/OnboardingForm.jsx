@@ -55,7 +55,7 @@ function validarNIS(nis) {
 }
 
 const EMPTY_FORM = {
-  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', address: '',
+  nome: '', profissao: '', profissao_cnp: '', data_nascimento: '', tel: '', email: '', dni: '', documento_validade: '', address: '',
   tabela_irs: 'tabelaI', n_dependentes: 0,
   nis: '', nif: '', iban: '',
 };
@@ -312,9 +312,14 @@ export default function OnboardingForm({ token }) {
             'apikey': SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
-            invite_id:        invite.id,
-            nome:             form.nome,
-            documento:        form.dni,
+            invite_id:          invite.id,
+            nome:               form.nome,
+            documento:          form.dni,
+            documento_validade: form.documento_validade || undefined,
+            nif:                form.nif || undefined,
+            nis:                form.nis || undefined,
+            morada:             form.address || undefined,
+            profissao:          form.profissao || undefined,
             assinatura_base64: commitment.signature,
             texto_hash:       commitment.hash,
             texto_versao:     commitment.version,
@@ -507,9 +512,14 @@ export default function OnboardingForm({ token }) {
                   <Inp error={errors.email} type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.pt" />
                 </InputField>
               </div>
-              <InputField label="Documento de identificação" icon={CreditCard}>
-                <Inp value={form.dni} onChange={e => set('dni', e.target.value)} placeholder="Nº CC / DNI / Passaporte" />
-              </InputField>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <InputField label="Documento de identificação" icon={CreditCard}>
+                  <Inp value={form.dni} onChange={e => set('dni', e.target.value)} placeholder="Nº CC / DNI / Passaporte" />
+                </InputField>
+                <InputField label="Válido até" icon={Calendar}>
+                  <Inp type="date" value={form.documento_validade} onChange={e => set('documento_validade', e.target.value)} />
+                </InputField>
+              </div>
               <InputField label="Morada completa" icon={MapPin}>
                 <Inp value={form.address} onChange={e => set('address', e.target.value)} placeholder="Rua, nº, localidade, código postal" />
               </InputField>
@@ -573,6 +583,7 @@ export default function OnboardingForm({ token }) {
                   <RRow label="Telemóvel" value={form.tel} />
                   <RRow label="Email" value={form.email} />
                   <RRow label="Documento" value={form.dni} />
+                  <RRow label="Válido até" value={form.documento_validade} />
                   <RRow label="Morada" value={form.address} />
                 </ReviewBlock>
                 <ReviewBlock title="Situação Fiscal" accent="violet">
@@ -616,6 +627,18 @@ export default function OnboardingForm({ token }) {
               <OnboardingCommitmentStep
                 ref={commitmentStepRef}
                 nome={form.nome}
+                dados={{
+                  nome: form.nome,
+                  documento: form.dni,
+                  documento_validade: form.documento_validade,
+                  nif: form.nif,
+                  nis: form.nis,
+                  morada: form.address,
+                  profissao: form.profissao,
+                  data_inicio: invite?.data_inicio_prevista,
+                  local_trabalho: invite?.local_trabalho_texto,
+                  vencimento_base: invite?.vencimento_base,
+                }}
                 onReadyChange={setCommitmentReady}
                 submitting={submitting}
               />

@@ -30,6 +30,9 @@ const TeamManagerContent = ({ onLogin }) => {
   const [inviteEmailSent, setInviteEmailSent] = useState(false);
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteError, setInviteError] = useState('');
+  const [inviteVencimentoBase, setInviteVencimentoBase] = useState('');
+  const [inviteDataInicio, setInviteDataInicio] = useState('');
+  const [inviteLocalTrabalho, setInviteLocalTrabalho] = useState('');
 
   useEffect(() => {
     if (!supabase) return;
@@ -73,6 +76,9 @@ const TeamManagerContent = ({ onLogin }) => {
         created_at: new Date().toISOString(),
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         status: 'pending',
+        vencimento_base: inviteVencimentoBase ? Number(inviteVencimentoBase) : null,
+        data_inicio_prevista: inviteDataInicio || null,
+        local_trabalho_texto: inviteLocalTrabalho || null,
       });
       if (error) throw error;
       const link = `${window.location.origin}/onboarding/${token}`;
@@ -286,7 +292,7 @@ const TeamManagerContent = ({ onLogin }) => {
       {/* Modal de convite de onboarding */}
       <ModalShell
         isOpen={inviteModal}
-        onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); setInviteError(''); }}
+        onClose={() => { setInviteModal(false); setGeneratedLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
         title="Convidar novo colaborador"
         subtitle="Link único de preenchimento de dados"
         icon={<UserPlus size={16} />}
@@ -311,6 +317,53 @@ const TeamManagerContent = ({ onLogin }) => {
                 onChange={e => setInviteEmail(e.target.value)}
               />
               <p className="text-[10px] text-slate-400 mt-1.5">Se preenchido, pode enviar o link por email.</p>
+            </div>
+            <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-3">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                Condições propostas (entram no compromisso de início de atividade)
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                    Vencimento base (€)
+                  </label>
+                  <input
+                    className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ex: 900"
+                    value={inviteVencimentoBase}
+                    onChange={e => setInviteVencimentoBase(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                    Data de início prevista
+                  </label>
+                  <input
+                    className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all"
+                    type="date"
+                    value={inviteDataInicio}
+                    onChange={e => setInviteDataInicio(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
+                  Local de trabalho
+                </label>
+                <input
+                  className="w-full bg-white border border-slate-200 rounded-lg py-2 px-3 text-sm font-semibold text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all placeholder:font-normal placeholder:text-slate-400"
+                  type="text"
+                  placeholder="Ex: instalações do cliente Acme Lda, Porto"
+                  value={inviteLocalTrabalho}
+                  onChange={e => setInviteLocalTrabalho(e.target.value)}
+                />
+              </div>
+              <p className="text-[10px] text-slate-400">
+                Opcional — se deixares em branco, o compromisso mostra "[a definir]" nesses pontos.
+              </p>
             </div>
             {inviteError && (
               <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
@@ -355,7 +408,7 @@ const TeamManagerContent = ({ onLogin }) => {
               </p>
             </div>
             <button
-              onClick={() => { setGeneratedLink(''); setInviteEmail(''); setInviteError(''); }}
+              onClick={() => { setGeneratedLink(''); setInviteEmail(''); setInviteError(''); setInviteVencimentoBase(''); setInviteDataInicio(''); setInviteLocalTrabalho(''); }}
               className="w-full text-xs text-slate-400 hover:text-slate-600 font-bold py-1 transition-colors"
             >
               Gerar novo link

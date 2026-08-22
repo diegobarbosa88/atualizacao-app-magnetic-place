@@ -52,6 +52,40 @@ Cláusula 6.ª (Declaração de leitura, aceitação e assinatura)
 
 O Segundo Contraente declara ter lido, compreendido e aceite integralmente todas as cláusulas do presente Compromisso, que assina de forma livre e esclarecida.`;
 
+// Substitui os placeholders do template pelos dados já recolhidos do
+// candidato/convite — usado APENAS para exibição (ecrã e PDF). O hash
+// SHA-256 é sempre calculado sobre o LEGAL_TEXT original, nunca sobre este
+// texto personalizado, para preservar a integridade do versionamento.
+// Mantém IDÊNTICA à função personalizarTexto() em
+// supabase/functions/submit-onboarding-commitment/pdfGenerator.ts.
+export function personalizarTexto(template, dados = {}) {
+  const fmtData = (iso) => {
+    if (!iso) return null;
+    const [y, m, d] = iso.split('-');
+    return (y && m && d) ? `${d}/${m}/${y}` : iso;
+  };
+  const fmtMoeda = (v) => (v === null || v === undefined || v === '') ? null : Number(v).toFixed(2);
+
+  const subs = [
+    [/\[Nome completo do trabalhador\]/g, dados.nome],
+    [/titular do documento de identificação n\.º \[_____\]/g, dados.documento ? `titular do documento de identificação n.º ${dados.documento}` : null],
+    [/válido até \[__\/__\/____\]/g, fmtData(dados.documento_validade) ? `válido até ${fmtData(dados.documento_validade)}` : null],
+    [/contribuinte fiscal \(NIF\) n\.º \[_____\]/g, dados.nif ? `contribuinte fiscal (NIF) n.º ${dados.nif}` : null],
+    [/número de identificação de Segurança Social \(NISS\) n\.º \[_____\]/g, dados.nis ? `número de identificação de Segurança Social (NISS) n.º ${dados.nis}` : null],
+    [/residente em \[morada completa\]/g, dados.morada ? `residente em ${dados.morada}` : null],
+    [/na categoria profissional de \[soldador \/ mecânico \/ outra\]/g, dados.profissao ? `na categoria profissional de ${dados.profissao}` : null],
+    [/no dia \[__\/__\/____\]/g, fmtData(dados.data_inicio) ? `no dia ${fmtData(dados.data_inicio)}` : null],
+    [/com o local de trabalho em \[___\]/g, dados.local_trabalho ? `com o local de trabalho em ${dados.local_trabalho}` : null],
+    [/retribuição base ilíquida mensal de \[_____\] €/g, fmtMoeda(dados.vencimento_base) ? `retribuição base ilíquida mensal de ${fmtMoeda(dados.vencimento_base)} €` : null],
+  ];
+
+  let out = template;
+  for (const [pattern, replacement] of subs) {
+    if (replacement) out = out.replace(pattern, replacement);
+  }
+  return out;
+}
+
 // Calcula SHA-256 do texto legal (para versionamento e auditoria)
 async function sha256hex(text) {
   const encoded = new TextEncoder().encode(text);
@@ -101,7 +135,7 @@ function StatusDot({ done, label }) {
 
 // Expõe getSignature() via ref para o pai chamar no momento do submit
 const OnboardingCommitmentStep = forwardRef(function OnboardingCommitmentStep(
-  { nome, onReadyChange, submitting },
+  { nome, dados, onReadyChange, submitting },
   ref,
 ) {
   const scrollRef  = useRef(null);
@@ -115,6 +149,8 @@ const OnboardingCommitmentStep = forwardRef(function OnboardingCommitmentStep(
 
   // Calcular hash uma vez no mount
   useEffect(() => { sha256hex(LEGAL_TEXT).then(setLegalHash); }, []);
+
+  const textoExibido = personalizarTexto(LEGAL_TEXT, dados);
 
   const isReady = scrolledToBottom && accepted && hasInk && !!legalHash;
 
@@ -237,7 +273,7 @@ const OnboardingCommitmentStep = forwardRef(function OnboardingCommitmentStep(
           <p className="font-black text-slate-800 text-xs mb-3 pb-3 border-b border-slate-100 uppercase tracking-widest">
             Documento legal — leia antes de assinar
           </p>
-          <pre className="whitespace-pre-wrap font-sans">{LEGAL_TEXT}</pre>
+          <pre className="whitespace-pre-wrap font-sans">{textoExibido}</pre>
         </div>
 
         {/* Gradiente + indicador de scroll */}

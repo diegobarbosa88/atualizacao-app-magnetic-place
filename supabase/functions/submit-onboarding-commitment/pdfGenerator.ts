@@ -64,12 +64,47 @@ Cláusula 6.ª (Declaração de leitura, aceitação e assinatura)
 O Segundo Contraente declara ter lido, compreendido e aceite integralmente todas as cláusulas do presente Compromisso, que assina de forma livre e esclarecida.`,
 };
 
-// Substitui os placeholders genéricos da Cláusula 1.ª com os dados reais do trabalhador.
-// Aplica-se apenas ao PDF — o hash é sempre calculado sobre o texto original do template.
-function personalizarTexto(template: string, nome: string, documentoId: string): string {
-  return template
-    .replace("[Nome completo do trabalhador]", nome)
-    .replace("titular do documento de identificação n.º [_____]", `titular do documento de identificação n.º ${documentoId || "[_____]"}`);
+export interface DadosPersonalizacao {
+  nome: string;
+  documentoId?: string;
+  documentoValidade?: string; // ISO yyyy-mm-dd
+  nif?: string;
+  nis?: string;
+  morada?: string;
+  profissao?: string;
+  dataInicio?: string;       // ISO yyyy-mm-dd (vem do convite)
+  localTrabalho?: string;    // vem do convite
+  vencimentoBase?: number;   // vem do convite
+}
+
+function fmtDataPT(iso?: string): string | null {
+  if (!iso) return null;
+  const [y, m, d] = iso.split("-");
+  return (y && m && d) ? `${d}/${m}/${y}` : iso;
+}
+
+// Substitui os placeholders do template com os dados reais já recolhidos
+// (candidato + condições definidas no convite). Aplica-se apenas ao PDF — o
+// hash é sempre calculado sobre o texto original do template. Mantém
+// IDÊNTICA à função personalizarTexto() em
+// src/features/public/OnboardingCommitmentStep.jsx.
+function personalizarTexto(template: string, dados: DadosPersonalizacao): string {
+  const validade = fmtDataPT(dados.documentoValidade);
+  const inicio   = fmtDataPT(dados.dataInicio);
+  const salario  = (dados.vencimentoBase !== undefined && dados.vencimentoBase !== null)
+    ? Number(dados.vencimentoBase).toFixed(2) : null;
+
+  let out = template.replace("[Nome completo do trabalhador]", dados.nome);
+  if (dados.documentoId) out = out.replace("titular do documento de identificação n.º [_____]", `titular do documento de identificação n.º ${dados.documentoId}`);
+  if (validade) out = out.replace("válido até [__/__/____]", `válido até ${validade}`);
+  if (dados.nif) out = out.replace("contribuinte fiscal (NIF) n.º [_____]", `contribuinte fiscal (NIF) n.º ${dados.nif}`);
+  if (dados.nis) out = out.replace("número de identificação de Segurança Social (NISS) n.º [_____]", `número de identificação de Segurança Social (NISS) n.º ${dados.nis}`);
+  if (dados.morada) out = out.replace("residente em [morada completa]", `residente em ${dados.morada}`);
+  if (dados.profissao) out = out.replace("na categoria profissional de [soldador / mecânico / outra]", `na categoria profissional de ${dados.profissao}`);
+  if (inicio) out = out.replace("no dia [__/__/____]", `no dia ${inicio}`);
+  if (dados.localTrabalho) out = out.replace("com o local de trabalho em [___]", `com o local de trabalho em ${dados.localTrabalho}`);
+  if (salario) out = out.replace("retribuição base ilíquida mensal de [_____] €", `retribuição base ilíquida mensal de ${salario} €`);
+  return out;
 }
 
 // Quebra de texto para caber na largura máxima
@@ -106,9 +141,7 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
-export interface GeneratePDFOptions {
-  nome: string;
-  documentoId: string;
+export interface GeneratePDFOptions extends DadosPersonalizacao {
   assinaturaBase64: string;
   textoHash: string;
   textoVersao: string;
@@ -168,7 +201,7 @@ export async function generateCommitmentPDF(opts: GeneratePDFOptions): Promise<U
 
   // ── Texto legal (com dados do trabalhador substituídos nos placeholders) ──
   const legalTemplate = LEGAL_TEXTS[textoVersao] ?? LEGAL_TEXTS["v1.0"];
-  const legalText = personalizarTexto(legalTemplate, nome, documentoId);
+  const legalText = personalizarTexto(legalTemplate, opts);
   const textLines = wrapText(legalText, fontReg, 8.5, CONTENT_W);
 
   for (const line of textLines) {

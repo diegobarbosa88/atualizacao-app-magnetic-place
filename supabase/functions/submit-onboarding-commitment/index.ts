@@ -26,7 +26,10 @@ Deno.serve(async (req: Request) => {
       return json({ error: "Body JSON inválido." }, 400);
     }
 
-    const { invite_id, nome, documento, assinatura_base64, texto_hash, texto_versao, user_agent, email } = body;
+    const {
+      invite_id, nome, documento, documento_validade, nif, nis, morada, profissao,
+      assinatura_base64, texto_hash, texto_versao, user_agent, email,
+    } = body;
 
     if (!invite_id || !nome?.trim() || !assinatura_base64 || !texto_hash) {
       return json({ error: "Campos obrigatórios em falta: invite_id, nome, assinatura_base64, texto_hash." }, 400);
@@ -54,7 +57,7 @@ Deno.serve(async (req: Request) => {
     // ── Verificar convite ────────────────────────────────────────
     const { data: invite } = await supabase
       .from("worker_onboarding_invites")
-      .select("id, status, expires_at")
+      .select("id, status, expires_at, vencimento_base, data_inicio_prevista, local_trabalho_texto")
       .eq("id", invite_id)
       .eq("status", "pending")
       .maybeSingle();
@@ -89,8 +92,16 @@ Deno.serve(async (req: Request) => {
     let pdfUrl: string | null = null;
     try {
       const pdfBytes = await generateCommitmentPDF({
-        nome:             nome.trim(),
-        documentoId:      documento ?? "N/D",
+        nome:              nome.trim(),
+        documentoId:       documento ?? "N/D",
+        documentoValidade: documento_validade,
+        nif,
+        nis,
+        morada,
+        profissao,
+        dataInicio:        invite.data_inicio_prevista ?? undefined,
+        localTrabalho:     invite.local_trabalho_texto ?? undefined,
+        vencimentoBase:    invite.vencimento_base ?? undefined,
         assinaturaBase64: assinatura_base64,
         textoHash:        texto_hash,
         textoVersao:      texto_versao ?? "v1.0",
