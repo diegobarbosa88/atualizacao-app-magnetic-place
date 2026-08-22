@@ -37,15 +37,16 @@ export default function ModalShell({ isOpen, onClose, title, subtitle, icon, acc
               style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #12293e 100%)' }}
             >
               <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                <span className="text-white">{icon}</span>
+                <span style={{ color: '#ffffff' }}>{icon}</span>
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="font-black text-white uppercase tracking-tight text-sm leading-none">{title}</h2>
-                {subtitle && <p className="text-[11px] font-semibold text-[#b7c8d8] mt-0.5 truncate normal-case">{subtitle}</p>}
+                <h2 className="font-black uppercase tracking-tight text-sm leading-none" style={{ color: '#ffffff' }}>{title}</h2>
+                {subtitle && <p className="text-[11px] font-semibold mt-0.5 truncate normal-case" style={{ color: '#b7c8d8' }}>{subtitle}</p>}
               </div>
               <button
                 onClick={onClose}
-                className="p-2 text-[#cfe0ee] hover:text-white hover:bg-white/10 rounded-xl transition-all shrink-0"
+                className="p-2 hover:bg-white/10 rounded-xl transition-all shrink-0"
+                style={{ color: '#cfe0ee' }}
               >
                 <X size={18} />
               </button>

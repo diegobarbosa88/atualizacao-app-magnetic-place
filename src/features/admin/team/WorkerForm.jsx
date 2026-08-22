@@ -224,11 +224,15 @@ const WorkerForm = () => {
             key={key}
             type="button"
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-1.5 px-3 py-2.5 -mb-px border-b-2 text-[11px] font-black uppercase tracking-wide whitespace-nowrap transition-all ${
-              activeTab === key ? 'border-[#EB8D00] text-[#1B3A57]' : 'border-transparent text-slate-400 hover:text-[#1B3A57]'
+            className={`flex items-center gap-2 px-3.5 py-3 -mb-px whitespace-nowrap transition-all ${
+              activeTab === key ? 'text-[#1B3A57]' : 'text-slate-400 hover:text-[#1B3A57]'
             }`}
+            style={{
+              fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.01em',
+              borderBottom: activeTab === key ? '2.5px solid #EB8D00' : '2.5px solid transparent',
+            }}
           >
-            <Icon size={12} /> {label}
+            <Icon size={14} /> {label}
           </button>
         ))}
       </div>
