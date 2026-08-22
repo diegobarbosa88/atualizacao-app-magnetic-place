@@ -2,11 +2,12 @@
   --app-max-width: 1920px;
 }
 
-* { text-transform: uppercase !important; }
-
 input.lowercase { text-transform: lowercase !important; }
 
-/* Permite elementos do Mapa de Salários manter capitalização mista */
+/* Maiúsculas passaram a ser opt-in (classe `uppercase` do Tailwind) em vez de
+   uma regra global `* { text-transform: uppercase }`. `.text-natural` era o
+   escape a essa regra — mantém-se como no-op para não partir os ~10 sítios
+   que ainda o aplicam. */
 .text-natural, .text-natural * { text-transform: none !important; }
 
 /* Custom Scrollbar for Menu */
@@ -31,7 +32,6 @@ input.lowercase { text-transform: lowercase !important; }
 .admin-table td {
   padding: 0.6rem 1rem !important;
   white-space: nowrap !important;
-  text-transform: uppercase !important;
 }
 
 .admin-table td {
@@ -120,13 +120,6 @@ input.lowercase { text-transform: lowercase !important; }
 .dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1) !important; color: #34d399 !important; }
 .dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.1) !important; color: #fb7185 !important; }
 .dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; color: #fbbf24 !important; }
-
-/* All words in uppercase for the dashboard area */
-.admin-dashboard-container, 
-.admin-table,
-.grid > div[class*="bg-white"] {
-  text-transform: uppercase !important;
-}
 
 .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
   border-color: #334155 !important;
