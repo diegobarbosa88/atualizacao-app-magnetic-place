@@ -143,6 +143,31 @@ const WorkerForm = () => {
                 <label className={lbl}>Data Fim</label>
                 <input type="date" value={workerForm.dataFim || ''} onChange={f('dataFim')} className={inp} />
               </div>
+              {workerForm.dataFim && (
+                <div className="col-span-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const hoje = new Date().toISOString().split('T')[0];
+                      setWorkerForm(prev => ({
+                        ...prev,
+                        status: 'ativo',
+                        dataInicio: hoje,
+                        dataFim: null,
+                        ss_admissao_comunicada_em: null,
+                        ss_admissao_num_registo: null,
+                        ss_cessacao_comunicada_em: null,
+                        ss_cessacao_num_registo: null,
+                      }));
+                    }}
+                    className="w-full text-[10px] font-bold uppercase tracking-wide px-2.5 py-2 rounded-lg border border-dashed transition-all hover:bg-slate-50"
+                    style={{ color: '#1B3A57', borderColor: '#1B3A57' }}
+                    title="Fecha o período atual (guarda no histórico ao gravar) e prepara um novo período em aberto — limpa também as comunicações de admissão/cessação à SS para poderes comunicar de novo."
+                  >
+                    ↻ Iniciar Novo Período (reentrada)
+                  </button>
+                </div>
+              )}
               {employmentHistory.length > 0 && (
                 <div className="col-span-2 border-l-2 border-slate-100 pl-2 space-y-0.5">
                   {employmentHistory.map(p => (
