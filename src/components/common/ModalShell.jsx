@@ -72,16 +72,22 @@ export default function ModalShell({
   layer = 'modal',
   footer,
   closeOnOverlay = true,
+  // Enquanto houver uma operação em curso (a gravar, a enviar, a importar),
+  // o modal não pode ser fechado por Esc, por clique fora nem pelo X.
+  //
+  // Existe porque o Esc foi acrescentado a todos os modais de uma vez: antes
+  // da migração nenhum destes o tinha, e sem esta guarda passava a ser
+  // possível desmontar o modal com um POST em voo — o utilizador nunca via a
+  // confirmação e ficava sem saber se a operação passou.
+  busy = false,
   children,
 }) {
-  // Esc fecha. Vários modais à mão implementavam isto por conta própria e a
-  // maioria simplesmente não o fazia.
   useEffect(() => {
-    if (!isOpen) return undefined;
+    if (!isOpen || busy) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') onClose?.(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isOpen, onClose]);
+  }, [isOpen, busy, onClose]);
 
   if (!isOpen) return null;
 
@@ -95,7 +101,7 @@ export default function ModalShell({
     <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex flex-col justify-end sm:items-center sm:justify-center p-0 sm:p-4"
       style={{ zIndex: Z[layer] ?? Z.modal }}
-      onMouseDown={closeOnOverlay ? (e) => { if (e.target === e.currentTarget) onClose?.(); } : undefined}
+      onMouseDown={closeOnOverlay && !busy ? (e) => { if (e.target === e.currentTarget) onClose?.(); } : undefined}
     >
       <div
         className={`bg-white rounded-t-3xl sm:rounded-[2rem] shadow-2xl w-full ${sizeClass} flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300`}
@@ -125,8 +131,9 @@ export default function ModalShell({
             </div>
             <button
               onClick={onClose}
+              disabled={busy}
               aria-label="Fechar"
-              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0"
+              className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
             >
               <X size={18} />
             </button>

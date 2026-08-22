@@ -24,6 +24,7 @@ export default function NcModal({ tx, clients, onClose, onSave }) {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title={tx.tipo === 'debito' ? 'Ligar a Fatura' : 'Ligar a NC'}
       size="md"
       footer={

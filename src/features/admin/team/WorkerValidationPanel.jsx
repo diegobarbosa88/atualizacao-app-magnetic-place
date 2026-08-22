@@ -2,8 +2,9 @@ import React, { useState, useMemo } from 'react';
 import {
   CheckCircle, UserCheck, RotateCcw, Search,
   Calendar, ChevronLeft, ChevronRight, LayoutList, LayoutGrid,
-  ClipboardList, X, Pencil, MapPin, Trash2
+  ClipboardList, Pencil, MapPin, Trash2
 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 import { useApp } from '../../../context/AppContext';
 import { calculateDuration, formatHours } from '../../../utils/formatUtils';
 import { toISODateLocal } from '../../../utils/dateUtils';
@@ -42,21 +43,15 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
   const totalHours = workerLogs.reduce((s, l) => s + (l.hours ?? calculateDuration(l.startTime, l.endTime, l.breakStart, l.breakEnd)), 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-10 overflow-y-auto">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100">
-          <div>
-            <h3 className="font-black text-slate-800 text-base uppercase">{worker.name}</h3>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mt-0.5">
-              {month.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} · {formatHours(totalHours)}h total
-            </p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all">
-            <X size={18} />
-          </button>
-        </div>
-
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={worker.name}
+      meta={`${month.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })} · ${formatHours(totalHours)}h total`}
+      size="2xl"
+      closeOnOverlay={false}
+    >
+      <>
         {/* Legend */}
         <div className="px-6 pt-4 flex flex-wrap gap-1.5">
           {Object.entries(SOURCE_CFG).map(([key, cfg]) => (
@@ -164,8 +159,8 @@ function WorkerLogsModal({ worker, logs, month, onClose }) {
             })
           )}
         </div>
-      </div>
-    </div>
+      </>
+    </ModalShell>
   );
 }
 

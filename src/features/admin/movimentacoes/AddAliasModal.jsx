@@ -23,6 +23,7 @@ export default function AddAliasModal({ clients, onClose, onSave }) {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Novo Alias"
       size="sm"
       footer={

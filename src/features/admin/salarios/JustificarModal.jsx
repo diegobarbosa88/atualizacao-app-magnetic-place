@@ -8,6 +8,7 @@ export default function JustificarModal({ entry, text, onTextChange, saving, onS
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Justificar Diferença"
       size="md"
       footer={

@@ -19,6 +19,7 @@ export default function ImpostoModal({ tx, onClose, onSave }) {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Pagamento Imposto"
       size="sm"
       footer={

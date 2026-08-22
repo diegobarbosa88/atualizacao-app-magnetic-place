@@ -236,6 +236,7 @@ export default function OnboardingPendentes() {
       <ModalShell
         isOpen={!!selected}
         onClose={() => setSelected(null)}
+        busy={saving}
         title={selected?.nome || 'Pedido de Onboarding'}
         subtitle="Reveja os dados e complete os campos necessários antes de aprovar."
         icon={<Users size={16} />}

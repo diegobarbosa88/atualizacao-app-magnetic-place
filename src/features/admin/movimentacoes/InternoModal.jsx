@@ -19,6 +19,7 @@ export default function InternoModal({ tx, onClose, onSave }) {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Marcar como Interno"
       size="sm"
       footer={

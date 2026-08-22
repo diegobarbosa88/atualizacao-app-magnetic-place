@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
 import {
-  X, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle,
+  Upload, FileSpreadsheet, CheckCircle2, AlertTriangle,
   HelpCircle, Loader2, ArrowRight,
 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 import { PROFISSOES_EMPRESA, findProfissaoByCodigo } from '../../../data/profissoesEmpresa';
 import { CNP_PROFISSOES } from '../../../data/cnpProfissoes';
 
@@ -382,27 +383,54 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
   // ── JSX ──
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(134,154,175,0.15)' }}>
-              <FileSpreadsheet size={18} style={{ color: '#869AAF' }} />
-            </div>
-            <div>
-              <p className="text-sm font-black text-slate-800">Importar Contratos da SS Direta</p>
-              <p className="text-[10px] text-slate-400 font-medium">Emprego → Vínculos de trabalhadores → Exportar CSV</p>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title="Importar Contratos da SS Direta"
+      meta="Emprego → Vínculos de trabalhadores → Exportar CSV"
+      icon={<FileSpreadsheet size={20} />}
+      accent="brand"
+      size="3xl"
+      closeOnOverlay={false}
+      footer={
+        passo === 'preview' ? (
+          <div className="px-5 py-4 flex items-center justify-between">
+            <button
+              onClick={() => { setPasso('upload'); setRows([]); setNaoEncontr([]); setDecisoes({}); }}
+              className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              ← Voltar
+            </button>
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-slate-400">
+                {totalAplicar} campo{totalAplicar !== 1 ? 's' : ''} a atualizar
+              </p>
+              <button
+                onClick={handleGuardar}
+                disabled={salvando || totalAplicar === 0}
+                className="flex items-center gap-2 px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+              >
+                {salvando
+                  ? <><Loader2 size={14} className="animate-spin" /> A guardar…</>
+                  : 'Confirmar e Importar'
+                }
+              </button>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-300 hover:text-slate-600 transition-colors p-1">
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Corpo */}
-        <div className="flex-1 overflow-y-auto">
+        ) : passo === 'done' ? (
+          <div className="px-5 py-4">
+            <button
+              onClick={onClose}
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
+            >
+              Fechar
+            </button>
+          </div>
+        ) : null
+      }
+    >
+      <>
 
           {/* ── Upload ── */}
           {passo === 'upload' && (
@@ -545,48 +573,7 @@ export default function ImportarContratosSSDModal({ workers, onClose, onImportad
             </div>
           )}
 
-        </div>
-
-        {/* Footer */}
-        {passo === 'preview' && (
-          <div className="px-5 py-4 border-t border-slate-100 flex items-center justify-between flex-shrink-0">
-            <button
-              onClick={() => { setPasso('upload'); setRows([]); setNaoEncontr([]); setDecisoes({}); }}
-              className="text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              ← Voltar
-            </button>
-            <div className="flex items-center gap-3">
-              <p className="text-xs text-slate-400">
-                {totalAplicar} campo{totalAplicar !== 1 ? 's' : ''} a atualizar
-              </p>
-              <button
-                onClick={handleGuardar}
-                disabled={salvando || totalAplicar === 0}
-                className="flex items-center gap-2 px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
-                style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
-              >
-                {salvando
-                  ? <><Loader2 size={14} className="animate-spin" /> A guardar…</>
-                  : 'Confirmar e Importar'
-                }
-              </button>
-            </div>
-          </div>
-        )}
-
-        {passo === 'done' && (
-          <div className="px-5 py-4 border-t border-slate-100 flex-shrink-0">
-            <button
-              onClick={onClose}
-              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-sm font-black uppercase tracking-widest transition-all"
-            >
-              Fechar
-            </button>
-          </div>
-        )}
-
-      </div>
-    </div>
+      </>
+    </ModalShell>
   );
 }

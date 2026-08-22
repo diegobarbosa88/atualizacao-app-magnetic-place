@@ -22,6 +22,7 @@ export default function FaturaModal({ tx, faturasData, faturaLinks, onClose, onS
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Ligar a Fatura de Fornecedor"
       size="md"
       footer={

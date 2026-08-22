@@ -34,6 +34,7 @@ export default function ReciboModal({ tx, receipts, onClose, onSave }) {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Ligar a Recibo de Trabalhador"
       size="md"
       footer={

@@ -372,6 +372,7 @@ const DocumentScannerModal = ({ open, onClose }) => {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={step === 'processing'}
       title="Scanner de Documentos"
       meta={step === 'results' ? `${files.length} ficheiro${files.length !== 1 ? 's' : ''}` : undefined}
       icon={<ScanSearch size={20} />}

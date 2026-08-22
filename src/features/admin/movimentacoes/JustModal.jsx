@@ -19,6 +19,7 @@ export default function JustModal({ tx, onClose, onSave }) {
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Justificar Transacção"
       size="md"
       footer={

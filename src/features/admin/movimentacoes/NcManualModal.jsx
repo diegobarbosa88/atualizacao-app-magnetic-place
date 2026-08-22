@@ -18,6 +18,7 @@ export default function NcManualModal({ tx, faturas, loading, onClose, onSave })
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Ligar a Nota de Crédito"
       size="md"
       footer={

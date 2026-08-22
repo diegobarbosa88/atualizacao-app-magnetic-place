@@ -28,6 +28,7 @@ export default function AssocTransacaoModal({
     <ModalShell
       isOpen
       onClose={onClose}
+      busy={saving}
       title="Associar Transferência"
       size="md"
       footer={

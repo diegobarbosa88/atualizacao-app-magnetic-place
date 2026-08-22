@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Edit2, Trash2, Check, X } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 const WorkerEmploymentHistoryModal = ({ show, workerId, workerName, supabase, onClose }) => {
   const [periods, setPeriods] = useState([]);
@@ -29,16 +30,15 @@ const WorkerEmploymentHistoryModal = ({ show, workerId, workerName, supabase, on
     setPeriods(data || []);
   };
 
-  if (!show) return null;
-
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white p-6 rounded-2xl max-w-md w-full mx-4 shadow-2xl" onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-black text-indigo-700">Períodos de Emprego</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
-        </div>
-        <p className="text-sm font-bold text-slate-500 mb-4">{workerName}</p>
+    <ModalShell
+      isOpen={show}
+      onClose={onClose}
+      title="Períodos de Emprego"
+      meta={workerName}
+      size="md"
+    >
+      <div className="p-6">
         {periods.length === 0 ? (
           <p className="text-sm text-slate-400 text-center py-4">Sem períodos registados</p>
         ) : (
@@ -79,7 +79,7 @@ const WorkerEmploymentHistoryModal = ({ show, workerId, workerName, supabase, on
           </div>
         )}
       </div>
-    </div>
+    </ModalShell>
   );
 };
 
