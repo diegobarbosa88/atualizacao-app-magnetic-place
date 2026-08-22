@@ -188,7 +188,7 @@ const ClientManagerContent = ({ setClienteSelecionado, setModalEmailAberto, setP
         subtitle={clientForm.id ? 'Cliente · Ficha' : 'Cliente · Novo registo'}
         icon={<Briefcase size={16} />}
         accent="navyGradient"
-        size="2xl"
+        size="6xl"
         footer={
           <div className="flex items-center justify-end gap-2.5 px-5 py-4 border-t border-slate-100">
             <button
