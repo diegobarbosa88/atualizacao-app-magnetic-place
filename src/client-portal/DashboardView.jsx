@@ -1,5 +1,6 @@
 import React from 'react';
-import { Calendar, Activity, ChevronLeft, ChevronRight, X, LogOut, LogIn, Coffee, PlayCircle, Navigation, MapPin, CheckCircle, Edit2 } from 'lucide-react';
+import { Calendar, Activity, ChevronLeft, ChevronRight, LogOut, LogIn, Coffee, PlayCircle, Navigation, MapPin, CheckCircle, Edit2 } from 'lucide-react';
+import ModalShell from '../components/common/ModalShell';
 
 const calculateHoursDiff = (entry, exit, breakStart, breakEnd) => {
     if (!entry || !exit || !entry.includes(':') || !exit.includes(':')) return 0;
@@ -179,22 +180,26 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
             </div>
 
             {isWorkersModalOpen && (
-                <div className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center p-4" onClick={() => setIsWorkersModalOpen(false)}>
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-                    <div className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
-                        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-emerald-50/50">
-                            <div className="flex items-center gap-3">
-                                <span className="relative flex h-3 w-3">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-                                </span>
-                                <h3 className="font-black text-slate-900 text-sm uppercase tracking-widest">Em serviço agora</h3>
-                            </div>
-                            <button onClick={() => setIsWorkersModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
-                                <X size={18} />
+                <ModalShell
+                    isOpen
+                    onClose={() => setIsWorkersModalOpen(false)}
+                    title="Em serviço agora"
+                    size="md"
+                    icon={(
+                        <span className="relative flex h-3 w-3">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+                        </span>
+                    )}
+                    footer={(
+                        <div className="p-4 bg-slate-50 flex justify-end">
+                            <button onClick={() => setIsWorkersModalOpen(false)} className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl transition-colors">
+                                Fechar
                             </button>
                         </div>
-                        <div className="max-h-[60vh] overflow-y-auto p-2">
+                    )}
+                >
+                        <div className="p-2">
                             {activeNow.map((log, i) => {
                                 const worker = workers.find(w => String(w.id) === String(log.workerId || log.worker_id));
                                 const inBreak = log.breakStart && !log.breakEnd;
@@ -225,13 +230,7 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                                 );
                             })}
                         </div>
-                        <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
-                            <button onClick={() => setIsWorkersModalOpen(false)} className="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-black text-xs uppercase tracking-widest rounded-xl transition-colors">
-                                Fechar
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                </ModalShell>
             )}
 
             {selectedMonth && (() => {
@@ -339,26 +338,20 @@ export default function DashboardView({ logs, workers, clients, effectiveClientI
                         </div>
 
                         {calSelectedDay && (
-                            <div className="fixed inset-0 z-[9998] flex items-end sm:items-center justify-center p-4" onClick={() => setCalSelectedDay(null)}>
-                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-                                <div className="relative w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={e => e.stopPropagation()}>
-                                    <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-indigo-50/60">
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-indigo-400">{t('day_records')}</p>
-                                            <p className="text-base font-black text-slate-800 mt-0.5">
-                                                {new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' })}
-                                            </p>
-                                        </div>
-                                        <button onClick={() => setCalSelectedDay(null)} className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 transition-all"><X size={16} /></button>
-                                    </div>
-                                    <div className="max-h-[60vh] overflow-y-auto">
-                                        {selectedDayLogs.length === 0
-                                            ? <div className="p-8 text-center text-slate-400 text-sm font-bold">{t('no_records')}</div>
-                                            : selectedDayLogs.map(renderCalLogLine)
-                                        }
-                                    </div>
+                            <ModalShell
+                                isOpen
+                                onClose={() => setCalSelectedDay(null)}
+                                subtitle={t('day_records')}
+                                title={new Date(...calSelectedDay.split('-').map((v,i) => i===1 ? Number(v)-1 : Number(v))).toLocaleDateString(t('locale'), { weekday: 'long', day: 'numeric', month: 'long' })}
+                                size="lg"
+                            >
+                                <div>
+                                    {selectedDayLogs.length === 0
+                                        ? <div className="p-8 text-center text-slate-400 text-sm font-bold">{t('no_records')}</div>
+                                        : selectedDayLogs.map(renderCalLogLine)
+                                    }
                                 </div>
-                            </div>
+                            </ModalShell>
                         )}
                     </section>
                 );

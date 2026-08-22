@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Tag, Plus, X, CheckCircle, Loader2 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 const COR_MAP = {
   violet:  { bg: 'bg-violet-100',  text: 'text-violet-700',  ring: 'ring-violet-400',  dot: 'bg-violet-500'  },
@@ -47,15 +48,34 @@ export default function OrfaoBancoModal({ indices, tags: initialTags, onCreateTa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-            Confirmar Movimento
-            {indices.length > 1 && ` (${indices.length} movimentos)`}
-          </h3>
-          <p className="text-sm text-slate-500 mt-1">Classifique e/ou adicione uma observação para este movimento.</p>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      busy={savingTag}
+      title="Confirmar Movimento"
+      meta={indices.length > 1 ? `${indices.length} movimentos` : undefined}
+      size="lg"
+      closeOnOverlay={false}
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button
+            onClick={handleConfirmar}
+            disabled={!selectedTag && !orphanObs.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <CheckCircle size={12} /> Confirmar
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest"
+          >
+            Cancelar
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-5">
+        <p className="text-sm text-slate-500">Classifique e/ou adicione uma observação para este movimento.</p>
 
         {/* Classificação */}
         <div className="space-y-2">
@@ -145,23 +165,7 @@ export default function OrfaoBancoModal({ indices, tags: initialTags, onCreateTa
             <p className="text-[10px] text-slate-400">Seleccione uma classificação ou escreva uma observação.</p>
           )}
         </div>
-
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={handleConfirmar}
-            disabled={!selectedTag && !orphanObs.trim()}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <CheckCircle size={12} /> Confirmar
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest"
-          >
-            Cancelar
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }

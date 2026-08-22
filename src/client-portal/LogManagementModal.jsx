@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { X, Plus, Edit2, Trash2, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, AlertTriangle } from 'lucide-react';
+import ModalShell from '../components/common/ModalShell';
 import { createLogByClient, updateLogByClient, deleteLogByClient } from '../utils/clientPortalApi';
 import { calculateDuration } from '../utils/formatUtils';
 import { roundTimeToIntervalTimeUp, roundTimeToIntervalTimeDown, getIntervalSettings } from '../utils/timeUtils';
@@ -276,24 +277,22 @@ export default function LogManagementModal({ worker, clientId, clientName, selec
   const handleDone = () => { if (onLogsChanged) onLogsChanged(); };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-          <div>
-            <h3 className="font-black text-slate-800 text-base uppercase tracking-tight">{worker.name}</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{monthLabel} · {workerLogs.length} registos · {totalHours.toFixed(2)}h total</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all">
-            <X size={18} />
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      title={worker.name}
+      meta={`${monthLabel} · ${workerLogs.length} registos · ${totalHours.toFixed(2)}h total`}
+      size="lg"
+      footer={
+        <div className="px-6 py-4">
+          <button onClick={onClose} className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider rounded-2xl transition-all">
+            Fechar
           </button>
         </div>
-
+      }
+    >
         {/* Body */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        <div className="px-4 py-4 space-y-4">
           {/* Add form */}
           {showAddForm ? (
             <AddLogForm
@@ -333,14 +332,6 @@ export default function LogManagementModal({ worker, clientId, clientName, selec
             </div>
           )}
         </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 shrink-0">
-          <button onClick={onClose} className="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-xs uppercase tracking-wider rounded-2xl transition-all">
-            Fechar
-          </button>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

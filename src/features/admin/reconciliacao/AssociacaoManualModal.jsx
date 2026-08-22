@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function AssociacaoManualModal({ tx, txValor, faturas, loading, onClose, onSelect }) {
   const [search, setSearch] = useState('');
@@ -17,15 +18,34 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
   })();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg p-6 space-y-4 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[85vh]">
-        <div>
-          <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associar a Fatura</h3>
-          <p className="text-sm text-slate-700 mt-1 font-semibold">
-            €{Number(txValor).toFixed(2)} · {tx.data}
-          </p>
-          <p className="text-xs text-slate-500 truncate">{tx.descricao}</p>
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      busy={loading}
+      title="Associar a Fatura"
+      meta={`€${Number(txValor).toFixed(2)} · ${tx.data}`}
+      size="lg"
+      accent="brand"
+      closeOnOverlay={false}
+      footer={
+        <div className="px-6 py-4 space-y-3">
+          <label className="flex items-center gap-2 cursor-pointer select-none px-1">
+            <input type="checkbox" checked={saveAlias} onChange={e => setSaveAlias(e.target.checked)}
+              className="accent-indigo-600 w-4 h-4" />
+            <span className="text-xs text-slate-600">Guardar como alias (próximos matches automáticos)</span>
+          </label>
+
+          <button
+            onClick={onClose}
+            className="w-full py-2 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
+          >
+            Cancelar
+          </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-4">
+        <p className="text-xs text-slate-500 truncate">{tx.descricao}</p>
 
         <input
           autoFocus
@@ -35,7 +55,7 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
           className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
         />
 
-        <div className="overflow-y-auto flex-1 space-y-2 pr-1">
+        <div className="space-y-2">
           {loading && (
             <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-400" /></div>
           )}
@@ -73,20 +93,7 @@ export default function AssociacaoManualModal({ tx, txValor, faturas, loading, o
             );
           })}
         </div>
-
-        <label className="flex items-center gap-2 cursor-pointer select-none px-1 pb-1">
-          <input type="checkbox" checked={saveAlias} onChange={e => setSaveAlias(e.target.checked)}
-            className="accent-indigo-600 w-4 h-4" />
-          <span className="text-xs text-slate-600">Guardar como alias (próximos matches automáticos)</span>
-        </label>
-
-        <button
-          onClick={onClose}
-          className="w-full py-2 text-slate-500 hover:text-slate-700 text-[10px] font-black uppercase tracking-widest"
-        >
-          Cancelar
-        </button>
       </div>
-    </div>
+    </ModalShell>
   );
 }

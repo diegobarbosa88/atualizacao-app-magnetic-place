@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Link2, Loader2 } from 'lucide-react';
+import { Link2, Loader2 } from 'lucide-react';
+import ModalShell from '../../../components/common/ModalShell';
 
 export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
   const [clienteId, setClienteId] = useState('');
@@ -15,20 +16,36 @@ export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Associar a Cliente</h3>
-            <p className="text-sm font-bold text-slate-800 mt-1">
-              €{Number(modal.tx?.valor || 0).toFixed(2)} · {modal.tx?.data}
-            </p>
-            <p className="text-[10px] text-slate-400 truncate">{modal.tx?.descricao}</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-all">
-            <X size={16} />
+    <ModalShell
+      isOpen
+      onClose={onClose}
+      busy={saving}
+      title="Associar a Cliente"
+      meta={`€${Number(modal.tx?.valor || 0).toFixed(2)} · ${modal.tx?.data}`}
+      size="md"
+      accent="brand"
+      closeOnOverlay={false}
+      footer={
+        <div className="flex gap-2 px-6 py-4">
+          <button
+            onClick={handleSave}
+            disabled={!clienteId || !periodo || saving}
+            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50"
+          >
+            {saving ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
+            Associar
+          </button>
+          <button
+            onClick={onClose}
+            className="px-4 py-2.5 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
+          >
+            Cancelar
           </button>
         </div>
+      }
+    >
+      <div className="p-6 space-y-5">
+        <p className="text-[10px] text-slate-400 truncate">{modal.tx?.descricao}</p>
 
         <div className="space-y-3">
           <div className="space-y-1">
@@ -54,24 +71,7 @@ export default function AssocClienteModal({ modal, clients, onClose, onSave }) {
             />
           </div>
         </div>
-
-        <div className="flex gap-2 pt-2">
-          <button
-            onClick={handleSave}
-            disabled={!clienteId || !periodo || saving}
-            className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 text-white rounded-xl py-2.5 text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all disabled:opacity-50"
-          >
-            {saving ? <Loader2 size={12} className="animate-spin" /> : <Link2 size={12} />}
-            Associar
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 text-slate-500 hover:text-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest border border-slate-200 hover:border-slate-300 transition-all"
-          >
-            Cancelar
-          </button>
-        </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
