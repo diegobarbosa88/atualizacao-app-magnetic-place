@@ -13,32 +13,38 @@ function getInitials(name) {
     : (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-function ssBadge(w) {
-  if (w.ss_cessacao_comunicada_em) {
-    return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-slate-100 border border-slate-200 text-slate-500">
-        <CheckCircle size={8} /> SS Cessação OK
-      </span>
-    );
-  }
-  if (w.dataFim && !w.ss_cessacao_comunicada_em) {
-    return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-orange-50 border border-orange-200 text-orange-600">
-        <AlertTriangle size={8} /> SS Cessação pendente
-      </span>
-    );
-  }
-  if (w.ss_admissao_comunicada_em) {
-    return (
-      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-emerald-50 border border-emerald-200 text-emerald-600">
-        <CheckCircle size={8} /> SS Admissão OK
-      </span>
-    );
-  }
+// Mini linha do tempo Admissão → Hoje → Cessação — versão compacta da
+// usada em WorkerForm.jsx, para o mesmo idioma visual ler-se em cards e
+// lista sem reabrir a ficha. Substitui o antigo ssBadge() (dois estados
+// soltos "SS Admissão OK"/"SS Cessação pendente" competindo por espaço).
+function MiniTimeline({ w }) {
+  const admissaoFeita = !!w.ss_admissao_comunicada_em;
+  const cessacaoFeita = !!w.ss_cessacao_comunicada_em;
+  const temFim = !!w.dataFim;
+
+  const dotCls = (state) =>
+    state === 'done' ? 'bg-emerald-500'
+    : state === 'pending' ? 'bg-amber-400'
+    : state === 'now' ? '' // usa style inline navy
+    : 'bg-slate-200';
+
+  const admissaoState = admissaoFeita ? 'done' : 'pending';
+  const cessacaoState = !temFim ? 'na' : cessacaoFeita ? 'done' : 'pending';
+
+  let label, labelCls;
+  if (!admissaoFeita) { label = 'SS admissão por comunicar'; labelCls = 'text-amber-600'; }
+  else if (temFim && !cessacaoFeita) { label = 'SS cessação por comunicar'; labelCls = 'text-amber-600'; }
+  else { label = temFim ? 'SS ok · cessado' : 'SS ok'; labelCls = 'text-emerald-600'; }
+
   return (
-    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-amber-50 border border-amber-200 text-amber-600">
-      <AlertTriangle size={8} /> SS por comunicar
-    </span>
+    <div className="flex items-center gap-1" title={label}>
+      <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(admissaoState)}`} />
+      <span className={`w-3 h-[2px] shrink-0 ${admissaoState === 'done' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+      <span className="w-[7px] h-[7px] rounded-full shrink-0" style={{ backgroundColor: '#1B3A57' }} />
+      <span className={`w-3 h-[2px] shrink-0 ${cessacaoState === 'done' ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+      <span className={`w-[7px] h-[7px] rounded-full shrink-0 ${dotCls(cessacaoState)}`} />
+      <span className={`text-[9px] font-black uppercase tracking-wide ml-1 truncate ${labelCls}`}>{label}</span>
+    </div>
   );
 }
 
@@ -171,7 +177,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       <div className="min-w-0">
                         <p className="font-black text-slate-800 text-sm truncate">{w.name}</p>
                         <p className="text-xs text-slate-400 truncate">{w.profissao || 'Staff'}</p>
-                        <div className="mt-1 flex flex-wrap gap-1">{ssBadge(w)}{apoliceBadge(w, apoliceMap)}</div>
+                        <div className="mt-1"><MiniTimeline w={w} /></div>
+                        <div className="mt-1">{apoliceBadge(w, apoliceMap)}</div>
                         {w.valorHora && <p className="text-[10px] text-slate-300 font-bold mt-0.5">{w.valorHora}€/h</p>}
                       </div>
                     </div>
@@ -259,9 +266,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 <div className="mx-3 my-1 border-t border-slate-100" />
                                 <button
                                   onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }}
-                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-blue-50 group transition-colors"
+                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
                                 >
-                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-500 group-hover:bg-blue-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
+                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
                                   <div className="text-left">
                                     <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">Comunicar Admissão à SS</span>
                                     {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
@@ -274,9 +281,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                                 {!(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && <div className="mx-3 my-1 border-t border-slate-100" />}
                                 <button
                                   onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }}
-                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-blue-50 group transition-colors"
+                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
                                 >
-                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-100 text-blue-500 group-hover:bg-blue-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
+                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
                                   <div className="text-left">
                                     <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">Comunicar Cessação à SS</span>
                                     {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
@@ -345,10 +352,10 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <button onClick={() => onOpenEmpHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Períodos de emprego">📅</button>
                 <button onClick={() => onOpenVHHistory(w.id, w.name)} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg transition-all border border-slate-100 text-xs" title="Histórico de valor">📊</button>
                 {w.status === 'ativo' && !w.ss_admissao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all border border-blue-100" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'admissao' })} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Admissão à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
                 )}
                 {w.dataFim && !w.ss_cessacao_comunicada_em && (
-                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-all border border-blue-100" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
+                  <button onClick={() => setSsModal({ worker: w, tipo: 'cessacao' })} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-all border border-amber-200" title={`Comunicar Cessação à SS${ssAmbiente === 'teste' ? ' (TESTE)' : ''}`}><SendHorizonal size={12} /></button>
                 )}
                 {confirmDeleteWorkerId === w.id ? (
                   <div className="flex items-center gap-1">
@@ -367,7 +374,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                 <p className="text-[10px] text-slate-400 font-bold truncate">{w.profissao || 'Staff'}</p>
               </div>
             </div>
-            <div className="mb-3 flex flex-wrap gap-1">{ssBadge(w)}{apoliceBadge(w, apoliceMap)}</div>
+            <div className="mb-2"><MiniTimeline w={w} /></div>
+            <div className="mb-3">{apoliceBadge(w, apoliceMap)}</div>
             <div className="text-[10px] text-slate-400 font-bold space-y-1 border-t border-slate-50 pt-2">
               <div className="flex items-center gap-1.5">
                 <span>⏱</span> {schedules.find(s => s.id === w.defaultScheduleId)?.name || 'N/A'}
