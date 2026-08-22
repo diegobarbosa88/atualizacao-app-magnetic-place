@@ -261,7 +261,8 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                       {openMenuId === w.id && (
                         <>
                           <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-slate-200/80 rounded-2xl shadow-xl ring-1 ring-black/5 py-1.5 min-w-[200px]">
+                          <div className="absolute right-0 top-full mt-1.5 z-20 bg-white border border-slate-200/80 rounded-2xl shadow-xl ring-1 ring-black/5 py-1.5 min-w-[210px]">
+                            <p className="px-3.5 pt-1 pb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-300">Colaborador</p>
                             <button
                               onClick={() => { onEdit(w); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
@@ -283,7 +284,9 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-500 group-hover:bg-emerald-200 transition-colors shrink-0"><FolderOpen size={13} /></span>
                               <span className="text-xs font-semibold text-slate-700 group-hover:text-emerald-700">Ver Pasta</span>
                             </button>
-                            <div className="mx-3 my-1 border-t border-slate-100" />
+
+                            <div className="mx-3 my-1.5 border-t border-slate-100" />
+                            <p className="px-3.5 pt-0.5 pb-1.5 text-[9px] font-black uppercase tracking-widest text-slate-300">Históricos</p>
                             <button
                               onClick={() => { onOpenEmpHistory(w.id, w.name); setOpenMenuId(null); }}
                               className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-slate-50 group transition-colors"
@@ -298,38 +301,40 @@ const WorkerList = ({ sortedWorkers, workersView, setWorkersView, workersSort, s
                               <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-slate-200 transition-colors shrink-0 text-base leading-none">📊</span>
                               <span className="text-xs font-semibold text-slate-700">Histórico de Valor</span>
                             </button>
-                            {/* Segurança Social */}
-                            {(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && (
+
+                            {/* Segurança Social — só aparece a secção quando há mesmo algo por comunicar */}
+                            {((w.status === 'ativo' && !w.ss_admissao_comunicada_em) || (w.dataFim && !w.ss_cessacao_comunicada_em)) && (
                               <>
-                                <div className="mx-3 my-1 border-t border-slate-100" />
-                                <button
-                                  onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }}
-                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
-                                >
-                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
-                                  <div className="text-left">
-                                    <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">Comunicar Admissão à SS</span>
-                                    {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
-                                  </div>
-                                </button>
+                                <div className="mx-3 my-1.5 border-t border-slate-100" />
+                                <p className="px-3.5 pt-0.5 pb-1.5 text-[9px] font-black uppercase tracking-widest text-amber-400">Segurança Social</p>
                               </>
+                            )}
+                            {(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && (
+                              <button
+                                onClick={() => { setSsModal({ worker: w, tipo: 'admissao' }); setOpenMenuId(null); }}
+                                className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
+                              >
+                                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
+                                <div className="text-left">
+                                  <span className="text-xs font-semibold text-slate-700 group-hover:text-amber-700">Comunicar Admissão</span>
+                                  {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
+                                </div>
+                              </button>
                             )}
                             {(w.dataFim && !w.ss_cessacao_comunicada_em) && (
-                              <>
-                                {!(w.status === 'ativo' && !w.ss_admissao_comunicada_em) && <div className="mx-3 my-1 border-t border-slate-100" />}
-                                <button
-                                  onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }}
-                                  className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
-                                >
-                                  <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
-                                  <div className="text-left">
-                                    <span className="text-xs font-semibold text-slate-700 group-hover:text-blue-700">Comunicar Cessação à SS</span>
-                                    {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
-                                  </div>
-                                </button>
-                              </>
+                              <button
+                                onClick={() => { setSsModal({ worker: w, tipo: 'cessacao' }); setOpenMenuId(null); }}
+                                className="w-full flex items-center gap-3 px-3.5 py-2.5 hover:bg-amber-50 group transition-colors"
+                              >
+                                <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-100 text-amber-600 group-hover:bg-amber-200 transition-colors shrink-0"><SendHorizonal size={13} /></span>
+                                <div className="text-left">
+                                  <span className="text-xs font-semibold text-slate-700 group-hover:text-amber-700">Comunicar Cessação</span>
+                                  {ssAmbiente === 'teste' && <p className="text-[9px] text-orange-500 font-bold">MODO TESTE</p>}
+                                </div>
+                              </button>
                             )}
-                            <div className="mx-3 my-1 border-t border-slate-100" />
+
+                            <div className="mx-3 my-1.5 border-t border-slate-100" />
                             {confirmDeleteWorkerId === w.id ? (
                               <div className="mx-2 mb-1.5 p-2.5 bg-rose-50 rounded-xl border border-rose-100">
                                 <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider mb-2">Confirmar apagar?</p>
