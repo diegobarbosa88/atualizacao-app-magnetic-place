@@ -62,8 +62,8 @@ export default function DocumentsAdmin() {
                 <FileText size={18} className="text-white" />
               </div>
               <div>
-                <h2 className="text-white font-black text-base uppercase tracking-tight leading-none">Documentos</h2>
-                <p className="text-[11px] text-[#b7c8d8] font-semibold mt-0.5">Gestão documental da equipa</p>
+                <h2 className="font-black text-base uppercase tracking-tight leading-none" style={{ color: '#ffffff' }}>Documentos</h2>
+                <p className="text-[11px] font-semibold mt-0.5" style={{ color: '#b7c8d8' }}>Gestão documental da equipa</p>
               </div>
             </div>
             <div className="flex bg-white/10 rounded-xl p-1 gap-1">

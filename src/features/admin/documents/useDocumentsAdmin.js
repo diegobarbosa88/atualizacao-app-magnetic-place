@@ -40,7 +40,7 @@ export function useDocumentsAdmin() {
   const [tipoFilter, setTipoFilter] = useState('all');
   const [categoriaFilter, setCategoriaFilter] = useState('');
   const [validadeFilter, setValidadeFilter] = useState('');
-  const [docMode, setDocMode] = useState('category'); // 'category' | 'worker'
+  const [docMode, setDocMode] = useState('worker'); // 'category' | 'worker'
   const [categoriaOverrides, setCategoriaOverrides] = useState({}); // { [docId]: categoria }
   const [approvingId, setApprovingId] = useState(null);
   const [preview, setPreview] = useState(null);
