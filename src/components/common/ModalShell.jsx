@@ -20,6 +20,7 @@ const SIZE_MAP = {
   '4xl': 'sm:max-w-4xl',
   '5xl': 'sm:max-w-5xl',
   '6xl': 'sm:max-w-6xl',
+  clientWide: 'sm:max-w-[1180px]',
 };
 
 export default function ModalShell({ isOpen, onClose, title, subtitle, icon, accent = 'indigo', size = 'lg', footer, children }) {

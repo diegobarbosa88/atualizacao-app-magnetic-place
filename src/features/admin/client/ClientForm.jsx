@@ -68,13 +68,13 @@ export default function ClientForm() {
   const ringSize = Math.max(46, Math.min(120, 46 + Number(raio) / 8));
 
   return (
-    <div className="p-5 sm:p-6" style={{ background: '#FDFCFA' }}>
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <div className="py-[1.75rem] px-[2rem]" style={{ background: '#FDFCFA' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[1.62fr_1fr] gap-[1.5rem]">
         {/* COLUNA ESQUERDA */}
-        <div className="lg:col-span-7 space-y-5">
+        <div className="space-y-5">
 
           {/* IDENTIFICAÇÃO */}
-          <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] p-5 sm:p-6 space-y-5">
+          <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] pt-[1.4rem] px-[1.5rem] pb-[1.6rem] space-y-5">
             <div className="flex items-center gap-2.5">
               <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
                 <Briefcase size={16} />
@@ -146,7 +146,7 @@ export default function ClientForm() {
           </div>
 
           {/* FINANCEIRO */}
-          <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] p-5 sm:p-6 space-y-4">
+          <div className="bg-[#FAFAF7] border border-[#E5E1D6] rounded-[1.5rem] pt-[1.4rem] px-[1.5rem] pb-[1.6rem] space-y-4">
             <div className="flex items-center gap-2.5">
               <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(235,141,0,0.14)', color: '#C97600' }}>
                 <Euro size={16} />
@@ -158,10 +158,10 @@ export default function ClientForm() {
             </div>
 
             {currentClient && (
-              <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-2xl px-5 py-4" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #20415F 100%)' }}>
+              <div className="relative overflow-hidden flex items-end justify-between gap-4 rounded-[1.15rem] px-[1.35rem] py-[1.15rem] mb-[1.1rem]" style={{ background: 'linear-gradient(135deg, #1B3A57 0%, #20415F 100%)' }}>
                 <div>
                   <p className="text-[9.5px] font-bold uppercase tracking-widest mb-1" style={{ fontFamily: FONT_MONO, color: '#9fb4c8' }}>Valor / hora atual</p>
-                  <p className="font-bold leading-none text-white" style={{ fontFamily: FONT_TITLE, fontSize: '2.2rem' }}>
+                  <p className="font-bold leading-none text-white" style={{ fontFamily: FONT_TITLE, fontSize: '2.5rem' }}>
                     {Number(currentClient.valorHora || 0).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-lg font-semibold" style={{ color: '#b9c9d8' }}>€</span>
                   </p>
                 </div>
@@ -183,7 +183,7 @@ export default function ClientForm() {
               </Field>
             </div>
 
-            <div className="flex items-start gap-2.5 rounded-xl px-3.5 py-3" style={{ background: '#EEF2F6' }}>
+            <div className="flex items-start gap-2.5 rounded-[0.85rem] px-[0.8rem] py-[0.65rem] mt-[0.9rem]" style={{ background: '#EEF2F6' }}>
               <Info size={14} style={{ color: '#869AAF' }} className="shrink-0 mt-0.5" />
               <p className="text-[11px] leading-relaxed font-medium" style={{ color: '#51606E' }}>
                 Ao atualizar o valor/hora, todos os registos futuros e os pendentes do mês atual são atualizados automaticamente com o novo valor.
@@ -193,10 +193,10 @@ export default function ClientForm() {
         </div>
 
         {/* COLUNA DIREITA */}
-        <div className="lg:col-span-5 space-y-5">
+        <div className="space-y-5">
 
           {/* GEOLOCALIZAÇÃO */}
-          <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] p-5">
+          <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] py-[1.25rem] px-[1.3rem]">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
                 <MapPin size={16} />
@@ -205,7 +205,7 @@ export default function ClientForm() {
             </div>
 
             {/* Mapa esquemático — pré-visualização do raio, não é um mapa real */}
-            <div className="relative h-[130px] rounded-2xl overflow-hidden border border-[#E5E1D6] mb-4" style={{ background: 'linear-gradient(135deg,#e9edf1,#dfe6ec)' }}>
+            <div className="relative h-[150px] rounded-[1.1rem] overflow-hidden border border-[#E5E1D6] mb-4" style={{ background: 'linear-gradient(135deg,#e9edf1,#dfe6ec)' }}>
               <div
                 className="absolute inset-0 opacity-50"
                 style={{ backgroundImage: 'linear-gradient(#c9d3db 1px, transparent 1px), linear-gradient(90deg, #c9d3db 1px, transparent 1px)', backgroundSize: '22px 22px' }}
@@ -229,7 +229,7 @@ export default function ClientForm() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5 mb-2.5">
+            <div className="grid grid-cols-2 gap-[0.7rem] mb-[0.7rem]">
               <div className="space-y-1">
                 <label className="text-[9px] font-bold uppercase tracking-wider text-[#5C7086]" style={{ fontFamily: FONT_MONO }}>Latitude</label>
                 <input type="number" step="any" value={clientForm.lat ?? ''} onChange={e => setClientForm(prev => ({ ...prev, lat: e.target.value }))} className="w-full bg-white border-[1.5px] border-[#E4E1D6] rounded-[0.7rem] py-[0.55rem] px-[0.7rem] text-[0.78rem] font-bold outline-none shadow-sm focus:border-[#1B3A57] focus:ring-4 focus:ring-[#1B3A57]/10 transition-all" style={{ fontFamily: FONT_MONO }} placeholder="38.7169" />
@@ -267,7 +267,7 @@ export default function ClientForm() {
           </div>
 
           {/* HORÁRIOS */}
-          <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] p-5">
+          <div className="bg-[#F7F8FA] border border-[#E5E1D6] rounded-[1.5rem] py-[1.25rem] px-[1.3rem]">
             <div className="flex items-center gap-2.5 mb-3.5">
               <div className="w-[34px] h-[34px] rounded-[11px] flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(134,154,175,0.16)', color: '#869AAF' }}>
                 <Clock size={16} />
