@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../../../context/AppContext';
 import { useSchedule } from '../contexts/ScheduleContext';
 import {
-  Timer, Edit2, Trash2, Coffee, Clock, Users, Search, Save, CalendarRange, ArrowRight, CheckCircle2
+  Timer, Edit2, Trash2, Coffee, Clock, Users, Search, CalendarRange, ArrowRight, CheckCircle2
 } from 'lucide-react';
 import ModalShell from '../../../components/common/ModalShell';
 
@@ -10,14 +10,13 @@ export default function ScheduleForm() {
   const { workers } = useApp();
   const {
     scheduleForm, setScheduleForm,
-    handleSaveSchedule,
     handleAssignScheduleWithDates,
-    setIsAddingInTab,
+    // Vêm do contexto para os botões Cancelar/Salvar poderem viver no rodapé
+    // fixo do ModalShell, que é irmão do conteúdo e não lhe vê o estado.
+    assignmentDates, setAssignmentDates,
   } = useSchedule();
 
   const supabase = window.supabaseInstance;
-
-  const [assignmentDates, setAssignmentDates] = useState({});
   const [workerSearch, setWorkerSearch] = useState('');
   const [saveSuccessWorkerId, setSaveSuccessWorkerId] = useState(null);
   const [showScheduleHistory, setShowScheduleHistory] = useState({ show: false, workerId: null, workerName: '', scheduleId: null, scheduleName: '', history: [] });
@@ -62,14 +61,8 @@ export default function ScheduleForm() {
 
   return (
     <div className="p-4 sm:p-6">
-      {/* Botões de ação */}
-      <div className="flex gap-3 mb-6">
-        <button onClick={() => setIsAddingInTab(false)} className="flex-1 md:flex-none px-6 py-3 text-slate-400 font-bold uppercase text-xs hover:bg-slate-50 rounded-2xl transition-all">CANCELAR</button>
-        <button onClick={() => handleSaveSchedule(assignmentDates)} className="flex-1 md:flex-none px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-lg hover:scale-105 transition-all flex items-center justify-center gap-2" style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}>
-          <Save size={16} /> Salvar Horário
-        </button>
-      </div>
-
+      {/* Os botões Cancelar/Salvar viviam aqui no topo; passaram para o rodapé
+          fixo do ModalShell, em ScheduleManager.jsx. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* COLUNA 1: Configuração do Horário */}
         <div className="lg:col-span-1 space-y-6">

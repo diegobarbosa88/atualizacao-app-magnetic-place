@@ -16,6 +16,10 @@ export const ScheduleProvider = ({ children }) => {
   const [schedulesView, setSchedulesView] = useState(window.innerWidth < 768 ? 'grid' : 'list');
   const [schedulesSort, setSchedulesSort] = useState({ key: 'name', direction: 'asc' });
   const [scheduleForm, setScheduleForm] = useState(INITIAL_SCHEDULE_FORM);
+  // Datas de início/fim por trabalhador atribuído. Vive aqui, e não dentro do
+  // ScheduleForm, para o botão "Salvar Horário" poder ficar no rodapé fixo do
+  // ModalShell — o rodapé é irmão do conteúdo, não tem acesso ao estado dele.
+  const [assignmentDates, setAssignmentDates] = useState({});
 
   const handleSaveSchedule = useCallback(async (assignmentDates = {}) => {
     if (!scheduleForm.name) return alert('Nome do horário é obrigatório');
@@ -123,6 +127,7 @@ export const ScheduleProvider = ({ children }) => {
     schedulesView, setSchedulesView,
     schedulesSort, setSchedulesSort,
     scheduleForm, setScheduleForm,
+    assignmentDates, setAssignmentDates,
     handleSaveSchedule,
     handleDeleteSchedule,
     handleAssignScheduleWithDates,

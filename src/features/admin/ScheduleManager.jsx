@@ -1,7 +1,7 @@
 import React from 'react';
 import { useApp } from '../../context/AppContext';
 import { useSchedule, ScheduleProvider } from './contexts/ScheduleContext';
-import { Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users } from 'lucide-react';
+import { Timer, LayoutGrid, List, Edit2, Trash2, Coffee, Clock, Users, Save } from 'lucide-react';
 import ScheduleForm from './schedules/ScheduleForm';
 import ModalShell from '../../components/common/ModalShell';
 import SectionHeaderShell from '../../components/common/SectionHeaderShell';
@@ -12,6 +12,8 @@ const ScheduleManagerContent = () => {
     schedulesView, setSchedulesView,
     schedulesSort, setSchedulesSort,
     scheduleForm, setScheduleForm,
+    assignmentDates,
+    handleSaveSchedule,
     handleDeleteSchedule,
   } = useSchedule();
 
@@ -42,9 +44,30 @@ const ScheduleManagerContent = () => {
         isOpen={isAddingInTab}
         onClose={() => setIsAddingInTab(false)}
         title={scheduleForm.id ? 'Editar Horário' : 'Novo Horário'}
-        icon={<Timer size={16} />}
+        icon={<Timer size={18} />}
         accent="brand"
-        size="3xl"
+        // O formulário usa lg:grid-cols-3 (e lg:grid-cols-4 nos horários por
+        // dia). Os breakpoints do Tailwind medem a VIEWPORT, não o contentor,
+        // por isso a 3xl (768px) as três colunas ativavam na mesma e ficavam
+        // espremidas — os rótulos ENTRADA/PAUSA/SAÍDA chegavam a sobrepor-se.
+        size="6xl"
+        footer={
+          <div className="flex items-center justify-end gap-3 px-6 py-4">
+            <button
+              onClick={() => setIsAddingInTab(false)}
+              className="px-6 py-3 text-slate-400 font-bold uppercase text-xs hover:bg-slate-50 rounded-2xl transition-all"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={() => handleSaveSchedule(assignmentDates)}
+              className="px-8 py-3 rounded-2xl font-black text-xs uppercase shadow-lg transition-all flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#EB8D00', color: '#1B3A57' }}
+            >
+              <Save size={16} /> Salvar Horário
+            </button>
+          </div>
+        }
       >
         <ScheduleForm />
       </ModalShell>
