@@ -332,6 +332,72 @@ export function parseSoapResponse(xmlStr) {
   return { sucesso: false, codigoErro: codigo, mensagemErro };
 }
 
+// ── Consultar comunicações — SOAP (obterComunicacoes) ───────────────────────
+//
+// Devolve comunicações de vínculo "a processar" (ainda não confirmadas) ou
+// "não aceites" (rejeitadas) — NUNCA as já aceites/processadas com sucesso,
+// que não aparecem aqui. Serve para apanhar casos raros em que uma admissão/
+// cessação ficou presa ou foi recusada depois do envio síncrono ter parecido
+// OK. niss opcional: sem lista, devolve tudo; com lista, filtra por esses NISS.
+// WSDL oficial (Agosto 2026): list-niss-trabalhador é minOccurs="0".
+export function buildObterComunicacoesSoap(nissList = []) {
+  const nissXml = nissList.length
+    ? `\n      <list-niss-trabalhador>\n${nissList.map(n => `        <niss-trabalhador>${escapeXml(n)}</niss-trabalhador>`).join('\n')}\n      </list-niss-trabalhador>`
+    : '';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope
+  xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+  xmlns:vo="http://vo.webservice.contrato.segsocial.pt">
+  <soapenv:Header/>
+  <soapenv:Body>
+    <vo:obterComunicacoes>${nissXml}
+    </vo:obterComunicacoes>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+}
+
+// Extrai a lista de <comunicacao> da resposta de obterComunicacoes.
+// tipoComunicacao: 0 = a processar, 1 = não aceite (rejeitada).
+export function parseObterComunicacoesResponse(xmlStr) {
+  if (!xmlStr) return { sucesso: false, mensagemErro: 'Resposta vazia da Segurança Social.', comunicacoes: [] };
+
+  const codigoMatch = xmlStr.match(/<(?:[^:>]+:)?codigo-resultado[^>]*>([^<]+)<\/(?:[^:>]+:)?codigo-resultado>/i);
+  const mensagemMatch = xmlStr.match(/<(?:[^:>]+:)?mensagens-erro[^>]*>([^<]*)<\/(?:[^:>]+:)?mensagens-erro>/i);
+  const codigo = codigoMatch ? codigoMatch[1].trim() : null;
+  const mensagem = mensagemMatch ? mensagemMatch[1].trim() : null;
+
+  if (codigo === '4') return { sucesso: true, comunicacoes: [] }; // pesquisa sem resultados
+  if (codigo !== '1') {
+    return { sucesso: false, mensagemErro: mensagem || `Código de resultado: ${codigo ?? 'desconhecido'}`, comunicacoes: [] };
+  }
+
+  const campo = (bloco, nome) => {
+    const m = bloco.match(new RegExp(`<(?:[^:>]+:)?${nome}[^>]*>([^<]*)<\\/(?:[^:>]+:)?${nome}>`, 'i'));
+    return m ? m[1].trim() : null;
+  };
+
+  const comunicacoes = [];
+  const blocoRegex = /<(?:[^:>]+:)?comunicacao>([\s\S]*?)<\/(?:[^:>]+:)?comunicacao>/gi;
+  let match;
+  while ((match = blocoRegex.exec(xmlStr))) {
+    const bloco = match[1];
+    comunicacoes.push({
+      tipoComunicacao: campo(bloco, 'tipoComunicacao'),
+      nissTrabalhador: campo(bloco, 'nissTrabalhador'),
+      nomeTrabalhador: campo(bloco, 'nomeTrabalhador'),
+      dataNascimento: campo(bloco, 'dataNascimento'),
+      dataComunicacao: campo(bloco, 'dataComunicacao'),
+      inicioContrato: campo(bloco, 'inicioContrato'),
+      motivo: campo(bloco, 'motivo'),
+      localTrabalho: campo(bloco, 'localTrabalho'),
+      dataProcessamento: campo(bloco, 'dataProcessamento'),
+      taxa: campo(bloco, 'taxa'),
+    });
+  }
+
+  return { sucesso: true, comunicacoes };
+}
+
 // Envia um envelope SOAP para a PSI.
 // soapAction: URI completo, ex: "http://interfaces.webservice.contrato.segsocial.pt#cessarVinculo"
 export async function callSS(operacao, soapBody, soapAction) {

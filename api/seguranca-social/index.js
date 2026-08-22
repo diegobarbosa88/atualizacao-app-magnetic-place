@@ -4,6 +4,8 @@ import {
   callSSRest,
   buildCessacaoSoap,
   parseSoapResponse,
+  buildObterComunicacoesSoap,
+  parseObterComunicacoesResponse,
   callSS,
   callSSRestGetUrl,
   callSSRestPostUrl,
@@ -116,6 +118,37 @@ export default async function handler(req, res) {
         ambiente: getAmbiente(),
       });
       return res.status(200).json({ semRegistos: dados.length === 0, dados, ambiente: getAmbiente() });
+    } catch (e) { return res.status(502).json({ erro: e.message }); }
+  }
+
+  if (req.method === 'GET' && action === 'comunicacoes-pendentes') {
+    if (!credenciaisConfiguradas()) return res.status(400).json({ erro: 'Token PSI não configurado.' });
+    const nissParam = req.query?.niss;
+    const nissList = nissParam
+      ? String(nissParam).split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const soapBody = buildObterComunicacoesSoap(nissList);
+    try {
+      const { xmlResposta } = await callSS(
+        'obterComunicacoes',
+        soapBody,
+        'http://interfaces.webservice.contrato.segsocial.pt#ObterComunicacoes',
+      );
+      const resultado = parseObterComunicacoesResponse(xmlResposta);
+      if (!resultado.sucesso) return res.status(422).json({ erro: resultado.mensagemErro });
+
+      await supabaseAdmin().from('ss_comunicacoes').insert({
+        worker_id: null, tipo: 'consulta', status: 'sucesso',
+        payload_xml: soapBody, resposta_ss: xmlResposta,
+        ambiente: getAmbiente(),
+      });
+
+      return res.status(200).json({
+        comunicacoes: resultado.comunicacoes,
+        aProcessar: resultado.comunicacoes.filter(c => c.tipoComunicacao === '0'),
+        naoAceites: resultado.comunicacoes.filter(c => c.tipoComunicacao === '1'),
+        ambiente: getAmbiente(),
+      });
     } catch (e) { return res.status(502).json({ erro: e.message }); }
   }
 
